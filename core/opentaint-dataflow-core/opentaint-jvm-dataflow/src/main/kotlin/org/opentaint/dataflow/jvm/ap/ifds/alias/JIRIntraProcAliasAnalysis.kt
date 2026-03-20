@@ -30,6 +30,7 @@ class JIRIntraProcAliasAnalysis(
     private val languageManager: JIRLanguageManager,
     private val rootCancellation: Cancellation,
     private val params: JIRLocalAliasAnalysis.Params,
+    private val mergeType: MergeType,
 ) {
     companion object {
         private val logger = object : KLogging() {}.logger
@@ -86,7 +87,7 @@ class JIRIntraProcAliasAnalysis(
         localVariableReachability: JIRLocalVariableReachability
     ): JIRLocalAliasAnalysis.MethodAliasInfo {
         val jig = getJIG(entryPoint)
-        val daa = DSUAliasAnalysis(CallResolver(), localVariableReachability, cancellation).analyze(jig)
+        val daa = DSUAliasAnalysis(CallResolver(), localVariableReachability, mergeType, cancellation).analyze(jig)
 
         val aliasBeforeStatement = Array(jig.statements.size) { Int2ObjectOpenHashMap<List<AliasInfo>>() }
         val aliasAfterStatement = Array(jig.statements.size) { Int2ObjectOpenHashMap<List<AliasInfo>>() }

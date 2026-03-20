@@ -1,6 +1,5 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.State
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.JIRInstGraph
 import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias.SimpleLoc
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -17,6 +16,7 @@ class DSUAliasAnalysisInvalidateOuterHeapAliasesTest {
             override fun buildMethodGraph(method: JIRMethod): JIRInstGraph? = null
         },
         rootMethodReachabilityInfo = null,
+        mergeType = MergeType.May,
         cancellation = AnalysisCancellation(timeLimit = Duration.INFINITE, parentCancellation = null),
     )
     private val manager = analysis.aliasManager
