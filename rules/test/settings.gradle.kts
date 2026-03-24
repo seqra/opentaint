@@ -1,4 +1,4 @@
-rootProject.name = "seqra-builtin-rules-test"
+rootProject.name = "opentaint-builtin-rules-test"
 
 // Auto-discover all spring-tests subprojects by walking the entire subtree
 val springTestsRoot = "spring-app-tests"
