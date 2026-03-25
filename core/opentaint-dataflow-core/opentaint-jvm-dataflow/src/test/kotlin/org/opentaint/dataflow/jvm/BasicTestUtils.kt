@@ -162,10 +162,7 @@ abstract class BasicTestUtils {
         findClass(className).declaredMethods.find { it.name == methodName }
             ?: error("Method $methodName not found in $className")
 
-    protected fun aaForMethod(
-        method: JIRMethod,
-        params: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params()
-    ): JIRLocalAliasAnalysis {
+    protected fun aaForMethod(method: JIRMethod): JIRLocalAliasAnalysis {
         val ep = method.instList.first()
         val usages = runBlocking { cp.usagesExt() }
         val graph = JApplicationGraphImpl(cp, usages)
@@ -174,7 +171,16 @@ abstract class BasicTestUtils {
         val localReachability = JIRLocalVariableReachability(method, graph, manager)
         val cancellation = Cancellation().also { it.activate() }
 
+        val params = loadSettings(method)
+
         return JIRLocalAliasAnalysis(ep, graph, callResolver, localReachability, cancellation, manager, params)
+    }
+
+    private fun loadSettings(method: JIRMethod): JIRLocalAliasAnalysis.Params {
+        val settings = method.annotations.find { it.name == ALIAS_SETTINGS }
+        val callDepth = settings?.values[INTER_PROC_SETTING] as? Int
+            ?: return JIRLocalAliasAnalysis.Params()
+        return interProcParams(callDepth)
     }
 
     protected fun interProcParams(depth: Int) =
@@ -223,9 +229,13 @@ abstract class BasicTestUtils {
         const val SIMPLE_SAMPLE = "$ALIAS_SAMPLE_PKG.SimpleAliasSample"
         const val LOOP_SAMPLE = "$ALIAS_SAMPLE_PKG.LoopAliasSample"
         const val HEAP_SAMPLE = "$ALIAS_SAMPLE_PKG.HeapAliasSample"
+        const val COMBINED_HEAP_SAMPLE = "$ALIAS_SAMPLE_PKG.CombinedHeapAliasSample"
         const val INTERPROC_SAMPLE = "$ALIAS_SAMPLE_PKG.InterProcAliasSample"
         const val FLAKY_SAMPLE = "$ALIAS_SAMPLE_PKG.FlakyAliasSample"
-        const val HEADER_VALUES_SAMPLE = "sample.alias.HeaderValuesHangSample"
+        const val HEADER_VALUES_SAMPLE = "$ALIAS_SAMPLE_PKG.HeaderValuesHangSample"
+
+        private const val ALIAS_SETTINGS = "sample.AliasSettings"
+        private const val INTER_PROC_SETTING = "interProcDepth"
 
         protected const val FIELD_VALUE = "value"
         protected const val FIELD_BOX = "box"

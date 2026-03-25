@@ -26,7 +26,7 @@ class DSUAliasAnalysisInvalidateOuterHeapAliasesTest {
         fillState(body).build()
 
     private inline fun fillState(body: StateBuilder.() -> Unit): StateBuilder {
-        val builder = StateBuilder(manager, strategy)
+        val builder = StateBuilder(manager, strategy, MergeType.May)
         builder.body()
         return builder
     }

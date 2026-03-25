@@ -1,11 +1,14 @@
 package sample.alias;
 
+import sample.AliasSettings;
+
 public final class HeaderValuesHangSample {
 
     public static void sinkOneValue(Object v) {}
 
     String[] value;
 
+    @AliasSettings(interProcDepth = 1)
     public void addAllEntry() {
         ElementBox box = new ElementBox();
         for (int i = 0; i < 1; i++) {

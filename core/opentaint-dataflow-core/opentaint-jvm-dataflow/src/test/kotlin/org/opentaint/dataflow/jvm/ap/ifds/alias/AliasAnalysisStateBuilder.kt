@@ -7,7 +7,8 @@ import java.util.IdentityHashMap
 
 internal class StateBuilder(
     private val manager: AAInfoManager,
-    private val strategy: DSUAliasAnalysis.DsuMergeStrategy
+    private val strategy: DSUAliasAnalysis.DsuMergeStrategy,
+    private val mergeType: MergeType
 ) {
     private var state = State.empty(manager, strategy)
 
@@ -61,7 +62,7 @@ internal class StateBuilder(
 
     fun mergeStates(vararg builders: StateBuilder) {
         val states = builders.map { it.state }
-        this.state = State.merge(manager, strategy, states, MergeType.May)
+        this.state = State.merge(manager, strategy, states, mergeType)
 
         builders.forEach {
             created.putAll(it.created)
