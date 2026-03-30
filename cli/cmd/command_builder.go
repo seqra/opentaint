@@ -42,26 +42,28 @@ func NewAutobuilderBuilder() *AutobuilderBuilder {
 
 type AnalyzerBuilder struct {
 	*BaseCommandBuilder
-	projectPath                string
-	outputDir                  string
-	sarifFileName              string
-	sarifCodeFlowLimit         int64
-	sarifToolVersion           string
-	sarifToolSemanticVersion   string
-	sarifUriBase               string
-	semgrepCompatibility       bool
-	partialFingerprints        bool
-	ifdsAnalysisTimeout        int64
-	severities                 []string
-	ruleSetPaths               []string
-	ruleLoadTracePath          string
-	jarPath                    string
-	maxMemory                  string
-	ruleIDs                    []string
-	approximationsConfig       []string
-	dataflowApproximations     []string
-	trackExternalMethods       bool
-	debugFactReachabilitySarif bool
+	projectPath                           string
+	outputDir                             string
+	sarifFileName                         string
+	sarifCodeFlowLimit                    int64
+	sarifToolVersion                      string
+	sarifToolSemanticVersion              string
+	sarifUriBase                          string
+	semgrepCompatibility                  bool
+	partialFingerprints                   bool
+	ifdsAnalysisTimeout                   int64
+	severities                            []string
+	ruleSetPaths                          []string
+	ruleLoadTracePath                     string
+	jarPath                               string
+	maxMemory                             string
+	ruleIDs                               []string
+	approximationsConfig                  []string
+	dataflowApproximations                []string
+	trackExternalMethods                  bool
+	debugFactReachabilitySarif            bool
+	runRuleTests                          bool
+	debugRunAnalysisOnSelectedEntryPoints string
 }
 
 func (a *AnalyzerBuilder) SetProject(projectPath string) *AnalyzerBuilder {
@@ -164,6 +166,16 @@ func (a *AnalyzerBuilder) EnableDebugFactReachabilitySarif() *AnalyzerBuilder {
 	return a
 }
 
+func (a *AnalyzerBuilder) SetDebugRunAnalysisOnSelectedEntryPoints(entryPoints string) *AnalyzerBuilder {
+	a.debugRunAnalysisOnSelectedEntryPoints = entryPoints
+	return a
+}
+
+func (a *AnalyzerBuilder) EnableRunRuleTests() *AnalyzerBuilder {
+	a.runRuleTests = true
+	return a
+}
+
 func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 	// For native execution, create a temporary logs directory
 	tempLogsDir, err := os.MkdirTemp("", "opentaint-*")
@@ -251,6 +263,14 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 
 	if a.debugFactReachabilitySarif {
 		flags = append(flags, "--debug-fact-reachability-sarif")
+	}
+
+	if a.debugRunAnalysisOnSelectedEntryPoints != "" {
+		flags = append(flags, "--debug-run-analysis-on-selected-entry-points", a.debugRunAnalysisOnSelectedEntryPoints)
+	}
+
+	if a.runRuleTests {
+		flags = append(flags, "--debug-run-rule-tests")
 	}
 
 	return append(command, flags...)
