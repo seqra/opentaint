@@ -1,9 +1,9 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis
-import org.opentaint.dataflow.jvm.ap.ifds.alias.MergeType
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -26,12 +26,18 @@ class JIRLocalAliasAnalysis(
         val aliasAnalysisTimeLimit: Duration = 10.seconds,
     )
 
-    private val mayAliasInfo by lazy { compute(MergeType.May) }
-    private val mustAliasInfo by lazy { compute(MergeType.Must) }
+    private val mayAliasInfo by lazy { computeMay() }
+    private val mustAliasInfo by lazy { computeMust() }
 
     class MethodAliasInfo(
         val aliasBeforeStatement: Array<Int2ObjectOpenHashMap<Array<Any>>?>?,
         val aliasAfterStatement: Array<Int2ObjectOpenHashMap<Array<Any>>?>?,
+        val unboundBeforeStatement: Array<Array<Array<Any>>?>?,
+    )
+
+    class MethodMustAliasInfo(
+        val aliasBeforeStatement: Array<Object2ObjectOpenHashMap<AccessPathBase, Array<Any>>?>?,
+        val aliasAfterStatement: Array<Object2ObjectOpenHashMap<AccessPathBase, Array<Any>>?>?,
         val unboundBeforeStatement: Array<Array<Array<Any>>?>?,
     )
 
@@ -43,10 +49,18 @@ class JIRLocalAliasAnalysis(
             it !is AliasApInfo || it.accessors.isNotEmpty() || it.base != base
         }?.map { it.wrapAliasInfo() }
 
-    fun findMustAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
+    private fun getAccessPathBaseAliases(
+        alias: Array<Object2ObjectOpenHashMap<AccessPathBase, Array<Any>>?>,
+        instIdx: Int, base: AccessPathBase
+    ): List<AliasInfo>? =
+        alias[instIdx]?.getOrDefault(base, null)?.filter {
+            it !is AliasApInfo || it.accessors.isNotEmpty() || it.base != base
+        }?.map { it.wrapAliasInfo() }
+
+    fun findMustAlias(base: AccessPathBase, statement: CommonInst): List<AliasInfo>? {
         val aliasBefore = mustAliasInfo.aliasBeforeStatement ?: return null
         val idx = languageManager.getInstIndex(statement)
-        return getLocalVarAliases(aliasBefore, idx, base)
+        return getAccessPathBaseAliases(aliasBefore, idx, base)
     }
 
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
@@ -76,9 +90,14 @@ class JIRLocalAliasAnalysis(
         return getLocalVarAliases(aliasAfter, idx, base)
     }
 
-    private fun compute(mergeType: MergeType): MethodAliasInfo {
-        val analysis = JIRIntraProcAliasAnalysis(entryPoint, graph, callResolver, languageManager, cancellation, params, mergeType)
-        return analysis.compute(localVariableReachability)
+    private fun computeMay(): MethodAliasInfo {
+        val analysis = JIRIntraProcAliasAnalysis(entryPoint, graph, callResolver, languageManager, cancellation, params)
+        return analysis.computeMay(localVariableReachability)
+    }
+
+    private fun computeMust(): MethodMustAliasInfo {
+        val analysis = JIRIntraProcAliasAnalysis(entryPoint, graph, callResolver, languageManager, cancellation, params)
+        return analysis.computeMust(localVariableReachability)
     }
 
     sealed interface AliasAccessor {
@@ -115,6 +134,14 @@ class JIRLocalAliasAnalysis(
         fun wrapAliasSet(aliases: Array<Any>): List<AliasInfo> =
             List(aliases.size) { aliases[it].wrapAliasInfo() }
 
+        fun wrapAllInfo(info: Object2ObjectOpenHashMap<AccessPathBase, Array<Any>>): Object2ObjectOpenHashMap<AccessPathBase, List<AliasInfo>> {
+            val result = Object2ObjectOpenHashMap<AccessPathBase, List<AliasInfo>>()
+            for ((key, aliases) in info) {
+                result.put(key, wrapAliasSet(aliases))
+            }
+            return result
+        }
+
         fun unwrapAllInfo(info: Int2ObjectOpenHashMap<List<AliasInfo>>): Int2ObjectOpenHashMap<Array<Any>> {
             val result = Int2ObjectOpenHashMap<Array<Any>>(info.size, 0.99f)
             val iter = info.int2ObjectEntrySet().fastIterator()
@@ -128,5 +155,16 @@ class JIRLocalAliasAnalysis(
 
         fun unwrapAliasSet(aliases: List<AliasInfo>): Array<Any> =
             Array(aliases.size) { aliases[it].unwrap() }
+
+        fun unwrapAllInfo(info: Object2ObjectOpenHashMap<AccessPathBase, List<AliasInfo>>): Object2ObjectOpenHashMap<AccessPathBase, Array<Any>> {
+            val result = Object2ObjectOpenHashMap<AccessPathBase, Array<Any>>(info.size, 0.99f)
+            val iter = info.object2ObjectEntrySet().fastIterator()
+            while (iter.hasNext()) {
+                val entry = iter.next()
+                val unwrapped = unwrapAliasSet(entry.value)
+                result.put(entry.key, unwrapped)
+            }
+            return result
+        }
     }
 }
