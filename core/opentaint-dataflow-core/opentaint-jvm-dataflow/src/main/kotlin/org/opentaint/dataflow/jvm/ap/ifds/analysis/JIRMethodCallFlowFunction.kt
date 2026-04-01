@@ -292,9 +292,30 @@ class JIRMethodCallFlowFunction(
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit
     ) {
-        val factReader = FinalFactReader(factAp, apManager)
+        val relevantBases = callExpr.operands.mapNotNull { MethodFlowFunctionUtils.accessPathBase(it) }
 
-        unresolvedCallDefaultFactPropagation(factReader, factAp, addCallToReturn)
+        val (aliasedFacts, irrelevantFacts) =
+            FactUtils.splitFactMultipleBases(analysisContext.aliasAnalysis, statement, relevantBases, factAp, true)
+
+        var fixedFactAp: FinalFactAp? = null
+
+        aliasedFacts.forEach { (fact, _) ->
+            if (JIRMethodCallFactMapper.factIsRelevantToMethodCall(returnValue, callExpr, fact))
+                fixedFactAp = fact
+        }
+
+        if (fixedFactAp == null) {
+            val initialFactReader = FinalFactReader(factAp, apManager)
+            unresolvedCallDefaultFactPropagation(initialFactReader, factAp, addCallToReturn)
+            return
+        }
+
+        irrelevantFacts.forEach { fact ->
+            val reader = FinalFactReader(fact, apManager)
+            addCallToReturn(reader, fact, TraceInfo.Flow)
+        }
+
+        val factReader = FinalFactReader(fixedFactAp, apManager)
 
         val method = callExpr.callee
         val conditionRewriter = JIRMarkAwareConditionRewriter(
@@ -307,7 +328,7 @@ class JIRMethodCallFlowFunction(
             callee = method,
             callExpr = callExpr,
             returnValue = null,
-            factAp = factAp,
+            factAp = fixedFactAp,
             checker = analysisContext.factTypeChecker
         ) { callerFact, startFactBase ->
             val passFactReader = FinalFactReader(callerFact.rebase(startFactBase), apManager)
@@ -351,7 +372,7 @@ class JIRMethodCallFlowFunction(
 
                         val trace = TraceInfo.Rule(evp.rule, evp.action)
 
-                        mappedFact.forEachFactWithAliases(factAp) {
+                        mappedFact.forEachFactWithAliases(fixedFactAp) {
                             addCallToReturn(passFactReader, it, trace)
                         }
                     }
