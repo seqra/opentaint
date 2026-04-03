@@ -292,30 +292,13 @@ class JIRMethodCallFlowFunction(
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit
     ) {
-        val relevantBases = callExpr.operands.mapNotNull { MethodFlowFunctionUtils.accessPathBase(it) }
-
-        val (aliasedFacts, irrelevantFacts) =
-            FactUtils.splitFactMultipleBases(analysisContext.aliasAnalysis, statement, relevantBases, factAp, true)
-
-        var fixedFactAp: FinalFactAp? = null
-
-        aliasedFacts.forEach { (fact, _) ->
-            if (JIRMethodCallFactMapper.factIsRelevantToMethodCall(returnValue, callExpr, fact))
-                fixedFactAp = fact
+        analysisContext.aliasAnalysis?.forEachMustAlias(statement, factAp) { fact ->
+            val aliasReader = FinalFactReader(fact, apManager)
+            unresolvedCallDefaultFactPropagation(aliasReader, fact, addCallToReturn)
         }
 
-        if (fixedFactAp == null) {
-            val initialFactReader = FinalFactReader(factAp, apManager)
-            unresolvedCallDefaultFactPropagation(initialFactReader, factAp, addCallToReturn)
-            return
-        }
-
-        irrelevantFacts.forEach { fact ->
-            val reader = FinalFactReader(fact, apManager)
-            addCallToReturn(reader, fact, TraceInfo.Flow)
-        }
-
-        val factReader = FinalFactReader(fixedFactAp, apManager)
+        val factReader = FinalFactReader(factAp, apManager)
+        unresolvedCallDefaultFactPropagation(factReader, factAp, addCallToReturn)
 
         val method = callExpr.callee
         val conditionRewriter = JIRMarkAwareConditionRewriter(
@@ -328,7 +311,7 @@ class JIRMethodCallFlowFunction(
             callee = method,
             callExpr = callExpr,
             returnValue = null,
-            factAp = fixedFactAp,
+            factAp = factAp,
             checker = analysisContext.factTypeChecker
         ) { callerFact, startFactBase ->
             val passFactReader = FinalFactReader(callerFact.rebase(startFactBase), apManager)
@@ -372,7 +355,7 @@ class JIRMethodCallFlowFunction(
 
                         val trace = TraceInfo.Rule(evp.rule, evp.action)
 
-                        mappedFact.forEachFactWithAliases(fixedFactAp) {
+                        mappedFact.forEachFactWithAliases(factAp) {
                             addCallToReturn(passFactReader, it, trace)
                         }
                     }
