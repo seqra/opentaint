@@ -22,7 +22,7 @@ interface TreeSuffixInitialFactAccess : InitialApAccess<FactAccess> {
         TreeSuffixInitialFact(apManager, base, ap.access, ap.suffix, ex)
 
     override fun getInitialAccess(factAp: InitialFactAp): FactAccess {
-        val fact = (factAp as TreeSuffixInitialFact)
+        val fact = factAp as TreeSuffixInitialFact
         return FactAccess(fact.access, fact.suffix)
     }
 }

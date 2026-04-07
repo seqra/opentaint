@@ -94,5 +94,7 @@ abstract class CommonZ2FSummary<FAP : Any>(
 
         fun setBase(base: AccessPathBase) = this.also { this.base = base }
         fun setNode(node: FAP) = this.also { this.node = node }
+
+        fun node(): FAP = node!!
     }
 }

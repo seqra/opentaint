@@ -15,17 +15,35 @@ class FinalSummaries(
     methodInitialStatement: CommonInst,
     override val apManager: TreeSuffixApManager,
 ) : CommonZ2FSummary<FactAccess>(methodInitialStatement), TreeSuffixFinalFactAccess {
-    override fun createStorage(): Storage<FactAccess> = FinalSummaryStorage()
+    override fun createStorage(): Storage<FactAccess> = FinalSummaryStorage(apManager)
 
-    private class FinalSummaryStorage : Storage<FactAccess> {
+    private class FinalSummaryStorage(val manager: TreeSuffixApManager) : Storage<FactAccess> {
+        private val treeStorage = MethodZeroToFactSummaryEdgeStorage(manager.treeManager)
+
         override fun add(edges: List<FactAccess>, added: MutableList<Z2FBBuilder<FactAccess>>) {
-            TODO("Not yet implemented")
+            val treeNodes = edges.map { it.toSingleTreeNode() }
+            collectToListWithPostProcess(
+                added,
+                { treeStorage.add(treeNodes, it) },
+                { it.convert() }
+            )
         }
 
         override fun collectEdges(dst: MutableList<Z2FBBuilder<FactAccess>>) {
-            TODO("Not yet implemented")
+            collectToListWithPostProcess(
+                dst,
+                { treeStorage.collectEdges(it) },
+                { it.convert() }
+            )
         }
+
+        private fun Z2FBBuilder<AccessTree.AccessNode>.convert(): Z2FBBuilder<FactAccess> =
+            Z2FSummaryBuilder(manager).setNode(suffixOnlyAccess(node()))
     }
+
+    private class Z2FSummaryBuilder(
+        override val apManager: TreeSuffixApManager
+    ) : Z2FBBuilder<FactAccess>(), TreeSuffixFinalFactAccess
 }
 
 class F2FSummaries(
