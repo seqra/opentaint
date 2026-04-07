@@ -28,42 +28,47 @@ class MethodEdgesInitialToFinalTreeApSet(
 
         override fun add(
             statement: CommonInst,
-            initial: AccessPath.AccessNode?,
-            final: AccessWithExclusion<AccessTree.AccessNode>,
-        ): AccessWithExclusion<AccessTree.AccessNode>? {
-            val storage = sameInitialAccessEdges.getOrPut(initial) {
+            fact: AccessPairWithExclusion<AccessPath.AccessNode?, AccessTree.AccessNode>
+        ): AccessPairWithExclusion<AccessPath.AccessNode?, AccessTree.AccessNode>? {
+            val storage = sameInitialAccessEdges.getOrPut(fact.initial) {
                 EdgeNonUniverseExclusionMergingStorage(maxInstIdx, languageManager, apManager)
             }
 
-            return storage.add(statement, final)
+            val addedFinal = storage.add(statement, fact.final) ?: return null
+            if (addedFinal === fact.final) return fact
+            return AccessPairWithExclusion(fact.initial, addedFinal)
         }
 
         override fun filter(
-            dst: MutableList<Pair<AccessPath.AccessNode?, AccessWithExclusion<AccessTree.AccessNode>>>,
+            dst: MutableList<AccessPairWithExclusion<AccessPath.AccessNode?, AccessTree.AccessNode>>,
             statement: CommonInst,
-            finalPattern: AccessPath.AccessNode?,
+            finalPattern: AccessPath.AccessNode?
         ) {
             sameInitialAccessEdges.forEach { (initial, storage) ->
                 collectToListWithPostProcess(
                     dst,
                     { storage.allApAtStatement(it, statement) },
-                    { initial to it }
+                    { AccessPairWithExclusion(initial, it) }
                 )
             }
         }
 
         override fun filter(
-            dst: MutableList<AccessWithExclusion<AccessTree.AccessNode>>,
+            dst: MutableList<AccessPairWithExclusion<AccessPath.AccessNode?, AccessTree.AccessNode>>,
             statement: CommonInst,
             initial: AccessPath.AccessNode?,
-            finalPattern: AccessPath.AccessNode?,
+            finalPattern: AccessPath.AccessNode?
         ) {
             val storage = sameInitialAccessEdges[initial] ?: return
-            storage.allApAtStatement(dst, statement)
+            collectToListWithPostProcess(
+                dst,
+                { storage.allApAtStatement(it, statement) },
+                { AccessPairWithExclusion(initial, it) }
+            )
         }
     }
 
-    private class EdgeNonUniverseExclusionMergingStorage(
+    class EdgeNonUniverseExclusionMergingStorage(
         maxInstIdx: Int,
         private val languageManager: LanguageManager,
         manager: TreeApManager,

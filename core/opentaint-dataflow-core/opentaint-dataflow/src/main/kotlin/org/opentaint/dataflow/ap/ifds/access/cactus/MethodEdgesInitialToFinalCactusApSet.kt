@@ -27,18 +27,19 @@ class MethodEdgesInitialToFinalCactusApSet(
 
         override fun add(
             statement: CommonInst,
-            initial: AccessPathWithCycles.AccessNode?,
-            final: AccessWithExclusion<AccessCactus.AccessNode>
-        ): AccessWithExclusion<AccessCactus.AccessNode>? {
-            val storage = sameInitialAccessEdges.getOrPut(initial) {
+            fact: AccessPairWithExclusion<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>
+        ): AccessPairWithExclusion<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>? {
+            val storage = sameInitialAccessEdges.getOrPut(fact.initial) {
                 EdgeNonUniverseExclusionMergingStorage(maxInstIdx, languageManager)
             }
 
-            return storage.add(statement, final)
+            return storage.add(statement, fact.final)?.let {
+                AccessPairWithExclusion(fact.initial, it)
+            }
         }
 
         override fun filter(
-            dst: MutableList<Pair<AccessPathWithCycles.AccessNode?, AccessWithExclusion<AccessCactus.AccessNode>>>,
+            dst: MutableList<AccessPairWithExclusion<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>,
             statement: CommonInst,
             finalPattern: AccessPathWithCycles.AccessNode?,
         ) {
@@ -46,19 +47,24 @@ class MethodEdgesInitialToFinalCactusApSet(
                 collectToListWithPostProcess(
                     dst,
                     { storage.allApAtStatement(it, statement) },
-                    { initial to it }
+                    { AccessPairWithExclusion(initial, it) }
                 )
             }
         }
 
         override fun filter(
-            dst: MutableList<AccessWithExclusion<AccessCactus.AccessNode>>,
+            dst: MutableList<AccessPairWithExclusion<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>,
             statement: CommonInst,
             initial: AccessPathWithCycles.AccessNode?,
             finalPattern: AccessPathWithCycles.AccessNode?,
         ) {
             val storage = sameInitialAccessEdges[initial] ?: return
-            storage.allApAtStatement(dst, statement)
+
+            collectToListWithPostProcess(
+                dst,
+                { storage.allApAtStatement(it, statement) },
+                { AccessPairWithExclusion(initial, it) }
+            )
         }
     }
 

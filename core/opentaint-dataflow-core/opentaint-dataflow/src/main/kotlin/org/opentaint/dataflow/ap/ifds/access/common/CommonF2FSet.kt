@@ -15,10 +15,15 @@ abstract class CommonF2FSet<IAP, FAP>(
 
     data class AccessWithExclusion<FAP>(val access: FAP, val exclusion: ExclusionSet)
 
+    data class AccessPairWithExclusion<IAP, FAP>(
+        val initial: IAP,
+        val final: AccessWithExclusion<FAP>,
+    )
+
     interface ApStorage<IAP, FAP> {
-        fun add(statement: CommonInst, initial: IAP, final: AccessWithExclusion<FAP>): AccessWithExclusion<FAP>?
-        fun filter(dst: MutableList<Pair<IAP, AccessWithExclusion<FAP>>>, statement: CommonInst, finalPattern: IAP)
-        fun filter(dst: MutableList<AccessWithExclusion<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
+        fun add(statement: CommonInst, fact: AccessPairWithExclusion<IAP, FAP>): AccessPairWithExclusion<IAP, FAP>?
+        fun filter(dst: MutableList<AccessPairWithExclusion<IAP, FAP>>, statement: CommonInst, finalPattern: IAP)
+        fun filter(dst: MutableList<AccessPairWithExclusion<IAP, FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
     }
 
     abstract fun createApStorage(): ApStorage<IAP, FAP>
@@ -35,15 +40,17 @@ abstract class CommonF2FSet<IAP, FAP>(
         val edgeStorage = storage.getOrCreate(finalAp.base).getOrCreate(initialAp.base)
 
         val final = AccessWithExclusion(getFinalAccess(finalAp), finalAp.exclusions)
-        val addedAccessWithExclusion = edgeStorage.add(statement, getInitialAccess(initialAp), final)
+        val fact = AccessPairWithExclusion(getInitialAccess(initialAp), final)
+
+        val addedAccessWithExclusion = edgeStorage.add(statement, fact)
             ?: return null
 
-        if (addedAccessWithExclusion === final) return initialAp to finalAp
+        if (addedAccessWithExclusion === fact) return initialAp to finalAp
 
-        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithExclusion.exclusion)
+        val newInitialAp = createInitial(initialAp.base, addedAccessWithExclusion.initial, addedAccessWithExclusion.final.exclusion)
 
         val newExitAp = createFinal(
-            finalAp.base, addedAccessWithExclusion.access, addedAccessWithExclusion.exclusion
+            finalAp.base, addedAccessWithExclusion.final.access, addedAccessWithExclusion.final.exclusion
         )
 
         return newInitialAp to newExitAp
@@ -85,8 +92,8 @@ abstract class CommonF2FSet<IAP, FAP>(
                 collection,
                 { storage.filter(it, statement, pattern) },
                 {
-                    val initialAp = createInitial(initialBase, it.first, it.second.exclusion)
-                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.exclusion)
+                    val initialAp = createInitial(initialBase, it.initial, it.final.exclusion)
+                    val finalAp = createFinal(finalFactBase, it.final.access, it.final.exclusion)
                     initialAp to finalAp
                 }
             )
@@ -108,7 +115,7 @@ abstract class CommonF2FSet<IAP, FAP>(
         collectToListWithPostProcess(
             collection,
             { factStorage.filter(it, statement, getInitialAccess(initialAp), getInitialAccess(finalFactPattern)) },
-            { createFinal(finalFactBase, it.access, it.exclusion) }
+            { createFinal(finalFactBase, it.final.access, it.final.exclusion) }
         )
     }
 
