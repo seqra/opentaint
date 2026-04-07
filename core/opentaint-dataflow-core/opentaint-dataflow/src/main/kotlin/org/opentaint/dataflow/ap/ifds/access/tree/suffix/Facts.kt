@@ -102,6 +102,36 @@ abstract class TreeSuffixBaseFact<T : Any>(
 
         return accessorIds.mapTo(hashSetOf()) { it.accessor }
     }
+
+    override fun toString(): String = buildString {
+        val prefix = "$base${access ?: ""}"
+        suffix.print(this, prefix, suffix = "/$exclusions")
+        if (this[lastIndex] == '\n') {
+            this.deleteCharAt(lastIndex)
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as TreeSuffixBaseFact<*>
+
+        if (base != other.base) return false
+        if (access != other.access) return false
+        if (suffix != other.suffix) return false
+        if (exclusions != other.exclusions) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = base.hashCode()
+        result = 31 * result + (access?.hashCode() ?: 0)
+        result = 31 * result + suffix.hashCode()
+        result = 31 * result + exclusions.hashCode()
+        return result
+    }
 }
 
 class TreeSuffixInitialFact(
