@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactNDEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.ZeroEdgeSummarySubscription
-import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 
 abstract class CommonZeroEdgeSubBuilder<FAP: Any>(
@@ -17,6 +16,8 @@ abstract class CommonZeroEdgeSubBuilder<FAP: Any>(
 
     fun setBase(base: AccessPathBase) = this.also { this.base = base }
     fun setNode(ap: FAP) = this.also { this.ap = ap }
+
+    fun node(): FAP = ap!!
 }
 
 abstract class CommonFactEdgeSubBuilder<FAP: Any>(

@@ -1,64 +1,71 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
-import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
-import java.util.IdentityHashMap
-import java.util.concurrent.ConcurrentHashMap
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.common.CommonSeReqStorage
 
 class SideEffectRequirementTreeApStorage(
-    val apManager: TreeApManager
-) : SideEffectRequirementApStorage {
-    private val based = ConcurrentHashMap<AccessPathBase, SideEffectRequirementStorage>()
+    override val apManager: TreeApManager
+) : CommonSeReqStorage<AccessPath.AccessNode?, AccessTree.AccessNode>(),
+    TreeInitialApAccess, TreeFinalApAccess {
+    override fun createStorage(): Storage<AccessPath.AccessNode?, AccessTree.AccessNode> =
+        TreeStorage(apManager)
 
-    override fun add(requirements: List<InitialFactAp>): List<InitialFactAp> {
-        val addedNodes = IdentityHashMap<SideEffectRequirementStorage, Unit>()
-        val modifiedStorageNodes = mutableListOf<SideEffectRequirementStorage>()
+    class TreeStorage(
+        val manager: TreeApManager
+    ) : Storage<AccessPath.AccessNode?, AccessTree.AccessNode> {
+        val nodeStorage = SideEffectRequirementStorage(manager)
 
-        for (requirement in requirements) {
-            requirement as AccessPath
+        private var modifiedNodes: MutableList<SideEffectRequirementStorage>? = null
 
-            val baseRequirements = based.computeIfAbsent(requirement.base) {
-                SideEffectRequirementStorage(apManager)
-            }
-
-            val node = baseRequirements.mergeAdd(requirement) ?: continue
-
-            if (addedNodes.put(node, Unit) == null) {
-                modifiedStorageNodes.add(node)
-            }
+        override fun add(
+            requirement: AccessPath.AccessNode?,
+            exclusionSet: ExclusionSet
+        ): Boolean {
+            val element = SideEffectRequirementStorage.Element(requirement, exclusionSet)
+            val modified = nodeStorage.mergeAdd(element) ?: return false
+            val modifiedList = modifiedNodes
+                ?: mutableListOf<SideEffectRequirementStorage>().also { modifiedNodes = it }
+            modifiedList.add(modified)
+            return true
         }
 
-        return modifiedStorageNodes.mapNotNull { it.requirement }
-    }
+        override fun getAndResetDelta(
+            delta: MutableList<Pair<AccessPath.AccessNode?, ExclusionSet>>
+        ) {
+            val modified = modifiedNodes?.also { modifiedNodes = null } ?: return
+            modified.mapNotNullTo(delta) { n -> n.requirement?.let { it.access to it.exclusions } }
+        }
 
-    override fun filterTo(dst: MutableList<InitialFactAp>, fact: FinalFactAp) {
-        val storage = based[fact.base] ?: return
-        dst.addAll(storage.findRequirements((fact as AccessTree).access))
-    }
-
-    override fun collectAllRequirementsTo(dst: MutableList<InitialFactAp>) {
-        based.values.forEach { storage ->
-            storage.allNodes().mapNotNullTo(dst) { it.requirement }
+        override fun find(
+            dst: MutableList<Pair<AccessPath.AccessNode?, ExclusionSet>>,
+            pattern: AccessTree.AccessNode?
+        ) {
+            val elements = if (pattern != null) {
+                nodeStorage.findRequirements(pattern)
+            } else {
+                nodeStorage.allNodes().mapNotNull { it.requirement }
+            }
+            elements.mapTo(dst) { it.access to it.exclusions }
         }
     }
 }
 
-private class SideEffectRequirementStorage(
+class SideEffectRequirementStorage(
     val apManager: TreeApManager,
 ) : AccessBasedStorage<SideEffectRequirementStorage>() {
-    var requirement: AccessPath? = null
+    data class Element(val access: AccessPath.AccessNode?, val exclusions: ExclusionSet)
+
+    var requirement: Element? = null
 
     override fun createStorage() = SideEffectRequirementStorage(apManager)
 
-    fun mergeAdd(requirement: AccessPath): SideEffectRequirementStorage? =
+    fun mergeAdd(requirement: Element): SideEffectRequirementStorage? =
         getOrCreateNode(requirement.access).mergeAddCurrent(requirement)
 
-    fun findRequirements(access: AccessTree.AccessNode): Sequence<AccessPath> =
+    fun findRequirements(access: AccessTree.AccessNode): Sequence<Element> =
         filterContains(access).mapNotNull { it.requirement }
 
-    private fun mergeAddCurrent(requirement: AccessPath): SideEffectRequirementStorage? {
+    private fun mergeAddCurrent(requirement: Element): SideEffectRequirementStorage? {
         val current = this.requirement
         if (current == null) {
             this.requirement = requirement
@@ -70,10 +77,7 @@ private class SideEffectRequirementStorage(
 
         if (mergedExclusion === currentExclusion) return null
 
-        val mergedAp = with(requirement) {
-            AccessPath(apManager, base, access, mergedExclusion)
-        }
-
+        val mergedAp = requirement.copy(exclusions = mergedExclusion)
         this.requirement = mergedAp
         return this
     }

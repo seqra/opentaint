@@ -280,7 +280,7 @@ private class AccessTreeIndexImpl {
     }
 }
 
-private class SummaryEdgeFactTreeSubscriptionStorage(
+class SummaryEdgeFactTreeSubscriptionStorage(
     val apManager: TreeApManager,
 ) : CommonAPSub.Z2FSubStorage<AccessPath.AccessNode?, AccessTree.AccessNode> {
     private var callerPathEdgeFactAp: AccessTree.AccessNode? = null
@@ -309,7 +309,7 @@ private class SummaryEdgeFactTreeSubscriptionStorage(
     }
 }
 
-private class ZeroEdgeSubBuilder(
+class ZeroEdgeSubBuilder(
     override val apManager: TreeApManager,
 ) : CommonZeroEdgeSubBuilder<AccessTree.AccessNode>(), TreeFinalApAccess
 

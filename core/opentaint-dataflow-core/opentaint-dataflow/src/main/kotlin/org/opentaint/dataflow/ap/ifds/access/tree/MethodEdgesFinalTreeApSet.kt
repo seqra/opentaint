@@ -15,7 +15,7 @@ class MethodEdgesFinalTreeApSet(
     override fun createApStorage(): ApStorage<AccessTreeNode> =
         ZeroInitialFactEdges(maxInstIdx, languageManager, apManager)
 
-    private class ZeroInitialFactEdges(
+    class ZeroInitialFactEdges(
         maxInstIdx: Int,
         private val languageManager: LanguageManager,
         manager: TreeApManager,
