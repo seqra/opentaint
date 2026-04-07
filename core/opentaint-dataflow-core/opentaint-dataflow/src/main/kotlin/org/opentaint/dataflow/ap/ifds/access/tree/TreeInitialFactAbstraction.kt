@@ -17,6 +17,7 @@ import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companio
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromReversedAp
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
+import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
@@ -32,12 +33,12 @@ class TreeInitialFactAbstraction(
     ): List<Pair<InitialFactAp, FinalFactAp>> {
         factAp as AccessTree
 
-        // note: we can ignore fact exclusions here
-        val facts = initialFacts.getOrPut(factAp.base)
-        val addedFact = facts.addInitialFact(factAp.access, interner) ?: return emptyList()
-
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
-        addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts, typeChecker)
+        collectToListWithPostProcess(
+            abstractFacts,
+            { addAbstractedInitialFact(it, factAp.base, factAp.access, typeChecker) },
+            { it.createAp(factAp.base) }
+        )
         return abstractFacts
     }
 
@@ -47,46 +48,83 @@ class TreeInitialFactAbstraction(
     ): List<Pair<InitialFactAp, FinalFactAp>> {
         factAp as AccessPath
 
-        val facts = initialFacts.getOrPut(factAp.base)
-
-        val excludedAccessors = IntOpenHashSet()
-        when (val ex = factAp.exclusions) {
-            is ExclusionSet.Concrete -> ex.set.forEach {
-                with(apManager) { excludedAccessors.add(it.idx) }
-            }
-            Empty -> {
-                // do nothing
-            }
-            ExclusionSet.Universe -> error("Unexpected universe exclusion")
-        }
-
-        if (!facts.addAnalyzedInitialFact(factAp.access, excludedAccessors)) return emptyList()
-
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
-        addAbstractInitialFact(facts, factAp.base, facts.allAddedFacts(), abstractFacts, typeChecker)
+        collectToListWithPostProcess(
+            abstractFacts,
+            { registerNewInitialFact(it, factAp.base, factAp.access, factAp.exclusions, typeChecker) },
+            { it.createAp(factAp.base) }
+        )
         return abstractFacts
     }
 
-    private fun addAbstractInitialFact(
+    fun addAbstractedInitialFact(
+        dst: MutableList<Pair<AccessPath.AccessNode?, ReversedApNode?>>,
+        base: AccessPathBase,
+        access: AccessTreeNode,
+        typeChecker: FactTypeChecker
+    ) {
+        // note: we can ignore fact exclusions here
+        val facts = initialFacts.getOrPut(base)
+        val addedFact = facts.addInitialFact(access, interner)
+            ?: return
+
+        addAbstractInitialFactImpl(facts, addedFact, dst, typeChecker)
+    }
+
+    fun registerNewInitialFact(
+        dst: MutableList<Pair<AccessPath.AccessNode?, ReversedApNode?>>,
+        base: AccessPathBase,
+        access: AccessPath.AccessNode?,
+        exclusionSet: ExclusionSet,
+        typeChecker: FactTypeChecker
+    ) {
+        val facts = initialFacts.getOrPut(base)
+
+        val excludedAccessors = excludedAccessors(exclusionSet)
+
+        if (!facts.addAnalyzedInitialFact(access, excludedAccessors)) return
+
+        addAbstractInitialFactImpl(facts, facts.allAddedFacts(), dst, typeChecker)
+    }
+
+    private fun excludedAccessors(ex: ExclusionSet): IntOpenHashSet {
+        val excludedAccessors = IntOpenHashSet()
+        when (ex) {
+            is ExclusionSet.Concrete -> ex.set.forEach {
+                with(apManager) { excludedAccessors.add(it.idx) }
+            }
+
+            Empty -> {
+                // do nothing
+            }
+
+            ExclusionSet.Universe -> error("Unexpected universe exclusion")
+        }
+        return excludedAccessors
+    }
+
+    private fun Pair<AccessPath.AccessNode?, ReversedApNode?>.createAp(base: AccessPathBase): Pair<InitialFactAp, FinalFactAp> {
+        val (initialAbstractAccessNode, abstractAccess) = this
+        val initialAbstractAp = AccessPath(apManager, base, initialAbstractAccessNode, Empty)
+
+        val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
+        val ap = AccessTree(apManager, base, apAccess, Empty)
+        return initialAbstractAp to ap
+    }
+
+    private fun addAbstractInitialFactImpl(
         facts: MethodSameBaseInitialFact,
-        concreteFactBase: AccessPathBase,
         initialConcreteFact: AccessTreeNode,
-        abstractFacts: MutableList<Pair<InitialFactAp, FinalFactAp>>,
+        abstractFacts: MutableList<Pair<AccessPath.AccessNode?, ReversedApNode?>>,
         typeChecker: FactTypeChecker
     ) {
         var concreteFactAccess = initialConcreteFact
         while (true) {
-
             val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
             abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests) { abstractAccess ->
                 val initialAbstractAccessNode = apManager.createNodeFromReversedAp(abstractAccess)
-                val initialAbstractAp = AccessPath(apManager, concreteFactBase, initialAbstractAccessNode, Empty)
-
-                val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
-                val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
-
                 facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
-                abstractFacts.add(initialAbstractAp to ap)
+                abstractFacts.add(initialAbstractAccessNode to abstractAccess)
             }
 
             concreteFactAccess = facts.unrollAnyAccessors(unrollRequests, typeChecker)
