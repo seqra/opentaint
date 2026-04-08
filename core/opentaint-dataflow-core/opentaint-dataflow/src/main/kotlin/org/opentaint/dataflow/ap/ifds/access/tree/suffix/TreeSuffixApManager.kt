@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree.suffix
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -73,9 +74,8 @@ class TreeSuffixApManager(
     override fun finalFactList(): FinalFactList =
         FactList(this)
 
-    override fun mostAbstractInitialAp(base: AccessPathBase): InitialFactAp = TreeSuffixInitialFact(
-        this, base, access = null, suffix = treeManager.abstractNode, ExclusionSet.Empty
-    )
+    override fun mostAbstractInitialAp(base: AccessPathBase): InitialFactAp =
+        TreeSuffixInitialFact(this, base, access = null, suffix = treeManager.abstractNode, ExclusionSet.Empty)
 
     override fun mostAbstractFinalAp(base: AccessPathBase): FinalFactAp = TreeSuffixFinalFact(
         this, base, access = null, suffix = treeManager.abstractNode, ExclusionSet.Empty
@@ -98,9 +98,9 @@ class TreeSuffixApManager(
     override fun createFinalInitialAp(
         base: AccessPathBase,
         exclusions: ExclusionSet
-    ): InitialFactAp = TreeSuffixInitialFact(
-        this, base, access = null, suffix = treeManager.finalNode, exclusions
-    )
+    ): InitialFactAp =
+        TreeSuffixInitialFact(this, base, access = null, suffix = treeManager.abstractNode, exclusions)
+            .prependAccessor(FinalAccessor)
 
     override fun createSerializer(context: SummarySerializationContext): ApSerializer =
         Serializer(context, this)

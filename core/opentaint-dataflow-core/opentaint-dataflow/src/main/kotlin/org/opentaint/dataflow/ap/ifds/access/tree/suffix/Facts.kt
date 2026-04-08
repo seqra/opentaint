@@ -162,7 +162,8 @@ class TreeSuffixInitialFact(
     }
 
     override fun compatibilityFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactCompatibilityFilter {
-        TODO("Not yet implemented")
+//        TODO("Not yet implemented")
+        return FactTypeChecker.AlwaysCompatibleFilter
     }
 }
 
@@ -196,12 +197,12 @@ class TreeSuffixFinalFact(
         TODO("Not yet implemented")
     }
 
-    override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
+    override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp {
 //        TODO("Not yet implemented")
         return this
     }
 
-    override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp? {
+    override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp {
 //        TODO("Not yet implemented")
         return this
     }

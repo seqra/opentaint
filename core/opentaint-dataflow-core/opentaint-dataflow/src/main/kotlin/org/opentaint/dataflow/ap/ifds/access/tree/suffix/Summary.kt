@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.tree.suffix
 
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
@@ -9,6 +10,12 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.
 import org.opentaint.dataflow.ap.ifds.access.common.CommonNDF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonSeReqStorage
 import org.opentaint.dataflow.ap.ifds.access.common.CommonZ2FSummary
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessBasedStorage
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
+import org.opentaint.dataflow.ap.ifds.access.tree.MergingTreeSummaryStorage
+import org.opentaint.dataflow.ap.ifds.access.tree.MethodEdgesInitialToFinalTreeApSet.EdgeNonUniverseExclusionMergingStorage
+import org.opentaint.dataflow.ap.ifds.access.tree.MethodFinalTreeApSummariesStorage.MethodZeroToFactSummaryEdgeStorage
+import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class FinalSummaries(
@@ -53,33 +60,75 @@ class F2FSummaries(
     TreeSuffixInitialFactAccess,
     TreeSuffixFinalFactAccess {
 
-    override fun createStorage(): Storage<FactAccess, FactAccess> = F2FSummaryStorage()
+    override fun createStorage(): Storage<FactAccess, FactAccess> = F2FSummaryStorage(apManager)
 
-    private class F2FSummaryStorage : Storage<FactAccess, FactAccess> {
+    private class F2FSummaryStorage(
+        val manager: TreeSuffixApManager
+    ) : Storage<FactAccess, FactAccess> {
         override fun add(
             edges: List<StorageEdge<FactAccess, FactAccess>>,
             added: MutableList<F2FBBuilder<FactAccess, FactAccess>>
         ) {
-            TODO("Not yet implemented")
+            edges.forEach {
+                val normalizedEdge = EdgeNormalization.normalizeFacts(it.initial, it.final)
+                addNormalizedEdge(normalizedEdge, it.exclusion, added)
+            }
+        }
+
+        private val storage = IAFAS(manager)
+
+        private fun addNormalizedEdge(
+            edge: EdgeNormalization.NormalizedFact,
+            exclusion: ExclusionSet,
+            added: MutableList<F2FBBuilder<FactAccess, FactAccess>>
+        ) {
+            val fas = storage.getOrCreateNode(edge.initialAccess).fas
+            val suffix = fas.getOrCreateNode(edge.finalAccess).suffix
+
+            // todo: SAVE exclusion
+
+            if (!suffix.add(edge.suffix)) return
+
+            val delta = suffix.getAndResetDelta() ?: return
+
+            added += F2FSummaryBuilder(manager)
+                .setExclusion(exclusion)
+                .setInitialAp(FactAccess(edge.initialAccess, delta))
+                .setExitAp(FactAccess(edge.finalAccess, delta))
         }
 
         override fun collectSummariesTo(
             dst: MutableList<F2FBBuilder<FactAccess, FactAccess>>,
             initialFactPatter: FactAccess?
         ) {
-            TODO("Not yet implemented")
+            return
+//            TODO("Not yet implemented")
+        }
+
+
+        class IAFAS(
+            val manager: TreeSuffixApManager,
+        ) : AccessBasedStorage<IAFAS>() {
+            val fas = FAS(manager)
+
+            override fun createStorage(): IAFAS = IAFAS(manager)
+        }
+
+        class FAS(
+            val manager: TreeSuffixApManager,
+        ) : AccessBasedStorage<FAS>() {
+            val suffix = MergingTreeSummaryStorage(manager.treeManager)
+
+            override fun createStorage(): FAS = FAS(manager)
         }
     }
 
-    private class F2FSummaryBuilder : F2FBBuilder<FactAccess, FactAccess>(),
+    private class F2FSummaryBuilder(override val apManager: TreeSuffixApManager) :
+        F2FBBuilder<FactAccess, FactAccess>(),
         TreeSuffixInitialFactAccess,
         TreeSuffixFinalFactAccess {
-        override val apManager: TreeSuffixApManager
-            get() = TODO("Not yet implemented")
 
-        override fun nonNullIAP(iap: FactAccess?): FactAccess {
-            TODO("Not yet implemented")
-        }
+        override fun nonNullIAP(iap: FactAccess?): FactAccess = iap!!
     }
 }
 
@@ -102,10 +151,9 @@ class NdF2FSummaries(
         }
     }
 
-    private class NdF2FSummaryBuilder : NDF2FBBuilder<FactAccess>(), TreeSuffixFinalFactAccess {
+    private class NdF2FSummaryBuilder(
         override val apManager: TreeSuffixApManager
-            get() = TODO("Not yet implemented")
-    }
+    ) : NDF2FBBuilder<FactAccess>(), TreeSuffixFinalFactAccess
 }
 
 class SeReqSummaries(
@@ -200,7 +248,5 @@ private class FactSETreeSuffixApBuilder(
 ) : FactSEBuilder<FactAccess>(),
     TreeSuffixInitialFactAccess,
     TreeSuffixFinalFactAccess {
-    override fun nonNullIAP(iap: FactAccess?): FactAccess {
-        TODO("Not yet implemented")
-    }
+    override fun nonNullIAP(iap: FactAccess?): FactAccess = iap!!
 }
