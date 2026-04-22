@@ -47,7 +47,6 @@ import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.ir.impl.opentaintIrDb
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import java.nio.file.Path
-import kotlin.collections.orEmpty
 import kotlin.io.path.Path
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

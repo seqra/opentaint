@@ -71,7 +71,7 @@ class JIRIntraProcAliasAnalysis(
             body = { computeMay(it, localVariableReachability) },
             onAnalysisCancelled = {
                 logger.error {
-                    "Alias analysis for ${entryPoint.location.method} exceed ${params.aliasAnalysisTimeLimit}"
+                    "May alias analysis for ${entryPoint.location.method} exceed ${params.aliasAnalysisTimeLimit}"
                 }
 
                 JIRLocalAliasAnalysis.MethodAliasInfo(
@@ -121,7 +121,7 @@ class JIRIntraProcAliasAnalysis(
             body = { computeMust(it, localVariableReachability) },
             onAnalysisCancelled = {
                 logger.error {
-                    "Alias analysis for ${entryPoint.location.method} exceed ${params.aliasAnalysisTimeLimit}"
+                    "Must alias analysis for ${entryPoint.location.method} exceed ${params.aliasAnalysisTimeLimit}"
                 }
 
                 JIRLocalAliasAnalysis.MethodMustAliasInfo(
