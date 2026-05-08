@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var agentRulesPathCmd = &cobra.Command{
+var devRulesPathCmd = &cobra.Command{
 	Use:   "rules-path",
 	Short: "Print the path to the builtin rules directory (downloads on demand)",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -37,5 +37,5 @@ var agentRulesPathCmd = &cobra.Command{
 }
 
 func init() {
-	agentCmd.AddCommand(agentRulesPathCmd)
+	devCmd.AddCommand(devRulesPathCmd)
 }

@@ -112,41 +112,45 @@ Use --project-model to scan a pre-compiled project model instead of compiling fr
 
 func init() {
 	rootCmd.AddCommand(scanCmd)
+	addScanFlags(scanCmd)
+	addRuleIDFlag(scanCmd)
+}
 
-	scanCmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Timeout for analysis")
-	_ = viper.BindPFlag("scan.timeout", scanCmd.Flags().Lookup("timeout"))
+// addRuleIDFlag registers the --rule-id flag. Split out from addScanFlags so
+// that `dev debug-fact-reachability` can omit it (it takes the rule ID
+// positionally and supports only one rule at a time).
+func addRuleIDFlag(cmd *cobra.Command) {
+	cmd.Flags().StringArrayVar(&RuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
+}
 
-	scanCmd.Flags().StringArrayVar(&Ruleset, "ruleset", []string{"builtin"}, "YAML rules file, directory of YAML rules files ending in .yml or .yaml, or `builtin` to scan with built-in rules")
-	_ = viper.BindPFlag("scan.ruleset", scanCmd.Flags().Lookup("ruleset"))
+func addScanFlags(cmd *cobra.Command) {
+	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Timeout for analysis")
+	_ = viper.BindPFlag("scan.timeout", cmd.Flags().Lookup("timeout"))
 
-	scanCmd.Flags().BoolVar(&SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep compatible ruleId")
-	scanCmd.Flags().StringVarP(&SarifReportPath, "output", "o", "", "Path to the SARIF-report output file")
+	cmd.Flags().StringArrayVar(&Ruleset, "ruleset", []string{"builtin"}, "YAML rules file, directory of YAML rules files ending in .yml or .yaml, or `builtin` to scan with built-in rules")
+	_ = viper.BindPFlag("scan.ruleset", cmd.Flags().Lookup("ruleset"))
 
-	scanCmd.Flags().StringArrayVar(&Severity, "severity", []string{"warning", "error"}, "Report findings only from rules matching the supplied severity level. By default only warning and error rules are run (note, warning, error)")
-	scanCmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 1024m, 8G, 81920k, 83886080)")
-	_ = viper.BindPFlag("scan.max_memory", scanCmd.Flags().Lookup("max-memory"))
-	scanCmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows to include in the report (0 = unlimited)")
-	_ = viper.BindPFlag("scan.code_flow_limit", scanCmd.Flags().Lookup("code-flow-limit"))
-	scanCmd.Flags().BoolVar(&DryRunScan, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
-	scanCmd.Flags().BoolVar(&Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
-	scanCmd.Flags().StringVar(&ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
-	scanCmd.Flags().StringVar(&ScanLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
-	scanCmd.Flags().StringArrayVar(&RuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
+	cmd.Flags().BoolVar(&SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep compatible ruleId")
+	cmd.Flags().StringVarP(&SarifReportPath, "output", "o", "", "Path to the SARIF-report output file")
 
-	scanCmd.Flags().StringArrayVar(&ApproximationsConfig, "approximations-config", nil, "YAML passThrough approximations config (OVERRIDE mode, repeatable)")
-	_ = scanCmd.Flags().MarkHidden("approximations-config")
+	cmd.Flags().StringArrayVar(&Severity, "severity", []string{"warning", "error"}, "Report findings only from rules matching the supplied severity level. By default only warning and error rules are run (note, warning, error)")
+	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 1024m, 8G, 81920k, 83886080)")
+	_ = viper.BindPFlag("scan.max_memory", cmd.Flags().Lookup("max-memory"))
+	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows to include in the report (0 = unlimited)")
+	_ = viper.BindPFlag("scan.code_flow_limit", cmd.Flags().Lookup("code-flow-limit"))
+	cmd.Flags().BoolVar(&DryRunScan, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
+	cmd.Flags().BoolVar(&Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
+	cmd.Flags().StringVar(&ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
+	cmd.Flags().StringVar(&ScanLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 
-	scanCmd.Flags().StringArrayVar(&DataflowApproximations, "dataflow-approximations", nil, "Directory of compiled approximation class files (repeatable)")
-	_ = scanCmd.Flags().MarkHidden("dataflow-approximations")
+	cmd.Flags().StringArrayVar(&ApproximationsConfig, "approximations-config", nil, "YAML passThrough approximations config (OVERRIDE mode, repeatable)")
+	_ = cmd.Flags().MarkHidden("approximations-config")
 
-	scanCmd.Flags().BoolVar(&TrackExternalMethods, "track-external-methods", false, "Write external-methods-{without,with}-rules.yaml next to the SARIF report")
-	_ = scanCmd.Flags().MarkHidden("track-external-methods")
+	cmd.Flags().StringArrayVar(&DataflowApproximations, "dataflow-approximations", nil, "Directory of compiled approximation class files (repeatable)")
+	_ = cmd.Flags().MarkHidden("dataflow-approximations")
 
-	scanCmd.Flags().BoolVar(&DebugFactReachabilitySarif, "debug-fact-reachability-sarif", false, "Generate SARIF with fact reachability info (debug; use with a single rule only)")
-	_ = scanCmd.Flags().MarkHidden("debug-fact-reachability-sarif")
-
-	scanCmd.Flags().StringVar(&DebugRunAnalysisOnSelectedEntryPoints, "debug-run-analysis-on-selected-entry-points", "", "Run analysis on selected entry points: '*' for all methods or method FQN like com.example.Class#method")
-	_ = scanCmd.Flags().MarkHidden("debug-run-analysis-on-selected-entry-points")
+	cmd.Flags().BoolVar(&TrackExternalMethods, "track-external-methods", false, "Write external-methods-{without,with}-rules.yaml next to the SARIF report")
+	_ = cmd.Flags().MarkHidden("track-external-methods")
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.

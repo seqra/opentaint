@@ -14,7 +14,7 @@ import (
 
 var initTestProjectDeps []string
 
-var agentInitTestProjectCmd = &cobra.Command{
+var devInitTestProjectCmd = &cobra.Command{
 	Use:   "init-test-project <output-dir>",
 	Short: "Bootstrap a rule test project with build.gradle.kts and test utility JAR",
 	Long: `Creates a minimal Gradle project structure for testing OpenTaint rules.
@@ -66,8 +66,8 @@ Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 }
 
 func init() {
-	agentCmd.AddCommand(agentInitTestProjectCmd)
-	agentInitTestProjectCmd.Flags().StringArrayVar(&initTestProjectDeps, "dependency", nil,
+	devCmd.AddCommand(devInitTestProjectCmd)
+	devInitTestProjectCmd.Flags().StringArrayVar(&initTestProjectDeps, "dependency", nil,
 		"Maven dependency coordinates to add (e.g., 'javax.servlet:javax.servlet-api:4.0.1')")
 }
 

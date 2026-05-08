@@ -21,7 +21,7 @@ var (
 	testRulesRuleID    []string
 )
 
-var agentTestRulesCmd = &cobra.Command{
+var devTestRulesCmd = &cobra.Command{
 	Use:   "test-rules <project-model>",
 	Short: "Run rule tests against annotated test samples",
 	Long: `Run rule tests against annotated test samples in the given project model.
@@ -143,11 +143,11 @@ Exit codes:
 }
 
 func init() {
-	agentCmd.AddCommand(agentTestRulesCmd)
+	devCmd.AddCommand(devTestRulesCmd)
 
-	agentTestRulesCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Additional ruleset path (repeatable)")
-	agentTestRulesCmd.Flags().StringVarP(&testRulesOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
-	agentTestRulesCmd.Flags().DurationVar(&testRulesTimeout, "timeout", 600*time.Second, "Timeout for analysis")
-	agentTestRulesCmd.Flags().StringVar(&testRulesMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
-	agentTestRulesCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
+	devTestRulesCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Additional ruleset path (repeatable)")
+	devTestRulesCmd.Flags().StringVarP(&testRulesOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
+	devTestRulesCmd.Flags().DurationVar(&testRulesTimeout, "timeout", 600*time.Second, "Timeout for analysis")
+	devTestRulesCmd.Flags().StringVar(&testRulesMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
+	devTestRulesCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
 }
