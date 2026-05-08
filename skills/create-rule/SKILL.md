@@ -1,6 +1,15 @@
+---
+name: create-rule
+description: Author OpenTaint YAML pattern rules for a vulnerability class on JVM code. Use when an uncovered vulnerability needs detection, or when an existing rule needs a false-positive or false-negative fix.
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "0.1"
+---
+
 # Skill: Create Rule
 
-Create pattern rules for detecting specific vulnerability classes.
+Create pattern rules for detecting specific vulnerability classes
 
 ## Prerequisites
 
@@ -11,11 +20,10 @@ Create pattern rules for detecting specific vulnerability classes.
 
 ### 1. Check existing coverage
 
-`opentaint agent rules-path` prints the absolute path to the built-in rules directory
-(downloading them on first call). Use it to browse built-in patterns.
+`opentaint dev rules-path` prints the absolute path to the built-in rules directory (downloading them on first call). Use it to browse built-in patterns.
 
 ```bash
-RULES_DIR=$(opentaint agent rules-path)
+RULES_DIR=$(opentaint dev rules-path)
 ls $RULES_DIR/java/lib/generic/
 ls $RULES_DIR/java/lib/spring/
 ls $RULES_DIR/java/security/
@@ -26,7 +34,7 @@ Read existing rules to understand patterns already covered.
 ### 2. Create rule directory structure
 
 ```
-agent-rules/
+.opentaint/rules/
   java/
     lib/
       my-source.yaml
@@ -37,7 +45,7 @@ agent-rules/
 
 ### 3. Create library rules
 
-**Source rule** (`agent-rules/java/lib/my-source.yaml`):
+**Source rule** (`.opentaint/rules/java/lib/my-source.yaml`):
 
 ```yaml
 rules:
@@ -59,7 +67,7 @@ rules:
                     - pattern: doPost
 ```
 
-**Sink rule** (`agent-rules/java/lib/my-sink.yaml`):
+**Sink rule** (`.opentaint/rules/java/lib/my-sink.yaml`):
 
 ```yaml
 rules:
@@ -113,25 +121,22 @@ refs:
 
 ### 6. Run analysis with specific rules
 
-The `--rule-id` flag requires the **full rule ID** in the format `<ruleSetRelativePath>:<shortId>`.
-The `ruleSetRelativePath` is the path to the YAML file relative to its ruleset root, **including** the `.yaml` extension.
+The `--rule-id` flag requires the **full rule ID** in the format `<ruleSetRelativePath>.yaml:<id>`. The `ruleSetRelativePath` is the path to the YAML file relative to its ruleset root, without the `.yaml` extension (it is written explicitly in the format).
 
-Library rules referenced via join-mode `refs` are NOT auto-included by `--rule-id` — the
-filter drops every rule whose full ID is not listed. Either list every library rule
-explicitly, or omit `--rule-id` entirely to keep all loaded rules active.
+Library rules referenced via join-mode `refs` are NOT auto-included by `--rule-id` — the filter drops every rule whose full ID is not listed. Either list every library rule explicitly, or omit `--rule-id` entirely to keep all loaded rules active.
 
 ```bash
 # Full rule ID = "java/security/my-vuln.yaml" (relative path with .yaml) + ":" + "my-vulnerability" (id from YAML)
-opentaint scan --project-model ./opentaint-project \
-  -o ./results/report.sarif \
-  --ruleset builtin --ruleset ./agent-rules \
+opentaint scan --project-model .opentaint/project \
+  -o .opentaint/results/report.sarif \
+  --ruleset builtin --ruleset .opentaint/rules \
   --rule-id java/security/my-vuln.yaml:my-vulnerability
 ```
 
 To discover full rule IDs, read the rule YAML file:
 - The `id` field in the YAML gives the short ID
 - The file path relative to the ruleset root (with `.yaml` extension) gives the prefix
-- Combine as `<relativePath>:<id>`, e.g. `java/security/path-traversal.yaml:path-traversal`
+- Combine as `<relativePath>.yaml:<id>`, e.g. `java/security/path-traversal.yaml:path-traversal`
 
 ## Constraints
 

@@ -1,23 +1,32 @@
+---
+name: test-rule
+description: Verify an OpenTaint rule on annotated test samples, including multi-module Spring reproducers. Use whenever a rule has been written or edited before scanning real projects.
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "0.1"
+---
+
 # Skill: Test Rule
 
-Create test samples for a rule and verify it works correctly.
+Create test samples for a rule and verify it works correctly
 
 ## Prerequisites
 
 - `opentaint` CLI available
 - Rules created (create-rule skill)
-- Target project dependencies known
+- Target project dependencies — derive from `.opentaint/analysis-plan.md` (step 3 lists detected frameworks, DB libraries, and HTTP clients) or directly from the project's `build.gradle` / `pom.xml`
 
 ## Procedure
 
 ### 1. Bootstrap test project
 
+Start with a plain method-level project. Only switch to the Spring multi-module layout (see below) if the plain test returns `falseNegative`.
+
 ```bash
-opentaint agent init-test-project ./agent-test-project \
+opentaint dev init-test-project .opentaint/test-project \
   --dependency "javax.servlet:javax.servlet-api:4.0.1"
 ```
-
-Or manually create a Gradle project with the test utility JAR and required dependencies.
 
 ### 2. Create test samples
 
@@ -55,7 +64,7 @@ public class MyVulnTest {
 ### 3. Build test project
 
 ```bash
-opentaint compile ./agent-test-project -o ./agent-test-compiled
+opentaint compile .opentaint/test-project -o .opentaint/test-compiled
 ```
 
 ### 4. Run rule tests
@@ -63,14 +72,14 @@ opentaint compile ./agent-test-project -o ./agent-test-compiled
 **Always specify `-o`** so results are written to a known location:
 
 ```bash
-opentaint agent test-rules ./agent-test-compiled \
-  -o ./agent-test-results \
-  --ruleset builtin --ruleset ./agent-rules
+opentaint dev test-rules .opentaint/test-compiled \
+  -o .opentaint/test-results \
+  --ruleset builtin --ruleset .opentaint/rules
 ```
 
 ### 5. Interpret results
 
-Read `./agent-test-results/test-result.json`:
+Read `.opentaint/test-results/test-result.json`:
 
 - **success**: Test passed (positive triggered, negative didn't)
 - **falseNegative**: Positive sample did NOT trigger -> rule patterns too narrow
@@ -99,7 +108,7 @@ Consequence: the annotated method is only a marker for **which rule to run and t
 Use a multi-module Gradle build where every `spring-app-tests/<name>` directory is its own sub-project:
 
 ```
-agent-test-project/
+.opentaint/test-project/
 ├── settings.gradle.kts
 ├── build.gradle.kts
 └── spring-app-tests/
@@ -115,7 +124,7 @@ agent-test-project/
             └── SafeSink.java                // carries the single @NegativeRuleSample
 ```
 
-`settings.gradle.kts` should auto-discover every `spring-app-tests/*/build.gradle.kts` so adding a new case only requires a new directory. See `rules/test/settings.gradle.kts` for a reference implementation.
+`settings.gradle.kts` should auto-discover every `spring-app-tests/*/build.gradle.kts` so adding a new case only requires a new directory. See `rules/test/settings.gradle.kts` in the OpenTaint repo for a reference implementation.
 
 ### Required dependencies
 
@@ -130,10 +139,10 @@ Each Spring sub-project must pull in at least:
 Compile and test the multi-module project the same way as a regular test project:
 
 ```bash
-opentaint compile ./agent-test-project -o ./agent-test-compiled
-opentaint agent test-rules ./agent-test-compiled \
-  -o ./agent-test-results \
-  --ruleset builtin --ruleset ./agent-rules
+opentaint compile .opentaint/test-project -o .opentaint/test-compiled
+opentaint dev test-rules .opentaint/test-compiled \
+  -o .opentaint/test-results \
+  --ruleset builtin --ruleset .opentaint/rules
 ```
 
 Each `spring-app-tests/<name>` sub-project becomes an independent test set and appears as its own entry in `test-result.json`.
@@ -149,9 +158,7 @@ Each `spring-app-tests/<name>` sub-project becomes an independent test set and a
 - `value`: Path to rule YAML file, relative to ruleset root (e.g. `java/security/my-vuln.yaml`)
 - `id`: Short rule ID within that file (the `id` field from the YAML, e.g. `my-vulnerability`)
 
-**Note**: The annotation `id` field uses the **short** rule ID (as written in the YAML file).
-This is different from `--rule-id` in `opentaint scan`, which requires the **full** rule ID
-in the format `<ruleSetRelativePath>:<shortId>` (e.g. `java/security/my-vuln.yaml:my-vulnerability`).
+**Note**: The annotation `id` field uses the **short** rule ID (as written in the YAML file). This is different from `--rule-id` in `opentaint scan`, which requires the **full** rule ID in the format `<ruleSetRelativePath>:<shortId>` (e.g. `java/security/my-vuln.yaml:my-vulnerability`).
 
 ## Troubleshooting
 

@@ -1,3 +1,12 @@
+---
+name: analyze-findings
+description: Triage OpenTaint scan results — classify each finding as true positive, fixable false positive, or false negative — and pick the next action. Use when a SARIF report and external-methods YAMLs are available.
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "0.1"
+---
+
 # Skill: Analyze Findings
 
 Interpret SARIF findings and the external methods list to classify results and plan next actions.
@@ -27,21 +36,24 @@ Read the trace:
 - Source genuinely provides attacker-controlled data
 - Sink genuinely performs a dangerous operation
 - No sanitization between source and sink
-- **Action**: Generate PoC (generate-poc skill), document in `vulnerabilities.md`
+- **Action**: Generate PoC (generate-poc skill), document in `.opentaint/vulnerabilities.md`
+- **Report as**: rule ID, CWE (from `runs[0].tool.driver.rules[].properties.cwe`), severity, source/sink locations, brief trace
 
-**FALSE POSITIVE -- fixable via Rule**: Over-broad pattern matching.
+**FALSE POSITIVE — fixable via Rule**: Over-broad pattern matching.
 - Sink pattern too broad, sanitizer not recognized, source matches non-attacker data
 - **Action**: Add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or narrow `metavariable-regex`. Update tests. Re-run.
+- **Report as**: `suggested fix kind: pattern-not` or `pattern-sanitizers` (pick the most applicable)
 
-**FALSE POSITIVE -- fixable via Approximation** (non-preferred): Imprecise taint propagation through a library method.
+**FALSE POSITIVE — fixable via Approximation** (non-preferred): Imprecise taint propagation through a library method.
 - Library method modeled as propagating taint when it actually neutralizes the threat
 - **Action**: Override passThrough approximation. Re-run.
+- **Report as**: `suggested fix kind: passThrough override`
 
 ### 3. Process external methods (FN discovery)
 
 The `--track-external-methods` flag produces two files next to the SARIF report:
-- **`<sarif-dir>/external-methods-without-rules.yaml`** — Methods where the analyzer **killed dataflow facts** (no approximation model). **This is the only list worth approximating.** Every false negative caused by a missing library model is rooted here.
-- **`<sarif-dir>/external-methods-with-rules.yaml`** — Methods that already have an approximation model. Do NOT target these with custom approximations or YAML `passThrough` rules — you would OVERRIDE an existing model, which is usually a regression.
+- **`.opentaint/results/external-methods-without-rules.yaml`** — Methods where the analyzer **killed dataflow facts** (no approximation model). **This is the only list worth approximating.** Every false negative caused by a missing library model is rooted here.
+- **`.opentaint/results/external-methods-with-rules.yaml`** — Methods that already have an approximation model. Do NOT target these with custom approximations or YAML `passThrough` rules — you would OVERRIDE an existing model, which is usually a regression.
 
 Filenames and directory are fixed; the flag is a boolean.
 
@@ -50,9 +62,7 @@ Filenames and directory are fixed; the flag is a boolean.
 - Methods not listed in either file were never reached on a tainted path during the scan; approximating them is a no-op until that changes (different sources/rules/entry points).
 - Application-internal methods are never in these lists — approximations don't apply to them. Fix those via rule patterns, not approximations.
 
-Read `external-methods-without-rules.yaml`. **Prioritize generic data-flow propagators** over
-vulnerability-specific methods. The most common cause of killed facts is mundane collection/utility
-methods, not the vulnerability-relevant operations themselves.
+Read `external-methods-without-rules.yaml`. **Prioritize generic data-flow propagators** over vulnerability-specific methods. The most common cause of killed facts is mundane collection/utility methods, not the vulnerability-relevant operations themselves.
 
 **HIGH PRIORITY — Generic propagators** (affect ALL vulnerability types):
 - Collection operations: `List.add`/`List.get`, `Map.put`/`Map.get`, `Set.add`/`Set.iterator`

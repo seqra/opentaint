@@ -1,6 +1,15 @@
+---
+name: build-project
+description: Build a Java/Kotlin project for opentaint analysis and produce a project.yaml model. Use whenever an opentaint scan needs a project model and `opentaint compile` may need help.
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "0.1"
+---
+
 # Skill: Build Project
 
-Build a target project and produce a `project.yaml` model for analysis.
+Build a target project and produce a `project.yaml` model for analysis
 
 ## Prerequisites
 
@@ -21,7 +30,7 @@ Examine directory contents:
 ### 2a. Gradle/Maven projects (autobuilder)
 
 ```bash
-opentaint compile /path/to/project -o ./opentaint-project
+opentaint compile /path/to/project -o .opentaint/project
 ```
 
 ### 2b. If `opentaint compile` fails — manual build + `opentaint project`
@@ -39,13 +48,11 @@ mvn package -DskipTests
 
 2. **Create the project model with `opentaint project`**:
 
-> **CRITICAL**: Always specify `--package` to restrict analysis to project code only.
-> Without `--package`, the analyzer will attempt to analyze ALL classes including third-party
-> libraries, and will hang or run for hours.
+> **CRITICAL**: Always specify `--package` to restrict analysis to project code only. Without `--package`, the analyzer will attempt to analyze ALL classes including third-party libraries, and will hang or run for hours.
 
 ```bash
 opentaint project \
-  --output ./opentaint-project \
+  --output .opentaint/project \
   --source-root /path/to/src \
   --classpath /path/to/app.jar \
   --package com.example.app
@@ -55,7 +62,7 @@ For multi-module projects, use multiple `--classpath` and `--package` flags:
 
 ```bash
 opentaint project \
-  --output ./opentaint-project \
+  --output .opentaint/project \
   --source-root /path/to/project \
   --classpath /path/to/module1/build/libs/module1.jar \
   --classpath /path/to/module2/build/libs/module2.jar \
@@ -65,7 +72,7 @@ opentaint project \
 
 ### 3. Verify
 
-Check that `./opentaint-project/project.yaml` exists and is non-empty.
+Check that `.opentaint/project/project.yaml` exists and is non-empty.
 
 ## Troubleshooting
 

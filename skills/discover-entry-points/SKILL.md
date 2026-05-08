@@ -1,6 +1,15 @@
+---
+name: discover-entry-points
+description: Map the attack surface of a Java/Kotlin project — HTTP endpoints, message handlers, schedulers, CLI mains — into an OpenTaint analysis plan. Use when the user asks for "discovering attack surface" in context of opentaint.
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "0.1"
+---
+
 # Skill: Discover Entry Points
 
-Identify the attack surface of the target project by reading source code and project structure.
+Identify the attack surface of the target project by reading source code and project structure
 
 ## Prerequisites
 
@@ -36,10 +45,10 @@ Read `build.gradle`, `pom.xml`, or `project.yaml` for:
 
 ### 4. Record findings
 
-Document entry points, data sources, and relevant vulnerability classes in `opentaint-analysis-plan.md`.
+Document entry points, data sources, and relevant vulnerability classes in `.opentaint/analysis-plan.md`.
 
 ## Engine Notes
 
-- Spring projects: The analyzer auto-discovers Spring endpoints when `--project-kind spring-web` is set
+- Spring projects: The analyzer auto-discovers Spring endpoints automatically
 - Generic projects: The analyzer uses all public/protected methods from public project classes
-- Targeted analysis: Use `--debug-run-analysis-on-selected-entry-points "com.example.Class#method"` for focused testing
+- Targeted analysis: Use `opentaint dev debug-run-on-entry-points "com.example.Class#method"` for focused testing

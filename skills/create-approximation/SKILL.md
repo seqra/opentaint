@@ -1,25 +1,25 @@
+---
+name: create-approximation
+description: Write a Java code-based dataflow model for a library method whose taint propagation depends on lambdas, callbacks, or async chains. Use to fix false negatives that a YAML passThrough rule cannot express (see `create-yaml-config`).
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "0.1"
+---
+
 # Skill: Create Approximation
 
-Create code-based approximations for complex library methods involving lambdas, async, or callbacks.
+Create code-based approximations for complex library methods involving lambdas, async, or callbacks. Sources live under `.opentaint/approximations/src/`.
 
 ## When approximations are actually useful
 
-Approximations (both code-based and YAML) only change the analysis of **external methods
-with no existing model**. Concretely, this means the method the approximation targets must
-appear in `<sarif-dir>/external-methods-without-rules.yaml` produced by the previous scan
-(see `analyze-findings` skill). An entry there means the analyzer walked through that method
-and **killed the dataflow facts** because it had no rule — that's the exact gap you can fill.
+Approximations (both code-based and YAML) only change the analysis of **external methods with no existing model**. Concretely, this means the method the approximation targets must appear in `.opentaint/results/external-methods-without-rules.yaml` produced by the previous scan (see `analyze-findings` skill). An entry there means the analyzer walked through that method and **killed the dataflow facts** because it had no rule — that's the exact gap you can fill.
 
-If the method is in `external-methods-with-rules.yaml`, it is already modeled. Writing
-another approximation for it is a no-op at best and conflicts with a built-in rule at worst
-(duplicate-target error). Skip it.
+If the method is in `external-methods-with-rules.yaml`, it is already modeled by a built-in code-based approximation. Writing another `@Approximate` class targeting the same class is a **hard runtime error** — the loader enforces a strict bijection and will abort with `IllegalArgumentException`. Skip it.
 
-If the method is in neither list, the analyzer never reached it on a tainted path during
-the scan. Adding an approximation will not change the result until the analyzer actually
-observes a tainted argument flowing in.
+If the method is in neither list, the analyzer never reached it on a tainted path during the scan. Adding an approximation will not change the result until the analyzer actually observes a tainted argument flowing in.
 
-**Rule of thumb**: approximate only methods that are in the `without-rules` list **and** lie
-on a code path relevant to your vulnerability (reachable between a source and a sink).
+**Rule of thumb**: approximate only methods that are in the `without-rules` list **and** lie on a code path relevant to your vulnerability (reachable between a source and a sink).
 
 ## Prerequisites
 
@@ -32,10 +32,10 @@ on a code path relevant to your vulnerability (reachable between a source and a 
 
 ### 1. Create approximation source
 
-Create Java files in `agent-approximations/src/`:
+Create Java files in `.opentaint/approximations/src/`:
 
 ```java
-package agent.approximations;
+package com.example.approximations;
 
 import org.opentaint.ir.approximation.annotation.Approximate;
 import org.opentaint.jvm.dataflow.approximations.ArgumentTypeContext;
@@ -68,22 +68,17 @@ public class ReactiveProcessor {
 
 ### 2. Run with approximations
 
-Point `--dataflow-approximations` at the source directory. The CLI auto-compiles `.java`
-files using the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`)
-and the target project's dependencies, then forwards the compiled directory to the analyzer.
-Manual `javac` invocation is not required.
+Point `--dataflow-approximations` at the source directory. The CLI auto-compiles `.java` files using the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the target project's dependencies, then forwards the compiled directory to the analyzer. Manual `javac` invocation is not required.
 
 ```bash
-opentaint scan --project-model ./opentaint-project \
-  -o ./results/report.sarif \
-  --ruleset builtin --ruleset ./agent-rules \
+opentaint scan --project-model .opentaint/project \
+  -o .opentaint/results/report.sarif \
+  --ruleset builtin --ruleset .opentaint/rules \
   --rule-id java/security/my-vuln.yaml:my-vulnerability \
-  --dataflow-approximations ./agent-approximations/src
+  --dataflow-approximations .opentaint/approximations/src
 ```
 
-If `.java` compilation fails, the CLI reports the errors and aborts before the scan starts.
-If the directory contains already-compiled `.class` files (no `.java` siblings), the CLI
-passes it through unchanged.
+If `.java` compilation fails, the CLI reports the errors and aborts before the scan starts. If the directory contains already-compiled `.class` files (no `.java` siblings), the CLI passes it through unchanged.
 
 ## Key Patterns
 
@@ -104,8 +99,7 @@ passes it through unchanged.
 
 ## Validating the approximation had an effect
 
-After re-running the scan with `--dataflow-approximations`, diff the before/after
-`external-methods-without-rules.yaml`:
+After re-running the scan with `--dataflow-approximations`, diff the before/after `external-methods-without-rules.yaml`:
 
 - The approximated method should disappear from `without-rules` (moves to `with-rules`)
 - If it does not move, your `@Approximate(...)` target class or the method signature does not match what the analyzer sees
