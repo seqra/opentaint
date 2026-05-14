@@ -50,7 +50,7 @@ install: core cli
 	printf '%s\n' \
 		'#!/bin/sh' \
 		'set -eu' \
-		'BIN_DIR=$$(CDPATH= cd -- "$$(dirname -- "$$0")" && pwd)' \
+		'BIN_DIR=$$(CDPATH= cd -- "$$(dirname -- "$$(realpath "$$0")")" && pwd)' \
 		'PREFIX_DIR=$$(CDPATH= cd -- "$$BIN_DIR/.." && pwd)' \
 		'LIB_DIR="$$PREFIX_DIR/lib"' \
 		'exec "$$BIN_DIR/$(CLI_BINARY_NAME)" --experimental --analyzer-jar "$$LIB_DIR/$(notdir $(ANALYZER_JAR))" --autobuilder-jar "$$LIB_DIR/$(notdir $(AUTOBUILDER_JAR))" "$$@"' \
