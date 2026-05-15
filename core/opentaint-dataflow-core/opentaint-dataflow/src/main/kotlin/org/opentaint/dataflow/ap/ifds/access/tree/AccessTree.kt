@@ -5,7 +5,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntObjectImmutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
@@ -687,8 +686,9 @@ class AccessTree(
             mergeSameNode: (AccessNode) -> T,
             mergeNodes: (AccessNode, AccessNode, Boolean, cache: Object2ObjectOpenHashMap<AccessNodeMergePair, T>) -> T
         ): T {
-            val results = Object2ObjectOpenHashMap<AccessNodeMergePair, T>()
-            val expanded = ObjectOpenHashSet<AccessNodeMergePair>()
+            if (this === other) return mergeSameNode(this)
+
+            val results = Object2ObjectOpenHashMap<AccessNodeMergePair, Any>()
             val stack = mutableListOf<AccessNodeMergePair>()
 
             val initial = AccessNodeMergePair(this, other)
@@ -697,11 +697,6 @@ class AccessTree(
             while (stack.isNotEmpty()) {
                 val mergePair = stack.last()
 
-                if (results.containsKey(mergePair)) {
-                    stack.removeLast()
-                    continue
-                }
-
                 val (a, b) = mergePair
                 if (a === b) {
                     results[mergePair] = mergeSameNode(a)
@@ -709,16 +704,24 @@ class AccessTree(
                     continue
                 }
 
-                if (expanded.add(mergePair)) {
+                val currentResult = results.putIfAbsent(mergePair, NodeExpansionRequested)
+                if (currentResult != null && currentResult !== NodeExpansionRequested) {
+                    stack.removeLast()
+                    continue
+                }
+
+                if (currentResult == null) {
                     pushSharedChildPairs(a, b, stack)
                     continue
                 }
 
-                results[mergePair] = mergeNodes(a, b, foldToAny, results)
+                @Suppress("UNCHECKED_CAST")
+                results[mergePair] = mergeNodes(a, b, foldToAny, results as Object2ObjectOpenHashMap<AccessNodeMergePair, T>)
                 stack.removeLast()
             }
 
-            return results.getComputedResult(initial)
+            @Suppress("UNCHECKED_CAST")
+            return (results as Object2ObjectOpenHashMap<AccessNodeMergePair, T>).getComputedResult(initial)
         }
 
         private fun pushSharedChildPairs(
@@ -1540,6 +1543,8 @@ class AccessTree(
 
             private fun <K, V: Any> Object2ObjectOpenHashMap<K, V>.getComputedResult(key: K): V =
                 get(key) ?: error("Result for $key was not computed")
+
+            private val NodeExpansionRequested = Any()
         }
     }
 }
