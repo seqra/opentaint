@@ -360,6 +360,24 @@ class JIRMethodCallFlowFunction(
         JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, this, analysisContext.factTypeChecker)
             .singleOrNull()
 
+    private fun InitialFactAp.mapExitToReturnFact(): InitialFactAp? =
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, this)
+            .singleOrNull()
+
+    private fun FinalFactReader.toConditionFactReaders(): List<FinalFactReader> {
+        val conditionFactReaders = mutableListOf<FinalFactReader>()
+        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
+            statement,
+            callee = callExpr.callee,
+            callExpr = callExpr,
+            returnValue = null,
+            factAp = factAp,
+            checker = analysisContext.factTypeChecker
+        ) { callerFact, startFactBase ->
+            conditionFactReaders += FinalFactReader(callerFact.rebase(startFactBase), apManager)
+        }
+        return conditionFactReaders
+    }
 
     private fun FinalFactReader.updateRefinement(conditionFactReaders: List<FinalFactReader>) {
         conditionFactReaders.forEach { updateRefinement(it) }
