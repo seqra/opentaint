@@ -39,7 +39,7 @@ public class ScriptEngineInjectionSpringSamples {
     public static class UnsafeInvocableFunctionController {
 
         @GetMapping("/invoke-function")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection-in-spring-app")
+        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection")
         public String unsafeInvokeFunction(@RequestParam("input") String input) throws Exception {
             ScriptEngineManager manager = new ScriptEngineManager();
             ScriptEngine engine = manager.getEngineByName("javascript");
@@ -58,7 +58,7 @@ public class ScriptEngineInjectionSpringSamples {
     public static class UnsafeInvocableMethodController {
 
         @GetMapping("/invoke-method")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection-in-spring-app")
+        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection")
         public String unsafeInvokeMethod(@RequestParam("input") String input) throws Exception {
             ScriptEngineManager manager = new ScriptEngineManager();
             ScriptEngine engine = manager.getEngineByName("javascript");

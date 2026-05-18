@@ -150,13 +150,13 @@ public class InsecureDesignSamples {
    header(..., x)
 */
 
-//    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
-//    public ResponseEntity<String> setPermissiveCorsHeadersInResponseEntity() {
-//        // Insecure: ResponseEntity builder with wildcard origin
-//        return ResponseEntity.ok()
-//                .header("Access-Control-Allow-Origin", "*")
-//                .body("ok");
-//    }
+    // @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
+    public ResponseEntity<String> setPermissiveCorsHeadersInResponseEntity() {
+        // Insecure: ResponseEntity builder with wildcard origin
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body("ok");
+    }
 
     public void setPermissiveCorsHeadersInReactive(ServerHttpResponse response) {
         // Insecure: reactive ServerHttpResponse with wildcard origin
