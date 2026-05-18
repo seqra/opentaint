@@ -14,7 +14,7 @@ import org.opentaint.ir.go.value.GoIRBuiltinValue
 open class GoCallExpr(
     val callInfo: GoIRCallInfo,
     val resolvedCallee: GoIRFunction?,
-    val enclosingMethod: GoIRFunction? = null,
+    val enclosingMethod: GoIRFunction,
 ) : CommonCallExpr {
     override val args: List<CommonValue>
         get() = callInfo.args.map { it as CommonValue }
@@ -50,5 +50,5 @@ class GoInstanceCallExpr(
     callInfo: GoIRCallInfo,
     resolvedCallee: GoIRFunction?,
     override val instance: CommonValue,
-    enclosingMethod: GoIRFunction? = null,
+    enclosingMethod: GoIRFunction,
 ) : GoCallExpr(callInfo, resolvedCallee, enclosingMethod), CommonInstanceCallExpr

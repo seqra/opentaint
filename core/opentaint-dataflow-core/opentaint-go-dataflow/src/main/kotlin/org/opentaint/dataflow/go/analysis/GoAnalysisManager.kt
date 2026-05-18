@@ -169,7 +169,7 @@ class GoAnalysisManager(
         base: AccessPathBase,
         statement: CommonInst,
     ): Boolean {
-        // In SSA form, all defined registers are reachable at their use points
+        // todo
         return true
     }
 

@@ -25,7 +25,7 @@ class GoCallResolver(val cp: GoIRProgram) {
         buildInterfaceImplementorsMap()
     }
 
-    fun resolve(call: GoIRCallInfo, location: GoIRInst): List<GoIRFunction> {
+    fun resolve(call: GoIRCallInfo, location: GoIRInst): List<GoIRFunction>? {
         return when (call.mode) {
             GoIRCallMode.DIRECT -> resolveDirect(call)
             GoIRCallMode.INVOKE -> resolveInvoke(call)
@@ -33,12 +33,12 @@ class GoCallResolver(val cp: GoIRProgram) {
         }
     }
 
-    private fun resolveDirect(call: GoIRCallInfo): List<GoIRFunction> {
-        val funcValue = call.function as? GoIRFunctionValue ?: return emptyList()
+    private fun resolveDirect(call: GoIRCallInfo): List<GoIRFunction>? {
+        val funcValue = call.function as? GoIRFunctionValue ?: return null
         return listOf(funcValue.function)
     }
 
-    private fun resolveDynamic(call: GoIRCallInfo, location: GoIRInst): List<GoIRFunction> {
+    private fun resolveDynamic(call: GoIRCallInfo, location: GoIRInst): List<GoIRFunction>? {
         // Trace the called function value back to its defining instruction.
         // If it was produced by MakeClosureExpr, resolve to the closure's function.
         val funcValue = call.function
@@ -52,15 +52,15 @@ class GoCallResolver(val cp: GoIRProgram) {
                 return listOf(closure.fn)
             }
         }
-        return emptyList()
+        return null
     }
 
-    private fun resolveInvoke(call: GoIRCallInfo): List<GoIRFunction> {
-        val methodName = call.methodName ?: return emptyList()
-        val receiverType = call.receiver?.type ?: return emptyList()
+    private fun resolveInvoke(call: GoIRCallInfo): List<GoIRFunction>? {
+        val methodName = call.methodName ?: return null
+        val receiverType = call.receiver?.type ?: return null
 
-        val interfaceFullName = resolveInterfaceFullName(receiverType) ?: return emptyList()
-        val implementors = interfaceImplementors[interfaceFullName] ?: return emptyList()
+        val interfaceFullName = resolveInterfaceFullName(receiverType) ?: return null
+        val implementors = interfaceImplementors[interfaceFullName] ?: return null
 
         return implementors.mapNotNull { concreteType ->
             concreteType.methodByName(methodName)

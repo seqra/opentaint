@@ -2,6 +2,7 @@ package org.opentaint.dataflow.go
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
@@ -38,35 +39,19 @@ object GoFlowFunctionUtils {
      * Maps a Go IR value to a framework access path base.
      * Requires the enclosing method for free variable mapping.
      */
-    fun accessPathBase(value: GoIRValue, method: GoIRFunction): AccessPathBase? {
+    fun accessPathBase(value: GoIRValue, method: GoIRFunction?): AccessPathBase? {
         return when (value) {
             is GoIRParameterValue -> AccessPathBase.Argument(value.paramIndex)
             is GoIRRegister -> AccessPathBase.LocalVar(value.index)
             is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
-            is GoIRGlobalValue -> AccessPathBase.ClassStatic
+            is GoIRGlobalValue -> TODO("Globals")
             is GoIRFunctionValue -> AccessPathBase.Constant("func", value.function.fullName)
             is GoIRBuiltinValue -> AccessPathBase.Constant("builtin", value.name)
             is GoIRFreeVarValue -> {
+                if (method == null) return null
                 val paramCount = method.params.size
                 AccessPathBase.Argument(paramCount + value.freeVarIndex)
             }
-            else -> null
-        }
-    }
-
-    /**
-     * Maps a Go IR value to AccessPathBase without method context.
-     * Cannot handle GoIRFreeVarValue (returns null).
-     */
-    fun accessPathBaseFromValue(value: GoIRValue): AccessPathBase? {
-        return when (value) {
-            is GoIRParameterValue -> AccessPathBase.Argument(value.paramIndex)
-            is GoIRRegister -> AccessPathBase.LocalVar(value.index)
-            is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
-            is GoIRGlobalValue -> AccessPathBase.ClassStatic
-            is GoIRFunctionValue -> AccessPathBase.Constant("func", value.function.fullName)
-            is GoIRBuiltinValue -> AccessPathBase.Constant("builtin", value.name)
-            is GoIRFreeVarValue -> null
             else -> null
         }
     }
@@ -92,13 +77,9 @@ object GoFlowFunctionUtils {
             // Index/element access
             is GoIRIndexExpr -> {
                 val base = accessPathBase(expr.x, method) ?: return null
-                // String indexing (s[i]) reads a byte — treat as simple taint propagation
-                if (isStringType(expr.x.type)) {
-                    Access.Simple(base)
-                } else {
-                    Access.RefAccess(base, ElementAccessor)
-                }
+                Access.RefAccess(base, ElementAccessor)
             }
+
             is GoIRIndexAddrExpr -> {
                 val base = accessPathBase(expr.x, method) ?: return null
                 Access.RefAccess(base, ElementAccessor)
@@ -272,7 +253,7 @@ object GoFlowFunctionUtils {
         return when (pos) {
             is PositionBase.Result -> AccessPathBase.Return
             is PositionBase.Argument -> AccessPathBase.Argument(pos.idx ?: 0)
-            is PositionBase.This -> AccessPathBase.This
+            is PositionBase.This -> error("This position is not used in Go")
             is PositionBase.ClassStatic -> AccessPathBase.ClassStatic
             is PositionBase.AnyArgument -> AccessPathBase.Argument(0)
         }
@@ -285,7 +266,7 @@ object GoFlowFunctionUtils {
             is PositionBaseWithModifiers.WithModifiers -> pos.modifiers.map { mod ->
                 when (mod) {
                     is PositionModifier.ArrayElement -> ElementAccessor
-                    is PositionModifier.AnyField -> org.opentaint.dataflow.ap.ifds.AnyAccessor
+                    is PositionModifier.AnyField -> AnyAccessor
                     is PositionModifier.Field -> FieldAccessor(mod.className, mod.fieldName, mod.fieldType)
                 }
             }

@@ -32,7 +32,7 @@ class GoMethodCallResolver(
         val resolved = callResolver.resolve(goCallExpr.callInfo, location as GoIRInst)
         val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
 
-        if (resolved.isEmpty()) {
+        if (resolved.isNullOrEmpty()) {
             analyzer.handleMethodCallResolutionFailure(callExpr, failureHandler)
         } else {
             for (callee in resolved) {
@@ -48,6 +48,8 @@ class GoMethodCallResolver(
     ): List<MethodCallResolutionResult> {
         val goCallExpr = callExpr as GoCallExpr
         val resolved = callResolver.resolve(goCallExpr.callInfo, location as GoIRInst)
+            ?: return listOf(MethodCallResolutionResult.ResolutionFailure)
+
         return resolved.map {
             MethodCallResolutionResult.ResolvedMethod(MethodWithContext(it, EmptyMethodContext))
         }

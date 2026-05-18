@@ -16,18 +16,18 @@ class GoApplicationGraph(
 
     override fun callees(node: GoIRInst): Sequence<GoIRFunction> {
         val callInfo = GoFlowFunctionUtils.extractCallInfo(node) ?: return emptySequence()
-        return callResolver.resolve(callInfo, node).asSequence()
+        return callResolver.resolve(callInfo, node).orEmpty().asSequence()
     }
 
     override fun callers(method: GoIRFunction): Sequence<GoIRInst> {
         // Scan all functions for call instructions that resolve to this method.
         // O(n) across all instructions — acceptable for MVP.
         return cp.allFunctions().asSequence()
-            .filter { it.body != null }
-            .flatMap { func ->
-                func.body!!.instructions.asSequence().filter { inst ->
+            .mapNotNull { it.body }
+            .flatMap { body ->
+                body.instructions.asSequence().filter { inst ->
                     val callInfo = GoFlowFunctionUtils.extractCallInfo(inst)
-                    callInfo != null && callResolver.resolve(callInfo, inst).any { it == method }
+                    callInfo != null && callResolver.resolve(callInfo, inst).orEmpty().any { it == method }
                 }
             }
     }

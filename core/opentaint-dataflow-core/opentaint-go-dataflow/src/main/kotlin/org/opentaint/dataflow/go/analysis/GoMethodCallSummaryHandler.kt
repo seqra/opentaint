@@ -20,8 +20,6 @@ class GoMethodCallSummaryHandler(
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
 
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> {
-        return GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(
-            statement, fact, factTypeChecker
-        )
+        return GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
     }
 }

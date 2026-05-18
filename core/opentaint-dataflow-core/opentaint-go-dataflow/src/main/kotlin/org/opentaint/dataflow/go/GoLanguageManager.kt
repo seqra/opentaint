@@ -43,8 +43,9 @@ open class GoLanguageManager(val cp: GoIRProgram) : LanguageManager {
             else -> null
         }
 
-        return if (callInfo.receiver != null) {
-            GoInstanceCallExpr(callInfo, callee, callInfo.receiver as CommonValue, enclosingMethod)
+        val callReceiver = callInfo.receiver
+        return if (callReceiver != null) {
+            GoInstanceCallExpr(callInfo, callee, callReceiver as CommonValue, enclosingMethod)
         } else {
             GoCallExpr(callInfo, callee, enclosingMethod)
         }

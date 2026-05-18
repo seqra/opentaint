@@ -11,6 +11,7 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRIndexExpr
 import org.opentaint.ir.go.inst.*
 import org.opentaint.ir.go.type.GoIRBinaryOp
 
@@ -39,15 +40,7 @@ class GoMethodSequentFlowFunction(
         initialFactAp: InitialFactAp,
         currentFactAp: FinalFactAp,
     ): Set<Sequent> {
-        // Synchronize exclusions before propagation — the framework may pass
-        // initialFactAp and currentFactAp with different exclusion sets when
-        // the initial fact was created from a different refinement path.
-        val syncedInitial = if (initialFactAp.exclusions != currentFactAp.exclusions) {
-            initialFactAp.replaceExclusions(currentFactAp.exclusions)
-        } else {
-            initialFactAp
-        }
-        return propagate(syncedInitial, currentFactAp)
+        return propagate(initialFactAp, currentFactAp)
     }
 
     override fun propagateNDFactToFact(
@@ -69,8 +62,6 @@ class GoMethodSequentFlowFunction(
         }
     }
 
-    // ── Assignment ───────────────────────────────────────────────────
-
     private fun handleAssign(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
@@ -79,11 +70,15 @@ class GoMethodSequentFlowFunction(
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
         val expr = inst.expr
 
-        // String concatenation — multiple operands
         if (expr is GoIRBinOpExpr && expr.op == GoIRBinaryOp.ADD
             && GoFlowFunctionUtils.isStringType(expr.type)
         ) {
             return handleStringConcat(initialFact, currentFact, registerBase, expr)
+        }
+
+        if (expr is GoIRIndexExpr && GoFlowFunctionUtils.isStringType(expr.x.type)) {
+            // read from string
+            TODO()
         }
 
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)
@@ -161,8 +156,6 @@ class GoMethodSequentFlowFunction(
         return result
     }
 
-    // ── Store ────────────────────────────────────────────────────────
-
     private fun handleStore(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
@@ -225,8 +218,6 @@ class GoMethodSequentFlowFunction(
         return result
     }
 
-    // ── Return ───────────────────────────────────────────────────────
-
     private fun handleReturn(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
@@ -235,14 +226,12 @@ class GoMethodSequentFlowFunction(
         val result = mutableSetOf<Sequent>(Sequent.Unchanged)
 
         if (inst.results.size == 1) {
-            // Single return value: direct mapping to Return (no tuple field)
             val retBase = GoFlowFunctionUtils.accessPathBase(inst.results[0], method) ?: return result
             if (currentFact.base == retBase) {
                 val exitFact = currentFact.rebase(AccessPathBase.Return)
                 result.add(makeEdge(initialFact, exitFact))
             }
         } else {
-            // Multi-return: map each return value to Return.$i (tuple field accessor)
             for ((i, retVal) in inst.results.withIndex()) {
                 val retBase = GoFlowFunctionUtils.accessPathBase(retVal, method) ?: continue
                 if (currentFact.base == retBase) {
@@ -255,8 +244,6 @@ class GoMethodSequentFlowFunction(
 
         return result
     }
-
-    // ── Phi ──────────────────────────────────────────────────────────
 
     private fun handlePhi(
         initialFact: InitialFactAp?,
@@ -272,7 +259,7 @@ class GoMethodSequentFlowFunction(
             result.add(Sequent.Unchanged)
         }
 
-        for (edge in inst.edges) {
+        for (edge in inst.edges.values) {
             val edgeBase = GoFlowFunctionUtils.accessPathBase(edge, method) ?: continue
             if (currentFact.base == edgeBase) {
                 val newFact = currentFact.rebase(registerBase)
@@ -284,14 +271,12 @@ class GoMethodSequentFlowFunction(
         return result
     }
 
-    // ── Map Update ───────────────────────────────────────────────────
-
     private fun handleMapUpdate(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
         inst: GoIRMapUpdate,
     ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>(Sequent.Unchanged) // weak update
+        val result = mutableSetOf<Sequent>(Sequent.Unchanged)
         val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method)
             ?: return setOf(Sequent.Unchanged)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
@@ -305,14 +290,12 @@ class GoMethodSequentFlowFunction(
         return result
     }
 
-    // ── Channel Send ──────────────────────────────────────────────────
-
     private fun handleSend(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
         inst: GoIRSend,
     ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>(Sequent.Unchanged) // weak update: channel may hold multiple values
+        val result = mutableSetOf<Sequent>(Sequent.Unchanged)
         val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method)
             ?: return setOf(Sequent.Unchanged)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method)
@@ -356,8 +339,6 @@ class GoMethodSequentFlowFunction(
         return result
     }
 
-    // ── Non-propagating expression ───────────────────────────────────
-
     private fun handleNonPropagatingExpr(
         currentFact: FinalFactAp,
         registerBase: AccessPathBase,
@@ -369,12 +350,9 @@ class GoMethodSequentFlowFunction(
         }
     }
 
-    // ── Edge creation helper ─────────────────────────────────────────
-
     private fun makeEdge(initialFact: InitialFactAp?, newFact: FinalFactAp): Sequent {
         val traceInfo = if (generateTrace) MethodSequentFlowFunction.TraceInfo.Flow else null
         return if (initialFact != null) {
-            // Synchronize exclusions: the framework requires initialAp.exclusions == finalAp.exclusions
             val syncedInitial = if (initialFact.exclusions != newFact.exclusions) {
                 initialFact.replaceExclusions(newFact.exclusions)
             } else {
