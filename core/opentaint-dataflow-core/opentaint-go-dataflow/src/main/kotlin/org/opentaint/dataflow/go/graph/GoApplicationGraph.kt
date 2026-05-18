@@ -46,10 +46,10 @@ class GoApplicationGraph(
         val body: GoIRBody
     ) : ApplicationGraph.MethodGraph<GoIRFunction, GoIRInst> {
         override fun predecessors(node: GoIRInst): Sequence<GoIRInst> =
-            body.instGraph.predecessors(node).asSequence()
+            body.instGraph.predecessorsList(node).asSequence()
 
         override fun successors(node: GoIRInst): Sequence<GoIRInst> =
-            body.instGraph.successors(node).asSequence()
+            body.instGraph.successorsList(node).asSequence()
 
         override fun entryPoints(): Sequence<GoIRInst> =
             body.instGraph.entries.asSequence()
