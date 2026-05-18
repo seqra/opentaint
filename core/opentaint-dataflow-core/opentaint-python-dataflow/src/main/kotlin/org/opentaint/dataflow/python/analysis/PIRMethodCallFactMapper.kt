@@ -91,6 +91,7 @@ class PIRMethodCallFactMapper(
     }
 
     override fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
         callee: CommonMethod,
         callExpr: CommonCallExpr,
         returnValue: CommonValue?,
@@ -121,6 +122,7 @@ class PIRMethodCallFactMapper(
     }
 
     override fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
         callee: CommonMethod,
         callExpr: CommonCallExpr,
         returnValue: CommonValue?,
@@ -150,6 +152,7 @@ class PIRMethodCallFactMapper(
     }
 
     override fun factIsRelevantToMethodCall(
+        callStatement: CommonInst,
         returnValue: CommonValue?,
         callExpr: CommonCallExpr,
         factAp: FactAp,
