@@ -7,7 +7,20 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.*
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFailureFact
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
@@ -16,7 +29,10 @@ import org.opentaint.dataflow.python.rules.PIRTaintConfig
 import org.opentaint.dataflow.python.rules.TaintRules
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.ir.api.common.cfg.CommonValue
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRLocalVar
 
 class PIRMethodCallFlowFunction(
     private val callInst: PIRCall,
@@ -270,6 +286,33 @@ class PIRMethodCallFlowFunction(
             }
         }
         null
+    }
+
+    override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> {
+        TODO("Not yet implemented")
+    }
+
+    override fun propagateZeroToFactResolutionFailure(
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase
+    ): Set<ZeroCallFailureFact> {
+        TODO("Not yet implemented")
+    }
+
+    override fun propagateFactToFactResolutionFailure(
+        initialFactAp: InitialFactAp,
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase
+    ): Set<FactCallFailureFact> {
+        TODO("Not yet implemented")
+    }
+
+    override fun propagateNDFactToFactResolutionFailure(
+        initialFacts: Set<InitialFactAp>,
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase
+    ): Set<NDFactCallFailureFact> {
+        TODO("Not yet implemented")
     }
 
     companion object {

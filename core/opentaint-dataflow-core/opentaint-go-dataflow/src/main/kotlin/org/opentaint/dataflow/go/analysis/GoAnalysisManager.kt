@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
+import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
@@ -23,11 +24,12 @@ import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoLanguageManager
 import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
-import org.opentaint.dataflow.go.rules.GoTaintConfig
+import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.trace.GoMethodCallPrecondition
 import org.opentaint.dataflow.go.trace.GoMethodSequentPrecondition
 import org.opentaint.dataflow.go.trace.GoMethodStartPrecondition
+import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
@@ -41,7 +43,10 @@ import org.opentaint.util.analysis.ApplicationGraph
 /**
  * Central factory that wires all Go dataflow analysis components together.
  */
-class GoAnalysisManager(cp: GoIRProgram) : GoLanguageManager(cp), TaintAnalysisManager {
+class GoAnalysisManager(
+    cp: GoIRProgram,
+    val taintConfig: GoTaintRulesProvider
+) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
 
@@ -52,9 +57,20 @@ class GoAnalysisManager(cp: GoIRProgram) : GoLanguageManager(cp), TaintAnalysisM
         taintAnalysisContext: TaintAnalysisContext,
         contextForEmptyMethod: MethodAnalysisContext?,
     ): MethodAnalysisContext {
-        val config = taintAnalysisContext.taintConfig as GoTaintConfig
-        val rulesProvider = GoTaintRulesProvider(config)
-        return GoMethodAnalysisContext(methodEntryPoint, taintAnalysisContext, rulesProvider)
+        val taintCtx = GoTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintConfig)
+        return GoMethodAnalysisContext(methodEntryPoint, taintCtx)
+    }
+
+    override fun getMethodInstGraph(
+        graph: ApplicationGraph<CommonMethod, CommonInst>,
+        analysisContext: MethodAnalysisContext,
+        method: CommonMethod
+    ): MethodInstGraph = MethodInstGraph.build(this, graph, method)
+
+    override fun getMethodEntrypointResolver(
+        graph: ApplicationGraph<CommonMethod, CommonInst>
+    ): MethodEntrypointResolver {
+        return GoMethodEntrypointResolver(graph as GoApplicationGraph)
     }
 
     override fun getMethodCallResolver(

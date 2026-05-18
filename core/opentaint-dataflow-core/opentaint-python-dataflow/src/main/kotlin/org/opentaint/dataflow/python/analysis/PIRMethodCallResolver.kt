@@ -6,7 +6,7 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
-import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallResolutionResult
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRCall
@@ -40,10 +40,12 @@ class PIRMethodCallResolver(
         callerContext: MethodAnalysisContext,
         callExpr: CommonCallExpr,
         location: CommonInst,
-    ): List<MethodWithContext> {
+    ): List<MethodCallResolutionResult> {
         val pirCall = location as PIRCall
         val callerMethod = (callerContext as PIRMethodAnalysisContext).method
-        val callee = callResolver.resolve(pirCall, callerMethod) ?: return emptyList()
-        return listOf(MethodWithContext(callee, EmptyMethodContext))
+        val callee = callResolver.resolve(pirCall, callerMethod)
+            ?: return listOf(MethodCallResolutionResult.ResolutionFailure)
+
+        return listOf(MethodCallResolutionResult.ResolvedMethod(MethodWithContext(callee, EmptyMethodContext)))
     }
 }

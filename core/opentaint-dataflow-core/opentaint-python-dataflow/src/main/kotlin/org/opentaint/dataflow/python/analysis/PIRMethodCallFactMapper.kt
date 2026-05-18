@@ -93,6 +93,7 @@ class PIRMethodCallFactMapper(
     override fun mapMethodCallToStartFlowFact(
         callee: CommonMethod,
         callExpr: CommonCallExpr,
+        returnValue: CommonValue?,
         factAp: FinalFactAp,
         checker: FactTypeChecker,
         onMappedFact: (FinalFactAp, AccessPathBase) -> Unit,
@@ -122,6 +123,7 @@ class PIRMethodCallFactMapper(
     override fun mapMethodCallToStartFlowFact(
         callee: CommonMethod,
         callExpr: CommonCallExpr,
+        returnValue: CommonValue?,
         fact: InitialFactAp,
         onMappedFact: (InitialFactAp, AccessPathBase) -> Unit,
     ) {

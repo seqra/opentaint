@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallResolutionResult
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoCallResolver
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
@@ -44,9 +45,11 @@ class GoMethodCallResolver(
         callerContext: MethodAnalysisContext,
         callExpr: CommonCallExpr,
         location: CommonInst,
-    ): List<MethodWithContext> {
+    ): List<MethodCallResolutionResult> {
         val goCallExpr = callExpr as GoCallExpr
         val resolved = callResolver.resolve(goCallExpr.callInfo, location as GoIRInst)
-        return resolved.map { MethodWithContext(it, EmptyMethodContext) }
+        return resolved.map {
+            MethodCallResolutionResult.ResolvedMethod(MethodWithContext(it, EmptyMethodContext))
+        }
     }
 }

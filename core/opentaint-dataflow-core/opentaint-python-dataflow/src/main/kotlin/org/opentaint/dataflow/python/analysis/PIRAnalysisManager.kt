@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
+import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
@@ -22,8 +23,11 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
+import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.python.PIRLanguageManager
+import org.opentaint.dataflow.python.graph.PIRApplicationGraph
+import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext
 import org.opentaint.dataflow.python.rules.PIRTaintConfig
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
@@ -35,7 +39,10 @@ import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.util.analysis.ApplicationGraph
 
-class PIRAnalysisManager(cp: PIRClasspath) : PIRLanguageManager(cp), TaintAnalysisManager {
+class PIRAnalysisManager(
+    cp: PIRClasspath,
+    val taintConfig: PIRTaintConfig
+) : PIRLanguageManager(cp), TaintAnalysisManager {
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
     private val pirCallResolver = PIRCallResolver(cp)
 
@@ -47,7 +54,20 @@ class PIRAnalysisManager(cp: PIRClasspath) : PIRLanguageManager(cp), TaintAnalys
         contextForEmptyMethod: MethodAnalysisContext?,
     ): MethodAnalysisContext {
         val method = methodEntryPoint.method as PIRFunction
-        return PIRMethodAnalysisContext(methodEntryPoint, method, taintAnalysisContext, pirCallResolver)
+        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintConfig)
+        return PIRMethodAnalysisContext(methodEntryPoint, method, taintCtx, pirCallResolver)
+    }
+
+    override fun getMethodInstGraph(
+        graph: ApplicationGraph<CommonMethod, CommonInst>,
+        analysisContext: MethodAnalysisContext,
+        method: CommonMethod
+    ): MethodInstGraph = MethodInstGraph.build(this, graph, method)
+
+    override fun getMethodEntrypointResolver(
+        graph: ApplicationGraph<CommonMethod, CommonInst>
+    ): MethodEntrypointResolver {
+        return PIRMethodEntrypointResolver(graph as PIRApplicationGraph)
     }
 
     override fun getMethodCallResolver(
@@ -97,7 +117,7 @@ class PIRAnalysisManager(cp: PIRClasspath) : PIRLanguageManager(cp), TaintAnalys
         generateTrace: Boolean,
     ): MethodCallFlowFunction {
         val ctx = analysisContext as PIRMethodAnalysisContext
-        val config = ctx.taint.taintConfig as PIRTaintConfig
+        val config = ctx.taint.taintConfig
         val pirCall = statement as PIRCall
         val callee = pirCallResolver.resolve(pirCall, ctx.method)
         return PIRMethodCallFlowFunction(
@@ -170,6 +190,13 @@ private object NoOpSequentPrecondition : MethodSequentPrecondition {
 private object NoOpCallPrecondition : MethodCallPrecondition {
     override fun factPrecondition(fact: InitialFactAp): List<MethodCallPrecondition.CallPrecondition> =
         listOf(MethodCallPrecondition.CallPrecondition.Unchanged)
+
+    override fun factPreconditionResolutionFailure(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase
+    ): List<MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact> =
+        emptyList()
+
     override fun resolvePassRuleCondition(precondition: PassRuleCondition): List<MethodCallPrecondition.PassRuleConditionFacts> =
         emptyList()
 }

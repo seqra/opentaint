@@ -7,9 +7,21 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.*
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFailureFact
 import org.opentaint.dataflow.go.GoCallExpr
-import org.opentaint.dataflow.go.GoCallResolver
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.ir.api.common.cfg.CommonValue
@@ -35,7 +47,7 @@ class GoMethodCallFlowFunction(
 ) : MethodCallFlowFunction {
 
     private val method: GoIRFunction get() = context.method
-    private val rulesProvider get() = context.rulesProvider
+    private val rulesProvider get() = context.taint.taintConfig
     private val callInfo: GoIRCallInfo get() = callExpr.callInfo
     private val calleeName: String? get() = callExpr.calleeName
 
@@ -297,5 +309,32 @@ class GoMethodCallFlowFunction(
             }
             else -> null
         }
+    }
+
+    override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> {
+        TODO("Not yet implemented")
+    }
+
+    override fun propagateZeroToFactResolutionFailure(
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase
+    ): Set<ZeroCallFailureFact> {
+        TODO("Not yet implemented")
+    }
+
+    override fun propagateFactToFactResolutionFailure(
+        initialFactAp: InitialFactAp,
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase
+    ): Set<FactCallFailureFact> {
+        TODO("Not yet implemented")
+    }
+
+    override fun propagateNDFactToFactResolutionFailure(
+        initialFacts: Set<InitialFactAp>,
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase
+    ): Set<NDFactCallFailureFact> {
+        TODO("Not yet implemented")
     }
 }
