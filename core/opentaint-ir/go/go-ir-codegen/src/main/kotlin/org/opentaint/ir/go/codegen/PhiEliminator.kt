@@ -2,6 +2,7 @@ package org.opentaint.ir.go.codegen
 
 import org.opentaint.ir.go.api.GoIRBody
 import org.opentaint.ir.go.inst.GoIRPhi
+import org.opentaint.ir.go.inst.index
 import org.opentaint.ir.go.value.GoIRValue
 
 /**
@@ -63,19 +64,22 @@ object PhiEliminator {
 
             // For each predecessor, compute assignments
             val preds = block.predecessors
-            for ((predIdx, pred) in preds.withIndex()) {
+            for (pred in preds) {
                 val assignments = predAssignments.getOrPut(pred.index) { mutableListOf() }
                 for (phi in phis) {
-                    if (predIdx < phi.edges.size) {
-                        val tempName = "_phi_${phi.register.name}"
-                        assignments.add(
-                            PhiAssignment(
-                                phiVarName = phi.register.name,
-                                phiTempName = tempName,
-                                sourceValue = phi.edges[predIdx],
-                            )
+                    val sourceValue = phi.edges[pred.end]
+                        ?: error(
+                            "Missing phi edge for predecessor terminator ${pred.end.index} " +
+                                "in block ${block.index}, phi ${phi.register.name} at instruction ${phi.index}"
                         )
-                    }
+                    val tempName = "_phi_${phi.register.name}"
+                    assignments.add(
+                        PhiAssignment(
+                            phiVarName = phi.register.name,
+                            phiTempName = tempName,
+                            sourceValue = sourceValue,
+                        )
+                    )
                 }
             }
         }

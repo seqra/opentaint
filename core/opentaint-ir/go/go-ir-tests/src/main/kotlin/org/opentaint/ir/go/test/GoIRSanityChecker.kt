@@ -1,6 +1,7 @@
 package org.opentaint.ir.go.test
 
 import org.opentaint.ir.go.api.*
+import org.opentaint.ir.go.cfg.GoIRBasicBlock
 import org.opentaint.ir.go.inst.*
 import org.opentaint.ir.go.value.*
 
@@ -103,7 +104,7 @@ object GoIRSanityChecker {
                 }
             }
 
-            // Check terminator successor count
+            // Check terminator successor count and explicit branch targets
             when (lastInst) {
                 is GoIRJump -> {
                     if (block.successors.size != 1) {
@@ -111,6 +112,9 @@ object GoIRSanityChecker {
                             "cfg",
                             "$fnName: Block ${block.index} Jump should have 1 successor, has ${block.successors.size}"
                         )
+                        checkBranchTarget(body, block, lastInst.target, null, "Jump target", errors)
+                    } else {
+                        checkBranchTarget(body, block, lastInst.target, block.successors[0], "Jump target", errors)
                     }
                 }
                 is GoIRIf -> {
@@ -119,6 +123,11 @@ object GoIRSanityChecker {
                             "cfg",
                             "$fnName: Block ${block.index} If should have 2 successors, has ${block.successors.size}"
                         )
+                        checkBranchTarget(body, block, lastInst.trueBranch, null, "If trueBranch", errors)
+                        checkBranchTarget(body, block, lastInst.falseBranch, null, "If falseBranch", errors)
+                    } else {
+                        checkBranchTarget(body, block, lastInst.trueBranch, block.successors[0], "If trueBranch", errors)
+                        checkBranchTarget(body, block, lastInst.falseBranch, block.successors[1], "If falseBranch", errors)
                     }
                 }
                 is GoIRReturn, is GoIRPanic -> {
@@ -172,6 +181,45 @@ object GoIRSanityChecker {
         }
     }
 
+    private fun checkBranchTarget(
+        body: GoIRBody,
+        block: GoIRBasicBlock,
+        target: GoIRInstRef,
+        expectedSuccessor: GoIRBasicBlock?,
+        label: String,
+        errors: MutableList<SanityViolation>,
+    ) {
+        val fnName = body.function.fullName
+        if (target.index !in body.instructions.indices) {
+            errors += SanityViolation(
+                "cfg",
+                "$fnName: Block ${block.index} $label $target is outside instruction range 0..${body.instructions.lastIndex}"
+            )
+            return
+        }
+
+        val targetInst = body.instructions[target.index]
+        val targetBlock = targetInst.block
+        if (target != targetBlock.start) {
+            errors += SanityViolation(
+                "cfg",
+                "$fnName: Block ${block.index} $label $target points into block ${targetBlock.index}, not to block start ${targetBlock.start}"
+            )
+        }
+        if (expectedSuccessor != null && targetBlock != expectedSuccessor) {
+            errors += SanityViolation(
+                "cfg",
+                "$fnName: Block ${block.index} $label $target points to block ${targetBlock.index}, expected successor block ${expectedSuccessor.index} start ${expectedSuccessor.start}"
+            )
+        }
+        if (expectedSuccessor != null && target != expectedSuccessor.start) {
+            errors += SanityViolation(
+                "cfg",
+                "$fnName: Block ${block.index} $label $target != successor start ${expectedSuccessor.start}"
+            )
+        }
+    }
+
     private fun checkSSAInvariants(
         body: GoIRBody,
         errors: MutableList<SanityViolation>,
@@ -194,13 +242,36 @@ object GoIRSanityChecker {
                 }
             }
 
-            // Phi edge count must equal predecessor count
+            // Phi edge keys must exactly match predecessor terminator refs.
             for (phi in block.phis) {
+                val expectedKeys = block.predecessors.map { it.end }.toSet()
                 if (phi.edges.size != block.predecessors.size) {
                     errors += SanityViolation(
                         "ssa",
                         "$fnName: Block ${block.index} Phi '${phi.register.name}' has ${phi.edges.size} edges but ${block.predecessors.size} predecessors"
                     )
+                }
+                if (phi.edges.keys != expectedKeys) {
+                    errors += SanityViolation(
+                        "ssa",
+                        "$fnName: Block ${block.index} Phi '${phi.register.name}' has edge keys ${phi.edges.keys} but expected predecessor terminators $expectedKeys"
+                    )
+                }
+                for (edgeKey in phi.edges.keys) {
+                    if (edgeKey.index !in body.instructions.indices) {
+                        errors += SanityViolation(
+                            "ssa",
+                            "$fnName: Block ${block.index} Phi '${phi.register.name}' edge key $edgeKey is outside instruction range 0..${body.instructions.lastIndex}"
+                        )
+                        continue
+                    }
+                    val edgeInst = body.instructions[edgeKey.index]
+                    if (edgeInst !is GoIRTerminator) {
+                        errors += SanityViolation(
+                            "ssa",
+                            "$fnName: Block ${block.index} Phi '${phi.register.name}' edge key $edgeKey is not a terminator"
+                        )
+                    }
                 }
             }
         }

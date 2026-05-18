@@ -815,13 +815,15 @@ class GoIRToGoCodeGenerator {
 
             // ─── Terminators ───
             override fun visitJump(inst: GoIRJump): String {
-                val target = block.successors[0].index
+                val irBody = requireNotNull(body) { "GoIR body is required to resolve jump target" }
+                val target = irBody.inst(inst.target).block.index
                 return "goto block$target"
             }
 
             override fun visitIf(inst: GoIRIf): String {
-                val tBlock = block.successors[0].index
-                val fBlock = block.successors[1].index
+                val irBody = requireNotNull(body) { "GoIR body is required to resolve if targets" }
+                val tBlock = irBody.inst(inst.trueBranch).block.index
+                val fBlock = irBody.inst(inst.falseBranch).block.index
                 return "if ${valueRef(inst.cond)} {\n\tgoto block$tBlock\n} else {\n\tgoto block$fBlock\n}"
             }
 

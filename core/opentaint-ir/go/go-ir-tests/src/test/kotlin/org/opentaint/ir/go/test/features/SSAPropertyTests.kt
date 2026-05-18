@@ -31,9 +31,11 @@ class SSAPropertyTests {
         val phis = fn.findInstructions<GoIRPhi>()
         assertThat(phis).hasSizeGreaterThanOrEqualTo(2) // i and total
 
-        // Each phi should have 2 edges (init + back-edge)
+        // Each phi should have one edge keyed by each predecessor terminator.
         for (phi in phis) {
-            assertThat(phi.edges).hasSize(phi.block.predecessors.size)
+            val expectedKeys = phi.block.predecessors.map { it.end }
+            assertThat(phi.edges).hasSize(expectedKeys.size)
+            assertThat(phi.edges.keys).containsExactlyInAnyOrderElementsOf(expectedKeys)
         }
 
         GoIRSanityChecker.check(prog).assertNoErrors()
@@ -58,6 +60,12 @@ class SSAPropertyTests {
         val phis = fn.findInstructions<GoIRPhi>()
         // SSA should have a phi at the merge point
         assertThat(phis).isNotEmpty()
+
+        for (phi in phis) {
+            val expectedKeys = phi.block.predecessors.map { it.end }
+            assertThat(phi.edges).hasSize(expectedKeys.size)
+            assertThat(phi.edges.keys).containsExactlyInAnyOrderElementsOf(expectedKeys)
+        }
 
         GoIRSanityChecker.check(prog).assertNoErrors()
     }

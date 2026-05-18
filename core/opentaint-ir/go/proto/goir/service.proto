@@ -413,8 +413,13 @@ message ProtoAllocInst {
 }
 
 message ProtoPhiInst {
-    repeated ProtoValueRef edges = 1;
+    repeated ProtoPhiEdge edges = 1;
     string comment = 2;
+}
+
+message ProtoPhiEdge {
+    optional int32 pred_inst_ref = 1;
+    ProtoValueRef value = 2;
 }
 
 message ProtoBinOpInst {
@@ -593,10 +598,14 @@ message ProtoExtractInst {
     int32 extract_index = 2;
 }
 
-message ProtoJumpInst {}
+message ProtoJumpInst {
+    optional int32 target = 1;
+}
 
 message ProtoIfInst {
     ProtoValueRef cond = 1;
+    optional int32 true_branch = 2;
+    optional int32 false_branch = 3;
 }
 
 message ProtoReturnInst {

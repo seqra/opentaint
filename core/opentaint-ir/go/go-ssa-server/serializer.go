@@ -840,7 +840,14 @@ func (s *serializer) serializeFunctionBody(fn *ssa.Function) (body *pb.ProtoFunc
 		body.RecoverBlockIndex = int32(fn.Recover.Index)
 	}
 
+	blockStartInstIndex := make(map[*ssa.BasicBlock]int32, len(fn.Blocks))
 	instIndex := int32(0)
+	for _, block := range fn.Blocks {
+		blockStartInstIndex[block] = instIndex
+		instIndex += int32(len(block.Instrs))
+	}
+
+	instIndex = 0
 	for _, block := range fn.Blocks {
 		pb_block := &pb.ProtoBasicBlock{
 			Index: int32(block.Index),
@@ -866,7 +873,7 @@ func (s *serializer) serializeFunctionBody(fn *ssa.Function) (body *pb.ProtoFunc
 		}
 
 		for _, inst := range block.Instrs {
-			pi := s.serializeInstruction(inst, instIndex)
+			pi := s.serializeInstruction(inst, instIndex, block, blockStartInstIndex)
 			pb_block.Instructions = append(pb_block.Instructions, pi)
 			instIndex++
 			s.stats.instructionCount++
@@ -878,7 +885,7 @@ func (s *serializer) serializeFunctionBody(fn *ssa.Function) (body *pb.ProtoFunc
 	return body, nil
 }
 
-func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32) *pb.ProtoInstruction {
+func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32, block *ssa.BasicBlock, blockStartInstIndex map[*ssa.BasicBlock]int32) *pb.ProtoInstruction {
 	pi := &pb.ProtoInstruction{
 		Index: idx,
 	}
@@ -904,9 +911,16 @@ func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32) *pb.P
 			},
 		}
 	case *ssa.Phi:
-		edges := make([]*pb.ProtoValueRef, len(i.Edges))
+		if len(i.Edges) != len(block.Preds) {
+			panic(fmt.Sprintf("phi %s in block %d has %d edges but %d predecessors", i.Name(), block.Index, len(i.Edges), len(block.Preds)))
+		}
+		edges := make([]*pb.ProtoPhiEdge, len(i.Edges))
 		for j, e := range i.Edges {
-			edges[j] = s.valueRef(e)
+			predInstRef := predecessorTerminatorInstIndex(block.Preds[j], blockStartInstIndex)
+			edges[j] = &pb.ProtoPhiEdge{
+				PredInstRef: &predInstRef,
+				Value:       s.valueRef(e),
+			}
 		}
 		pi.Inst = &pb.ProtoInstruction_Phi{
 			Phi: &pb.ProtoPhiInst{Edges: edges, Comment: i.Comment},
@@ -1070,10 +1084,19 @@ func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32) *pb.P
 		}
 	// Effect-only instructions
 	case *ssa.Jump:
-		pi.Inst = &pb.ProtoInstruction_Jump{Jump: &pb.ProtoJumpInst{}}
+		s.requireBranchSuccCount(block, "Jump", 1)
+		target := s.branchTargetInstIndex(block, block.Succs[0], "Jump", 0, blockStartInstIndex)
+		pi.Inst = &pb.ProtoInstruction_Jump{Jump: &pb.ProtoJumpInst{Target: int32Ptr(target)}}
 	case *ssa.If:
+		s.requireBranchSuccCount(block, "If", 2)
+		trueBranch := s.branchTargetInstIndex(block, block.Succs[0], "If", 0, blockStartInstIndex)
+		falseBranch := s.branchTargetInstIndex(block, block.Succs[1], "If", 1, blockStartInstIndex)
 		pi.Inst = &pb.ProtoInstruction_IfInst{
-			IfInst: &pb.ProtoIfInst{Cond: s.valueRef(i.Cond)},
+			IfInst: &pb.ProtoIfInst{
+				Cond:        s.valueRef(i.Cond),
+				TrueBranch:  int32Ptr(trueBranch),
+				FalseBranch: int32Ptr(falseBranch),
+			},
 		}
 	case *ssa.Return:
 		results := make([]*pb.ProtoValueRef, len(i.Results))
@@ -1389,4 +1412,51 @@ func chanDirToProto(dir types.ChanDir) pb.ProtoChanDirection {
 	default:
 		return pb.ProtoChanDirection_CHAN_SEND_RECV
 	}
+}
+
+func int32Ptr(v int32) *int32 {
+	return &v
+}
+
+func (s *serializer) requireBranchSuccCount(block *ssa.BasicBlock, kind string, expected int) {
+	if len(block.Succs) != expected {
+		panic(fmt.Sprintf(
+			"Go SSA CFG invariant failed in function %s block %d: %s has %d successors, expected %d",
+			block.Parent().String(), block.Index, kind, len(block.Succs), expected,
+		))
+	}
+}
+
+func predecessorTerminatorInstIndex(pred *ssa.BasicBlock, blockStartInstIndex map[*ssa.BasicBlock]int32) int32 {
+	if len(pred.Instrs) == 0 {
+		panic(fmt.Sprintf(
+			"Go SSA CFG invariant failed in function %s block %d: phi predecessor has no instructions",
+			pred.Parent().String(), pred.Index,
+		))
+	}
+	start, ok := blockStartInstIndex[pred]
+	if !ok {
+		panic(fmt.Sprintf(
+			"Go SSA CFG invariant failed in function %s block %d: phi predecessor has no start instruction index",
+			pred.Parent().String(), pred.Index,
+		))
+	}
+	return start + int32(len(pred.Instrs)-1)
+}
+
+func (s *serializer) branchTargetInstIndex(block *ssa.BasicBlock, succ *ssa.BasicBlock, kind string, succPos int, blockStartInstIndex map[*ssa.BasicBlock]int32) int32 {
+	if len(succ.Instrs) == 0 {
+		panic(fmt.Sprintf(
+			"Go SSA CFG invariant failed in function %s block %d: %s successor[%d] block %d has no instructions",
+			block.Parent().String(), block.Index, kind, succPos, succ.Index,
+		))
+	}
+	target, ok := blockStartInstIndex[succ]
+	if !ok {
+		panic(fmt.Sprintf(
+			"Go SSA CFG invariant failed in function %s block %d: %s successor[%d] block %d has no start instruction index",
+			block.Parent().String(), block.Index, kind, succPos, succ.Index,
+		))
+	}
+	return target
 }

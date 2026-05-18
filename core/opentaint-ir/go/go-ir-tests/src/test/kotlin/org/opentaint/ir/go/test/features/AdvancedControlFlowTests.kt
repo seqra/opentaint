@@ -35,6 +35,10 @@ class AdvancedControlFlowTests {
         // go-ssa lowers switch to if-else chains
         val ifs = fn.findInstructions<GoIRIf>()
         assertThat(ifs).hasSizeGreaterThanOrEqualTo(2)
+        for (ifInst in ifs) {
+            assertThat(ifInst.trueBranch).isEqualTo(ifInst.block.successors[0].start)
+            assertThat(ifInst.falseBranch).isEqualTo(ifInst.block.successors[1].start)
+        }
 
         GoIRSanityChecker.check(prog).assertNoErrors()
     }

@@ -2,6 +2,7 @@ package org.opentaint.ir.go.impl
 
 import org.opentaint.ir.go.api.GoIRBody
 import org.opentaint.ir.go.cfg.GoIRInstGraph
+import org.opentaint.ir.go.inst.GoIRBranching
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRInstRef
 import org.opentaint.ir.go.inst.GoIRPanic
@@ -32,9 +33,12 @@ class GoIRInstGraphImpl(override val body: GoIRBody) : GoIRInstGraph {
                 preds.getOrPut(instrs[i + 1].index) { mutableListOf() }
                     .add(instrs[i].index)
             }
-            // Terminator -> successor block first instructions
+            // Terminator -> successor instructions
             val term = instrs.last()
-            val termSuccs = block.successors.map { it.instructions.first().index }
+            val termSuccs = when (term) {
+                is GoIRBranching -> term.successors.map { it.index }
+                else -> block.successors.map { it.instructions.first().index }
+            }
             succs[term.index] = termSuccs
             for (s in termSuccs) {
                 preds.getOrPut(s) { mutableListOf() }.add(term.index)

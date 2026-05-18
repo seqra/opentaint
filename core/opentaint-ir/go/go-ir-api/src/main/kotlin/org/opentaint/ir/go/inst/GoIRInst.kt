@@ -51,7 +51,9 @@ sealed interface GoIRDefInst : GoIRInst {
 sealed interface GoIRTerminator : GoIRInst
 
 /** Marker for branching terminators (Jump, If). */
-sealed interface GoIRBranching : GoIRTerminator
+sealed interface GoIRBranching : GoIRTerminator {
+    val successors: List<GoIRInstRef>
+}
 
 // ─── Value-defining instructions ────────────────────────────────────
 
@@ -71,15 +73,15 @@ data class GoIRAssignInst(
 
 /**
  * Phi instruction: merges values from predecessor blocks at a join point.
- * Each edge corresponds to a predecessor block; edge[i] is the value from predecessor[i].
+ * Each edge is keyed by the predecessor block terminator instruction reference.
  */
 data class GoIRPhi(
     override val location: GoInstLocation,
     override val register: GoIRRegister,
-    val edges: List<GoIRValue>,
+    val edges: Map<GoIRInstRef, GoIRValue>,
     val comment: String?,
 ) : GoIRDefInst {
-    override val operands: List<GoIRValue> get() = edges
+    override val operands: List<GoIRValue> get() = edges.entries.sortedBy { it.key.index }.map { it.value }
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitPhi(this)
 }
 
@@ -99,16 +101,21 @@ data class GoIRCall(
 
 data class GoIRJump(
     override val location: GoInstLocation,
+    val target: GoIRInstRef,
 ) : GoIRBranching {
     override val operands: List<GoIRValue> get() = emptyList()
+    override val successors: List<GoIRInstRef> get() = listOf(target)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitJump(this)
 }
 
 data class GoIRIf(
     override val location: GoInstLocation,
     val cond: GoIRValue,
+    val trueBranch: GoIRInstRef,
+    val falseBranch: GoIRInstRef,
 ) : GoIRBranching {
     override val operands: List<GoIRValue> get() = listOf(cond)
+    override val successors: List<GoIRInstRef> get() = listOf(trueBranch, falseBranch)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitIf(this)
 }
 

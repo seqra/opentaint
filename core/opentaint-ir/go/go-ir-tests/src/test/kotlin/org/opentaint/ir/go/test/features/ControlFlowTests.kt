@@ -35,9 +35,11 @@ class ControlFlowTests {
         val ifs = fn.findInstructions<GoIRIf>()
         assertThat(ifs).isNotEmpty()
 
-        // If's block should have 2 successors
+        // If's block should have 2 successors, mirrored by explicit instruction targets
         val ifBlock = ifs[0].block
         assertThat(ifBlock.successors).hasSize(2)
+        assertThat(ifs[0].trueBranch).isEqualTo(ifBlock.successors[0].start)
+        assertThat(ifs[0].falseBranch).isEqualTo(ifBlock.successors[1].start)
 
         // Multiple blocks (at least: entry with If, true branch, false/merge)
         assertThat(body.blocks.size).isGreaterThanOrEqualTo(3)
@@ -59,7 +61,6 @@ class ControlFlowTests {
         """.trimIndent())
 
         val fn = prog.findFunctionByName("sum")!!
-        val body = fn.body!!
 
         // Loops generate Phi nodes for loop variables
         val phis = fn.findInstructions<GoIRPhi>()
@@ -69,9 +70,17 @@ class ControlFlowTests {
         val jumps = fn.findInstructions<GoIRJump>()
         assertThat(jumps).isNotEmpty()
 
+        for (jump in jumps) {
+            assertThat(jump.target).isEqualTo(jump.block.successors.single().start)
+        }
+
         // Should have If (loop condition check)
         val ifs = fn.findInstructions<GoIRIf>()
         assertThat(ifs).isNotEmpty()
+        for (ifInst in ifs) {
+            assertThat(ifInst.trueBranch).isEqualTo(ifInst.block.successors[0].start)
+            assertThat(ifInst.falseBranch).isEqualTo(ifInst.block.successors[1].start)
+        }
 
         GoIRSanityChecker.check(prog).assertNoErrors()
     }

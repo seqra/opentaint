@@ -48,6 +48,7 @@ import org.opentaint.ir.go.inst.GoIRDefer
 import org.opentaint.ir.go.inst.GoIRGo
 import org.opentaint.ir.go.inst.GoIRIf
 import org.opentaint.ir.go.inst.GoIRInst
+import org.opentaint.ir.go.inst.GoIRInstRef
 import org.opentaint.ir.go.inst.GoIRJump
 import org.opentaint.ir.go.inst.GoIRMapUpdate
 import org.opentaint.ir.go.inst.GoIRPanic
@@ -563,7 +564,20 @@ class GoIRDeserializer {
             ProtoInstruction.InstCase.PHI -> {
                 val reg = valueMap[pi.valueId]
                 registerTypeIds.add(reg to pi.typeId)
-                GoIRPhi(loc, reg, pi.phi.edgesList.map { ref(it) }, pi.phi.comment.ifEmpty { null })
+                val edges = linkedMapOf<GoIRInstRef, GoIRValue>()
+                pi.phi.edgesList.forEachIndexed { edgeIndex, edge ->
+                    check(edge.hasPredInstRef()) {
+                        "Missing phi edge pred_inst_ref in function ${fn.fullName} at instruction ${pi.index}, edge $edgeIndex"
+                    }
+                    check(edge.hasValue()) {
+                        "Missing phi edge value in function ${fn.fullName} at instruction ${pi.index}, edge $edgeIndex"
+                    }
+                    val predInstRef = GoIRInstRef(edge.predInstRef)
+                    check(edges.putIfAbsent(predInstRef, ref(edge.value)) == null) {
+                        "Duplicate phi edge pred_inst_ref ${predInstRef.index} in function ${fn.fullName} at instruction ${pi.index}"
+                    }
+                }
+                GoIRPhi(loc, reg, edges, pi.phi.comment.ifEmpty { null })
             }
 
             // ─── Call (separate instruction, not an expression) ───
@@ -574,8 +588,26 @@ class GoIRDeserializer {
             }
 
             // ─── Terminators ───
-            ProtoInstruction.InstCase.JUMP -> GoIRJump(loc)
-            ProtoInstruction.InstCase.IF_INST -> GoIRIf(loc, ref(pi.ifInst.cond))
+            ProtoInstruction.InstCase.JUMP -> {
+                check(pi.jump.hasTarget()) {
+                    "Missing jump target in function ${fn.fullName} at instruction ${pi.index}"
+                }
+                GoIRJump(loc, GoIRInstRef(pi.jump.target))
+            }
+            ProtoInstruction.InstCase.IF_INST -> {
+                check(pi.ifInst.hasTrueBranch()) {
+                    "Missing if true_branch target in function ${fn.fullName} at instruction ${pi.index}"
+                }
+                check(pi.ifInst.hasFalseBranch()) {
+                    "Missing if false_branch target in function ${fn.fullName} at instruction ${pi.index}"
+                }
+                GoIRIf(
+                    loc,
+                    ref(pi.ifInst.cond),
+                    GoIRInstRef(pi.ifInst.trueBranch),
+                    GoIRInstRef(pi.ifInst.falseBranch),
+                )
+            }
             ProtoInstruction.InstCase.RETURN_INST -> GoIRReturn(
                 loc, pi.returnInst.resultsList.map { ref(it) }
             )
