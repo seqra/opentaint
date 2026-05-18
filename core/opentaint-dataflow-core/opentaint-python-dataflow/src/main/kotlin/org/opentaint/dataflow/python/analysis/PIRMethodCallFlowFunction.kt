@@ -288,15 +288,14 @@ class PIRMethodCallFlowFunction(
         null
     }
 
-    override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> {
-        TODO("Not yet implemented")
-    }
+    override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> =
+        setOf(CallToReturnZeroFact)
 
     override fun propagateZeroToFactResolutionFailure(
         currentFactAp: FinalFactAp,
         startFactBase: AccessPathBase
     ): Set<ZeroCallFailureFact> {
-        TODO("Not yet implemented")
+        return setOf(CallToReturnZFact(currentFactAp, traceInfo = null))
     }
 
     override fun propagateFactToFactResolutionFailure(
@@ -304,7 +303,7 @@ class PIRMethodCallFlowFunction(
         currentFactAp: FinalFactAp,
         startFactBase: AccessPathBase
     ): Set<FactCallFailureFact> {
-        TODO("Not yet implemented")
+        return setOf(CallToReturnFFact(initialFactAp, currentFactAp, traceInfo = null))
     }
 
     override fun propagateNDFactToFactResolutionFailure(
@@ -312,7 +311,9 @@ class PIRMethodCallFlowFunction(
         currentFactAp: FinalFactAp,
         startFactBase: AccessPathBase
     ): Set<NDFactCallFailureFact> {
-        TODO("Not yet implemented")
+        return setOf(
+            MethodCallFlowFunction.CallToReturnNonDistributiveFact(initialFacts, currentFactAp, traceInfo = null)
+        )
     }
 
     companion object {
