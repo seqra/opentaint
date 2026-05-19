@@ -32,7 +32,7 @@ object GoIRSanityChecker {
         val errors = mutableListOf<SanityViolation>()
         val warnings = mutableListOf<SanityViolation>()
 
-        checkEntityInvariants(program, errors, warnings)
+        checkEntityInvariants(program, errors)
 
         for (fn in program.allFunctions()) {
             val body = fn.body ?: continue
@@ -41,7 +41,7 @@ object GoIRSanityChecker {
             checkSSAInvariants(body, errors, warnings)
             if (deep) {
                 checkBlockMembership(body, errors)
-                checkInstGraphConsistency(body, errors, warnings)
+                checkInstGraphConsistency(body, errors)
                 checkDominatorTree(body, errors, warnings)
                 checkOperandValidity(body, errors, warnings)
             }
@@ -351,7 +351,6 @@ object GoIRSanityChecker {
     private fun checkInstGraphConsistency(
         body: GoIRBody,
         errors: MutableList<SanityViolation>,
-        warnings: MutableList<SanityViolation>,
     ) {
         val fnName = body.function.fullName
         val instGraph = body.instGraph
@@ -599,7 +598,6 @@ object GoIRSanityChecker {
     private fun checkEntityInvariants(
         program: GoIRProgram,
         errors: MutableList<SanityViolation>,
-        warnings: MutableList<SanityViolation>,
     ) {
         // Check unique import paths
         val importPaths = program.packages.keys.toList()
@@ -616,8 +614,13 @@ object GoIRSanityChecker {
 
         // Check that methods have receiver types
         for (fn in program.allFunctions()) {
+            val pkg = fn.pkg
+            if (pkg != null && fn !in pkg.functions) {
+                errors += SanityViolation("entity", "Function '${fn.fullName}' is in package '${pkg.importPath}'")
+            }
+
             if (fn.isMethod && fn.receiverType == null) {
-                warnings += SanityViolation(
+                errors += SanityViolation(
                     "entity",
                     "Method '${fn.fullName}' has isMethod=true but receiverType=null"
                 )
@@ -628,7 +631,7 @@ object GoIRSanityChecker {
         for ((importPath, pkg) in program.packages) {
             for (fn in pkg.functions) {
                 if (fn.pkg !== pkg) {
-                    warnings += SanityViolation(
+                    errors += SanityViolation(
                         "entity",
                         "Function '${fn.fullName}' is in package '${importPath}' functions list but fn.pkg differs"
                     )
@@ -640,7 +643,7 @@ object GoIRSanityChecker {
         for ((importPath, pkg) in program.packages) {
             for (nt in pkg.namedTypes) {
                 if (nt.pkg !== pkg) {
-                    warnings += SanityViolation(
+                    errors += SanityViolation(
                         "entity",
                         "NamedType '${nt.name}' in package '${importPath}' but nt.pkg differs"
                     )
