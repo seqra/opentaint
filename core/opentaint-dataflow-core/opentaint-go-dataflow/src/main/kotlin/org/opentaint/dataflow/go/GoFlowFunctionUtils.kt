@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.go
 
+import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
@@ -14,6 +15,7 @@ import org.opentaint.ir.go.expr.*
 import org.opentaint.ir.go.inst.*
 import org.opentaint.ir.go.type.*
 import org.opentaint.ir.go.value.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Foundational utility for mapping Go IR values and expressions to the framework's
@@ -44,7 +46,12 @@ object GoFlowFunctionUtils {
             is GoIRParameterValue -> AccessPathBase.Argument(value.paramIndex)
             is GoIRRegister -> AccessPathBase.LocalVar(value.index)
             is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
-            is GoIRGlobalValue -> TODO("Globals")
+            is GoIRGlobalValue -> {
+                if (globalsNotSupportedReported.compareAndSet(false, true)) {
+                    logger.error("TODO: Global values are not supported")
+                }
+                null
+            }
             is GoIRFunctionValue -> AccessPathBase.Constant("func", value.function.fullName)
             is GoIRBuiltinValue -> AccessPathBase.Constant("builtin", value.name)
             is GoIRFreeVarValue -> {
@@ -52,7 +59,10 @@ object GoFlowFunctionUtils {
                 val paramCount = method.params.size
                 AccessPathBase.Argument(paramCount + value.freeVarIndex)
             }
-            else -> null
+            else -> {
+                logger.error("Unsupported value type: ${value.javaClass.canonicalName}")
+                null
+            }
         }
     }
 
@@ -273,4 +283,7 @@ object GoFlowFunctionUtils {
         }
         return Pair(base, accessors)
     }
+
+    private val globalsNotSupportedReported = AtomicBoolean(false)
+    private val logger = object : KLogging() {}.logger
 }
