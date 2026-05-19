@@ -8,7 +8,8 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
-import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
@@ -120,7 +121,7 @@ abstract class AnalysisTest {
         sink: TaintRules.Sink,
         entryPointFunction: String,
         extraPassRules: List<TaintRules.Pass> = emptyList(),
-    ): List<TaintSinkTracker.TaintVulnerability> {
+    ): List<VulnerabilityWithTrace> {
         val entryPoint = cp.findFunctionByFullName(entryPointFunction)
             ?: error("Entry point not found: $entryPointFunction")
 
@@ -142,7 +143,13 @@ abstract class AnalysisTest {
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
         return engine.use { eng ->
             eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
-            eng.getVulnerabilities()
+            val allVulnerabilities = eng.getVulnerabilities()
+
+            eng.resolveVulnerabilityTraces(
+                setOf(entryPoint), allVulnerabilities,
+                resolverParams = TraceResolver.Params(),
+                timeout = 1.minutes, cancellationTimeout = 10.seconds
+            ).filter { it.trace != null}
         }
     }
 
