@@ -166,10 +166,12 @@ class GoMethodCallFlowFunction(
 
             val markAccessor = TaintMarkAccessor(rule.mark)
             if (currentFactAp.startsWithAccessor(markAccessor)) {
+                val fact = apManager.createFinalInitialAp(currentFactAp.base, ExclusionSet.Empty)
+                    .prependAccessor(markAccessor)
                 context.taint.taintSinkTracker.addVulnerability(
                     methodEntryPoint = context.methodEntryPoint,
-                    facts = emptySet(), // todo: vulnerability facts
                     statement = statement,
+                    facts = setOf(fact),
                     rule = rule,
                 )
             } else if (currentFactAp.isAbstract() && !currentFactAp.exclusions.contains(markAccessor)) {
