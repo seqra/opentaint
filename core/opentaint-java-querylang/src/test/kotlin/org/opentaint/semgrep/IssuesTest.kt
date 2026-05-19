@@ -16,6 +16,7 @@ import issues.issue94
 import issues.issue95
 import issues.issue96
 import issues.issue97
+import issues.issue98
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
@@ -104,6 +105,10 @@ class IssuesTest : SampleBasedTest() {
 
     @Test
     fun `issue 97`() = runTest<issue97>()
+
+    @Test
+    @Disabled // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
+    fun `issue 98`() = runTest<issue98>()
 
     @AfterAll
     fun close() {
