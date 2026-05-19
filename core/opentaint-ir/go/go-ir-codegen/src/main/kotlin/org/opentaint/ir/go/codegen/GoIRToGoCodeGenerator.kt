@@ -86,18 +86,10 @@ class GoIRToGoCodeGenerator {
 
     private fun collectAllFunctions(pkg: GoIRPackage): List<GoIRFunction> {
         val result = mutableListOf<GoIRFunction>()
+        // pkg.functions already contains every function in the package: regular functions,
+        // methods (also reachable via namedTypes[*].methods), and anonymous functions
+        // (also reachable via parent.anonymousFunctions).
         result.addAll(pkg.functions)
-        result.addAll(pkg.allMethods())
-        // Collect anonymous functions recursively
-        fun collectAnon(fn: GoIRFunction) {
-            for (anon in fn.anonymousFunctions) {
-                result.add(anon)
-                collectAnon(anon)
-            }
-        }
-        for (fn in pkg.functions + pkg.allMethods()) {
-            collectAnon(fn)
-        }
         return result
     }
 

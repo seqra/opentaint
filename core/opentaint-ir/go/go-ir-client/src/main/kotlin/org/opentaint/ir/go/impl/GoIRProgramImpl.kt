@@ -8,7 +8,7 @@ class GoIRProgramImpl(
     override fun findPackage(importPath: String) = packages[importPath]
 
     override fun allFunctions(): List<GoIRFunction> =
-        packages.values.flatMap { it.functions + it.allMethods() }
+        packages.values.flatMap { it.functions }
 
     override fun allNamedTypes(): List<GoIRNamedType> =
         packages.values.flatMap { it.namedTypes }

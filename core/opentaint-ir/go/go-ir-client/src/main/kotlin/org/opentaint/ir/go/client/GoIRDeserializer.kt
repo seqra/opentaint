@@ -320,13 +320,12 @@ class GoIRDeserializer {
             pkg.addNamedType(namedType)
         }
 
-        // Functions
+        // Functions — register every function in its package (methods, anon funcs, and regular funcs).
+        // Methods are additionally linked to their receiver named type later via methodIds.
         for (pf in pp.functionsList) {
             val fn = deserializeFunction(pf, pkg)
             functionsById[pf.id] = fn
-            if (!pf.isMethod) {
-                pkg.addFunction(fn)
-            }
+            pkg.addFunction(fn)
         }
 
         // Globals
@@ -810,6 +809,19 @@ class GoIRDeserializer {
         // Resolve function cross-references
         for (fn in functionsById.values) {
             fn.resolveReferences(functionsById, namedTypesById)
+        }
+
+        // Resolve receiver types for methods that weren't linked via named type method lists
+        // (e.g. pointer-wrapper synthetic methods). receiverTypeId is a type ID that resolves
+        // to a named-type reference.
+        for (fn in functionsById.values) {
+            if (fn.isMethod && fn.receiverType == null && fn.receiverTypeId != 0) {
+                val recvType = resolveType(fn.receiverTypeId)
+                val named = (recvType as? GoIRNamedTypeRef)?.namedType
+                if (named != null) {
+                    fn.resolveReceiverType(named)
+                }
+            }
         }
     }
 

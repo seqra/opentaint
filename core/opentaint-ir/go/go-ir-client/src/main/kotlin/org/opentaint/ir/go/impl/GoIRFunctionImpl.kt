@@ -49,8 +49,16 @@ class GoIRFunctionImpl(
         for (id in anonFunctionIds) {
             functionsById[id]?.let { _anonymousFunctions.add(it) }
         }
-        // receiverType resolved via namedTypesById — but we need the type ID to be a named type ID
-        // This is handled during named type method resolution
+        // receiverType is resolved externally via resolveReceiverType after type
+        // references have been linked, because receiverTypeId is a type ID (not a
+        // named-type ID) and methods may not be referenced from any named type's
+        // method list (e.g. pointer-wrapper synthetic methods).
+    }
+
+    fun resolveReceiverType(named: GoIRNamedType) {
+        if (receiverType == null) {
+            receiverType = named
+        }
     }
 
     override fun toString(): String = "GoIRFunction($fullName)"
