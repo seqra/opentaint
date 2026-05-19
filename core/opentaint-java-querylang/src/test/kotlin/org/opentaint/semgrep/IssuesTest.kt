@@ -114,8 +114,7 @@ class IssuesTest : SampleBasedTest() {
     @Test
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
 
-    @Test
-    @Disabled // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
+    @Test // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
     fun `issue 98`() = runTest<issue98>()
 
     @AfterAll
