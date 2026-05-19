@@ -5,6 +5,7 @@ package org.opentaint.ir.api.python
  */
 interface PIRInstVisitor<out T> {
     fun visitAssign(inst: PIRAssign): T
+    fun visitReadName(inst: PIRReadName): T
     fun visitLoadAttr(inst: PIRLoadAttr): T
     fun visitStoreAttr(inst: PIRStoreAttr): T
     fun visitStoreSubscript(inst: PIRStoreSubscript): T
@@ -34,6 +35,7 @@ interface PIRInstVisitor<out T> {
         fun defaultVisit(inst: PIRInstruction): T
 
         override fun visitAssign(inst: PIRAssign): T = defaultVisit(inst)
+        override fun visitReadName(inst: PIRReadName): T = defaultVisit(inst)
         override fun visitLoadAttr(inst: PIRLoadAttr): T = defaultVisit(inst)
         override fun visitStoreAttr(inst: PIRStoreAttr): T = defaultVisit(inst)
         override fun visitStoreSubscript(inst: PIRStoreSubscript): T = defaultVisit(inst)
@@ -121,8 +123,6 @@ interface PIRValueVisitor<out T> {
     fun visitEllipsisConst(value: PIREllipsisConst): T
     fun visitBytesConst(value: PIRBytesConst): T
     fun visitComplexConst(value: PIRComplexConst): T
-    fun visitGlobalRef(value: PIRGlobalRef): T
-    fun visitModuleRef(value: PIRModuleRef): T
 
     interface Default<out T> : PIRValueVisitor<T> {
         fun defaultVisitValue(value: PIRValue): T
@@ -137,7 +137,5 @@ interface PIRValueVisitor<out T> {
         override fun visitEllipsisConst(value: PIREllipsisConst): T = defaultVisitValue(value)
         override fun visitBytesConst(value: PIRBytesConst): T = defaultVisitValue(value)
         override fun visitComplexConst(value: PIRComplexConst): T = defaultVisitValue(value)
-        override fun visitGlobalRef(value: PIRGlobalRef): T = defaultVisitValue(value)
-        override fun visitModuleRef(value: PIRModuleRef): T = defaultVisitValue(value)
     }
 }

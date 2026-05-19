@@ -23,13 +23,14 @@ import org.opentaint.ir.impl.python.flat.FlatDeleteSubscript
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatFunctionKind
 import org.opentaint.ir.impl.python.flat.FlatGetIter
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
 import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
 import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatModuleIR
-import org.opentaint.ir.impl.python.flat.FlatModuleRef
+import org.opentaint.ir.impl.python.flat.FlatModuleNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatNextIter
 import org.opentaint.ir.impl.python.flat.FlatRaise
 import org.opentaint.ir.impl.python.flat.FlatReturn
@@ -79,15 +80,16 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         return out
     }
 
-    /** Returns each FlatGlobalRef as `(simpleName, module)` derived from
-     *  `qualifiedName` via last-dot split. */
+    /** Returns each FlatGlobalNameRef (carried by a [FlatReadName]) as
+     *  `(simpleName, module)` derived from `qualifiedName` via last-dot split. */
     private fun globalRefs(fn: FlatFunctionIR): Set<Pair<String, String>> {
         val out = HashSet<Pair<String, String>>()
         for (block in fn.cfg.blocks) {
             for (inst in block.instructions) {
-                forEachOperand(inst) { v ->
-                    if (v is FlatGlobalRef) {
-                        val qn = v.qualifiedName
+                if (inst is FlatReadName) {
+                    val ref = inst.ref
+                    if (ref is FlatGlobalNameRef) {
+                        val qn = ref.qualifiedName
                         val dot = qn.lastIndexOf('.')
                         if (dot >= 0) out.add(qn.substring(dot + 1) to qn.substring(0, dot))
                         else out.add(qn to "")
@@ -102,27 +104,42 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         val out = HashSet<String>()
         for (block in fn.cfg.blocks) {
             for (inst in block.instructions) {
-                forEachOperand(inst) { v -> if (v is FlatModuleRef) out.add(v.module) }
+                if (inst is FlatReadName) {
+                    val ref = inst.ref
+                    if (ref is FlatModuleNameRef) out.add(ref.module)
+                }
             }
         }
         return out
     }
 
     /**
-     * Harvest cross-module attribute reads, i.e. instructions of the shape
-     * `FlatLoadAttr(_, FlatModuleRef(m), attr)`. Returns `(attr, m)` pairs,
-     * mirroring [globalRefs] so individual tests can assert against the
-     * same `(simpleName, module)` tuple regardless of whether the read
-     * surfaced as a `FlatGlobalRef` (legacy/builtin path) or a
-     * ModuleRef+LoadAttr (new cross-module-user-import path).
+     * Harvest cross-module attribute reads. After the FlatReadName lowering,
+     * `from os import getcwd` produces:
+     *   FlatReadName(tmp, FlatModuleNameRef("os"))
+     *   FlatLoadAttr(t2, tmp, "getcwd")
+     * This helper finds each `FlatLoadAttr` whose `obj` was filled by a
+     * `FlatReadName` of a [FlatModuleNameRef], and returns `(attr, module)`
+     * pairs.
      */
     private fun importedAttrReads(fn: FlatFunctionIR): Set<Pair<String, String>> {
         val out = HashSet<Pair<String, String>>()
         for (block in fn.cfg.blocks) {
+            // Build name → moduleRef map for FlatReadName-defined locals in this block.
+            val nameToModule = HashMap<String, String>()
+            for (inst in block.instructions) {
+                if (inst is FlatReadName) {
+                    val ref = inst.ref
+                    if (ref is FlatModuleNameRef) {
+                        nameToModule[(inst.target as FlatLocal).name] = ref.module
+                    }
+                }
+            }
             for (inst in block.instructions) {
                 if (inst is FlatLoadAttr) {
-                    val obj = inst.obj
-                    if (obj is FlatModuleRef) out.add(inst.attribute to obj.module)
+                    val objName = (inst.obj as? FlatLocal)?.name
+                    val mod = objName?.let(nameToModule::get)
+                    if (mod != null) out.add(inst.attribute to mod)
                 }
             }
         }

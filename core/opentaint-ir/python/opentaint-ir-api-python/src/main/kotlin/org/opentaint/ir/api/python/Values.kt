@@ -1,11 +1,15 @@
 package org.opentaint.ir.api.python
 
 /**
- * A value used in instructions (operand or result).
- * Analogous to JIRValue / JIRImmediate / JIRRef.
+ * A value used as an operand or result of a PIR instruction.
  *
- * Values are also expressions (PIRExpr), since they can appear as the
- * right-hand side of PIRAssign instructions.
+ * `PIRValue` is exactly `PIRLocal | PIRConst` — a function-local slot
+ * (variable, temporary, or parameter) or a literal constant. Name
+ * resolution (global / module references) is **not** a value: it is an
+ * explicit [PIRReadName] instruction whose result lands in a local.
+ *
+ * Values are also expressions ([PIRExpr]) since they can appear as the
+ * right-hand side of [PIRAssign].
  */
 sealed interface PIRValue : PIRExpr, org.opentaint.ir.api.common.cfg.CommonValue {
     val type: PIRType
@@ -131,37 +135,41 @@ data class PIRComplexConst(val real: Double, val imag: Double) : PIRConst {
     override fun <T> accept(visitor: PIRValueVisitor<T>): T = visitor.visitComplexConst(this)
 }
 
-// ─── Global References ──────────────────────────────────────
+// ─── Name references (NOT values) ───────────────────────────
 
 /**
- * Reference to a global variable or imported name, identified by its
- * canonical qualified name. The single string is the resolution key —
- * consumers that need a module / simple-name split do it themselves.
+ * A structural name that the IR must resolve to a value at runtime.
+ * Carried by [PIRReadName] (read), [PIRStoreGlobal] / [PIRDeleteGlobal]
+ * (write/delete of a global), and [PIRBindFunctionExpr] (structural
+ * reference to a lifted function).
+ *
+ * Name refs are deliberately not [PIRValue]: resolution is a
+ * side-effecting load, distinct from an operand read. Spilling a name
+ * into a local via `PIRReadName(tmp, ref)` makes the resolution an
+ * explicit instruction in the CFG.
  */
-data class PIRGlobalRef(
-    val qualifiedName: String,
-    override val type: PIRType = PIRAnyType,
-) : PIRValue {
+sealed interface PIRNameRef
+
+/**
+ * A reference to a global variable or imported name, identified by its
+ * canonical qualified name (e.g. `os.getcwd`, `builtins.super`,
+ * `mypkg.module.func`).
+ */
+data class PIRGlobalNameRef(val qualifiedName: String) : PIRNameRef {
     override fun toString(): String = qualifiedName
-    override fun <T> accept(visitor: PIRValueVisitor<T>): T = visitor.visitGlobalRef(this)
 }
 
 /**
- * Reference to a module by its top-level segment (e.g. `os` in
- * `os.getcwd()`). Distinct from [PIRGlobalRef], which names a value
- * inside a module.
+ * A reference to a module by its top-level segment (e.g. `os` in
+ * `os.getcwd()`). Sub-module access (e.g. `os.path`) is uniformly
+ * represented as a [PIRLoadAttr] chain rooted at a local that was
+ * filled by `PIRReadName(tmp, PIRModuleNameRef("os"))`.
  *
- * `module` is a single segment with no dots; sub-module access (e.g.
- * `os.path`) is uniformly represented as a `PIRLoadAttr` chain rooted at
- * this ref. Source-level aliases are resolved away during lowering.
+ * `module` must be a single segment with no dots.
  */
-data class PIRModuleRef(
-    val module: String,
-    override val type: PIRType = PIRAnyType,
-) : PIRValue {
+data class PIRModuleNameRef(val module: String) : PIRNameRef {
     init {
-        require('.' !in module) { "PIRModuleRef.module must be a single segment, got '$module'" }
+        require('.' !in module) { "PIRModuleNameRef.module must be a single segment, got '$module'" }
     }
     override fun toString(): String = module
-    override fun <T> accept(visitor: PIRValueVisitor<T>): T = visitor.visitModuleRef(this)
 }

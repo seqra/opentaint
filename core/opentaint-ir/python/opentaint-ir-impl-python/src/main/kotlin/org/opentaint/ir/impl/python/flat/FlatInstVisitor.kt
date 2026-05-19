@@ -20,7 +20,7 @@ interface FlatInstVisitor<R> {
     fun visitStoreAttr(inst: FlatStoreAttr): R
     fun visitLoadSubscript(inst: FlatLoadSubscript): R
     fun visitStoreSubscript(inst: FlatStoreSubscript): R
-    fun visitLoadGlobal(inst: FlatLoadGlobal): R
+    fun visitReadName(inst: FlatReadName): R
     fun visitStoreGlobal(inst: FlatStoreGlobal): R
     fun visitBindFunction(inst: FlatBindFunction): R
     fun visitBinOp(inst: FlatBinOp): R

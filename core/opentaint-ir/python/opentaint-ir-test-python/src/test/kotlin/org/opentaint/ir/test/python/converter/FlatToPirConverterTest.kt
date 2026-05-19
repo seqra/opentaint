@@ -152,7 +152,7 @@ class FlatToPirConverterTest {
     fun `FlatBindFunction lowers to PIRAssign of PIRBindFunctionExpr`() {
         val bind = FlatBindFunction(
             target = FlatLocal("x"),
-            function = FlatGlobalRef("mod.inner\$local0"),
+            function = FlatGlobalNameRef("mod.inner\$local0"),
             physicalLocation = PIRPhysicalLocation(
                 lineStart = 7u, lineEnd = 7u, colStart = 0u, colEnd = 0u,
             ),

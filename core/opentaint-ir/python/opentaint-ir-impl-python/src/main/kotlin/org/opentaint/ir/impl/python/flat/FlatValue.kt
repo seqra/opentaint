@@ -1,8 +1,14 @@
 package org.opentaint.ir.impl.python.flat
 
 /**
- * Operand of a [FlatInst]. Either a constant, a local/temporary variable,
- * or a reference to a globally-scoped name.
+ * Operand of a [FlatInst]. Either a constant or a local/temporary variable.
+ *
+ * Name resolution is **not** a value: globals and modules are referenced by
+ * [FlatNameRef] inside dedicated instructions ([FlatReadName] for reads,
+ * [FlatStoreGlobal] / [FlatDeleteGlobal] for writes, [FlatBindFunction] for
+ * the structural reference to a lifted function). This keeps every
+ * `FlatValue` operand uniformly "local or const", making instruction shape
+ * legible from types alone.
  */
 sealed interface FlatValue
 
@@ -30,38 +36,6 @@ data class FlatParameterRef(
     val type: FlatType = FlatAnyType,
 ) : FlatValue
 
-/**
- * Reference to a globally-resolvable name, identified by its qualified name.
- * For intra-module functions [qualifiedName] equals the corresponding
- * [FlatFunctionIR.qualifiedName]; for builtins / cross-module imports it is
- * the canonical dotted fullname (`builtins.AssertionError`, `os.getcwd`).
- *
- * The single string is the resolution key. Module-ness is a property of the
- * resolved target, not of the reference, so consumers that care about a
- * "module" component (e.g. PIR class-method dispatch) split the string at
- * the relevant boundary themselves.
- */
-data class FlatGlobalRef(val qualifiedName: String) : FlatValue
-
-/**
- * Reference to an entire module by its top-level segment (e.g. `os` in
- * `os.getcwd()`, or the root `collections` of `from collections.abc
- * import Iterable`). Distinct from [FlatGlobalRef], which names a value
- * defined inside a module.
- *
- * `module` is a single segment with no dots — sub-module access (e.g.
- * `os.path` reached via `import os.path as p`, or `collections.abc`
- * reached via `from collections.abc import Iterable`) is uniformly
- * represented as a `FlatLoadAttr` chain rooted at this ref. Aliases are
- * resolved at lowering time so downstream consumers only ever see the
- * canonical root segment.
- */
-data class FlatModuleRef(val module: String) : FlatValue {
-    init {
-        require('.' !in module) { "FlatModuleRef.module must be a single segment, got '$module'" }
-    }
-}
-
 sealed interface FlatConst : FlatValue
 data class FlatIntConst(val value: Long) : FlatConst
 data class FlatFloatConst(val value: Double) : FlatConst
@@ -74,3 +48,44 @@ data class FlatBytesConst(val value: ByteArray) : FlatConst {
     override fun hashCode() = value.contentHashCode()
 }
 data class FlatComplexConst(val real: Double, val imag: Double) : FlatConst
+
+// ─── Name references (NOT values) ───────────────────────────
+
+/**
+ * A structural name that the IR must resolve at runtime. Carried by
+ * [FlatReadName] (read), [FlatStoreGlobal] / [FlatDeleteGlobal]
+ * (write/delete of a global), and [FlatBindFunction] (structural reference
+ * to a lifted function). Not a [FlatValue]: resolution is a side-effecting
+ * load, distinct from an operand read, so every use site spills it through
+ * a `FlatReadName` into a local first.
+ */
+sealed interface FlatNameRef
+
+/**
+ * Reference to a globally-resolvable name, identified by its canonical
+ * qualified name. For intra-module functions [qualifiedName] equals the
+ * corresponding [FlatFunctionIR.qualifiedName]; for builtins / cross-module
+ * imports it is the canonical dotted fullname (`builtins.AssertionError`,
+ * `os.getcwd`).
+ */
+data class FlatGlobalNameRef(val qualifiedName: String) : FlatNameRef
+
+/**
+ * Reference to an entire module by its top-level segment (e.g. `os` in
+ * `os.getcwd()`, or the root `collections` of `from collections.abc
+ * import Iterable`). Distinct from [FlatGlobalNameRef], which names a
+ * value defined inside a module.
+ *
+ * `module` is a single segment with no dots — sub-module access (e.g.
+ * `os.path` reached via `import os.path as p`, or `collections.abc`
+ * reached via `from collections.abc import Iterable`) is uniformly
+ * represented as a `FlatLoadAttr` chain rooted at the local that received
+ * a `FlatReadName(_, FlatModuleNameRef(...))`. Aliases are resolved at
+ * lowering time so downstream consumers only ever see the canonical root
+ * segment.
+ */
+data class FlatModuleNameRef(val module: String) : FlatNameRef {
+    init {
+        require('.' !in module) { "FlatModuleNameRef.module must be a single segment, got '$module'" }
+    }
+}

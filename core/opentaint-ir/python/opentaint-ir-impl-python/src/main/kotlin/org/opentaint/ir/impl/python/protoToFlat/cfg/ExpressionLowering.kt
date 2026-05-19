@@ -163,8 +163,8 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
  * Materialize an [ImportBinding] into a `FlatValue`, recursively emitting
  * the `FlatLoadAttr` chain along the way.
  *
- * - [ImportBinding.Module] → `FlatModuleRef(name)`; no instructions
- *   emitted.
+ * - [ImportBinding.Module] → emit `FlatReadName(tmp, FlatModuleNameRef(name))`;
+ *   return `tmp`.
  * - [ImportBinding.Attr] → materialize the parent, then emit
  *   `FlatLoadAttr(tmp, parent_result, name)`. This handles both submodule
  *   access (`import os.path as p` → `Attr(Module(os), path)`) and from-
@@ -173,22 +173,31 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
  *   `Attr(Attr(Module(collections), abc), Iterable)`). Each read site
  *   gets fresh temps; we don't hoist or cache, which matches Python's
  *   re-resolve-on-every-access semantics.
- * - [ImportBinding.BareGlobal] → `FlatGlobalRef(name)`. Used only when
- *   mypy couldn't resolve the base of a relative `from . import x`. The
- *   KDoc on `ImportManager.recordImportFrom` documents this carve-out.
+ * - [ImportBinding.BareGlobal] → emit `FlatReadName(tmp,
+ *   FlatGlobalNameRef(name))`. Used only when mypy couldn't resolve the
+ *   base of a relative `from . import x`. The KDoc on
+ *   `ImportManager.recordImportFrom` documents this carve-out.
  */
 private fun CfgSession.materializeImport(
     binding: ImportBinding,
     location: PIRPhysicalLocation?,
 ): FlatValue = when (binding) {
-    is ImportBinding.Module -> FlatModuleRef(binding.name)
+    is ImportBinding.Module -> {
+        val tmp = newTempValue()
+        emit(FlatReadName(tmp, FlatModuleNameRef(binding.name), physicalLocation = location))
+        tmp
+    }
     is ImportBinding.Attr -> {
         val parentVal = materializeImport(binding.parent, location)
         val tmp = newTempValue()
         emit(FlatLoadAttr(tmp, parentVal, binding.name, physicalLocation = location))
         tmp
     }
-    is ImportBinding.BareGlobal -> FlatGlobalRef(binding.name)
+    is ImportBinding.BareGlobal -> {
+        val tmp = newTempValue()
+        emit(FlatReadName(tmp, FlatGlobalNameRef(binding.name), physicalLocation = location))
+        tmp
+    }
 }
 
 /**
@@ -216,7 +225,9 @@ private fun CfgSession.lowerGlobalFullname(
     if (owner == module.moduleName || owner == "builtins" ||
         owner.startsWith("${module.moduleName}.") || owner.startsWith("builtins.")
     ) {
-        return FlatGlobalRef(fullname)
+        val tmp = newTempValue()
+        emit(FlatReadName(tmp, FlatGlobalNameRef(fullname), physicalLocation = location))
+        return tmp
     }
     return materializeImport(moduleChain(fullname), location)
 }
@@ -477,7 +488,7 @@ private fun CfgSession.lowerLambda(expr: MypyLambdaExprProto): FlatValue {
         enclosingImports = imports,
     )
     module.register(lambda)
-    val ref = FlatGlobalRef(lambda.qualifiedName)
+    val ref = FlatGlobalNameRef(lambda.qualifiedName)
     val target = newTempValue()
     emit(FlatBindFunction(target, ref, physicalLocation = null))
     return target
@@ -486,8 +497,10 @@ private fun CfgSession.lowerLambda(expr: MypyLambdaExprProto): FlatValue {
 // ─── Super ──────────────────────────────────────────
 
 private fun CfgSession.lowerSuper(location: PIRPhysicalLocation?): FlatValue {
+    val callee = newTempValue()
+    emit(FlatReadName(callee, FlatGlobalNameRef("builtins.super"), physicalLocation = location))
     val target = newTempValue()
-    emit(FlatCall(target, FlatGlobalRef("builtins.super"), physicalLocation = location))
+    emit(FlatCall(target, callee, physicalLocation = location))
     return target
 }
 
@@ -509,7 +522,9 @@ private fun CfgSession.lowerComprehension(
             addMethod = "append"
         }
         CollectionKind.SET -> {
-            emit(FlatCall(result, FlatGlobalRef("builtins.set"), physicalLocation = location))
+            val callee = newTempValue()
+            emit(FlatReadName(callee, FlatGlobalNameRef("builtins.set"), physicalLocation = location))
+            emit(FlatCall(result, callee, physicalLocation = location))
             addMethod = "add"
         }
     }

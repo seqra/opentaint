@@ -4,13 +4,13 @@ import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
-import org.opentaint.ir.api.python.PIRGlobalRef
+import org.opentaint.ir.api.python.PIRGlobalNameRef
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRLoadAttr
 import org.opentaint.ir.api.python.PIRLocal
-import org.opentaint.ir.api.python.PIRLocalVar
-import org.opentaint.ir.api.python.PIRModuleRef
+import org.opentaint.ir.api.python.PIRModuleNameRef
 import org.opentaint.ir.api.python.PIRParameterRef
+import org.opentaint.ir.api.python.PIRReadName
 import org.opentaint.ir.api.python.targets
 
 class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, applicationGraph: PIRApplicationGraph) {
@@ -39,28 +39,29 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
         }
     }
 
-    private fun processEmpty(inst: PIRInstruction): NameBinding? {
-        if (inst !is PIRAssign) return null
-        val local = (inst.target as? PIRLocalVar)?.index ?: return null
-
-        val name = when (val rhv = inst.expr) {
-            is PIRGlobalRef -> NameEntry.GlobalRef(rhv.qualifiedName)
-            is PIRModuleRef -> NameEntry.GlobalRef(rhv.module)
-            is PIRParameterRef -> NameEntry.ParamRef(rhv.index)
-
-            else -> return null
+    private fun processEmpty(inst: PIRInstruction): NameBinding? =
+        when (inst) {
+            is PIRReadName -> {
+                val name = when (val ref = inst.ref) {
+                    is PIRGlobalNameRef -> NameEntry.GlobalRef(ref.qualifiedName)
+                    is PIRModuleNameRef -> NameEntry.GlobalRef(ref.module)
+                }
+                NameBinding.LocalBinding(inst.target.index, name)
+            }
+            is PIRAssign -> {
+                val rhv = inst.expr as? PIRParameterRef ?: return null
+                NameBinding.LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
+            }
+            else -> null
         }
-
-        return NameBinding.LocalBinding(local, name)
-    }
 
     private fun processLocalBinding(inst: PIRInstruction, entry: NameBinding.LocalBinding): List<NameBinding.LocalBinding> = buildList {
         val idx = entry.idx
 
         when (inst) {
             is PIRLoadAttr -> {
-                val targetIdx = (inst.target as? PIRLocalVar)?.index ?: error("Unexpected non-local target for instruction $inst")
-                val objIdx = (inst.obj as? PIRLocal)?.index // TODO object should be a local
+                val targetIdx = inst.target.index
+                val objIdx = (inst.obj as? PIRLocal)?.index
 
                 if (objIdx == idx) {
                     val newName = entry.name.prependSegment(inst.attribute)
@@ -78,25 +79,26 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
 
             is PIRAssign -> {
                 val sourceIdx = (inst.expr as? PIRLocal)?.index
-                val targetIdx = (inst.target as? PIRLocal)?.index
+                val targetIdx = inst.target.index
 
                 if (idx != targetIdx) {
                     this += entry
                 }
 
-                if (sourceIdx == idx && targetIdx != null) {
+                if (sourceIdx == idx) {
                     this += NameBinding.LocalBinding(targetIdx, entry.name)
                 }
             }
 
             else -> {
-                val idxReassignment = inst.targets.any { (it as? PIRLocal)?.index == idx }
+                val idxReassignment = inst.targets.any { it.index == idx }
 
                 if (!idxReassignment) {
                     this += entry
                 }
 
-                if (inst is PIRCall) {
+                val calleeIndex = ((inst as? PIRCall)?.callee as? PIRLocal)?.index
+                if (calleeIndex == entry.idx) {
                     saveResult(inst, entry.name)
                 }
             }

@@ -12,7 +12,8 @@ class PIRCallResolver(private val cp: PIRClasspath) {
     /**
      * Resolves a call with fallback: if resolvedCallee is null, searches the method's
      * instructions for a preceding PIRLoadAttr(target=callee, obj, attr)
-     * and constructs the qualified name from obj.type + attr.
+     * and constructs the qualified name from obj.type + attr, or by walking
+     * back to a [PIRReadName] that defined `obj`.
      */
     fun resolve(call: PIRCall, method: PIRFunction): PIRFunction? {
         // Primary: use resolvedCallee. The proto-to-flat layer normalizes
@@ -44,9 +45,7 @@ class PIRCallResolver(private val cp: PIRClasspath) {
         val calleeValue = call.callee
         if (calleeValue is PIRLocalVar) {
             for (inst in method.instList) {
-                if (inst is PIRLoadAttr && inst.target is PIRLocalVar &&
-                    (inst.target as PIRLocalVar).index == calleeValue.index
-                ) {
+                if (inst is PIRLoadAttr && inst.target.index == calleeValue.index) {
                     val attrName = inst.attribute
 
                     // Strategy 1: Use obj's type name (for instance method calls: obj.method())
@@ -57,18 +56,20 @@ class PIRCallResolver(private val cp: PIRClasspath) {
                         if (resolved1 != null) return resolved1
                     }
 
-                    // Strategy 2: Use PIRGlobalRef's qualifiedName (for class-level calls: ClassName.method())
-                    if (inst.obj is PIRGlobalRef) {
-                        val gref = inst.obj as PIRGlobalRef
-                        val resolved2 = cp.findFunctionOrNull("${gref.qualifiedName}.$attrName")
-                        if (resolved2 != null) return resolved2
-                    }
-
-                    // Strategy 2b: Use PIRModuleRef directly (for module.attr() calls: os.getcwd()).
-                    if (inst.obj is PIRModuleRef) {
-                        val mref = inst.obj as PIRModuleRef
-                        val resolved2b = cp.findFunctionOrNull("${mref.module}.$attrName")
-                        if (resolved2b != null) return resolved2b
+                    // Strategy 2 / 2b: the load's `obj` is now always a local;
+                    // the actual class/module name lives on a preceding
+                    // PIRReadName that filled `obj`. Walk back to find it.
+                    if (inst.obj is PIRLocalVar) {
+                        val objLocalIndex = (inst.obj as PIRLocalVar).index
+                        val nameRef = findReadNameRef(objLocalIndex, method)
+                        if (nameRef != null) {
+                            val ownerName = when (nameRef) {
+                                is PIRGlobalNameRef -> nameRef.qualifiedName
+                                is PIRModuleNameRef -> nameRef.module
+                            }
+                            val resolved2 = cp.findFunctionOrNull("$ownerName.$attrName")
+                            if (resolved2 != null) return resolved2
+                        }
                     }
 
                     // Strategy 3: For local variables with unknown type, try to infer the class
@@ -89,6 +90,18 @@ class PIRCallResolver(private val cp: PIRClasspath) {
     }
 
     /**
+     * Find the `PIRNameRef` whose [PIRReadName] resolves into the local
+     * slot with [localIndex]. Returns null when no such read is in scope
+     * (e.g. the local was filled by some other instruction).
+     */
+    private fun findReadNameRef(localIndex: Int, method: PIRFunction): PIRNameRef? {
+        for (inst in method.instList) {
+            if (inst is PIRReadName && inst.target.index == localIndex) return inst.ref
+        }
+        return null
+    }
+
+    /**
      * Infers the class of a local variable by finding the constructor call that assigned it.
      * For `obj = MyClass()`, the PIRCall has resolvedCallee="module.MyClass".
      * Returns the qualified class name or null.
@@ -96,8 +109,7 @@ class PIRCallResolver(private val cp: PIRClasspath) {
     private fun inferClassFromConstructor(localIndex: Int, method: PIRFunction): String? {
         for (inst in method.instList) {
             // Look for: PIRCall(target=PIRLocalVar(index=localIndex), resolvedCallee="module.ClassName")
-            if (inst is PIRCall && inst.target is PIRLocalVar &&
-                (inst.target as PIRLocalVar).index == localIndex &&
+            if (inst is PIRCall && inst.target?.index == localIndex &&
                 inst.resolvedCallee != null
             ) {
                 // The resolvedCallee might be a class name (for constructors)
@@ -107,8 +119,7 @@ class PIRCallResolver(private val cp: PIRClasspath) {
             }
             // Also check: PIRAssign(target=PIRLocalVar(index=localIndex), expr=PIRLocalVar(tempIndex))
             // where tempIndex was assigned from a constructor call
-            if (inst is PIRAssign && inst.target is PIRLocalVar &&
-                (inst.target as PIRLocalVar).index == localIndex &&
+            if (inst is PIRAssign && inst.target.index == localIndex &&
                 inst.expr is PIRLocalVar
             ) {
                 val tempIndex = (inst.expr as PIRLocalVar).index

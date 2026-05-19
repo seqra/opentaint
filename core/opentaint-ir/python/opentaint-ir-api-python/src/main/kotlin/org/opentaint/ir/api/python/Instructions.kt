@@ -51,7 +51,7 @@ sealed interface PIRTerminatingInst : PIRInstruction
 
 /**
  * Base for all PIR expressions (right-hand sides of assignments).
- * [PIRValue] subtypes (locals, constants, refs) are also expressions.
+ * [PIRValue] subtypes (locals, constants) are also expressions.
  * Compound expressions (binary ops, comparisons, attribute loads, etc.) extend this.
  */
 sealed interface PIRExpr : org.opentaint.ir.api.common.cfg.CommonExpr {
@@ -61,15 +61,13 @@ sealed interface PIRExpr : org.opentaint.ir.api.common.cfg.CommonExpr {
 // ─── Assignment (target = expr) ─────────────────────────────
 
 data class PIRAssign(
-    val target: PIRValue,
+    val target: PIRLocalVar,
     val expr: PIRExpr,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
 ) : PIRInstruction {
     override fun equals(other: Any?) = this === other
     override fun hashCode() = System.identityHashCode(this)
-    /** Backwards-compat: the source value when the expression is a simple value copy. */
-    val source: PIRValue get() = expr as PIRValue
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitAssign(this)
 }
 
@@ -147,13 +145,41 @@ data class PIRTypeCheckExpr(val value: PIRValue, val checkType: PIRType) : PIREx
  * function value at the site where the `def` / `lambda` syntactically appears
  * in the source. The closure transform may follow this with a
  * [PIRStoreAttr] writing `_closure_env_` on the bound local.
+ *
+ * The [function] is a structural name reference, not a value — it identifies
+ * which lifted function to bind, but does not denote a runtime read.
  */
-data class PIRBindFunctionExpr(val function: PIRGlobalRef) : PIRExpr
+data class PIRBindFunctionExpr(val function: PIRGlobalNameRef) : PIRExpr
+
+// ─── Name Resolution (read) ─────────────────────────────────
+
+/**
+ * Resolves a name reference ([PIRGlobalNameRef] / [PIRModuleNameRef]) and
+ * stores the resulting value into [target]. The single instruction kind
+ * for "read a global" and "read a module" — the discriminator is the
+ * [ref]'s subtype.
+ *
+ * Materialized by the Flat → PIR converter wherever Flat IR carries a
+ * raw name (FlatGlobalRef, FlatModuleRef, FlatLoadGlobal). After this
+ * lowering, no operand position in any PIR instruction holds a name
+ * reference: every use of a global / module goes through a temp filled
+ * by a `PIRReadName`.
+ */
+data class PIRReadName(
+    val target: PIRLocalVar,
+    val ref: PIRNameRef,
+    override val location: PIRLocation,
+    override val physicalLocation: PIRPhysicalLocation? = null,
+) : PIRInstruction {
+    override fun equals(other: Any?) = this === other
+    override fun hashCode() = System.identityHashCode(this)
+    override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitReadName(this)
+}
 
 // ─── Memory Store (side-effecting, no result) ───────────────
 
 data class PIRLoadAttr(
-    val target: PIRValue,
+    val target: PIRLocalVar,
     val obj: PIRValue,
     val attribute: String,
     val resultType: PIRType = PIRAnyType,
@@ -190,8 +216,7 @@ data class PIRStoreSubscript(
 }
 
 data class PIRStoreGlobal(
-    val name: String,
-    val module: String,
+    val ref: PIRGlobalNameRef,
     val value: PIRValue,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
@@ -216,7 +241,7 @@ data class PIRStoreClosure(
 // ─── Call ───────────────────────────────────────────────────
 
 data class PIRCall(
-    val target: PIRValue?,
+    val target: PIRLocalVar?,
     val callee: PIRValue,
     val args: List<PIRCallArg>,
     val resolvedCallee: String? = null,
@@ -239,7 +264,7 @@ enum class PIRCallArgKind { POSITIONAL, KEYWORD, STAR, DOUBLE_STAR }
 // ─── Iteration ──────────────────────────────────────────────
 
 data class PIRNextIter(
-    val target: PIRValue,
+    val target: PIRLocalVar,
     val iterator: PIRValue,
     val bodyBlock: Int,
     val exitBlock: Int,
@@ -260,7 +285,7 @@ data class PIRNextIter(
 }
 
 data class PIRUnpack(
-    val targets: List<PIRValue>,
+    val targets: List<PIRLocalVar>,
     val source: PIRValue,
     val starIndex: Int,
     override val location: PIRLocation,
@@ -332,7 +357,7 @@ data class PIRRaise(
 }
 
 data class PIRExceptHandler(
-    val target: PIRValue?,
+    val target: PIRLocalVar?,
     val exceptionTypes: List<PIRType>,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
@@ -345,7 +370,7 @@ data class PIRExceptHandler(
 // ─── Generators & Async ─────────────────────────────────────
 
 data class PIRYield(
-    val target: PIRValue?,
+    val target: PIRLocalVar?,
     val value: PIRValue?,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
@@ -356,7 +381,7 @@ data class PIRYield(
 }
 
 data class PIRYieldFrom(
-    val target: PIRValue?,
+    val target: PIRLocalVar?,
     val iterable: PIRValue,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
@@ -367,7 +392,7 @@ data class PIRYieldFrom(
 }
 
 data class PIRAwait(
-    val target: PIRValue?,
+    val target: PIRLocalVar?,
     val awaitable: PIRValue,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
@@ -380,7 +405,7 @@ data class PIRAwait(
 // ─── Delete ─────────────────────────────────────────────────
 
 data class PIRDeleteLocal(
-    val local: PIRValue,
+    val local: PIRLocalVar,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
 ) : PIRInstruction {
@@ -412,8 +437,7 @@ data class PIRDeleteSubscript(
 }
 
 data class PIRDeleteGlobal(
-    val name: String,
-    val module: String,
+    val ref: PIRGlobalNameRef,
     override val location: PIRLocation,
     override val physicalLocation: PIRPhysicalLocation? = null,
 ) : PIRInstruction {

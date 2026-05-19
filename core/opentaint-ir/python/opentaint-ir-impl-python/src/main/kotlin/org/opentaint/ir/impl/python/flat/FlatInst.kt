@@ -40,15 +40,22 @@ data class FlatLoadSubscript(val target: FlatValue, val obj: FlatValue, val inde
 data class FlatStoreSubscript(val obj: FlatValue, val index: FlatValue, val value: FlatValue, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitStoreSubscript(this)
 }
-data class FlatLoadGlobal(val target: FlatValue, val name: String, val module: String, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
-    override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitLoadGlobal(this)
+/**
+ * Resolves a [FlatNameRef] (global or module) and writes the result into
+ * [target]. The single instruction kind for "read a global" / "read a
+ * module"; the discriminator is the [ref]'s subtype. Lowering chains
+ * cross-module access into a `FlatReadName` root plus a `FlatLoadAttr`
+ * chain.
+ */
+data class FlatReadName(val target: FlatValue, val ref: FlatNameRef, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
+    override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitReadName(this)
 }
-data class FlatStoreGlobal(val name: String, val module: String, val value: FlatValue, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
+data class FlatStoreGlobal(val ref: FlatGlobalNameRef, val value: FlatValue, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitStoreGlobal(this)
 }
 data class FlatBindFunction(
-    val target: FlatValue,        // local that receives the bound function
-    val function: FlatGlobalRef,  // synthetic global ref to the lifted function
+    val target: FlatValue,             // local that receives the bound function
+    val function: FlatGlobalNameRef,   // structural name of the lifted function
     override val physicalLocation: PIRPhysicalLocation? = null,
 ) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitBindFunction(this)
@@ -133,7 +140,7 @@ data class FlatDeleteAttr(val obj: FlatValue, val attribute: String, override va
 data class FlatDeleteSubscript(val obj: FlatValue, val index: FlatValue, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitDeleteSubscript(this)
 }
-data class FlatDeleteGlobal(val name: String, val module: String, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
+data class FlatDeleteGlobal(val ref: FlatGlobalNameRef, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitDeleteGlobal(this)
 }
 

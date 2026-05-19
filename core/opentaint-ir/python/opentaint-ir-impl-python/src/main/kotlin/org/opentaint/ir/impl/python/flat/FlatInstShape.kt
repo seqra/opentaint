@@ -79,7 +79,7 @@ private object TargetExtractor : FlatInstVisitor<List<FlatValue>> {
     override fun visitStoreAttr(inst: FlatStoreAttr) = emptyList<FlatValue>()
     override fun visitLoadSubscript(inst: FlatLoadSubscript) = listOf(inst.target)
     override fun visitStoreSubscript(inst: FlatStoreSubscript) = emptyList<FlatValue>()
-    override fun visitLoadGlobal(inst: FlatLoadGlobal) = listOf(inst.target)
+    override fun visitReadName(inst: FlatReadName) = listOf(inst.target)
     override fun visitStoreGlobal(inst: FlatStoreGlobal) = emptyList<FlatValue>()
     override fun visitBindFunction(inst: FlatBindFunction) = listOf(inst.target)
     override fun visitBinOp(inst: FlatBinOp) = listOf(inst.target)
@@ -117,7 +117,7 @@ private class TargetMapper(private val f: (FlatValue) -> FlatValue) : FlatInstVi
     override fun visitStoreAttr(inst: FlatStoreAttr): FlatInst = inst
     override fun visitLoadSubscript(inst: FlatLoadSubscript) = transform(inst, inst.target, f) { inst.copy(target = it) }
     override fun visitStoreSubscript(inst: FlatStoreSubscript): FlatInst = inst
-    override fun visitLoadGlobal(inst: FlatLoadGlobal) = transform(inst, inst.target, f)  { inst.copy(target = it) }
+    override fun visitReadName(inst: FlatReadName) = transform(inst, inst.target, f) { inst.copy(target = it) }
     override fun visitStoreGlobal(inst: FlatStoreGlobal): FlatInst = inst
     override fun visitBindFunction(inst: FlatBindFunction) = transform(inst, inst.target, f)  { inst.copy(target = it) }
     override fun visitBinOp(inst: FlatBinOp) = transform(inst, inst.target, f)  { inst.copy(target = it) }
@@ -163,7 +163,7 @@ private class OperandMapper(private val f: (FlatValue) -> FlatValue) : FlatInstV
         transform(inst, inst.obj, inst.index, inst.value, f) { o, i, v ->
             inst.copy(obj = o, index = i, value = v)
         }
-    override fun visitLoadGlobal(inst: FlatLoadGlobal): FlatInst = inst
+    override fun visitReadName(inst: FlatReadName): FlatInst = inst  // ref is not an operand
     override fun visitStoreGlobal(inst: FlatStoreGlobal) =
         transform(inst, inst.value, f) { inst.copy(value = it) }
     override fun visitBindFunction(inst: FlatBindFunction): FlatInst = inst   // function ref is not an operand

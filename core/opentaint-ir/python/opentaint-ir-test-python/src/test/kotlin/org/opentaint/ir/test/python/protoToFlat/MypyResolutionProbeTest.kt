@@ -22,7 +22,8 @@ import org.opentaint.ir.impl.python.flat.FlatDeleteLocal
 import org.opentaint.ir.impl.python.flat.FlatDeleteSubscript
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatGetIter
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
 import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
@@ -90,9 +91,10 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
     }
 
     private fun addGlobalRefs(inst: FlatInst, out: MutableSet<Pair<String, String>>) {
-        forEachOperand(inst) { v ->
-            if (v is FlatGlobalRef) {
-                val qn = v.qualifiedName
+        if (inst is FlatReadName) {
+            val ref = inst.ref
+            if (ref is FlatGlobalNameRef) {
+                val qn = ref.qualifiedName
                 val dot = qn.lastIndexOf('.')
                 if (dot >= 0) out.add(qn.substring(dot + 1) to qn.substring(0, dot))
                 else out.add(qn to "")
@@ -516,7 +518,7 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
                     is FlatCompare -> add(inst.target)
                     is FlatLoadAttr -> add(inst.target)
                     is FlatLoadSubscript -> add(inst.target)
-                    is org.opentaint.ir.impl.python.flat.FlatLoadGlobal -> add(inst.target)
+                    is FlatReadName -> add(inst.target)
                     is FlatBuildList -> add(inst.target)
                     is FlatBuildTuple -> add(inst.target)
                     is FlatBuildSet -> add(inst.target)

@@ -274,9 +274,7 @@ class PIRMethodCallFlowFunction(
         val callee = callInst.callee
         if (callee !is PIRLocalVar) return@lazy null
         for (inst in method.instList) {
-            if (inst is PIRLoadAttr && inst.target is PIRLocalVar
-                && (inst.target as PIRLocalVar).index == callee.index
-            ) {
+            if (inst is PIRLoadAttr && inst.target.index == callee.index) {
                 val attrName = inst.attribute
                 val typeName = inst.obj.type.typeName
                 if (typeName.isNotEmpty() && typeName != "Any" && typeName != "any") {

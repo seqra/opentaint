@@ -401,7 +401,9 @@ private fun CfgSession.visitAssert(stmt: MypyAssertStmtProto, location: PIRPhysi
     emitBranch(cond, passBlock, failBlock, location)
 
     activate(failBlock)
-    var exc: FlatValue = FlatGlobalRef("builtins.AssertionError")
+    val excClass = newTempValue()
+    emit(FlatReadName(excClass, FlatGlobalNameRef("builtins.AssertionError"), physicalLocation = location))
+    var exc: FlatValue = excClass
     if (stmt.hasMsg() && stmt.msg.kindCase != MypyExprProto.KindCase.KIND_NOT_SET) {
         val msgVal = lowerExpr(stmt.msg)
         val callTarget = newTempValue()
@@ -446,7 +448,7 @@ private fun CfgSession.visitNestedFuncDef(
     module.register(nested)
 
     // Bind the local name to the synthetic global function.
-    val ref = FlatGlobalRef(nested.qualifiedName)
+    val ref = FlatGlobalNameRef(nested.qualifiedName)
     val targetName = scope.resolveLocal(funcDef.name)
     emit(FlatBindFunction(FlatLocal(targetName), ref, physicalLocation = location))
 }

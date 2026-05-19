@@ -10,8 +10,9 @@ import org.opentaint.ir.impl.python.flat.FlatClass
 import org.opentaint.ir.impl.python.flat.FlatDeleteAttr
 import org.opentaint.ir.impl.python.flat.FlatDeleteLocal
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
 import org.opentaint.ir.impl.python.flat.FlatInst
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
 import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
 import org.opentaint.ir.impl.python.flat.FlatLocal
@@ -153,10 +154,17 @@ internal class RewriteCtx(
         // seed here would duplicate that store.
         for (name in ownedCells) {
             val cellLocal = cellLocals.getValue(name)
+            val callee = freshTemp()
+            add(
+                FlatReadName(
+                    target = callee,
+                    ref = FlatGlobalNameRef("builtins.${ClosureRuntime.CELL_CTOR_NAME}"),
+                ),
+            )
             add(
                 FlatCall(
                     target = cellLocal,
-                    callee = FlatGlobalRef("builtins.${ClosureRuntime.CELL_CTOR_NAME}"),
+                    callee = callee,
                     args = emptyList(),
                 ),
             )
@@ -331,10 +339,19 @@ internal class RewriteCtx(
         // unchanged.
         val callTarget = redirectTarget(originalTarget, location, scope)
 
+        val adapterLocal = freshTemp()
+        scope.emitBefore(
+            FlatReadName(
+                target = adapterLocal,
+                ref = FlatGlobalNameRef(childAdapterQn),
+                physicalLocation = location,
+            ),
+        )
+
         scope.replaceWith(
             FlatCall(
                 target = callTarget,
-                callee = FlatGlobalRef(childAdapterQn),
+                callee = adapterLocal,
                 args = listOf(FlatCallArg(envValueLocal)),
                 physicalLocation = location,
             ),

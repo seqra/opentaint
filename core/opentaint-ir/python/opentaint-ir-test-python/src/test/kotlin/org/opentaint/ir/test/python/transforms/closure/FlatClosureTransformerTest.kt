@@ -22,7 +22,8 @@ import org.opentaint.ir.impl.python.flat.FlatDeleteLocal
 import org.opentaint.ir.impl.python.flat.FlatExceptHandler
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatFunctionKind
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatIntConst
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
@@ -175,6 +176,24 @@ class FlatClosureTransformerTest {
     private fun entryInsts(fn: FlatFunctionIR): List<FlatInst> =
         fn.cfg.blocks.first { it.label == fn.cfg.entryBlock }.instructions
 
+    /**
+     * Resolve the qualified name of a `FlatCall`'s callee through a
+     * preceding `FlatReadName` that defined it. Returns null when the
+     * callee is not a local filled by a `FlatGlobalNameRef`-tagged read.
+     */
+    private fun calleeQn(call: FlatCall, insts: List<FlatInst>): String? {
+        val callee = call.callee as? FlatLocal ?: return null
+        for (inst in insts) {
+            if (inst === call) break
+            if (inst is FlatReadName &&
+                (inst.target as? FlatLocal)?.name == callee.name
+            ) {
+                return (inst.ref as? FlatGlobalNameRef)?.qualifiedName
+            }
+        }
+        return null
+    }
+
     /* ------------------------------------------------------------------ */
     /* 1. <self> injected iff closureVars non-empty                       */
     /* ------------------------------------------------------------------ */
@@ -200,7 +219,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -234,7 +253,7 @@ class FlatClosureTransformerTest {
             parent = null,
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -271,7 +290,7 @@ class FlatClosureTransformerTest {
             body = listOf(
                 FlatAssign(local("a"), FlatIntConst(1)),
                 FlatAssign(local("b"), FlatIntConst(2)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -282,16 +301,19 @@ class FlatClosureTransformerTest {
         // First two should be __pir_cell__() calls.
         val cellCtorQn = "builtins.${ClosureRuntime.CELL_CTOR_NAME}"
         val cellCalls = insts.filterIsInstance<FlatCall>().filter {
-            (it.callee as? FlatGlobalRef)?.qualifiedName == cellCtorQn
+            calleeQn(it, insts) == cellCtorQn
         }
         assertEquals(2, cellCalls.size)
         val targets = cellCalls.mapNotNull { (it.target as? FlatLocal)?.name }.toSet()
         assertEquals(setOf(cellName("a"), cellName("b")), targets)
-        // First instruction in body is a cell allocation (prologue prepended).
-        val firstCellAllocAt = insts.indexOfFirst {
-            it is FlatCall && (it.callee as? FlatGlobalRef)?.qualifiedName == cellCtorQn
-        }
-        assertEquals(0, firstCellAllocAt)
+        // First instructions in body are the prologue: FlatReadName loading
+        // the cell ctor, then the FlatCall allocating the cell. The very
+        // first instruction is the read; the cell allocation follows.
+        assertTrue(insts[0] is FlatReadName, "first inst should be the cell-ctor FlatReadName, got ${insts[0]}")
+        assertTrue(
+            insts[1] is FlatCall && calleeQn(insts[1] as FlatCall, insts) == cellCtorQn,
+            "second inst should be the cell allocation FlatCall, got ${insts[1]}",
+        )
     }
 
     /* ------------------------------------------------------------------ */
@@ -326,7 +348,7 @@ class FlatClosureTransformerTest {
             params = listOf("x"),
             body = listOf(
                 FlatAssign(local("x"), FlatParameterRef("x")),  // mirrors CfgBuild's prologue
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -340,7 +362,7 @@ class FlatClosureTransformerTest {
         // assign) by a FlatStoreAttr($cell$x, "value", _) seeding the cell.
         val allocIdx = insts.indexOfFirst {
             it is FlatCall &&
-                (it.callee as? FlatGlobalRef)?.qualifiedName == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
+                calleeQn(it, insts) == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
                 (it.target as? FlatLocal)?.name == cellName("x")
         }
         assertTrue(allocIdx >= 0, "expected cell-alloc for x; insts=$insts")
@@ -389,7 +411,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -438,7 +460,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("count"), FlatIntConst(0)),
-                FlatBindFunction(local("inc"), FlatGlobalRef(incQn)),
+                FlatBindFunction(local("inc"), FlatGlobalNameRef(incQn)),
                 FlatReturn(null),
             ),
         )
@@ -481,7 +503,7 @@ class FlatClosureTransformerTest {
             params = listOf("f"),
             body = listOf(
                 FlatAssign(local("v"), FlatIntConst(0)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -517,7 +539,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("xs"), FlatIntConst(0)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -557,7 +579,7 @@ class FlatClosureTransformerTest {
         val bodyBlock = FlatBlock(
             label = 1,
             instructions = listOf(
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 org.opentaint.ir.impl.python.flat.FlatGoto(0),
             ),
             exceptionHandlers = emptyList(),
@@ -602,7 +624,7 @@ class FlatClosureTransformerTest {
             label = 1,
             instructions = listOf(
                 FlatExceptHandler(target = local("e"), exceptionTypes = listOf(FlatClassType("Exception"))),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
             exceptionHandlers = emptyList(),
@@ -651,7 +673,7 @@ class FlatClosureTransformerTest {
             params = listOf("pair"),
             body = listOf(
                 FlatUnpack(targets = listOf(local("a"), local("b")), source = local("pair"), starIndex = -1),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -692,7 +714,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatDeleteLocal(local("x")),
                 FlatReturn(null),
             ),
@@ -729,7 +751,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -746,11 +768,13 @@ class FlatClosureTransformerTest {
         val buildDict = insts[buildIdx] as FlatBuildDict
         assertEquals(listOf(FlatStrConst("x") as FlatValue), buildDict.keys)
         assertEquals(listOf(local(cellName("x")) as FlatValue), buildDict.values)
-        // Next is the constructor call producing the adapter instance into `inner`.
-        val ctor = insts[buildIdx + 1] as FlatCall
+        // Next is a FlatReadName loading the adapter class into a temp,
+        // then the constructor call producing the adapter instance into `inner`.
+        val read = insts[buildIdx + 1] as FlatReadName
+        assertEquals("$moduleName.<closure_inner>", (read.ref as FlatGlobalNameRef).qualifiedName)
+        val ctor = insts[buildIdx + 2] as FlatCall
         assertEquals("inner", (ctor.target as FlatLocal).name)
-        val callee = ctor.callee as FlatGlobalRef
-        assertEquals("$moduleName.<closure_inner>", callee.qualifiedName)
+        assertEquals((read.target as FlatLocal).name, (ctor.callee as FlatLocal).name)
         assertEquals(1, ctor.args.size)
         assertEquals((buildDict.target as FlatLocal).name, (ctor.args[0].value as FlatLocal).name)
     }
@@ -774,7 +798,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -804,9 +828,8 @@ class FlatClosureTransformerTest {
         assertEquals(2, implCall.args.size)
         assertEquals("self", (implCall.args[0].value as FlatLocal).name)
         assertEquals("p", (implCall.args[1].value as FlatLocal).name)
-        // Impl callee is a FlatGlobalRef pointing at the renamed impl.
-        val implCallee = implCall.callee as FlatGlobalRef
-        assertEquals("$moduleName.<closure_inner_impl>", implCallee.qualifiedName)
+        // Impl callee is a local filled by FlatReadName pointing at the renamed impl.
+        assertEquals("$moduleName.<closure_inner_impl>", calleeQn(implCall, callInsts))
     }
 
     @Test
@@ -827,7 +850,7 @@ class FlatClosureTransformerTest {
             parent = null,
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -863,7 +886,7 @@ class FlatClosureTransformerTest {
             parent = null,
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -908,7 +931,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatCall(target = local("r"), callee = local("inner"), args = listOf(FlatCallArg(FlatIntConst(42)))),
                 FlatReturn(null),
             ),
@@ -950,7 +973,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(local("x"), FlatIntConst(1)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -967,7 +990,7 @@ class FlatClosureTransformerTest {
         val outerInsts = entryInsts(lookup(out, outerQn))
         // Capturing-child bind became a FlatCall to the adapter constructor.
         val ctor = outerInsts.filterIsInstance<FlatCall>().firstOrNull {
-            (it.callee as? FlatGlobalRef)?.qualifiedName == cls.qualifiedName
+            calleeQn(it, outerInsts) == cls.qualifiedName
         }
         assertNotNull(ctor)
     }
@@ -1004,7 +1027,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.METHOD,
             params = listOf("self"),
             body = listOf(
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -1026,7 +1049,7 @@ class FlatClosureTransformerTest {
         assertTrue(
             outerInsts.any {
                 it is FlatCall &&
-                    (it.callee as? FlatGlobalRef)?.qualifiedName == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
+                    calleeQn(it, outerInsts) == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
                     (it.target as? FlatLocal)?.name == cellName("x")
             },
             "outer should allocate \$cell\$x",
@@ -1069,7 +1092,7 @@ class FlatClosureTransformerTest {
             body = listOf(
                 FlatAssign(local("a"), FlatIntConst(1)),
                 FlatAssign(local("b"), FlatIntConst(2)),
-                FlatBindFunction(local("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )

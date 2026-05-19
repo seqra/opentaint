@@ -80,8 +80,8 @@ def ap_chained_attr(obj) -> None:
 
     @Test
     fun `ap_simple - assigns integer constant`() {
-        assertTrue(allOf<PIRAssign>("ap_simple").any { it.source is PIRIntConst },
-            "Expected PIRAssign with PIRIntConst source")
+        assertTrue(allOf<PIRAssign>("ap_simple").any { it.expr is PIRIntConst },
+            "Expected PIRAssign with PIRIntConst expr")
     }
 
     @Test

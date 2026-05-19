@@ -14,7 +14,8 @@ import org.opentaint.ir.impl.python.flat.FlatClass
 import org.opentaint.ir.impl.python.flat.FlatDecorator
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatFunctionKind
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatIntConst
 import org.opentaint.ir.impl.python.flat.FlatLocal
@@ -111,6 +112,21 @@ class CallableShimTest {
             ?: error("Impl $expected not found")
     }
 
+    /**
+     * Resolve the qualified name of a `FlatCall`'s callee through a
+     * preceding `FlatReadName` that defined it.
+     */
+    private fun calleeQnHelper(call: FlatCall, insts: List<FlatInst>): String? {
+        val callee = call.callee as? FlatLocal ?: return null
+        for (inst in insts) {
+            if (inst === call) break
+            if (inst is FlatReadName && (inst.target as? FlatLocal)?.name == callee.name) {
+                return (inst.ref as? FlatGlobalNameRef)?.qualifiedName
+            }
+        }
+        return null
+    }
+
     /* ------------------------------------------------------------------ */
 
     @Test
@@ -132,7 +148,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -172,9 +188,9 @@ class CallableShimTest {
         val cls = adapterFor(out, "inner")
         val callMethod = cls.methods[1]
         assertEquals(listOf("self", "p"), callMethod.parameters.map { it.name })
-        val implCall = callMethod.cfg.blocks.single().instructions.filterIsInstance<FlatCall>().single()
-        val callee = implCall.callee as FlatGlobalRef
-        assertEquals("$moduleName.<closure_inner_impl>", callee.qualifiedName)
+        val callInsts = callMethod.cfg.blocks.single().instructions
+        val implCall = callInsts.filterIsInstance<FlatCall>().single()
+        assertEquals("$moduleName.<closure_inner_impl>", calleeQnHelper(implCall, callInsts))
         assertEquals(2, implCall.args.size)
         assertEquals("self", (implCall.args[0].value as FlatLocal).name)
         assertEquals(FlatArgKind.POSITIONAL, implCall.args[0].kind)
@@ -200,7 +216,7 @@ class CallableShimTest {
             parent = null,
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -233,7 +249,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("fn"), FlatGlobalRef(lambdaQn)),
+                FlatBindFunction(FlatLocal("fn"), FlatGlobalNameRef(lambdaQn)),
                 FlatReturn(null),
             ),
         )
@@ -255,7 +271,7 @@ class CallableShimTest {
         // Find the adapter ctor call.
         val cls = adapterFor(out, "inner")
         val ctor = insts.filterIsInstance<FlatCall>().firstOrNull {
-            (it.callee as? FlatGlobalRef)?.qualifiedName == cls.qualifiedName
+            calleeQnHelper(it, insts) == cls.qualifiedName
         }
         assertNotNull(ctor)
         assertEquals("inner", (ctor!!.target as FlatLocal).name)
@@ -282,7 +298,7 @@ class CallableShimTest {
             parent = null,
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -313,7 +329,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -344,7 +360,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -381,7 +397,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -416,7 +432,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )
@@ -473,9 +489,9 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("a"), FlatGlobalRef(aQn)),
-                FlatBindFunction(FlatLocal("b"), FlatGlobalRef(bQn)),
-                FlatBindFunction(FlatLocal("c"), FlatGlobalRef(cQn)),
+                FlatBindFunction(FlatLocal("a"), FlatGlobalNameRef(aQn)),
+                FlatBindFunction(FlatLocal("b"), FlatGlobalNameRef(bQn)),
+                FlatBindFunction(FlatLocal("c"), FlatGlobalNameRef(cQn)),
                 FlatReturn(null),
             ),
         )
@@ -487,7 +503,7 @@ class CallableShimTest {
         // then FlatStoreAttr($cell$b, "value", temp).
         val clsB = adapterFor(out, "b")
         val ctorB = insts.filterIsInstance<FlatCall>().firstOrNull {
-            (it.callee as? FlatGlobalRef)?.qualifiedName == clsB.qualifiedName
+            calleeQnHelper(it, insts) == clsB.qualifiedName
         }
         assertNotNull(ctorB)
         // ctor target is a fresh temp (not "b").
@@ -531,7 +547,7 @@ class CallableShimTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             body = listOf(
                 FlatAssign(FlatLocal("x"), FlatIntConst(1)),
-                FlatBindFunction(FlatLocal("inner"), FlatGlobalRef(innerQn)),
+                FlatBindFunction(FlatLocal("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
         )

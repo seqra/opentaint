@@ -25,14 +25,16 @@ object PIRFlowFunctionUtils {
      * - PIRParameterRef → Argument(value.index). Indices are signature-order
      *   on the post-rewrite [PIRFunction.parameters], so `<self>`-shifted
      *   indices on closure children are already correct.
-     * - PIRConst, PIRGlobalRef, PIRModuleRef → null (not taint-trackable).
+     * - PIRConst → null (not taint-trackable).
+     *
+     * Global / module name references are not [PIRValue]s — they appear
+     * only on [PIRReadName] instructions, whose target is a local that
+     * downstream consumers see in this method.
      */
     fun accessPathBase(value: PIRValue): AccessPathBase? = when (value) {
         is PIRLocalVar -> AccessPathBase.LocalVar(value.index)
         is PIRParameterRef -> AccessPathBase.Argument(value.index)
         is PIRConst -> null // Constants are not taint-trackable
-        is PIRGlobalRef -> null  // Not tracked as a local
-        is PIRModuleRef -> null  // Module references are not taint-trackable
     }
 
     /**
@@ -67,9 +69,7 @@ object PIRFlowFunctionUtils {
         if (callee !is PIRLocalVar) return null
 
         for (inst in method.instList) {
-            if (inst is PIRLoadAttr && inst.target is PIRLocalVar
-                && (inst.target as PIRLocalVar).index == callee.index
-            ) {
+            if (inst is PIRLoadAttr && inst.target.index == callee.index) {
                 return inst.obj
             }
         }

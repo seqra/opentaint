@@ -3,10 +3,10 @@ package org.opentaint.ir.test.python.protoToFlat
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.ir.impl.python.flat.FlatAssign
 import org.opentaint.ir.impl.python.flat.FlatBindFunction
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatLocal
 import kotlin.test.assertEquals
@@ -110,7 +110,7 @@ class BindFunctionEmissionTest : RawFlatModuleTestBase() {
     }
 
     @Test
-    fun `no FlatAssign of FlatLocal from FlatGlobalRef remains at nested-def or lambda binding sites`() {
+    fun `no FlatReadName of a lifted function remains at nested-def or lambda binding sites`() {
         val module = lowerSourceToFlat(source)
         val liftedQualifiedNames = module.functions.map { it.qualifiedName }.toSet()
 
@@ -119,14 +119,12 @@ class BindFunctionEmissionTest : RawFlatModuleTestBase() {
         }
         for (parent in parents) {
             val offending = parent.allInstructions().filter { inst ->
-                inst is FlatAssign &&
-                    inst.target is FlatLocal &&
-                    inst.source is FlatGlobalRef &&
-                    (inst.source as FlatGlobalRef).qualifiedName in liftedQualifiedNames
+                inst is FlatReadName &&
+                    (inst.ref as? FlatGlobalNameRef)?.qualifiedName in liftedQualifiedNames
             }
             assertTrue(
                 offending.isEmpty(),
-                "parent ${parent.qualifiedName} still uses FlatAssign(FlatLocal, FlatGlobalRef) for a lifted function: $offending",
+                "parent ${parent.qualifiedName} still uses FlatReadName for a lifted function: $offending",
             )
         }
     }

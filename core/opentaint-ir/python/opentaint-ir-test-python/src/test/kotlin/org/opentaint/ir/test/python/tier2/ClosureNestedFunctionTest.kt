@@ -753,9 +753,21 @@ def cnf_transitive(x):
         val outer = findFunc("cnf_closure_read")
         val insts = outer.instList
 
+        // Build a map: localVar.index → qualifiedName for PIRReadName(GlobalNameRef).
+        val nameByLocal = insts
+            .filterIsInstance<PIRReadName>()
+            .mapNotNull { r ->
+                val ref = r.ref as? PIRGlobalNameRef ?: return@mapNotNull null
+                r.target.index to ref.qualifiedName
+            }
+            .toMap()
+        fun calleeQn(call: PIRCall): String? {
+            val callee = call.callee as? PIRLocalVar ?: return null
+            return nameByLocal[callee.index]
+        }
+
         val cellCtorCalls = insts.filterIsInstance<PIRCall>().filter { call ->
-            val callee = call.callee
-            callee is PIRGlobalRef && callee.qualifiedName == "builtins.__pir_cell__"
+            calleeQn(call) == "builtins.__pir_cell__"
         }
         assertTrue(cellCtorCalls.isNotEmpty(),
             "outer should have at least one PIRCall to __pir_cell__() for owning value's cell")
@@ -764,11 +776,10 @@ def cnf_transitive(x):
         // synthesized adapter class with the env dict as the only positional arg.
         // The class qualified name uses angle brackets (synthetic, not user-visible).
         val adapterCtors = insts.filterIsInstance<PIRCall>().filter { call ->
-            val callee = call.callee
-            callee is PIRGlobalRef &&
-                callee.qualifiedName.substringAfterLast('.').let {
-                    it.startsWith("<closure_") && !it.endsWith("_impl>")
-                }
+            val qn = calleeQn(call) ?: return@filter false
+            qn.substringAfterLast('.').let {
+                it.startsWith("<closure_") && !it.endsWith("_impl>")
+            }
         }
         assertTrue(adapterCtors.isNotEmpty(),
             "outer should have a PIRCall to the synthesized adapter class constructor")

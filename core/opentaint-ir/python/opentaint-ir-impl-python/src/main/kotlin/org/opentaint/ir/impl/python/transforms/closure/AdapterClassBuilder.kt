@@ -9,7 +9,8 @@ import org.opentaint.ir.impl.python.flat.FlatCallArg
 import org.opentaint.ir.impl.python.flat.FlatClass
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatFunctionKind
-import org.opentaint.ir.impl.python.flat.FlatGlobalRef
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatParamKind
 import org.opentaint.ir.impl.python.flat.FlatParameter
@@ -123,14 +124,19 @@ private fun buildCallMethod(
     val forwardArgs = listOf(FlatCallArg(FlatLocal("self"), FlatArgKind.POSITIONAL)) +
         implUserParams.map { p -> forwardArgFor(p) }
 
+    val calleeLocal = FlatLocal("\$callee")
     val cfg = FlatCFG(
         blocks = listOf(
             FlatBlock(
                 label = 0,
                 instructions = listOf(
+                    FlatReadName(
+                        target = calleeLocal,
+                        ref = FlatGlobalNameRef(implQn),
+                    ),
                     FlatCall(
                         target = tmpReturn,
-                        callee = FlatGlobalRef(implQn),
+                        callee = calleeLocal,
                         args = forwardArgs,
                     ),
                     FlatReturn(tmpReturn),

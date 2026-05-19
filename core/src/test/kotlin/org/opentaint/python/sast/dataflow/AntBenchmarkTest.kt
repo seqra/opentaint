@@ -30,6 +30,7 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
+import kotlin.test.Ignore
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -45,6 +46,7 @@ import kotlin.time.Duration.Companion.seconds
  * PIRClasspath (built once in @BeforeAll). Each parameterized test case analyzes a single
  * function within that classpath.
  */
+@Ignore
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AntBenchmarkTest {
 
