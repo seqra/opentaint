@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Interface dispatch (INVOKE) tests ────────────────────────────────
 
@@ -35,45 +37,45 @@ func (r IDCleanReader) Read() string { return "clean" }
 // ── Tests ────────────────────────────────────────────────────────────
 
 func polymorphism001T() {
-	data := source()
+	data := util.Source()
 	var p IDProcessor = IDTaintedProcessor{}
 	result := p.Process(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func polymorphism002F() {
-	data := source()
+	data := util.Source()
 	var p IDProcessor = IDCleanProcessor{}
 	result := p.Process(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func interfaceClass001T() {
-	data := source()
+	data := util.Source()
 	var r IDReader = IDTaintedReader{data: data}
 	result := r.Read()
-	sink(result)
+	util.Sink(result)
 }
 
 func interfaceClass002F() {
-	_ = source()
+	_ = util.Source()
 	var r IDReader = IDCleanReader{}
 	result := r.Read()
-	sink(result)
+	util.Sink(result)
 }
 
 func interfaceViaFunc001T() {
-	data := source()
+	data := util.Source()
 	var p IDProcessor = IDTaintedProcessor{}
 	result := processViaInterface(p, data)
-	sink(result)
+	util.Sink(result)
 }
 
 func interfaceViaFunc002F() {
-	data := source()
+	data := util.Source()
 	var p IDProcessor = IDCleanProcessor{}
 	result := processViaInterface(p, data)
-	sink(result)
+	util.Sink(result)
 }
 
 func processViaInterface(p IDProcessor, data string) string {

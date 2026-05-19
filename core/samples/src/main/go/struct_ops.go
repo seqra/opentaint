@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Additional struct operation tests ────────────────────────────────
 
@@ -10,25 +12,25 @@ type SOData struct {
 }
 
 func structCopy001T() {
-	data := source()
+	data := util.Source()
 	original := SOData{value: data, extra: "x"}
 	copied := original
-	sink(copied.value)
+	util.Sink(copied.value)
 }
 
 func structCopy002F() {
-	data := source()
+	data := util.Source()
 	original := SOData{value: data, extra: "x"}
 	copied := original
-	sink(copied.extra)
+	util.Sink(copied.extra)
 }
 
 func structCopy003T() {
-	data := source()
+	data := util.Source()
 	original := SOData{value: data, extra: "x"}
 	copied := original
 	original.value = "safe" // mutating original doesn't affect copy
-	sink(copied.value)
+	util.Sink(copied.value)
 }
 
 // ── Struct as function argument (value semantics) ────────────────────
@@ -37,17 +39,17 @@ func readSOValue(d SOData) string { return d.value }
 func readSOExtra(d SOData) string { return d.extra }
 
 func structArg001T() {
-	data := source()
+	data := util.Source()
 	d := SOData{value: data, extra: "x"}
 	result := readSOValue(d)
-	sink(result)
+	util.Sink(result)
 }
 
 func structArg002F() {
-	data := source()
+	data := util.Source()
 	d := SOData{value: data, extra: "x"}
 	result := readSOExtra(d)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Struct returned from function ────────────────────────────────────
@@ -57,15 +59,15 @@ func makeSOData(val string) SOData {
 }
 
 func structReturn001T() {
-	data := source()
+	data := util.Source()
 	d := makeSOData(data)
-	sink(d.value)
+	util.Sink(d.value)
 }
 
 func structReturn002F() {
-	data := source()
+	data := util.Source()
 	d := makeSOData(data)
-	sink(d.extra)
+	util.Sink(d.extra)
 }
 
 // ── Nested struct modification ───────────────────────────────────────
@@ -76,46 +78,46 @@ type SOOuter struct {
 }
 
 func nestedStructMod001T() {
-	data := source()
+	data := util.Source()
 	o := SOOuter{
 		inner: SOData{value: data, extra: "x"},
 		label: "y",
 	}
-	sink(o.inner.value)
+	util.Sink(o.inner.value)
 }
 
 func nestedStructMod002F() {
-	data := source()
+	data := util.Source()
 	o := SOOuter{
 		inner: SOData{value: data, extra: "x"},
 		label: "y",
 	}
-	sink(o.label)
+	util.Sink(o.label)
 }
 
 func nestedStructMod003F() {
-	data := source()
+	data := util.Source()
 	o := SOOuter{
 		inner: SOData{value: data, extra: "x"},
 		label: "y",
 	}
-	sink(o.inner.extra)
+	util.Sink(o.inner.extra)
 }
 
 // ── Struct pointer field modification ────────────────────────────────
 
 func structPtrField001T() {
-	data := source()
+	data := util.Source()
 	d := &SOData{}
 	d.value = data
-	sink(d.value)
+	util.Sink(d.value)
 }
 
 func structPtrField002F() {
-	data := source()
+	data := util.Source()
 	d := &SOData{}
 	d.value = data
-	sink(d.extra)
+	util.Sink(d.extra)
 }
 
 // ── Struct with method modifying field ───────────────────────────────
@@ -128,17 +130,17 @@ func (s *SOWithMethod) Set(val string) { s.data = val }
 func (s SOWithMethod) Get() string     { return s.data }
 
 func structMethod001T() {
-	data := source()
+	data := util.Source()
 	s := &SOWithMethod{}
 	s.Set(data)
 	result := s.Get()
-	sink(result)
+	util.Sink(result)
 }
 
 func structMethod002F() {
-	_ = source()
+	_ = util.Source()
 	s := &SOWithMethod{}
 	s.Set("safe")
 	result := s.Get()
-	sink(result)
+	util.Sink(result)
 }

@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Helper functions for interprocedural tests ──────────────────────
 
@@ -12,78 +14,78 @@ func dropValue(x string) string         { return "safe" }
 // ── Argument/return passing ─────────────────────────────────────────
 
 func returnValuePassing001F() {
-	taintSrc := source()
+	taintSrc := util.Source()
 	result := dropValue(taintSrc)
-	sink(result)
+	util.Sink(result)
 }
 
 func returnValuePassing002T() {
-	taintSrc := source()
+	taintSrc := util.Source()
 	result := identity(taintSrc)
-	sink(result)
+	util.Sink(result)
 }
 
 func argPassing001F() {
-	taintSrc := source()
+	taintSrc := util.Source()
 	result := selectSecond(taintSrc, "clean")
-	sink(result)
+	util.Sink(result)
 }
 
 func argPassing002T() {
-	taintSrc := source()
+	taintSrc := util.Source()
 	result := selectFirst(taintSrc, "clean")
-	sink(result)
+	util.Sink(result)
 }
 
 func argPassing005F() {
-	taintSrc := source()
+	taintSrc := util.Source()
 	result := selectFirst("clean", taintSrc)
-	sink(result)
+	util.Sink(result)
 }
 
 func argPassing006T() {
-	taintSrc := source()
+	taintSrc := util.Source()
 	result := selectSecond("clean", taintSrc)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Deep call chains ────────────────────────────────────────────────
 
 func deepCall001T() {
-	data := source()
+	data := util.Source()
 	result := identity(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func deepCall002T() {
-	data := source()
+	data := util.Source()
 	result := identityChain(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func deepCall003T() {
-	data := source()
+	data := util.Source()
 	result := identityChainDeep(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func deepCallClean001F() {
-	data := source()
+	data := util.Source()
 	_ = data
 	result := identity("safe")
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Argument position sensitivity ───────────────────────────────────
 
 func argPosition001T() {
-	data := source()
+	data := util.Source()
 	result := selectFirst(data, "clean")
-	sink(result)
+	util.Sink(result)
 }
 
 func argPosition002F() {
-	data := source()
+	data := util.Source()
 	result := selectSecond(data, "clean")
-	sink(result)
+	util.Sink(result)
 }

@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Multi-return pattern tests ───────────────────────────────────────
 
@@ -9,15 +11,15 @@ func swapReturns(a string, b string) (string, string) {
 }
 
 func multiRetSwap001T() {
-	data := source()
+	data := util.Source()
 	first, _ := swapReturns("clean", data)
-	sink(first)
+	util.Sink(first)
 }
 
 func multiRetSwap002F() {
-	data := source()
+	data := util.Source()
 	_, second := swapReturns("clean", data)
-	sink(second)
+	util.Sink(second)
 }
 
 // ── Chain of multi-return calls ──────────────────────────────────────
@@ -27,17 +29,17 @@ func pairPass(a string, b string) (string, string) {
 }
 
 func multiRetChain001T() {
-	data := source()
+	data := util.Source()
 	x, _ := pairPass(data, "clean")
 	result, _ := pairPass(x, "other")
-	sink(result)
+	util.Sink(result)
 }
 
 func multiRetChain002F() {
-	data := source()
+	data := util.Source()
 	_, y := pairPass(data, "clean")
 	_, result := pairPass("other", y)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Multi-return used inside another function call ───────────────────
@@ -47,29 +49,29 @@ func firstOf(a string, b string) string {
 }
 
 func multiRetFunc001T() {
-	data := source()
+	data := util.Source()
 	a, _ := pairPass(data, "clean")
 	result := firstOf(a, "safe")
-	sink(result)
+	util.Sink(result)
 }
 
 func multiRetFunc002F() {
-	data := source()
+	data := util.Source()
 	_, b := pairPass(data, "clean")
 	result := firstOf("safe", b)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Discarding returns with _ ────────────────────────────────────────
 
 func multiRetIgnore001T() {
-	data := source()
+	data := util.Source()
 	result, _ := pairPass(data, "clean")
-	sink(result)
+	util.Sink(result)
 }
 
 func multiRetIgnore002F() {
-	data := source()
+	data := util.Source()
 	_, _ = pairPass(data, "clean")
-	sink("safe")
+	util.Sink("safe")
 }

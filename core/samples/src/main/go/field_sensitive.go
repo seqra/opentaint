@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Field sensitivity (struct fields) tests ──────────────────────────
 
@@ -17,29 +19,29 @@ type SFNested struct {
 // ── Direct field read/write ──────────────────────────────────────────
 
 func structField001T() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
-	sink(p.tainted)
+	util.Sink(p.tainted)
 }
 
 func structField002F() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
-	sink(p.clean)
+	util.Sink(p.clean)
 }
 
 func structFieldWrite001T() {
-	data := source()
+	data := util.Source()
 	var p SFPair
 	p.tainted = data
-	sink(p.tainted)
+	util.Sink(p.tainted)
 }
 
 func structFieldWrite002F() {
-	data := source()
+	data := util.Source()
 	var p SFPair
 	p.tainted = data
-	sink(p.clean)
+	util.Sink(p.clean)
 }
 
 // ── Field sensitivity through function calls ─────────────────────────
@@ -48,31 +50,31 @@ func getPairTainted(p SFPair) string { return p.tainted }
 func getPairClean(p SFPair) string   { return p.clean }
 
 func structFieldInterproc001T() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
 	result := getPairTainted(p)
-	sink(result)
+	util.Sink(result)
 }
 
 func structFieldInterproc002F() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
 	result := getPairClean(p)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Nested struct field access ───────────────────────────────────────
 
 func structNested001T() {
-	data := source()
+	data := util.Source()
 	inner := SFPair{tainted: data, clean: "safe"}
 	n := SFNested{inner: inner, other: "safe"}
-	sink(n.inner.tainted)
+	util.Sink(n.inner.tainted)
 }
 
 func structNested002F() {
-	data := source()
+	data := util.Source()
 	inner := SFPair{tainted: data, clean: "safe"}
 	n := SFNested{inner: inner, other: "safe"}
-	sink(n.other)
+	util.Sink(n.other)
 }

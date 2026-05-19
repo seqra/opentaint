@@ -10,9 +10,9 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TypeOpsTest : AnalysisTest() {
 
-    private val intSource = TaintRules.Source("test.sourceInt", "taint", Result)
-    private val floatSink = TaintRules.Sink("test.sinkFloat", "taint", Argument(0), "test-id")
-    private val anySource = TaintRules.Source("test.sourceAny", "taint", Result)
+    private val intSource = TaintRules.Source("test/util.SourceInt", "taint", Result)
+    private val floatSink = TaintRules.Sink("test/util.SinkFloat", "taint", Argument(0), "test-id")
+    private val anySource = TaintRules.Source("test/util.SourceAny", "taint", Result)
 
     // Type conversion
     @Test fun typeCastInt001T() = assertSinkReachable(intSource, floatSink, "test.typeCastInt001T")

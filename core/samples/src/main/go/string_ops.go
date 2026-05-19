@@ -1,72 +1,74 @@
 package test
+import "test/util"
+
 
 // ── String operation tests ───────────────────────────────────────────
 
 // ── String indexing ──────────────────────────────────────────────────
 
 func stringIndex001T() {
-	data := source()
+	data := util.Source()
 	b := data[0]
 	result := string(b)
-	sink(result)
+	util.Sink(result)
 }
 
 func stringIndex002F() {
-	_ = source()
+	_ = util.Source()
 	data := "safe"
 	b := data[0]
 	result := string(b)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── String slicing ───────────────────────────────────────────────────
 
 func stringSlice001T() {
-	data := source()
+	data := util.Source()
 	result := data[1:3]
-	sink(result)
+	util.Sink(result)
 }
 
 func stringSlice002F() {
-	_ = source()
+	_ = util.Source()
 	data := "safe string"
 	result := data[1:3]
-	sink(result)
+	util.Sink(result)
 }
 
 // ── String through multiple variables ────────────────────────────────
 
 func stringMultiVar001T() {
-	a := source()
+	a := util.Source()
 	b := a
 	c := b
-	sink(c)
+	util.Sink(c)
 }
 
 func stringMultiVar002F() {
-	a := source()
+	a := util.Source()
 	_ = a
 	b := "safe"
 	c := b
-	sink(c)
+	util.Sink(c)
 }
 
 // ── String concat in loop ────────────────────────────────────────────
 
 func stringConcatLoop001T() {
-	data := source()
+	data := util.Source()
 	result := ""
 	for i := 0; i < 3; i++ {
 		result = result + data
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func stringConcatLoop002F() {
-	_ = source()
+	_ = util.Source()
 	result := ""
 	for i := 0; i < 3; i++ {
 		result = result + "safe"
 	}
-	sink(result)
+	util.Sink(result)
 }

@@ -1,14 +1,16 @@
 package test
+import "test/util"
+
 
 func sample() {
-	var data = source()
+	var data = util.Source()
 	var other = data
-	sink(other)
+	util.Sink(other)
 }
 
 func sampleNonReachable() {
-	var data = source()
+	var data = util.Source()
 	var other = "safe"
-	sink(other)
-	consume(data)
+	util.Sink(other)
+	util.Consume(data)
 }

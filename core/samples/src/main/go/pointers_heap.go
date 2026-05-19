@@ -1,21 +1,23 @@
 package test
+import "test/util"
+
 
 // ── Pointer and heap escape tests ────────────────────────────────────
 
 // ── Basic pointer operations ─────────────────────────────────────────
 
 func pointer001T() {
-	data := source()
+	data := util.Source()
 	p := &data
-	sink(*p)
+	util.Sink(*p)
 }
 
 func pointer002F() {
-	data := source()
+	data := util.Source()
 	_ = data
 	safe := "safe"
 	p := &safe
-	sink(*p)
+	util.Sink(*p)
 }
 
 // ── Heap-allocated struct via new ────────────────────────────────────
@@ -25,17 +27,17 @@ type HeapObj struct {
 }
 
 func heapNew001T() {
-	data := source()
+	data := util.Source()
 	obj := new(HeapObj)
 	obj.value = data
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 func heapNew002F() {
-	_ = source()
+	_ = util.Source()
 	obj := new(HeapObj)
 	obj.value = "safe"
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 // ── Heap escape: struct returned from function ───────────────────────
@@ -45,15 +47,15 @@ func makeHeapObj(val1 string) *HeapObj {
 }
 
 func heapEscape001T() {
-	data := source()
+	data := util.Source()
 	obj := makeHeapObj(data)
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 func heapEscape002F() {
-	_ = source()
+	_ = util.Source()
 	obj := makeHeapObj("safe")
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 // ── Pointer passed to function ───────────────────────────────────────
@@ -63,56 +65,56 @@ func setPtrValue(obj *HeapObj, val1 string) {
 }
 
 func ptrArg001T() {
-	data := source()
+	data := util.Source()
 	obj := &HeapObj{}
 	setPtrValue(obj, data)
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 func ptrArg002F() {
-	_ = source()
+	_ = util.Source()
 	obj := &HeapObj{}
 	setPtrValue(obj, "safe")
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 // ── Pointer indirection (double pointer) ─────────────────────────────
 
 func ptrToPtr001T() {
-	data := source()
+	data := util.Source()
 	p := &data
 	pp := &p
-	sink(**pp)
+	util.Sink(**pp)
 }
 
 // ── Slice of pointers ────────────────────────────────────────────────
 
 func sliceOfPtr001T() {
-	data := source()
+	data := util.Source()
 	obj := &HeapObj{value: data}
 	ptrs := []*HeapObj{obj}
-	sink(ptrs[0].value)
+	util.Sink(ptrs[0].value)
 }
 
 func sliceOfPtr002F() {
-	_ = source()
+	_ = util.Source()
 	obj := &HeapObj{value: "safe"}
 	ptrs := []*HeapObj{obj}
-	sink(ptrs[0].value)
+	util.Sink(ptrs[0].value)
 }
 
 // ── Map of pointers ──────────────────────────────────────────────────
 
 func mapOfPtr001T() {
-	data := source()
+	data := util.Source()
 	obj := &HeapObj{value: data}
 	m := map[string]*HeapObj{"key": obj}
-	sink(m["key"].value)
+	util.Sink(m["key"].value)
 }
 
 func mapOfPtr002F() {
-	_ = source()
+	_ = util.Source()
 	obj := &HeapObj{value: "safe"}
 	m := map[string]*HeapObj{"key": obj}
-	sink(m["key"].value)
+	util.Sink(m["key"].value)
 }

@@ -9,8 +9,8 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GenericsTest : AnalysisTest() {
 
-    private val intSource = TaintRules.Source("test.sourceInt", "taint", Result)
-    private val intSink = TaintRules.Sink("test.sinkInt", "taint", Argument(0), "test-id")
+    private val intSource = TaintRules.Source("test/util.SourceInt", "taint", Result)
+    private val intSink = TaintRules.Sink("test/util.SinkInt", "taint", Argument(0), "test-id")
 
     // Generic identity function
     @Test fun genericFunc001T() = assertReachable("test.genericFunc001T")

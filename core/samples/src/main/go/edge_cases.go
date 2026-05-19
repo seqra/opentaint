@@ -1,22 +1,24 @@
 package test
+import "test/util"
+
 
 // ── Edge case tests ──────────────────────────────────────────────────
 
 // ── Nil/zero value handling ──────────────────────────────────────────
 
 func nilSlice001F() {
-	_ = source()
+	_ = util.Source()
 	var s []string
 	if s != nil {
-		sink(s[0])
+		util.Sink(s[0])
 	}
 }
 
 func nilMap001F() {
-	_ = source()
+	_ = util.Source()
 	var m map[string]string
 	if m != nil {
-		sink(m["k"])
+		util.Sink(m["k"])
 	}
 }
 
@@ -25,16 +27,16 @@ func nilMap001F() {
 type EdgeEmpty struct{}
 
 func emptyStruct001F() {
-	_ = source()
+	_ = util.Source()
 	e := EdgeEmpty{}
 	_ = e
-	sink("safe")
+	util.Sink("safe")
 }
 
 // ── Very long assignment chain ───────────────────────────────────────
 
 func longChain001T() {
-	v0 := source()
+	v0 := util.Source()
 	v1 := v0
 	v2 := v1
 	v3 := v2
@@ -44,11 +46,11 @@ func longChain001T() {
 	v7 := v6
 	v8 := v7
 	v9 := v8
-	sink(v9)
+	util.Sink(v9)
 }
 
 func longChain002F() {
-	v0 := source()
+	v0 := util.Source()
 	_ = v0
 	v1 := "safe"
 	v2 := v1
@@ -59,7 +61,7 @@ func longChain002F() {
 	v7 := v6
 	v8 := v7
 	v9 := v8
-	sink(v9)
+	util.Sink(v9)
 }
 
 // ── Taint through multiple function hops ─────────────────────────────
@@ -71,15 +73,15 @@ func hop4(x string) string { return hop5(x) }
 func hop5(x string) string { return x }
 
 func deepHop001T() {
-	data := source()
+	data := util.Source()
 	result := hop1(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func deepHop002F() {
-	_ = source()
+	_ = util.Source()
 	result := hop1("safe")
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Recursive function ───────────────────────────────────────────────
@@ -92,68 +94,68 @@ func recurse(s string, n int) string {
 }
 
 func recursive001T() {
-	data := source()
+	data := util.Source()
 	result := recurse(data, 3)
-	sink(result)
+	util.Sink(result)
 }
 
 func recursive002F() {
-	_ = source()
+	_ = util.Source()
 	result := recurse("safe", 3)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Same variable reused in different contexts ───────────────────────
 
 func reuseVar001T() {
-	x := source()
-	sink(x) // first use — tainted
+	x := util.Source()
+	util.Sink(x) // first use — tainted
 }
 
 func reuseVar002F() {
-	x := source()
+	x := util.Source()
 	x = "safe"
-	sink(x) // second use — overwritten
+	util.Sink(x) // second use — overwritten
 }
 
 func reuseVar003T() {
 	x := "safe"
-	x = source()
-	sink(x) // overwritten with taint
+	x = util.Source()
+	util.Sink(x) // overwritten with taint
 }
 
 // ── Taint through temp variable ──────────────────────────────────────
 
 func tempVar001T() {
-	data := source()
+	data := util.Source()
 	tmp := data
 	data = "safe"
-	sink(tmp) // tmp still holds tainted value
+	util.Sink(tmp) // tmp still holds tainted value
 }
 
 func tempVar002F() {
-	data := source()
+	data := util.Source()
 	tmp := "safe"
 	_ = data
-	sink(tmp)
+	util.Sink(tmp)
 }
 
 // ── Multiple returns from same function ──────────────────────────────
 
 func edgeMultiCall001T() {
-	data := source()
+	data := util.Source()
 	r1 := identity(data)
 	r2 := identity("safe")
-	sink(r1)
-	consume(r2)
+	util.Sink(r1)
+	util.Consume(r2)
 }
 
 func edgeMultiCall002F() {
-	data := source()
+	data := util.Source()
 	r1 := identity("safe")
 	r2 := identity(data)
-	sink(r1)
-	consume(r2)
+	util.Sink(r1)
+	util.Consume(r2)
 }
 
 // ── Struct literal with mixed taint ──────────────────────────────────
@@ -165,41 +167,41 @@ type EdgeMixed struct {
 }
 
 func structMixed001T() {
-	data := source()
+	data := util.Source()
 	m := EdgeMixed{a: data, b: "safe", c: "safe"}
-	sink(m.a)
+	util.Sink(m.a)
 }
 
 func structMixed002F() {
-	data := source()
+	data := util.Source()
 	m := EdgeMixed{a: data, b: "safe", c: "safe"}
-	sink(m.b)
+	util.Sink(m.b)
 }
 
 func structMixed003F() {
-	data := source()
+	data := util.Source()
 	m := EdgeMixed{a: data, b: "safe", c: "safe"}
-	sink(m.c)
+	util.Sink(m.c)
 }
 
 // ── Swap pattern ─────────────────────────────────────────────────────
 
 func swapVars001T() {
-	a := source()
+	a := util.Source()
 	b := "safe"
 	tmp := a
 	a = b
 	b = tmp
-	sink(b) // b now holds original tainted value
-	consume(a)
+	util.Sink(b) // b now holds original tainted value
+	util.Consume(a)
 }
 
 func swapVars002F() {
-	a := source()
+	a := util.Source()
 	b := "safe"
 	tmp := a
 	a = b
 	b = tmp
-	sink(a) // a now holds "safe"
-	consume(b)
+	util.Sink(a) // a now holds "safe"
+	util.Consume(b)
 }

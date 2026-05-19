@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Variadic function tests ──────────────────────────────────────────
 
@@ -27,55 +29,55 @@ func varLast(parts ...string) string {
 // ── Tests ────────────────────────────────────────────────────────────
 
 func variadic001T() {
-	data := source()
+	data := util.Source()
 	result := varJoin(data, "b", "c")
-	sink(result)
+	util.Sink(result)
 }
 
 func variadic002F() {
-	_ = source()
+	_ = util.Source()
 	result := varJoin("a", "b", "c")
-	sink(result)
+	util.Sink(result)
 }
 
 func variadic003T() {
-	data := source()
+	data := util.Source()
 	result := varFirst(data, "b")
-	sink(result)
+	util.Sink(result)
 }
 
 func variadic004F() {
-	data := source()
+	data := util.Source()
 	result := varFirst("safe", data)
 	// varFirst returns first arg which is "safe"
-	sink(result)
+	util.Sink(result)
 }
 
 func variadic005T() {
-	data := source()
+	data := util.Source()
 	result := varLast("a", data)
-	sink(result)
+	util.Sink(result)
 }
 
 func variadic006F() {
-	data := source()
+	data := util.Source()
 	result := varLast(data, "safe")
 	// varLast returns last arg which is "safe"
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Spread slice into variadic ───────────────────────────────────────
 
 func variadicSpread001T() {
-	data := source()
+	data := util.Source()
 	args := []string{data, "b"}
 	result := varFirst(args...)
-	sink(result)
+	util.Sink(result)
 }
 
 func variadicSpread002T() {
-	data := source()
+	data := util.Source()
 	args := []string{"a", data}
 	result := varJoin(args...)
-	sink(result)
+	util.Sink(result)
 }

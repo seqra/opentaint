@@ -1,70 +1,72 @@
 package test
+import "test/util"
+
 
 // ── Sanitization pattern tests ───────────────────────────────────────
 
 // ── Conditional sanitization ─────────────────────────────────────────
 
 func sanitizeConditional001T() {
-	data := source()
+	data := util.Source()
 	if len(data) > 5 {
-		data = sanitize(data)
+		data = util.Sanitize(data)
 	}
 	// only one branch sanitizes → conservative: still tainted
-	sink(data)
+	util.Sink(data)
 }
 
 func sanitizeConditional002F() {
-	data := source()
+	data := util.Source()
 	if len(data) > 5 {
 		data = "safe1"
 	} else {
 		data = "safe2"
 	}
-	sink(data)
+	util.Sink(data)
 }
 
 // ── Return from function (identity vs constant) ──────────────────────
 
 func sanitizeReturn001T() {
-	data := source()
+	data := util.Source()
 	result := identity(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func sanitizeReturn002F() {
-	data := source()
+	data := util.Source()
 	result := dropValue(data)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Chain of functions ───────────────────────────────────────────────
 
 func sanitizeChain001T() {
-	data := source()
+	data := util.Source()
 	step1 := identity(data)
-	step2 := passthrough(step1)
-	sink(step2)
+	step2 := util.Passthrough(step1)
+	util.Sink(step2)
 }
 
 func sanitizeChain002F() {
-	data := source()
+	data := util.Source()
 	step1 := identity(data)
 	step2 := dropValue(step1)
-	sink(step2)
+	util.Sink(step2)
 }
 
 // ── Reassignment of tainted variable ─────────────────────────────────
 
 func sanitizeReassign001T() {
-	data := source()
+	data := util.Source()
 	original := data
 	data = "safe"
 	// original still holds taint
-	sink(original)
+	util.Sink(original)
 }
 
 func sanitizeReassign002F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
-	sink(data)
+	util.Sink(data)
 }

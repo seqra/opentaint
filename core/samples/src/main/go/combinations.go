@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Combination / stress tests ───────────────────────────────────────
 // Tests that combine multiple features to verify complex interactions.
@@ -20,91 +22,91 @@ type CombSafe struct{}
 func (c CombSafe) Process() string { return "safe" }
 
 func combStructInterface001T() {
-	data := source()
+	data := util.Source()
 	var p CombProcessor = CombTainted{data: data}
 	result := p.Process()
-	sink(result)
+	util.Sink(result)
 }
 
 func combStructInterface002F() {
-	_ = source()
+	_ = util.Source()
 	var p CombProcessor = CombSafe{}
 	result := p.Process()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Closure + struct field ───────────────────────────────────────────
 
 func combClosureField001T() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
 	f := func() string { return p.tainted }
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 func combClosureField002F() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
 	f := func() string { return p.clean }
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Map + function call + multi-return ───────────────────────────────
 
 func combMapFunc001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"key": data}
 	result, _ := twoReturns(m["key"], "clean")
-	sink(result)
+	util.Sink(result)
 }
 
 func combMapFunc002F() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"key": data}
 	_, result := twoReturns(m["key"], "clean")
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Slice + loop + function call ─────────────────────────────────────
 
 func combSliceLoop001T() {
-	data := source()
+	data := util.Source()
 	s := []string{"a", data, "b"}
 	var result string
 	for _, v := range s {
 		result = identity(v)
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func combSliceLoop002F() {
-	data := source()
+	data := util.Source()
 	s := []string{"a", data, "b"}
 	var result string
 	for _, v := range s {
 		result = dropValue(v)
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Pointer + method + interface ─────────────────────────────────────
 
 func combPtrMethod001T() {
-	data := source()
+	data := util.Source()
 	obj := &MRPtrContainer{}
 	obj.SetValue(data)
 	result := obj.GetValue()
-	sink(result)
+	util.Sink(result)
 }
 
 func combPtrMethod002F() {
-	_ = source()
+	_ = util.Source()
 	obj := &MRPtrContainer{}
 	obj.SetValue("safe")
 	result := obj.GetValue()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Nested function calls + struct ───────────────────────────────────
@@ -118,39 +120,39 @@ func extractFromPair(p SFPair) string {
 }
 
 func combNestedFunc001T() {
-	data := source()
+	data := util.Source()
 	result := extractFromPair(wrapInPair(data))
-	sink(result)
+	util.Sink(result)
 }
 
 func combNestedFunc002F() {
-	_ = source()
+	_ = util.Source()
 	result := extractFromPair(wrapInPair("safe"))
 	// wrapInPair puts "safe" in tainted field, so extractFromPair returns "safe"
 	// However, the field is literally "safe" string, not tainted
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Deep chain: closure capturing struct returned from func ──────────
 
 func combDeepChain001T() {
-	data := source()
+	data := util.Source()
 	p := wrapInPair(data)
 	f := func() string {
 		return extractFromPair(p)
 	}
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 func combDeepChain002F() {
-	_ = source()
+	_ = util.Source()
 	p := wrapInPair("safe")
 	f := func() string {
 		return extractFromPair(p)
 	}
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Struct field + slice element ─────────────────────────────────────
@@ -160,34 +162,34 @@ type CombHolder struct {
 }
 
 func combStructSlice001T() {
-	data := source()
+	data := util.Source()
 	h := CombHolder{items: []string{data}}
-	sink(h.items[0])
+	util.Sink(h.items[0])
 }
 
 func combStructSlice002F() {
-	_ = source()
+	_ = util.Source()
 	h := CombHolder{items: []string{"safe"}}
-	sink(h.items[0])
+	util.Sink(h.items[0])
 }
 
 // ── Multiple assignments in sequence ─────────────────────────────────
 
 func combSequence001T() {
-	a := source()
+	a := util.Source()
 	b := a
 	c := b
 	d := c
 	e := d
-	sink(e)
+	util.Sink(e)
 }
 
 func combSequence002F() {
-	a := source()
+	a := util.Source()
 	b := a
 	_ = b
 	c := "safe"
 	d := c
 	e := d
-	sink(e)
+	util.Sink(e)
 }

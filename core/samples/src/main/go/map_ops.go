@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Additional map operation tests ───────────────────────────────────
 
@@ -10,79 +12,79 @@ type MapItem struct {
 }
 
 func mapStruct001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]MapItem{
 		"key": {data: data, label: "x"},
 	}
-	sink(m["key"].data)
+	util.Sink(m["key"].data)
 }
 
 func mapStruct002F() {
-	data := source()
+	data := util.Source()
 	m := map[string]MapItem{
 		"key": {data: data, label: "x"},
 	}
-	sink(m["key"].label)
+	util.Sink(m["key"].label)
 }
 
 // ── Map iteration ────────────────────────────────────────────────────
 
 func mapIter001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"k1": data, "k2": "safe"}
 	var result string
 	for _, v := range m {
 		result = v
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func mapIter002F() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"k1": "safe", "k2": "safe"}
 	var result string
 	for _, v := range m {
 		result = v
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 // ── Map key taint ────────────────────────────────────────────────────
 
 func mapKeyTaint001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{data: "value"}
 	for k := range m {
-		sink(k)
+		util.Sink(k)
 	}
 }
 
 // ── Map delete doesn't affect taint ──────────────────────────────────
 
 func mapDelete001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"k1": data, "k2": "safe"}
 	delete(m, "k1") // delete doesn't kill taint in analysis
-	sink(m["k1"])
+	util.Sink(m["k1"])
 }
 
 // ── Map comma-ok lookup ──────────────────────────────────────────────
 
 func mapCommaOk001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"k": data}
 	v, ok := m["k"]
 	if ok {
-		sink(v)
+		util.Sink(v)
 	}
 }
 
 func mapCommaOk002F() {
-	_ = source()
+	_ = util.Source()
 	m := map[string]string{"k": "safe"}
 	v, ok := m["k"]
 	if ok {
-		sink(v)
+		util.Sink(v)
 	}
 }

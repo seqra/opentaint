@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Channel direction and usage pattern tests ────────────────────────
 
@@ -6,18 +8,18 @@ package test
 
 func chanDirection001T() {
 	ch := make(chan string, 1)
-	data := source()
+	data := util.Source()
 	ch <- data
 	result := <-ch
-	sink(result)
+	util.Sink(result)
 }
 
 func chanDirection002F() {
 	ch := make(chan string, 1)
-	_ = source()
+	_ = util.Source()
 	ch <- "safe"
 	result := <-ch
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Multiple sends on a channel ──────────────────────────────────────
@@ -25,22 +27,22 @@ func chanDirection002F() {
 func chanMultiSend001T() {
 	ch := make(chan string, 3)
 	ch <- "clean1"
-	ch <- source()
+	ch <- util.Source()
 	ch <- "clean2"
 	_ = <-ch
 	result := <-ch
-	sink(result)
+	util.Sink(result)
 }
 
 func chanMultiSend002F() {
-	_ = source()
+	_ = util.Source()
 	ch := make(chan string, 3)
 	ch <- "clean1"
 	ch <- "clean2"
 	ch <- "clean3"
 	_ = <-ch
 	result := <-ch
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Function returning value from channel ────────────────────────────
@@ -51,18 +53,18 @@ func recvFromChan(ch chan string) string {
 
 func chanFunc001T() {
 	ch := make(chan string, 1)
-	data := source()
+	data := util.Source()
 	ch <- data
 	result := recvFromChan(ch)
-	sink(result)
+	util.Sink(result)
 }
 
 func chanFunc002F() {
 	ch := make(chan string, 1)
-	_ = source()
+	_ = util.Source()
 	ch <- "safe"
 	result := recvFromChan(ch)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Channel passed to function that sends ────────────────────────────
@@ -73,37 +75,37 @@ func chanSendHelper(ch chan string, val string) {
 
 func chanPassThrough001T() {
 	ch := make(chan string, 1)
-	data := source()
+	data := util.Source()
 	chanSendHelper(ch, data)
 	result := <-ch
-	sink(result)
+	util.Sink(result)
 }
 
 func chanPassThrough002F() {
 	ch := make(chan string, 1)
-	_ = source()
+	_ = util.Source()
 	chanSendHelper(ch, "safe")
 	result := <-ch
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Channel receive in loop ──────────────────────────────────────────
 
 func chanLoop001T() {
 	ch := make(chan string, 3)
-	ch <- source()
+	ch <- util.Source()
 	ch <- "a"
 	ch <- "b"
 	for i := 0; i < 3; i++ {
 		val := <-ch
 		if i == 0 {
-			sink(val)
+			util.Sink(val)
 		}
 	}
 }
 
 func chanLoop002F() {
-	_ = source()
+	_ = util.Source()
 	ch := make(chan string, 3)
 	ch <- "safe1"
 	ch <- "safe2"
@@ -111,7 +113,7 @@ func chanLoop002F() {
 	for i := 0; i < 3; i++ {
 		val := <-ch
 		if i == 0 {
-			sink(val)
+			util.Sink(val)
 		}
 	}
 }

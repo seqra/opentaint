@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Struct embedding tests ───────────────────────────────────────────
 
@@ -16,41 +18,41 @@ type EmbDerived struct {
 }
 
 func embeddedField001T() {
-	data := source()
+	data := util.Source()
 	d := EmbDerived{
 		EmbBase:      EmbBase{baseValue: data},
 		derivedValue: "safe",
 	}
-	sink(d.baseValue) // access promoted field
+	util.Sink(d.baseValue) // access promoted field
 }
 
 func embeddedField002F() {
-	data := source()
+	data := util.Source()
 	d := EmbDerived{
 		EmbBase:      EmbBase{baseValue: data},
 		derivedValue: "safe",
 	}
-	sink(d.derivedValue)
+	util.Sink(d.derivedValue)
 }
 
 func embeddedMethod001T() {
-	data := source()
+	data := util.Source()
 	d := EmbDerived{
 		EmbBase:      EmbBase{baseValue: data},
 		derivedValue: "safe",
 	}
 	result := d.GetBaseValue() // promoted method
-	sink(result)
+	util.Sink(result)
 }
 
 func embeddedMethod002F() {
-	_ = source()
+	_ = util.Source()
 	d := EmbDerived{
 		EmbBase:      EmbBase{baseValue: "safe"},
 		derivedValue: "safe",
 	}
 	result := d.GetBaseValue()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Multi-level embedding ────────────────────────────────────────────
@@ -61,7 +63,7 @@ type EmbLevel2 struct {
 }
 
 func embeddedDeep001T() {
-	data := source()
+	data := util.Source()
 	obj := EmbLevel2{
 		EmbDerived: EmbDerived{
 			EmbBase:      EmbBase{baseValue: data},
@@ -69,11 +71,11 @@ func embeddedDeep001T() {
 		},
 		level2Value: "safe",
 	}
-	sink(obj.baseValue) // promoted through two levels
+	util.Sink(obj.baseValue) // promoted through two levels
 }
 
 func embeddedDeep002F() {
-	data := source()
+	data := util.Source()
 	obj := EmbLevel2{
 		EmbDerived: EmbDerived{
 			EmbBase:      EmbBase{baseValue: data},
@@ -81,7 +83,7 @@ func embeddedDeep002F() {
 		},
 		level2Value: "safe",
 	}
-	sink(obj.level2Value)
+	util.Sink(obj.level2Value)
 }
 
 // ── Interface embedding ──────────────────────────────────────────────
@@ -107,15 +109,15 @@ func (rw *EmbRWImpl) Read() string      { return rw.data }
 func (rw *EmbRWImpl) Write(data string) { rw.data = data }
 
 func embeddedInterface001T() {
-	data := source()
+	data := util.Source()
 	var rw EmbReadWriter = &EmbRWImpl{data: data}
 	result := rw.Read()
-	sink(result)
+	util.Sink(result)
 }
 
 func embeddedInterface002F() {
-	_ = source()
+	_ = util.Source()
 	var rw EmbReadWriter = &EmbRWImpl{data: "safe"}
 	result := rw.Read()
-	sink(result)
+	util.Sink(result)
 }

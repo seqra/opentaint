@@ -1,69 +1,71 @@
 package test
+import "test/util"
+
 
 // ── Closure and anonymous function tests ─────────────────────────────
 
 // ── Basic anonymous functions ────────────────────────────────────────
 
 func anonFunc001T() {
-	data := source()
+	data := util.Source()
 	f := func(x string) string { return x }
 	result := f(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func anonFunc002F() {
-	data := source()
+	data := util.Source()
 	_ = data
 	f := func(x string) string { return "safe" }
 	result := f("anything")
-	sink(result)
+	util.Sink(result)
 }
 
 func anonFuncDirect001T() {
-	data := source()
+	data := util.Source()
 	result := func(x string) string { return x }(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func anonFuncDirect002F() {
-	_ = source()
+	_ = util.Source()
 	result := func(x string) string { return "safe" }("anything")
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Closures that capture variables ──────────────────────────────────
 
 func closure001T() {
-	data := source()
+	data := util.Source()
 	f := func() string { return data }
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 func closure002F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
 	f := func() string { return data }
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 func closureModify001T() {
 	data := "safe"
 	f := func() {
-		data = source()
+		data = util.Source()
 	}
 	f()
-	sink(data)
+	util.Sink(data)
 }
 
 func closureModify002F() {
-	data := source()
+	data := util.Source()
 	f := func() {
 		data = "safe"
 	}
 	f()
-	sink(data)
+	util.Sink(data)
 }
 
 // ── Closure returned from function ───────────────────────────────────
@@ -73,17 +75,17 @@ func makeAdder(prefix string) func(string) string {
 }
 
 func closureReturn001T() {
-	data := source()
+	data := util.Source()
 	adder := makeAdder(data)
 	result := adder("suffix")
-	sink(result)
+	util.Sink(result)
 }
 
 func closureReturn002F() {
-	_ = source()
+	_ = util.Source()
 	adder := makeAdder("safe")
 	result := adder("suffix")
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Higher-order functions ───────────────────────────────────────────
@@ -93,26 +95,26 @@ func applyFunc(f func(string) string, data string) string {
 }
 
 func higherOrder001T() {
-	data := source()
+	data := util.Source()
 	result := applyFunc(func(s string) string { return s }, data)
-	sink(result)
+	util.Sink(result)
 }
 
 func higherOrder002F() {
-	data := source()
+	data := util.Source()
 	_ = data
 	result := applyFunc(func(s string) string { return "safe" }, "anything")
-	sink(result)
+	util.Sink(result)
 }
 
 func higherOrder003T() {
-	data := source()
+	data := util.Source()
 	result := applyFunc(identity, data)
-	sink(result)
+	util.Sink(result)
 }
 
 func higherOrder004F() {
-	data := source()
+	data := util.Source()
 	result := applyFunc(dropValue, data)
-	sink(result)
+	util.Sink(result)
 }

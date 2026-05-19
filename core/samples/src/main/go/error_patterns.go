@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 import "errors"
 
@@ -18,25 +20,25 @@ func mayFailClean(input string) (string, error) {
 }
 
 func errorReturn001T() {
-	data := source()
+	data := util.Source()
 	result, err := mayFail(data)
 	if err == nil {
-		sink(result)
+		util.Sink(result)
 	}
 }
 
 func errorReturn002F() {
-	data := source()
+	data := util.Source()
 	result, err := mayFailClean(data)
 	if err == nil {
-		sink(result)
+		util.Sink(result)
 	}
 }
 
 func errorReturn003T() {
-	data := source()
+	data := util.Source()
 	result, _ := mayFail(data)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Error wrapping ───────────────────────────────────────────────────
@@ -50,33 +52,33 @@ func wrapResult(input string) (string, error) {
 }
 
 func errorWrap001T() {
-	data := source()
+	data := util.Source()
 	result, _ := wrapResult(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func errorWrap002F() {
-	data := source()
+	data := util.Source()
 	_, _ = wrapResult(data) // discard result
-	sink("safe")
+	util.Sink("safe")
 }
 
 // ── Early return on error ────────────────────────────────────────────
 
 func earlyReturn001T() {
-	data := source()
+	data := util.Source()
 	result, err := mayFail(data)
 	if err != nil {
 		return
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func earlyReturn002F() {
-	data := source()
+	data := util.Source()
 	_, err := mayFail(data)
 	if err != nil {
 		return
 	}
-	sink("safe")
+	util.Sink("safe")
 }

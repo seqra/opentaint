@@ -1,26 +1,28 @@
 package test
+import "test/util"
+
 
 // ── Pass-through rule tests ──────────────────────────────────────────
 
 func passThrough001T() {
-	data := source()
-	result := passthrough(data)
-	sink(result)
+	data := util.Source()
+	result := util.Passthrough(data)
+	util.Sink(result)
 }
 
 func passThrough002F() {
-	data := source()
-	result := sanitize(data)
-	sink(result)
+	data := util.Source()
+	result := util.Sanitize(data)
+	util.Sink(result)
 }
 
 func passThrough003T() {
-	data := source()
-	result := transform(data, "other")
-	sink(result)
+	data := util.Source()
+	result := util.Transform(data, "other")
+	util.Sink(result)
 }
 
 func passThrough004F() {
-	result := transform("clean", source())
-	sink(result)
+	result := util.Transform("clean", util.Source())
+	util.Sink(result)
 }

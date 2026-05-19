@@ -1,11 +1,13 @@
 package test
+import "test/util"
+
 
 // ── Advanced control flow tests ──────────────────────────────────────
 
 // ── Switch/case ──────────────────────────────────────────────────────
 
 func switchCase001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	switch data {
 	case "a":
@@ -15,11 +17,11 @@ func switchCase001T() {
 	default:
 		result = data
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func switchCase002F() {
-	data := source()
+	data := util.Source()
 	var result string
 	switch data {
 	case "a":
@@ -29,12 +31,12 @@ func switchCase002F() {
 	default:
 		result = "safe"
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 func switchFallthrough001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	switch 1 {
 	case 1:
@@ -43,57 +45,57 @@ func switchFallthrough001T() {
 	case 2:
 		// result keeps value from case 1
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 // ── For-range ────────────────────────────────────────────────────────
 
 func forRange001T() {
-	data := source()
+	data := util.Source()
 	s := []string{data, "a", "b"}
 	var result string
 	for _, v := range s {
 		result = v
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func forRange002F() {
-	data := source()
+	data := util.Source()
 	s := []string{"a", "b", "c"}
 	var result string
 	for _, v := range s {
 		result = v
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 func forRangeMap001T() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"k": data}
 	var result string
 	for _, v := range m {
 		result = v
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func forRangeMap002F() {
-	data := source()
+	data := util.Source()
 	m := map[string]string{"k": "safe"}
 	var result string
 	for _, v := range m {
 		result = v
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 // ── Break and continue ───────────────────────────────────────────────
 
 func breakInLoop001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 10; i++ {
 		if i == 5 {
@@ -101,11 +103,11 @@ func breakInLoop001T() {
 			break
 		}
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func breakInLoop002F() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 10; i++ {
 		result = "safe"
@@ -113,12 +115,12 @@ func breakInLoop002F() {
 			break
 		}
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 func continueInLoop001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 3; i++ {
 		if i == 0 {
@@ -126,13 +128,13 @@ func continueInLoop001T() {
 		}
 		result = data
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Labeled break ────────────────────────────────────────────────────
 
 func labeledBreak001T() {
-	data := source()
+	data := util.Source()
 	var result string
 outer:
 	for i := 0; i < 3; i++ {
@@ -143,43 +145,43 @@ outer:
 			}
 		}
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Nested loops ─────────────────────────────────────────────────────
 
 func nestedLoop001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			result = data
 		}
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func nestedLoop002F() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			result = "safe"
 		}
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 // ── Select statement ─────────────────────────────────────────────────
 
 func selectStmt001T() {
-	data := source()
+	data := util.Source()
 	ch := make(chan string, 1)
 	ch <- data
 	var result string
 	select {
 	case result = <-ch:
 	}
-	sink(result)
+	util.Sink(result)
 }

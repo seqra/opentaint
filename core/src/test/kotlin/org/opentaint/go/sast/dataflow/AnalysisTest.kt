@@ -19,6 +19,7 @@ import org.opentaint.dataflow.go.rules.TaintRules
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
+import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.ext.findFunctionByFullName
@@ -45,8 +46,8 @@ abstract class AnalysisTest {
     lateinit var client: GoIRClient
 
     // Standard source/sink rules
-    val stdSource = TaintRules.Source("test.source", "taint", Result)
-    val stdSink = TaintRules.Sink("test.sink", "taint", Argument(0), "test-id")
+    val stdSource = TaintRules.Source("test/util.Source", "taint", Result)
+    val stdSink = TaintRules.Sink("test/util.Sink", "taint", Argument(0), "test-id")
 
     @BeforeAll
     fun setup() {

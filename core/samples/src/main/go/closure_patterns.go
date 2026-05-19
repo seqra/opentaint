@@ -1,91 +1,93 @@
 package test
+import "test/util"
+
 
 // ── Closure capture and invocation pattern tests ─────────────────────
 
 // ── Direct capture of tainted variable ───────────────────────────────
 
 func closureCapture001T() {
-	data := source()
+	data := util.Source()
 	f := func() string { return data }
-	sink(f())
+	util.Sink(f())
 }
 
 func closureCapture002F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
 	f := func() string { return data }
-	sink(f())
+	util.Sink(f())
 }
 
 // ── Closure capturing two variables ──────────────────────────────────
 
 func closureTwoVars001T() {
-	tainted := source()
+	tainted := util.Source()
 	clean := "safe"
 	f := func() string { return tainted + clean }
-	sink(f())
+	util.Sink(f())
 }
 
 func closureTwoVars002F() {
-	tainted := source()
+	tainted := util.Source()
 	clean := "safe"
-	consume(tainted)
+	util.Consume(tainted)
 	f := func() string { return clean }
-	sink(f())
+	util.Sink(f())
 }
 
 // ── Nested closures ──────────────────────────────────────────────────
 
 func closureNested001T() {
-	data := source()
+	data := util.Source()
 	outer := func() func() string {
 		return func() string { return data }
 	}
 	inner := outer()
-	sink(inner())
+	util.Sink(inner())
 }
 
 func closureNested002F() {
-	data := source()
-	consume(data)
+	data := util.Source()
+	util.Consume(data)
 	safe := "clean"
 	outer := func() func() string {
 		return func() string { return safe }
 	}
 	inner := outer()
-	sink(inner())
+	util.Sink(inner())
 }
 
 // ── Closure assigned to variable then called ─────────────────────────
 
 func closureAssign001T() {
-	data := source()
+	data := util.Source()
 	var f func() string
 	f = func() string { return data }
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 func closureAssign002F() {
-	_ = source()
+	_ = util.Source()
 	var f func() string
 	f = func() string { return "constant" }
 	result := f()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Closure capturing slice ──────────────────────────────────────────
 
 func closureSlice001T() {
-	data := source()
+	data := util.Source()
 	items := []string{data, "b", "c"}
 	f := func() string { return items[0] }
-	sink(f())
+	util.Sink(f())
 }
 
 func closureSlice002F() {
-	_ = source()
+	_ = util.Source()
 	items := []string{"safe", "b", "c"}
 	f := func() string { return items[0] }
-	sink(f())
+	util.Sink(f())
 }

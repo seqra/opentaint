@@ -1,107 +1,109 @@
 package test
+import "test/util"
+
 
 // ── Sanitization and taint killing tests ─────────────────────────────
 
 // ── Basic overwrite sanitization ─────────────────────────────────────
 
 func sanitize001F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
-	sink(data)
+	util.Sink(data)
 }
 
 func sanitize002T() {
-	data := source()
+	data := util.Source()
 	other := data
 	data = "safe" // kills data but not other
-	sink(other)
+	util.Sink(other)
 }
 
 // ── Sanitization through function call ───────────────────────────────
 
 func sanitize003F() {
-	data := source()
+	data := util.Source()
 	result := dropValue(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func sanitize004T() {
-	data := source()
+	data := util.Source()
 	_ = dropValue(data) // doesn't affect original
-	sink(data)
+	util.Sink(data)
 }
 
 // ── Conditional sanitization ─────────────────────────────────────────
 
 func sanitizeCond001T() {
-	data := source()
+	data := util.Source()
 	if len(data) > 100 {
 		data = "safe" // only sanitizes in one branch
 	}
-	sink(data) // taint may still reach here (conservative)
+	util.Sink(data) // taint may still reach here (conservative)
 }
 
 func sanitizeCond002F() {
-	data := source()
+	data := util.Source()
 	if true {
 		data = "safe"
 	} else {
 		data = "also safe"
 	}
-	sink(data)
+	util.Sink(data)
 }
 
 // ── Sanitization in loop ─────────────────────────────────────────────
 
 func sanitizeLoop001T() {
-	data := source()
+	data := util.Source()
 	for i := 0; i < 3; i++ {
 		if i == 2 {
 			data = "safe"
 		}
 	}
-	sink(data) // conservative: taint may not have been killed
+	util.Sink(data) // conservative: taint may not have been killed
 }
 
 func sanitizeLoop002F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
 	for i := 0; i < 3; i++ {
 		// data stays safe
 	}
-	sink(data)
+	util.Sink(data)
 }
 
-// ── Multiple taint sources, partial sanitization ─────────────────────
+// ── Multiple taint util.Sources, partial sanitization ─────────────────────
 
 func sanitizePartial001T() {
-	a := source()
-	b := source()
+	a := util.Source()
+	b := util.Source()
 	a = "safe" // kills a
-	sink(b)    // b still tainted
-	consume(a)
+	util.Sink(b)    // b still tainted
+	util.Consume(a)
 }
 
 func sanitizePartial002F() {
-	a := source()
-	b := source()
+	a := util.Source()
+	b := util.Source()
 	a = "safe"
 	b = "safe"  // both killed
-	sink(a + b) // both safe now
+	util.Sink(a + b) // both safe now
 }
 
 // ── Struct field overwrite ───────────────────────────────────────────
 
 func sanitizeField001T() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
 	p.clean = "new safe" // doesn't affect tainted field
-	sink(p.tainted)
+	util.Sink(p.tainted)
 }
 
 func sanitizeField002F() {
-	data := source()
+	data := util.Source()
 	p := SFPair{tainted: data, clean: "safe"}
 	p.tainted = "safe" // overwrites tainted field
-	sink(p.tainted)
+	util.Sink(p.tainted)
 }

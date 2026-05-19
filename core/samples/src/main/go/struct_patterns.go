@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Struct field access pattern tests ────────────────────────────────
 
@@ -11,29 +13,29 @@ type SPData struct {
 // ── Struct literal with tainted field ────────────────────────────────
 
 func structLiteral001T() {
-	data := source()
+	data := util.Source()
 	s := SPData{first: data, second: "clean", third: "clean"}
-	sink(s.first)
+	util.Sink(s.first)
 }
 
 func structLiteral002F() {
-	data := source()
+	data := util.Source()
 	s := SPData{first: data, second: "clean", third: "clean"}
-	sink(s.second)
+	util.Sink(s.second)
 }
 
 // ── Multi-field struct, selective access ──────────────────────────────
 
 func structMultiField001T() {
-	data := source()
+	data := util.Source()
 	s := SPData{first: data, second: "b", third: "c"}
-	sink(s.first)
+	util.Sink(s.first)
 }
 
 func structMultiField002F() {
-	data := source()
+	data := util.Source()
 	s := SPData{first: data, second: "b", third: "c"}
-	sink(s.second)
+	util.Sink(s.second)
 }
 
 // ── Function returning struct ────────────────────────────────────────
@@ -43,43 +45,43 @@ func makeSPData(val string) SPData {
 }
 
 func structFuncReturn001T() {
-	data := source()
+	data := util.Source()
 	s := makeSPData(data)
-	sink(s.first)
+	util.Sink(s.first)
 }
 
 func structFuncReturn002F() {
-	data := source()
+	data := util.Source()
 	s := makeSPData(data)
-	sink(s.second)
+	util.Sink(s.second)
 }
 
 // ── Pointer to struct, dereference and read ──────────────────────────
 
 func structPtrDeref001T() {
-	data := source()
+	data := util.Source()
 	s := &SPData{first: data, second: "clean", third: "clean"}
-	sink(s.first)
+	util.Sink(s.first)
 }
 
 func structPtrDeref002F() {
-	data := source()
+	data := util.Source()
 	s := &SPData{first: data, second: "clean", third: "clean"}
-	sink(s.second)
+	util.Sink(s.second)
 }
 
 // ── Struct field reassignment ────────────────────────────────────────
 
 func structReassign001T() {
-	data := source()
+	data := util.Source()
 	s := SPData{first: "clean", second: "clean", third: "clean"}
 	s.first = data
-	sink(s.first)
+	util.Sink(s.first)
 }
 
 func structReassign002F() {
-	data := source()
+	data := util.Source()
 	s := SPData{first: "clean", second: "clean", third: "clean"}
 	s.first = data
-	sink(s.second)
+	util.Sink(s.second)
 }

@@ -1,18 +1,20 @@
 package test
+import "test/util"
+
 
 // ── Multiple taint mark tests ────────────────────────────────────────
 
 func taintMarkMatch001T() {
-	data := sourceA()
-	sinkA(data)
+	data := util.SourceA()
+	util.SinkA(data)
 }
 
 func taintMarkMismatch001F() {
-	data := sourceA()
-	sinkB(data)
+	data := util.SourceA()
+	util.SinkB(data)
 }
 
 func taintMarkMatch002T() {
-	data := sourceB()
-	sinkB(data)
+	data := util.SourceB()
+	util.SinkB(data)
 }

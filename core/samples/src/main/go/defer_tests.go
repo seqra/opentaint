@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Defer execution order tests ──────────────────────────────────────
 // Defer args are evaluated immediately, but the call runs after surrounding code.
@@ -6,61 +8,61 @@ package test
 // ── Basic defer ──────────────────────────────────────────────────────
 
 func defer001T() {
-	data := source()
-	defer consume(data) // deferred, but data is tainted at eval time
-	sink(data)          // sink runs before defer body
+	data := util.Source()
+	defer util.Consume(data) // deferred, but data is tainted at eval time
+	util.Sink(data)          // util.Sink runs before defer body
 }
 
 func defer002F() {
 	data := "safe"
-	defer consume(data)
-	sink(data) // data is safe here
+	defer util.Consume(data)
+	util.Sink(data) // data is safe here
 }
 
-// ── Defer with sink ──────────────────────────────────────────────────
+// ── Defer with util.Sink ──────────────────────────────────────────────────
 
 func deferSink001T() {
-	data := source()
-	defer sink(data) // args evaluated immediately: data is tainted
+	data := util.Source()
+	defer util.Sink(data) // args evaluated immediately: data is tainted
 }
 
 func deferSink002F() {
 	data := "safe"
-	defer sink(data) // args evaluated immediately: data is safe
-	data = source()  // this happens after defer eval, before defer runs
-	consume(data)
+	defer util.Sink(data) // args evaluated immediately: data is safe
+	data = util.Source()  // this happens after defer eval, before defer runs
+	util.Consume(data)
 }
 
 // ── Defer in loop ────────────────────────────────────────────────────
 
 func deferLoop001T() {
-	data := source()
+	data := util.Source()
 	for i := 0; i < 1; i++ {
-		defer sink(data)
+		defer util.Sink(data)
 	}
 }
 
 // ── Defer with closure ───────────────────────────────────────────────
 
 func deferClosure001T() {
-	data := source()
+	data := util.Source()
 	defer func() {
-		sink(data) // closure captures data; data is tainted at call time
+		util.Sink(data) // closure captures data; data is tainted at call time
 	}()
 }
 
 func deferClosure002F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
 	defer func() {
-		sink(data) // data was overwritten before defer was set up
+		util.Sink(data) // data was overwritten before defer was set up
 	}()
 }
 
 // ── Multiple defers (LIFO order) ─────────────────────────────────────
 
 func deferMultiple001T() {
-	data := source()
-	defer consume(data)
-	defer sink(data) // this runs before the consume defer
+	data := util.Source()
+	defer util.Consume(data)
+	defer util.Sink(data) // this runs before the consume defer
 }

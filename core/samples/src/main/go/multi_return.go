@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Multiple return value tests ──────────────────────────────────────
 
@@ -26,73 +28,73 @@ func namedReturnsClean(input string) (result string, err string) {
 // ── Basic multi-return ───────────────────────────────────────────────
 
 func multiReturn001T() {
-	data := source()
+	data := util.Source()
 	first, _ := twoReturns(data, "clean")
-	sink(first)
+	util.Sink(first)
 }
 
 func multiReturn002F() {
-	data := source()
+	data := util.Source()
 	_, second := twoReturns(data, "clean")
-	sink(second)
+	util.Sink(second)
 }
 
 func multiReturn003T() {
-	data := source()
+	data := util.Source()
 	_, second := twoReturns("clean", data)
-	sink(second)
+	util.Sink(second)
 }
 
 func multiReturn004F() {
-	data := source()
+	data := util.Source()
 	first, _ := twoReturns("clean", data)
-	sink(first)
+	util.Sink(first)
 }
 
 // ── Three return values ──────────────────────────────────────────────
 
 func threeReturn001T() {
-	data := source()
+	data := util.Source()
 	first, _, _ := threeReturns(data, "b", "c")
-	sink(first)
+	util.Sink(first)
 }
 
 func threeReturn002F() {
-	data := source()
+	data := util.Source()
 	_, second, _ := threeReturns(data, "b", "c")
-	sink(second)
+	util.Sink(second)
 }
 
 func threeReturn003T() {
-	data := source()
+	data := util.Source()
 	_, _, third := threeReturns("a", "b", data)
-	sink(third)
+	util.Sink(third)
 }
 
 // ── Named return values ──────────────────────────────────────────────
 
 func namedReturn001T() {
-	data := source()
+	data := util.Source()
 	result, _ := namedReturns(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func namedReturn002F() {
-	data := source()
+	data := util.Source()
 	result, _ := namedReturnsClean(data)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Discard with blank identifier ────────────────────────────────────
 
 func blankIdentifier001T() {
-	data := source()
+	data := util.Source()
 	result, _ := twoReturns(data, "x")
-	sink(result)
+	util.Sink(result)
 }
 
 func blankIdentifier002F() {
-	data := source()
+	data := util.Source()
 	_, result := twoReturns(data, "x")
-	sink(result)
+	util.Sink(result)
 }

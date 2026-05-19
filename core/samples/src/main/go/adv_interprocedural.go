@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Advanced interprocedural tests ───────────────────────────────────
 
@@ -16,15 +18,15 @@ func mutualB(s string, n int) string {
 }
 
 func mutualRecursion001T() {
-	data := source()
+	data := util.Source()
 	result := mutualA(data, 4)
-	sink(result)
+	util.Sink(result)
 }
 
 func mutualRecursion002F() {
-	_ = source()
+	_ = util.Source()
 	result := mutualA("safe", 4)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Function returning function result ───────────────────────────────
@@ -38,33 +40,33 @@ func wrapDrop(s string) string {
 }
 
 func funcReturnFunc001T() {
-	data := source()
+	data := util.Source()
 	result := wrapIdentity(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func funcReturnFunc002F() {
-	data := source()
+	data := util.Source()
 	result := wrapDrop(data)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Multiple callers of same function ────────────────────────────────
 
 func multiCaller001T() {
-	data := source()
+	data := util.Source()
 	r1 := identity(data)
 	r2 := identity("safe")
-	sink(r1)
-	consume(r2)
+	util.Sink(r1)
+	util.Consume(r2)
 }
 
 func multiCaller002F() {
-	data := source()
+	data := util.Source()
 	r1 := identity("safe")
 	r2 := identity(data)
-	sink(r1)
-	consume(r2)
+	util.Sink(r1)
+	util.Consume(r2)
 }
 
 // ── Pass through multiple functions ──────────────────────────────────
@@ -74,15 +76,15 @@ func passB(s string) string { return passC(s) }
 func passC(s string) string { return s }
 
 func multiPass001T() {
-	data := source()
+	data := util.Source()
 	result := passA(data)
-	sink(result)
+	util.Sink(result)
 }
 
 func multiPass002F() {
-	_ = source()
+	_ = util.Source()
 	result := passA("safe")
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Function with side effects on argument ───────────────────────────
@@ -96,17 +98,17 @@ func fillHolder(h *AdvHolder, val string) {
 }
 
 func advSideEffect001T() {
-	data := source()
+	data := util.Source()
 	h := &AdvHolder{}
 	fillHolder(h, data)
-	sink(h.data)
+	util.Sink(h.data)
 }
 
 func advSideEffect002F() {
-	_ = source()
+	_ = util.Source()
 	h := &AdvHolder{}
 	fillHolder(h, "safe")
-	sink(h.data)
+	util.Sink(h.data)
 }
 
 // ── Builder pattern ──────────────────────────────────────────────────
@@ -125,17 +127,17 @@ func (b *AdvBuilder) Build() string {
 }
 
 func builder001T() {
-	data := source()
+	data := util.Source()
 	b := &AdvBuilder{}
 	result := b.Add(data).Build()
-	sink(result)
+	util.Sink(result)
 }
 
 func builder002F() {
-	_ = source()
+	_ = util.Source()
 	b := &AdvBuilder{}
 	result := b.Add("safe").Build()
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Function that returns different values based on condition ─────────
@@ -148,14 +150,14 @@ func condReturn(s string, useIt bool) string {
 }
 
 func condReturn001T() {
-	data := source()
+	data := util.Source()
 	result := condReturn(data, true)
-	sink(result)
+	util.Sink(result)
 }
 
 func condReturn002T() {
 	// Conservative: analysis doesn't know runtime value of condition
-	data := source()
+	data := util.Source()
 	result := condReturn(data, false)
-	sink(result)
+	util.Sink(result)
 }

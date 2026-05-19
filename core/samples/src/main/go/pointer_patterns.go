@@ -1,4 +1,6 @@
 package test
+import "test/util"
+
 
 // ── Pointer aliasing and indirection pattern tests ───────────────────
 
@@ -10,34 +12,34 @@ type PPData struct {
 // ── Pointer aliasing ─────────────────────────────────────────────────
 
 func ptrAlias001T() {
-	data := source()
+	data := util.Source()
 	p1 := &data
 	p2 := p1
-	sink(*p2)
+	util.Sink(*p2)
 }
 
 func ptrAlias002F() {
-	data := source()
+	data := util.Source()
 	_ = &data
 	safe := "clean"
 	p2 := &safe
-	sink(*p2)
+	util.Sink(*p2)
 }
 
 // ── Pointer to struct field ──────────────────────────────────────────
 
 func ptrField001T() {
-	data := source()
+	data := util.Source()
 	obj := &PPData{value: "clean", other: "clean"}
 	obj.value = data
-	sink(obj.value)
+	util.Sink(obj.value)
 }
 
 func ptrField002F() {
-	data := source()
+	data := util.Source()
 	obj := &PPData{value: "clean", other: "clean"}
 	obj.value = data
-	sink(obj.other)
+	util.Sink(obj.other)
 }
 
 // ── Function writing through pointer parameter ──────────────────────
@@ -55,34 +57,34 @@ func readPPOther(obj *PPData) string {
 }
 
 func ptrFunc001T() {
-	data := source()
+	data := util.Source()
 	obj := &PPData{value: "clean", other: "clean"}
 	writeThroughPtr(obj, data)
 	result := readPPValue(obj)
-	sink(result)
+	util.Sink(result)
 }
 
 func ptrFunc002F() {
-	data := source()
+	data := util.Source()
 	obj := &PPData{value: "clean", other: "clean"}
 	writeThroughPtr(obj, data)
 	result := readPPOther(obj)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Pointer dereference ──────────────────────────────────────────────
 
 func ptrDeref001T() {
-	data := source()
+	data := util.Source()
 	p := &data
 	result := *p
-	sink(result)
+	util.Sink(result)
 }
 
 func ptrDeref002F() {
-	_ = source()
+	_ = util.Source()
 	safe := "clean"
 	p := &safe
 	result := *p
-	sink(result)
+	util.Sink(result)
 }

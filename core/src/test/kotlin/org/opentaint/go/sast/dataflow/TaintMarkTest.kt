@@ -9,10 +9,10 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TaintMarkTest : AnalysisTest() {
 
-    private val sourceMarkA = TaintRules.Source("test.sourceA", "markA", Result)
-    private val sourceMarkB = TaintRules.Source("test.sourceB", "markB", Result)
-    private val sinkMarkA = TaintRules.Sink("test.sinkA", "markA", Argument(0), "test-mark-a")
-    private val sinkMarkB = TaintRules.Sink("test.sinkB", "markB", Argument(0), "test-mark-b")
+    private val sourceMarkA = TaintRules.Source("test/util.SourceA", "markA", Result)
+    private val sourceMarkB = TaintRules.Source("test/util.SourceB", "markB", Result)
+    private val sinkMarkA = TaintRules.Sink("test/util.SinkA", "markA", Argument(0), "test-mark-a")
+    private val sinkMarkB = TaintRules.Sink("test/util.SinkB", "markB", Argument(0), "test-mark-b")
 
     @Test fun taintMarkMatch001T() = assertSinkReachable(sourceMarkA, sinkMarkA, "test.taintMarkMatch001T")
     @Test fun taintMarkMismatch001F() = assertSinkNotReachable(sourceMarkA, sinkMarkB, "test.taintMarkMismatch001F")

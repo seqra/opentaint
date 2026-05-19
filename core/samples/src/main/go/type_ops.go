@@ -1,97 +1,99 @@
 package test
+import "test/util"
+
 
 // ── Type operation tests (casts, assertions, conversions, interface wrapping) ──
 
 // ── Type conversion (preserves taint) ────────────────────────────────
 
 func typeCastInt001T() {
-	data := sourceInt()
+	data := util.SourceInt()
 	result := float64(data)
-	sinkFloat(result)
+	util.SinkFloat(result)
 }
 
 func typeCastInt002F() {
-	_ = sourceInt()
+	_ = util.SourceInt()
 	result := float64(42)
-	sinkFloat(result)
+	util.SinkFloat(result)
 }
 
 func typeCastStringToBytes001T() {
-	data := source()
+	data := util.Source()
 	bytes := []byte(data)
 	result := string(bytes)
-	sink(result)
+	util.Sink(result)
 }
 
 func typeCastStringToBytes002F() {
-	_ = source()
+	_ = util.Source()
 	bytes := []byte("safe")
 	result := string(bytes)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Interface wrapping (MakeInterface preserves taint) ───────────────
 
 func interfaceWrap001T() {
-	data := source()
+	data := util.Source()
 	var iface interface{} = data
 	result := iface.(string)
-	sink(result)
+	util.Sink(result)
 }
 
 func interfaceWrap002F() {
-	_ = source()
+	_ = util.Source()
 	var iface interface{} = "safe"
 	result := iface.(string)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Type assertion ───────────────────────────────────────────────────
 
 func typeAssert001T() {
-	data := sourceAny()
+	data := util.SourceAny()
 	result := data.(string)
-	sink(result)
+	util.Sink(result)
 }
 
 func typeAssert002F() {
-	_ = sourceAny()
+	_ = util.SourceAny()
 	var clean interface{} = "safe"
 	result := clean.(string)
-	sink(result)
+	util.Sink(result)
 }
 
 // ── Type assertion with comma-ok ─────────────────────────────────────
 
 func typeAssertOk001T() {
-	data := sourceAny()
+	data := util.SourceAny()
 	result, ok := data.(string)
 	if ok {
-		sink(result)
+		util.Sink(result)
 	}
 }
 
 func typeAssertOk002F() {
-	_ = sourceAny()
+	_ = util.SourceAny()
 	var clean interface{} = "safe"
 	result, ok := clean.(string)
 	if ok {
-		sink(result)
+		util.Sink(result)
 	}
 }
 
 // ── Rune/byte conversion ─────────────────────────────────────────────
 
 func runeConv001T() {
-	data := sourceInt()
+	data := util.SourceInt()
 	r := rune(data)
 	result := string(r)
-	sink(result)
+	util.Sink(result)
 }
 
 func runeConv002F() {
-	_ = sourceInt()
+	_ = util.SourceInt()
 	r := rune(65)
 	result := string(r)
-	sink(result)
+	util.Sink(result)
 }

@@ -1,45 +1,47 @@
 package test
+import "test/util"
+
 
 // ── Control flow tests ──────────────────────────────────────────────
 
 func conditionalIf001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	if len(data) > 0 {
 		result = data
 	} else {
 		result = "safe"
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func conditionalIf002F() {
-	data := source()
+	data := util.Source()
 	var result string
 	if len(data) > 0 {
 		result = "safe"
 	} else {
 		result = "safe"
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }
 
 func forBody001T() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 1; i++ {
 		result = data
 	}
-	sink(result)
+	util.Sink(result)
 }
 
 func forBody002F() {
-	data := source()
+	data := util.Source()
 	var result string
 	for i := 0; i < 1; i++ {
 		result = "safe"
 	}
-	sink(result)
-	consume(data)
+	util.Sink(result)
+	util.Consume(data)
 }

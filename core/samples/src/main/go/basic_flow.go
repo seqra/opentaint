@@ -1,27 +1,29 @@
 package test
+import "test/util"
+
 
 // ── Basic intraprocedural flow tests ────────────────────────────────
 
 func stringDirect() {
-	sink(source())
+	util.Sink(util.Source())
 }
 
 func killByOverwrite001F() {
-	data := source()
+	data := util.Source()
 	data = "safe"
-	sink(data)
+	util.Sink(data)
 }
 
 func killByReassign001F() {
-	data := source()
+	data := util.Source()
 	other := data
 	other = "safe"
-	sink(other)
+	util.Sink(other)
 }
 
 func noKill001T() {
-	data := source()
+	data := util.Source()
 	other := data
 	data = "safe"
-	sink(other)
+	util.Sink(other)
 }

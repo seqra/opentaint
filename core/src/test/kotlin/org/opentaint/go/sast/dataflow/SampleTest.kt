@@ -10,15 +10,15 @@ import kotlin.test.Test
 class SampleTest : AnalysisTest() {
     @Test
     fun sample() = assertSinkReachable(
-        TaintRules.Source("test.source", "taint", Result),
-        TaintRules.Sink("test.sink", "taint", Argument(0), "test-id"),
+        TaintRules.Source("test/util.Source", "taint", Result),
+        TaintRules.Sink("test/util.Sink", "taint", Argument(0), "test-id"),
         "test.sample"
     )
 
     @Test
     fun sampleNonReachable() = assertSinkNotReachable(
-        TaintRules.Source("test.source", "taint", Result),
-        TaintRules.Sink("test.sink", "taint", Argument(0), "test-id"),
+        TaintRules.Source("test/util.Source", "taint", Result),
+        TaintRules.Sink("test/util.Sink", "taint", Argument(0), "test-id"),
         "test.sampleNonReachable"
     )
 }
