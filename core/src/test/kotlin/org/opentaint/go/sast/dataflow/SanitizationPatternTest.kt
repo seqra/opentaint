@@ -1,10 +1,20 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SanitizationPatternTest : AnalysisTest() {
+    private val passthroughRule = TaintRules.Pass(
+        "test/util.Passthrough",
+        PositionBaseWithModifiers.BaseOnly(Argument(0)),
+        PositionBaseWithModifiers.BaseOnly(PositionBase.Result),
+    )
 
     // Conservative: only one branch sanitizes, so taint persists
     @Test fun sanitizeConditional001T() = assertReachable("test.sanitizeConditional001T")
@@ -13,7 +23,12 @@ class SanitizationPatternTest : AnalysisTest() {
     @Test fun sanitizeReturn001T() = assertReachable("test.sanitizeReturn001T")
     @Test fun sanitizeReturn002F() = assertNotReachable("test.sanitizeReturn002F")
 
-    @Test fun sanitizeChain001T() = assertReachable("test.sanitizeChain001T")
+    @Test
+    fun sanitizeChain001T() {
+        val vulnerabilities = runAnalysis(stdSource, stdSink, "test.sanitizeChain001T", extraPassRules = listOf(passthroughRule))
+        assertTrue(vulnerabilities.isNotEmpty(), "Sink was not reached in ${"test.sanitizeChain001T"}")
+    }
+
     @Test fun sanitizeChain002F() = assertNotReachable("test.sanitizeChain002F")
 
     @Test fun sanitizeReassign001T() = assertReachable("test.sanitizeReassign001T")
