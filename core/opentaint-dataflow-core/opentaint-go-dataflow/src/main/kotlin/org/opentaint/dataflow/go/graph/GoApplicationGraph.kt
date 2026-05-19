@@ -2,6 +2,7 @@ package org.opentaint.dataflow.go.graph
 
 import org.opentaint.dataflow.go.GoCallResolver
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
+import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.ir.go.api.GoIRBody
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
@@ -9,10 +10,10 @@ import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.util.analysis.ApplicationGraph
 
 class GoApplicationGraph(
-    val cp: GoIRProgram
+    val cp: GoIRProgram,
+    unitResolver: UnitResolver<GoIRFunction>,
 ) : ApplicationGraph<GoIRFunction, GoIRInst> {
-
-    internal val callResolver = GoCallResolver(cp)
+    internal val callResolver = GoCallResolver(cp, unitResolver)
 
     override fun callees(node: GoIRInst): Sequence<GoIRFunction> {
         val callInfo = GoFlowFunctionUtils.extractCallInfo(node) ?: return emptySequence()

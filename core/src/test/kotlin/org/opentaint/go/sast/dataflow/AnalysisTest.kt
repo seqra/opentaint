@@ -17,6 +17,8 @@ import org.opentaint.dataflow.go.rules.GoTaintConfig
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.rules.TaintRules
 import org.opentaint.dataflow.ifds.SingletonUnit
+import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -125,21 +127,13 @@ abstract class AnalysisTest {
         val allPassRules = commonPassRules + extraPassRules
         val config = GoTaintConfig(listOf(source), listOf(sink), allPassRules)
 
-        val ifdsGraph = GoApplicationGraph(cp)
+        val ifdsGraph = GoApplicationGraph(cp, TestUnitResolver)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
             GoAnalysisManager(cp, GoTaintRulesProvider(config)),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
-            unitResolver = { f ->
-                f as GoIRFunction
-                val pkgName = f.pkg?.importPath
-                when (pkgName) {
-                    "test" -> SingletonUnit
-                    "test/util" -> UnknownUnit
-                    else -> error("Unknown test pkg: $pkgName")
-                }
-            },
+            unitResolver = TestUnitResolver as UnitResolver<CommonMethod>,
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
@@ -149,6 +143,18 @@ abstract class AnalysisTest {
         return engine.use { eng ->
             eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
             eng.getVulnerabilities()
+        }
+    }
+
+    private object TestUnitResolver : UnitResolver<GoIRFunction> {
+        override fun resolve(method: GoIRFunction): UnitType {
+            val pkgName = method.pkg?.importPath
+            return when (pkgName) {
+                "test" -> SingletonUnit
+                "test/util" -> UnknownUnit
+                "errors" -> UnknownUnit
+                else -> error("Unknown test pkg: $pkgName")
+            }
         }
     }
 }

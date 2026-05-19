@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.go
 
+import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRNamedType
 import org.opentaint.ir.go.api.GoIRProgram
@@ -16,8 +18,10 @@ import org.opentaint.ir.go.value.GoIRRegister
 /**
  * Low-level call resolver for Go. Handles DIRECT, INVOKE, and DYNAMIC call modes.
  */
-class GoCallResolver(val cp: GoIRProgram) {
-
+class GoCallResolver(
+    val cp: GoIRProgram,
+    private val unitResolver: UnitResolver<GoIRFunction>
+) {
     /**
      * Pre-computed: for each interface (by fullName), all concrete types implementing it.
      */
@@ -26,11 +30,15 @@ class GoCallResolver(val cp: GoIRProgram) {
     }
 
     fun resolve(call: GoIRCallInfo, location: GoIRInst): List<GoIRFunction>? {
-        return when (call.mode) {
+        val candidates = when (call.mode) {
             GoIRCallMode.DIRECT -> resolveDirect(call)
             GoIRCallMode.INVOKE -> resolveInvoke(call)
             GoIRCallMode.DYNAMIC -> resolveDynamic(call, location)
         }
+
+        return candidates
+            ?.filter { unitResolver.resolve(it) != UnknownUnit }
+            ?.takeIf { it.isNotEmpty() }
     }
 
     private fun resolveDirect(call: GoIRCallInfo): List<GoIRFunction>? {
