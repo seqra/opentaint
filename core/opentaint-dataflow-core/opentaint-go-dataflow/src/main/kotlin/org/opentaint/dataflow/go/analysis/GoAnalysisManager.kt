@@ -150,7 +150,8 @@ class GoAnalysisManager(
         analysisContext: MethodAnalysisContext,
         currentInst: CommonInst,
     ): MethodSequentPrecondition {
-        return GoMethodSequentPrecondition()
+        val ctx = analysisContext as GoMethodAnalysisContext
+        return GoMethodSequentPrecondition(currentInst as GoIRInst, ctx.method)
     }
 
     override fun getMethodCallPrecondition(
@@ -160,7 +161,13 @@ class GoAnalysisManager(
         callExpr: CommonCallExpr,
         statement: CommonInst,
     ): MethodCallPrecondition {
-        return GoMethodCallPrecondition()
+        val ctx = analysisContext as GoMethodAnalysisContext
+        return GoMethodCallPrecondition(
+            returnValue as? GoIRValue,
+            callExpr as GoCallExpr,
+            statement as GoIRInst,
+            ctx,
+        )
     }
 
     override fun isReachable(
