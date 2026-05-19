@@ -1,0 +1,15 @@
+rules:
+  - id: i98
+    languages:
+      - java
+    severity: ERROR
+    message: tainted array element reaches sink
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - focus-metavariable: $X
+          - pattern: $X = src();
+    pattern-sinks:
+      - patterns:
+          - pattern: sink($Y);
+          - focus-metavariable: $Y

@@ -16,6 +16,7 @@ import issues.issue94
 import issues.issue95
 import issues.issue96
 import issues.issue97
+import issues.issue98
 import issues.issueChain
 import issues.issueChainSplitBuilder
 import org.junit.jupiter.api.AfterAll
@@ -112,6 +113,10 @@ class IssuesTest : SampleBasedTest() {
 
     @Test
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
+
+    @Test
+    @Disabled // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
+    fun `issue 98`() = runTest<issue98>()
 
     @AfterAll
     fun close() {
