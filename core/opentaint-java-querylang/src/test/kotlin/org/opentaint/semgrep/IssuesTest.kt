@@ -106,8 +106,7 @@ class IssuesTest : SampleBasedTest() {
     @Test
     fun `issue 97`() = runTest<issue97>()
 
-    @Test
-    @Disabled // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
+    @Test // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
     fun `issue 98`() = runTest<issue98>()
 
     @AfterAll
