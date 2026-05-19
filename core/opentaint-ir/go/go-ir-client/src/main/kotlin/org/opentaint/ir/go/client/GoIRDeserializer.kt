@@ -1,6 +1,5 @@
 package org.opentaint.ir.go.client
 
-import com.google.protobuf.type
 import org.opentaint.ir.go.api.GoIRFreeVar
 import org.opentaint.ir.go.api.GoIRInterfaceMethod
 import org.opentaint.ir.go.api.GoIRParameter
