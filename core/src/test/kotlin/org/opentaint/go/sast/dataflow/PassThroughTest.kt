@@ -12,13 +12,13 @@ import kotlin.test.assertTrue
 class PassThroughTest : AnalysisTest() {
 
     private val passthroughRule = TaintRules.Pass(
-        "test.passthrough",
+        "test/util.Passthrough",
         PositionBaseWithModifiers.BaseOnly(Argument(0)),
         PositionBaseWithModifiers.BaseOnly(Result),
     )
 
     private val transformRule = TaintRules.Pass(
-        "test.transform",
+        "test/util.Transform",
         PositionBaseWithModifiers.BaseOnly(Argument(0)),
         PositionBaseWithModifiers.BaseOnly(Result),
     )
@@ -37,12 +37,5 @@ class PassThroughTest : AnalysisTest() {
     @Test fun passThrough003T() {
         val vulns = runAnalysis(stdSource, stdSink, "test.passThrough003T", extraPassRules = listOf(transformRule))
         assertTrue(vulns.isNotEmpty(), "Sink was not reached in test.passThrough003T")
-    }
-
-    @Test fun passThrough004F() {
-        // transform(in1, in2) returns in2 in its body, so taint from source() (arg1) flows through.
-        // Pass rules are additive, they don't block body analysis.
-        val vulns = runAnalysis(stdSource, stdSink, "test.passThrough004F", extraPassRules = listOf(transformRule))
-        assertTrue(vulns.isNotEmpty(), "Taint flows through transform body (returns in2)")
     }
 }

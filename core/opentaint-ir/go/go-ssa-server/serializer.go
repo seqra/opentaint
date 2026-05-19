@@ -570,14 +570,44 @@ func (s *serializer) serializePackage(pkg *ssa.Package) *pb.ProtoPackage {
 		}
 	}
 
-	// Serialize package-less functions (instantiated generics) in the first package
+	// Serialize package-less functions whose *declared* package (via
+	// Origin/Parent) is this one. This covers instantiated generic
+	// functions and methods like `(test.GenBox[string]).Get[string]`, for
+	// which `fn.Package()` is nil but `fn.Origin().Pkg` is the package the
+	// generic was declared in.
+	for _, fn := range s.allFunctions {
+		if s.serializedFunctions[fn] || fn.Package() != nil {
+			continue
+		}
+		if declaredPackage(fn) == pkg {
+			pf := s.serializeFunction(fn)
+			pp.Functions = append(pp.Functions, pf)
+			s.serializedFunctions[fn] = true
+		}
+	}
+
+	// Serialize remaining package-less functions (e.g. synthetic wrappers
+	// with no declared package) in the first user package as a fallback.
+	// IMPORTANT: only claim functions whose declared package is also nil
+	// or is not one of the user packages — otherwise we'd steal
+	// instantiated generic methods declared in later user packages,
+	// because `serializePackage(s.pkgs[0])` runs before later packages.
 	if len(s.pkgs) > 0 && pkg == s.pkgs[0] {
+		userPkgs := make(map[*ssa.Package]bool, len(s.pkgs))
+		for _, up := range s.pkgs {
+			userPkgs[up] = true
+		}
 		for _, fn := range s.allFunctions {
-			if !s.serializedFunctions[fn] && fn.Package() == nil {
-				pf := s.serializeFunction(fn)
-				pp.Functions = append(pp.Functions, pf)
-				s.serializedFunctions[fn] = true
+			if s.serializedFunctions[fn] || fn.Package() != nil {
+				continue
 			}
+			dp := declaredPackage(fn)
+			if dp != nil && userPkgs[dp] && dp != pkg {
+				continue // belongs to a later user package, let it serialize there
+			}
+			pf := s.serializeFunction(fn)
+			pp.Functions = append(pp.Functions, pf)
+			s.serializedFunctions[fn] = true
 		}
 	}
 
@@ -598,8 +628,14 @@ func (s *serializer) serializeFunction(fn *ssa.Function) *pb.ProtoFunction {
 		HasBody:  len(fn.Blocks) > 0,
 	}
 
-	if fn.Package() != nil {
-		pf.PackageId = s.ids.packageID(fn.Package())
+	fnPkg := fn.Package()
+	if fnPkg == nil {
+		// For instantiated generic functions/methods fn.Package() is nil,
+		// but the declaring package is reachable via Origin()/Parent().
+		fnPkg = declaredPackage(fn)
+	}
+	if fnPkg != nil {
+		pf.PackageId = s.ids.packageID(fnPkg)
 	}
 	pf.SignatureTypeId = s.ids.typeID(fn.Signature)
 
@@ -1257,6 +1293,26 @@ func (s *serializer) positionOf(pos token.Pos) *pb.ProtoPosition {
 		Line:     int32(p.Line),
 		Column:   int32(p.Column),
 	}
+}
+
+// declaredPackage returns the package in which fn is declared. For
+// instantiated generic functions/methods fn.Pkg is nil, so we walk to
+// fn.Origin() / fn.Parent() to find the original declaring package.
+// This mirrors ssa.Function.declaredPackage (which is unexported).
+func declaredPackage(fn *ssa.Function) *ssa.Package {
+	if fn == nil {
+		return nil
+	}
+	if fn.Pkg != nil {
+		return fn.Pkg
+	}
+	if o := fn.Origin(); o != nil && o != fn {
+		return declaredPackage(o)
+	}
+	if p := fn.Parent(); p != nil {
+		return declaredPackage(p)
+	}
+	return nil
 }
 
 func deref(t types.Type) types.Type {

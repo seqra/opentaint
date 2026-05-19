@@ -11,8 +11,13 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
-import org.opentaint.ir.go.expr.GoIRIndexExpr
-import org.opentaint.ir.go.inst.*
+import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRInst
+import org.opentaint.ir.go.inst.GoIRMapUpdate
+import org.opentaint.ir.go.inst.GoIRPhi
+import org.opentaint.ir.go.inst.GoIRReturn
+import org.opentaint.ir.go.inst.GoIRSend
+import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.type.GoIRBinaryOp
 
 /**
@@ -74,11 +79,6 @@ class GoMethodSequentFlowFunction(
             && GoFlowFunctionUtils.isStringType(expr.type)
         ) {
             return handleStringConcat(initialFact, currentFact, registerBase, expr)
-        }
-
-        if (expr is GoIRIndexExpr && GoFlowFunctionUtils.isStringType(expr.x.type)) {
-            // read from string
-            TODO()
         }
 
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)

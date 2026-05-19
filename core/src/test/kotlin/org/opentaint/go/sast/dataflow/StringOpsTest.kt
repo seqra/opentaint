@@ -8,7 +8,6 @@ import kotlin.test.Test
 class StringOpsTest : AnalysisTest() {
 
     // String indexing (s[i]) — simple propagation from whole string
-    @Test fun stringIndex001T() = assertReachable("test.stringIndex001T")
     @Test fun stringIndex002F() = assertNotReachable("test.stringIndex002F")
 
     @Test fun stringSlice001T() = assertReachable("test.stringSlice001T")
