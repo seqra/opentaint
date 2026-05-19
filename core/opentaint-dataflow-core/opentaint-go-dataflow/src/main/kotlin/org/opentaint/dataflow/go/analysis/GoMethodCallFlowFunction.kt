@@ -138,7 +138,7 @@ class GoMethodCallFlowFunction(
         for (rule in sourceRules) {
             val base = GoFlowFunctionUtils.resolvePosition(rule.pos)
 
-            val factAp = apManager.createAbstractAp(base, ExclusionSet.Universe)
+            val factAp = apManager.createFinalAp(base, ExclusionSet.Universe)
                 .prependAccessor(TaintMarkAccessor(rule.mark))
 
             val callerFacts = mapMethodExitToReturnFlowFact(statement, factAp, FactTypeChecker.Dummy)
