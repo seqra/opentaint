@@ -46,9 +46,15 @@ class ProjectAutoBuilder : CliWithLogger() {
             }
         }
 
+        val topLevelProject = Project(
+            projectRoot = projectRootDir,
+            goProjects = emptyList(),
+            javaProjects = Project.flattenJavaProject(resolvedProject),
+        )
+
         when (val b = build) {
             is SimpleProjectBuild -> {
-                resolvedProject.dump(b.result.createParentDirectories())
+                topLevelProject.dump(b.result.createParentDirectories())
             }
 
             is PortableProjectBuild -> {

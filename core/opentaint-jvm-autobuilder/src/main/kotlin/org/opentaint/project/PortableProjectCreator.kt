@@ -19,7 +19,7 @@ class PortableProjectCreator(
         data class Ported(val path: Path) : PortAction
     }
 
-    private class ProjectPortContext(
+    private inner class ProjectPortContext(
         val sources: Path,
         val classes: Path,
         val dependencies: Path,
@@ -91,20 +91,20 @@ class PortableProjectCreator(
     }
 
     private fun create(ctx: ProjectPortContext, project: JavaProject): JavaProject = JavaProject(
-        sourceRoot = project.sourceRoot?.let { copySources(ctx, project, it) },
+        sourceRoot = project.sourceRoot?.let { copySources(ctx, it) },
         javaToolchain = project.javaToolchain?.let { copyToolchain(ctx, it) },
-        modules = project.modules.map { create(ctx, project, it) },
+        modules = project.modules.map { create(ctx, it) },
         dependencies = project.dependencies.map { copyDependency(ctx, it) },
         subProjects = project.subProjects.map { create(ctx, it) }
     )
 
-    private fun create(ctx: ProjectPortContext, rootProject: JavaProject, module: ProjectModuleClasses) = ProjectModuleClasses(
+    private fun create(ctx: ProjectPortContext, module: ProjectModuleClasses) = ProjectModuleClasses(
         packages = module.packages,
-        moduleSourceRoot = module.moduleSourceRoot?.let { copySources(ctx, rootProject, it) },
+        moduleSourceRoot = module.moduleSourceRoot?.let { copySources(ctx, it) },
         moduleClasses = module.moduleClasses.map { copyClasses(ctx, it) }
     )
 
-    private fun copySources(ctx: ProjectPortContext, rootProject: JavaProject, source: Path): Path {
+    private fun copySources(ctx: ProjectPortContext, source: Path): Path {
         val relativeOriginal = rootProject.sourceRoot?.let { source.relativeTo(it) } ?: source
         return ctx.sources.resolve(relativeOriginal)
     }
