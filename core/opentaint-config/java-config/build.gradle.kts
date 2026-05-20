@@ -1,4 +1,5 @@
 import OpentaintConfigurationDependency.opentaintRulesJvm
+import OpentaintConfigurationDependency.opentaintRulesPython
 
 plugins {
     `kotlin-conventions`
@@ -6,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(opentaintRulesJvm)
+    implementation(opentaintRulesPython)
 }
 
 tasks.withType<ProcessResources> {

@@ -16,7 +16,7 @@ fun DependencySubstitutions.substituteProjects(group: String, projects: List<Str
 
 includeBuild("opentaint-configuration-rules") {
     dependencySubstitution {
-        substituteProjects("org.opentaint.opentaint-configuration-rules", listOf("configuration-rules-common", "configuration-rules-jvm"))
+        substituteProjects("org.opentaint.opentaint-configuration-rules", listOf("configuration-rules-common", "configuration-rules-jvm", "configuration-rules-python"))
     }
 }
 
