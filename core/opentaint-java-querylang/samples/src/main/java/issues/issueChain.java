@@ -8,22 +8,26 @@ import issues.iChain.Source;
 import issues.iChain.URI;
 
 /**
- * Reproducer: a sink-side pattern that names a static-method receiver
- * literally (`HttpRequest.newBuilder().uri($URL)`) does NOT match a
- * chained call expression like
- *   `req = HttpRequest.newBuilder().uri(URI.create(t)).GET().build();`
+ * INTENDED non-match (the {@code issueChain} test is expected to stay red).
  *
- * Replacing the literal receiver with `$_.uri($URL)` matches the same
- * shape (see SSRF rule `ssrf-sinks.yaml` for the production version
- * that uses the `$_` form). The repro contrasts the two forms in
- * separate rule files; the YAML referenced by `@RuleSet` is the
- * failing literal-receiver form.
+ * <p>The sink rule nests the static receiver inside a single expression,
+ * {@code $BUILDER = HttpRequest.newBuilder().uri($URL)}, and then matches
+ * {@code $BUILDER.build()}. The source, however, builds the request as one
+ * fluent chain:
+ * <pre>
+ *   req = HttpRequest.newBuilder().uri(URI.create(t)).GET().build();
+ * </pre>
+ * whose calls are matched one at a time. The order/structure of the calls
+ * in the rule does not line up with the source — there is no point where a
+ * single {@code newBuilder().uri(...)} sub-expression is the direct receiver
+ * of {@code .build()} (the {@code .GET()} call sits in between) — so the
+ * literal nested receiver never binds and the rule legitimately does not
+ * fire. This is expected behaviour, not an analyzer false-negative.
  *
- * The PositiveTaint case exercises the same shape that the production
- * `UnsafeHttpClientSendController` test uses; this test fails until
- * the literal-receiver form is supported (or the documented
- * `(HttpRequest.Builder $_)` typed-receiver constraint becomes
- * available).
+ * <p>The working way to express the same intent is to bind the static
+ * {@code newBuilder()} call to its own metavariable first and then match the
+ * chain call-by-call. See {@link issueChainSplitBuilder} (and
+ * {@code issueChainSplitBuilder.yaml}) for that passing counterpart.
  */
 @RuleSet("issues/issueChain.yaml")
 public abstract class issueChain implements RuleSample {

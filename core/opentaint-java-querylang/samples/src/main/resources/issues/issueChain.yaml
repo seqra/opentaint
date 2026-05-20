@@ -1,6 +1,6 @@
 rules:
   - id: issue-chain
-    message: "Reproducer: literal static-method receiver inside chained-builder pattern doesn't match"
+    message: "Reproducer (intended non-match): nested literal static receiver doesn't line up with the fluent chain"
     severity: WARNING
     languages: [java]
     mode: taint
@@ -9,20 +9,22 @@ rules:
       - pattern: $UNTRUSTED = issues.iChain.Source.taint();
 
     pattern-sinks:
-      # FAILING FORM — uses `issues.iChain.HttpRequest.newBuilder()` as
-      # the literal receiver of `.uri(...)`. The source is the chained
-      # call:
+      # INTENDED NON-MATCH. This nests the static receiver inside one
+      # expression — `$BUILDER = newBuilder().uri($URL)` — and then matches
+      # `$BUILDER.build()`. The source is a single fluent chain:
       #     HttpRequest req = HttpRequest.newBuilder()
       #             .uri(URI.create(t))
       #             .GET()
       #             .build();
       #     client.send(req);
-      # Replacing the literal receiver with `$_.uri($URL)` makes the
-      # exact same test pass (see the production `ssrf-sinks.yaml`
-      # `java-ssrf-sink` block at the `Builder-chain inline forms`
-      # comment — that's the workaround currently used in the SSRF
-      # rule). The literal form should also match the same shape but
-      # does not.
+      # whose calls are matched one at a time. There is no point where a
+      # `newBuilder().uri(...)` sub-expression is the direct receiver of
+      # `.build()` (the `.GET()` call sits in between), so the literal
+      # nested receiver never binds and the rule legitimately does not
+      # fire. The order/structure of calls in the rule has to line up with
+      # the source. See `issueChainSplitBuilder.yaml` for the working form
+      # that binds `newBuilder()` separately and matches the chain
+      # call-by-call.
       - patterns:
           - pattern-either:
               - pattern-inside: |

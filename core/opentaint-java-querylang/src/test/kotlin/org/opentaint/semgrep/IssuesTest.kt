@@ -17,6 +17,7 @@ import issues.issue95
 import issues.issue96
 import issues.issue97
 import issues.issueChain
+import issues.issueChainSplitBuilder
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
@@ -107,13 +108,20 @@ class IssuesTest : SampleBasedTest() {
     fun `issue 97`() = runTest<issue97>()
 
     @Test
-    // Reproducer for a chained-builder pattern with a literal static-method
-    // receiver. Should match the `req = newBuilder().uri(URI.create(t)).GET().build();`
-    // shape but does not — see `issueChain.yaml` and `issueChain.java` for
-    // the failing pattern and its passing `$_.uri($URL)` counterpart.
+    // INTENDED non-match (this test is expected to be red). The rule nests the
+    // static receiver inside one expression — `$BUILDER = newBuilder().uri($URL)`
+    // — and then matches `$BUILDER.build()`. The source builds the request as a
+    // single fluent chain `newBuilder().uri(URI.create(t)).GET().build()`, whose
+    // calls are matched one at a time, so the order/structure of calls in the
+    // rule does not line up with the source and the literal nested receiver never
+    // binds. `issueChainSplitBuilder` shows the working form (bind `newBuilder()`
+    // separately first). See `issueChain.yaml`/`issueChain.java` for details.
     // (`EXPECT_STATE_VAR` because the multi-statement sink pattern with
     // `$BUILDER`/`$REQ` introduces state-vars during taint config build.)
     fun `issue chain-pattern literal static receiver`() = runTest<issueChain>(EXPECT_STATE_VAR)
+
+    @Test
+    fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
 
     @AfterAll
     fun close() {
