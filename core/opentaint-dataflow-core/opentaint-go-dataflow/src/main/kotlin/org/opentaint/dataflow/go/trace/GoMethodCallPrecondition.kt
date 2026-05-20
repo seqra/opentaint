@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.go.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
@@ -10,6 +11,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondit
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
+import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
@@ -46,6 +48,12 @@ class GoMethodCallPrecondition(
 
     /** Dummy assign-action used to identify a source rule in a [TaintRulePrecondition.Source]. */
     private data class GoSourceAction(val rule: TaintRules.Source) : CommonTaintAssignAction
+
+    /** Dummy action identifying a pass rule application in a [TaintRulePrecondition.Pass]. */
+    private data class GoPassAction(val rule: TaintRules.Pass) : CommonTaintAction
+
+    /** Pass rule condition: the single precondition fact (in caller namespace). */
+    private data class GoPassRuleCondition(val fact: InitialFactAp) : PassRuleCondition
 
     override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
         val preconditionFacts = preconditionForFact(fact)
@@ -125,11 +133,59 @@ class GoMethodCallPrecondition(
         if (startFactBase != AccessPathBase.Return) {
             result += CallPreconditionFact.UnresolvedCallSkip
         }
-        // Pass-through rule preconditions are not modeled for the Go MVP rule set.
+        factPassRulePrecondition(fact, startFactBase).mapTo(result) {
+            CallPreconditionFact.CallToReturnTaintRule(it)
+        }
+        return result
+    }
+
+    private fun factPassRulePrecondition(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+    ): List<TaintRulePrecondition.Pass> {
+        val name = calleeName ?: return emptyList()
+        val passRules = rulesProvider.passRulesForCall(name)
+        if (passRules.isEmpty()) return emptyList()
+
+        val result = mutableListOf<TaintRulePrecondition.Pass>()
+        for (rule in passRules) {
+            val (fromBase, fromAccessors) = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
+            if (fromAccessors.isNotEmpty()) {
+                TODO("Complex `from` not modeled")
+            }
+
+            val (toBase, toAccessors) = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
+            if (toBase != startFactBase) continue
+
+            val delta = fact.readAccessors(toAccessors.asReversed())
+                ?: continue
+
+            // Build the precondition fact in callee namespace at `fromBase`, then map back to caller.
+            val calleeFact = delta.rebase(fromBase)
+            val callerFacts = GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, calleeFact)
+            for (callerFact in callerFacts) {
+                result += TaintRulePrecondition.Pass(
+                    rule,
+                    setOf(GoPassAction(rule)),
+                    GoPassRuleCondition(callerFact),
+                )
+            }
+        }
+        return result
+    }
+
+    private fun InitialFactAp.readAccessors(accessors: List<Accessor>): InitialFactAp? {
+        var result = this
+        for (accessor in accessors) {
+            result = result.readAccessor(accessor) ?: return null
+        }
         return result
     }
 
     override fun resolvePassRuleCondition(
         precondition: PassRuleCondition
-    ): List<MethodCallPrecondition.PassRuleConditionFacts> = emptyList()
+    ): List<MethodCallPrecondition.PassRuleConditionFacts> {
+        precondition as GoPassRuleCondition
+        return listOf(MethodCallPrecondition.PassRuleConditionFacts(listOf(precondition.fact)))
+    }
 }
