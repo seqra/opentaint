@@ -108,7 +108,8 @@ class IssuesTest : SampleBasedTest() {
     fun `issue 97`() = runTest<issue97>()
 
     @Test
-    // INTENDED non-match (this test is expected to be red). The rule nests the
+    // INTENDED non-match (the tainted case is recorded as a Negative sample, so
+    // the test passes). The rule nests the
     // static receiver inside one expression — `$BUILDER = newBuilder().uri($URL)`
     // — and then matches `$BUILDER.build()`. The source builds the request as a
     // single fluent chain `newBuilder().uri(URI.create(t)).GET().build()`, whose

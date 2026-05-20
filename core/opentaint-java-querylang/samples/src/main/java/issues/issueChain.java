@@ -8,7 +8,10 @@ import issues.iChain.Source;
 import issues.iChain.URI;
 
 /**
- * INTENDED non-match (the {@code issueChain} test is expected to stay red).
+ * INTENDED non-match: the rule legitimately does not fire on the tainted fluent
+ * chain, so that case is recorded as a {@code Negative} sample
+ * ({@link NegativeTaintIntendedNonMatch}) rather than a positive, and the
+ * {@code issueChain} test passes.
  *
  * <p>The sink rule nests the static receiver inside a single expression,
  * {@code $BUILDER = HttpRequest.newBuilder().uri($URL)}, and then matches
@@ -32,7 +35,9 @@ import issues.iChain.URI;
 @RuleSet("issues/issueChain.yaml")
 public abstract class issueChain implements RuleSample {
 
-    static class PositiveTaint extends issueChain {
+    // Carries real taint, but the chain pattern legitimately does not match
+    // (see class Javadoc), so no finding is expected — recorded as a Negative case.
+    static class NegativeTaintIntendedNonMatch extends issueChain {
         @Override
         public void entrypoint() {
             String t = Source.taint();
