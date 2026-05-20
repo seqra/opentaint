@@ -357,22 +357,25 @@ rules:
       - patterns:
           - pattern-either:
               - pattern-inside: |
-                  $TYPE $X = URI.create($UNTRUSTED);
+                  $X = URI.create($UNTRUSTED);
                   ...
               - pattern-inside: |
-                  $TYPE $X = java.net.URI.create($UNTRUSTED);
+                  $X = java.net.URI.create($UNTRUSTED);
                   ...
               - pattern-inside: |
-                  $TYPE $X = new URI($UNTRUSTED);
+                  $X = new URI($UNTRUSTED);
                   ...
               - pattern-inside: |
-                  $TYPE $X = new java.net.URI($UNTRUSTED);
+                  $X = new java.net.URI($UNTRUSTED);
                   ...
           - pattern-either:
               # java.net.http.HttpRequest builder
               - pattern: java.net.http.HttpRequest.newBuilder($X)
-              - pattern: java.net.http.HttpRequest.newBuilder().uri($X).$_().build()
-              - pattern: java.net.http.HttpRequest.newBuilder().uri($X).build()
+              - patterns:
+                  - pattern-inside: |
+                        $BUILDER = java.net.http.HttpRequest.newBuilder();
+                        ...
+                  - pattern: $BUILDER.uri($X).build()
               # Spring RequestEntity static factories
               - patterns:
                   - pattern: org.springframework.http.RequestEntity.$METHOD($X, ...)
@@ -404,20 +407,27 @@ rules:
               - pattern-inside: |
                   $URL = new java.net.URI($UNTRUSTED);
                   ...
-          # `$_` (not `java.net.http.HttpRequest.newBuilder()`) is required
-          # here because the analyzer auto-splits a chained static call
+          # The analyzer auto-splits a chained static call
           # `HttpRequest.newBuilder().uri(...)` into an implicit
           # let-binding `$t = newBuilder(); $BUILDER = $t.uri(...)`, so
-          # the receiver of `.uri(...)` is the anonymous $t, not the
-          # literal `newBuilder()` call. Constructor calls (`new X()`)
-          # are kept literal — see the OkHttp `new Request.Builder()`
-          # pattern below for the version where the literal form works.
-          # A typed `(HttpRequest.Builder $_).uri(...)` constraint isn't
+          # the receiver of `.uri(...)` is the anonymous temp `$t`, not
+          # the literal `newBuilder()` call. We bind that temp via the
+          # `pattern-inside` below (`$NEW_BUILDER = newBuilder(); ...`)
+          # and reference it as `$NEW_BUILDER.uri($URL)`, which
+          # constrains the receiver to an actual `newBuilder()` result —
+          # more precise than an anonymous `$_`, which would match
+          # `.uri(...)` on any expression. A typed
+          # `(HttpRequest.Builder $_).uri(...)` constraint isn't
           # available because inner-class types aren't supported as
           # typed metavariables (see the matching `# ANALYZER LIMITATION`
-          # TODO higher up in this file).
+          # TODO higher up in this file). Constructor calls (`new X()`)
+          # are kept literal — see the OkHttp `new Request.Builder()`
+          # pattern below for the version where the literal form works.
+          - pattern-inside: |
+              $NEW_BUILDER = java.net.http.HttpRequest.newBuilder();
+              ...
           - pattern: |
-              $BUILDER = $_.uri($URL);
+              $BUILDER = $NEW_BUILDER.uri($URL);
               ...;
               $TYPE $REQ = $BUILDER.build();
               ...;
