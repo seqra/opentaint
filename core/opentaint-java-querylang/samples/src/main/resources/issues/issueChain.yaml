@@ -9,22 +9,6 @@ rules:
       - pattern: $UNTRUSTED = issues.iChain.Source.taint();
 
     pattern-sinks:
-      # INTENDED NON-MATCH. This nests the static receiver inside one
-      # expression — `$BUILDER = newBuilder().uri($URL)` — and then matches
-      # `$BUILDER.build()`. The source is a single fluent chain:
-      #     HttpRequest req = HttpRequest.newBuilder()
-      #             .uri(URI.create(t))
-      #             .GET()
-      #             .build();
-      #     client.send(req);
-      # whose calls are matched one at a time. There is no point where a
-      # `newBuilder().uri(...)` sub-expression is the direct receiver of
-      # `.build()` (the `.GET()` call sits in between), so the literal
-      # nested receiver never binds and the rule legitimately does not
-      # fire. The order/structure of calls in the rule has to line up with
-      # the source. See `issueChainSplitBuilder.yaml` for the working form
-      # that binds `newBuilder()` separately and matches the chain
-      # call-by-call.
       - patterns:
           - pattern-either:
               - pattern-inside: |

@@ -108,17 +108,6 @@ class IssuesTest : SampleBasedTest() {
     fun `issue 97`() = runTest<issue97>()
 
     @Test
-    // INTENDED non-match (the tainted case is recorded as a Negative sample, so
-    // the test passes). The rule nests the
-    // static receiver inside one expression — `$BUILDER = newBuilder().uri($URL)`
-    // — and then matches `$BUILDER.build()`. The source builds the request as a
-    // single fluent chain `newBuilder().uri(URI.create(t)).GET().build()`, whose
-    // calls are matched one at a time, so the order/structure of calls in the
-    // rule does not line up with the source and the literal nested receiver never
-    // binds. `issueChainSplitBuilder` shows the working form (bind `newBuilder()`
-    // separately first). See `issueChain.yaml`/`issueChain.java` for details.
-    // (`EXPECT_STATE_VAR` because the multi-statement sink pattern with
-    // `$BUILDER`/`$REQ` introduces state-vars during taint config build.)
     fun `issue chain-pattern literal static receiver`() = runTest<issueChain>(EXPECT_STATE_VAR)
 
     @Test

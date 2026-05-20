@@ -9,18 +9,6 @@ rules:
       - pattern: $UNTRUSTED = issues.iChain.Source.taint();
 
     pattern-sinks:
-      # WORKING FORM. The source builds the request as one fluent chain:
-      #     HttpRequest req = HttpRequest.newBuilder()
-      #             .uri(URI.create(t))
-      #             .GET()
-      #             .build();
-      #     client.send(req);
-      # The static `newBuilder()` call is bound to `$NEW_BUILDER` in its
-      # own `pattern-inside` first, then `.uri($URL)` is matched on that
-      # receiver. Because each call in the chain is matched separately,
-      # the differing order of calls between rule and source (the
-      # intervening `.GET()`) no longer breaks the match — unlike the
-      # nested literal form `newBuilder().uri($URL)` in `issueChain.yaml`.
       - patterns:
           - pattern-either:
               - pattern-inside: |
