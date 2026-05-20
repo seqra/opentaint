@@ -16,6 +16,7 @@ import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companio
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromReversedAp
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isAlwaysUnrollNext
 import org.opentaint.dataflow.util.forEachInt
@@ -133,7 +134,7 @@ class TreeInitialFactAbstraction(
             }
         }
 
-        val mergedNewFacts = newFacts.reduceOrNull { acc, f -> acc.mergeAdd(f) }
+        val mergedNewFacts = newFacts.reduceOrNull { acc, f -> acc.mergeAdd(f, foldToAny = false) }
             ?: return null
 
         return addInitialFact(mergedNewFacts, interner)
@@ -189,6 +190,9 @@ class TreeInitialFactAbstraction(
                 if (unrollAccessors.isNotEmpty()) {
                     unrollRequests += AnyAccessorUnrollRequest(state.currentAp, state.added, unrollAccessors)
                 }
+
+                val anyBranch = state.added.getChild(ANY_ACCESSOR_IDX) ?: error("impossible")
+                unprocessed += AbstractionState(state.analyzedTrieRoot, anyBranch, state.currentAp)
             }
 
             if (state.added.isFinal) {
@@ -292,7 +296,7 @@ class TreeInitialFactAbstraction(
 
         fun addInitialFact(ap: AccessTreeNode, interner: AccessTreeSoftInterner): AccessTreeNode? {
             val currentNode = added ?: manager.create()
-            val (updatedAddedNode, addedInitial) = currentNode.mergeAddDelta(ap)
+            val (updatedAddedNode, addedInitial) = currentNode.mergeAddDelta(ap, foldToAny = false)
 
             if (addedInitial == null) return null
 

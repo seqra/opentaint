@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companio
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
-import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isFieldAccessor
 
 class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
