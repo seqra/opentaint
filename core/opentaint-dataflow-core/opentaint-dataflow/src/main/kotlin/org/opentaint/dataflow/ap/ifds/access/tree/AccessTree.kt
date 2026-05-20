@@ -566,7 +566,7 @@ class AccessTree(
             val addedNodes = Array(uniqueAccessors.size) { uniqueAccessors[it].second() }
 
             val mergedAccessors = mergeAccessors(
-                addedAccessors, addedNodes, onOtherNode = { _, _ -> }
+                addedAccessors, addedNodes, foldToAny = true, onOtherNode = { _, _ -> }
             ) { _, thisNode, otherNode ->
                 thisNode.mergeAdd(otherNode)
             }
@@ -576,29 +576,17 @@ class AccessTree(
             return manager.create(isAbstract, isFinal, mergedAccessors.first, mergedAccessors.second)
         }
 
-        fun mergeAdd(other: AccessNode): AccessNode {
+        fun mergeAdd(other: AccessNode, foldToAny: Boolean = true): AccessNode {
             if (this === other) return this
 
             val isAbstract = this.isAbstract || other.isAbstract
 
             val isFinal = this.isFinal || other.isFinal
 
-            val thisAny = this.getChild(ANY_ACCESSOR_IDX)
-            val (otherAccessors, otherAccessorNodes) =
-                if (thisAny != null)
-                    AccessTreeAnySuffixMatcher(thisAny).getNonMatchingNode(other)
-                else other.accessors to other.accessorNodes
-
-            val otherAny = other.getChild(ANY_ACCESSOR_IDX)
-            val (thisAccessors, thisAccessorNodes) =
-                if (otherAny != null)
-                    AccessTreeAnySuffixMatcher(otherAny).getNonMatchingNode(this)
-                else accessors to accessorNodes
-
             val mergedAccessors = mergeAccessors(
-                thisAccessors, thisAccessorNodes, otherAccessors, otherAccessorNodes, onOtherNode = { _, _ -> }
+                other.accessors, other.accessorNodes, foldToAny, onOtherNode = { _, _ -> }
             ) { _, thisNode, otherNode ->
-                thisNode.mergeAdd(otherNode)
+                thisNode.mergeAdd(otherNode, foldToAny)
             }
             if (
                 isAbstract == this.isAbstract
@@ -614,7 +602,7 @@ class AccessTree(
             return manager.create(isAbstract, isFinal, accessors, accessorNodes)
         }
 
-        fun mergeAddDelta(other: AccessNode): Pair<AccessNode, AccessNode?> {
+        fun mergeAddDelta(other: AccessNode, foldToAny: Boolean = true): Pair<AccessNode, AccessNode?> {
             if (this === other) return this to null
 
             val isFinal = this.isFinal || other.isFinal
@@ -627,13 +615,13 @@ class AccessTree(
             val deltaAccessorNodes = arrayListOf<AccessNode>()
 
             val mergedAccessors = mergeAccessors(
-                other.accessors, other.accessorNodes,
+                other.accessors, other.accessorNodes, foldToAny,
                 onOtherNode = { field, node ->
                     deltaAccessors.add(field)
                     deltaAccessorNodes.add(node)
                 }
             ) { field, thisNode, otherNode ->
-                val (addedNode, addedNodeDelta) = thisNode.mergeAddDelta(otherNode)
+                val (addedNode, addedNodeDelta) = thisNode.mergeAddDelta(otherNode, foldToAny)
 
                 if (addedNodeDelta != null) {
                     deltaAccessors.add(field)
@@ -966,31 +954,51 @@ class AccessTree(
         private inline fun mergeAccessors(
             otherFields: IntArray?,
             otherNodesE: Array<AccessNode>?,
+            foldToAny: Boolean,
             onOtherNode: (AccessorIdx, AccessNode) -> Unit,
-            merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode
-        ) = mergeAccessors(accessors, accessorNodes, otherFields, otherNodesE, onOtherNode, merge)
+            merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode,
+        ) = mergeAccessors(accessors, accessorNodes, otherFields, otherNodesE, foldToAny, onOtherNode, merge)
 
         private inline fun mergeAccessors(
             accessors: IntArray?,
             nodes: Array<AccessNode>?,
-            otherAccessors: IntArray?,
+            otherAccessorsE: IntArray?,
             otherNodesE: Array<AccessNode>?,
+            foldToAny: Boolean,
             onOtherNode: (AccessorIdx, AccessNode) -> Unit,
-            merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode
+            merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode,
         ): Pair<IntArray, Array<AccessNode>>? {
-            if (otherAccessors == null) return null
-            val otherNodes = otherNodesE!!
+            if (otherAccessorsE == null) return null
+            val otherNodesBeforeAny = otherNodesE!!
 
             if (accessors == null) {
-                for (i in otherAccessors.indices) {
-                    onOtherNode(otherAccessors[i], otherNodes[i])
+                for (i in otherAccessorsE.indices) {
+                    onOtherNode(otherAccessorsE[i], otherNodesBeforeAny[i])
                 }
 
-                return otherAccessors to otherNodes
+                return otherAccessorsE to otherNodesBeforeAny
             }
 
-            val thisAccessors = accessors
-            val thisNodes = nodes!!
+            val thisAccessorsBeforeAny = accessors
+            val thisNodesBeforeAny = nodes!!
+
+            var thisAnyIdx: Int = -1
+            if (foldToAny)
+                thisAnyIdx = accessors.indexOf(ANY_ACCESSOR_IDX)
+//            val (otherAccessors, otherNodes) = otherAccessorsE to otherNodesBeforeAny
+            val (otherAccessors, otherNodes) =
+                if (thisAnyIdx > 0)
+                    AccessTreeAnySuffixMatcher(nodes[thisAnyIdx]).getNonMatchingNode(otherAccessorsE, otherNodesBeforeAny)
+                else otherAccessorsE to otherNodesBeforeAny
+
+            var otherAnyIdx: Int = -1
+            if (foldToAny)
+                otherAnyIdx = otherAccessorsE.indexOf(ANY_ACCESSOR_IDX)
+//            val (thisAccessors, thisNodes) = thisAccessorsBeforeAny to thisNodesBeforeAny
+            val (thisAccessors, thisNodes) =
+                if (otherAnyIdx > 0)
+                    AccessTreeAnySuffixMatcher(otherNodesBeforeAny[otherAnyIdx]).getNonMatchingNode(thisAccessorsBeforeAny, thisNodesBeforeAny)
+                else thisAccessorsBeforeAny to thisNodesBeforeAny
 
             var modified = false
             var accessorsModified = false

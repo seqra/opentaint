@@ -85,9 +85,9 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
                 var prefix = triePar.prefixLink
                 while (prefix != null) {
                     val next = prefix.children.get(accessor)
-                    val notCoveredStillInSuffix = curNotCoveredByAny == null || depth - next.depth < curNotCoveredByAny
-                    if (next != null && notCoveredStillInSuffix) {
-                        prefix = next
+                    if (next != null) {
+                        val notCoveredStillInSuffix = curNotCoveredByAny == null || depth - next.depth < curNotCoveredByAny
+                        prefix = if (notCoveredStillInSuffix) next else null
                         break
                     }
                     prefix = prefix.prefixLink
@@ -112,11 +112,12 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         }
     }
 
-    fun getNonMatchingNode(node: AccessTree.AccessNode): Pair<IntArray, Array<AccessTree.AccessNode>> {
+    fun getNonMatchingNode(accessors: IntArray, nodes: Array<AccessTree.AccessNode>): Pair<IntArray, Array<AccessTree.AccessNode>> {
         val accessorIdx = mutableListOf<AccessorIdx>()
         val accessorNodes = mutableListOf<AccessTree.AccessNode>()
 
-        node.forEachAccessor { accessor, accessorNode ->
+        accessors.forEachIndexed { i, accessor ->
+            val accessorNode = nodes[i]
             val afterAny = root.children.get(accessor)
             val accessorCovered = accessor.coveredByAny()
             if (afterAny == null && !accessorCovered) {
