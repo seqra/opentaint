@@ -14,6 +14,14 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java:4.29.3")
     implementation("com.google.protobuf:protobuf-kotlin:4.29.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.assertj:assertj-core:3.27.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.4")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 protobuf {

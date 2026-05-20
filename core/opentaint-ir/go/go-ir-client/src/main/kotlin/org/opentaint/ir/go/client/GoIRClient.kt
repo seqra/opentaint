@@ -1,19 +1,29 @@
 package org.opentaint.ir.go.client
 
 import org.opentaint.ir.go.api.GoIRProgram
-import org.opentaint.ir.go.proto.BuildProgramRequest
 import org.opentaint.ir.go.proto.GoSSAServiceGrpc
+import org.opentaint.ir.go.proto.OpenSessionRequest
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Timing breakdown for a single IR build.
+ *
+ * Under the lazy `OpenSession` flow these timings reflect only the open call;
+ * subsequent package and function-body materializations happen on demand and
+ * are NOT included here. Specifically:
+ *   - [serverBuildMs]: time the Go server reported for handling `OpenSession`.
+ *   - [deserializeMs]: time spent processing the `OpenSessionResponse` on the
+ *     Kotlin side (turning package summaries into lazy placeholders).
+ *   - [totalMs]: wall-clock for the `OpenSession` RPC + the deserialize step
+ *     above. It does NOT cover later lazy loads.
  */
 data class BuildTimings(
-    /** Total wall-clock time including gRPC overhead */
+    /** Total wall-clock time for `OpenSession` + deserialization of its response. */
     val totalMs: Long,
-    /** Time spent on the Go server (SSA build + serialization), from the Summary message */
+    /** Time spent on the Go server during `OpenSession`, from the Summary message. */
     val serverBuildMs: Long,
-    /** Time spent deserializing the gRPC stream on the Kotlin side */
+    /** Time spent deserializing the `OpenSessionResponse` on the Kotlin side. */
     val deserializeMs: Long,
 )
 
@@ -32,6 +42,7 @@ class GoIRClient : AutoCloseable {
     private val serverProcess = GoSsaServerProcess()
     private val channel = serverProcess.start()
     private val stub = GoSSAServiceGrpc.newBlockingStub(channel)
+    private val lazySessions = ConcurrentHashMap.newKeySet<GoIRLazySession>()
 
     /**
      * Build IR from a directory with Go source files.
@@ -49,7 +60,8 @@ class GoIRClient : AutoCloseable {
     ).program
 
     /**
-     * Build IR from a directory, returning both the program and detailed timings.
+     * Open a lazy IR session from a directory, returning the program (with
+     * lazy package/body placeholders) and timings covering only `OpenSession`.
      */
     fun buildFromDirWithTimings(
         dir: Path,
@@ -58,7 +70,7 @@ class GoIRClient : AutoCloseable {
         sanityCheck: Boolean = true,
         includeStdlib: Boolean = false,
     ): BuildResult {
-        val request = BuildProgramRequest.newBuilder()
+        val request = OpenSessionRequest.newBuilder()
             .addAllPatterns(patterns.toList())
             .setWorkingDir(dir.toAbsolutePath().toString())
             .setInstantiateGenerics(instantiateGenerics)
@@ -67,19 +79,20 @@ class GoIRClient : AutoCloseable {
             .build()
 
         val totalStart = System.nanoTime()
-        val responses = stub.buildProgram(request)
+        val response = stub.openSession(request)
         val deserializer = GoIRDeserializer()
         val deserializeStart = System.nanoTime()
-        val program = deserializer.deserialize(responses)
+        val program = deserializer.deserializeLazy(response) { d ->
+            GoIRLazySession(stub, response.sessionId, d).also { lazySessions.add(it) }
+        }
         val deserializeMs = (System.nanoTime() - deserializeStart) / 1_000_000
         val totalMs = (System.nanoTime() - totalStart) / 1_000_000
-        val serverBuildMs = deserializer.serverBuildTimeMs
 
         return BuildResult(
             program = program,
             timings = BuildTimings(
                 totalMs = totalMs,
-                serverBuildMs = serverBuildMs,
+                serverBuildMs = deserializer.serverBuildTimeMs,
                 deserializeMs = deserializeMs,
             ),
         )
@@ -105,6 +118,10 @@ class GoIRClient : AutoCloseable {
     }
 
     override fun close() {
+        lazySessions.forEach { session ->
+            runCatching { session.close() }
+        }
+        lazySessions.clear()
         serverProcess.close()
     }
 }

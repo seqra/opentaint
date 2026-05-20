@@ -7,7 +7,14 @@ option java_multiple_files = true;
 // ─── Service ────────────────────────────────────────────────────────
 
 service GoSSAService {
-    rpc BuildProgram(BuildProgramRequest) returns (stream BuildProgramResponse);
+    // Lazy/session-based API. OpenSession performs a cheap package listing only;
+    // LoadPackage streams package/type/function signatures; LoadFunctionBody
+    // streams the dependencies needed for, and the body of, one function.
+    rpc OpenSession(OpenSessionRequest) returns (OpenSessionResponse);
+    rpc LoadPackage(LoadPackageRequest) returns (stream LoadPackageResponse);
+    rpc LoadFunctionBody(LoadFunctionBodyRequest) returns (stream LoadFunctionBodyResponse);
+    rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
+
     rpc Ping(PingRequest) returns (PingResponse);
 }
 
@@ -20,7 +27,7 @@ message PingResponse {
     string go_version = 2;
 }
 
-message BuildProgramRequest {
+message OpenSessionRequest {
     repeated string patterns = 1;
     bool instantiate_generics = 2;
     bool sanity_check = 3;
@@ -33,17 +40,65 @@ message BuildProgramRequest {
     bool include_stdlib = 10;
 }
 
-// ─── Response Stream ────────────────────────────────────────────────
+message OpenSessionResponse {
+    string session_id = 1;
+    repeated ProtoPackageSummary packages = 2;
+    ProtoBuildSummary summary = 3;
+    ProtoError error = 4;
+}
 
-message BuildProgramResponse {
+message ProtoPackageSummary {
+    int32 id = 1;
+    string import_path = 2;
+    string name = 3;
+    repeated string go_files = 4;
+    repeated string compiled_go_files = 5;
+    string module_path = 6;
+    string module_dir = 7;
+    bool is_stdlib = 8;
+    bool is_dependency = 9;
+    repeated string errors = 10;
+}
+
+message LoadPackageRequest {
+    string session_id = 1;
+    int32 package_id = 2;
+}
+
+message LoadPackageResponse {
     oneof payload {
         ProtoTypeDefinition type_def = 1;
         ProtoPackage package_def = 2;
-        ProtoFunctionBody function_body = 3;
-        ProtoBuildSummary summary = 4;
-        ProtoError error = 5;
+        ProtoBuildSummary summary = 3;
+        ProtoError error = 4;
     }
 }
+
+message LoadFunctionBodyRequest {
+    string session_id = 1;
+    int32 function_id = 2;
+}
+
+message LoadFunctionBodyResponse {
+    oneof payload {
+        ProtoTypeDefinition type_def = 1;
+        ProtoPackage package_def = 2;
+        ProtoFunction function_def = 3;
+        ProtoFunctionBody function_body = 4;
+        ProtoBuildSummary summary = 5;
+        ProtoError error = 6;
+    }
+}
+
+message CloseSessionRequest {
+    string session_id = 1;
+}
+
+message CloseSessionResponse {
+    bool closed = 1;
+}
+
+// ─── Response Stream ────────────────────────────────────────────────
 
 message ProtoError {
     string message = 1;

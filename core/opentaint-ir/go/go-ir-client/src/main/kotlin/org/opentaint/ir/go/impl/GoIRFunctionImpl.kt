@@ -16,13 +16,31 @@ class GoIRFunctionImpl(
     override val isExported: Boolean,
     override val isSynthetic: Boolean,
     override val syntheticKind: String?,
+    private val declaredHasBody: Boolean = false,
+    private val bodyLoader: (() -> Unit)? = null,
     // Deferred resolution fields
     internal val receiverTypeId: Int = 0,
     internal val parentFunctionId: Int = 0,
     internal val anonFunctionIds: List<Int> = emptyList(),
 ) : GoIRFunction {
-    override var body: GoIRBody? = null
-        private set
+    private val bodyLock = Any()
+    @Volatile private var bodyLoadAttempted = bodyLoader == null
+    private var _body: GoIRBody? = null
+
+    override val body: GoIRBody?
+        get() {
+            if (_body == null && declaredHasBody && !bodyLoadAttempted) {
+                synchronized(bodyLock) {
+                    if (_body == null && !bodyLoadAttempted) {
+                        bodyLoader?.invoke()
+                        bodyLoadAttempted = true
+                    }
+                }
+            }
+            return _body
+        }
+
+    override val hasBody: Boolean get() = declaredHasBody
 
     override var receiverType: GoIRNamedType? = null
         internal set
@@ -36,7 +54,8 @@ class GoIRFunctionImpl(
     override val typeParams: List<GoIRTypeParamDecl> = emptyList() // TODO: implement
 
     fun setBody(body: GoIRBody) {
-        this.body = body
+        this._body = body
+        this.bodyLoadAttempted = true
     }
 
     fun resolveReferences(

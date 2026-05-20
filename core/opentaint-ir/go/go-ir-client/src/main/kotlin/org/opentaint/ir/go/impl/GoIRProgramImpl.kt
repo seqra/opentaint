@@ -4,7 +4,8 @@ import org.opentaint.ir.go.api.*
 
 class GoIRProgramImpl(
     override val packages: Map<String, GoIRPackage>,
-) : GoIRProgram {
+    private val closeable: AutoCloseable? = null,
+) : GoIRProgram, AutoCloseable {
     override fun findPackage(importPath: String) = packages[importPath]
 
     override fun allFunctions(): List<GoIRFunction> =
@@ -15,4 +16,8 @@ class GoIRProgramImpl(
 
     override fun mainPackage(): GoIRPackage? =
         packages.values.find { it.name == "main" }
+
+    override fun close() {
+        closeable?.close()
+    }
 }

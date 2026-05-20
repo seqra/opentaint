@@ -30,26 +30,49 @@ class GoIRBlockGraphImpl(override val body: GoIRBody) : GoIRBlockGraph {
         instToBlock[ref.index] ?: throw IllegalArgumentException("Instruction ${ref.index} not found")
 
     override fun domPreorder(): List<GoIRBasicBlock> {
+        // Iterative DFS preorder over the dominator tree.
+        // The recursive version overflows the JVM stack on real-world Go
+        // projects where some functions produce dominator trees that are
+        // effectively linear chains thousands of blocks deep.
         val result = mutableListOf<GoIRBasicBlock>()
-        fun visit(block: GoIRBasicBlock) {
+        val stack = ArrayDeque<GoIRBasicBlock>()
+        stack.addLast(entry)
+        while (stack.isNotEmpty()) {
+            val block = stack.removeLast()
             result.add(block)
-            for (child in block.dominatedBlocks) {
-                visit(child)
+            val children = block.dominatedBlocks
+            // Push in reverse so children are visited in original order.
+            for (i in children.indices.reversed()) {
+                stack.addLast(children[i])
             }
         }
-        visit(entry)
         return result
     }
 
     override fun domPostorder(): List<GoIRBasicBlock> {
+        // Iterative DFS postorder over the dominator tree (same reasoning
+        // as domPreorder).
         val result = mutableListOf<GoIRBasicBlock>()
-        fun visit(block: GoIRBasicBlock) {
-            for (child in block.dominatedBlocks) {
-                visit(child)
+        // Each stack frame is (block, nextChildIndex).
+        val blockStack = ArrayDeque<GoIRBasicBlock>()
+        val idxStack = ArrayDeque<Int>()
+        blockStack.addLast(entry)
+        idxStack.addLast(0)
+        while (blockStack.isNotEmpty()) {
+            val block = blockStack.last()
+            val idx = idxStack.last()
+            val children = block.dominatedBlocks
+            if (idx < children.size) {
+                idxStack.removeLast()
+                idxStack.addLast(idx + 1)
+                blockStack.addLast(children[idx])
+                idxStack.addLast(0)
+            } else {
+                result.add(block)
+                blockStack.removeLast()
+                idxStack.removeLast()
             }
-            result.add(block)
         }
-        visit(entry)
         return result
     }
 }

@@ -20,6 +20,7 @@ class GoSsaServerProcess(
 
     fun start(): ManagedChannel {
         val pb = ProcessBuilder(serverBinaryPath, "-port=0")
+            .redirectInput(ProcessBuilder.Redirect.PIPE)
             .redirectErrorStream(false)
 
         val proc = pb.start()
@@ -55,6 +56,13 @@ class GoSsaServerProcess(
             }
         }
         process?.let {
+            // Closing stdin signals the Go server to shut down via its
+            // stdin-EOF watcher (mechanism A) before we resort to SIGTERM.
+            try {
+                it.outputStream.close()
+            } catch (_: Throwable) {
+                // best-effort
+            }
             it.destroy()
             try {
                 it.waitFor(5, TimeUnit.SECONDS)
