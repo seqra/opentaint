@@ -6,14 +6,14 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 
 /**
- * In-memory Python taint-rule representation. Built by
- * `org.opentaint.dataflow.python.rules.PIRTaintConfiguration` from the
- * serialized YAML model.
+ * Compiled (per-`PIRFunction` / per-attribute-name) Python taint-rule
+ * representation. Built by the resolver from
+ * [org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig].
  *
- * Compared with the JVM `TaintConfigurationItem` hierarchy this is intentionally
- * much smaller: Python rules match by string (FQN / regex) rather than against
- * a resolved method, there are no field rules, no method-entry/exit variants,
- * and no `overrides:` flag.
+ * Mirrors the JVM `configuration-rules-jvm/TaintConfigurationItem.kt`
+ * shape, except that Python conflates "method" and "attribute" rules
+ * under a single [Target] sealed type — the JVM equivalent would be
+ * `method: CommonMethod` plus a separate `TaintStaticFieldSource`.
  */
 sealed interface TaintConfigurationItem : CommonTaintConfigurationItem {
     val target: Target

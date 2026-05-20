@@ -1,3 +1,4 @@
+import OpentaintIrDependency.opentaint_ir_api_python
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
 
@@ -9,6 +10,7 @@ plugins {
 dependencies {
     api(project(":configuration-rules-common"))
 
+    implementation(opentaint_ir_api_python)
     implementation(KotlinDependency.Libs.kotlinx_serialization_core)
     implementation(KotlinDependency.Libs.kaml)
 
