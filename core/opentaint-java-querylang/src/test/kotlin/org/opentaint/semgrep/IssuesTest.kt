@@ -108,7 +108,7 @@ class IssuesTest : SampleBasedTest() {
     fun `issue 97`() = runTest<issue97>()
 
     @Test
-    fun `issue chain-pattern literal static receiver`() = runTest<issueChain>(EXPECT_STATE_VAR)
+    fun `issue chain-pattern literal static receiver (intended non-match)`() = runTest<issueChain>(EXPECT_STATE_VAR)
 
     @Test
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
