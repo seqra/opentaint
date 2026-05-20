@@ -14,6 +14,7 @@ dependencies {
     api(project(":opentaint-dataflow"))
     implementation(opentaintUtilCommon)
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
+    api("org.opentaint.opentaint-configuration-rules:configuration-rules-python")
 
     implementation(opentaint_ir_api_python)
     implementation(opentaint_ir_core_python)
@@ -26,4 +27,6 @@ dependencies {
     implementation(Libs.fastutil)
 
     implementation(Libs.sarif4k)
+
+    implementation("org.opentaint.config:opentaint-config")
 }
