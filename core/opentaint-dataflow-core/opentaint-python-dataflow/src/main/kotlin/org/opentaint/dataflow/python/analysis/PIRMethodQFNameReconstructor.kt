@@ -2,6 +2,7 @@ package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.PIRAssign
+import org.opentaint.ir.api.python.PIRBindFunctionExpr
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRGlobalNameRef
@@ -14,6 +15,7 @@ import org.opentaint.ir.api.python.PIRReadName
 import org.opentaint.ir.api.python.targets
 
 class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, applicationGraph: PIRApplicationGraph) {
+    private val cp = applicationGraph.cp
     private val graph = applicationGraph.methodGraph(method)
     private val queue = mutableListOf<Pair<PIRInstruction, NameBinding>>()
     private val storage = MutableList(method.instList.size) { hashSetOf<NameBinding>() }
@@ -48,9 +50,12 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 }
                 NameBinding.LocalBinding(inst.target.index, name)
             }
-            is PIRAssign -> {
-                val rhv = inst.expr as? PIRParameterRef ?: return null
-                NameBinding.LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
+            is PIRAssign -> when (val rhv = inst.expr) {
+                is PIRParameterRef ->
+                    NameBinding.LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
+                is PIRBindFunctionExpr ->
+                    NameBinding.LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
+                else -> null
             }
             else -> null
         }
@@ -90,23 +95,45 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 }
             }
 
+            is PIRCall -> {
+                val calleeIdx = (inst.callee as? PIRLocal)?.index
+                val targetIdx = inst.target?.index
+
+                if (calleeIdx == idx) {
+                    saveResult(inst, entry.name)
+
+                    if (targetIdx != null) {
+                        val qn = entry.name.flattenOrNull()
+                        if (qn != null && cp.findClassOrNull(qn) != null) {
+                            this += NameBinding.LocalBinding(targetIdx, entry.name)
+                        }
+                    }
+                }
+
+                if (targetIdx != idx) {
+                    this += entry
+                }
+            }
+
             else -> {
                 val idxReassignment = inst.targets.any { it.index == idx }
 
                 if (!idxReassignment) {
                     this += entry
                 }
-
-                val calleeIndex = ((inst as? PIRCall)?.callee as? PIRLocal)?.index
-                if (calleeIndex == entry.idx) {
-                    saveResult(inst, entry.name)
-                }
             }
         }
     }
 
     private fun saveResult(inst: PIRInstruction, nameEntry: NameEntry) {
-        var cur: NameEntry = nameEntry
+        val qfName = nameEntry.flattenOrNull() ?: return // parameters are not supported yet
+
+        result.getOrPut(inst) { hashSetOf() }
+            .add(qfName)
+    }
+
+    private fun NameEntry.flattenOrNull(): String? {
+        var cur: NameEntry = this
         val segments = mutableListOf<String>()
         while (true) {
             when (cur) {
@@ -118,14 +145,10 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                     segments += cur.segment
                     cur = cur.base
                 }
-                is NameEntry.ParamRef -> return // parameters are not supported yet
+                is NameEntry.ParamRef -> return null
             }
         }
-
-        val qfName = segments.asReversed().joinToString(separator = ".")
-
-        result.getOrPut(inst) { hashSetOf() }
-            .add(qfName)
+        return segments.asReversed().joinToString(separator = ".")
     }
 
     private fun NameEntry.prependSegment(segmentName: String): NameEntry? {
