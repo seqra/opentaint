@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.go.rules
 
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
@@ -22,7 +23,11 @@ sealed interface TaintRules {
         }
     }
 
-    data class Pass(val function: String, val from: PositionBaseWithModifiers, val to: PositionBaseWithModifiers) : TaintRules
+    data class Pass(
+        val function: String,
+        val from: PositionBaseWithModifiers,
+        val to: PositionBaseWithModifiers,
+    ) : TaintRules, CommonTaintConfigurationItem
 }
 
 data class GoTaintConfig(
