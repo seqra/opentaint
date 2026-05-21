@@ -4,8 +4,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
-import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
-import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isFieldAccessor
 
 class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     private val manager = suffixNode.manager
@@ -52,7 +50,7 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     }
 
     private fun AccessorIdx.coveredByAny(): Boolean =
-        this == ELEMENT_ACCESSOR_IDX || this.isFieldAccessor()
+        manager.isCoveredByAny(this)
 
     private data class RawNodeWithParent(
         val node: AccessTree.AccessNode,

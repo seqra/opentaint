@@ -45,6 +45,9 @@ class TreeApManager(
         get() = interner.accessor(this)
             ?: error("Accessor not found: $this")
 
+    fun isCoveredByAny(accessor: AccessorIdx) =
+        anyAccessorUnrollStrategy.unrollAccessor(accessor.accessor)
+
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
         TreeInitialFactAbstraction(this)
 

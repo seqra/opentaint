@@ -985,18 +985,16 @@ class AccessTree(
             var thisAnyIdx: Int = -1
             if (foldToAny)
                 thisAnyIdx = accessors.indexOf(ANY_ACCESSOR_IDX)
-//            val (otherAccessors, otherNodes) = otherAccessorsE to otherNodesBeforeAny
             val (otherAccessors, otherNodes) =
-                if (thisAnyIdx > 0)
+                if (thisAnyIdx >= 0)
                     AccessTreeAnySuffixMatcher(nodes[thisAnyIdx]).getNonMatchingNode(otherAccessorsE, otherNodesBeforeAny)
                 else otherAccessorsE to otherNodesBeforeAny
 
             var otherAnyIdx: Int = -1
             if (foldToAny)
                 otherAnyIdx = otherAccessorsE.indexOf(ANY_ACCESSOR_IDX)
-//            val (thisAccessors, thisNodes) = thisAccessorsBeforeAny to thisNodesBeforeAny
             val (thisAccessors, thisNodes) =
-                if (otherAnyIdx > 0)
+                if (otherAnyIdx >= 0)
                     AccessTreeAnySuffixMatcher(otherNodesBeforeAny[otherAnyIdx]).getNonMatchingNode(thisAccessorsBeforeAny, thisNodesBeforeAny)
                 else thisAccessorsBeforeAny to thisNodesBeforeAny
 
