@@ -119,6 +119,10 @@ class PatternToActionListConverter {
             )
         }
         is ParenExpr -> decomposeReceiver(recv.inner)
+        is CallExpr -> {
+            val (actions, cond) = transformPatternIntoParamConditionWithActions(recv)
+            Triple(actions, cond ?: ParamCondition.True, null)
+        }
         else -> transformationFailed("MethodInvocation_obj: ${recv::class.simpleName}")
     }
 

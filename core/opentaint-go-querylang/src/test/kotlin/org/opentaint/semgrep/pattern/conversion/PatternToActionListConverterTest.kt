@@ -70,4 +70,28 @@ class PatternToActionListConverterTest {
         assertEquals(null, call.obj)
         assertEquals(ParamConstraint.Concrete(listOf(ParamCondition.AnyStringLiteral)), call.params)
     }
+
+    @Test fun chainedCallLinearizes() {
+        val a = convertOk("a.b().c()")
+        assertEquals(2, a.actions.size)
+        val inner = a.actions[0] as MethodCall
+        val outer = a.actions[1] as MethodCall
+        assertEquals(SignatureName.Concrete("b"), inner.methodName)
+        assertEquals(SignatureName.Concrete("c"), outer.methodName)
+        // inner.result is an artificial metavar that becomes outer.obj
+        val innerResult = inner.result as ParamCondition.IsMetavar
+        assertEquals(innerResult, outer.obj)
+        assertTrue((innerResult.metavar as MetavarAtom.Basic).isArtificial)
+    }
+
+    @Test fun nestedCallArgumentLinearizes() {
+        val a = convertOk("outer(inner(\$X))")
+        assertEquals(2, a.actions.size)
+        val inner = a.actions[0] as MethodCall
+        val outer = a.actions[1] as MethodCall
+        assertEquals(SignatureName.Concrete("inner"), inner.methodName)
+        assertEquals(SignatureName.Concrete("outer"), outer.methodName)
+        val innerResult = inner.result as ParamCondition.IsMetavar
+        assertEquals(ParamConstraint.Concrete(listOf(innerResult)), outer.params)
+    }
 }
