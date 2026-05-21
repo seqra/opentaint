@@ -3,7 +3,11 @@ package org.opentaint.semgrep.pattern.conversion
 import org.opentaint.semgrep.pattern.SemgrepGoPattern
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -21,9 +25,49 @@ class PatternToActionListConverterTest {
         return c.createActionList(parse(src)) to c.failedTransformations
     }
 
+    private fun convertOk(src: String): SemgrepGoPatternActionList {
+        val (r, failures) = convert(src)
+        assertNotNull(r, "conversion failed for `$src`: $failures")
+        return r
+    }
+
     @Test fun unsupportedReturnsNullAndRecordsReason() {
         val (result, failures) = convert("if true { }")
         assertNull(result)
         assertTrue(failures.isNotEmpty(), "expected a recorded failure reason, got $failures")
+    }
+
+    @Test fun qualifiedCall() {
+        val a = convertOk("fmt.Println(\$X)")
+        assertEquals(1, a.actions.size)
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete("Println"), call.methodName)
+        assertEquals(TypePattern.Named("fmt"), call.enclosingClassName)
+        assertEquals(ParamCondition.True, call.obj)
+        assertEquals(
+            ParamConstraint.Concrete(listOf(ParamCondition.IsMetavar(MetavarAtom.create("X")))),
+            call.params,
+        )
+    }
+
+    @Test fun methodCallOnMetavarReceiverWithEllipsisArgs() {
+        val a = convertOk("\$DB.Exec(\$QUERY, ...)")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete("Exec"), call.methodName)
+        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("DB")), call.obj)
+        assertEquals(null, call.enclosingClassName)
+        val params = call.params as ParamConstraint.Partial
+        assertEquals(
+            listOf(ParamPattern(ParamPosition.Concrete(0), ParamCondition.IsMetavar(MetavarAtom.create("QUERY")))),
+            params.params,
+        )
+    }
+
+    @Test fun plainCallWithStringEllipsis() {
+        val a = convertOk("sink(\"...\")")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete("sink"), call.methodName)
+        assertEquals(null, call.obj)
+        assertEquals(ParamConstraint.Concrete(listOf(ParamCondition.AnyStringLiteral)), call.params)
     }
 }
