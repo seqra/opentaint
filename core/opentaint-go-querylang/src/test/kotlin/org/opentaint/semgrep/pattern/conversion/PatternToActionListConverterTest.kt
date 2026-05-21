@@ -94,4 +94,33 @@ class PatternToActionListConverterTest {
         val innerResult = inner.result as ParamCondition.IsMetavar
         assertEquals(ParamConstraint.Concrete(listOf(innerResult)), outer.params)
     }
+
+    @Test fun bareEllipsisHasBothFlags() {
+        val a = convertOk("...")
+        assertTrue(a.actions.isEmpty())
+        assertTrue(a.hasEllipsisInTheBeginning)
+        assertTrue(a.hasEllipsisInTheEnd)
+    }
+
+    @Test fun sequenceWithEllipsisSeparator() {
+        val a = convertOk("\$DB.Exec(\$Q, ...)\n...\n\$DB.Close()")
+        assertEquals(2, a.actions.size)
+        assertTrue(a.actions[0] is MethodCall && (a.actions[0] as MethodCall).methodName == SignatureName.Concrete("Exec"))
+        assertTrue(a.actions[1] is MethodCall && (a.actions[1] as MethodCall).methodName == SignatureName.Concrete("Close"))
+        assertEquals(false, a.hasEllipsisInTheBeginning)
+        assertEquals(false, a.hasEllipsisInTheEnd)
+    }
+
+    @Test fun leadingEllipsisSetsBeginningFlag() {
+        val a = convertOk("...\nrand.Read(\$X)")
+        assertEquals(1, a.actions.size)
+        assertTrue(a.hasEllipsisInTheBeginning)
+        assertEquals(false, a.hasEllipsisInTheEnd)
+    }
+
+    @Test fun deferUnwrapsToCall() {
+        val a = convertOk("defer \$F.Close()")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete("Close"), call.methodName)
+    }
 }

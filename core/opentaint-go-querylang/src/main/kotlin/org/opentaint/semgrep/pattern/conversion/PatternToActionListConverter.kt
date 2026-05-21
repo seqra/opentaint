@@ -27,7 +27,12 @@ import org.opentaint.semgrep.pattern.StringLiteral
 import org.opentaint.semgrep.pattern.TopList
 import org.opentaint.semgrep.pattern.TypeName
 import org.opentaint.semgrep.pattern.TypedMetavar
+import org.opentaint.semgrep.pattern.Ellipsis
+import org.opentaint.semgrep.pattern.EllipsisStmt
+import org.opentaint.semgrep.pattern.DeferStmt
+import org.opentaint.semgrep.pattern.GoStmt
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodExit
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
 
 class PatternToActionListConverter {
@@ -55,6 +60,10 @@ class PatternToActionListConverter {
         is TopList -> transformSequence(pattern.items)
         is ExprStmt -> transformPatternToActionList(pattern.expr)
         is CallExpr -> transformMethodInvocation(pattern)
+        is Ellipsis, is EllipsisStmt ->
+            SemgrepGoPatternActionList(emptyList(), hasEllipsisInTheBeginning = true, hasEllipsisInTheEnd = true)
+        is DeferStmt -> transformPatternToActionList(pattern.call)
+        is GoStmt -> transformPatternToActionList(pattern.call)
         // Cases added in later tasks.
         else -> {
             val prefix = if (isRoot) "Root pattern is: " else ""
@@ -62,10 +71,30 @@ class PatternToActionListConverter {
         }
     }
 
-    /** Task 2 version: concatenate items, no ellipsis flags yet (refined in Task 4). */
     private fun transformSequence(items: List<SemgrepGoPattern>): SemgrepGoPatternActionList {
-        val actions = items.flatMap { transformPatternToActionList(it).actions }
-        return SemgrepGoPatternActionList(actions, hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
+        if (items.isEmpty()) {
+            return SemgrepGoPatternActionList(emptyList(), hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
+        }
+        return items
+            .map { transformPatternToActionList(it) }
+            .reduce { acc, next -> concatActionLists(acc, next) }
+    }
+
+    private fun concatActionLists(
+        first: SemgrepGoPatternActionList,
+        second: SemgrepGoPatternActionList,
+    ): SemgrepGoPatternActionList {
+        var endEllipsis = second.hasEllipsisInTheEnd
+        if (endEllipsis && second.actions.isEmpty() && first.actions.lastOrNull() is MethodExit) {
+            endEllipsis = false
+        }
+        // A leading "..." (empty list, both flags) contributes only the beginning flag.
+        val beginEllipsis = first.hasEllipsisInTheBeginning
+        return SemgrepGoPatternActionList(
+            first.actions + second.actions,
+            hasEllipsisInTheBeginning = beginEllipsis,
+            hasEllipsisInTheEnd = endEllipsis,
+        )
     }
 
     private fun signatureName(name: Name): SignatureName = when (name) {
