@@ -29,8 +29,11 @@ import org.opentaint.semgrep.pattern.TypeName
 import org.opentaint.semgrep.pattern.TypedMetavar
 import org.opentaint.semgrep.pattern.Ellipsis
 import org.opentaint.semgrep.pattern.EllipsisStmt
+import org.opentaint.semgrep.pattern.AssignStmt
 import org.opentaint.semgrep.pattern.DeferStmt
 import org.opentaint.semgrep.pattern.GoStmt
+import org.opentaint.semgrep.pattern.ShortVarDecl
+import org.opentaint.semgrep.pattern.VarDecl
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodExit
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
@@ -64,6 +67,20 @@ class PatternToActionListConverter {
             SemgrepGoPatternActionList(emptyList(), hasEllipsisInTheBeginning = true, hasEllipsisInTheEnd = true)
         is DeferStmt -> transformPatternToActionList(pattern.call)
         is GoStmt -> transformPatternToActionList(pattern.call)
+        is AssignStmt -> {
+            if (pattern.op != "=") transformationFailed("Assignment_op_${pattern.op}")
+            if (pattern.lhs.size != 1 || pattern.rhs.size != 1) transformationFailed("multi-LHS assignment")
+            transformAssignment(pattern.lhs.single(), declType = null, value = pattern.rhs.single())
+        }
+        is ShortVarDecl -> {
+            if (pattern.lhs.size != 1 || pattern.rhs.size != 1) transformationFailed("multi-LHS assignment")
+            transformAssignment(pattern.lhs.single(), declType = null, value = pattern.rhs.single())
+        }
+        is VarDecl -> {
+            val spec = pattern.specs.singleOrNull() ?: transformationFailed("VarDecl_multiple_specs")
+            if (spec.names.size != 1 || spec.values.size != 1) transformationFailed("multi-LHS assignment")
+            transformAssignment(target = null, targetName = spec.names.single(), declType = spec.type, value = spec.values.single())
+        }
         // Cases added in later tasks.
         else -> {
             val prefix = if (isRoot) "Root pattern is: " else ""
@@ -236,6 +253,38 @@ class PatternToActionListConverter {
             ),
         )
         else -> null
+    }
+
+    private fun transformAssignment(
+        target: SemgrepGoPattern?,
+        declType: TypeName?,
+        value: SemgrepGoPattern,
+        targetName: Name? = null,
+    ): SemgrepGoPatternActionList {
+        val conditions = mutableListOf<ParamCondition>()
+        declType?.let { conditions += ParamCondition.TypeIs(transformType(it)) }
+
+        val name: String = when {
+            targetName != null -> (targetName as? MetavarName)?.name
+                ?: transformationFailed("Assignment_target_not_metavar")
+            target is Metavar -> target.name
+            target is TypedMetavar -> {
+                conditions += ParamCondition.TypeIs(transformType(target.type)); target.name
+            }
+            target is Identifier && target.name is MetavarName -> (target.name as MetavarName).name
+            else -> transformationFailed("Assignment_target_not_metavar")
+        }
+        conditions += ParamCondition.IsMetavar(MetavarAtom.create(name))
+
+        val actionList = transformPatternToActionList(value)
+        if (actionList.actions.isEmpty()) transformationFailed("Assignment_nothing_to_assign")
+        val last = actionList.actions.last()
+        val newLast = last.setResultCondition(mkAnd(conditions))
+        return SemgrepGoPatternActionList(
+            actionList.actions.dropLast(1) + newLast,
+            hasEllipsisInTheBeginning = false,
+            hasEllipsisInTheEnd = false,
+        )
     }
 
     private fun transformType(type: TypeName): TypePattern = when (type) {

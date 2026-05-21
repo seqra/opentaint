@@ -123,4 +123,23 @@ class PatternToActionListConverterTest {
         val call = a.actions.single() as MethodCall
         assertEquals(SignatureName.Concrete("Close"), call.methodName)
     }
+
+    @Test fun shortVarDeclBindsResult() {
+        val a = convertOk("\$X := getInput()")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete("getInput"), call.methodName)
+        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("X")), call.result)
+    }
+
+    @Test fun assignBindsResult() {
+        val a = convertOk("\$X = source.Read()")
+        val call = a.actions.single() as MethodCall
+        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("X")), call.result)
+    }
+
+    @Test fun multiLhsAssignFailsGracefully() {
+        val (r, failures) = convert("\$A, \$B := f()")
+        assertNull(r)
+        assertTrue(failures.keys.any { it.contains("multi") }, "expected a multi-LHS failure reason, got $failures")
+    }
 }
