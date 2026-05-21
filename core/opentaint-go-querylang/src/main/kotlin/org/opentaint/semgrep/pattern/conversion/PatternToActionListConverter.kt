@@ -34,6 +34,12 @@ import org.opentaint.semgrep.pattern.DeferStmt
 import org.opentaint.semgrep.pattern.GoStmt
 import org.opentaint.semgrep.pattern.ShortVarDecl
 import org.opentaint.semgrep.pattern.VarDecl
+import org.opentaint.semgrep.pattern.CompositeLit
+import org.opentaint.semgrep.pattern.CompositeElem
+import org.opentaint.semgrep.pattern.KeyedElem
+import org.opentaint.semgrep.pattern.EllipsisElem
+import org.opentaint.semgrep.pattern.UnaryExpr
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodExit
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
@@ -81,6 +87,10 @@ class PatternToActionListConverter {
             if (spec.names.size != 1 || spec.values.size != 1) transformationFailed("multi-LHS assignment")
             transformAssignment(target = null, targetName = spec.names.single(), declType = spec.type, value = spec.values.single())
         }
+        is CompositeLit -> transformObjectCreation(pattern)
+        is UnaryExpr ->
+            if (pattern.op == "&" && pattern.operand is CompositeLit) transformObjectCreation(pattern.operand as CompositeLit)
+            else transformationFailed("UnaryExpr_${pattern.op}")
         // Cases added in later tasks.
         else -> {
             val prefix = if (isRoot) "Root pattern is: " else ""
@@ -302,5 +312,55 @@ class PatternToActionListConverter {
         is SliceType -> TypePattern.Slice(transformType(type.elem))
         is MapType -> TypePattern.Map(transformType(type.key), transformType(type.value))
         else -> transformationFailed("Type_unsupported: ${type::class.simpleName}")
+    }
+
+    private fun transformObjectCreation(lit: CompositeLit): SemgrepGoPatternActionList {
+        val className = lit.type?.let { transformType(it) } ?: transformationFailed("CompositeLit_no_type")
+        val allActions = mutableListOf<SemgrepGoPatternAction>()
+        val patterns = mutableListOf<ParamPattern>()
+        var positional = true
+        var idx = 0
+        for (elem in lit.elements) {
+            when (elem) {
+                is EllipsisElem -> positional = false
+                is KeyedElem -> {
+                    // `...` inside a composite literal is parsed as KeyedElem(null, Ellipsis) by the grammar.
+                    // Treat it the same as EllipsisElem: it marks the struct literal as open/partial.
+                    if (elem.key == null && elem.value is Ellipsis) { positional = false; continue }
+                    val (actions, cond) = transformPatternIntoParamConditionWithActions(elem.value)
+                    allActions += actions
+                    val condition = cond ?: ParamCondition.True
+                    val key = elem.key
+                    val position: ParamPosition = when {
+                        key != null -> ParamPosition.Named(
+                            fieldName(key) ?: transformationFailed("CompositeLit_key_not_field"),
+                        )
+                        positional -> ParamPosition.Concrete(idx)
+                        else -> ParamPosition.Any("*->$idx")
+                    }
+                    if (!(condition is ParamCondition.True && position is ParamPosition.Any)) {
+                        patterns += ParamPattern(position, condition)
+                    }
+                    idx++
+                }
+            }
+        }
+        val allConcrete = positional && patterns.all { it.position is ParamPosition.Concrete }
+        val params: ParamConstraint = if (allConcrete) {
+            ParamConstraint.Concrete(patterns.map { it.condition })
+        } else {
+            if (patterns.count { it.position is ParamPosition.Any } > 1) transformationFailed("Multiple any params")
+            ParamConstraint.Partial(patterns)
+        }
+        return SemgrepGoPatternActionList(
+            allActions + ConstructorCall(className, params, result = null),
+            hasEllipsisInTheBeginning = false,
+            hasEllipsisInTheEnd = false,
+        )
+    }
+
+    private fun fieldName(key: SemgrepGoPattern): String? = when (key) {
+        is Identifier -> (key.name as? ConcreteName)?.name
+        else -> null
     }
 }

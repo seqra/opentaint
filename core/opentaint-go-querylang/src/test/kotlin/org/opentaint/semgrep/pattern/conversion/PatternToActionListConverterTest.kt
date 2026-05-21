@@ -3,6 +3,7 @@ package org.opentaint.semgrep.pattern.conversion
 import org.opentaint.semgrep.pattern.SemgrepGoPattern
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
 import kotlin.test.Test
@@ -141,5 +142,23 @@ class PatternToActionListConverterTest {
         val (r, failures) = convert("\$A, \$B := f()")
         assertNull(r)
         assertTrue(failures.keys.any { it.contains("multi") }, "expected a multi-LHS failure reason, got $failures")
+    }
+
+    @Test fun keyedCompositeLiteral() {
+        val a = convertOk("http.Cookie{Secure: true, ...}")
+        val ctor = a.actions.single() as ConstructorCall
+        assertEquals(TypePattern.Qualified("http", "Cookie"), ctor.className)
+        val params = ctor.params as ParamConstraint.Partial
+        assertEquals(
+            listOf(ParamPattern(ParamPosition.Named("Secure"), ParamCondition.SpecificBoolValue(true))),
+            params.params,
+        )
+    }
+
+    @Test fun pointerCompositeLiteralInAssignment() {
+        val a = convertOk("\$C := &http.Client{...}")
+        val ctor = a.actions.single() as ConstructorCall
+        assertEquals(TypePattern.Qualified("http", "Client"), ctor.className)
+        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("C")), ctor.result)
     }
 }
