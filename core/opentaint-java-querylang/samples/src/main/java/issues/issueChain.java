@@ -10,9 +10,10 @@ import issues.iChain.URI;
 @RuleSet("issues/issueChain.yaml")
 public abstract class issueChain implements RuleSample {
 
-    // Carries real taint, but the chain pattern's nested static receiver never
-    // binds, so the rule legitimately does not fire — recorded as a Negative case.
-    static class NegativeTaintIntendedNonMatch extends issueChain {
+    // Carries real taint, but the rule's sub-pattern order (URL bound before the
+    // builder) doesn't line up with the code's call order (builder created first),
+    // so the sink is unreachable and the rule does not fire — a Negative case.
+    static class NegativeTaintOrderSensitive extends issueChain {
         @Override
         public void entrypoint() {
             String t = Source.taint();

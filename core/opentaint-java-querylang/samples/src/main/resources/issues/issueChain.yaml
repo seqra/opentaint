@@ -1,6 +1,6 @@
 rules:
   - id: issue-chain
-    message: "Reproducer (intended non-match): nested literal static receiver doesn't line up with the fluent chain"
+    message: "Reproducer (order-sensitive match): rule sub-pattern order (URL before builder) doesn't line up with the code's call order, so the sink is unreachable"
     severity: WARNING
     languages: [java]
     mode: taint
