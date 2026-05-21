@@ -49,7 +49,7 @@ class GoProjectAnalyzer(
     }
 
     private fun selectEntryPoints(cp: GoIRProgram): List<GoIRFunction> =
-        cp.allFunctions().filter { it.hasBody && it.pkg != null && !it.isSynthetic }
+        cp.allFunctions().filter { it.hasBody && it.pkg != null && !it.isSynthetic && it.parent == null }
 
     private fun writeReport(traces: List<VulnerabilityWithTrace>) {
         val generator = GoSarifGenerator(options, project.projectDir)

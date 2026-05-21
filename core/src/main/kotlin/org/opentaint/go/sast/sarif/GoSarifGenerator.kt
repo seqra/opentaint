@@ -14,6 +14,7 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.jvm.sast.project.SarifGenerationOptions
 import org.opentaint.jvm.sast.sarif.InstructionInfo
@@ -106,7 +107,10 @@ class GoSarifGenerator(
     private fun generateTracePaths(trace: TraceResolver.Trace?): List<List<TracePathNode>>? {
         if (trace == null) return null
         return when (val result = generateTracePath(trace)) {
-            TracePathGenerationResult.Failure -> null
+            TracePathGenerationResult.Failure -> {
+                logger.warn { "Failed to generate Go trace path for vulnerability trace" }
+                null
+            }
             TracePathGenerationResult.Simple -> null
             is TracePathGenerationResult.Path -> {
                 val limit = options.sarifCodeFlowLimit
@@ -128,7 +132,7 @@ class GoSarifGenerator(
         )
     }
 
-    private fun goStatementLocation(statement: org.opentaint.ir.api.common.cfg.CommonInst): IntermediateLocation? {
+    private fun goStatementLocation(statement: CommonInst): IntermediateLocation? {
         val inst = statement as? GoIRInst ?: return null
         return IntermediateLocation(
             inst = inst,
