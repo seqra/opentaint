@@ -18,7 +18,6 @@ import org.opentaint.semgrep.pattern.NilLiteral
 import org.opentaint.semgrep.pattern.NoArgs
 import org.opentaint.semgrep.pattern.ParenExpr
 import org.opentaint.semgrep.pattern.PointerType
-import org.opentaint.semgrep.pattern.QualifiedIdent
 import org.opentaint.semgrep.pattern.QualifiedType
 import org.opentaint.semgrep.pattern.SelectorExpr
 import org.opentaint.semgrep.pattern.SemgrepGoPattern
@@ -83,13 +82,11 @@ class PatternToActionListConverter {
         when (val fn = call.fn) {
             is Identifier -> methodName = signatureName(fn.name)
             is Metavar -> methodName = SignatureName.MetaVar(fn.name)
-            is QualifiedIdent -> {
-                methodName = signatureName(fn.sel)
-                enclosing = qualifierType(fn.pkg)
-                obj = ParamCondition.True
-            }
             is SelectorExpr -> {
                 methodName = signatureName(fn.sel)
+                // A package-qualified call `pkg.Func(...)` arrives here too: the parser models the
+                // receiver `pkg` as Identifier(ConcreteName), which decomposeReceiver maps to
+                // (obj = True, enclosingClassName = Named(pkg)).
                 val (recvActions, recvObj, recvType) = decomposeReceiver(fn.obj)
                 actions += recvActions
                 obj = recvObj
@@ -98,15 +95,11 @@ class PatternToActionListConverter {
             else -> transformationFailed("MethodInvocation_fn: ${fn::class.simpleName}")
         }
 
+        // TODO: CallExpr.hasEllipsis (Go variadic spread, e.g. f(xs...)) is not yet modeled.
         val (argActions, params) = generateParamConditions(call.args)
         actions += argActions
         actions += MethodCall(methodName, obj, enclosing, params, result = null)
         return SemgrepGoPatternActionList(actions, hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
-    }
-
-    private fun qualifierType(name: Name): TypePattern = when (name) {
-        is ConcreteName -> TypePattern.Named(name.name)
-        is MetavarName -> TypePattern.MetaVar(name.name)
     }
 
     private fun decomposeReceiver(

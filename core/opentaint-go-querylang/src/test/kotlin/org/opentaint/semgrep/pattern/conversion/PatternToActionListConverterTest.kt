@@ -37,7 +37,7 @@ class PatternToActionListConverterTest {
         assertTrue(failures.isNotEmpty(), "expected a recorded failure reason, got $failures")
     }
 
-    @Test fun qualifiedCall() {
+    @Test fun packageQualifiedCall() {
         val a = convertOk("fmt.Println(\$X)")
         assertEquals(1, a.actions.size)
         val call = a.actions.single() as MethodCall
