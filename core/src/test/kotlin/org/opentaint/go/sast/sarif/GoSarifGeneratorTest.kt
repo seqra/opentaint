@@ -39,6 +39,7 @@ class GoSarifGeneratorTest : AnalysisTest() {
         println("Go SARIF results: ${results.size}")
         assertTrue(results.isNotEmpty(), "Expected at least one SARIF result")
 
+        assertTrue(results.size == 1, "Expected exactly one SARIF result, got ${results.size}")
         val result = results.first()
         assertTrue(
             result.ruleID == GoStubRules.SINK_RULE_ID,
@@ -46,14 +47,14 @@ class GoSarifGeneratorTest : AnalysisTest() {
         )
 
         // Sink physical location resolved from GoIRPosition.
-        val sinkPhysical = result.locations?.firstOrNull()?.physicalLocation
-        assertNotNull(sinkPhysical, "Expected sink physical location")
-        val sinkRegion = sinkPhysical!!.region
-        assertNotNull(sinkRegion, "Expected sink region")
-        assertTrue((sinkRegion!!.startLine ?: 0L) > 0L, "Expected positive sink start line")
-        val sinkUri = sinkPhysical.artifactLocation?.uri
-        assertNotNull(sinkUri, "Expected sink uri")
-        assertTrue(sinkUri!!.endsWith(".go"), "Expected a Go source uri, got: $sinkUri")
+        val sinkPhysical = assertNotNull(
+            result.locations?.firstOrNull()?.physicalLocation,
+            "Expected sink physical location",
+        )
+        val sinkRegion = assertNotNull(sinkPhysical.region, "Expected sink region")
+        assertTrue((sinkRegion.startLine ?: 0L) > 0L, "Expected positive sink start line")
+        val sinkUri = assertNotNull(sinkPhysical.artifactLocation?.uri, "Expected sink uri")
+        assertTrue(sinkUri.endsWith(".go"), "Expected a Go source uri, got: $sinkUri")
 
         // Code flow with meaningful messages.
         val flowLocations = results
@@ -75,9 +76,8 @@ class GoSarifGeneratorTest : AnalysisTest() {
 
         // Every flow location resolved to a Go source position.
         flowLocations.forEach { tfl ->
-            val region = tfl.location?.physicalLocation?.region
-            assertNotNull(region, "Flow location missing region")
-            assertTrue((region!!.startLine ?: 0L) > 0L, "Flow location with non-positive line")
+            val region = assertNotNull(tfl.location?.physicalLocation?.region, "Flow location missing region")
+            assertTrue((region.startLine ?: 0L) > 0L, "Flow location with non-positive line")
         }
     }
 }
