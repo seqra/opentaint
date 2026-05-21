@@ -109,13 +109,14 @@ class PatternToActionListConverter {
         }
         is BlockStmt -> transformSequence(pattern.stmts)
         is ReturnStmt -> {
+            val allActions = mutableListOf<SemgrepGoPatternAction>()
             val retVals = pattern.values.map { v ->
                 val (actions, cond) = transformPatternIntoParamConditionWithActions(v)
-                check(actions.isEmpty()) { "return values with side effects are not supported in v1" }
+                allActions += actions
                 cond ?: ParamCondition.True
             }
             SemgrepGoPatternActionList(
-                listOf(MethodExit(retVals)),
+                allActions + MethodExit(retVals),
                 hasEllipsisInTheBeginning = false,
                 hasEllipsisInTheEnd = false,
             )

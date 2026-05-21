@@ -191,4 +191,15 @@ class PatternToActionListConverterTest {
         val exit = a.actions.last() as MethodExit
         assertEquals(listOf(ParamCondition.IsMetavar(MetavarAtom.create("X"))), exit.retVals)
     }
+
+    @Test fun returnCallLinearizesAndDoesNotCrash() {
+        val a = convertOk("func \$F() { return sink(\$X) }")
+        // [MethodSignature, MethodCall(sink) -> $art, MethodExit([$art])]
+        val call = a.actions.first { it is MethodCall } as MethodCall
+        assertEquals(SignatureName.Concrete("sink"), call.methodName)
+        val exit = a.actions.last() as MethodExit
+        val callResult = call.result as ParamCondition.IsMetavar
+        assertEquals(listOf<ParamCondition>(callResult), exit.retVals)
+        assertTrue((callResult.metavar as MetavarAtom.Basic).isArtificial)
+    }
 }
