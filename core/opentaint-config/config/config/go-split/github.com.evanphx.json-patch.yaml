@@ -1,0 +1,99 @@
+passThrough:
+- function:
+    package: github.com/evanphx/json-patch
+    name: CreateMergePatch
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    name: DecodePatch
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    name: MergeMergePatches
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    name: MergePatch
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: Apply
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: Apply
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: ApplyIndent
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: ApplyIndent
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: ApplyIndentWithOptions
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: ApplyIndentWithOptions
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: ApplyWithOptions
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/evanphx/json-patch
+    type: Patch
+    name: ApplyWithOptions
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)

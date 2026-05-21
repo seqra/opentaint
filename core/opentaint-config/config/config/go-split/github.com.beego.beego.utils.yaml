@@ -1,0 +1,8 @@
+passThrough:
+- function:
+    package: github.com/beego/beego/utils
+    name: GetDisplayString
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result(0)

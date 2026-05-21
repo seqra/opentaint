@@ -1,0 +1,16 @@
+passThrough:
+- function:
+    package: text/tabwriter
+    type: Writer
+    name: Init
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: text/tabwriter
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

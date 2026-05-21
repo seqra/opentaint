@@ -1,0 +1,8 @@
+passThrough:
+- function:
+    package: sort
+    name: Reverse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result

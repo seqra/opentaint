@@ -1,0 +1,15 @@
+passThrough:
+- function:
+    package: crypto/rsa
+    name: DecryptOAEP
+    receiver: false
+  copy:
+  - from: arg(3)
+    to: result(0)
+- function:
+    package: crypto/rsa
+    name: DecryptPKCS1v15
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result(0)

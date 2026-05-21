@@ -1,0 +1,43 @@
+passThrough:
+- function:
+    package: github.com/valyala/fasthttp
+    type: URI
+    name: SetHost
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: github.com/valyala/fasthttp
+    type: URI
+    name: SetHostBytes
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: github.com/valyala/fasthttp
+    type: URI
+    name: Update
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: github.com/valyala/fasthttp
+    type: URI
+    name: UpdateBytes
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: github.com/valyala/fasthttp
+    type: URI
+    name: Parse
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this

@@ -1,0 +1,51 @@
+passThrough:
+- function:
+    package: expvar
+    type: Func
+    name: Value
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: expvar
+    type: Map
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: expvar
+    type: Map
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: expvar
+    type: String
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: expvar
+    type: String
+    name: Value
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: expvar
+    type: Var
+    name: String
+    receiver: true
+  copy:
+  - from: this
+    to: result

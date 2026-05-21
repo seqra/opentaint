@@ -1,0 +1,15 @@
+passThrough:
+- function:
+    package: mime/quotedprintable
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: mime/quotedprintable
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

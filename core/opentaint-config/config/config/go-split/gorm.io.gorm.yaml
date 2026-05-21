@@ -1,0 +1,25 @@
+passThrough:
+- function:
+    package: gorm.io/gorm
+    type: DB
+    name: ScanRows
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/jinzhu/gorm
+    type: DB
+    name: ScanRows
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/go-gorm/gorm
+    type: DB
+    name: ScanRows
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)

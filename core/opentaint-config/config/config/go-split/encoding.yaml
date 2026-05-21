@@ -1,0 +1,65 @@
+passThrough:
+- function:
+    package: encoding
+    type: BinaryAppender
+    name: AppendBinary
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding
+    type: BinaryAppender
+    name: AppendBinary
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: encoding
+    type: BinaryMarshaler
+    name: MarshalBinary
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding
+    type: BinaryUnmarshaler
+    name: UnmarshalBinary
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding
+    type: TextAppender
+    name: AppendText
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding
+    type: TextAppender
+    name: AppendText
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: encoding
+    type: TextMarshaler
+    name: MarshalText
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding
+    type: TextUnmarshaler
+    name: UnmarshalText
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this

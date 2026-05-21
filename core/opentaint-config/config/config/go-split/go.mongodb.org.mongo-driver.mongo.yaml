@@ -1,0 +1,41 @@
+passThrough:
+- function:
+    package: go.mongodb.org/mongo-driver/mongo
+    type: ChangeStream
+    name: Decode
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: go.mongodb.org/mongo-driver/mongo
+    type: Cursor
+    name: All
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: go.mongodb.org/mongo-driver/mongo
+    type: Cursor
+    name: Decode
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: go.mongodb.org/mongo-driver/mongo
+    type: SingleResult
+    name: Decode
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: go.mongodb.org/mongo-driver/mongo
+    type: SingleResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

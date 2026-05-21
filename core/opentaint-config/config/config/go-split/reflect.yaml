@@ -1,0 +1,304 @@
+passThrough:
+- function:
+    package: reflect
+    name: AppendSlice
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: reflect
+    name: Copy
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: reflect
+    name: Indirect
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: reflect
+    name: ValueOf
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: reflect
+    type: MapIter
+    name: Key
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: MapIter
+    name: Value
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: StructTag
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: StructTag
+    name: Lookup
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: reflect
+    type: Value
+    name: Addr
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Bytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Convert
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Elem
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Field
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: FieldByIndex
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: FieldByName
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: FieldByNameFunc
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Index
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Interface
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: InterfaceData
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: MapIndex
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: MapKeys
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: MapRange
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Method
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: MethodByName
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Pointer
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Recv
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: reflect
+    type: Value
+    name: Send
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: SetBytes
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: SetMapIndex
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: SetPointer
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: SetString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: Slice
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: Slice3
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    type: Value
+    name: TryRecv
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: reflect
+    type: Value
+    name: TrySend
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: reflect
+    type: Value
+    name: UnsafeAddr
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: reflect
+    name: Append
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

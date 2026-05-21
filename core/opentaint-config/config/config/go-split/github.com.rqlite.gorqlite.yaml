@@ -1,0 +1,49 @@
+passThrough:
+- function:
+    package: github.com/kanikanema/gorqlite
+    type: QueryResult
+    name: Map
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/rqlite/gorqlite
+    type: QueryResult
+    name: Map
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/raindog308/gorqlite
+    type: QueryResult
+    name: Map
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/kanikanema/gorqlite
+    type: QueryResult
+    name: Slice
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/rqlite/gorqlite
+    type: QueryResult
+    name: Slice
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/raindog308/gorqlite
+    type: QueryResult
+    name: Slice
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

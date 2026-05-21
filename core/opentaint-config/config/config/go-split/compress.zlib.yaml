@@ -1,0 +1,52 @@
+passThrough:
+- function:
+    package: compress/zlib
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: compress/zlib
+    name: NewReaderDict
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: compress/zlib
+    type: Resetter
+    name: Reset
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: compress/zlib
+    type: Writer
+    name: Reset
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: compress/zlib
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: compress/zlib
+    name: NewWriterLevel
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)
+- function:
+    package: compress/zlib
+    name: NewWriterLevelDict
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)

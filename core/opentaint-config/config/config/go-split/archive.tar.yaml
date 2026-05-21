@@ -1,0 +1,46 @@
+passThrough:
+- function:
+    package: archive/tar
+    name: FileInfoHeader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: archive/tar
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: archive/tar
+    type: Header
+    name: FileInfo
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: archive/tar
+    type: Reader
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: archive/tar
+    type: Writer
+    name: WriteHeader
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: archive/tar
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

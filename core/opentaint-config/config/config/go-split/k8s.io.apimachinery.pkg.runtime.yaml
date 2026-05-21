@@ -1,0 +1,357 @@
+passThrough:
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_Slice_string_To_Pointer_int64
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_Slice_string_To_int
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_Slice_string_To_int64
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_Slice_string_To_string
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_runtime_Object_To_runtime_RawExtension
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_runtime_RawExtension_To_runtime_Object
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_string_To_Pointer_int64
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Convert_string_To_int64
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Decode
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: DecodeInto
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: DeepCopyJSON
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: DeepCopyJSONValue
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Encode
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: EncodeOrDie
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: Field
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: FieldPtr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: NewEncodable
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: NewEncodableList
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: SetField
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    name: UseOrCreateObject
+    receiver: false
+  copy:
+  - from: arg(3)
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: CacheableObject
+    name: CacheEncode
+    receiver: true
+  copy:
+  - from: this
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: CacheableObject
+    name: GetObject
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Decoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Decoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Encoder
+    name: Encode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Framer
+    name: NewFrameReader
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Framer
+    name: NewFrameWriter
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Object
+    name: DeepCopyObject
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: ObjectConvertor
+    name: Convert
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: ObjectVersioner
+    name: ConvertToVersion
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: ParameterCodec
+    name: DecodeParameters
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: ParameterCodec
+    name: EncodeParameters
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: ProtobufMarshaller
+    name: MarshalTo
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: ProtobufReverseMarshaller
+    name: MarshalToSizedBuffer
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: RawExtension
+    name: DeepCopy
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: RawExtension
+    name: DeepCopyInto
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: RawExtension
+    name: Marshal
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: RawExtension
+    name: Unmarshal
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unknown
+    name: DeepCopy
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unknown
+    name: DeepCopyInto
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unknown
+    name: Marshal
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unknown
+    name: NestedMarshalTo
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unknown
+    name: Unmarshal
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unstructured
+    name: SetUnstructuredContent
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: Unstructured
+    name: UnstructuredContent
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: WithoutVersionDecoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(2)
+- function:
+    package: k8s.io/apimachinery/pkg/runtime
+    type: WithoutVersionDecoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)

@@ -1,0 +1,46 @@
+passThrough:
+- function:
+    package: net/mail
+    name: ParseAddress
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/mail
+    name: ParseAddressList
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/mail
+    name: ReadMessage
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/mail
+    type: AddressParser
+    name: Parse
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/mail
+    type: AddressParser
+    name: ParseList
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/mail
+    type: Header
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result

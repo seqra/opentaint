@@ -1,0 +1,139 @@
+passThrough:
+- function:
+    package: container/list
+    type: Element
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: container/list
+    type: Element
+    name: Prev
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: container/list
+    type: List
+    name: Back
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .container/list.List#<element>
+    to:
+    - result
+    - .container/list.Element#Value
+- function:
+    package: container/list
+    type: List
+    name: Front
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .container/list.List#<element>
+    to:
+    - result
+    - .container/list.Element#Value
+- function:
+    package: container/list
+    type: List
+    name: Init
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: container/list
+    type: List
+    name: InsertAfter
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .container/list.List#<element>
+  - from: arg(0)
+    to:
+    - result
+    - .container/list.Element#Value
+- function:
+    package: container/list
+    type: List
+    name: InsertBefore
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .container/list.List#<element>
+  - from: arg(0)
+    to:
+    - result
+    - .container/list.Element#Value
+- function:
+    package: container/list
+    type: List
+    name: PushBack
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .container/list.List#<element>
+  - from: arg(0)
+    to:
+    - result
+    - .container/list.Element#Value
+- function:
+    package: container/list
+    type: List
+    name: PushFront
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .container/list.List#<element>
+  - from: arg(0)
+    to:
+    - result
+    - .container/list.Element#Value
+- function:
+    package: container/list
+    type: List
+    name: PushBackList
+    receiver: true
+  copy:
+  - from:
+    - arg(0)
+    - .container/list.List#<element>
+    to:
+    - this
+    - .container/list.List#<element>
+- function:
+    package: container/list
+    type: List
+    name: PushFrontList
+    receiver: true
+  copy:
+  - from:
+    - arg(0)
+    - .container/list.List#<element>
+    to:
+    - this
+    - .container/list.List#<element>
+- function:
+    package: container/list
+    type: List
+    name: Remove
+    receiver: true
+  copy:
+  - from:
+    - arg(0)
+    - .container/list.Element#Value
+    to: result

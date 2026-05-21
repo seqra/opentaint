@@ -1,0 +1,32 @@
+passThrough:
+- function:
+    package: log
+    type: Logger
+    name: SetOutput
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: log
+    type: Logger
+    name: SetPrefix
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: log
+    type: Logger
+    name: Writer
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: log
+    name: New
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

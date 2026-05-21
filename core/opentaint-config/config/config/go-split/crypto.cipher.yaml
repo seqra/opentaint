@@ -1,0 +1,25 @@
+passThrough:
+- function:
+    package: crypto/cipher
+    type: AEAD
+    name: Open
+    receiver: true
+  copy:
+  - from: arg(2)
+    to: arg(0)
+- function:
+    package: crypto/cipher
+    type: AEAD
+    name: Open
+    receiver: true
+  copy:
+  - from: arg(2)
+    to: result(0)
+- function:
+    package: crypto/cipher
+    type: Block
+    name: Decrypt
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)

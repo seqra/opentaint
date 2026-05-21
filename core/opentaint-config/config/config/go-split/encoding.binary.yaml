@@ -1,0 +1,15 @@
+passThrough:
+- function:
+    package: encoding/binary
+    name: Read
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(2)
+- function:
+    package: encoding/binary
+    name: Write
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: arg(0)

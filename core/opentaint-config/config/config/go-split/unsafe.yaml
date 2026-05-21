@@ -1,0 +1,29 @@
+passThrough:
+- function:
+    package: unsafe
+    name: String
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: unsafe
+    name: StringData
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: unsafe
+    name: Slice
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: unsafe
+    name: SliceData
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result

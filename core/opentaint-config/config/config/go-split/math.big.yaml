@@ -1,0 +1,9 @@
+passThrough:
+- function:
+    package: math/big
+    type: Int
+    name: Int64
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

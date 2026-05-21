@@ -1,0 +1,60 @@
+passThrough:
+- function:
+    package: syscall
+    name: BytePtrFromString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: syscall
+    name: ByteSliceFromString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: syscall
+    name: StringBytePtr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: syscall
+    name: StringByteSlice
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: syscall
+    name: StringSlicePtr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: syscall
+    type: Conn
+    name: SyscallConn
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: syscall
+    type: RawConn
+    name: Read
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: syscall
+    type: RawConn
+    name: Write
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this

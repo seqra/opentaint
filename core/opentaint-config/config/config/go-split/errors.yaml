@@ -1,0 +1,36 @@
+passThrough:
+- function:
+    package: errors
+    name: As
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: errors
+    name: AsType
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: errors
+    name: New
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: errors
+    name: Unwrap
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: errors
+    name: Join
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

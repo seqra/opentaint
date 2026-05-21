@@ -1,0 +1,307 @@
+passThrough:
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceChunk
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceChunk
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceChunk
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceDiff
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceDiff
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceDiff
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceFilter
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceFilter
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceFilter
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceIntersect
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceIntersect
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceIntersect
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceMerge
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceMerge
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceMerge
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SlicePad
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SlicePad
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SlicePad
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceRand
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceRand
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceRand
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceReduce
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceReduce
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceReduce
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceShuffle
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceShuffle
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceShuffle
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    name: SliceUnique
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    name: SliceUnique
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    name: SliceUnique
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    type: BeeMap
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    type: BeeMap
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    type: BeeMap
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    type: BeeMap
+    name: Items
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/beego/beego/utils
+    type: BeeMap
+    name: Items
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/beego/beego/core/utils
+    type: BeeMap
+    name: Items
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/astaxie/beego/utils
+    type: BeeMap
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: this
+- function:
+    package: github.com/beego/beego/utils
+    type: BeeMap
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: this
+- function:
+    package: github.com/beego/beego/core/utils
+    type: BeeMap
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: this

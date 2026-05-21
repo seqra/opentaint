@@ -1,0 +1,61 @@
+passThrough:
+- function:
+    package: google.golang.org/protobuf/proto
+    name: Clone
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: google.golang.org/protobuf/proto
+    name: Marshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: google.golang.org/protobuf/proto
+    name: Merge
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: google.golang.org/protobuf/proto
+    name: Unmarshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: google.golang.org/protobuf/proto
+    type: MarshalOptions
+    name: Marshal
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: google.golang.org/protobuf/proto
+    type: MarshalOptions
+    name: MarshalAppend
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: google.golang.org/protobuf/proto
+    type: MarshalOptions
+    name: MarshalAppend
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: google.golang.org/protobuf/proto
+    type: UnmarshalOptions
+    name: Unmarshal
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)

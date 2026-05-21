@@ -1,0 +1,162 @@
+passThrough:
+- function:
+    package: io
+    name: Copy
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: io
+    name: CopyBuffer
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: io
+    name: CopyN
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: io
+    name: LimitReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: io
+    name: NewSectionReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: io
+    name: NopCloser
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: io
+    name: ReadAll
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: io
+    name: ReadAtLeast
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: io
+    name: ReadFull
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: io
+    name: TeeReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: io
+    name: TeeReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: io
+    name: WriteString
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: io
+    type: Reader
+    name: Read
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: io
+    type: ReaderAt
+    name: ReadAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: io
+    type: ReaderFrom
+    name: ReadFrom
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: io
+    type: StringWriter
+    name: WriteString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: io
+    type: Writer
+    name: Write
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: io
+    type: WriterAt
+    name: WriteAt
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: io
+    type: WriterTo
+    name: WriteTo
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: io
+    name: MultiReader
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+- function:
+    package: io
+    name: MultiWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(*)
+- function:
+    package: io
+    name: Pipe
+    receiver: false
+  copy:
+  - from: result(1)
+    to: result(0)
