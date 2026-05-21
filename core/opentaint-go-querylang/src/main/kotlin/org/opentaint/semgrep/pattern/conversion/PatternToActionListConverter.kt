@@ -30,6 +30,16 @@ import org.opentaint.semgrep.pattern.TypedMetavar
 import org.opentaint.semgrep.pattern.Ellipsis
 import org.opentaint.semgrep.pattern.EllipsisStmt
 import org.opentaint.semgrep.pattern.AssignStmt
+import org.opentaint.semgrep.pattern.FuncDecl
+import org.opentaint.semgrep.pattern.MethodDecl
+import org.opentaint.semgrep.pattern.FuncType
+import org.opentaint.semgrep.pattern.ParameterDecl
+import org.opentaint.semgrep.pattern.NamedParam
+import org.opentaint.semgrep.pattern.EllipsisParam
+import org.opentaint.semgrep.pattern.EllipsisMetavarParam
+import org.opentaint.semgrep.pattern.MetavarParam
+import org.opentaint.semgrep.pattern.BlockStmt
+import org.opentaint.semgrep.pattern.ReturnStmt
 import org.opentaint.semgrep.pattern.DeferStmt
 import org.opentaint.semgrep.pattern.GoStmt
 import org.opentaint.semgrep.pattern.ShortVarDecl
@@ -42,6 +52,7 @@ import org.opentaint.semgrep.pattern.UnaryExpr
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodExit
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodSignature
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
 
 class PatternToActionListConverter {
@@ -91,6 +102,24 @@ class PatternToActionListConverter {
         is UnaryExpr ->
             if (pattern.op == "&" && pattern.operand is CompositeLit) transformObjectCreation(pattern.operand as CompositeLit)
             else transformationFailed("UnaryExpr_${pattern.op}")
+        is FuncDecl -> transformFuncDecl(pattern.name, pattern.signature, pattern.body, receiverType = null)
+        is MethodDecl -> {
+            val recvType = (pattern.receiver as? NamedParam)?.type?.let { transformType(it) }
+            transformFuncDecl(pattern.name, pattern.signature, pattern.body, receiverType = recvType)
+        }
+        is BlockStmt -> transformSequence(pattern.stmts)
+        is ReturnStmt -> {
+            val retVals = pattern.values.map { v ->
+                val (actions, cond) = transformPatternIntoParamConditionWithActions(v)
+                check(actions.isEmpty()) { "return values with side effects are not supported in v1" }
+                cond ?: ParamCondition.True
+            }
+            SemgrepGoPatternActionList(
+                listOf(MethodExit(retVals)),
+                hasEllipsisInTheBeginning = false,
+                hasEllipsisInTheEnd = false,
+            )
+        }
         // Cases added in later tasks.
         else -> {
             val prefix = if (isRoot) "Root pattern is: " else ""
@@ -362,5 +391,45 @@ class PatternToActionListConverter {
     private fun fieldName(key: SemgrepGoPattern): String? = when (key) {
         is Identifier -> (key.name as? ConcreteName)?.name
         else -> null
+    }
+
+    private fun transformFuncDecl(
+        name: Name,
+        signature: FuncType,
+        body: BlockStmt?,
+        receiverType: TypePattern?,
+    ): SemgrepGoPatternActionList {
+        val methodName = signatureName(name)
+        val paramPatterns = mutableListOf<ParamPattern>()
+        var positional = true
+        var idx = 0
+        for (p in signature.params) {
+            when (p) {
+                is EllipsisParam, is EllipsisMetavarParam -> positional = false
+                is MetavarParam -> {
+                    val position = if (positional) ParamPosition.Concrete(idx) else ParamPosition.Any(p.name)
+                    paramPatterns += ParamPattern(position, ParamCondition.IsMetavar(MetavarAtom.create(p.name)))
+                    idx++
+                }
+                is NamedParam -> {
+                    for (nm in p.names) {
+                        val mv = (nm as? MetavarName)?.name
+                            ?: transformationFailed("MethodDecl_param_name_not_metavar")
+                        val position = if (positional) ParamPosition.Concrete(idx) else ParamPosition.Any(mv)
+                        paramPatterns += ParamPattern(position, ParamCondition.IsMetavar(MetavarAtom.create(mv)))
+                        paramPatterns += ParamPattern(position, ParamCondition.TypeIs(transformType(p.type)))
+                        idx++
+                    }
+                }
+            }
+        }
+        val returnTypes = signature.results.mapNotNull { (it as? NamedParam)?.type?.let { t -> transformType(t) } }
+        val sig = MethodSignature(methodName, ParamConstraint.Partial(paramPatterns), returnTypes, receiverType)
+        val bodyList = body?.let { transformPatternToActionList(it) }
+        return SemgrepGoPatternActionList(
+            listOf(sig) + (bodyList?.actions ?: emptyList()),
+            hasEllipsisInTheBeginning = false,
+            hasEllipsisInTheEnd = bodyList?.hasEllipsisInTheEnd ?: false,
+        )
     }
 }

@@ -5,6 +5,8 @@ import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodExit
+import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodSignature
 import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -160,5 +162,33 @@ class PatternToActionListConverterTest {
         val ctor = a.actions.single() as ConstructorCall
         assertEquals(TypePattern.Qualified("http", "Client"), ctor.className)
         assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("C")), ctor.result)
+    }
+
+    @Test fun funcDeclEmitsSignatureThenBody() {
+        val a = convertOk("func \$H(\$E \$T) { sink(\$E) }")
+        val sig = a.actions[0] as MethodSignature
+        assertEquals(SignatureName.MetaVar("H"), sig.methodName)
+        assertNull(sig.receiverType)
+        assertEquals(
+            listOf(
+                ParamPattern(ParamPosition.Concrete(0), ParamCondition.IsMetavar(MetavarAtom.create("E"))),
+                ParamPattern(ParamPosition.Concrete(0), ParamCondition.TypeIs(TypePattern.MetaVar("T"))),
+            ),
+            sig.params.params,
+        )
+        assertTrue(a.actions[1] is MethodCall)
+    }
+
+    @Test fun funcDeclSequenceWithTrailingCall() {
+        val a = convertOk("func \$H(\$E \$T, ...) {...}\n...\nlambda.Start(\$H, ...)")
+        assertTrue(a.actions.first() is MethodSignature)
+        assertTrue(a.actions.last() is MethodCall)
+        assertEquals(SignatureName.Concrete("Start"), (a.actions.last() as MethodCall).methodName)
+    }
+
+    @Test fun returnEmitsMethodExit() {
+        val a = convertOk("func \$F() { return \$X }")
+        val exit = a.actions.last() as MethodExit
+        assertEquals(listOf(ParamCondition.IsMetavar(MetavarAtom.create("X"))), exit.retVals)
     }
 }
