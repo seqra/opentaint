@@ -1,0 +1,10 @@
+rules:
+  - id: go-source-sink-rule
+    languages: [go]
+    mode: taint
+    message: "Tainted data flows to sink"
+    severity: ERROR
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

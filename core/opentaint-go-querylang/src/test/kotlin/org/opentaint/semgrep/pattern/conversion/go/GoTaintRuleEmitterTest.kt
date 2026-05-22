@@ -188,6 +188,36 @@ class GoTaintRuleEmitterTest {
     }
 
     @Test
+    fun `pass resolves dollar-prefixed from-to against Go-stripped action-list metavar names`() {
+        // Mirrors real Go parsing: the action list has metavar names WITHOUT '$' (the Go parser
+        // calls removePrefix("$") on every metavar token), but the YAML from/to retain the '$'
+        // prefix.  positionOfMetavar must normalise the incoming name so "$IN" matches "IN".
+        val emitter = GoTaintRuleEmitter()
+        val pattern = listOfCall(
+            call(
+                "Wrap",
+                // Go-parser-stripped names: "IN" (no $), "OUT" (no $)
+                params = ParamConstraint.Concrete(listOf(metavar("IN"))),
+                result = metavar("OUT"),
+                enclosing = goPackage("util"),
+            ),
+        )
+        val prop = SemgrepTaintPropagator(
+            from = "\$IN",   // standard YAML convention retains '$'
+            to = "\$OUT",
+            bySideEffect = null,
+            pattern = pattern,
+        )
+
+        val pass = emitter.emitPass(prop)
+
+        assertEquals("util.Wrap", pass?.function)
+        assertEquals(PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(0)), pass?.from)
+        assertEquals(PositionBaseWithModifiers.BaseOnly(PositionBase.Result), pass?.to)
+        assertTrue(emitter.dropped.isEmpty())
+    }
+
+    @Test
     fun `pass with an unlocatable metavar is dropped and counted`() {
         val emitter = GoTaintRuleEmitter()
         val pattern = listOfCall(

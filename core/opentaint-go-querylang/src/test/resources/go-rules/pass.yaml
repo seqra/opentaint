@@ -1,0 +1,14 @@
+rules:
+  - id: go-pass-rule
+    languages: [go]
+    mode: taint
+    message: "Tainted data propagates through wrapper"
+    severity: WARNING
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"
+    pattern-propagators:
+      - pattern: "$OUT = util.Wrap($IN)"
+        from: "$IN"
+        to: "$OUT"

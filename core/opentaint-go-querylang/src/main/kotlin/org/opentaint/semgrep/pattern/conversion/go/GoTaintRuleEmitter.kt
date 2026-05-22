@@ -90,11 +90,17 @@ class GoTaintRuleEmitter {
     /**
      * The position (within [call]) of the argument/receiver/result carrying the metavar named
      * [metaName], or null if it appears nowhere locatable.
+     *
+     * The Go parser strips the leading `$` from metavar names in the action list (e.g. `$IN`
+     * becomes `IN`), whereas YAML `from`/`to` fields retain the `$` prefix. Normalise by
+     * stripping a leading `$` from [metaName] and from each stored name before comparing, so
+     * both `"$IN"` (YAML) and `"IN"` (Go-parsed action list) match each other.
      */
     private fun positionOfMetavar(call: SemgrepPatternAction.MethodCall, metaName: String): PositionBase? {
-        if (call.obj?.metavarNames()?.contains(metaName) == true) return PositionBase.This
-        if (call.result?.metavarNames()?.contains(metaName) == true) return PositionBase.Result
-        return firstMetavarArgPosition(call.params) { it.metavarNames().contains(metaName) }
+        val name = metaName.removePrefix("$")
+        if (call.obj?.metavarNames()?.any { it.removePrefix("$") == name } == true) return PositionBase.This
+        if (call.result?.metavarNames()?.any { it.removePrefix("$") == name } == true) return PositionBase.Result
+        return firstMetavarArgPosition(call.params) { it.metavarNames().any { n -> n.removePrefix("$") == name } }
     }
 
     /**
