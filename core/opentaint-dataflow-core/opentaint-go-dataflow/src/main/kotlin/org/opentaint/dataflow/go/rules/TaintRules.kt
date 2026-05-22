@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.go.rules
 
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
@@ -10,18 +12,32 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 
 sealed interface TaintRules {
-    data class Source(val function: String, val mark: String, val pos: PositionBase) : TaintRules, CommonTaintConfigurationSource, CommonTaintAction
+    data class Source(
+        val function: String,
+        val mark: String,
+        val pos: PositionBase
+    ) : TaintRules, CommonTaintConfigurationSource, CommonTaintAssignAction
 
     data class Sink(
         val function: String,
-        val mark: String,
-        val pos: PositionBase,
+        val condition: CommonCondition<GoRuleCondition>,
         override val id: String,
     ) : TaintRules, CommonTaintConfigurationSink {
+        constructor(
+            function: String,
+            mark: String,
+            pos: PositionBase,
+            id: String,
+        ) : this(function, CommonCondition.Atom(GoRuleCondition.ContainsMark(pos, mark)), id)
+
         override val meta: CommonTaintConfigurationSinkMeta = object : CommonTaintConfigurationSinkMeta {
             override val message: String = "Taint sink: $function"
             override val severity: CommonTaintConfigurationSinkMeta.Severity = CommonTaintConfigurationSinkMeta.Severity.Error
         }
+
+        @Deprecated("")
+        val pos: PositionBase
+            get() = (condition as CommonCondition.Atom).atom.let { it as GoRuleCondition.ContainsMark }.position
     }
 
     data class Pass(

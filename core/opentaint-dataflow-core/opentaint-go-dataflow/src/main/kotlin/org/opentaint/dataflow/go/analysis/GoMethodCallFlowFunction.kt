@@ -3,7 +3,6 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -18,6 +17,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFa
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
@@ -27,6 +27,7 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
+import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.PositionTypeResolver
@@ -77,7 +78,9 @@ class GoMethodCallFlowFunction(
         propagateFact(
             factAp = currentFactAp,
             skipCall = { this += Unchanged },
-            addCallToReturn = { factAp, trace -> this += CallToReturnZFact(factAp, trace) },
+            addSideEffectRequirement = { factReader ->
+                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+            },
             addCallToStart = { callerFact, startBase, trace -> this += CallToStartZFact(callerFact, startBase, trace) },
         )
     }
@@ -91,8 +94,8 @@ class GoMethodCallFlowFunction(
         propagateFact(
             factAp = currentFactAp,
             skipCall = { this += Unchanged },
-            addCallToReturn = { factAp, trace ->
-                this += CallToReturnFFact(initialFactAp.replaceExclusions(factAp.exclusions), factAp, trace)
+            addSideEffectRequirement = { factReader ->
+                this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
             },
             addCallToStart = { callerFact, startBase, trace ->
                 this += CallToStartFFact(initialFactAp.replaceExclusions(callerFact.exclusions), callerFact, startBase, trace)
@@ -110,7 +113,7 @@ class GoMethodCallFlowFunction(
     private fun propagateFact(
         factAp: FinalFactAp,
         skipCall: () -> Unit,
-        addCallToReturn: (FinalFactAp, TraceInfo) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
         addCallToStart: (callerFact: FinalFactAp, startBase: AccessPathBase, TraceInfo) -> Unit,
     ) {
         // 0. Relevance check
@@ -118,6 +121,9 @@ class GoMethodCallFlowFunction(
             skipCall()
             return
         }
+
+        // 1. Sink rules
+        applySinkRules(factAp, addSideEffectRequirement)
 
         GoMethodCallFactMapper.mapMethodCallToStartFlowFact(
             statement,
@@ -127,9 +133,6 @@ class GoMethodCallFlowFunction(
             factAp,
             FactTypeChecker.Dummy
         ) { fact, startBase ->
-            // 1. Sink rules
-            applySinkRules(fact, startBase, addCallToReturn)
-
             // 2. Pass-through rules
             addCallToStart(fact, startBase, TraceInfo.Flow)
         }
@@ -141,50 +144,40 @@ class GoMethodCallFlowFunction(
         val name = calleeName ?: return
         val sourceRules = rulesProvider.sourceRulesForCall(name)
 
-        for (rule in sourceRules) {
-            val base = GoFlowFunctionUtils.resolvePosition(rule.pos)
+        if (sourceRules.isEmpty()) return
 
-            val factAp = apManager.createFinalAp(base, ExclusionSet.Universe)
-                .prependAccessor(TaintMarkAccessor(rule.mark))
-
-            val callerFacts = mapMethodExitToReturnFlowFact(statement, factAp, FactTypeChecker.Dummy)
-
-            val traceInfo = if (generateTrace) TraceInfo.Flow else null
-            callerFacts.mapTo(result) {
-                CallToReturnZFact(it, traceInfo)
-            }
-        }
+        val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
+        taintUtils.applySourceRules(
+            sourceRules = sourceRules,
+            initialFacts = emptySet(),
+            conditionRewriter = GoRuleConditionRewriter(),
+            factReader = null,
+            exclusion = ExclusionSet.Universe,
+            createFinalFact = { fact, trace ->
+                result += CallToReturnZFact(fact, trace)
+            },
+            createEdge = { _, _, _ -> error("unused") },
+            createNDEdge = { _, _, _ -> error("unused") }
+        )
     }
 
     // ── Sink rule application ────────────────────────────────────────
 
     private fun applySinkRules(
         currentFactAp: FinalFactAp,
-        startBase: AccessPathBase,
-        addCallToReturn: (FinalFactAp, TraceInfo) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
     ) {
         val name = calleeName ?: return
         val sinkRules = rulesProvider.sinkRulesForCall(name)
+        if (sinkRules.isEmpty()) return
 
-        for (rule in sinkRules) {
-            val sinkArgBase = GoFlowFunctionUtils.resolvePosition(rule.pos)
-            if (sinkArgBase != startBase) continue
+        val factReader = FinalFactReader(currentFactAp, apManager)
 
-            val markAccessor = TaintMarkAccessor(rule.mark)
-            if (currentFactAp.startsWithAccessor(markAccessor)) {
-                val fact = apManager.createFinalInitialAp(currentFactAp.base, ExclusionSet.Empty)
-                    .prependAccessor(markAccessor)
-                context.taint.taintSinkTracker.addVulnerability(
-                    methodEntryPoint = context.methodEntryPoint,
-                    statement = statement,
-                    facts = setOf(fact),
-                    rule = rule,
-                )
-            } else if (currentFactAp.isAbstract() && !currentFactAp.exclusions.contains(markAccessor)) {
-                // Trigger refinement
-                val refinedFact = currentFactAp.exclude(markAccessor)
-                addCallToReturn(refinedFact, TraceInfo.Flow)
-            }
+        val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
+        taintUtils.applySinkRules(sinkRules, GoRuleConditionRewriter(), factReader, markAfterAnyFieldResolver = null)
+
+        if (factReader.hasRefinement) {
+            addSideEffectRequirement(factReader)
         }
     }
 
@@ -226,8 +219,8 @@ class GoMethodCallFlowFunction(
 
         val result = mutableListOf<FinalFactAp>()
         for (rule in passRules) {
-            val from = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
-            val to = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
+            val from = GoFlowFunctionUtils.resolvePositionAccess(rule.from)
+            val to = GoFlowFunctionUtils.resolvePositionAccess(rule.to)
 
             passEvaluator.propagateData(rule, rule, from, to).onSome { facts ->
                 facts.forEach { newFact ->

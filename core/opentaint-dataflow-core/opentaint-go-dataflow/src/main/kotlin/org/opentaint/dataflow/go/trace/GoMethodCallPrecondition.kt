@@ -152,8 +152,8 @@ class GoMethodCallPrecondition(
         val rulePreconditionEvaluator = TaintPassActionPreconditionEvaluator(entryFactReader)
 
         for (rule in passRules) {
-            val from = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
-            val to = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
+            val from = GoFlowFunctionUtils.resolvePositionAccess(rule.from)
+            val to = GoFlowFunctionUtils.resolvePositionAccess(rule.to)
 
             rulePreconditionEvaluator.propagateData(rule, rule, from, to).onSome { facts ->
                 facts.forEach { calleeFact ->

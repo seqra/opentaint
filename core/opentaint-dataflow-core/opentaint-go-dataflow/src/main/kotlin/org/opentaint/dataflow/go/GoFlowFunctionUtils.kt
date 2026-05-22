@@ -270,7 +270,10 @@ object GoFlowFunctionUtils {
         }
     }
 
-    fun resolvePositionWithModifiers(pos: PositionBaseWithModifiers): PositionAccess {
+    fun resolvePositionAccess(pos: PositionBase): PositionAccess =
+        PositionAccess.Simple(resolvePosition(pos))
+
+    fun resolvePositionAccess(pos: PositionBaseWithModifiers): PositionAccess {
         val base = PositionAccess.Simple(resolvePosition(pos.base))
         val accessors = when (pos) {
             is PositionBaseWithModifiers.BaseOnly -> return base
