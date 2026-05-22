@@ -4,13 +4,13 @@ on:
   push:
     paths:
       - 'rules/**'
-      - 'model/**'
+      - 'core/opentaint-config/config/**'
       - '.github/workflows/ci-rules.yaml'
     branches: [ "main" ]
   pull_request:
     paths:
       - 'rules/**'
-      - 'model/**'
+      - 'core/opentaint-config/config/**'
       - '.github/workflows/ci-rules.yaml'
     branches: [ "main" ]
   workflow_dispatch:
@@ -87,6 +87,19 @@ jobs:
                --result-dir ./opentaint-project \
                --logs-file autobuild.log \
                --verbosity debug
+
+      - name: Use source propagators (overlay repo config into analyzer jar)
+        run: |
+          # The rule-test runner (--debug-run-rule-tests -> TestProjectAnalyzer)
+          # loads taint passThrough rules only from the analyzer jar's bundled
+          # /config resources (loadDefaultConfig -> ConfigLoader); it does NOT read
+          # --approximations-config. The released analyzer jar is built from main,
+          # so its bundled config lacks the propagators kept in this repo's source
+          # tree, which surfaces as false negatives. Overlay the in-repo propagators
+          # (core/opentaint-config/config/config -> jar entries under config/) so the
+          # rule tests run against the source config.
+          jar uf opentaint-analyzer/opentaint-project-analyzer.jar \
+              -C core/opentaint-config/config config
 
       - name: Run OpenTaint analyzer
         env:
