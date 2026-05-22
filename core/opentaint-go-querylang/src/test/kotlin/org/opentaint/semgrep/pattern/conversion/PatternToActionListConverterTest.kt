@@ -3,11 +3,12 @@ package org.opentaint.semgrep.pattern.conversion
 import org.opentaint.semgrep.pattern.SemgrepGoPattern
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
-import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.ConstructorCall
-import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodCall
-import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodExit
-import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.MethodSignature
-import org.opentaint.semgrep.pattern.conversion.SemgrepGoPatternAction.SignatureName
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ClassConstraint
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ConstructorCall
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodCall
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodExit
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodSignature
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -23,12 +24,12 @@ class PatternToActionListConverterTest {
         return r.pattern
     }
 
-    private fun convert(src: String): Pair<SemgrepGoPatternActionList?, Map<String, Int>> {
+    private fun convert(src: String): Pair<SemgrepPatternActionList?, Map<String, Int>> {
         val c = PatternToActionListConverter()
         return c.createActionList(parse(src)) to c.failedTransformations
     }
 
-    private fun convertOk(src: String): SemgrepGoPatternActionList {
+    private fun convertOk(src: String): SemgrepPatternActionList {
         val (r, failures) = convert(src)
         assertNotNull(r, "conversion failed for `$src`: $failures")
         return r
@@ -45,10 +46,10 @@ class PatternToActionListConverterTest {
         assertEquals(1, a.actions.size)
         val call = a.actions.single() as MethodCall
         assertEquals(SignatureName.Concrete("Println"), call.methodName)
-        assertEquals(TypePattern.Named("fmt"), call.enclosingClassName)
+        assertEquals(goNamed("fmt"), call.enclosingClassName)
         assertEquals(ParamCondition.True, call.obj)
         assertEquals(
-            ParamConstraint.Concrete(listOf(ParamCondition.IsMetavar(MetavarAtom.create("X")))),
+            ParamConstraint.Concrete(listOf(IsMetavar(MetavarAtom.create("X")))),
             call.params,
         )
     }
@@ -57,11 +58,11 @@ class PatternToActionListConverterTest {
         val a = convertOk("\$DB.Exec(\$QUERY, ...)")
         val call = a.actions.single() as MethodCall
         assertEquals(SignatureName.Concrete("Exec"), call.methodName)
-        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("DB")), call.obj)
+        assertEquals(IsMetavar(MetavarAtom.create("DB")), call.obj)
         assertEquals(null, call.enclosingClassName)
         val params = call.params as ParamConstraint.Partial
         assertEquals(
-            listOf(ParamPattern(ParamPosition.Concrete(0), ParamCondition.IsMetavar(MetavarAtom.create("QUERY")))),
+            listOf(ParamPattern(ParamPosition.Concrete(0), IsMetavar(MetavarAtom.create("QUERY")))),
             params.params,
         )
     }
@@ -82,7 +83,7 @@ class PatternToActionListConverterTest {
         assertEquals(SignatureName.Concrete("b"), inner.methodName)
         assertEquals(SignatureName.Concrete("c"), outer.methodName)
         // inner.result is an artificial metavar that becomes outer.obj
-        val innerResult = inner.result as ParamCondition.IsMetavar
+        val innerResult = inner.result as IsMetavar
         assertEquals(innerResult, outer.obj)
         assertTrue((innerResult.metavar as MetavarAtom.Basic).isArtificial)
     }
@@ -94,7 +95,7 @@ class PatternToActionListConverterTest {
         val outer = a.actions[1] as MethodCall
         assertEquals(SignatureName.Concrete("inner"), inner.methodName)
         assertEquals(SignatureName.Concrete("outer"), outer.methodName)
-        val innerResult = inner.result as ParamCondition.IsMetavar
+        val innerResult = inner.result as IsMetavar
         assertEquals(ParamConstraint.Concrete(listOf(innerResult)), outer.params)
     }
 
@@ -131,13 +132,13 @@ class PatternToActionListConverterTest {
         val a = convertOk("\$X := getInput()")
         val call = a.actions.single() as MethodCall
         assertEquals(SignatureName.Concrete("getInput"), call.methodName)
-        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("X")), call.result)
+        assertEquals(IsMetavar(MetavarAtom.create("X")), call.result)
     }
 
     @Test fun assignBindsResult() {
         val a = convertOk("\$X = source.Read()")
         val call = a.actions.single() as MethodCall
-        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("X")), call.result)
+        assertEquals(IsMetavar(MetavarAtom.create("X")), call.result)
     }
 
     @Test fun multiLhsAssignFailsGracefully() {
@@ -149,10 +150,10 @@ class PatternToActionListConverterTest {
     @Test fun keyedCompositeLiteral() {
         val a = convertOk("http.Cookie{Secure: true, ...}")
         val ctor = a.actions.single() as ConstructorCall
-        assertEquals(TypePattern.Qualified("http", "Cookie"), ctor.className)
+        assertEquals(goQualified("http", "Cookie"), ctor.className)
         val params = ctor.params as ParamConstraint.Partial
         assertEquals(
-            listOf(ParamPattern(ParamPosition.Named("Secure"), ParamCondition.SpecificBoolValue(true))),
+            listOf(ParamPattern(ParamPosition.Named("Secure"), SpecificBoolValue(true))),
             params.params,
         )
     }
@@ -160,19 +161,20 @@ class PatternToActionListConverterTest {
     @Test fun pointerCompositeLiteralInAssignment() {
         val a = convertOk("\$C := &http.Client{...}")
         val ctor = a.actions.single() as ConstructorCall
-        assertEquals(TypePattern.Qualified("http", "Client"), ctor.className)
-        assertEquals(ParamCondition.IsMetavar(MetavarAtom.create("C")), ctor.result)
+        assertEquals(goQualified("http", "Client"), ctor.className)
+        assertEquals(IsMetavar(MetavarAtom.create("C")), ctor.result)
     }
 
     @Test fun funcDeclEmitsSignatureThenBody() {
         val a = convertOk("func \$H(\$E \$T) { sink(\$E) }")
         val sig = a.actions[0] as MethodSignature
         assertEquals(SignatureName.MetaVar("H"), sig.methodName)
-        assertNull(sig.receiverType)
+        assertNull(sig.enclosingClassMetavar)
+        assertTrue(sig.enclosingClassConstraints.isEmpty())
         assertEquals(
             listOf(
-                ParamPattern(ParamPosition.Concrete(0), ParamCondition.IsMetavar(MetavarAtom.create("E"))),
-                ParamPattern(ParamPosition.Concrete(0), ParamCondition.TypeIs(TypePattern.MetaVar("T"))),
+                ParamPattern(ParamPosition.Concrete(0), IsMetavar(MetavarAtom.create("E"))),
+                ParamPattern(ParamPosition.Concrete(0), ParamCondition.TypeIs(TypeConstraint.MetaVar("T"))),
             ),
             sig.params.params,
         )
@@ -189,7 +191,7 @@ class PatternToActionListConverterTest {
     @Test fun returnEmitsMethodExit() {
         val a = convertOk("func \$F() { return \$X }")
         val exit = a.actions.last() as MethodExit
-        assertEquals(listOf(ParamCondition.IsMetavar(MetavarAtom.create("X"))), exit.retVals)
+        assertEquals(listOf(IsMetavar(MetavarAtom.create("X"))), exit.retVals)
     }
 
     @Test fun returnCallLinearizesAndDoesNotCrash() {
@@ -198,8 +200,20 @@ class PatternToActionListConverterTest {
         val call = a.actions.first { it is MethodCall } as MethodCall
         assertEquals(SignatureName.Concrete("sink"), call.methodName)
         val exit = a.actions.last() as MethodExit
-        val callResult = call.result as ParamCondition.IsMetavar
+        val callResult = call.result as IsMetavar
         assertEquals(listOf<ParamCondition>(callResult), exit.retVals)
         assertTrue((callResult.metavar as MetavarAtom.Basic).isArtificial)
+    }
+
+    @Test fun methodDeclWithConcreteReceiverPopulatesClassConstraints() {
+        val a = convertOk("func (\$R *Foo) Bar() {}")
+        val sig = a.actions.single() as MethodSignature
+        assertEquals(SignatureName.Concrete("Bar"), sig.methodName)
+        assertNull(sig.enclosingClassMetavar)
+        val expectedType = TypeConstraint.Concrete(GoConcreteType.Pointer(goNamed("Foo")))
+        assertEquals(
+            listOf(ClassConstraint.SuperType(expectedType)),
+            sig.enclosingClassConstraints,
+        )
     }
 }

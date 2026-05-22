@@ -12,6 +12,7 @@ configurations.api.get().let { config ->
 }
 
 dependencies {
+    implementation(project(":opentaint-java-querylang"))
     implementation(KotlinDependency.Libs.kotlin_logging)
     antlr(Libs.antlr)
     implementation(Libs.antlr_runtime)
