@@ -2,12 +2,15 @@ package org.opentaint.semgrep.pattern.conversion
 
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
+import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class CorpusConversionTest {
     private val parser = SemgrepGoPatternParser()
     private val converter = PatternToActionListConverter()
+    private val noopTrace = SemgrepRuleLoadStepTrace(Step.BUILD_PARSE_SEMGREP_RULE)
 
     private fun loadPatterns(): List<String> {
         val text = javaClass.classLoader.getResource("patterns/corpus.txt")
@@ -24,7 +27,7 @@ class CorpusConversionTest {
             val r = parser.parseSemgrepGoPattern(p)
             if (r !is SemgrepGoPatternParsingResult.Ok) continue
             parsed++
-            if (converter.createActionList(r.pattern) != null) converted++
+            if (converter.createActionList(r.pattern, noopTrace) != null) converted++
         }
         println("Conversion: total=${patterns.size} parsed=$parsed converted=$converted")
         println("Failure reasons (top 30):")

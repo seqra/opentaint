@@ -49,13 +49,14 @@ import org.opentaint.semgrep.pattern.CompositeElem
 import org.opentaint.semgrep.pattern.KeyedElem
 import org.opentaint.semgrep.pattern.EllipsisElem
 import org.opentaint.semgrep.pattern.UnaryExpr
+import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodExit
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodSignature
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
 
-class PatternToActionListConverter {
+class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
     val failedTransformations = mutableMapOf<String, Int>()
 
     private var nextArtificialId = 0
@@ -65,7 +66,7 @@ class PatternToActionListConverter {
     private class TransformationFailed(override val message: String) : Exception(message)
     private fun transformationFailed(reason: String): Nothing = throw TransformationFailed(reason)
 
-    fun createActionList(pattern: SemgrepGoPattern): SemgrepPatternActionList? = try {
+    override fun createActionList(pattern: SemgrepGoPattern, semgrepTrace: SemgrepRuleLoadStepTrace): SemgrepPatternActionList? = try {
         transformPatternToActionList(pattern, isRoot = true)
     } catch (ex: TransformationFailed) {
         val reason = ex.message

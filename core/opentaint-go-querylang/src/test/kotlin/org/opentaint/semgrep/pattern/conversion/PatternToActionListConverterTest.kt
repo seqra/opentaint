@@ -3,6 +3,8 @@ package org.opentaint.semgrep.pattern.conversion
 import org.opentaint.semgrep.pattern.SemgrepGoPattern
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
+import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ClassConstraint
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodCall
@@ -17,6 +19,7 @@ import kotlin.test.assertTrue
 
 class PatternToActionListConverterTest {
     private val parser = SemgrepGoPatternParser()
+    private val noopTrace = SemgrepRuleLoadStepTrace(Step.BUILD_PARSE_SEMGREP_RULE)
 
     private fun parse(src: String): SemgrepGoPattern {
         val r = parser.parseSemgrepGoPattern(src)
@@ -26,7 +29,7 @@ class PatternToActionListConverterTest {
 
     private fun convert(src: String): Pair<SemgrepPatternActionList?, Map<String, Int>> {
         val c = PatternToActionListConverter()
-        return c.createActionList(parse(src)) to c.failedTransformations
+        return c.createActionList(parse(src), noopTrace) to c.failedTransformations
     }
 
     private fun convertOk(src: String): SemgrepPatternActionList {

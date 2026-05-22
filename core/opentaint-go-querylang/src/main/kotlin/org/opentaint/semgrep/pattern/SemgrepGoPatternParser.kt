@@ -9,6 +9,7 @@ import org.antlr.v4.runtime.RecognitionException
 import org.antlr.v4.runtime.Recognizer
 import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.TerminalNode
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternParser
 import org.opentaint.semgrep.pattern.go.antlr.GoLexer
 import org.opentaint.semgrep.pattern.go.antlr.GoParser
 import org.opentaint.semgrep.pattern.go.antlr.GoParserBaseVisitor
@@ -28,8 +29,25 @@ class SemgrepGoParsingFailedException(ctx: ParserRuleContext, additionalMessage:
 class UnsupportedGoElement(element: ParserRuleContext) :
     SemgrepGoParsingException(element, "Unsupported element: ${element.text}")
 
-class SemgrepGoPatternParser {
+class SemgrepGoPatternParser : SemgrepPatternParser<SemgrepGoPattern> {
     private val visitor = SemgrepGoPatternParserVisitor()
+
+    override fun parseOrNull(pattern: String, semgrepTrace: SemgrepRuleLoadStepTrace): SemgrepGoPattern? =
+        when (val r = parseSemgrepGoPattern(pattern)) {
+            is SemgrepGoPatternParsingResult.Ok -> r.pattern
+            is SemgrepGoPatternParsingResult.FailedASTParsing -> {
+                semgrepTrace.error(PatternParsingAstFailed(r.errorMessages))
+                null
+            }
+            is SemgrepGoPatternParsingResult.ParserFailure -> {
+                semgrepTrace.error(PatternParsingFailure(r.exception.message))
+                null
+            }
+            is SemgrepGoPatternParsingResult.OtherFailure -> {
+                semgrepTrace.error(PatternParsingFailure(r.exception.message))
+                null
+            }
+        }
 
     fun parseSemgrepGoPattern(pattern: String): SemgrepGoPatternParsingResult {
         val errors = mutableListOf<String>()
