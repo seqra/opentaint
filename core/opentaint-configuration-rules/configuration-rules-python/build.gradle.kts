@@ -19,7 +19,7 @@ dependencies {
 }
 
 val pythonConfigFile = rootProject.layout.projectDirectory
-    .dir("../opentaint-config/config/python-config")
+    .dir("../opentaint-dataflow-core/opentaint-python-dataflow/config/config")
     .file("config.yaml")
     .asFile
 

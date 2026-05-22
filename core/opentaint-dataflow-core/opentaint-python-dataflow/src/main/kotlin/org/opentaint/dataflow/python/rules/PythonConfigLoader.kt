@@ -1,4 +1,4 @@
-package org.opentaint.config
+package org.opentaint.dataflow.python.rules
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -11,9 +11,10 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSi
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
 import org.opentaint.dataflow.configuration.python.serialized.loadSerializedPythonTaintConfig
+import kotlin.io.path.toPath
 
 object PythonConfigLoader {
-    private const val CONFIG_ROOT = "/python-config"
+    private const val CONFIG_ROOT = "/config"
     private val config = lazy { loadConfig() }
 
     fun getConfig() = config.value
@@ -22,14 +23,16 @@ object PythonConfigLoader {
         val resources = javaClass.getResource(CONFIG_ROOT) ?: return null
         val uri = resources.toURI()
 
-        // it is expected to be used as a .jar-dependency
-        if (uri.scheme != "jar") return null
-
-        val allFiles =
+        val allFiles = if (uri.scheme == "jar") {
             FileSystems.newFileSystem(uri, Collections.emptyMap<String, String>()).use { fs ->
                 val path = fs.getPath(CONFIG_ROOT)
                 Files.walk(path).asSequence().map { path.relativize(it).toString() }.toList()
             }
+        } else {
+            val path = uri.toPath()
+            Files.walk(path).asSequence().map { path.relativize(it).toString() }.toList()
+        }
+
         if (allFiles.isEmpty()) return null
         val files = allFiles.filter { it.endsWith(".yaml") }
 

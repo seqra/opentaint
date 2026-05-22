@@ -30,3 +30,9 @@ dependencies {
 
     implementation("org.opentaint.config:opentaint-config")
 }
+
+tasks.withType<ProcessResources> {
+    val configDir = layout.projectDirectory.dir("config")
+
+    from(configDir)
+}
