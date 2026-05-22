@@ -90,10 +90,12 @@ class GoSemgrepReachabilityTest {
                   - pattern: util.Sink(${'$'}X)
         """.trimIndent()
 
-        val loader = SemgrepRuleLoader(mapOf("go" to GoLanguageStrategy()))
+        val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path("util-source-sink.yaml"), Path("."), SemgrepLoadTrace())
-        val (meta, rule) = loader.loadGoRules().single()
-        val config: GoTaintConfig = GoTaintRuleEmitter().emit(meta.ruleId, rule)
+        val loadedRules = loader.loadRules()
+        val rule = loadedRules.rulesWithMeta.first()
+
+        val config: GoTaintConfig = GoTaintRuleEmitter().emit(rule.first.ruleId, rule.first)
 
         // Assert the generated config names match the Go IR; a name mismatch must fail loudly here.
         assertEquals(

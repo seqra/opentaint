@@ -2,26 +2,35 @@ package org.opentaint.semgrep.pattern.conversion.go
 
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedCondition
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedFunctionNameMatcher
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedSimpleNameMatcher
 import org.opentaint.dataflow.go.rules.GoTaintConfig
 import org.opentaint.dataflow.go.rules.TaintRules
-import org.opentaint.semgrep.pattern.SemgrepTaintPropagator
-import org.opentaint.semgrep.pattern.SemgrepTaintRule
-import org.opentaint.semgrep.pattern.conversion.IsMetavar
-import org.opentaint.semgrep.pattern.conversion.MetavarAtom
-import org.opentaint.semgrep.pattern.conversion.ParamCondition
-import org.opentaint.semgrep.pattern.conversion.ParamConstraint
-import org.opentaint.semgrep.pattern.conversion.ParamPosition
-import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction
-import org.opentaint.semgrep.pattern.conversion.SemgrepPatternActionList
+import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 
 /**
- * LOW-FIDELITY lowering of taint patterns (already converted to the shared action-list model)
- * into a [GoTaintConfig].
+ * LOW-FIDELITY adapter from the SHARED [TaintRuleFromSemgrep] (JVM [SerializedRule]s, produced by
+ * the common [org.opentaint.semgrep.pattern.SemgrepRuleLoader] for ALL languages incl. Go) into a
+ * [GoTaintConfig].
  *
- * Works DIRECTLY from the action lists (not the taint automaton): the source/sink/pass each carry a
- * single [SemgrepPatternAction.MethodCall] from which we recover a named function + a taint position.
- * Conditions (argument types/values) are intentionally dropped. Anything that cannot be cleanly
- * named or located is dropped and counted in [dropped] (never thrown).
+ * Each rule carries a function-name matcher from which we recover a named function
+ * ("pkg.Name" / "util.Source") plus a taint position. The shared loader lowers a semgrep taint
+ * rule to a taint AUTOMATON, which it emits as:
+ *  - an UNCONDITIONAL [SerializedRule.Source] (condition has no `ContainsMark`) -> a real SOURCE
+ *    (its result/taint-assign position becomes tainted);
+ *  - a CONDITIONAL [SerializedRule.Source] (condition contains a `ContainsMark`) -> a PROPAGATOR
+ *    (the `ContainsMark` position is the `from`, the taint-assign position is the `to`); this is
+ *    how `$OUT = util.Wrap($IN)` round-trips;
+ *  - a [SerializedRule.Sink] -> a SINK (the first usable `ContainsMark` argument position is the
+ *    tainted-argument position);
+ *  - a [SerializedRule.PassThrough] -> a PROPAGATOR (rare for Go, but supported).
+ *
+ * Positions are normalised to what the Go engine understands: `This`/`AnyArgument` collapse to
+ * `Argument(0)` (see GoFlowFunctionUtils.resolvePosition, which errors on `This` and maps
+ * `AnyArgument` -> arg 0). Other conditions are dropped. Anything that cannot be cleanly named or
+ * located is dropped and counted in [dropped] (never thrown). Duplicate rules are de-duplicated.
  */
 class GoTaintRuleEmitter {
     /** reason -> number of items dropped for that reason. */
@@ -32,113 +41,104 @@ class GoTaintRuleEmitter {
         return null
     }
 
-    /** The single [SemgrepPatternAction.MethodCall] in a simple source/sink/pass action list, or null. */
-    private fun primaryCall(list: SemgrepPatternActionList): SemgrepPatternAction.MethodCall? =
-        list.actions.singleOrNull() as? SemgrepPatternAction.MethodCall
+    fun emit(ruleId: String, rule: TaintRuleFromSemgrep, mark: String = "taint"): GoTaintConfig {
+        val items = rule.taintRules.flatMap { it.rules }
+        val sources = items.filterIsInstance<SerializedRule.Source>()
 
-    /** A source: the function whose RESULT is tainted. */
-    fun emitSource(list: SemgrepPatternActionList, mark: String): TaintRules.Source? {
-        val call = primaryCall(list) ?: return drop("source_not_single_call")
-        val name = goQualifiedName(call.methodName, call.enclosingClassName) ?: return drop("source_unnameable")
-        return TaintRules.Source(name, mark, PositionBase.Result)
-    }
-
-    /** A sink: the function whose tainted ARGUMENT (the IsMetavar param) is the sink position. */
-    fun emitSink(list: SemgrepPatternActionList, mark: String, ruleId: String): TaintRules.Sink? {
-        val call = primaryCall(list) ?: return drop("sink_not_single_call")
-        val name = goQualifiedName(call.methodName, call.enclosingClassName) ?: return drop("sink_unnameable")
-        val pos = sinkPosition(call) ?: return drop("sink_no_tainted_position")
-        return TaintRules.Sink(name, mark, pos, ruleId)
-    }
-
-    /** A propagator: from/to are metavar NAMES; locate each in the call's obj/params/result. */
-    fun emitPass(prop: SemgrepTaintPropagator<SemgrepPatternActionList>): TaintRules.Pass? {
-        val call = primaryCall(prop.pattern) ?: return drop("pass_not_single_call")
-        val name = goQualifiedName(call.methodName, call.enclosingClassName) ?: return drop("pass_unnameable")
-        val from = positionOfMetavar(call, prop.from) ?: return drop("pass_from_not_found")
-        val to = positionOfMetavar(call, prop.to) ?: return drop("pass_to_not_found")
-        return TaintRules.Pass(
-            name,
-            PositionBaseWithModifiers.BaseOnly(from),
-            PositionBaseWithModifiers.BaseOnly(to),
+        return GoTaintConfig(
+            // Unconditional sources are real sources; conditional ones (carrying a ContainsMark)
+            // are propagators.
+            sources = sources
+                .filter { firstContainsMarkPosition(it.condition) == null }
+                .mapNotNull { adaptSource(it, mark) }
+                .distinct(),
+            sinks = items.filterIsInstance<SerializedRule.Sink>()
+                .mapNotNull { adaptSink(it, mark, ruleId) }
+                .distinct(),
+            propagators = (
+                sources
+                    .filter { firstContainsMarkPosition(it.condition) != null }
+                    .mapNotNull { adaptSourceAsPass(it) } +
+                    items.filterIsInstance<SerializedRule.PassThrough>().mapNotNull { adaptPass(it) }
+                ).distinct(),
         )
     }
 
-    fun emit(
-        ruleId: String,
-        rule: SemgrepTaintRule<SemgrepPatternActionList>,
-        mark: String = "taint",
-    ): GoTaintConfig =
-        GoTaintConfig(
-            sources = rule.sources.mapNotNull { emitSource(it.pattern, mark) },
-            sinks = rule.sinks.mapNotNull { emitSink(it.pattern, mark, ruleId) },
-            propagators = rule.propagators.mapNotNull { emitPass(it) },
-        )
+    /** An unconditional source: the function whose taint-assign position becomes tainted. */
+    private fun adaptSource(r: SerializedRule.Source, mark: String): TaintRules.Source? {
+        val name = qualifiedName(r.function) ?: return drop("source_unnameable")
+        val pos = goPosition(r.taint.firstOrNull()?.pos?.base ?: PositionBase.Result)
+        return TaintRules.Source(name, mark, pos)
+    }
 
-    /**
-     * The taint position of a sink call: the FIRST argument whose condition carries a metavar
-     * becomes that argument position; if no argument carries one but the receiver does, the receiver
-     * (`PositionBase.This`) is used. Otherwise null (no tainted position).
-     */
-    private fun sinkPosition(call: SemgrepPatternAction.MethodCall): PositionBase? {
-        val argPos = firstMetavarArgPosition(call.params) { it.metavarNames().isNotEmpty() }
-        if (argPos != null) return argPos
-        if (call.obj?.metavarNames()?.isNotEmpty() == true) return PositionBase.This
-        return null
+    /** A conditional source modelled as a propagator: ContainsMark position -> taint-assign position. */
+    private fun adaptSourceAsPass(r: SerializedRule.Source): TaintRules.Pass? {
+        val name = qualifiedName(r.function) ?: return drop("pass_unnameable")
+        val from = firstContainsMarkPosition(r.condition) ?: return drop("pass_no_from")
+        val to = r.taint.firstOrNull()?.pos?.base ?: PositionBase.Result
+        return TaintRules.Pass(name, baseOnly(from), baseOnly(to))
+    }
+
+    /** A sink: the function whose tainted ARGUMENT (the first usable ContainsMark) is the sink. */
+    private fun adaptSink(r: SerializedRule.Sink, mark: String, ruleId: String): TaintRules.Sink? {
+        val name = qualifiedName(r.function) ?: return drop("sink_unnameable")
+        val pos = firstContainsMarkPosition(r.condition)?.let { goPosition(it) } ?: PositionBase.Argument(0)
+        return TaintRules.Sink(name, mark, pos, r.id ?: ruleId)
+    }
+
+    /** A propagator rule: from/to taken from the first copy action. */
+    private fun adaptPass(r: SerializedRule.PassThrough): TaintRules.Pass? {
+        val name = qualifiedName(r.function) ?: return drop("pass_unnameable")
+        val action = r.copy.firstOrNull() ?: return drop("pass_no_copy")
+        return TaintRules.Pass(name, normalize(action.from), normalize(action.to))
+    }
+
+    /** Reconstruct "pkg.Name" / "util.Source" from a function-name matcher (Simple parts only). */
+    private fun qualifiedName(fn: SerializedFunctionNameMatcher): String? {
+        val pkg = (fn.`package` as? SerializedSimpleNameMatcher.Simple)?.value
+        val cls = (fn.`class` as? SerializedSimpleNameMatcher.Simple)?.value
+        val nm = (fn.name as? SerializedSimpleNameMatcher.Simple)?.value ?: return null
+        val qualifier = listOfNotNull(pkg, cls).filter { it.isNotEmpty() }.joinToString(".")
+        return if (qualifier.isEmpty()) nm else "$qualifier.$nm"
     }
 
     /**
-     * The position (within [call]) of the argument/receiver/result carrying the metavar named
-     * [metaName], or null if it appears nowhere locatable.
-     *
-     * The Go parser strips the leading `$` from metavar names in the action list (e.g. `$IN`
-     * becomes `IN`), whereas YAML `from`/`to` fields retain the `$` prefix. Normalise by
-     * stripping a leading `$` from [metaName] and from each stored name before comparing, so
-     * both `"$IN"` (YAML) and `"IN"` (Go-parsed action list) match each other.
+     * Normalise a [PositionBase] to one the Go engine can resolve: `This` and `AnyArgument` both
+     * collapse to `Argument(0)` (matching GoFlowFunctionUtils.resolvePosition, which errors on
+     * `This`); everything else is unchanged.
      */
-    private fun positionOfMetavar(call: SemgrepPatternAction.MethodCall, metaName: String): PositionBase? {
-        val name = metaName.removePrefix("$")
-        if (call.obj?.metavarNames()?.any { it.removePrefix("$") == name } == true) return PositionBase.This
-        if (call.result?.metavarNames()?.any { it.removePrefix("$") == name } == true) return PositionBase.Result
-        return firstMetavarArgPosition(call.params) { it.metavarNames().any { n -> n.removePrefix("$") == name } }
+    private fun goPosition(pos: PositionBase): PositionBase = when (pos) {
+        is PositionBase.This -> PositionBase.Argument(0)
+        is PositionBase.AnyArgument -> PositionBase.Argument(0)
+        else -> pos
     }
+
+    private fun normalize(pos: PositionBaseWithModifiers): PositionBaseWithModifiers = when (pos) {
+        is PositionBaseWithModifiers.BaseOnly -> PositionBaseWithModifiers.BaseOnly(goPosition(pos.base))
+        is PositionBaseWithModifiers.WithModifiers ->
+            PositionBaseWithModifiers.WithModifiers(goPosition(pos.base), pos.modifiers)
+    }
+
+    private fun baseOnly(pos: PositionBase) = PositionBaseWithModifiers.BaseOnly(goPosition(pos))
 
     /**
-     * Position of the first argument whose condition satisfies [predicate].
-     *
-     * For [ParamConstraint.Concrete] the list index is the argument index. For
-     * [ParamConstraint.Partial] the [ParamPosition] is mapped: Concrete(idx) -> Argument(idx),
-     * Any(classifier) -> AnyArgument(classifier), Named(field) -> AnyArgument(field).
+     * Recursively walk the [SerializedCondition] tree (And/Or/Not) for the FIRST usable
+     * [SerializedCondition.ContainsMark] and return its position. A `This` ContainsMark is skipped
+     * in favour of a real argument position when one exists (the shared loader emits both a
+     * receiver-tainted and an argument-tainted variant for a 1-arg call). Returns null if there is
+     * no ContainsMark at all.
      */
-    private fun firstMetavarArgPosition(
-        params: ParamConstraint,
-        predicate: (ParamCondition) -> Boolean,
-    ): PositionBase? = when (params) {
-        is ParamConstraint.Concrete -> {
-            val idx = params.params.indexOfFirst { predicate(it) }
-            if (idx >= 0) PositionBase.Argument(idx) else null
-        }
-
-        is ParamConstraint.Partial -> {
-            val match = params.params.firstOrNull { predicate(it.condition) }
-            when (val pos = match?.position) {
-                is ParamPosition.Concrete -> PositionBase.Argument(pos.idx)
-                is ParamPosition.Any -> PositionBase.AnyArgument(pos.paramClassifier)
-                is ParamPosition.Named -> PositionBase.AnyArgument(pos.field)
-                null -> null
-            }
-        }
+    private fun firstContainsMarkPosition(cond: SerializedCondition?): PositionBase? {
+        if (cond == null) return null
+        val positions = collectContainsMarkPositions(cond)
+        return positions.firstOrNull { it !is PositionBase.This } ?: positions.firstOrNull()
     }
-}
 
-/**
- * Names of all metavars referenced by this condition.
- *
- * Unwraps [ParamCondition.And] and reads [IsMetavar], expanding both [MetavarAtom.Basic] and
- * [MetavarAtom.Complex] (whose component basics are flattened).
- */
-internal fun ParamCondition.metavarNames(): Set<String> = when (this) {
-    is ParamCondition.And -> conditions.flatMapTo(mutableSetOf()) { it.metavarNames() }
-    is IsMetavar -> metavar.basics.mapTo(mutableSetOf()) { it.name }
-    else -> emptySet()
+    private fun collectContainsMarkPositions(cond: SerializedCondition): List<PositionBase> = when (cond) {
+        is SerializedCondition.ContainsMark -> listOf(cond.pos.base)
+        is SerializedCondition.And -> cond.allOf.flatMap { collectContainsMarkPositions(it) }
+        is SerializedCondition.Or -> cond.anyOf.flatMap { collectContainsMarkPositions(it) }
+        is SerializedCondition.Not -> collectContainsMarkPositions(cond.not)
+        else -> emptyList()
+    }
 }

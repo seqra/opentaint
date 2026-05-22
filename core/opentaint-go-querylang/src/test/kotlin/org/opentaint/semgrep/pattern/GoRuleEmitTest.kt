@@ -19,8 +19,7 @@ class GoRuleEmitTest {
         val rule = loadedRules.rulesWithMeta.first()
 
         val emitter = GoTaintRuleEmitter()
-        TODO()
-//        return emitter.emit(rule.first.ruleId, rule.first) to emitter
+        return emitter.emit(rule.first.ruleId, rule.first) to emitter
     }
 
     @Test fun sourceSinkEmitsExpectedConfig() {
