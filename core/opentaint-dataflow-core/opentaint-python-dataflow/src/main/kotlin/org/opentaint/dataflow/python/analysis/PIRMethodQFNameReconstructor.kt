@@ -4,6 +4,7 @@ import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRBindFunctionExpr
 import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClassType
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRGlobalNameRef
 import org.opentaint.ir.api.python.PIRInstruction
@@ -24,7 +25,6 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
 
     private fun compute(): Map<PIRInstruction, Set<String>> {
         graph.statements().forEach { addEntry(it, NameBinding.Empty) }
-
         loop()
 
         return result
@@ -41,8 +41,8 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
         }
     }
 
-    private fun processEmpty(inst: PIRInstruction): NameBinding? =
-        when (inst) {
+    private fun processEmpty(inst: PIRInstruction): NameBinding? {
+        return when (inst) {
             is PIRReadName -> {
                 val name = when (val ref = inst.ref) {
                     is PIRGlobalNameRef -> NameEntry.GlobalRef(ref.qualifiedName)
@@ -50,15 +50,34 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 }
                 NameBinding.LocalBinding(inst.target.index, name)
             }
+
             is PIRAssign -> when (val rhv = inst.expr) {
                 is PIRParameterRef ->
                     NameBinding.LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
+
                 is PIRBindFunctionExpr ->
                     NameBinding.LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
+
                 else -> null
             }
+
+            is PIRCall -> {
+                val resolved = inst.resolvedCallee ?: return null
+                saveResult(inst, NameEntry.GlobalRef(resolved))
+
+                val targetIdx = inst.target?.index
+                val resultQn = resultTypeQn(resolved)
+
+                if (targetIdx != null && resultQn != null) {
+                    NameBinding.LocalBinding(targetIdx, NameEntry.GlobalRef(resultQn))
+                } else {
+                    null
+                }
+            }
+
             else -> null
         }
+    }
 
     private fun processLocalBinding(inst: PIRInstruction, entry: NameBinding.LocalBinding): List<NameBinding.LocalBinding> = buildList {
         val idx = entry.idx
@@ -104,8 +123,9 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
 
                     if (targetIdx != null) {
                         val qn = entry.name.flattenOrNull()
-                        if (qn != null && cp.findClassOrNull(qn) != null) {
-                            this += NameBinding.LocalBinding(targetIdx, entry.name)
+                        val resultTypeQn = qn?.let { resultTypeQn(it) }
+                        if (resultTypeQn != null) {
+                            this += NameBinding.LocalBinding(targetIdx, NameEntry.GlobalRef(resultTypeQn))
                         }
                     }
                 }
@@ -123,6 +143,12 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 }
             }
         }
+    }
+
+    private fun resultTypeQn(calleeQn: String): String? {
+        if (cp.findClassOrNull(calleeQn) != null) return calleeQn
+        val returnType = cp.findFunctionOrNull(calleeQn)?.returnType as? PIRClassType ?: return null
+        return returnType.qualifiedName.ifEmpty { null }
     }
 
     private fun saveResult(inst: PIRInstruction, nameEntry: NameEntry) {

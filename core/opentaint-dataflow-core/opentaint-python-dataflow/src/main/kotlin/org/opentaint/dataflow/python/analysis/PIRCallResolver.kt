@@ -2,15 +2,22 @@ package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.*
+import org.opentaint.ir.impl.python.PIRUnknownFunction
+import org.opentaint.ir.impl.python.PIRUnknownModule
 
 /**
  * Resolves PIRCall instructions to concrete PIRFunction callees.
  *
- * Resolution order:
- *  1. mypy's static resolution via [PIRCall.resolvedCallee].
- *  2. Flow-sensitive name reconstruction from [PIRMethodQFNameReconstructor] — handles
- *     module-imported names, closures (`PIRBindFunctionExpr`), chained attribute
- *     access, and constructor-typed locals. Cached per method.
+ * All callee-name candidates — mypy's static `resolvedCallee`, names
+ * reconstructed from receiver types / constructor-typed locals, names
+ * propagated through `PIRReadName` / `PIRBindFunctionExpr` chains — are
+ * produced by [PIRMethodQFNameReconstructor] in a single pass per
+ * method. This class only translates those candidate qualified names
+ * to `PIRFunction`s: real ones via [PIRClasspath.findFunctionOrNull],
+ * or a synthetic [PIRUnknownFunction] when no PIR body exists. The
+ * synthetic path lets taint rules keyed on stdlib / library FQNs
+ * (`builtins.str.upper`, etc.) match calls whose callee has no body
+ * loaded into the classpath.
  */
 class PIRCallResolver(
     private val cp: PIRClasspath,
@@ -18,21 +25,28 @@ class PIRCallResolver(
 ) {
 
     private val perMethodNames: MutableMap<PIRFunction, Map<PIRInstruction, Set<String>>> = hashMapOf()
+    private val syntheticByName: MutableMap<String, PIRUnknownFunction> = hashMapOf()
 
     private fun namesFor(method: PIRFunction): Map<PIRInstruction, Set<String>> =
         perMethodNames.getOrPut(method) {
             PIRMethodQFNameReconstructor.compute(method, applicationGraph)
         }
 
-    fun resolve(call: PIRCall, method: PIRFunction): Set<PIRFunction> = buildSet {
-        // 1. mypy's resolvedCallee. The proto-to-flat layer normalizes mypy's
-        // lexical names (`m.outer.inner`) to the lifter's flat-encoded qualified
-        // names (`m.outer$inner`) at module-build time, so a direct lookup
-        // against the classpath qn registry succeeds for any fully-qualified
-        // in-module callee.
-        call.resolvedCallee?.let { cp.findFunctionOrNull(it)?.let(::add) }
+    private fun namesFor(method: PIRFunction, call: PIRCall) =
+        namesFor(method).getOrDefault(call, emptySet())
 
-        // 2. Flow-sensitive QN candidates from the reconstructor.
-        namesFor(method)[call]?.forEach { cp.findFunctionOrNull(it)?.let(::add) }
-    }
+    fun resolve(call: PIRCall, method: PIRFunction): Set<PIRFunction> =
+        namesFor(method, call).mapTo(hashSetOf()) {
+            cp.findFunctionOrNull(it)
+                ?: syntheticFor(it)
+        }
+
+    private fun syntheticFor(qualifiedName: String): PIRUnknownFunction =
+        syntheticByName.getOrPut(qualifiedName) {
+            PIRUnknownFunction(
+                name = qualifiedName.substringAfterLast('.'),
+                qualifiedName = qualifiedName,
+                module = PIRUnknownModule(qualifiedName.substringBeforeLast('.', ""), emptyList()),
+            )
+        }
 }
