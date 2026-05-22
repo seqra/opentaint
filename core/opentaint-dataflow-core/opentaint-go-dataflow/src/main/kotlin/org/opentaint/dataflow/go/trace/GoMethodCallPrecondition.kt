@@ -1,8 +1,8 @@
 package org.opentaint.dataflow.go.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
@@ -11,7 +11,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondit
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
-import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
@@ -20,8 +19,11 @@ import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCa
 import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.rules.TaintRules
+import org.opentaint.dataflow.taint.InitialFactReader
+import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.value.GoIRValue
+import org.opentaint.util.onSome
 
 /**
  * Call-site precondition for Go. For each fact observed after a call statement,
@@ -33,6 +35,7 @@ import org.opentaint.ir.go.value.GoIRValue
  * (no condition expressions, no aliasing).
  */
 class GoMethodCallPrecondition(
+    private val apManager: ApManager,
     private val returnValueFromFramework: GoIRValue?,
     private val callExpr: GoCallExpr,
     private val statement: GoIRInst,
@@ -48,9 +51,6 @@ class GoMethodCallPrecondition(
 
     /** Dummy assign-action used to identify a source rule in a [TaintRulePrecondition.Source]. */
     private data class GoSourceAction(val rule: TaintRules.Source) : CommonTaintAssignAction
-
-    /** Dummy action identifying a pass rule application in a [TaintRulePrecondition.Pass]. */
-    private data class GoPassAction(val rule: TaintRules.Pass) : CommonTaintAction
 
     /** Pass rule condition: the single precondition fact (in caller namespace). */
     private data class GoPassRuleCondition(val fact: InitialFactAp) : PassRuleCondition
@@ -148,36 +148,25 @@ class GoMethodCallPrecondition(
         if (passRules.isEmpty()) return emptyList()
 
         val result = mutableListOf<TaintRulePrecondition.Pass>()
+        val entryFactReader = InitialFactReader(fact.rebase(startFactBase), apManager)
+        val rulePreconditionEvaluator = TaintPassActionPreconditionEvaluator(entryFactReader)
+
         for (rule in passRules) {
-            val (fromBase, fromAccessors) = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
-            if (fromAccessors.isNotEmpty()) {
-                TODO("Complex `from` not modeled")
+            val from = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
+            val to = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
+
+            rulePreconditionEvaluator.propagateData(rule, rule, from, to).onSome { facts ->
+                facts.forEach { calleeFact ->
+                    val callerFacts = GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, calleeFact.second)
+                    for (callerFact in callerFacts) {
+                        result += TaintRulePrecondition.Pass(
+                            rule,
+                            setOf(calleeFact.first),
+                            GoPassRuleCondition(callerFact),
+                        )
+                    }
+                }
             }
-
-            val (toBase, toAccessors) = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
-            if (toBase != startFactBase) continue
-
-            val delta = fact.readAccessors(toAccessors.asReversed())
-                ?: continue
-
-            // Build the precondition fact in callee namespace at `fromBase`, then map back to caller.
-            val calleeFact = delta.rebase(fromBase)
-            val callerFacts = GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, calleeFact)
-            for (callerFact in callerFacts) {
-                result += TaintRulePrecondition.Pass(
-                    rule,
-                    setOf(GoPassAction(rule)),
-                    GoPassRuleCondition(callerFact),
-                )
-            }
-        }
-        return result
-    }
-
-    private fun InitialFactAp.readAccessors(accessors: List<Accessor>): InitialFactAp? {
-        var result = this
-        for (accessor in accessors) {
-            result = result.readAccessor(accessor) ?: return null
         }
         return result
     }
