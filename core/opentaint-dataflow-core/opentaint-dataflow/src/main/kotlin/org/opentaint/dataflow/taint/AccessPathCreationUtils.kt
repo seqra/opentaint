@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.mkAccessPath
 
 fun ApManager.mkAccessPath(
     position: PositionAccess,
