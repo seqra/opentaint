@@ -13,6 +13,8 @@ configurations.api.get().let { config ->
 
 dependencies {
     implementation(project(":opentaint-java-querylang"))
+    implementation("org.opentaint.opentaint-dataflow-core:opentaint-go-dataflow")
+    implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
     implementation(KotlinDependency.Libs.kotlin_logging)
     antlr(Libs.antlr)
     implementation(Libs.antlr_runtime)
