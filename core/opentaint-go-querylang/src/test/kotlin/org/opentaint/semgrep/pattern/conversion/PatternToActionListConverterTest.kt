@@ -52,7 +52,7 @@ class PatternToActionListConverterTest {
         assertEquals(goNamed("fmt"), call.enclosingClassName)
         assertEquals(ParamCondition.True, call.obj)
         assertEquals(
-            ParamConstraint.Concrete(listOf(IsMetavar(MetavarAtom.create("X")))),
+            ParamConstraint.Concrete(listOf(IsMetavar(MetavarAtom.create("\$X")))),
             call.params,
         )
     }
@@ -61,11 +61,11 @@ class PatternToActionListConverterTest {
         val a = convertOk("\$DB.Exec(\$QUERY, ...)")
         val call = a.actions.single() as MethodCall
         assertEquals(SignatureName.Concrete("Exec"), call.methodName)
-        assertEquals(IsMetavar(MetavarAtom.create("DB")), call.obj)
+        assertEquals(IsMetavar(MetavarAtom.create("\$DB")), call.obj)
         assertEquals(null, call.enclosingClassName)
         val params = call.params as ParamConstraint.Partial
         assertEquals(
-            listOf(ParamPattern(ParamPosition.Concrete(0), IsMetavar(MetavarAtom.create("QUERY")))),
+            listOf(ParamPattern(ParamPosition.Concrete(0), IsMetavar(MetavarAtom.create("\$QUERY")))),
             params.params,
         )
     }
@@ -135,13 +135,13 @@ class PatternToActionListConverterTest {
         val a = convertOk("\$X := getInput()")
         val call = a.actions.single() as MethodCall
         assertEquals(SignatureName.Concrete("getInput"), call.methodName)
-        assertEquals(IsMetavar(MetavarAtom.create("X")), call.result)
+        assertEquals(IsMetavar(MetavarAtom.create("\$X")), call.result)
     }
 
     @Test fun assignBindsResult() {
         val a = convertOk("\$X = source.Read()")
         val call = a.actions.single() as MethodCall
-        assertEquals(IsMetavar(MetavarAtom.create("X")), call.result)
+        assertEquals(IsMetavar(MetavarAtom.create("\$X")), call.result)
     }
 
     @Test fun multiLhsAssignFailsGracefully() {
@@ -165,19 +165,19 @@ class PatternToActionListConverterTest {
         val a = convertOk("\$C := &http.Client{...}")
         val ctor = a.actions.single() as ConstructorCall
         assertEquals(goQualified("http", "Client"), ctor.className)
-        assertEquals(IsMetavar(MetavarAtom.create("C")), ctor.result)
+        assertEquals(IsMetavar(MetavarAtom.create("\$C")), ctor.result)
     }
 
     @Test fun funcDeclEmitsSignatureThenBody() {
         val a = convertOk("func \$H(\$E \$T) { sink(\$E) }")
         val sig = a.actions[0] as MethodSignature
-        assertEquals(SignatureName.MetaVar("H"), sig.methodName)
+        assertEquals(SignatureName.MetaVar("\$H"), sig.methodName)
         assertNull(sig.enclosingClassMetavar)
         assertTrue(sig.enclosingClassConstraints.isEmpty())
         assertEquals(
             listOf(
-                ParamPattern(ParamPosition.Concrete(0), IsMetavar(MetavarAtom.create("E"))),
-                ParamPattern(ParamPosition.Concrete(0), ParamCondition.TypeIs(TypeConstraint.MetaVar("T"))),
+                ParamPattern(ParamPosition.Concrete(0), IsMetavar(MetavarAtom.create("\$E"))),
+                ParamPattern(ParamPosition.Concrete(0), ParamCondition.TypeIs(TypeConstraint.MetaVar("\$T"))),
             ),
             sig.params.params,
         )
@@ -194,7 +194,7 @@ class PatternToActionListConverterTest {
     @Test fun returnEmitsMethodExit() {
         val a = convertOk("func \$F() { return \$X }")
         val exit = a.actions.last() as MethodExit
-        assertEquals(listOf(IsMetavar(MetavarAtom.create("X"))), exit.retVals)
+        assertEquals(listOf(IsMetavar(MetavarAtom.create("\$X"))), exit.retVals)
     }
 
     @Test fun returnCallLinearizesAndDoesNotCrash() {

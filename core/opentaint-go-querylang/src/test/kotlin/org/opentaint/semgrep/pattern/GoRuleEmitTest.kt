@@ -13,11 +13,14 @@ import kotlin.test.assertTrue
 class GoRuleEmitTest {
     private fun emitConfig(resource: String): Pair<GoTaintConfig, GoTaintRuleEmitter> {
         val yaml = javaClass.classLoader.getResource(resource)!!.readText()
-        val loader = SemgrepRuleLoader(mapOf("go" to GoLanguageStrategy()))
+        val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path(resource), Path("."), SemgrepLoadTrace())
-        val (meta, rule) = loader.loadGoRules().single()
+        val loadedRules = loader.loadRules()
+        val rule = loadedRules.rulesWithMeta.first()
+
         val emitter = GoTaintRuleEmitter()
-        return emitter.emit(meta.ruleId, rule) to emitter
+        TODO()
+//        return emitter.emit(rule.first.ruleId, rule.first) to emitter
     }
 
     @Test fun sourceSinkEmitsExpectedConfig() {

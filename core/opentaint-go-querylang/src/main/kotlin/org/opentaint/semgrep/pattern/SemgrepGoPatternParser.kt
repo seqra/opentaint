@@ -98,7 +98,7 @@ class SemgrepGoPatternParser : SemgrepPatternParser<SemgrepGoPattern> {
 // ----------------------------------------------------------------------------
 
 private fun GoParser.IdentifierContext.parseName(): Name {
-    METAVAR_IDENT()?.let { return MetavarName(it.text.removePrefix("$")) }
+    METAVAR_IDENT()?.let { return MetavarName(it.text) }
     METAVAR_ELLIPSIS()?.let { return MetavarName(it.text.removePrefix("$...")) }
     ANONYMOUS_METAVAR()?.let { return MetavarName("_") }
     return ConcreteName(text)
@@ -237,7 +237,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
 
     private fun parseParameterDecl(ctx: GoParser.ParameterDeclContext): ParameterDecl {
         ctx.METAVAR_ELLIPSIS()?.let { return EllipsisMetavarParam(it.text.removePrefix("$...")) }
-        ctx.METAVAR_IDENT()?.let { return MetavarParam(it.text.removePrefix("$")) }
+        ctx.METAVAR_IDENT()?.let { return MetavarParam(it.text) }
         if (ctx.type_() == null && ctx.ELLIPSIS() != null) return EllipsisParam
         val type = ctx.type_()?.let { parseType(it) } ?: return EllipsisParam
         val names = ctx.identifierList()?.identifier()?.map { it.parseName() }.orEmpty()
@@ -262,7 +262,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
             val (pkg, sel) = parseQualifiedIdentParts(q)
             return QualifiedType(pkg, sel, typeArgs)
         }
-        ctx.METAVAR_IDENT()?.let { return MetavarType(it.text.removePrefix("$")) }
+        ctx.METAVAR_IDENT()?.let { return MetavarType(it.text) }
         ctx.IDENTIFIER()?.let { return NamedType(ConcreteName(it.text), typeArgs) }
         throw UnsupportedGoElement(ctx)
     }
@@ -572,7 +572,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
                     if (next is TerminalNode) {
                         val sel: Name = when (next.symbol.type) {
                             GoParser.IDENTIFIER -> ConcreteName(next.text)
-                            GoParser.METAVAR_IDENT -> MetavarName(next.text.removePrefix("$"))
+                            GoParser.METAVAR_IDENT -> MetavarName(next.text)
                             GoParser.ELLIPSIS -> MetavarName("...")
                             else -> ConcreteName(next.text)
                         }
@@ -638,7 +638,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
     private fun parseMethodExpr(ctx: GoParser.MethodExprContext): SelectorExpr {
         val type = parseType(ctx.type_())
         val sel: Name = when {
-            ctx.METAVAR_IDENT() != null -> MetavarName(ctx.METAVAR_IDENT().text.removePrefix("$"))
+            ctx.METAVAR_IDENT() != null -> MetavarName(ctx.METAVAR_IDENT().text)
             else -> ConcreteName(ctx.IDENTIFIER().text)
         }
         // We model type-as-receiver as Raw (since SelectorExpr.obj expects a pattern). Use Identifier with concrete-name fallback.
@@ -670,7 +670,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
         }
         // typed metavar ($X : T)
         if (ctx.METAVAR_IDENT() != null && ctx.type_() != null) {
-            return TypedMetavar(ctx.METAVAR_IDENT().text.removePrefix("$"), parseType(ctx.type_()))
+            return TypedMetavar(ctx.METAVAR_IDENT().text, parseType(ctx.type_()))
         }
         ctx.expression()?.let { return ParenExpr(parseExpression(it)) }
         throw UnsupportedGoElement(ctx)
@@ -681,7 +681,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
             val (pkg, sel) = parseQualifiedIdentParts(it)
             return SelectorExpr(Identifier(pkg), sel)
         }
-        ctx.METAVAR_IDENT()?.let { return Metavar(it.text.removePrefix("$")) }
+        ctx.METAVAR_IDENT()?.let { return Metavar(it.text) }
         ctx.ANONYMOUS_METAVAR()?.let { return Metavar("_") }
         ctx.METAVAR_ELLIPSIS()?.let { return EllipsisMetavar(it.text.removePrefix("$...")) }
         ctx.IDENTIFIER()?.let { return Identifier(ConcreteName(it.text)) }
@@ -693,10 +693,10 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
         val left = children.first() as TerminalNode
         val right = children.last() as TerminalNode
         val pkg: Name = if (left.symbol.type == GoParser.METAVAR_IDENT) {
-            MetavarName(left.text.removePrefix("$"))
+            MetavarName(left.text)
         } else ConcreteName(left.text)
         val sel: Name = if (right.symbol.type == GoParser.METAVAR_IDENT) {
-            MetavarName(right.text.removePrefix("$"))
+            MetavarName(right.text)
         } else ConcreteName(right.text)
         return pkg to sel
     }
@@ -730,7 +730,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
     private fun parseString(ctx: GoParser.String_Context): SemgrepGoPattern {
         ctx.METAVAR_LITERAL()?.let {
             val inner = it.text.removeSurrounding("\"")
-            return StringLiteral(MetavarName(inner.removePrefix("$")))
+            return StringLiteral(MetavarName(inner))
         }
         ctx.ELLIPSIS_LITERAL()?.let { return StringEllipsis }
         ctx.RAW_STRING_LIT()?.let { return StringLiteral(ConcreteName(unquoteString(it.text))) }

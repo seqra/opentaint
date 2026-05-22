@@ -28,8 +28,8 @@ class SemgrepGoPatternParserTest {
         // so we expect a TypeOnlyPattern wrapping a MetavarType.
         val ast = parse("\$X")
         assertTrue(
-            ast is TypeOnlyPattern && (ast as TypeOnlyPattern).type == MetavarType("X"),
-            "Expected TypeOnlyPattern(MetavarType(X)), got $ast"
+            ast is TypeOnlyPattern && (ast as TypeOnlyPattern).type == MetavarType("\$X"),
+            "Expected TypeOnlyPattern(MetavarType(\$X)), got $ast"
         )
     }
 
@@ -59,7 +59,7 @@ class SemgrepGoPatternParserTest {
             "Expected obj to be Identifier(fmt), got $obj"
         )
         // Args contain $X metavar
-        assertNotNull(find(call) { it is Metavar && it.name == "X" })
+        assertNotNull(find(call) { it is Metavar && it.name == "\$X" })
     }
 
     @Test fun deepEllipsis() {
@@ -71,7 +71,7 @@ class SemgrepGoPatternParserTest {
         val ast = parse("func \$F(\$X int) int")
         val decl = find(ast) { it is FuncDecl } as? FuncDecl
         assertNotNull(decl)
-        assertEquals(MetavarName("F"), decl!!.name)
+        assertEquals(MetavarName("\$F"), decl!!.name)
     }
 
     @Test fun importStmt() {
@@ -83,7 +83,7 @@ class SemgrepGoPatternParserTest {
         val ast = parse("\"\$STR\"")
         val sl = find(ast) { it is StringLiteral && it.content is MetavarName } as? StringLiteral
         assertNotNull(sl)
-        assertEquals(MetavarName("STR"), sl!!.content)
+        assertEquals(MetavarName("\$STR"), sl!!.content)
     }
 
     @Test fun ellipsisStringLit() {
