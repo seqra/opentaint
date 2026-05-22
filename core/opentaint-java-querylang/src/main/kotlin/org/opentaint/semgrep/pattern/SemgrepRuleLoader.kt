@@ -6,6 +6,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternActionList
 import org.opentaint.semgrep.pattern.conversion.SemgrepRuleAutomataBuilder
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintAutomataJoinMetaVarRef
@@ -140,6 +141,70 @@ class SemgrepRuleLoader(
             }
 
         return RuleLoadResult(loaded, disabledRules)
+    }
+
+    /**
+     * Option B emit path for Go: produces, for each registered Go taint-mode rule, a [SemgrepTaintRule]
+     * whose source/sink/propagator patterns are shared [SemgrepPatternActionList]s.
+     *
+     * Returns SHARED types only (no `opentaint-go-dataflow` types), so this module does NOT depend on
+     * `opentaint-go-querylang`. The caller (a Go test) is responsible for running the Go emitter on the
+     * result. Works from per-pattern action lists; does NOT build a taint automaton.
+     *
+     * Sanitizers are dropped in v1 (GoTaintConfig has no cleaner concept). A converted rule with neither
+     * usable sources nor sinks is skipped.
+     */
+    fun loadGoRules(): List<Pair<RuleMetadata, SemgrepTaintRule<SemgrepPatternActionList>>> {
+        registeredRules.values.toList()
+            .forEach { parseRule(it, forceLibraryMode = false) }
+
+        resolveRuleOverrides()
+
+        val result = mutableListOf<Pair<RuleMetadata, SemgrepTaintRule<SemgrepPatternActionList>>>()
+        parsedRules.values
+            .filterIsInstance<NormalRule<Formula>>()
+            .filter { it.info.language == "go" }
+            .forEach { normalRule ->
+                // mode already guarantees taint rules carry SemgrepTaintRule; non-taint Go rules are skipped.
+                val taintRule = normalRule.rule as? SemgrepTaintRule<Formula> ?: return@forEach
+                val strategy = strategies["go"] ?: return@forEach
+
+                val trace = normalRule.info.ruleTrace.stepTrace(Step.BUILD_ACTION_LIST_CONVERSION)
+                val rawTaintRule = convertToRawRule(taintRule, trace) as? SemgrepTaintRule<RuleWithMetaVars<RawSemgrepRule, RawMetaVarInfo>>
+                    ?: return@forEach
+
+                val converted = SemgrepTaintRule(
+                    sources = rawTaintRule.sources.mapNotNull { s ->
+                        convertPattern(strategy, s.pattern.rule, trace)?.let { s.updatePattern(it) }
+                    },
+                    sinks = rawTaintRule.sinks.mapNotNull { s ->
+                        convertPattern(strategy, s.pattern.rule, trace)?.let { s.updatePattern(it) }
+                    },
+                    propagators = rawTaintRule.propagators.mapNotNull { p ->
+                        convertPattern(strategy, p.pattern.rule, trace)?.let { p.updatePattern(it) }
+                    },
+                    sanitizers = emptyList(),
+                )
+
+                if (converted.sinks.isEmpty() && converted.sources.isEmpty()) return@forEach
+                result += normalRule.info.metadata to converted
+            }
+        return result
+    }
+
+    /**
+     * Binds the strategy's pattern type [P] once so that [SemgrepPatternParser.parseOrNull] and
+     * [ActionListBuilder.createActionList] can be chained across a single capture (the caller holds a
+     * star-projected [LanguageStrategy]<*>; Kotlin captures [P] consistently inside this helper).
+     */
+    private fun <P : Any> convertPattern(
+        strategy: LanguageStrategy<P>,
+        raw: RawSemgrepRule,
+        trace: SemgrepRuleLoadStepTrace,
+    ): SemgrepPatternActionList? {
+        val patternStr = raw.patterns.firstOrNull() ?: return null
+        val parsed = strategy.parser.parseOrNull(patternStr, trace) ?: return null
+        return strategy.converter.createActionList(parsed, trace)
     }
 
     private data class RuleInfo(
