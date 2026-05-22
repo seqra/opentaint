@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.go.rules
 
+import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
@@ -9,7 +10,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 
 sealed interface TaintRules {
-    data class Source(val function: String, val mark: String, val pos: PositionBase) : TaintRules, CommonTaintConfigurationSource
+    data class Source(val function: String, val mark: String, val pos: PositionBase) : TaintRules, CommonTaintConfigurationSource, CommonTaintAction
 
     data class Sink(
         val function: String,
@@ -27,7 +28,7 @@ sealed interface TaintRules {
         val function: String,
         val from: PositionBaseWithModifiers,
         val to: PositionBaseWithModifiers,
-    ) : TaintRules, CommonTaintConfigurationItem
+    ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
 }
 
 data class GoTaintConfig(

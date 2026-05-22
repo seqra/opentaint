@@ -27,10 +27,16 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
+import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.PositionTypeResolver
+import org.opentaint.dataflow.taint.TaintPassActionEvaluator
+import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.value.GoIRValue
+import org.opentaint.util.onSome
 
 /**
  * Handles interprocedural taint propagation at call sites:
@@ -213,25 +219,27 @@ class GoMethodCallFlowFunction(
         val name = calleeName ?: return emptyList()
         val passRules = rulesProvider.passRulesForCall(name)
 
+        val passFactReader = FinalFactReader(currentFactAp.rebase(startFactBase), apManager)
+        val passEvaluator = TaintPassActionEvaluator(
+            apManager, FactTypeChecker.Dummy, passFactReader, DummyPositionTypeResolver
+        )
+
         val result = mutableListOf<FinalFactAp>()
         for (rule in passRules) {
-            val (fromBase, fromAccessors) = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
-            if (startFactBase != fromBase) continue
+            val from = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.from)
+            val to = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
 
-            val (toBase, toAccessors) = GoFlowFunctionUtils.resolvePositionWithModifiers(rule.to)
-
-            if (fromAccessors.isNotEmpty()) {
-                TODO("Complex from")
+            passEvaluator.propagateData(rule, rule, from, to).onSome { facts ->
+                facts.forEach { newFact ->
+                    result += mapMethodExitToReturnFlowFact(statement, newFact.fact, FactTypeChecker.Dummy)
+                }
             }
-
-            var newFact = currentFactAp.rebase(toBase)
-            for (accessor in toAccessors) {
-                newFact = newFact.prependAccessor(accessor)
-            }
-
-            result += mapMethodExitToReturnFlowFact(statement, newFact, FactTypeChecker.Dummy)
         }
         return result
+    }
+
+    object DummyPositionTypeResolver : PositionTypeResolver {
+        override fun resolve(position: PositionAccess): CommonType? = null
     }
 
     override fun propagateNDFactToFactResolutionFailure(

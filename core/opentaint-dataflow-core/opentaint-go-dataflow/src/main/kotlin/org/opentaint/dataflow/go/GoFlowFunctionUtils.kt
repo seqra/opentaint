@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
+import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
 import org.opentaint.ir.go.expr.*
@@ -269,10 +270,10 @@ object GoFlowFunctionUtils {
         }
     }
 
-    fun resolvePositionWithModifiers(pos: PositionBaseWithModifiers): Pair<AccessPathBase, List<Accessor>> {
-        val base = resolvePosition(pos.base)
+    fun resolvePositionWithModifiers(pos: PositionBaseWithModifiers): PositionAccess {
+        val base = PositionAccess.Simple(resolvePosition(pos.base))
         val accessors = when (pos) {
-            is PositionBaseWithModifiers.BaseOnly -> emptyList()
+            is PositionBaseWithModifiers.BaseOnly -> return base
             is PositionBaseWithModifiers.WithModifiers -> pos.modifiers.map { mod ->
                 when (mod) {
                     is PositionModifier.ArrayElement -> ElementAccessor
@@ -281,7 +282,10 @@ object GoFlowFunctionUtils {
                 }
             }
         }
-        return Pair(base, accessors)
+
+        return accessors.fold(base as PositionAccess) { ac, accessor ->
+            PositionAccess.Complex(ac, accessor)
+        }
     }
 
     private val globalsNotSupportedReported = AtomicBoolean(false)
