@@ -1,131 +1,38 @@
 package org.opentaint.dataflow.python.analysis
 
+import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.*
 
 /**
  * Resolves PIRCall instructions to concrete PIRFunction callees.
- * Uses mypy's static resolution (PIRCall.resolvedCallee), falling back to
- * type-based resolution for method calls where mypy doesn't set resolvedCallee.
+ *
+ * Resolution order:
+ *  1. mypy's static resolution via [PIRCall.resolvedCallee].
+ *  2. Flow-sensitive name reconstruction from [PIRMethodQFNameReconstructor] — handles
+ *     module-imported names, closures (`PIRBindFunctionExpr`), chained attribute
+ *     access, and constructor-typed locals. Cached per method.
  */
-class PIRCallResolver(private val cp: PIRClasspath) {
+class PIRCallResolver(
+    private val cp: PIRClasspath,
+    private val applicationGraph: PIRApplicationGraph,
+) {
 
-    /**
-     * Resolves a call with fallback: if resolvedCallee is null, searches the method's
-     * instructions for a preceding PIRLoadAttr(target=callee, obj, attr)
-     * and constructs the qualified name from obj.type + attr, or by walking
-     * back to a [PIRReadName] that defined `obj`.
-     */
-    fun resolve(call: PIRCall, method: PIRFunction): PIRFunction? {
-        // Primary: use resolvedCallee. The proto-to-flat layer normalizes
-        // mypy's lexical names (`m.outer.inner`) to the lifter's flat-encoded
-        // qualified names (`m.outer$inner`) at module-build time, so a direct
-        // lookup against the classpath qn registry succeeds for any
-        // fully-qualified in-module callee.
-        val qualifiedName = call.resolvedCallee
-        if (qualifiedName != null) {
-            cp.findFunctionOrNull(qualifiedName)?.let { return it }
+    private val perMethodNames: MutableMap<PIRFunction, Map<PIRInstruction, Set<String>>> = hashMapOf()
 
-            // Fallback for nested functions: mypy may set resolvedCallee to just
-            // the short name (e.g. "process" instead of "Module.outer.process").
-            // Synthesize the lexical qn by prepending the enclosing method's qn,
-            // then translate the trailing `.` separator into the lifter's `$`
-            // encoding so the synthesized name matches the flat function's qn.
-            // (This local synthesis happens after the proto-to-flat normalizer
-            // has already run on every emitted resolvedCallee, so the path
-            // `method.qn + "." + shortName` only appears here.)
-            if ("." !in qualifiedName) {
-                val lexicalCandidate = "${method.qualifiedName}.$qualifiedName"
-                cp.findFunctionOrNull(lexicalCandidate)?.let { return it }
-                val flatCandidate = "${method.qualifiedName}\$$qualifiedName"
-                cp.findFunctionOrNull(flatCandidate)?.let { return it }
-            }
+    private fun namesFor(method: PIRFunction): Map<PIRInstruction, Set<String>> =
+        perMethodNames.getOrPut(method) {
+            PIRMethodQFNameReconstructor.compute(method, applicationGraph)
         }
 
-        // Fallback: find the PIRLoadAttr that loaded the callee
-        val calleeValue = call.callee
-        if (calleeValue is PIRLocalVar) {
-            for (inst in method.instList) {
-                if (inst is PIRLoadAttr && inst.target.index == calleeValue.index) {
-                    val attrName = inst.attribute
+    fun resolve(call: PIRCall, method: PIRFunction): Set<PIRFunction> = buildSet {
+        // 1. mypy's resolvedCallee. The proto-to-flat layer normalizes mypy's
+        // lexical names (`m.outer.inner`) to the lifter's flat-encoded qualified
+        // names (`m.outer$inner`) at module-build time, so a direct lookup
+        // against the classpath qn registry succeeds for any fully-qualified
+        // in-module callee.
+        call.resolvedCallee?.let { cp.findFunctionOrNull(it)?.let(::add) }
 
-                    // Strategy 1: Use obj's type name (for instance method calls: obj.method())
-                    val objType = inst.obj.type
-                    val typeName = objType.typeName
-                    if (typeName != "Any") {
-                        val resolved1 = cp.findFunctionOrNull("$typeName.$attrName")
-                        if (resolved1 != null) return resolved1
-                    }
-
-                    // Strategy 2 / 2b: the load's `obj` is now always a local;
-                    // the actual class/module name lives on a preceding
-                    // PIRReadName that filled `obj`. Walk back to find it.
-                    if (inst.obj is PIRLocalVar) {
-                        val objLocalIndex = (inst.obj as PIRLocalVar).index
-                        val nameRef = findReadNameRef(objLocalIndex, method)
-                        if (nameRef != null) {
-                            val ownerName = when (nameRef) {
-                                is PIRGlobalNameRef -> nameRef.qualifiedName
-                                is PIRModuleNameRef -> nameRef.module
-                            }
-                            val resolved2 = cp.findFunctionOrNull("$ownerName.$attrName")
-                            if (resolved2 != null) return resolved2
-                        }
-                    }
-
-                    // Strategy 3: For local variables with unknown type, try to infer the class
-                    // from the constructor call that assigned the variable
-                    if (inst.obj is PIRLocalVar) {
-                        val localIndex = (inst.obj as PIRLocalVar).index
-                        val className = inferClassFromConstructor(localIndex, method)
-                        if (className != null) {
-                            val resolved3 = cp.findFunctionOrNull("$className.$attrName")
-                            if (resolved3 != null) return resolved3
-                        }
-                    }
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Find the `PIRNameRef` whose [PIRReadName] resolves into the local
-     * slot with [localIndex]. Returns null when no such read is in scope
-     * (e.g. the local was filled by some other instruction).
-     */
-    private fun findReadNameRef(localIndex: Int, method: PIRFunction): PIRNameRef? {
-        for (inst in method.instList) {
-            if (inst is PIRReadName && inst.target.index == localIndex) return inst.ref
-        }
-        return null
-    }
-
-    /**
-     * Infers the class of a local variable by finding the constructor call that assigned it.
-     * For `obj = MyClass()`, the PIRCall has resolvedCallee="module.MyClass".
-     * Returns the qualified class name or null.
-     */
-    private fun inferClassFromConstructor(localIndex: Int, method: PIRFunction): String? {
-        for (inst in method.instList) {
-            // Look for: PIRCall(target=PIRLocalVar(index=localIndex), resolvedCallee="module.ClassName")
-            if (inst is PIRCall && inst.target?.index == localIndex &&
-                inst.resolvedCallee != null
-            ) {
-                // The resolvedCallee might be a class name (for constructors)
-                val callee = inst.resolvedCallee!!
-                val cls = cp.findClassOrNull(callee)
-                if (cls != null) return cls.qualifiedName
-            }
-            // Also check: PIRAssign(target=PIRLocalVar(index=localIndex), expr=PIRLocalVar(tempIndex))
-            // where tempIndex was assigned from a constructor call
-            if (inst is PIRAssign && inst.target.index == localIndex &&
-                inst.expr is PIRLocalVar
-            ) {
-                val tempIndex = (inst.expr as PIRLocalVar).index
-                return inferClassFromConstructor(tempIndex, method)
-            }
-        }
-        return null
+        // 2. Flow-sensitive QN candidates from the reconstructor.
+        namesFor(method)[call]?.forEach { cp.findFunctionOrNull(it)?.let(::add) }
     }
 }

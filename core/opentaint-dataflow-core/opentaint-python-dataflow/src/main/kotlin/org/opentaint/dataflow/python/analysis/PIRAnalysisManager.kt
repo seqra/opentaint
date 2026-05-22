@@ -44,7 +44,8 @@ class PIRAnalysisManager(
     val taintConfig: PIRTaintConfig
 ) : PIRLanguageManager(cp), TaintAnalysisManager {
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
-    private val pirCallResolver = PIRCallResolver(cp)
+    private val pirApplicationGraph = PIRApplicationGraph(cp)
+    private val pirCallResolver = PIRCallResolver(cp, pirApplicationGraph)
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
@@ -119,7 +120,7 @@ class PIRAnalysisManager(
         val ctx = analysisContext as PIRMethodAnalysisContext
         val config = ctx.taint.taintConfig
         val pirCall = statement as PIRCall
-        val callee = pirCallResolver.resolve(pirCall, ctx.method)
+        val callee = pirCallResolver.resolve(pirCall, ctx.method).firstOrNull()
         return PIRMethodCallFlowFunction(
             pirCall, ctx.method, ctx, config, callee, apManager, returnValue
         )

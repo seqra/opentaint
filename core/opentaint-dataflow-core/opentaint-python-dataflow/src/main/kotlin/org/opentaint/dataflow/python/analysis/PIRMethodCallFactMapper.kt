@@ -34,7 +34,7 @@ class PIRMethodCallFactMapper(
      * Returns 0 if the callee cannot be resolved or has no implicit parameters.
      */
     private fun callOffset(call: PIRCall): Int {
-        val callee = callResolver.resolve(call, callerMethod) ?: return 0
+        val callee = callResolver.resolve(call, callerMethod).firstOrNull() ?: return 0
         return PIRFlowFunctionUtils.implicitParamOffset(callee)
     }
 

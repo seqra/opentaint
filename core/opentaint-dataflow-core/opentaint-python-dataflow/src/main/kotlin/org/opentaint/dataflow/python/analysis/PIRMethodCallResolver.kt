@@ -25,15 +25,15 @@ class PIRMethodCallResolver(
     ) {
         val pirCall = location as PIRCall
         val callerMethod = (callerContext as PIRMethodAnalysisContext).method
-        val callee = callResolver.resolve(pirCall, callerMethod)
-        if (callee == null) {
-            val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
+        val callees = callResolver.resolve(pirCall, callerMethod)
+        val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
+        if (callees.isEmpty()) {
             analyzer.handleMethodCallResolutionFailure(callExpr, failureHandler)
             return
         }
-        val methodWithContext = MethodWithContext(callee, EmptyMethodContext)
-        val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
-        analyzer.handleResolvedMethodCall(methodWithContext, handler)
+        for (callee in callees) {
+            analyzer.handleResolvedMethodCall(MethodWithContext(callee, EmptyMethodContext), handler)
+        }
     }
 
     override fun resolvedMethodCalls(
@@ -43,9 +43,10 @@ class PIRMethodCallResolver(
     ): List<MethodCallResolutionResult> {
         val pirCall = location as PIRCall
         val callerMethod = (callerContext as PIRMethodAnalysisContext).method
-        val callee = callResolver.resolve(pirCall, callerMethod)
-            ?: return listOf(MethodCallResolutionResult.ResolutionFailure)
-
-        return listOf(MethodCallResolutionResult.ResolvedMethod(MethodWithContext(callee, EmptyMethodContext)))
+        val callees = callResolver.resolve(pirCall, callerMethod)
+        if (callees.isEmpty()) return listOf(MethodCallResolutionResult.ResolutionFailure)
+        return callees.map {
+            MethodCallResolutionResult.ResolvedMethod(MethodWithContext(it, EmptyMethodContext))
+        }
     }
 }

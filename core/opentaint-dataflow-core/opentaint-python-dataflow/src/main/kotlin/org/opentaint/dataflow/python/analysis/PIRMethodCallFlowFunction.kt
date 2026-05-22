@@ -55,7 +55,7 @@ class PIRMethodCallFlowFunction(
             if (matchesCall(source.function, callInst)) {
                 val targetBase = resolvePosition(source.pos, callInst, method)
                     ?: continue
-                val newFact = apManager.createAbstractAp(targetBase, ExclusionSet.Universe)
+                val newFact = apManager.createFinalAp(targetBase, ExclusionSet.Universe)
                     .prependAccessor(TaintMarkAccessor(source.mark))
                 results.add(CallToReturnZFact(newFact, null))
             }
@@ -73,7 +73,7 @@ class PIRMethodCallFlowFunction(
         propagateFact(currentFactAp,
             mkCallToReturnFact = { _: PIRFactRefinement, fact -> CallToReturnZFact(fact, null) },
             mkCallToStartFact = { _: PIRFactRefinement, callerFact, startBase -> CallToStartZFact(callerFact, startBase, null) },
-            mkUnchanged = { @Suppress("UNCHECKED_CAST") (Unchanged as ZeroCallFact) },
+            mkUnchanged = { _ -> @Suppress("UNCHECKED_CAST") (Unchanged as ZeroCallFact) },
         )
 
     override fun propagateFactToFact(
@@ -87,7 +87,13 @@ class PIRMethodCallFlowFunction(
             mkCallToStartFact = { refinement, callerFact, startBase ->
                 CallToStartFFact(refinement.refine(initialFactAp), refinement.refine(callerFact), startBase, null)
             },
-            mkUnchanged = { @Suppress("UNCHECKED_CAST") (Unchanged as FactCallFact) },
+            mkUnchanged = { refinement ->
+                if (refinement.hasRefinement) {
+                    CallToReturnFFact(refinement.refine(initialFactAp), refinement.refine(currentFactAp), traceInfo = null)
+                } else {
+                    Unchanged
+                }
+            },
         )
 
     override fun propagateNDFactToFact(
@@ -110,7 +116,7 @@ class PIRMethodCallFlowFunction(
         currentFactAp: FinalFactAp,
         mkCallToReturnFact: (PIRFactRefinement, FinalFactAp) -> T,
         mkCallToStartFact: (PIRFactRefinement, FinalFactAp, AccessPathBase) -> T,
-        mkUnchanged: () -> T,
+        mkUnchanged: (PIRFactRefinement) -> T,
     ): MutableSet<T> {
         val results = mutableSetOf<T>()
         val refinement = PIRFactRefinement()
@@ -140,7 +146,7 @@ class PIRMethodCallFlowFunction(
         }
 
         // 4. Call-to-return: keep fact in caller frame
-        results.add(mkUnchanged())
+        results.add(mkUnchanged(refinement))
 
         return results
     }
