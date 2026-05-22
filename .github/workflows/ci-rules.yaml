@@ -98,8 +98,15 @@ jobs:
           # tree, which surfaces as false negatives. Overlay the in-repo propagators
           # (core/opentaint-config/config/config -> jar entries under config/) so the
           # rule tests run against the source config.
-          jar uf opentaint-analyzer/opentaint-project-analyzer.jar \
-              -C core/opentaint-config/config config
+          #
+          # Use `zip`, not `jar uf`: the analyzer is a shadow/fat jar with duplicate
+          # directory entries (e.g. `org/`). `jar uf` rewrites the whole archive via
+          # ZipOutputStream, which aborts on those pre-existing duplicates
+          # (java.util.zip.ZipException: duplicate entry: org/). `zip` copies existing
+          # entries as-is and only replaces/adds the config files.
+          apt-get update && apt-get install -y zip
+          JAR="$PWD/opentaint-analyzer/opentaint-project-analyzer.jar"
+          ( cd core/opentaint-config/config && zip -r "$JAR" config )
 
       - name: Run OpenTaint analyzer
         env:
