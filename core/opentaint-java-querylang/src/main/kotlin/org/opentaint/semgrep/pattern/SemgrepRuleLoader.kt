@@ -153,6 +153,10 @@ class SemgrepRuleLoader(
      *
      * Sanitizers are dropped in v1 (GoTaintConfig has no cleaner concept). A converted rule with neither
      * usable sources nor sinks is skipped.
+     *
+     * Note: the Go parser strips the leading `$` from metavar names (action-list metavars are `"X"`, not
+     * `"$X"`), unlike the Java path. Anything matching these names against raw YAML metavar keys (which keep
+     * the `$`) must normalize accordingly — see GoTaintRuleEmitter.positionOfMetavar.
      */
     fun loadGoRules(): List<Pair<RuleMetadata, SemgrepTaintRule<SemgrepPatternActionList>>> {
         registeredRules.values.toList()
