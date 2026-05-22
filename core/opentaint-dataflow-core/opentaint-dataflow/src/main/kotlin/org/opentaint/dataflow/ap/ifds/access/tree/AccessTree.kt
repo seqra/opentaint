@@ -391,25 +391,32 @@ class AccessTree(
             }
         }
 
+        private fun mergeAddMaybeNull(l: AccessNode?, r: AccessNode?): AccessNode? {
+            if (l == null)
+                return r
+            if (r == null)
+                return l
+            return r.mergeAdd(l)
+        }
+
         fun getChild(accessor: AccessorIdx): AccessNode? {
             if (accessor == FINAL_ACCESSOR_IDX) return manager.finalNode.takeIf { this.isFinal }
 
             val node = getNodeByAccessor(accessor)
-            if (node != null) return node
 
             val anyAccessorNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
-                ?: return null
+                ?: return node
 
             val anyChild = anyAccessorNode.getNodeByAccessor(accessor)
-            if (anyChild != null) return anyChild
+            var resultNode = mergeAddMaybeNull(anyChild, node)
 
-            with(manager) {
-                if (!anyAccessorUnrollStrategy.unrollAccessor(accessor.accessor)) return null
+            if (manager.isCoveredByAny(accessor)) {
+                val anyAccessorNoRepeats = anyAccessorNode.clearChild(accessor)
+                val originalAnyNoRepeats = anyAccessorNoRepeats.addParentIfPossible(ANY_ACCESSOR_IDX)
+                resultNode = mergeAddMaybeNull(originalAnyNoRepeats, resultNode)
             }
 
-            val childWithAny = anyAccessorNode.addParentIfPossible(ANY_ACCESSOR_IDX)
-            val unrolled = childWithAny?.mergeAdd(anyAccessorNode) ?: anyAccessorNode
-            return unrolled
+            return resultNode
         }
 
         fun addParentIfPossible(accessor: AccessorIdx): AccessNode? {
@@ -536,12 +543,11 @@ class AccessTree(
             }
 
             forEachAccessor { accessor, accessorNode ->
-                if (accessor == ANY_ACCESSOR_IDX) {
+                if (accessor != ANY_ACCESSOR_IDX) {
                     // note: always ignore any accessor
-                    return@forEachAccessor
+                    dst.add(accessor)
                 }
 
-                dst.add(accessor)
                 accessorNode.collectAccessorsTo(dst)
             }
         }
