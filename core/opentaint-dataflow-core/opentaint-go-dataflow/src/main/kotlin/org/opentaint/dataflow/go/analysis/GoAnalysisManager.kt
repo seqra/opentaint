@@ -163,6 +163,7 @@ class GoAnalysisManager(
     ): MethodCallPrecondition {
         val ctx = analysisContext as GoMethodAnalysisContext
         return GoMethodCallPrecondition(
+            apManager,
             returnValue as? GoIRValue,
             callExpr as GoCallExpr,
             statement as GoIRInst,
