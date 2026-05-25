@@ -447,17 +447,17 @@ func scan(cmd *cobra.Command) {
 	}
 
 	var suggestions []output.Suggestion
+	if analyzerFail != nil {
+		if logSug, ok := logSuggestion(); ok {
+			suggestions = append(suggestions, logSug)
+		}
+	}
 	if report != nil {
 		printSarifSummary(report, absSarifReportPath)
 		suggestions = append(suggestions, output.Suggestion{
 			Description: "To view findings run",
 			Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),
 		})
-	}
-	if analyzerFail != nil {
-		if logSug, ok := logSuggestion(); ok {
-			suggestions = append(suggestions, logSug)
-		}
 	}
 	out.Suggestions(suggestions...)
 
