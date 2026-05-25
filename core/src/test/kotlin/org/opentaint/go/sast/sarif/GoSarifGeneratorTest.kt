@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.go.sast.dataflow.AnalysisTest
-import org.opentaint.go.sast.dataflow.GoStubRules
 import org.opentaint.go.sast.dataflow.GoTaintAnalyzer
 import org.opentaint.go.sast.dataflow.GoUnitResolver
 import org.opentaint.ir.go.ext.findFunctionByFullName
