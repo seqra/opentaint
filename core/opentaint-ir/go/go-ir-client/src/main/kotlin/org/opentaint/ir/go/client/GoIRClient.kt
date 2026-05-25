@@ -83,7 +83,7 @@ class GoIRClient : AutoCloseable {
         val deserializer = GoIRDeserializer()
         val deserializeStart = System.nanoTime()
         val program = deserializer.deserializeLazy(response) { d ->
-            GoIRLazySession(stub, response.sessionId, d).also { lazySessions.add(it) }
+            GoIRLazySession(stub, response.sessionId, d, this).also { lazySessions.add(it) }
         }
         val deserializeMs = (System.nanoTime() - deserializeStart) / 1_000_000
         val totalMs = (System.nanoTime() - totalStart) / 1_000_000
@@ -123,5 +123,15 @@ class GoIRClient : AutoCloseable {
         }
         lazySessions.clear()
         serverProcess.close()
+    }
+
+    /**
+     * Invoked by [GoIRLazySession.close] so that explicit per-session releases
+     * also drop the JVM-side reference, not just the Go-server-side state. Keeps
+     * [lazySessions] from growing unboundedly across long-running clients (the
+     * massive sample test in particular opens hundreds of sessions).
+     */
+    internal fun cleanupClosedSession(session: GoIRLazySession) {
+        lazySessions.remove(session)
     }
 }

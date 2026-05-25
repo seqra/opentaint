@@ -10,6 +10,7 @@ internal class GoIRLazySession(
     private val stub: GoSSAServiceGrpc.GoSSAServiceBlockingStub,
     val sessionId: String,
     private val deserializer: GoIRDeserializer,
+    private val owner: GoIRClient,
 ) : AutoCloseable {
     private val loadLock = Any()
     private val loadedPackages = mutableSetOf<Int>()
@@ -55,6 +56,7 @@ internal class GoIRLazySession(
             )
             closed = true
         }
+        owner.cleanupClosedSession(this)
     }
 
     private fun checkOpen() {

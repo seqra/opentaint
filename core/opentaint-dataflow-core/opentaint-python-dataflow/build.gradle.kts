@@ -28,7 +28,7 @@ dependencies {
 
     implementation(Libs.sarif4k)
 
-    implementation("org.opentaint.config:opentaint-config")
+    implementation("org.opentaint.config:java-config")
 }
 
 tasks.withType<ProcessResources> {

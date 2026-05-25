@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -109,11 +111,24 @@ func (m *sessionManager) get(id string) (*lazySession, bool) {
 
 func (m *sessionManager) close(id string) bool {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.sessions[id]; !ok {
+	sess, ok := m.sessions[id]
+	if !ok {
+		m.mu.Unlock()
 		return false
 	}
 	delete(m.sessions, id)
+	m.mu.Unlock()
+
+	// The SSA program plus the per-session id-allocator maps pin the entire
+	// parsed/type-checked package graph (often hundreds of MB). Without an
+	// explicit nil-out Go's GC keeps the whole arena alive through whatever
+	// transient stack reference still touches the *lazySession. Explicitly
+	// release here so back-to-back OpenSession calls don't accumulate.
+	sess.release()
+	// Encourage the runtime to return freed pages to the OS — without this,
+	// long-running batches see RSS grow even as the in-use heap shrinks.
+	runtime.GC()
+	debug.FreeOSMemory()
 	return true
 }
 
@@ -121,6 +136,7 @@ func (m *sessionManager) cleanupLocked(now time.Time) {
 	for id, sess := range m.sessions {
 		if now.Sub(sess.lastAccess) > lazySessionTTL {
 			delete(m.sessions, id)
+			sess.release()
 		}
 	}
 }
@@ -144,7 +160,9 @@ func (m *sessionManager) evictOldestLocked() {
 	if now.Sub(oldest) < lazySessionTTL {
 		return // LRU is still fresh; skip eviction
 	}
+	sess := m.sessions[oldestID]
 	delete(m.sessions, oldestID)
+	sess.release()
 }
 
 // touch updates the lastAccess timestamp under the manager lock. Used by
@@ -183,6 +201,22 @@ func loadPackageList(req *pb.OpenSessionRequest) ([]*packages.Package, time.Dura
 		filtered = append(filtered, p)
 	}
 	return filtered, time.Since(start), nil
+}
+
+// release drops every reference the session holds to parsed packages, SSA
+// state, and the per-session id-allocator. Called from sessionManager.close so
+// memory can be reclaimed even while the *lazySession struct itself is briefly
+// kept alive by an in-flight handler frame.
+func (s *lazySession) release() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.prog = nil
+	s.ssaPkgs = nil
+	s.packageSummaries = nil
+	s.packageByID = nil
+	s.packageByPath = nil
+	s.ids = nil
+	s.built = false
 }
 
 func (s *lazySession) loadPackage(id int32) (*serializer, *ssa.Package, time.Duration, error) {
