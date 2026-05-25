@@ -8,26 +8,20 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnNonDistributiveFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartFFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFailureFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFailureFact
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
-import org.opentaint.dataflow.go.GoMethodCallFactMapper
+import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
+import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
+import org.opentaint.dataflow.go.rules.accept
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.PositionTypeResolver
@@ -37,12 +31,9 @@ import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.value.GoIRValue
+import org.opentaint.util.maybeFlatMap
 import org.opentaint.util.onSome
 
-/**
- * Handles interprocedural taint propagation at call sites:
- * source rule application, sink rule checking, pass-through rules, and fact mapping.
- */
 class GoMethodCallFlowFunction(
     private val apManager: ApManager,
     private val context: GoMethodAnalysisContext,
@@ -50,198 +41,196 @@ class GoMethodCallFlowFunction(
     private val callExpr: GoCallExpr,
     private val statement: GoIRInst,
     private val generateTrace: Boolean,
-) : MethodCallFlowFunction {
-
+) : MethodCallFlowFunction.Default {
     private val method: GoIRFunction get() = context.method
     private val rulesProvider get() = context.taint.taintConfig
     private val calleeName: String? get() = callExpr.calleeName
 
-    /**
-     * Get the return value register. GoIRCall doesn't implement CommonAssignInst,
-     * so the framework passes null for returnValue. We extract it directly from the statement.
-     */
     private val returnValue: GoIRValue?
         get() = returnValueFromFramework ?: GoFlowFunctionUtils.extractResultRegister(statement)
 
-    // ── Zero propagation ─────────────────────────────────────────────
+    private val callSignature: GoFunctionSignature?
+        get() = calleeName?.let { GoFunctionSignature(it, callExpr.explicitArgs.size, callExpr.isMethodCall) }
+
+    private val summaryRewriter by lazy {
+        GoCallRuleBasedSummaryRewriter(statement, context, apManager)
+    }
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> {
         val result = mutableSetOf(
             CallToReturnZeroFact,
             CallToStartZeroFact,
         )
-        applySourceRules(result)
+        applySourceRules(
+            emptySet(), null, ExclusionSet.Universe,
+            createFinalFact = { it, trace ->
+                result += CallToReturnZFact(factAp = it, trace)
+            },
+            createEdge = { initial, it, trace ->
+                result += CallToReturnFFact(initial, it, trace)
+            },
+            createNDEdge = { initial, it, trace ->
+                result += CallToReturnNonDistributiveFact(initial, it, trace)
+            }
+        )
         return result
     }
 
-    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<ZeroCallFact> = buildSet {
-        propagateFact(
-            factAp = currentFactAp,
-            skipCall = { this += Unchanged },
-            addSideEffectRequirement = { factReader ->
-                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
-            },
-            addCallToStart = { callerFact, startBase, trace -> this += CallToStartZFact(callerFact, startBase, trace) },
-        )
-    }
-
-    // ── Fact propagation ─────────────────────────────────────────────
-
-    override fun propagateFactToFact(
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<FactCallFact> = buildSet {
-        propagateFact(
-            factAp = currentFactAp,
-            skipCall = { this += Unchanged },
-            addSideEffectRequirement = { factReader ->
-                this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
-            },
-            addCallToStart = { callerFact, startBase, trace ->
-                this += CallToStartFFact(initialFactAp.replaceExclusions(callerFact.exclusions), callerFact, startBase, trace)
-            },
-        )
-    }
-
-    override fun propagateNDFactToFact(
+    override fun propagateFact(
         initialFacts: Set<InitialFactAp>,
-        currentFactAp: FinalFactAp,
-    ): Set<NDFactCallFact> {
-        return setOf(Unchanged)
-    }
-
-    private fun propagateFact(
+        exclusion: ExclusionSet,
         factAp: FinalFactAp,
         skipCall: () -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
-        addCallToStart: (callerFact: FinalFactAp, startBase: AccessPathBase, TraceInfo) -> Unit,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
-        // 0. Relevance check
         if (!factIsRelevantToMethodCall(statement, returnValue as? CommonValue, callExpr, factAp)) {
             skipCall()
             return
         }
 
-        // 1. Sink rules
-        applySinkRules(factAp, addSideEffectRequirement)
+        val factReader = FinalFactReader(factAp, apManager)
 
-        GoMethodCallFactMapper.mapMethodCallToStartFlowFact(
-            statement,
-            callee = method, // todo: remove hack
-            callExpr,
-            returnValue,
-            factAp,
-            FactTypeChecker.Dummy
-        ) { fact, startBase ->
-            // 2. Pass-through rules
-            addCallToStart(fact, startBase, TraceInfo.Flow)
-        }
-    }
+        applySinkRules(factReader)
 
-    // ── Source rule application (zero-to-zero only) ──────────────────
-
-    private fun applySourceRules(result: MutableSet<ZeroCallFact>) {
-        val name = calleeName ?: return
-        val sourceRules = rulesProvider.sourceRulesForCall(name)
-
-        if (sourceRules.isEmpty()) return
-
-        val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
-        taintUtils.applySourceRules(
-            sourceRules = sourceRules,
-            initialFacts = emptySet(),
-            conditionRewriter = GoRuleConditionRewriter(),
-            factReader = null,
-            exclusion = ExclusionSet.Universe,
-            createFinalFact = { fact, trace ->
-                result += CallToReturnZFact(fact, trace)
+        applySourceRules(
+            initialFacts, factReader, exclusion,
+            createFinalFact = { it, trace ->
+                addCallToReturn(factReader, it, trace)
             },
-            createEdge = { _, _, _ -> error("unused") },
-            createNDEdge = { _, _, _ -> error("unused") }
+            createEdge = { initial, it, trace ->
+                addUnchecked(CallToReturnFFact(initial, it, trace))
+            },
+            createNDEdge = { initial, it, trace ->
+                addUnchecked(CallToReturnNonDistributiveFact(initial, it, trace))
+            }
         )
-    }
 
-    // ── Sink rule application ────────────────────────────────────────
-
-    private fun applySinkRules(
-        currentFactAp: FinalFactAp,
-        addSideEffectRequirement: (FinalFactReader) -> Unit,
-    ) {
-        val name = calleeName ?: return
-        val sinkRules = rulesProvider.sinkRulesForCall(name)
-        if (sinkRules.isEmpty()) return
-
-        val factReader = FinalFactReader(currentFactAp, apManager)
-
-        val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
-        taintUtils.applySinkRules(sinkRules, GoRuleConditionRewriter(), factReader, markAfterAnyFieldResolver = null)
+        factAp.mapCall2Start { fact, startBase ->
+            addCallToStart(factReader, fact, startBase, TraceInfo.Flow)
+        }
 
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
         }
     }
 
-    override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> =
-        setOf(CallToReturnZeroFact)
+    private fun applySourceRules(
+        initialFacts: Set<InitialFactAp>,
+        factReader: FinalFactReader?,
+        exclusion: ExclusionSet,
+        createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
+        createEdge: (InitialFactAp, FinalFactAp, TraceInfo) -> Unit,
+        createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
+    ) {
+        val signature = callSignature ?: return
+        val sourceRules = rulesProvider.sourceRulesForCall(signature)
+        if (sourceRules.isEmpty()) return
 
-    override fun propagateZeroToFactResolutionFailure(
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<ZeroCallFailureFact> = buildSet {
-        applyPassRules(currentFactAp, startFactBase)
-            .mapTo(this) { CallToReturnZFact(it, traceInfo = null) }
-
-        this += CallToReturnZFact(currentFactAp, traceInfo = null)
-    }
-
-    override fun propagateFactToFactResolutionFailure(
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<FactCallFailureFact> = buildSet {
-        applyPassRules(currentFactAp, startFactBase)
-            .mapTo(this) { CallToReturnFFact(initialFactAp, it, traceInfo = null) }
-
-        this += CallToReturnFFact(initialFactAp, currentFactAp, traceInfo = null)
-    }
-
-    private fun applyPassRules(
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): List<FinalFactAp> {
-        val name = calleeName ?: return emptyList()
-        val passRules = rulesProvider.passRulesForCall(name)
-
-        val passFactReader = FinalFactReader(currentFactAp.rebase(startFactBase), apManager)
-        val passEvaluator = TaintPassActionEvaluator(
-            apManager, FactTypeChecker.Dummy, passFactReader, DummyPositionTypeResolver
+        val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
+        taintUtils.applySourceRules(
+            sourceRules, initialFacts,
+            conditionRewriter = GoRuleConditionRewriter(callExpr, statement, returnValue),
+            factReader, exclusion, createFinalFact, createEdge, createNDEdge,
         )
+    }
 
-        val result = mutableListOf<FinalFactAp>()
-        for (rule in passRules) {
-            val from = GoFlowFunctionUtils.resolvePositionAccess(rule.from)
-            val to = GoFlowFunctionUtils.resolvePositionAccess(rule.to)
+    private fun applySinkRules(
+        factReader: FinalFactReader,
+    ) {
+        val signature = callSignature ?: return
+        val sinkRules = rulesProvider.sinkRulesForCall(signature)
+        if (sinkRules.isEmpty()) return
 
-            passEvaluator.propagateData(rule, rule, from, to).onSome { facts ->
-                facts.forEach { newFact ->
-                    result += mapMethodExitToReturnFlowFact(statement, newFact.fact, FactTypeChecker.Dummy)
+        val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
+        taintUtils.applySinkRules(sinkRules, GoRuleConditionRewriter(callExpr, statement, returnValue), factReader, markAfterAnyFieldResolver = null)
+    }
+
+    override fun propagateUnresolvedCallFact(
+        factAp: FinalFactAp,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit
+    ) {
+        propagateDefault(factAp, addCallToReturn)
+
+        val factReader = FinalFactReader(factAp, apManager)
+
+        val signature = callSignature ?: return
+        val passRules = rulesProvider.passThroughRulesForCall(signature)
+
+        factAp.mapCall2Start { callerFact, startFactBase ->
+            val passFactReader = FinalFactReader(callerFact.rebase(startFactBase), apManager)
+
+            val passEvaluator = TaintPassActionEvaluator(
+                apManager, FactTypeChecker.Dummy, passFactReader, DummyPositionTypeResolver
+            )
+
+            val passThroughFacts = passRules.maybeFlatMap { item ->
+                item.actionsAfter.maybeFlatMap {
+                    passEvaluator.accept(item, it)
                 }
             }
+
+            if (startFactBase !is AccessPathBase.ClassStatic) {
+                context.taint.externalMethodTracker?.trackExternalMethod(
+                    method = signature.name,
+                    signature = "args:${signature.numArgs}",
+                    factPosition = startFactBase.toString(),
+                    rulesApplied = passThroughFacts.isSome,
+                )
+            }
+
+            passThroughFacts.onSome { evaluatedPass ->
+                evaluatedPass.forEach { evp ->
+                    val rewrittenFacts = summaryRewriter.rewriteSummaryFact(evp.fact)
+                    for ((unrefinedFact, factRefinement) in rewrittenFacts) {
+                        val fact = factRefinement.refineFact(unrefinedFact)
+                        passFactReader.updateRefinement(factRefinement)
+
+                        val mappedFact = fact.mapExitToReturnFact() ?: continue
+
+                        val trace = TraceInfo.Rule(evp.rule, evp.action)
+                        addCallToReturn(passFactReader, mappedFact, trace)
+                    }
+                }
+            }
+
+            factReader.updateRefinement(passFactReader)
         }
-        return result
+
+        if (factReader.hasRefinement) {
+            addSideEffectRequirement(factReader)
+        }
+    }
+
+    private fun propagateDefault(
+        factAp: FinalFactAp,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit
+    ) {
+        summaryRewriter.rewriteSummaryFact(factAp).forEach { (fact, reader) ->
+            addCallToReturn(reader, fact, null)
+        }
     }
 
     object DummyPositionTypeResolver : PositionTypeResolver {
         override fun resolve(position: PositionAccess): CommonType? = null
     }
 
-    override fun propagateNDFactToFactResolutionFailure(
-        initialFacts: Set<InitialFactAp>,
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<NDFactCallFailureFact> {
-        return setOf(
-            MethodCallFlowFunction.CallToReturnNonDistributiveFact(initialFacts, currentFactAp, traceInfo = null)
-        )
+    private fun FinalFactAp.mapExitToReturnFact(): FinalFactAp? =
+        mapMethodExitToReturnFlowFact(statement, this, FactTypeChecker.Dummy).singleOrNull()
+
+    private fun FinalFactAp.mapCall2Start(body: (FinalFactAp, AccessPathBase) -> Unit) {
+        mapMethodCallToStartFlowFact(
+            statement,
+            callee = method, // todo: remove hack
+            callExpr,
+            returnValue,
+            this,
+            FactTypeChecker.Dummy
+        ) { fact, startBase ->
+            body(fact, startBase)
+        }
     }
 }

@@ -1,6 +1,9 @@
 package org.opentaint.dataflow.go.rules
 
-sealed interface GoTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintAssignAction
+
+sealed interface GoTaintAction : CommonTaintAction
 
 data class CopyTaintMark(
     val mark: String,
@@ -21,3 +24,5 @@ data class RemoveMark(
 data class RemoveAllMarks(
     val pos: Position,
 ) : GoTaintAction
+
+data class GoAssignMark(val mark: String, val pos: Position): GoTaintAction, CommonTaintAssignAction
