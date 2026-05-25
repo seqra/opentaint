@@ -1,43 +1,42 @@
 package org.opentaint.semgrep.pattern
 
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.go.rules.GoTaintConfig
-import org.opentaint.dataflow.go.rules.TaintRules
+import org.opentaint.dataflow.go.rules.GoSerializedItem
+import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.go.GoTaintRuleEmitter
 import kotlin.io.path.Path
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class GoRuleEmitTest {
-    private fun emitConfig(resource: String): Pair<GoTaintConfig, GoTaintRuleEmitter> {
+    private fun emitConfig(resource: String): GoTaintConfiguration {
         val yaml = javaClass.classLoader.getResource(resource)!!.readText()
         val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path(resource), Path("."), SemgrepLoadTrace())
         val loadedRules = loader.loadRules()
         val rule = loadedRules.rulesWithMeta.first()
 
-        val emitter = GoTaintRuleEmitter()
-        return emitter.emit(rule.first.ruleId, rule.first) to emitter
+        @Suppress("UNCHECKED_CAST")
+        val firstRule = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
+        return GoTaintRuleEmitter().emit(firstRule.ruleId, firstRule)
     }
 
     @Test fun sourceSinkEmitsExpectedConfig() {
-        val (cfg, _) = emitConfig("go-rules/source-sink.yaml")
-        assertEquals(listOf(TaintRules.Source("util.Source", "taint", PositionBase.Result)), cfg.sources)
-        assertEquals("util.Sink", cfg.sinks.single().function)
-        assertEquals(PositionBase.Argument(0), cfg.sinks.single().pos)
+        val cfg = emitConfig("go-rules/source-sink.yaml")
+        assertTrue(cfg.sourceForFunction("util.Source").isNotEmpty(), "expected util.Source source")
+        assertTrue(cfg.sinkForFunction("util.Sink").isNotEmpty(), "expected util.Sink sink")
     }
 
     @Test fun passEmitsPropagator() {
-        val (cfg, _) = emitConfig("go-rules/pass.yaml")
-        assertTrue(cfg.propagators.isNotEmpty(), "expected a propagator")
-        assertEquals("util.Wrap", cfg.propagators.single().function)
+        val cfg = emitConfig("go-rules/pass.yaml")
+        assertTrue(
+            cfg.passThroughForFunction("util.Wrap").isNotEmpty(),
+            "expected util.Wrap propagator",
+        )
     }
 
-    @Test fun unsupportedSinkIsDroppedAndCounted() {
-        val (cfg, emitter) = emitConfig("go-rules/needs-conditions.yaml")
-        // the metavar-named source ($F(...)) should be dropped; the sink still emits
-        assertTrue(emitter.dropped.isNotEmpty(), "expected a dropped entry, got: ${emitter.dropped}")
+    @Test fun needsConditionsEmitsSinkOnly() {
+        val cfg = emitConfig("go-rules/needs-conditions.yaml")
+        assertTrue(cfg.sinkForFunction("util.Sink").isNotEmpty(), "expected the sink to be emitted")
     }
 }
