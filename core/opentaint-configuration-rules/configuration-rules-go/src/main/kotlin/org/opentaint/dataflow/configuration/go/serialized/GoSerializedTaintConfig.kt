@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.go.rules.serialized
+package org.opentaint.dataflow.configuration.go.serialized
 
 data class GoSerializedTaintConfig(
     val source: List<GoSerializedRule.Source> = emptyList(),

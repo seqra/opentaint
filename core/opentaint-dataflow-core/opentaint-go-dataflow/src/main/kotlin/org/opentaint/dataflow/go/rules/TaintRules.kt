@@ -33,7 +33,6 @@ sealed interface TaintRules {
 
     data class PassThrough(
         val function: String,
-        val condition: CommonCondition<GoRuleCondition>,
         val actionsAfter: List<GoTaintAction>,
     ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
 

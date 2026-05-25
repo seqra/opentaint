@@ -1,6 +1,4 @@
-package org.opentaint.dataflow.go.rules.serialized
-
-import org.opentaint.dataflow.go.rules.GoSinkMetaData
+package org.opentaint.dataflow.configuration.go.serialized
 
 sealed interface GoSerializedItem
 
@@ -23,7 +21,6 @@ sealed interface GoSerializedRule : GoSerializedItem {
 
     data class PassThrough(
         override val function: GoFunctionMatcher,
-        val condition: GoSerializedCondition? = null,
         val copy: List<GoSerializedPassAction>,
     ) : GoSerializedRule
 

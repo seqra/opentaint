@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.go.rules.serialized
+package org.opentaint.dataflow.configuration.go.serialized
 
 /**
  * Matches a Go function by qualified name (e.g. "util.Source").

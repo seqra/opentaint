@@ -1,35 +1,33 @@
 package org.opentaint.dataflow.go.rules
 
-import org.opentaint.dataflow.taint.PositionAccess
-
 sealed interface GoRuleCondition {
     fun <R> accept(visitor: GoConditionVisitor<R>): R
 
-    data class ContainsMark(val position: PositionAccess, val mark: String) : GoRuleCondition {
+    data class ContainsMark(val position: Position, val mark: String) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class IsConstant(val position: PositionAccess.Simple) : GoRuleCondition {
+    data class IsConstant(val position: Position.Simple) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class IsNull(val position: PositionAccess.Simple) : GoRuleCondition {
+    data class IsNull(val position: Position.Simple) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class ConstantEq(val position: PositionAccess.Simple, val value: ConstantValue) : GoRuleCondition {
+    data class ConstantEq(val position: Position.Simple, val value: ConstantValue) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class ConstantLt(val position: PositionAccess.Simple, val value: ConstantValue) : GoRuleCondition {
+    data class ConstantLt(val position: Position.Simple, val value: ConstantValue) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class ConstantGt(val position: PositionAccess.Simple, val value: ConstantValue) : GoRuleCondition {
+    data class ConstantGt(val position: Position.Simple, val value: ConstantValue) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class ConstantMatches(val position: PositionAccess.Simple, val pattern: Regex) : GoRuleCondition {
+    data class ConstantMatches(val position: Position.Simple, val pattern: Regex) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
@@ -37,7 +35,7 @@ sealed interface GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class IsType(val typeName: String, val position: PositionAccess.Simple) : GoRuleCondition {
+    data class IsType(val typeName: String, val position: Position.Simple) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 }

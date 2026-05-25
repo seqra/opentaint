@@ -13,7 +13,9 @@ plugins {
 dependencies {
     api(project(":opentaint-dataflow"))
     implementation(opentaintUtilCommon)
+
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
+    implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-go")
     implementation("org.opentaint.config:go-config")
 
     implementation(opentaint_ir_api_go)
