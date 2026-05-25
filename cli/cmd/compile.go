@@ -16,13 +16,6 @@ import (
 	"github.com/seqra/opentaint/internal/output"
 )
 
-type CompileCaller int
-
-const (
-	External CompileCaller = iota
-	Internal
-)
-
 var OutputProjectModelPath string
 var ProjectPath string
 var DryRunCompile bool
@@ -34,6 +27,14 @@ var CompileLogFile string
 func currentCompileBuilder(projectPath string) *utils.OpentaintCommandBuilder {
 	return utils.NewCompileCommand(projectPath).
 		WithOutput(OutputProjectModelPath)
+}
+
+// dockerCompileSuggestion builds the "try Docker-based compilation" fallback hint.
+func dockerCompileSuggestion() output.Suggestion {
+	return output.Suggestion{
+		Description: "If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based compilation:",
+		Command:     utils.BuildCompileCommandWithDocker(currentCompileBuilder(""), ProjectPath, OutputProjectModelPath),
+	}
 }
 
 // compileCmd represents the compile command
@@ -96,14 +97,14 @@ Arguments:
 		}
 
 		if err := out.RunWithSpinner("Compiling project model", func() error {
-			return compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath, compileJavaRunner, External)
+			return compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath, compileJavaRunner)
 		}); err == nil {
 			out.Blank()
 			printCompileSummary(absOutputProjectModelPath)
 			suggest("To scan project run", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath))
 		} else {
 			out.InteractiveBlank()
-			out.Fatalf("Native compile has failed: %s", err)
+			failWith(1, fmt.Sprintf("Native compile has failed: %s", err), dockerCompileSuggestion())
 		}
 	},
 }
@@ -136,7 +137,7 @@ func ensureAutobuilderAvailable() (string, error) {
 	return autobuilderJarPath, nil
 }
 
-func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath string, javaRunner java.JavaRunner, caller CompileCaller) error {
+func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath string, javaRunner java.JavaRunner) error {
 	if err := validation.ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath); err != nil {
 		return err
 	}
@@ -150,12 +151,8 @@ func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath strin
 	}
 
 	if _, err := validation.ValidateProjectModelOutput(absOutputProjectModelPath); err != nil {
-		validationErr := fmt.Errorf("output validation failed after compile: %w", err)
-		output.LogInfo(validationErr)
-		if caller == External {
-			suggest("If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based compilation:", utils.BuildCompileCommandWithDocker(currentCompileBuilder(""), ProjectPath, OutputProjectModelPath))
-		}
-		return fmt.Errorf("there was a problem during the compile step, check the full logs: %s", globals.LogPath)
+		output.LogInfo(fmt.Errorf("output validation failed after compile: %w", err))
+		return fmt.Errorf("there was a problem during the compile step")
 	}
 
 	return nil

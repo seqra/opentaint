@@ -156,6 +156,14 @@ func currentScanBuilder(sourcePath string) *utils.OpentaintCommandBuilder {
 		WithSemgrepCompatibility(SemgrepCompatibilitySarif)
 }
 
+// dockerScanSuggestion builds the "try Docker-based scan" fallback hint.
+func dockerScanSuggestion(projectRoot, sarifReportPath string) output.Suggestion {
+	return output.Suggestion{
+		Description: "If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based scan:",
+		Command:     utils.BuildScanCommandWithDocker(currentScanBuilder(""), projectRoot, sarifReportPath, Ruleset),
+	}
+}
+
 func scan(cmd *cobra.Command) {
 	userProjectPath := filepath.Clean(UserProjectPath)
 	absUserProjectRoot := log.AbsPathOrExit(userProjectPath, "project path")
@@ -296,14 +304,12 @@ func scan(cmd *cobra.Command) {
 		}
 
 		if err := out.RunWithSpinner("Compiling project model", func() error {
-			return compile(absUserProjectRoot, cfg.absProjectModel, autobuilderJarPath, compileJavaRunner, Internal)
+			return compile(absUserProjectRoot, cfg.absProjectModel, autobuilderJarPath, compileJavaRunner)
 		}); err != nil {
 			if cfg.projectCachePath != "" {
 				_ = os.RemoveAll(cfg.absProjectModel)
 			}
-			out.Error("Native compile has failed: " + err.Error())
-			suggest("If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based scan:", utils.BuildScanCommandWithDocker(currentScanBuilder(""), absUserProjectRoot, absSarifReportPath, Ruleset))
-			os.Exit(1)
+			failWith(1, "Native compile has failed: "+err.Error(), dockerScanSuggestion(absUserProjectRoot, absSarifReportPath))
 		}
 		out.Blank()
 
@@ -398,7 +404,7 @@ func scan(cmd *cobra.Command) {
 		scanCmdErr, scanErr = scanProject(nativeBuilder, analyzerJavaRunner)
 		return scanErr
 	}); err != nil {
-		out.Fatalf("Native scan has failed: %s", err)
+		failf("Native scan has failed: %s", err)
 	}
 	if analyzerFail = analyzer.Classify(scanCmdErr); analyzerFail != nil {
 		out.Error(analyzerFail.Message)
@@ -409,7 +415,7 @@ func scan(cmd *cobra.Command) {
 		output.LogInfof("Scan output validation failed: %v", err)
 		if analyzerFail == nil {
 			// Analyzer reported success but produced no valid SARIF — treat as failure.
-			out.Error(fmt.Sprintf("There was a problem during the scan step, check the full logs: %s", globals.LogPath))
+			out.Error("There was a problem during the scan step")
 			analyzerFail = &analyzer.Error{ExitCode: 1, Message: "scan output validation failed"}
 		}
 	}
@@ -440,10 +446,20 @@ func scan(cmd *cobra.Command) {
 		load_trace.PrintSyntaxErrorReport(out, ruleLoadTraceSummary)
 	}
 
+	var suggestions []output.Suggestion
 	if report != nil {
 		printSarifSummary(report, absSarifReportPath)
-		suggest("To view findings run", utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build())
+		suggestions = append(suggestions, output.Suggestion{
+			Description: "To view findings run",
+			Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),
+		})
 	}
+	if analyzerFail != nil {
+		if logSug, ok := logSuggestion(); ok {
+			suggestions = append(suggestions, logSug)
+		}
+	}
+	out.Suggestions(suggestions...)
 
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
