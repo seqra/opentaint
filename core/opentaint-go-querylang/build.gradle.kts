@@ -1,3 +1,6 @@
+import OpentaintIrDependency.opentaint_ir_api_go
+import OpentaintIrDependency.opentaint_ir_core_go
+import OpentaintUtilDependency.opentaintUtilJvm
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
 
@@ -21,6 +24,11 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(JunitDependencies.Libs.junit_jupiter)
     testImplementation(JunitDependencies.Libs.junit_jupiter_params)
+
+    testImplementation(opentaint_ir_api_go)
+    testImplementation(opentaint_ir_core_go)
+    testImplementation(opentaintUtilJvm)
+    testImplementation("org.opentaint.sast:dataflow")
     testRuntimeOnly(Libs.logback)
 }
 
@@ -118,5 +126,42 @@ tasks.compileTestKotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    jvmArgs = listOf("-Xmx2g")
+    jvmArgs = listOf("-Xmx8g")
+
+    systemProperty("GO_SAMPLES_DIR", layout.projectDirectory.dir("samples-go").asFile.absolutePath)
+    systemProperty("GO_MASSIVE_SAMPLES_DIR", layout.projectDirectory.dir("samples-go-massive").asFile.absolutePath)
+    systemProperty("GO_MASSIVE_OUTPUT_DIR", layout.buildDirectory.dir("go-massive-report").get().asFile.absolutePath)
+    ensureGoEnvInitialized()
+    doFirst {
+        goEnvironment().forEach { (key, value) -> environment(key, value) }
+    }
+}
+
+// ─── Go environment ─────────────────────────────────────────────────
+// Mirror of core/build.gradle.kts: wire this module's tests to the Go SSA server
+// initializer so GoIRClient can spawn the server.
+
+val opentaintGoEnvKey = "opentaint.go.env"
+
+fun goEnvironment(): Map<String, Any> {
+    val goEnv = mutableMapOf<String, Any>()
+    setupOpentaintGoEnvironment(goEnv)
+    return goEnv
+}
+
+@Suppress("UNCHECKED_CAST")
+fun setupOpentaintGoEnvironment(goEnv: MutableMap<String, Any>) {
+    val initializer = findOpentaintGoEnvInitializer() ?: return
+    val env = initializer.extra.get(opentaintGoEnvKey) as Map<String, Any>
+    goEnv += env
+}
+
+fun Task.ensureGoEnvInitialized() {
+    val initializer = findOpentaintGoEnvInitializer() ?: return
+    dependsOn(initializer)
+}
+
+fun findOpentaintGoEnvInitializer(): Task? {
+    val irProject = gradle.includedBuilds.find { it.name == "opentaint-ir" } ?: return null
+    return irProject.resolveIncludedProjectTask(":go:setupGoEnvironment")
 }
