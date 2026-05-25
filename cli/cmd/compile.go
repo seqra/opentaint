@@ -32,7 +32,7 @@ func currentCompileBuilder(projectPath string) *utils.OpentaintCommandBuilder {
 // dockerCompileSuggestion builds the "try Docker-based compilation" fallback hint.
 func dockerCompileSuggestion() output.Suggestion {
 	return output.Suggestion{
-		Description: "If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based compilation:",
+		Description: dockerFallbackHintPrefix + "compilation:",
 		Command:     utils.BuildCompileCommandWithDocker(currentCompileBuilder(""), ProjectPath, OutputProjectModelPath),
 	}
 }

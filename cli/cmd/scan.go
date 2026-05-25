@@ -159,7 +159,7 @@ func currentScanBuilder(sourcePath string) *utils.OpentaintCommandBuilder {
 // dockerScanSuggestion builds the "try Docker-based scan" fallback hint.
 func dockerScanSuggestion(projectRoot, sarifReportPath string) output.Suggestion {
 	return output.Suggestion{
-		Description: "If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based scan:",
+		Description: dockerFallbackHintPrefix + "scan:",
 		Command:     utils.BuildScanCommandWithDocker(currentScanBuilder(""), projectRoot, sarifReportPath, Ruleset),
 	}
 }
@@ -448,9 +448,7 @@ func scan(cmd *cobra.Command) {
 
 	var suggestions []output.Suggestion
 	if analyzerFail != nil {
-		if logSug, ok := logSuggestion(); ok {
-			suggestions = append(suggestions, logSug)
-		}
+		suggestions = appendLogSuggestion(suggestions)
 	}
 	if report != nil {
 		printSarifSummary(report, absSarifReportPath)
