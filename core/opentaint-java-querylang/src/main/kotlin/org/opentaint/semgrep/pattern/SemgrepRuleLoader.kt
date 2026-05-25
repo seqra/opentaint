@@ -325,7 +325,7 @@ class SemgrepRuleLoader(
         strategy: LanguageStrategy<P, R>,
         ctx: RuleConversionCtx,
         rule: SemgrepRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
-    ): TaintRuleFromSemgrep<R> = ctx.convertTaintAutomataToTaintRules(strategy, rule)
+    ): TaintRuleFromSemgrep<R> = ctx.convertTaintAutomataToTaintRules(strategy.taintRuleStrategy, rule)
 
     private fun loadJoinRule(rule: JoinRule<*>): Pair<TaintRuleFromSemgrep<*>, RuleMetadata>? {
         val trace = rule.info.ruleTrace
@@ -353,7 +353,7 @@ class SemgrepRuleLoader(
         strategy: LanguageStrategy<P, R>,
         ctx: RuleConversionCtx,
         taintAutomata: TaintAutomataJoinRule,
-    ): TaintRuleFromSemgrep<R>? = ctx.convertTaintAutomataJoinToTaintRules(strategy, taintAutomata)
+    ): TaintRuleFromSemgrep<R>? = ctx.convertTaintAutomataJoinToTaintRules(strategy.taintRuleStrategy, taintAutomata)
 
     private fun resolveBuiltRuleWrtOverrides(
         ruleId: String,
