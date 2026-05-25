@@ -17,7 +17,7 @@ import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
 import org.opentaint.dataflow.go.rules.GoAssignMark
 import org.opentaint.dataflow.go.rules.GoRuleCondition
-import org.opentaint.dataflow.go.rules.TaintRules
+import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.FactReader
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.FinalFactReaderWithPrefix
@@ -34,40 +34,40 @@ class GoMethodCallTaintUtil(
     val returnValue: GoIRValue?,
     private val context: GoMethodAnalysisContext,
     apManager: ApManager
-) : TaintUtil<GoRuleCondition, TaintRules.Source, TaintRules.Sink, TraceInfo>(apManager) {
+) : TaintUtil<GoRuleCondition, TaintRule.Source, TaintRule.Sink, TraceInfo>(apManager) {
     private val sinkTracker get() = context.taint.taintSinkTracker
 
-    override fun TaintRules.Source.srcCondition(): CommonCondition<GoRuleCondition> = condition
-    override fun TaintRules.Sink.sinkCondition(): CommonCondition<GoRuleCondition> = condition
+    override fun TaintRule.Source.srcCondition(): CommonCondition<GoRuleCondition> = condition
+    override fun TaintRule.Sink.sinkCondition(): CommonCondition<GoRuleCondition> = condition
 
-    override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintRules.Source> =
-        object : RuleAssumptionsManager<TaintRules.Source> {
+    override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintRule.Source> =
+        object : RuleAssumptionsManager<TaintRule.Source> {
             override fun storeAssumptions(
-                rule: TaintRules.Source,
+                rule: TaintRule.Source,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) {
                 sinkTracker.addSourceRuleAssumptions(rule, statement, assumptions)
             }
 
-            override fun currentAssumptions(rule: TaintRules.Source): Set<InitialFactAp> =
+            override fun currentAssumptions(rule: TaintRule.Source): Set<InitialFactAp> =
                 sinkTracker.currentSourceRuleAssumptions(rule, statement)
 
             override fun currentAssumptionPreconditions(
-                rule: TaintRules.Source,
+                rule: TaintRule.Source,
                 assumptions: List<InitialFactAp>
             ) = sinkTracker.currentSourceRuleAssumptionsPreconditions(rule, statement, assumptions)
         }
 
-    override fun sinkAssumptionsManager(): RuleAssumptionsManager<TaintRules.Sink> =
-        object : RuleAssumptionsManager<TaintRules.Sink> {
+    override fun sinkAssumptionsManager(): RuleAssumptionsManager<TaintRule.Sink> =
+        object : RuleAssumptionsManager<TaintRule.Sink> {
             override fun storeAssumptions(
-                rule: TaintRules.Sink,
+                rule: TaintRule.Sink,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) {
                 sinkTracker.addSinkRuleAssumptions(rule, statement, assumptions)
             }
 
-            override fun currentAssumptions(rule: TaintRules.Sink): Set<InitialFactAp> =
+            override fun currentAssumptions(rule: TaintRule.Sink): Set<InitialFactAp> =
                 sinkTracker.currentSinkRuleAssumptions(rule, statement)
         }
 
@@ -113,7 +113,7 @@ class GoMethodCallTaintUtil(
     }
 
     override fun handleReachedSink(
-        rule: TaintRules.Sink,
+        rule: TaintRule.Sink,
         factReader: FinalFactReader?,
         evaluatedFacts: List<InitialFactAp>
     ) {
@@ -168,7 +168,7 @@ class GoMethodCallTaintUtil(
     }
 
     override fun applySourceAction(
-        rule: TaintRules.Source,
+        rule: TaintRule.Source,
         sourceEvaluator: TaintSourceActionEvaluator,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit
     ) = applySourceAction(rule, rule.actionsAfter, sourceEvaluator) { f ->

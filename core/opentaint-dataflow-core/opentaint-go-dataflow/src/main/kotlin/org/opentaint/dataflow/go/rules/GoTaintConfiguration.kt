@@ -14,23 +14,23 @@ import java.util.concurrent.atomic.AtomicInteger
 class GoTaintConfiguration {
     private val globalSourceSimple = hashMapOf<String, MutableList<GoSerializedGlobalSource>>()
     private val globalSourcePatterns = mutableListOf<GoSerializedGlobalSource>()
-    private val globalSourceMemo = hashMapOf<String, List<TaintRules.GlobalReadSource>>()
+    private val globalSourceMemo = hashMapOf<String, List<TaintRule.GlobalReadSource>>()
 
     private val sourceSimple = hashMapOf<String, MutableList<GoSerializedRule.Source>>()
     private val sourcePatterns = mutableListOf<GoSerializedRule.Source>()
-    private val sourceMemo = hashMapOf<String, List<TaintRules.Source>>()
+    private val sourceMemo = hashMapOf<String, List<TaintRule.Source>>()
 
     private val sinkSimple = hashMapOf<String, MutableList<GoSerializedRule.Sink>>()
     private val sinkPatterns = mutableListOf<GoSerializedRule.Sink>()
-    private val sinkMemo = hashMapOf<String, List<TaintRules.Sink>>()
+    private val sinkMemo = hashMapOf<String, List<TaintRule.Sink>>()
 
     private val passSimple = hashMapOf<String, MutableList<GoSerializedRule.PassThrough>>()
     private val passPatterns = mutableListOf<GoSerializedRule.PassThrough>()
-    private val passMemo = hashMapOf<String, List<TaintRules.PassThrough>>()
+    private val passMemo = hashMapOf<String, List<TaintRule.PassThrough>>()
 
     private val cleanerSimple = hashMapOf<String, MutableList<GoSerializedRule.Cleaner>>()
     private val cleanerPatterns = mutableListOf<GoSerializedRule.Cleaner>()
-    private val cleanerMemo = hashMapOf<String, List<TaintRules.Cleaner>>()
+    private val cleanerMemo = hashMapOf<String, List<TaintRule.Cleaner>>()
 
     private val ruleIdGen = AtomicInteger()
 
@@ -86,28 +86,28 @@ class GoTaintConfiguration {
     }
 
     @Synchronized
-    fun sourceForGlobal(name: String): List<TaintRules.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
+    fun sourceForGlobal(name: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
         candidates(name, globalSourceSimple, globalSourcePatterns, { global })
             .mapNotNull { specialize(it, name) }
     }
 
     @Synchronized
-    fun sourceForFunction(signature: GoFunctionSignature): List<TaintRules.Source> = sourceMemo.getOrPut(signature.name) {
+    fun sourceForFunction(signature: GoFunctionSignature, allRelevant: Boolean): List<TaintRule.Source> = sourceMemo.getOrPut(signature.name) {
         candidates(signature, sourceSimple, sourcePatterns).mapNotNull { specialize(it, signature) }
     }
 
     @Synchronized
-    fun sinkForFunction(signature: GoFunctionSignature): List<TaintRules.Sink> = sinkMemo.getOrPut(signature.name) {
+    fun sinkForFunction(signature: GoFunctionSignature): List<TaintRule.Sink> = sinkMemo.getOrPut(signature.name) {
         candidates(signature, sinkSimple, sinkPatterns).mapNotNull { specialize(it, signature) }
     }
 
     @Synchronized
-    fun passThroughForFunction(signature: GoFunctionSignature): List<TaintRules.PassThrough> = passMemo.getOrPut(signature.name) {
+    fun passThroughForFunction(signature: GoFunctionSignature): List<TaintRule.PassThrough> = passMemo.getOrPut(signature.name) {
         candidates(signature, passSimple, passPatterns).mapNotNull { specialize(it, signature) }
     }
 
     @Synchronized
-    fun cleanerForFunction(signature: GoFunctionSignature): List<TaintRules.Cleaner> = cleanerMemo.getOrPut(signature.name) {
+    fun cleanerForFunction(signature: GoFunctionSignature, allRelevant: Boolean): List<TaintRule.Cleaner> = cleanerMemo.getOrPut(signature.name) {
         candidates(signature, cleanerSimple, cleanerPatterns).mapNotNull { specialize(it, signature) }
     }
 
@@ -130,21 +130,21 @@ class GoTaintConfiguration {
         return direct + patternMatches
     }
 
-    private fun specialize(rule: GoSerializedGlobalSource, name: String): TaintRules.GlobalReadSource? {
+    private fun specialize(rule: GoSerializedGlobalSource, name: String): TaintRule.GlobalReadSource? {
         TODO()
     }
 
-    private fun specialize(rule: GoSerializedRule.Source, signature: GoFunctionSignature): TaintRules.Source? {
+    private fun specialize(rule: GoSerializedRule.Source, signature: GoFunctionSignature): TaintRule.Source? {
         val condition = rule.condition.resolveToRuleCondition(signature)
         if (condition.isFalse()) return null
 
         val actions = rule.taint.flatMap { t ->
             t.pos.resolve(signature).map { GoAssignMark(t.kind, it) }
         }
-        return TaintRules.Source(signature.name, condition, actions)
+        return TaintRule.Source(signature.name, condition, actions)
     }
 
-    private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRules.Sink? {
+    private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRule.Sink? {
         val condition = rule.condition.resolveToRuleCondition(signature)
         if (condition.isFalse()) return null
 
@@ -157,20 +157,20 @@ class GoTaintConfiguration {
         val id = rule.id ?: generateRuleId(rule)
         val meta = rule.meta ?: defaultMeta(signature.name)
 
-        return TaintRules.Sink(signature.name, condition, trackFacts, id, meta)
+        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta)
     }
 
-    private fun specialize(rule: GoSerializedRule.PassThrough, signature: GoFunctionSignature): TaintRules.PassThrough? {
+    private fun specialize(rule: GoSerializedRule.PassThrough, signature: GoFunctionSignature): TaintRule.PassThrough? {
         val actions = rule.copy.flatMap { it.toTaintAction(signature) }
-        return TaintRules.PassThrough(signature.name, actions)
+        return TaintRule.PassThrough(signature.name, actions)
     }
 
-    private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRules.Cleaner? {
+    private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRule.Cleaner? {
         val condition = rule.condition.resolveToRuleCondition(signature)
         if (condition.isFalse()) return null
 
         val actions = rule.cleans.flatMap { it.toTaintAction(signature) }
-        return TaintRules.Cleaner(signature.name, condition, actions)
+        return TaintRule.Cleaner(signature.name, condition, actions)
     }
 
     private fun GoSerializedPassAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =
@@ -193,5 +193,5 @@ class GoTaintConfiguration {
     }
 
     private fun defaultMeta(function: String): CommonTaintConfigurationSinkMeta =
-        TaintRules.Sink.DefaultMeta("Taint sink: $function")
+        TaintRule.Sink.DefaultMeta("Taint sink: $function")
 }

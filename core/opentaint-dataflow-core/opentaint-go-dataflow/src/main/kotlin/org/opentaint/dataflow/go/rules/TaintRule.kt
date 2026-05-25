@@ -8,20 +8,19 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
-import org.opentaint.dataflow.configuration.CommonTaintRulesProvider
 
-sealed interface TaintRules {
+sealed interface TaintRule {
     data class GlobalReadSource(
         val global: String,
         val condition: CommonCondition<GoRuleCondition>,
         val actionsAfter: List<GoAssignMark>,
-    ) : TaintRules, CommonTaintConfigurationSource, CommonTaintAssignAction
+    ) : TaintRule, CommonTaintConfigurationSource, CommonTaintAssignAction
 
     data class Source(
         val function: String,
         val condition: CommonCondition<GoRuleCondition>,
         val actionsAfter: List<GoAssignMark>,
-    ) : TaintRules, CommonTaintConfigurationSource, CommonTaintAssignAction
+    ) : TaintRule, CommonTaintConfigurationSource, CommonTaintAssignAction
 
     data class Sink(
         val function: String,
@@ -29,7 +28,7 @@ sealed interface TaintRules {
         val trackFactsReachAnalysisEnd: List<GoAssignMark>,
         override val id: String,
         override val meta: CommonTaintConfigurationSinkMeta,
-    ) : TaintRules, CommonTaintConfigurationSink {
+    ) : TaintRule, CommonTaintConfigurationSink {
 
         data class DefaultMeta(
             override val message: String,
@@ -40,11 +39,11 @@ sealed interface TaintRules {
     data class PassThrough(
         val function: String,
         val actionsAfter: List<GoTaintAction>,
-    ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
+    ) : TaintRule, CommonTaintConfigurationItem, CommonTaintAction
 
     data class Cleaner(
         val function: String,
         val condition: CommonCondition<GoRuleCondition>,
         val actionsAfter: List<GoTaintAction>,
-    ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
+    ) : TaintRule, CommonTaintConfigurationItem, CommonTaintAction
 }
