@@ -1,0 +1,12 @@
+rules:
+  - id: constant-not-tainted
+    languages: [go]
+    severity: WARNING
+    message: "Taint from util.Source reaches util.Sink (excluding the literal \"safe\")"
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern: "util.Sink($X)"
+          - pattern-not: "util.Sink(\"safe\")"

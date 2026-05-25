@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-signature
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithSignature (Go port, recast as either-sink)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sinks:
+      - pattern-either:
+          - pattern: "util.Sink1($X)"
+          - pattern: "util.Sink2($X)"

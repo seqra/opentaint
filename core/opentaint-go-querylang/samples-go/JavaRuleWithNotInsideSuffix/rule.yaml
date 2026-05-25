@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-not-inside-suffix
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithNotInsideSuffix (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sanitizers:
+      - pattern: "util.SuffixClean($X)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

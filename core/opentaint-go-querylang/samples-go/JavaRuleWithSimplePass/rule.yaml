@@ -1,0 +1,14 @@
+rules:
+  - id: java-rule-with-simple-pass
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithSimplePass (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"
+    pattern-propagators:
+      - pattern: "$OUT = util.Pass($IN)"
+        from: "$IN"
+        to: "$OUT"

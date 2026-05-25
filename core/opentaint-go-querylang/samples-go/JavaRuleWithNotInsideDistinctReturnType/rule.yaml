@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-not-inside-distinct-return-type
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithNotInsideDistinctReturnType (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"
