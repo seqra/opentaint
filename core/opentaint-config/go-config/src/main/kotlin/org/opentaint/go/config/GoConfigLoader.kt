@@ -6,7 +6,7 @@ import com.charleskorn.kaml.YamlList
 import com.charleskorn.kaml.YamlMap
 import com.charleskorn.kaml.YamlNode
 import com.charleskorn.kaml.YamlScalar
-import org.opentaint.dataflow.configuration.go.serialized.GoFunctionMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedPassAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
@@ -72,7 +72,7 @@ private fun YamlNode.toPassThroughRule(): GoSerializedRule.PassThrough? {
     if (actions.isEmpty()) return null
 
     return GoSerializedRule.PassThrough(
-        function = GoFunctionMatcher.Simple("${function.`package`}.${function.name}"),
+        function = GoNameMatcher.Simple("${function.`package`}.${function.name}"),
         copy = actions,
     )
 }
