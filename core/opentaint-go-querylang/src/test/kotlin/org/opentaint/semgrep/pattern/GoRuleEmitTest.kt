@@ -1,6 +1,6 @@
 package org.opentaint.semgrep.pattern
 
-import org.opentaint.dataflow.go.rules.GoSerializedItem
+import org.opentaint.dataflow.go.rules.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.go.GoTaintRuleEmitter

@@ -13,6 +13,7 @@ import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
+import org.opentaint.dataflow.go.rules.serialized.GoSerializedItem
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
@@ -33,7 +34,6 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -94,7 +94,7 @@ class GoSemgrepReachabilityTest {
         val rule = loadedRules.rulesWithMeta.first()
 
         @Suppress("UNCHECKED_CAST")
-        val firstRule = rule.first as org.opentaint.semgrep.pattern.TaintRuleFromSemgrep<org.opentaint.dataflow.go.rules.GoSerializedItem>
+        val firstRule = rule.first as org.opentaint.semgrep.pattern.TaintRuleFromSemgrep<GoSerializedItem>
         val config: GoTaintConfiguration = GoTaintRuleEmitter().emit(firstRule.ruleId, firstRule)
 
         // Assert the generated config names match the Go IR; a name mismatch must fail loudly here.

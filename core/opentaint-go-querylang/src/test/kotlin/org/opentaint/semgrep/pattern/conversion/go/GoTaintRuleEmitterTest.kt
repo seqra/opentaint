@@ -2,13 +2,13 @@ package org.opentaint.semgrep.pattern.conversion.go
 
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.go.rules.GoFunctionMatcher
+import org.opentaint.dataflow.go.rules.serialized.GoFunctionMatcher
 import org.opentaint.dataflow.go.rules.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.go.rules.serialized.GoSerializedCleanAction
-import org.opentaint.dataflow.go.rules.GoSerializedCondition
-import org.opentaint.dataflow.go.rules.GoSerializedItem
+import org.opentaint.dataflow.go.rules.serialized.GoSerializedCondition
+import org.opentaint.dataflow.go.rules.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.rules.serialized.GoSerializedPassAction
-import org.opentaint.dataflow.go.rules.GoSerializedRule
+import org.opentaint.dataflow.go.rules.serialized.GoSerializedRule
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import kotlin.test.Test
 import kotlin.test.assertEquals

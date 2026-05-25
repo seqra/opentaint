@@ -1,12 +1,13 @@
 package org.opentaint.dataflow.go.rules
 
+import org.opentaint.dataflow.go.rules.serialized.GoFunctionMatcher
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
  * Smoke test that the bundled `:go-config` JAR is on the classpath and parses
- * cleanly into a [GoSerializedTaintConfig]. Detailed propagation behavior is
+ * cleanly into a [org.opentaint.dataflow.go.rules.serialized.GoSerializedTaintConfig]. Detailed propagation behavior is
  * exercised in [org.opentaint.semgrep.GoSampleBasedTest] via the
  * `useDefaultConfig = true` opt-in.
  */
