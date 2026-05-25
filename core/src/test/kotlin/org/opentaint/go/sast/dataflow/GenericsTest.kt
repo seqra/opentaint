@@ -1,16 +1,31 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.go.rules.GoAssignMark
+import org.opentaint.dataflow.go.rules.GoRuleCondition
 import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GenericsTest : AnalysisTest() {
 
-    private val intSource = TaintRules.Source("test/util.SourceInt", "taint", Result)
-    private val intSink = TaintRules.Sink("test/util.SinkInt", "taint", Argument(0), "test-id")
+    private val intSource = TaintRules.Source(
+        function = "test/util.SourceInt",
+        condition = mkTrue(),
+        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    )
+    private val intSink = TaintRules.Sink(
+        function = "test/util.SinkInt",
+        condition = CommonCondition.Atom(GoRuleCondition.ContainsMark(PositionBaseWithModifiers.BaseOnly(Argument(0)), "taint")),
+        trackFactsReachAnalysisEnd = emptyList(),
+        id = "test-id",
+        meta = TaintRules.Sink.DefaultMeta("Taint sink: test/util.SinkInt"),
+    )
 
     // Generic identity function
     @Test fun genericFunc001T() = assertReachable("test.genericFunc001T")

@@ -1,18 +1,37 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.go.rules.GoAssignMark
+import org.opentaint.dataflow.go.rules.GoRuleCondition
 import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ExpressionTest : AnalysisTest() {
 
-    private val intSource = TaintRules.Source("test.sourceInt", "taint", Result)
-    private val intSink = TaintRules.Sink("test.sinkInt", "taint", Argument(0), "test-id")
-    private val boolSource = TaintRules.Source("test.sourceBool", "taint", Result)
-    private val boolSink = TaintRules.Sink("test.sinkBool", "taint", Argument(0), "test-id")
+    private fun source(function: String) = TaintRules.Source(
+        function = function,
+        condition = mkTrue(),
+        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    )
+
+    private fun sink(function: String) = TaintRules.Sink(
+        function = function,
+        condition = CommonCondition.Atom(GoRuleCondition.ContainsMark(PositionBaseWithModifiers.BaseOnly(Argument(0)), "taint")),
+        trackFactsReachAnalysisEnd = emptyList(),
+        id = "test-id",
+        meta = TaintRules.Sink.DefaultMeta("Taint sink: $function"),
+    )
+
+    private val intSource = source("test.sourceInt")
+    private val intSink = sink("test.sinkInt")
+    private val boolSource = source("test.sourceBool")
+    private val boolSink = sink("test.sinkBool")
 
     // String concatenation
     @Test fun stringConcat001T() = assertReachable("test.stringConcat001T")

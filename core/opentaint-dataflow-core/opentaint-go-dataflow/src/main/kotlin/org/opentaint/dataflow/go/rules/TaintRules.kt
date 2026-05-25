@@ -6,49 +6,47 @@ import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 import org.opentaint.dataflow.configuration.CommonTaintRulesProvider
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 
 sealed interface TaintRules {
     data class Source(
         val function: String,
-        val mark: String,
-        val pos: PositionBase
+        val condition: CommonCondition<GoRuleCondition>,
+        val actionsAfter: List<GoAssignMark>,
     ) : TaintRules, CommonTaintConfigurationSource, CommonTaintAssignAction
 
     data class Sink(
         val function: String,
         val condition: CommonCondition<GoRuleCondition>,
+        val trackFactsReachAnalysisEnd: List<GoAssignMark>,
         override val id: String,
+        override val meta: CommonTaintConfigurationSinkMeta,
     ) : TaintRules, CommonTaintConfigurationSink {
-        constructor(
-            function: String,
-            mark: String,
-            pos: PositionBase,
-            id: String,
-        ) : this(function, CommonCondition.Atom(GoRuleCondition.ContainsMark(pos, mark)), id)
 
-        override val meta: CommonTaintConfigurationSinkMeta = object : CommonTaintConfigurationSinkMeta {
-            override val message: String = "Taint sink: $function"
-            override val severity: CommonTaintConfigurationSinkMeta.Severity = CommonTaintConfigurationSinkMeta.Severity.Error
-        }
-
-        @Deprecated("")
-        val pos: PositionBase
-            get() = (condition as CommonCondition.Atom).atom.let { it as GoRuleCondition.ContainsMark }.position
+        data class DefaultMeta(
+            override val message: String,
+            override val severity: Severity = Severity.Error,
+        ) : CommonTaintConfigurationSinkMeta
     }
 
-    data class Pass(
+    data class PassThrough(
         val function: String,
-        val from: PositionBaseWithModifiers,
-        val to: PositionBaseWithModifiers,
+        val condition: CommonCondition<GoRuleCondition>,
+        val actionsAfter: List<GoTaintAction>,
+    ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
+
+    data class Cleaner(
+        val function: String,
+        val condition: CommonCondition<GoRuleCondition>,
+        val actionsAfter: List<GoTaintAction>,
     ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
 }
 
 data class GoTaintConfig(
     val sources: List<TaintRules.Source>,
     val sinks: List<TaintRules.Sink>,
-    val propagators: List<TaintRules.Pass>,
+    val passThroughs: List<TaintRules.PassThrough>,
+    val cleaners: List<TaintRules.Cleaner> = emptyList(),
 ) : CommonTaintRulesProvider

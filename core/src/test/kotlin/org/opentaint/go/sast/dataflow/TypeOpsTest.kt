@@ -2,17 +2,36 @@ package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.go.rules.GoAssignMark
+import org.opentaint.dataflow.go.rules.GoRuleCondition
 import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TypeOpsTest : AnalysisTest() {
 
-    private val intSource = TaintRules.Source("test/util.SourceInt", "taint", Result)
-    private val floatSink = TaintRules.Sink("test/util.SinkFloat", "taint", Argument(0), "test-id")
-    private val anySource = TaintRules.Source("test/util.SourceAny", "taint", Result)
+    private val intSource = TaintRules.Source(
+        function = "test/util.SourceInt",
+        condition = mkTrue(),
+        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    )
+    private val floatSink = TaintRules.Sink(
+        function = "test/util.SinkFloat",
+        condition = CommonCondition.Atom(GoRuleCondition.ContainsMark(PositionBaseWithModifiers.BaseOnly(Argument(0)), "taint")),
+        trackFactsReachAnalysisEnd = emptyList(),
+        id = "test-id",
+        meta = TaintRules.Sink.DefaultMeta("Taint sink: test/util.SinkFloat"),
+    )
+    private val anySource = TaintRules.Source(
+        function = "test/util.SourceAny",
+        condition = mkTrue(),
+        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    )
 
     // Type conversion
     @Test fun typeCastInt001T() = assertSinkReachable(intSource, floatSink, "test.typeCastInt001T")

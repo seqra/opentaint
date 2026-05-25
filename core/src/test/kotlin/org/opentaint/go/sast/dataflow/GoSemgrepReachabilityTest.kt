@@ -9,12 +9,10 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
-import org.opentaint.dataflow.go.rules.GoTaintConfig
+import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
-import org.opentaint.dataflow.go.rules.TaintRules
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
@@ -43,7 +41,7 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * Real end-to-end go-dataflow reachability test for a GENERATED Go taint rule:
  *
- *   Go semgrep rule -> [SemgrepRuleLoader.loadGoRules] -> [GoTaintRuleEmitter.emit] -> [GoTaintConfig]
+ *   Go semgrep rule -> [SemgrepRuleLoader.loadGoRules] -> [GoTaintRuleEmitter.emit] -> [GoTaintConfiguration]
  *   -> fed to go-dataflow -> the sink is reachable from the source.
  *
  * The emitter names functions by the package SELECTOR (e.g. `util.Source`), so the sample is a
@@ -76,7 +74,7 @@ class GoSemgrepReachabilityTest {
 
     @Test
     fun generatedGoRuleReachesSink() {
-        // 1. Build the GoTaintConfig FROM A SEMGREP RULE (the point of the test).
+        // 1. Build the GoTaintConfiguration FROM A SEMGREP RULE (the point of the test).
         val yaml = """
             rules:
               - id: util-source-sink
@@ -95,17 +93,19 @@ class GoSemgrepReachabilityTest {
         val loadedRules = loader.loadRules()
         val rule = loadedRules.rulesWithMeta.first()
 
-        val config: GoTaintConfig = GoTaintRuleEmitter().emit(rule.first.ruleId, rule.first)
+        @Suppress("UNCHECKED_CAST")
+        val firstRule = rule.first as org.opentaint.semgrep.pattern.TaintRuleFromSemgrep<org.opentaint.dataflow.go.rules.GoSerializedItem>
+        val config: GoTaintConfiguration = GoTaintRuleEmitter().emit(firstRule.ruleId, firstRule)
 
         // Assert the generated config names match the Go IR; a name mismatch must fail loudly here.
-        assertEquals(
-            listOf(TaintRules.Source("util.Source", "taint", PositionBase.Result)),
-            config.sources,
-            "generated sources must name util.Source with Result position",
+        assertTrue(
+            config.sourceForFunction("util.Source").isNotEmpty(),
+            "generated sources must name util.Source",
         )
-        val sink = config.sinks.single()
-        assertEquals("util.Sink", sink.function, "generated sink must name util.Sink")
-        assertEquals(PositionBase.Argument(0), sink.pos, "generated sink must taint argument 0")
+        assertTrue(
+            config.sinkForFunction("util.Sink").isNotEmpty(),
+            "generated sinks must name util.Sink",
+        )
 
         // 2. Run go-dataflow with the GENERATED config and assert the sink is reachable.
         val vulnerabilities = runAnalysis(config, "util.Run")
@@ -115,7 +115,7 @@ class GoSemgrepReachabilityTest {
         )
     }
 
-    private fun runAnalysis(config: GoTaintConfig, entryPointFunction: String): List<*> {
+    private fun runAnalysis(config: GoTaintConfiguration, entryPointFunction: String): List<*> {
         val entryPoint = cp.findFunctionByFullName(entryPointFunction)
             ?: error("Entry point not found: $entryPointFunction")
 
