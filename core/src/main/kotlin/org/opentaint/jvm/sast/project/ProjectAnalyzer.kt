@@ -33,6 +33,7 @@ import org.opentaint.jvm.sast.util.asSequenceWithProgress
 import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
