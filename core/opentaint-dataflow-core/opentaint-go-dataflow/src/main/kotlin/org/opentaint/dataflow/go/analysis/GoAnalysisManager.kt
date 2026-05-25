@@ -16,6 +16,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
@@ -45,7 +46,8 @@ import org.opentaint.util.analysis.ApplicationGraph
  */
 class GoAnalysisManager(
     cp: GoIRProgram,
-    val taintConfig: GoTaintRulesProvider
+    val taintConfig: GoTaintRulesProvider,
+    val externalMethodTracker: ExternalMethodTracker? = null,
 ) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
@@ -57,7 +59,11 @@ class GoAnalysisManager(
         taintAnalysisContext: TaintAnalysisContext,
         contextForEmptyMethod: MethodAnalysisContext?,
     ): MethodAnalysisContext {
-        val taintCtx = GoTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintConfig)
+        val taintCtx = GoTaintAnalysisContext(
+            taintAnalysisContext.taintSinkTracker,
+            taintConfig,
+            externalMethodTracker,
+        )
         return GoMethodAnalysisContext(methodEntryPoint, taintCtx)
     }
 
