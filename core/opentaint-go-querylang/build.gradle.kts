@@ -29,6 +29,8 @@ dependencies {
     testImplementation(opentaint_ir_core_go)
     testImplementation(opentaintUtilJvm)
     testImplementation("org.opentaint.sast:dataflow")
+    testImplementation("org.opentaint.config:go-config")
+    testImplementation("org.opentaint.opentaint-configuration-rules:configuration-rules-go")
     testRuntimeOnly(Libs.logback)
 }
 
