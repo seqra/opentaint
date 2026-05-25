@@ -31,10 +31,6 @@ sealed interface GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
-    data class NumberOfArgs(val n: Int) : GoRuleCondition {
-        override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
-    }
-
     data class IsType(val typeName: String, val position: Position.Simple) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
@@ -48,7 +44,6 @@ interface GoConditionVisitor<out R> {
     fun visit(c: GoRuleCondition.ConstantLt): R
     fun visit(c: GoRuleCondition.ConstantGt): R
     fun visit(c: GoRuleCondition.ConstantMatches): R
-    fun visit(c: GoRuleCondition.NumberOfArgs): R
     fun visit(c: GoRuleCondition.IsType): R
 }
 

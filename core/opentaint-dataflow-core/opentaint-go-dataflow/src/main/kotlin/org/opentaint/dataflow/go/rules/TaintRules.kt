@@ -11,6 +11,12 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 import org.opentaint.dataflow.configuration.CommonTaintRulesProvider
 
 sealed interface TaintRules {
+    data class GlobalReadSource(
+        val global: String,
+        val condition: CommonCondition<GoRuleCondition>,
+        val actionsAfter: List<GoAssignMark>,
+    ) : TaintRules, CommonTaintConfigurationSource, CommonTaintAssignAction
+
     data class Source(
         val function: String,
         val condition: CommonCondition<GoRuleCondition>,
@@ -42,10 +48,3 @@ sealed interface TaintRules {
         val actionsAfter: List<GoTaintAction>,
     ) : TaintRules, CommonTaintConfigurationItem, CommonTaintAction
 }
-
-data class GoTaintConfig(
-    val sources: List<TaintRules.Source>,
-    val sinks: List<TaintRules.Sink>,
-    val passThroughs: List<TaintRules.PassThrough>,
-    val cleaners: List<TaintRules.Cleaner> = emptyList(),
-) : CommonTaintRulesProvider

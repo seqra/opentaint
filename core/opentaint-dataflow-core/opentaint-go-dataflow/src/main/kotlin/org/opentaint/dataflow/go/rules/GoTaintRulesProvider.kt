@@ -1,29 +1,20 @@
 package org.opentaint.dataflow.go.rules
 
-/**
- * Bridges GoTaintConfig to rule queries used by flow functions.
- * Pre-indexes rules by function name for O(1) lookup.
- */
-class GoTaintRulesProvider(val config: GoTaintConfig) {
+import org.opentaint.dataflow.go.GoFunctionSignature
 
-    private val sourcesByFunction: Map<String, List<TaintRules.Source>> =
-        config.sources.groupBy { it.function }
+class GoTaintRulesProvider(val configuration: GoTaintConfiguration) {
+    fun sourceRulesForGlobal(globalName: String): List<TaintRules.GlobalReadSource> =
+        configuration.sourceForGlobal(globalName)
 
-    private val sinksByFunction: Map<String, List<TaintRules.Sink>> =
-        config.sinks.groupBy { it.function }
+    fun sourceRulesForCall(signature: GoFunctionSignature): List<TaintRules.Source> =
+        configuration.sourceForFunction(signature)
 
-    private val passByFunction: Map<String, List<TaintRules.Pass>> =
-        config.propagators.groupBy { it.function }
+    fun sinkRulesForCall(signature: GoFunctionSignature): List<TaintRules.Sink> =
+        configuration.sinkForFunction(signature)
 
-    fun sourceRulesForCall(calleeName: String): List<TaintRules.Source> =
-        sourcesByFunction[calleeName] ?: emptyList()
+    fun passThroughRulesForCall(signature: GoFunctionSignature): List<TaintRules.PassThrough> =
+        configuration.passThroughForFunction(signature)
 
-    fun sinkRulesForCall(calleeName: String): List<TaintRules.Sink> =
-        sinksByFunction[calleeName] ?: emptyList()
-
-    fun passRulesForCall(calleeName: String): List<TaintRules.Pass> =
-        passByFunction[calleeName] ?: emptyList()
-
-    fun hasAnyRulesForCall(calleeName: String): Boolean =
-        calleeName in sourcesByFunction || calleeName in sinksByFunction || calleeName in passByFunction
+    fun cleanerRulesForCall(signature: GoFunctionSignature): List<TaintRules.Cleaner> =
+        configuration.cleanerForFunction(signature)
 }
