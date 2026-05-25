@@ -219,6 +219,52 @@ func TestSuggestQuietHasLeadingBlankLine(t *testing.T) {
 	}
 }
 
+func TestSuggestionsRendersMultipleItemsInOneSection(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+
+	p.Suggestions(
+		Suggestion{Description: "First hint", Command: "opentaint scan ."},
+		Suggestion{Description: "For full details, check the log file:", Command: "/tmp/run.log"},
+	)
+
+	got := buf.String()
+	if n := strings.Count(got, "Suggestions"); n != 1 {
+		t.Errorf("expected exactly one 'Suggestions' header, got %d in %q", n, got)
+	}
+	for _, want := range []string{"First hint", "opentaint scan .", "For full details, check the log file:", "/tmp/run.log"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected output to contain %q, got %q", want, got)
+		}
+	}
+}
+
+func TestSuggestionsDescriptionOnly(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+
+	p.Suggestions(Suggestion{Description: "Just a note"})
+
+	got := buf.String()
+	if !strings.Contains(got, "Just a note") {
+		t.Errorf("expected description in output, got %q", got)
+	}
+}
+
+func TestSuggestionsEmptyRendersNothing(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+
+	p.Suggestions()
+
+	if buf.String() != "" {
+		t.Errorf("expected no output for empty suggestions, got %q", buf.String())
+	}
+}
+
 func TestInteractiveBlank(t *testing.T) {
 	var buf bytes.Buffer
 	p := NewWithWriter(&buf)

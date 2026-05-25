@@ -231,17 +231,36 @@ func (p *Printer) StyledFieldItem(key string, value any, valueStyle lipgloss.Sty
 
 // ── Suggestion ───────────────────────────────────────────────────────
 
-// Suggest prints a suggestion section with a description and optional command.
-func (p *Printer) Suggest(description string, command string) {
+// Suggestion is one entry in a Suggestions block: a description and an
+// optional command. When Command is empty the entry renders as plain text.
+type Suggestion struct {
+	Description string
+	Command     string
+}
+
+// Suggestions prints a single "Suggestions" section containing every item.
+// Items with a Command render the command as a styled child of the
+// description; items without one render as plain styled text. Rendering
+// nothing when there are no items keeps callers from emitting an empty block.
+func (p *Printer) Suggestions(items ...Suggestion) {
+	if len(items) == 0 {
+		return
+	}
 	th := p.theme
 
 	p.Blank()
 	sb := p.Section("Suggestions")
-	if command == "" {
-		sb.StyledText(description, th.Suggestion)
-	} else {
-		sb.Child(p.GroupItem(th.Suggestion.Render(description), th.Command.Render(command)))
+	for _, item := range items {
+		if item.Command == "" {
+			sb.StyledText(item.Description, th.Suggestion)
+		} else {
+			sb.Child(p.GroupItem(th.Suggestion.Render(item.Description), th.Command.Render(item.Command)))
+		}
 	}
-
 	sb.Render()
+}
+
+// Suggest prints a single suggestion. Thin wrapper over Suggestions.
+func (p *Printer) Suggest(description string, command string) {
+	p.Suggestions(Suggestion{Description: description, Command: command})
 }
