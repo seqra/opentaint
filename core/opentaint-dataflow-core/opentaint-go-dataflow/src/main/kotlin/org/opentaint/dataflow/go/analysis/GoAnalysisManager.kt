@@ -117,7 +117,6 @@ class GoAnalysisManager(
     ): MethodCallFlowFunction {
         return GoMethodCallFlowFunction(
             apManager, analysisContext as GoMethodAnalysisContext,
-            returnValue as? GoIRValue,
             callExpr as GoCallExpr,
             statement as GoIRInst,
             generateTrace,
@@ -130,6 +129,7 @@ class GoAnalysisManager(
         statement: CommonInst,
     ): MethodCallSummaryHandler {
         return GoMethodCallSummaryHandler(
+            this,
             apManager, analysisContext as GoMethodAnalysisContext,
             statement as GoIRInst
         )

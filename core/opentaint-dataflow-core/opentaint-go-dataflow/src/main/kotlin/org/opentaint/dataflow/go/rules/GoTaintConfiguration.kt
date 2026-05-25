@@ -141,7 +141,7 @@ class GoTaintConfiguration {
         val actions = rule.taint.flatMap { t ->
             t.pos.resolve(signature).map { GoAssignMark(t.kind, it) }
         }
-        return TaintRule.Source(signature.name, condition, actions)
+        return TaintRule.Source(signature.name, condition, actions, rule.info)
     }
 
     private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRule.Sink? {
@@ -157,12 +157,12 @@ class GoTaintConfiguration {
         val id = rule.id ?: generateRuleId(rule)
         val meta = rule.meta ?: defaultMeta(signature.name)
 
-        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta)
+        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta, rule.info)
     }
 
     private fun specialize(rule: GoSerializedRule.PassThrough, signature: GoFunctionSignature): TaintRule.PassThrough? {
         val actions = rule.copy.flatMap { it.toTaintAction(signature) }
-        return TaintRule.PassThrough(signature.name, actions)
+        return TaintRule.PassThrough(signature.name, actions, rule.info)
     }
 
     private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRule.Cleaner? {
@@ -170,7 +170,7 @@ class GoTaintConfiguration {
         if (condition.isFalse()) return null
 
         val actions = rule.cleans.flatMap { it.toTaintAction(signature) }
-        return TaintRule.Cleaner(signature.name, condition, actions)
+        return TaintRule.Cleaner(signature.name, condition, actions, rule.info)
     }
 
     private fun GoSerializedPassAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =

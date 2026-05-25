@@ -37,7 +37,6 @@ import org.opentaint.util.onSome
 class GoMethodCallFlowFunction(
     private val apManager: ApManager,
     private val context: GoMethodAnalysisContext,
-    private val returnValueFromFramework: GoIRValue?,
     private val callExpr: GoCallExpr,
     private val statement: GoIRInst,
     private val generateTrace: Boolean,
@@ -47,13 +46,13 @@ class GoMethodCallFlowFunction(
     private val calleeName: String? get() = callExpr.calleeName
 
     private val returnValue: GoIRValue?
-        get() = returnValueFromFramework ?: GoFlowFunctionUtils.extractResultRegister(statement)
+        get() = GoFlowFunctionUtils.extractResultRegister(statement)
 
     private val callSignature: GoFunctionSignature?
         get() = calleeName?.let { GoFunctionSignature(it, callExpr.explicitArgs.size, callExpr.isMethodCall) }
 
     private val summaryRewriter by lazy {
-        GoCallRuleBasedSummaryRewriter(statement, context, apManager)
+        GoCallRuleBasedSummaryRewriter(statement, callExpr, returnValue, context, apManager)
     }
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> {
