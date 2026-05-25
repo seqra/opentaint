@@ -20,6 +20,9 @@ open class GoCallExpr(
     override val typeName: String
         get() = callInfo.resultType.displayName
 
+    val isMethodCall: Boolean
+        get() = callInfo.receiver != null || resolvedCallee?.isMethod == true
+
     val effectiveReceiver: GoIRValue?
         get() = when {
             callInfo.receiver != null -> callInfo.receiver
