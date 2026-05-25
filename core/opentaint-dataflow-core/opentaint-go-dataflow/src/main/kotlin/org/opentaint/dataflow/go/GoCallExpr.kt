@@ -7,28 +7,33 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
 import org.opentaint.ir.go.type.GoIRCallMode
 import org.opentaint.ir.go.value.GoIRBuiltinValue
+import org.opentaint.ir.go.value.GoIRValue
 
-/**
- * Wraps GoIRCallInfo to implement the framework's CommonCallExpr interface.
- */
 open class GoCallExpr(
     val callInfo: GoIRCallInfo,
     val resolvedCallee: GoIRFunction?,
     val enclosingMethod: GoIRFunction,
 ) : CommonCallExpr {
     override val args: List<CommonValue>
-        get() = callInfo.args.map { it as CommonValue }
+        get() = explicitArgs.map { it as CommonValue }
 
     override val typeName: String
         get() = callInfo.resultType.displayName
 
-    /**
-     * Callee function name for rule matching.
-     * For DIRECT: the function's full name (e.g., "test.source")
-     * For INVOKE: constructed from receiver type + method name
-     * For builtins: the builtin name (e.g., "append")
-     * For DYNAMIC: null (unresolved)
-     */
+    val effectiveReceiver: GoIRValue?
+        get() = when {
+            callInfo.receiver != null -> callInfo.receiver
+            resolvedCallee?.isMethod == true -> callInfo.args.firstOrNull()
+            else -> null
+        }
+
+    val explicitArgs: List<GoIRValue>
+        get() = when {
+            callInfo.receiver != null -> callInfo.args
+            resolvedCallee?.isMethod == true -> callInfo.args.drop(1)
+            else -> callInfo.args
+        }
+
     val calleeName: String?
         get() {
             resolvedCallee?.fullName?.let { return it }
@@ -43,9 +48,6 @@ open class GoCallExpr(
         }
 }
 
-/**
- * GoCallExpr variant for method calls (receiver-based).
- */
 class GoInstanceCallExpr(
     callInfo: GoIRCallInfo,
     resolvedCallee: GoIRFunction?,
