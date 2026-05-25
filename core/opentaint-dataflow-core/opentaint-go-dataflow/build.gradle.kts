@@ -14,6 +14,7 @@ dependencies {
     api(project(":opentaint-dataflow"))
     implementation(opentaintUtilCommon)
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
+    implementation("org.opentaint.config:go-config")
 
     implementation(opentaint_ir_api_go)
     implementation(opentaint_ir_core_go)
@@ -22,6 +23,7 @@ dependencies {
 
     implementation(KotlinDependency.Libs.kotlin_logging)
     implementation(KotlinDependency.Libs.reflect)
+    implementation(KotlinDependency.Libs.kaml)
 
     implementation(Libs.fastutil)
 
