@@ -25,16 +25,23 @@ func logSuggestion() (output.Suggestion, bool) {
 	}, true
 }
 
+// buildFailSuggestions returns the contextual hints followed by a pointer to
+// the log file when one exists. The defensive copy avoids mutating a caller's
+// backing array when contextual is passed via the spread form.
+func buildFailSuggestions(contextual []output.Suggestion) []output.Suggestion {
+	suggestions := append([]output.Suggestion(nil), contextual...)
+	if logSug, ok := logSuggestion(); ok {
+		suggestions = append(suggestions, logSug)
+	}
+	return suggestions
+}
+
 // failWith prints an error message, renders a single Suggestions block with any
 // contextual hints followed by a pointer to the log file (when one exists),
 // then exits the process with the given code.
 func failWith(code int, message string, contextual ...output.Suggestion) {
 	out.Error(message)
-	suggestions := append([]output.Suggestion(nil), contextual...)
-	if logSug, ok := logSuggestion(); ok {
-		suggestions = append(suggestions, logSug)
-	}
-	out.Suggestions(suggestions...)
+	out.Suggestions(buildFailSuggestions(contextual)...)
 	os.Exit(code)
 }
 
