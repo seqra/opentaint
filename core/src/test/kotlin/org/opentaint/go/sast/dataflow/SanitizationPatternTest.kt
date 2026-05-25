@@ -1,11 +1,8 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.mkTrue
-import org.opentaint.dataflow.go.rules.CopyAllMarks
+import org.opentaint.dataflow.go.rules.CopyData
+import org.opentaint.dataflow.go.rules.Position
 import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -14,13 +11,7 @@ import kotlin.test.assertTrue
 class SanitizationPatternTest : AnalysisTest() {
     private val passthroughRule = TaintRules.PassThrough(
         function = "test/util.Passthrough",
-        condition = mkTrue(),
-        actionsAfter = listOf(
-            CopyAllMarks(
-                PositionBaseWithModifiers.BaseOnly(Argument(0)),
-                PositionBaseWithModifiers.BaseOnly(PositionBase.Result),
-            ),
-        ),
+        actionsAfter = listOf(CopyData(Position.Argument(0), Position.Result)),
     )
 
     // Conservative: only one branch sanitizes, so taint persists
