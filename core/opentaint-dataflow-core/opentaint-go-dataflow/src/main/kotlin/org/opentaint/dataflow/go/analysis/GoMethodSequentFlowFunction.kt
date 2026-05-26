@@ -397,6 +397,70 @@ class GoMethodSequentFlowFunction(
         }
     }
 
+    /**
+     * Inspect an assignment's RHS for a "global read".
+     *
+     * Three SSA shapes lower to a tainted destination register:
+     *
+     *  1. `q := slice[i]` over a global-loaded slice, IR-as-IndexExpr:
+     *       `GoIRIndexExpr(x = register-loaded-from-global)`
+     *  2. `q := os.Args[1]` — the dominant CLI-input shape — which Go SSA splits
+     *     into three steps:
+     *       `t0 = *os.Args`            (GoIRUnOpExpr DEREF)
+     *       `t1 = &t0[i]`              (GoIRIndexAddrExpr)
+     *       `q  = *t1`                 (GoIRUnOpExpr DEREF)
+     *     We fire on the outer DEREF, chasing one def-step through the
+     *     `IndexAddrExpr` back to the global.
+     *  3. `q := *globalVar` — a bare slice-as-a-whole load. Rare in practice but
+     *     covered for symmetry; lets a sink rule that consumes the slice value
+     *     itself (e.g. `Sink_Slice(os.Args)`) work without a separate path.
+     *
+     * Returns the global's `fullName` so the caller can look up
+     * `sourceRulesForCall("<fullName>[]")`.
+     */
+    private fun detectGlobalReadName(inst: GoIRAssignInst): String? {
+        val expr = inst.expr
+        // Direct indexing via IndexExpr — `q := slice[i]` over a global-loaded slice.
+        if (expr is GoIRIndexExpr) {
+            return globalBehindValue(expr.x)
+        }
+        // Indirect indexing via &slice[i] + deref (`q := os.Args[1]` SSA shape):
+        //   t0 = *os.Args
+        //   t1 = &t0[i]   (GoIRIndexAddrExpr)
+        //   q  = *t1      (GoIRUnOpExpr DEREF — our destination)
+        // Detect the third instruction by chasing the deref through the index-addr.
+        if (expr is GoIRUnOpExpr && expr.op == GoIRUnaryOp.DEREF) {
+            val src = expr.x as? GoIRRegister
+            if (src != null) {
+                val srcDef = (GoFlowFunctionUtils.findDefInst(src, method) as? GoIRAssignInst)?.expr
+                if (srcDef is GoIRIndexAddrExpr) {
+                    val behind = globalBehindValue(srcDef.x)
+                    if (behind != null) return behind
+                }
+            }
+        }
+        // Bare expressions whose only operand is the global itself
+        // (`q := *os.Args` → the very first deref of the slice variable).
+        val ops = expr.operands
+        if (ops.size != 1) return null
+        return (ops[0] as? GoIRGlobalValue)?.global?.fullName
+    }
+
+    /**
+     * Resolve a value to the package-level global it was loaded from. Either the
+     * value is itself the global, or it is a register whose defining instruction
+     * is a single-operand expression (typically a `*globalVar` DEREF) over the
+     * global. Returns null if neither shape matches.
+     */
+    private fun globalBehindValue(value: GoIRValue): String? {
+        if (value is GoIRGlobalValue) return value.global.fullName
+        if (value !is GoIRRegister) return null
+        val defInst = GoFlowFunctionUtils.findDefInst(value, method) as? GoIRAssignInst ?: return null
+        val defOps = defInst.expr.operands
+        if (defOps.size != 1) return null
+        return (defOps[0] as? GoIRGlobalValue)?.global?.fullName
+    }
+
     private fun makeEdge(initialFact: InitialFactAp?, newFact: FinalFactAp): Sequent {
         val traceInfo = traceInfoOrNull()
         return if (initialFact != null) {
