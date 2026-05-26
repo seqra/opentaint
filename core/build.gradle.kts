@@ -30,6 +30,7 @@ dependencies {
 
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-python")
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
+    implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-go")
     implementation("org.opentaint.opentaint-dataflow-core:opentaint-jvm-dataflow")
     implementation("org.opentaint.sast.se:api")
 

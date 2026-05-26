@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":opentaint-java-querylang"))
     implementation("org.opentaint.opentaint-dataflow-core:opentaint-go-dataflow")
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
+    implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-go")
     implementation(KotlinDependency.Libs.kotlin_logging)
     antlr(Libs.antlr)
     implementation(Libs.antlr_runtime)
@@ -30,7 +31,6 @@ dependencies {
     testImplementation(opentaintUtilJvm)
     testImplementation("org.opentaint.sast:dataflow")
     testImplementation("org.opentaint.config:go-config")
-    testImplementation("org.opentaint.opentaint-configuration-rules:configuration-rules-go")
     testRuntimeOnly(Libs.logback)
 }
 

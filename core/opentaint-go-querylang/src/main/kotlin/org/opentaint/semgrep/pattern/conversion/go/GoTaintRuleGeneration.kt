@@ -1,0 +1,689 @@
+package org.opentaint.semgrep.pattern.conversion.go
+
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
+import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
+import org.opentaint.semgrep.pattern.FailedToCreateTaintRules
+import org.opentaint.semgrep.pattern.IgnoredMetavarConstraint
+import org.opentaint.semgrep.pattern.MetaVarConstraint
+import org.opentaint.semgrep.pattern.MetaVarConstraintFormula
+import org.opentaint.semgrep.pattern.NonMethodCallCleaner
+import org.opentaint.semgrep.pattern.PlaceholderMethodName
+import org.opentaint.semgrep.pattern.PlaceholderStringValue
+import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
+import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.GoTaintRuleGenerationCtx
+import org.opentaint.semgrep.pattern.conversion.IsMetavar
+import org.opentaint.semgrep.pattern.conversion.MetavarAtom
+import org.opentaint.semgrep.pattern.conversion.ParamCondition
+import org.opentaint.semgrep.pattern.conversion.ParamCondition.StringValueMetaVar
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
+import org.opentaint.semgrep.pattern.conversion.SpecificBoolValue
+import org.opentaint.semgrep.pattern.conversion.SpecificIntValue
+import org.opentaint.semgrep.pattern.conversion.SpecificNullValue
+import org.opentaint.semgrep.pattern.conversion.SpecificStringValue
+import org.opentaint.semgrep.pattern.conversion.automata.MethodConstraint
+import org.opentaint.semgrep.pattern.conversion.automata.MethodEnclosingClassName
+import org.opentaint.semgrep.pattern.conversion.automata.MethodName
+import org.opentaint.semgrep.pattern.conversion.automata.MethodSignature
+import org.opentaint.semgrep.pattern.conversion.automata.NumberOfArgsConstraint
+import org.opentaint.semgrep.pattern.conversion.automata.ParamConstraint
+import org.opentaint.semgrep.pattern.conversion.automata.Position
+import org.opentaint.semgrep.pattern.conversion.taint.MetaVarConstraintOrPlaceHolder
+import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
+import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeCondition
+import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeEffect
+import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.State
+import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleEdge
+import org.opentaint.semgrep.pattern.conversion.taint.isGeneratedAnyValueGenerator
+import org.opentaint.semgrep.pattern.conversion.taint.isGeneratedStringConcat
+import org.opentaint.semgrep.pattern.toDNF
+
+private enum class GoTaintEdgeKind { POSITIVE, CLEANER }
+
+private sealed interface GoMethodNamePattern {
+    data object AnyName : GoMethodNamePattern
+    data class Concrete(val name: String) : GoMethodNamePattern
+    data class Regex(val regex: String) : GoMethodNamePattern
+}
+
+fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSerializedItem> {
+    val rules = mutableListOf<GoSerializedItem>()
+
+    fun evaluateWithStateCheck(edge: TaintRuleEdge, kind: GoTaintEdgeKind, stateOfEdge: State): List<GoEvaluatedEdgeCondition> =
+        this.evaluateGoMethodConditionAndEffect(kind, stateOfEdge, edge.edgeCondition, edge.edgeEffect, ctx.trace)
+            .map { it.addGoStateCheck(this, edge.checkGlobalState, stateOfEdge) }
+
+    for (ruleEdge in edges) {
+        val stateOfEdge = ruleEdge.stateFrom
+
+        for (condition in evaluateWithStateCheck(ruleEdge, GoTaintEdgeKind.POSITIVE, stateOfEdge)) {
+            val actions = buildGoStateAssignActions(ruleEdge.stateTo, condition)
+            if (actions.isEmpty()) continue
+
+            when (ruleEdge.edgeKind) {
+                TaintRuleEdge.Kind.MethodEnter,
+                TaintRuleEdge.Kind.MethodExit -> {
+                    ctx.trace.error(FailedToCreateTaintRules("Non method call sources are not supported yet"))
+                    continue
+                }
+
+                TaintRuleEdge.Kind.MethodCall -> {
+                    val info = edgeRuleInfo(ruleEdge).toGo()
+                    val fn = condition.ruleCondition.function
+                    fn.handleMethodCall(
+                        call = {
+                            rules += GoSerializedRule.Source(
+                                function = fn,
+                                condition = condition.ruleCondition.condition,
+                                taint = actions,
+                                info = info,
+                            )
+                        },
+                        global = { globalField ->
+                            rules += GoSerializedGlobalSource(
+                                global = globalField,
+                                condition = condition.ruleCondition.condition,
+                                taint = actions,
+                                info = info,
+                            )
+                        }
+                    )
+
+                }
+            }
+        }
+    }
+
+    for (ruleEdge in edgesToFinalAccept) {
+        val stateOfEdge = ruleEdge.stateFrom
+
+        for (condition in evaluateWithStateCheck(ruleEdge, GoTaintEdgeKind.POSITIVE, stateOfEdge)) {
+            when (ruleEdge.edgeKind) {
+                TaintRuleEdge.Kind.MethodEnter,
+                TaintRuleEdge.Kind.MethodExit -> {
+                    ctx.trace.error(FailedToCreateTaintRules("Non method call sinks are not supported yet"))
+                    continue
+                }
+
+                TaintRuleEdge.Kind.MethodCall -> {
+                    val fn = condition.ruleCondition.function
+                    fn.handleMethodCall(
+                        call = {
+                            val afterSinkActions = buildGoStateAssignActions(ruleEdge.stateTo, condition)
+                            rules += GoSerializedRule.Sink(
+                                function = condition.ruleCondition.function,
+                                condition = condition.ruleCondition.condition,
+                                trackFactsReachAnalysisEnd = afterSinkActions.takeIf { it.isNotEmpty() },
+                                id = ctx.ruleId,
+                                meta = ctx.meta.toGoSinkMeta(),
+                                info = null,
+                            )
+                        },
+                        global = { _ ->
+                            ctx.trace.error(FailedToCreateTaintRules("Global sinks are not supported yet"))
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    for (ruleEdge in edgesToFinalDead) {
+        val stateOfEdge = ruleEdge.stateFrom
+
+        for (condition in evaluateWithStateCheck(ruleEdge, GoTaintEdgeKind.CLEANER, stateOfEdge)) {
+            val actions = buildGoStateCleanActions(ruleEdge.stateTo, stateOfEdge, condition)
+            if (actions.isEmpty()) continue
+
+            val info = edgeRuleInfo(ruleEdge).toGo()
+
+            when (ruleEdge.edgeKind) {
+                TaintRuleEdge.Kind.MethodEnter, TaintRuleEdge.Kind.MethodExit -> {
+                    ctx.trace.error(NonMethodCallCleaner())
+                    continue
+                }
+                TaintRuleEdge.Kind.MethodCall -> {
+                    val fn = condition.ruleCondition.function
+                    fn.handleMethodCall(
+                        call = {
+                            rules += GoSerializedRule.Cleaner(
+                                function = condition.ruleCondition.function,
+                                condition = condition.ruleCondition.condition,
+                                cleans = actions,
+                                info = info,
+                            )
+                        },
+                        global = { _ ->
+                            ctx.trace.error(FailedToCreateTaintRules("Global cleaners are not supported yet"))
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    return rules
+}
+
+private inline fun GoNameMatcher.handleMethodCall(call: () -> Unit, global: (GoNameMatcher) -> Unit) {
+    if (this is GoNameMatcher.Simple) {
+        val globalField = GoLanguageStrategy.globalReadFieldOrNull(name)
+        if (globalField != null) {
+            global(GoNameMatcher.Simple(globalField))
+            return
+        }
+    }
+    call()
+}
+
+private fun SinkMetaData.toGoSinkMeta(): GoSinkMetaData =
+    GoSinkMetaData(message = note ?: "", severity = severity ?: GoSinkMetaData().severity, cwe = cwe)
+
+private fun GoTaintRuleGenerationCtx.buildGoStateAssignActions(
+    stateAfter: State,
+    edgeCondition: GoEvaluatedEdgeCondition
+): List<GoSerializedAssignAction> {
+    val requiredVariables = stateAfter.register.assignedVars.keys
+    val result = requiredVariables.flatMapTo(mutableListOf()) { varName ->
+        val varPosition = edgeCondition.accessedVarPosition[varName] ?: return@flatMapTo emptyList()
+        varPosition.positions.flatMap { stateAssignMark(varPosition.varName, stateAfter, it) }
+    }
+    return result
+}
+
+private fun GoTaintRuleGenerationCtx.buildGoStateCleanActions(
+    stateAfter: State,
+    stateBefore: State,
+    edgeCondition: GoEvaluatedEdgeCondition
+): List<GoSerializedCleanAction> {
+    val result = edgeCondition.accessedVarPosition.values.flatMapTo(mutableListOf()) { varPosition ->
+        varPosition.positions.flatMap { stateCleanMark(varPosition.varName, stateAfter, stateBefore, it) }
+    }
+    result += stateCleanMark(varName = null, stateAfter, stateBefore, position = null)
+    return result
+}
+
+private fun GoEvaluatedEdgeCondition.addGoStateCheck(
+    ctx: GoTaintRuleGenerationCtx,
+    checkGlobalState: Boolean,
+    stateOfEdge: State,
+): GoEvaluatedEdgeCondition {
+    val stateChecks = mutableListOf<GoSerializedCondition>()
+    if (checkGlobalState) {
+        stateChecks += ctx.globalStateMarkName(stateOfEdge).mkGoContainsMark(
+            PositionBase.ClassStatic(ctx.prefix.artificialState("pos").taintMarkStr()).baseGo()
+        )
+    } else {
+        for (metaVar in stateOfEdge.register.assignedVars.keys) {
+            for (pos in accessedVarPosition[metaVar]?.positions.orEmpty()) {
+                stateChecks += ctx.containsStateMark(metaVar, stateOfEdge, pos)
+            }
+        }
+    }
+
+    if (stateChecks.isEmpty()) return this
+
+    val stateCondition = GoSerializedCondition.or(stateChecks)
+    val combined = GoSerializedCondition.and(listOf(stateCondition, ruleCondition.condition))
+    return copy(ruleCondition = ruleCondition.copy(condition = combined))
+}
+
+private fun GoTaintRuleGenerationCtx.evaluateGoMethodConditionAndEffect(
+    edgeKind: GoTaintEdgeKind,
+    edgeState: State,
+    condition: EdgeCondition,
+    effect: EdgeEffect,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): List<GoEvaluatedEdgeCondition> {
+    val evaluatedConditions = mutableListOf<GoEvaluatedEdgeCondition>()
+
+    val (evaluatedSignature, ruleBuilders) = evaluateGoConditionAndEffectSignatures(this, effect, condition, semgrepRuleTrace)
+    for (ruleBuilder in ruleBuilders) {
+        condition.readMetaVar.values.flatten().forEach {
+            val signature = it.predicate.signature.notEvaluatedSignature(evaluatedSignature)
+            evaluateGoEdgePredicateConstraint(this, edgeKind, edgeState, signature, it.predicate.constraint, it.negated, ruleBuilder.conditions, semgrepRuleTrace)
+        }
+        condition.other.forEach {
+            val signature = it.predicate.signature.notEvaluatedSignature(evaluatedSignature)
+            evaluateGoEdgePredicateConstraint(this, edgeKind, edgeState, signature, it.predicate.constraint, it.negated, ruleBuilder.conditions, semgrepRuleTrace)
+        }
+
+        val varPositions = hashMapOf<MetavarAtom, GoRegisterVarPosition>()
+        effect.assignMetaVar.values.flatten().forEach { findGoMetaVarPosition(it.predicate.constraint, varPositions) }
+
+        evaluatedConditions += GoEvaluatedEdgeCondition(ruleBuilder.build(), varPositions)
+    }
+
+    return evaluatedConditions
+}
+
+private fun MethodSignature.notEvaluatedSignature(evaluated: MethodSignature): MethodSignature? {
+    if (this == evaluated) return null
+    return MethodSignature(
+        methodName = if (methodName == evaluated.methodName) MethodName(SignatureName.AnyName) else methodName,
+        enclosingClassName = if (enclosingClassName == evaluated.enclosingClassName) MethodEnclosingClassName.anyClassName else enclosingClassName,
+        returnType = if (returnType == evaluated.returnType) null else returnType,
+    )
+}
+
+private fun evaluateGoConditionAndEffectSignatures(
+    ctx: GoTaintRuleGenerationCtx,
+    effect: EdgeEffect,
+    condition: EdgeCondition,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): Pair<MethodSignature, List<GoRuleConditionBuilder>> {
+    val signatures = mutableListOf<MethodSignature>()
+    effect.assignMetaVar.values.flatten().forEach {
+        check(!it.negated) { "Negated effect" }
+        signatures.add(it.predicate.signature)
+    }
+    condition.readMetaVar.values.flatten().forEach {
+        if (!it.negated) signatures.add(it.predicate.signature)
+    }
+    condition.other.forEach {
+        if (!it.negated) signatures.add(it.predicate.signature)
+    }
+    return evaluateGoFormulaSignature(ctx, signatures, semgrepRuleTrace)
+}
+
+private fun evaluateGoFormulaSignature(
+    ctx: GoTaintRuleGenerationCtx,
+    signatures: List<MethodSignature>,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): Pair<MethodSignature, List<GoRuleConditionBuilder>> {
+    val signature = signatures.first()
+    if (signatures.any { it != signature }) TODO("Signature mismatch")
+    if (signature.isGeneratedAnyValueGenerator()) TODO("Eliminate generated method")
+    if (signature.isGeneratedStringConcat()) TODO("Eliminate generated string concat")
+
+    val methodName = signature.methodName.name
+    val evaluatedMethodName = evaluateGoFormulaSignatureMethodName(ctx, methodName, semgrepRuleTrace)
+
+    // A non-null Go function matcher means we have a concrete name; otherwise we leave the
+    // builder.function null and the build() default kicks in (matches anything).
+    val classMatcherSource = signature.enclosingClassName.name
+    val classFormula = ctx.goTypeMatcher(classMatcherSource, semgrepRuleTrace)
+
+    val builders = evaluatedMethodName.flatMap { namePattern ->
+        if (classFormula == null) {
+            return@flatMap listOf(
+                GoRuleConditionBuilder().also { b ->
+                    b.function = buildGoFunctionMatcher(namePattern, positiveClass = null, negativeClasses = emptyList())
+                }
+            )
+        }
+
+        val classDnf = classFormula.toDNF()
+        classDnf.flatMap { cube ->
+            if (cube.positive.size > 1) TODO("Complex class signature matcher")
+            val positiveClass = cube.positive.firstOrNull()?.constraint
+            val negativeClasses = cube.negative.map { it.constraint }
+            listOf(
+                GoRuleConditionBuilder().also { b ->
+                    b.function = buildGoFunctionMatcher(namePattern, positiveClass, negativeClasses)
+                }
+            )
+        }.ifEmpty {
+            // Empty DNF (no cubes at all): fall back to name-only matcher.
+            listOf(
+                GoRuleConditionBuilder().also { b ->
+                    b.function = buildGoFunctionMatcher(namePattern, positiveClass = null, negativeClasses = emptyList())
+                }
+            )
+        }
+    }
+
+    // Return type — emit IsType(Result) condition.
+    signature.returnType?.let { returnType ->
+        val rt = ctx.goTypeMatcher(returnType, semgrepRuleTrace)
+        val cond = rt.toGoSerializedConditionIsType(PositionBase.Result)
+        builders.forEach { it.conditions += cond }
+    }
+
+    return signature to builders
+}
+
+/**
+ * Build a [org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher] from a method-name pattern and an optional positive /
+ * any-count negative class constraints. Implements the full cross-product matrix:
+ *
+ * ```
+ * namePattern    | +cls | -classes | matcher
+ * ---------------+------+----------+--------------------------------------------------
+ * AnyName        | none | none     | null   (matches anything)
+ * AnyName        | cls  | none     | Pattern("(.[SLASH])?<cls>\\..*")
+ * AnyName        | none | [N…]     | Pattern("^(?!.*N1\\.)…(?!.*Nk\\.).*\\..*$")
+ * AnyName        | cls  | [N…]     | Pattern("^(?!.*N1\\.)…(.[SLASH])?<cls>\\..*$")
+ * Concrete(name) | none | none     | Pattern("(.*\\.)?<name>")
+ * Concrete(name) | cls  | none     | Pattern("(.[SLASH])?<cls>\\.<name>")
+ * Concrete(name) | none | [N…]     | Pattern("^(?!.*N1\\.)….*<name>$")
+ * Concrete(name) | cls  | [N…]     | Pattern("^(?!.*N1\\.)…(.[SLASH])?<cls>\\.<name>$")
+ * Regex(r)       | none | none     | Pattern("(.*\\.)?<r>")    — r raw
+ * Regex(r)       | cls  | none     | Pattern("(.[SLASH])?<cls>\\.<r>")    — r raw
+ * Regex(r)       | none | [N…]     | Pattern("^(?!.*N1\\.)….*<r>$")
+ * Regex(r)       | cls  | [N…]     | Pattern("^(?!.*N1\\.)…(.[SLASH])?<cls>\\.<r>$")
+ * ```
+ *
+ * `[SLASH]` here denotes a literal `/` followed by `?`-optional group; written
+ * that way in the table because a literal `*` `/` would close the kdoc block.
+ *
+ * The optional path prefix in front of `<cls>` is the G10 fix: Go's IR encodes
+ * nested import paths in the callee name (e.g. `net/http.Get`,
+ * `io/ioutil.ReadFile`), while a semgrep pattern uses only the last path segment
+ * (`http`, `ioutil`). The optional `<anything>/` prefix lets one matcher accept
+ * both forms — top-level packages (`os.Getenv`) and nested ones
+ * (`net/http.Get`, `foo/bar/http.Get`).
+ *
+ * Negative-class lookaheads also include a `.*` so the import-path prefix
+ * doesn't slip an exclusion past the start anchor.
+ */
+private fun buildGoFunctionMatcher(
+    namePattern: GoMethodNamePattern,
+    positiveClass: String?,
+    negativeClasses: List<String>,
+): GoNameMatcher? {
+    if (negativeClasses.isEmpty()) {
+        return buildGoFunctionMatcherPositive(namePattern, positiveClass)
+    }
+
+    // We have at least one negative-class constraint; emit a Pattern with negative
+    // lookaheads anchored at start, followed by the positive / wildcard tail.
+    // Each lookahead uses `.*` to scan past any import-path prefix.
+    val lookaheads = negativeClasses.joinToString("") { "(?!.*${Regex.escape(it)}\\.)" }
+    val tail = when (namePattern) {
+        GoMethodNamePattern.AnyName -> {
+            if (positiveClass != null) "(.*/)?${Regex.escape(positiveClass)}\\..*"
+            else ".*\\..*"
+        }
+        is GoMethodNamePattern.Concrete -> {
+            val n = Regex.escape(namePattern.name)
+            if (positiveClass != null) "(.*/)?${Regex.escape(positiveClass)}\\.$n"
+            else ".*$n"
+        }
+        is GoMethodNamePattern.Regex -> {
+            // namePattern.regex is already a regex — pass through unescaped.
+            if (positiveClass != null) "(.*/)?${Regex.escape(positiveClass)}\\.${namePattern.regex}"
+            else ".*${namePattern.regex}"
+        }
+    }
+    return GoNameMatcher.Pattern("^$lookaheads$tail$")
+}
+
+private fun buildGoFunctionMatcherPositive(
+    namePattern: GoMethodNamePattern,
+    positiveClass: String?,
+): GoNameMatcher? = when (namePattern) {
+    GoMethodNamePattern.AnyName -> when (positiveClass) {
+        null -> null  // matches anything
+        // `(.*/)?` lets a class alias (e.g. `http`) match both top-level
+        // (`http.Foo`) and nested-import forms (`net/http.Foo`). G10.
+        else -> GoNameMatcher.Pattern("(.*/)?${Regex.escape(positiveClass)}\\..*")
+    }
+    is GoMethodNamePattern.Concrete -> {
+        val name = namePattern.name
+        when (positiveClass) {
+            null -> GoNameMatcher.Pattern("(.*\\.)?${Regex.escape(name)}")
+            // G10: emit a regex with optional import-path prefix so
+            // `http.Get` matches both `http.Get` and `net/http.Get`.
+            else -> GoNameMatcher.Pattern(
+                "(.*/)?${Regex.escape(positiveClass)}\\.${Regex.escape(name)}"
+            )
+        }
+    }
+    is GoMethodNamePattern.Regex -> when (positiveClass) {
+        null -> GoNameMatcher.Pattern("(.*\\.)?${namePattern.regex}")
+        else -> GoNameMatcher.Pattern("(.*/)?${Regex.escape(positiveClass)}\\.${namePattern.regex}")
+    }
+}
+
+private fun evaluateGoFormulaSignatureMethodName(
+    ctx: GoTaintRuleGenerationCtx,
+    methodName: SignatureName,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): List<GoMethodNamePattern> = when (methodName) {
+    SignatureName.AnyName -> listOf(GoMethodNamePattern.AnyName)
+    is SignatureName.Concrete -> listOf(GoMethodNamePattern.Concrete(methodName.name))
+    is SignatureName.MetaVar -> {
+        val constraint = when (val c = ctx.metaVarInfo.constraints[methodName.metaVar]) {
+            null -> null
+            is MetaVarConstraintOrPlaceHolder.Constraint -> c.constraint
+            is MetaVarConstraintOrPlaceHolder.PlaceHolder -> {
+                semgrepRuleTrace.error(PlaceholderMethodName())
+                c.constraint
+            }
+        }
+        if (constraint == null) listOf(GoMethodNamePattern.AnyName) else {
+            val cubes = constraint.constraint.toDNF()
+            cubes.mapNotNull { cube ->
+                // Negated method names are still dropped — Go's function-matcher matches
+                // by qualified name, and a single name-only negation would require the
+                // matcher to match anything-except, which is rule-specific (and the surrounding
+                // pipeline emits this as a `Not` condition where it can).
+                if (cube.negative.isNotEmpty()) null
+                else if (cube.positive.isEmpty()) null
+                else if (cube.positive.size > 1) null
+                else when (val c = cube.positive.first().constraint) {
+                    is MetaVarConstraint.Concrete -> GoMethodNamePattern.Concrete(c.value)
+                    is MetaVarConstraint.RegExp -> GoMethodNamePattern.Regex(c.regex)
+                }
+            }.ifEmpty { listOf(GoMethodNamePattern.AnyName) }
+        }
+    }
+}
+
+private fun evaluateGoEdgePredicateConstraint(
+    ctx: GoTaintRuleGenerationCtx,
+    edgeKind: GoTaintEdgeKind,
+    edgeState: State,
+    signature: MethodSignature?,
+    constraint: MethodConstraint?,
+    negated: Boolean,
+    conditions: MutableSet<GoSerializedCondition>,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+) {
+    if (!negated) {
+        evaluateGoMethodConstraints(ctx, edgeKind, edgeState, signature, constraint, conditions, semgrepRuleTrace)
+    } else {
+        val negatedConds = hashSetOf<GoSerializedCondition>()
+        evaluateGoMethodConstraints(ctx, edgeKind, edgeState, signature, constraint, negatedConds, semgrepRuleTrace)
+        conditions += GoSerializedCondition.not(GoSerializedCondition.and(negatedConds.toList()))
+    }
+}
+
+private fun evaluateGoMethodConstraints(
+    ctx: GoTaintRuleGenerationCtx,
+    edgeKind: GoTaintEdgeKind,
+    edgeState: State,
+    signature: MethodSignature?,
+    constraint: MethodConstraint?,
+    conditions: MutableSet<GoSerializedCondition>,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+) {
+    if (signature != null) {
+        evaluateGoMethodSignatureCondition(ctx, signature, conditions, semgrepRuleTrace)
+    }
+    when (constraint) {
+        null -> {}
+        is NumberOfArgsConstraint -> conditions += GoSerializedCondition.NumberOfArgs(constraint.num)
+        is ParamConstraint -> evaluateGoParamConstraints(ctx, edgeKind, edgeState, constraint, conditions, semgrepRuleTrace)
+        // ClassModifierConstraint / MethodModifierConstraint — Java-only (annotations); omitted on Go.
+        else -> {
+            // Drop unsupported constraints silently — Go has no annotations/modifiers.
+        }
+    }
+}
+
+private fun evaluateGoMethodSignatureCondition(
+    ctx: GoTaintRuleGenerationCtx,
+    signature: MethodSignature,
+    conditions: MutableSet<GoSerializedCondition>,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+) {
+    // Class-name matching is not representable at Go condition level (only at function-matcher level);
+    // skip the class part. Method-name matching is also not representable; skip too.
+    signature.returnType?.let {
+        val rt = ctx.goTypeMatcher(it, semgrepRuleTrace)
+        conditions += rt.toGoSerializedConditionIsType(PositionBase.Result)
+    }
+}
+
+private fun evaluateGoParamConstraints(
+    ctx: GoTaintRuleGenerationCtx,
+    edgeKind: GoTaintEdgeKind,
+    edgeState: State,
+    param: ParamConstraint,
+    conditions: MutableSet<GoSerializedCondition>,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+) {
+    val position = param.position.toGoSerializedPosition()
+    conditions += evaluateGoParamCondition(ctx, edgeKind, edgeState, position, param.condition, semgrepRuleTrace)
+}
+
+private fun findGoMetaVarPosition(
+    constraint: MethodConstraint?,
+    varPositions: MutableMap<MetavarAtom, GoRegisterVarPosition>,
+) {
+    if (constraint !is ParamConstraint) return
+    val position = constraint.position.toGoSerializedPosition()
+    findGoMetaVarPositionUtil(position, constraint.condition, varPositions)
+}
+
+private fun findGoMetaVarPositionUtil(
+    position: PositionBaseWithModifiers,
+    condition: ParamCondition.Atom,
+    varPositions: MutableMap<MetavarAtom, GoRegisterVarPosition>,
+) {
+    if (condition !is IsMetavar) return
+    val varPosition = varPositions.getOrPut(condition.metavar) {
+        GoRegisterVarPosition(condition.metavar, hashSetOf())
+    }
+    varPosition.positions.add(position)
+}
+
+private fun evaluateGoParamCondition(
+    ctx: GoTaintRuleGenerationCtx,
+    edgeKind: GoTaintEdgeKind,
+    edgeState: State,
+    position: PositionBaseWithModifiers,
+    condition: ParamCondition.Atom,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): GoSerializedCondition {
+    when (condition) {
+        is IsMetavar -> {
+            val constraints = ctx.metaVarInfo.constraints[condition.metavar.toString()]
+            if (constraints != null) {
+                // todo: semantic metavar constraint
+                semgrepRuleTrace.error(IgnoredMetavarConstraint(condition.metavar))
+            }
+            return ctx.containsMarkWithAnyStateBefore(edgeState, condition.metavar, position)
+        }
+        is ParamCondition.TypeIs -> {
+            return ctx.goTypeMatcher(condition.typeName, semgrepRuleTrace)
+                .toGoSerializedConditionIsType(position.base)
+        }
+        is ParamCondition.SpecificStaticFieldValue -> {
+            // Go has no static-field source rules in v1; drop the condition entirely.
+            return GoSerializedCondition.True
+        }
+        ParamCondition.AnyStringLiteral -> {
+            return GoSerializedCondition.and(
+                listOf(
+                    GoSerializedCondition.IsType("string", position.base),
+                    GoSerializedCondition.ConstantMatches(position.base, ".*"),
+                )
+            )
+        }
+        is SpecificBoolValue -> {
+            val v = GoSerializedCondition.ConstantValue(
+                GoSerializedCondition.ConstantType.Bool, condition.value.toString()
+            )
+            return GoSerializedCondition.ConstantCmp(position.base, v, GoSerializedCondition.ConstantCmpType.Eq)
+        }
+        is SpecificIntValue -> {
+            val v = GoSerializedCondition.ConstantValue(
+                GoSerializedCondition.ConstantType.Int, condition.value.toString()
+            )
+            return GoSerializedCondition.ConstantCmp(position.base, v, GoSerializedCondition.ConstantCmpType.Eq)
+        }
+        is SpecificStringValue -> {
+            val v = GoSerializedCondition.ConstantValue(GoSerializedCondition.ConstantType.Str, condition.value)
+            return GoSerializedCondition.ConstantCmp(position.base, v, GoSerializedCondition.ConstantCmpType.Eq)
+        }
+        is SpecificNullValue -> {
+            return GoSerializedCondition.IsNull(position.base)
+        }
+        is StringValueMetaVar -> {
+            val constraints = ctx.metaVarInfo.constraints[condition.metaVar.toString()]
+            val constraint = when (constraints) {
+                null -> null
+                is MetaVarConstraintOrPlaceHolder.Constraint -> constraints.constraint.constraint
+                is MetaVarConstraintOrPlaceHolder.PlaceHolder -> {
+                    semgrepRuleTrace.error(PlaceholderStringValue())
+                    constraints.constraint?.constraint
+                }
+            }
+            return constraint.toGoSerializedConditionFromMetaVar(position.base)
+        }
+        is ParamCondition.ParamModifier -> {
+            // Annotations — Java-only. Omit.
+            return GoSerializedCondition.True
+        }
+    }
+}
+
+private fun MetaVarConstraintFormula<String>?.toGoSerializedConditionIsType(pos: PositionBase): GoSerializedCondition {
+    if (this == null) return GoSerializedCondition.True
+    return toGoSerializedCondition { GoSerializedCondition.IsType(it, pos) }
+}
+
+private fun <T> MetaVarConstraintFormula<T>?.toGoSerializedCondition(
+    transform: (T) -> GoSerializedCondition,
+): GoSerializedCondition {
+    if (this == null) return GoSerializedCondition.True
+    return toGoSerializedConditionWrtLiteral { transform(it.constraint) }
+}
+
+private fun <T> MetaVarConstraintFormula<T>.toGoSerializedConditionWrtLiteral(
+    transform: (MetaVarConstraintFormula.Literal<T>) -> GoSerializedCondition,
+): GoSerializedCondition = when (this) {
+    is MetaVarConstraintFormula.Constraint -> transform(this)
+    is MetaVarConstraintFormula.NegatedConstraint -> GoSerializedCondition.not(transform(this))
+    is MetaVarConstraintFormula.And -> GoSerializedCondition.and(args.map { it.toGoSerializedConditionWrtLiteral(transform) })
+    is MetaVarConstraintFormula.Or -> GoSerializedCondition.or(args.map { it.toGoSerializedConditionWrtLiteral(transform) })
+}
+
+private fun MetaVarConstraintFormula<MetaVarConstraint>?.toGoSerializedConditionFromMetaVar(pos: PositionBase): GoSerializedCondition {
+    if (this == null) return GoSerializedCondition.True
+    return toGoSerializedCondition { c ->
+        when (c) {
+            is MetaVarConstraint.Concrete -> {
+                val v = GoSerializedCondition.ConstantValue(GoSerializedCondition.ConstantType.Str, c.value)
+                GoSerializedCondition.ConstantCmp(pos, v, GoSerializedCondition.ConstantCmpType.Eq)
+            }
+            is MetaVarConstraint.RegExp -> GoSerializedCondition.and(
+                listOf(
+                    GoSerializedCondition.IsType("string", pos),
+                    GoSerializedCondition.ConstantMatches(pos, c.regex),
+                )
+            )
+        }
+    }
+}
+
+private fun Position.toGoSerializedPosition(): PositionBaseWithModifiers = when (this) {
+    is Position.Argument -> when (val idx = index) {
+        is Position.ArgumentIndex.Any -> PositionBase.AnyArgument(idx.paramClassifier).baseGo()
+        is Position.ArgumentIndex.Concrete -> PositionBase.Argument(idx.idx).baseGo()
+    }
+    is Position.Object -> PositionBase.This.baseGo()
+    is Position.Result -> PositionBase.Result.baseGo()
+}
