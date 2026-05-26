@@ -14,7 +14,7 @@ import org.opentaint.dataflow.configuration.python.serialized.loadSerializedPyth
 import kotlin.io.path.toPath
 
 object PythonConfigLoader {
-    private const val CONFIG_ROOT = "/config"
+    private const val CONFIG_ROOT = "/python-config"
     private val config = lazy { loadConfig() }
 
     fun getConfig() = config.value
