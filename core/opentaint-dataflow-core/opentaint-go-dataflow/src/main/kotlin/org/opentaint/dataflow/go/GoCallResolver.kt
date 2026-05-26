@@ -97,8 +97,9 @@ class GoCallResolver(
                 emptyList()
             } else {
                 concreteTypes.filter { concrete ->
+                    val concreteMethods = concrete.allMethods().toList()
                     requiredMethods.all { (name, ifaceParamCount) ->
-                        concrete.allMethods().any { m ->
+                        concreteMethods.any { m ->
                             m.name == name && methodParamCount(m) == ifaceParamCount
                         }
                     }
@@ -115,10 +116,10 @@ class GoCallResolver(
      */
     private fun collectInterfaceMethodSignatures(iface: GoIRNamedType): Set<Pair<String, Int>> {
         val methods = mutableSetOf<Pair<String, Int>>()
-        for (m in iface.interfaceMethods) {
+        for (m in iface.interfaceMethods.toList()) {
             methods.add(m.name to m.signature.params.size)
         }
-        for (embed in iface.embeddedInterfaces) {
+        for (embed in iface.embeddedInterfaces.toList()) {
             methods += collectInterfaceMethodSignatures(embed)
         }
         return methods

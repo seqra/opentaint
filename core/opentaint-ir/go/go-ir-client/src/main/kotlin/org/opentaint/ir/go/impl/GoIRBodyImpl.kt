@@ -24,4 +24,12 @@ class GoIRBodyImpl(
     override val instGraph: GoIRInstGraph by lazy {
         GoIRInstGraphImpl(this)
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GoIRBody) return false
+        return function == other.function
+    }
+
+    override fun hashCode(): Int = function.hashCode()
 }

@@ -12,6 +12,14 @@ class GoIRNamedTypeImpl(
     override val kind: GoIRNamedTypeKind,
     override val position: GoIRPosition?,
 ) : GoIRNamedType {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GoIRNamedType) return false
+        return fullName == other.fullName
+    }
+
+    override fun hashCode(): Int = fullName.hashCode()
+
     private val _fields = mutableListOf<GoIRField>()
     private val _methods = mutableListOf<GoIRFunction>()
     private val _pointerMethods = mutableListOf<GoIRFunction>()

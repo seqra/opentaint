@@ -23,6 +23,12 @@ data class GoInstLocation(
 /**
  * Base interface for all IR instructions.
  * Every instruction belongs to a basic block and has a unique index within its function.
+ *
+ * Equality and hashCode are anchored on [location] — within a function body each instruction has a
+ * unique (block,index) coordinate, so two GoIRInst at the same location are necessarily the same
+ * instruction. Fields beyond location (registers, exprs, …) carry mutable type state populated
+ * during lazy body resolution, and including them in hashCode produces unstable hashes that break
+ * map-based storage (e.g. `MethodAnalyzerStorage.entryPoints`).
  */
 sealed interface GoIRInst: CommonInst {
     override val location: GoInstLocation
@@ -30,6 +36,9 @@ sealed interface GoIRInst: CommonInst {
 
     fun <T> accept(visitor: GoIRInstVisitor<T>): T
 }
+
+private fun GoIRInst.equalsByLocation(other: Any?): Boolean =
+    this === other || (other is GoIRInst && location == other.location)
 
 val GoIRInst.index: Int get() = location.index
 
@@ -57,11 +66,6 @@ sealed interface GoIRBranching : GoIRTerminator {
 
 // ─── Value-defining instructions ────────────────────────────────────
 
-/**
- * Assignment instruction: `register = expr`.
- * Wraps a [GoIRExpr] that computes the value stored into [register].
- * This covers 24 expression kinds (alloc, binop, unop, conversions, field access, etc.).
- */
 data class GoIRAssignInst(
     override val location: GoInstLocation,
     override val register: GoIRRegister,
@@ -70,12 +74,10 @@ data class GoIRAssignInst(
     override val operands: List<GoIRValue> get() = expr.operands
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitAssign(this)
     override fun toString(): String = "$register = $expr"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
-/**
- * Phi instruction: merges values from predecessor blocks at a join point.
- * Each edge is keyed by the predecessor block terminator instruction reference.
- */
 data class GoIRPhi(
     override val location: GoInstLocation,
     override val register: GoIRRegister,
@@ -90,11 +92,10 @@ data class GoIRPhi(
         val suffix = comment?.let { "  // $it" } ?: ""
         return "$register = phi($args)$suffix"
     }
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
-/**
- * Call instruction: invokes a function and stores the result into [register].
- */
 data class GoIRCall(
     override val location: GoInstLocation,
     override val register: GoIRRegister,
@@ -103,6 +104,8 @@ data class GoIRCall(
     override val operands: List<GoIRValue> get() = call.allOperands()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitCall(this)
     override fun toString(): String = "$register = ${call.render()}"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 // ─── Terminators ────────────────────────────────────────────────────
@@ -115,6 +118,8 @@ data class GoIRJump(
     override val successors: List<GoIRInstRef> get() = listOf(target)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitJump(this)
     override fun toString(): String = "jump $target"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRIf(
@@ -127,6 +132,8 @@ data class GoIRIf(
     override val successors: List<GoIRInstRef> get() = listOf(trueBranch, falseBranch)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitIf(this)
     override fun toString(): String = "if ($cond) then $trueBranch else $falseBranch"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRReturn(
@@ -137,6 +144,8 @@ data class GoIRReturn(
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitReturn(this)
     override fun toString(): String =
         if (results.isEmpty()) "return" else "return ${results.joinToString(", ")}"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRPanic(
@@ -146,6 +155,8 @@ data class GoIRPanic(
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitPanic(this)
     override fun toString(): String = "panic $x"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 // ─── Effect-only instructions ───────────────────────────────────────
@@ -158,6 +169,8 @@ data class GoIRStore(
     override val operands: List<GoIRValue> get() = listOf(addr, value)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitStore(this)
     override fun toString(): String = "*$addr = $value"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRMapUpdate(
@@ -169,6 +182,8 @@ data class GoIRMapUpdate(
     override val operands: List<GoIRValue> get() = listOf(map, key, value)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitMapUpdate(this)
     override fun toString(): String = "$map[$key] = $value"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRSend(
@@ -179,6 +194,8 @@ data class GoIRSend(
     override val operands: List<GoIRValue> get() = listOf(chan, x)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitSend(this)
     override fun toString(): String = "send $chan <- $x"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRGo(
@@ -188,6 +205,8 @@ data class GoIRGo(
     override val operands: List<GoIRValue> get() = call.allOperands()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitGo(this)
     override fun toString(): String = "go ${call.render()}"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRDefer(
@@ -197,6 +216,8 @@ data class GoIRDefer(
     override val operands: List<GoIRValue> get() = call.allOperands()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitDefer(this)
     override fun toString(): String = "defer ${call.render()}"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRRunDefers(
@@ -205,6 +226,8 @@ data class GoIRRunDefers(
     override val operands: List<GoIRValue> get() = emptyList()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitRunDefers(this)
     override fun toString(): String = "rundefers"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 data class GoIRDebugRef(
@@ -215,6 +238,8 @@ data class GoIRDebugRef(
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitDebugRef(this)
     override fun toString(): String = "debugref ${if (isAddr) "&" else ""}$x"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
 }
 
 private fun GoIRCallInfo.render(): String {

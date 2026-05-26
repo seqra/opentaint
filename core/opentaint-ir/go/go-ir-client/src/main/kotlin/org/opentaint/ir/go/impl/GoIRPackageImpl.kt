@@ -7,6 +7,14 @@ class GoIRPackageImpl(
     override val name: String,
     private val loader: (() -> Unit)? = null,
 ) : GoIRPackage {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GoIRPackage) return false
+        return importPath == other.importPath
+    }
+
+    override fun hashCode(): Int = importPath.hashCode()
+
     private val loadLock = Any()
     @Volatile private var loaded: Boolean = loader == null
 

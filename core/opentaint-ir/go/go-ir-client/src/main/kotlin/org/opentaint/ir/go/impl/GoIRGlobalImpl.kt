@@ -11,7 +11,15 @@ class GoIRGlobalImpl(
     override val pkg: GoIRPackage,
     override val isExported: Boolean,
     override val position: GoIRPosition?,
-) : GoIRGlobal
+) : GoIRGlobal {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GoIRGlobal) return false
+        return fullName == other.fullName
+    }
+
+    override fun hashCode(): Int = fullName.hashCode()
+}
 
 class GoIRConstImpl(
     override val name: String,
@@ -21,4 +29,12 @@ class GoIRConstImpl(
     override val pkg: GoIRPackage,
     override val isExported: Boolean,
     override val position: GoIRPosition?,
-) : GoIRConst
+) : GoIRConst {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GoIRConst) return false
+        return fullName == other.fullName
+    }
+
+    override fun hashCode(): Int = fullName.hashCode()
+}
