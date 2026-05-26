@@ -46,7 +46,7 @@ class GoProjectAnalyzer(
             val analyzer = GoTaintAnalyzer(
                 cp = cp,
                 taintConfig = rulesProvider,
-                unitResolver = GoUnitResolver(cp.packages.keys.toSet()),
+                unitResolver = GoUnitResolver(),
                 externalMethodTracker = tracker,
             )
             val entryPoints = selectEntryPoints(cp)
@@ -86,7 +86,10 @@ class GoProjectAnalyzer(
     }
 
     private fun selectEntryPoints(cp: GoIRProgram): List<GoIRFunction> =
-        cp.allFunctions().filter { it.hasBody && it.pkg != null && !it.isSynthetic && it.parent == null }
+        cp.packages.values
+            .filter { it.isProject }
+            .flatMap { it.functions }
+            .filter { it.hasBody && !it.isSynthetic && it.parent == null }
 
     private fun writeReport(traces: List<VulnerabilityWithTrace>) {
         val sarif = options.common.sarifGenerationOptions

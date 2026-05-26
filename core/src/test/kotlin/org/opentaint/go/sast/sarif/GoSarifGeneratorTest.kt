@@ -21,7 +21,7 @@ class GoSarifGeneratorTest : AnalysisTest() {
         val analyzer = GoTaintAnalyzer(
             cp = cp,
             taintConfig = GoStubRules.defaultConfig(),
-            unitResolver = GoUnitResolver(setOf("test")),
+            unitResolver = GoUnitResolver(),
         )
         return analyzer.analyzeWithIfds(listOf(entryPoint))
     }
