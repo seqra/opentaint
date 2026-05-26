@@ -284,7 +284,8 @@ class DSUAliasAnalysis(
                     val info = aliasManager.getElementUncheck(id)
                     if (info !is HeapAlias) return@forEachInt
 
-                    if (aliasGroupRepr(info.instance) !in invalidAliasRepr) return@forEachInt
+                    val instanceRepr = aliasGroupRepr(info.instance)
+                    if (instanceRepr !in invalidAliasRepr && !instanceRepr.aliasInfoIsSimpleOuter()) return@forEachInt
 
                     if (isHeapImmutable(info, IntOpenHashSet())) return@forEachInt
 
