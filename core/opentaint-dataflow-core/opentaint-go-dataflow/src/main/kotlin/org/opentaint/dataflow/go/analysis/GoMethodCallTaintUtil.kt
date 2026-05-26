@@ -182,7 +182,7 @@ class GoMethodCallTaintUtil(
             val position = action.pos.resolvePosAccess()
             sourceEvaluator.evaluate(rule, action, position, TaintMarkAccessor(action.mark)).onSome { facts ->
                 facts.forEach { f ->
-                    f.mapExitToReturnFact()?.let { createFinalFact(f) }
+                    f.mapExitToReturnFact()?.let { createFinalFact(it) }
                 }
             }
         }
