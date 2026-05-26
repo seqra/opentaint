@@ -9,7 +9,6 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
-import org.opentaint.dataflow.go.rules.GoTaintConfig
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.ir.api.common.CommonMethod
@@ -22,16 +21,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Go counterpart of [org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer].
- *
- * Drives the shared IFDS taint engine over a [GoIRProgram] using a predefined
- * [GoTaintConfig], then resolves source-to-sink traces for reporting. The
- * control flow mirrors the proven Go `AnalysisTest.runAnalysis`.
- */
 class GoTaintAnalyzer(
     private val cp: GoIRProgram,
-    private val taintConfig: GoTaintConfig,
+    private val taintConfig: GoTaintRulesProvider,
     private val unitResolver: UnitResolver<GoIRFunction>,
     private val analysisTimeout: Duration = 1.minutes,
     private val cancellationTimeout: Duration = 10.seconds,
@@ -41,7 +33,7 @@ class GoTaintAnalyzer(
         val ifdsGraph = GoApplicationGraph(cp, unitResolver)
 
         val engine = TaintAnalysisUnitRunnerManager(
-            GoAnalysisManager(cp, GoTaintRulesProvider(taintConfig)),
+            GoAnalysisManager(cp, taintConfig),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = unitResolver as UnitResolver<CommonMethod>,
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),

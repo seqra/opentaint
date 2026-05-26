@@ -2,7 +2,7 @@ package org.opentaint.go.sast.project
 
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.go.rules.GoTaintConfig
+import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.go.sast.dataflow.GoTaintAnalyzer
 import org.opentaint.go.sast.dataflow.GoUnitResolver
 import org.opentaint.go.sast.sarif.GoSarifGenerator
@@ -48,7 +48,7 @@ class GoProjectAnalyzer(
         }
     }
 
-    private fun loadRules(): GoTaintConfig = TODO()
+    private fun loadRules(): GoTaintRulesProvider = TODO()
 
     private fun selectEntryPoints(cp: GoIRProgram): List<GoIRFunction> =
         cp.allFunctions().filter { it.hasBody && it.pkg != null && !it.isSynthetic && it.parent == null }
