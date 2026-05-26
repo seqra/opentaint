@@ -1,30 +1,32 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.configuration.CommonCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
+import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.mkTrue
-import org.opentaint.dataflow.go.rules.GoAssignMark
-import org.opentaint.dataflow.go.rules.GoRuleCondition
-import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GenericsTest : AnalysisTest() {
 
-    private val intSource = TaintRules.Source(
-        function = "test/util.SourceInt",
-        condition = mkTrue(),
-        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    private val intSource = GoSerializedRule.Source(
+        function = GoNameMatcher.Simple("test/util.SourceInt"),
+        condition = null,
+        taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+        info = null,
     )
-    private val intSink = TaintRules.Sink(
-        function = "test/util.SinkInt",
-        condition = CommonCondition.Atom(GoRuleCondition.ContainsMark(PositionBaseWithModifiers.BaseOnly(Argument(0)), "taint")),
+    private val intSink = GoSerializedRule.Sink(
+        function = GoNameMatcher.Simple("test/util.SinkInt"),
+        condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "test-id",
-        meta = TaintRules.Sink.DefaultMeta("Taint sink: test/util.SinkInt"),
+        meta = GoSinkMetaData("Taint sink: test/util.SinkInt"),
+        info = null,
     )
 
     // Generic identity function

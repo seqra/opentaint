@@ -30,7 +30,7 @@ import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.go.GoTaintRuleEmitter
+import org.opentaint.GoTaintRuleEmitter
 import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
@@ -165,7 +165,7 @@ class GoMassiveSampleTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return GoTaintRuleEmitter().emit(typed.ruleId, typed)
+        return GoTaintRuleEmitter().emit(typed)
     }
 
     private fun runAnalysis(

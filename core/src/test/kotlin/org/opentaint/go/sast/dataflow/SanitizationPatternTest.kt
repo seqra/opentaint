@@ -1,17 +1,26 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.go.rules.CopyData
-import org.opentaint.dataflow.go.rules.Position
-import org.opentaint.dataflow.go.rules.TaintRules
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedPassAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SanitizationPatternTest : AnalysisTest() {
-    private val passthroughRule = TaintRules.PassThrough(
-        function = "test/util.Passthrough",
-        actionsAfter = listOf(CopyData(Position.Argument(0), Position.Result)),
+    private val passthroughRule = GoSerializedRule.PassThrough(
+        function = GoNameMatcher.Simple("test/util.Passthrough"),
+        copy = listOf(
+            GoSerializedPassAction(
+                from = PositionBaseWithModifiers.BaseOnly(Argument(0)),
+                to = PositionBaseWithModifiers.BaseOnly(Result),
+            ),
+        ),
+        info = null,
     )
 
     // Conservative: only one branch sanitizes, so taint persists

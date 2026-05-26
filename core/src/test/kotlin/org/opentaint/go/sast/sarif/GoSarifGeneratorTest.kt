@@ -69,7 +69,7 @@ class GoSarifGeneratorTest : AnalysisTest() {
             "Expected a source message in the flow, got: $messages",
         )
         assertTrue(
-            messages.any { it == GoStubRules.defaultSinks.first().meta.message },
+            messages.any { it == GoStubRules.defaultSinks.first().meta?.message },
             "Expected the sink message in the flow, got: $messages",
         )
 

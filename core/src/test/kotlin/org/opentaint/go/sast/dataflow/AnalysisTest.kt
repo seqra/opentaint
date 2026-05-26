@@ -10,18 +10,21 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.configuration.CommonCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassThrough
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.Sink
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.Source
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
+import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
-import org.opentaint.dataflow.go.rules.GoAssignMark
-import org.opentaint.dataflow.go.rules.GoRuleCondition
-import org.opentaint.dataflow.go.rules.GoTaintConfig
+import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
-import org.opentaint.dataflow.go.rules.TaintRules
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
@@ -55,17 +58,19 @@ abstract class AnalysisTest {
     lateinit var client: GoIRClient
 
     // Standard source/sink rules
-    val stdSource = TaintRules.Source(
-        function = "test/util.Source",
-        condition = mkTrue(),
-        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    val stdSource = Source(
+        function = GoNameMatcher.Simple("test/util.Source"),
+        condition = null,
+        taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+        info = null,
     )
-    val stdSink = TaintRules.Sink(
-        function = "test/util.Sink",
-        condition = CommonCondition.Atom(GoRuleCondition.ContainsMark(PositionBaseWithModifiers.BaseOnly(Argument(0)), "taint")),
+    val stdSink = Sink(
+        function = GoNameMatcher.Simple("test/util.Sink"),
+        condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "test-id",
-        meta = TaintRules.Sink.DefaultMeta("Taint sink: test/util.Sink"),
+        meta = GoSinkMetaData("Taint sink: test/util.Sink"),
+        info = null
     )
 
     @BeforeAll
@@ -107,15 +112,15 @@ abstract class AnalysisTest {
         }
     }
 
-    open val commonPassRules: List<TaintRules.PassThrough> = emptyList()
+    open val commonPassRules: List<PassThrough> = emptyList()
 
     // Convenience: standard assertion with default rules
     fun assertReachable(fn: String) = assertSinkReachable(stdSource, stdSink, fn)
     fun assertNotReachable(fn: String) = assertSinkNotReachable(stdSource, stdSink, fn)
 
     fun assertSinkReachable(
-        source: TaintRules.Source,
-        sink: TaintRules.Sink,
+        source: Source,
+        sink: Sink,
         entryPointFunction: String,
     ) {
         val vulnerabilities = runAnalysis(source, sink, entryPointFunction)
@@ -123,8 +128,8 @@ abstract class AnalysisTest {
     }
 
     fun assertSinkNotReachable(
-        source: TaintRules.Source,
-        sink: TaintRules.Sink,
+        source: Source,
+        sink: Sink,
         entryPointFunction: String,
     ) {
         val vulnerabilities = runAnalysis(source, sink, entryPointFunction)
@@ -132,22 +137,26 @@ abstract class AnalysisTest {
     }
 
     fun runAnalysis(
-        source: TaintRules.Source,
-        sink: TaintRules.Sink,
+        source: Source,
+        sink: Sink,
         entryPointFunction: String,
-        extraPassRules: List<TaintRules.PassThrough> = emptyList(),
+        extraPassRules: List<PassThrough> = emptyList(),
     ): List<VulnerabilityWithTrace> {
         val entryPoint = cp.findFunctionByFullName(entryPointFunction)
             ?: error("Entry point not found: $entryPointFunction")
 
         val allPassRules = commonPassRules + extraPassRules
-        val config = GoTaintConfig(listOf(source), listOf(sink), allPassRules)
+        val serializedConfig = GoSerializedTaintConfig(
+            source = listOf(source), sink = listOf(sink), passThrough = allPassRules
+        )
+        val loadedConfig = GoTaintConfiguration()
+        loadedConfig.loadConfig(serializedConfig)
 
         val ifdsGraph = GoApplicationGraph(cp, TestUnitResolver)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
-            GoAnalysisManager(cp, GoTaintRulesProvider(config)),
+            GoAnalysisManager(cp, GoTaintRulesProvider(loadedConfig)),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = TestUnitResolver as UnitResolver<CommonMethod>,
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),

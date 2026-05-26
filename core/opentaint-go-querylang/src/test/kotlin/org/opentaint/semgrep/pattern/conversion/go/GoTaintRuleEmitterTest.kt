@@ -1,14 +1,17 @@
 package org.opentaint.semgrep.pattern.conversion.go
 
+import org.opentaint.GoTaintRuleEmitter
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedPassAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.go.rules.serialized.GoFunctionMatcher
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedAssignAction
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedCleanAction
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedCondition
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedItem
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedPassAction
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedRule
+import org.opentaint.dataflow.go.GoFunctionSignature
+import org.opentaint.dataflow.go.rules.Position
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,46 +28,49 @@ class GoTaintRuleEmitterTest {
     fun `source taints the result of a named function`() {
         val rule = rule(
             GoSerializedRule.Source(
-                function = GoFunctionMatcher.Simple("util.Source"),
+                function = GoNameMatcher.Simple("util.Source"),
                 condition = null,
                 taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
+                info = null,
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit("r", rule)
+        val cfg = GoTaintRuleEmitter().emit(rule)
 
-        val src = cfg.sourceForFunction("util.Source").single()
+        val src = cfg.sourceForFunction("util.Source".signature(0), allRelevant = false).single()
         assertEquals("util.Source", src.function)
         assertEquals("taint", src.actionsAfter.single().mark)
-        assertEquals(baseOnly(PositionBase.Result), src.actionsAfter.single().pos)
+        assertEquals(Position.Result, src.actionsAfter.single().pos)
     }
 
     @Test
     fun `source with no taint action emits no actions`() {
         val rule = rule(
             GoSerializedRule.Source(
-                function = GoFunctionMatcher.Simple("util.Source"),
+                function = GoNameMatcher.Simple("util.Source"),
                 condition = null,
                 taint = emptyList(),
+                info = null,
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit("r", rule)
-        assertTrue(cfg.sourceForFunction("util.Source").single().actionsAfter.isEmpty())
+        val cfg = GoTaintRuleEmitter().emit(rule)
+        assertTrue(cfg.sourceForFunction("util.Source".signature(0), allRelevant = false).single().actionsAfter.isEmpty())
     }
 
     @Test
     fun `sink with explicit id is preserved`() {
         val rule = rule(
             GoSerializedRule.Sink(
-                function = GoFunctionMatcher.Simple("util.Sink"),
+                function = GoNameMatcher.Simple("util.Sink"),
                 condition = GoSerializedCondition.ContainsMark("taint", baseOnly(PositionBase.Argument(0))),
                 id = "explicit-id",
+                info = null,
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit("r", rule)
-        val sink = cfg.sinkForFunction("util.Sink").single()
+        val cfg = GoTaintRuleEmitter().emit(rule)
+        val sink = cfg.sinkForFunction("util.Sink".signature(1)).single()
         assertEquals("util.Sink", sink.function)
         assertEquals("explicit-id", sink.id)
     }
@@ -73,7 +79,7 @@ class GoTaintRuleEmitterTest {
     fun `pass-through copy action is resolved`() {
         val rule = rule(
             GoSerializedRule.PassThrough(
-                function = GoFunctionMatcher.Simple("util.Wrap"),
+                function = GoNameMatcher.Simple("util.Wrap"),
                 copy = listOf(
                     GoSerializedPassAction(
                         from = baseOnly(PositionBase.Argument(0)),
@@ -83,8 +89,8 @@ class GoTaintRuleEmitterTest {
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit("r", rule)
-        val pass = cfg.passThroughForFunction("util.Wrap").single()
+        val cfg = GoTaintRuleEmitter().emit(rule)
+        val pass = cfg.passThroughForFunction("util.Wrap".signature(1)).single()
         assertEquals("util.Wrap", pass.function)
         assertEquals(1, pass.actionsAfter.size)
     }
@@ -93,32 +99,37 @@ class GoTaintRuleEmitterTest {
     fun `pattern-matcher rules resolve on callee-name lookup`() {
         val rule = rule(
             GoSerializedRule.Source(
-                function = GoFunctionMatcher.Pattern("util\\..*"),
+                function = GoNameMatcher.Pattern("util\\..*"),
                 condition = null,
                 taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
+                info = null
             ),
         )
 
         // The pattern matcher survives — querying a concrete callee name that matches the
         // pattern materializes the rule on demand.
-        val cfg = GoTaintRuleEmitter().emit("r", rule)
-        assertTrue(cfg.sourceForFunction("util.Foo").isNotEmpty())
-        assertTrue(cfg.sourceForFunction("util.Bar").isNotEmpty())
+        val cfg = GoTaintRuleEmitter().emit(rule)
+        assertTrue(cfg.sourceForFunction("util.Foo".signature(0), allRelevant = false).isNotEmpty())
+        assertTrue(cfg.sourceForFunction("util.Bar".signature(0), allRelevant = false).isNotEmpty())
         // A name that does NOT match the pattern returns no rules.
-        assertTrue(cfg.sourceForFunction("other.Foo").isEmpty())
+        assertTrue(cfg.sourceForFunction("other.Foo".signature(0), allRelevant = false).isEmpty())
     }
 
     @Test
     fun `cleaner rule is resolved`() {
         val rule = rule(
             GoSerializedRule.Cleaner(
-                function = GoFunctionMatcher.Simple("util.Clean"),
+                function = GoNameMatcher.Simple("util.Clean"),
                 cleans = listOf(GoSerializedCleanAction("taint", baseOnly(PositionBase.Argument(0)))),
+                info = null,
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit("r", rule)
-        assertEquals(1, cfg.cleanerForFunction("util.Clean").size)
-        assertEquals("util.Clean", cfg.cleanerForFunction("util.Clean").single().function)
+        val cfg = GoTaintRuleEmitter().emit(rule)
+        assertEquals(1, cfg.cleanerForFunction("util.Clean".signature(1), allRelevant = false).size)
+        assertEquals("util.Clean", cfg.cleanerForFunction("util.Clean".signature(1), allRelevant = false).single().function)
     }
+
+    fun String.signature(args: Int): GoFunctionSignature =
+        GoFunctionSignature(this, args, hasReceiver = false)
 }

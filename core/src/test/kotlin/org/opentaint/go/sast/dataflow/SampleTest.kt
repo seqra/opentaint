@@ -1,31 +1,33 @@
 package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.configuration.CommonCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
+import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.mkTrue
-import org.opentaint.dataflow.go.rules.GoAssignMark
-import org.opentaint.dataflow.go.rules.GoRuleCondition
-import org.opentaint.dataflow.go.rules.TaintRules
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SampleTest : AnalysisTest() {
 
-    private fun source(function: String) = TaintRules.Source(
-        function = function,
-        condition = mkTrue(),
-        actionsAfter = listOf(GoAssignMark("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+    private fun source(function: String) = GoSerializedRule.Source(
+        function = GoNameMatcher.Simple(function),
+        condition = null,
+        taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+        info = null,
     )
 
-    private fun sink(function: String, id: String) = TaintRules.Sink(
-        function = function,
-        condition = CommonCondition.Atom(GoRuleCondition.ContainsMark(PositionBaseWithModifiers.BaseOnly(Argument(0)), "taint")),
+    private fun sink(function: String, id: String) = GoSerializedRule.Sink(
+        function = GoNameMatcher.Simple(function),
+        condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = id,
-        meta = TaintRules.Sink.DefaultMeta("Taint sink: $function"),
+        meta = GoSinkMetaData("Taint sink: $function"),
+        info = null,
     )
 
     @Test

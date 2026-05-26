@@ -9,11 +9,15 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
+import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedItem
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
@@ -27,8 +31,8 @@ import org.opentaint.ir.go.ext.findFunctionByFullName
 import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.go.GoTaintRuleEmitter
 import org.opentaint.util.analysis.ApplicationGraph
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -38,16 +42,6 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Real end-to-end go-dataflow reachability test for a GENERATED Go taint rule:
- *
- *   Go semgrep rule -> [SemgrepRuleLoader.loadGoRules] -> [GoTaintRuleEmitter.emit] -> [GoTaintConfiguration]
- *   -> fed to go-dataflow -> the sink is reachable from the source.
- *
- * The emitter names functions by the package SELECTOR (e.g. `util.Source`), so the sample is a
- * standalone `module util`; the Go IR then names the functions `util.Source` / `util.Sink` /
- * `util.Run`, matching the generated config.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GoSemgrepReachabilityTest {
     private lateinit var sourcesDir: Path
@@ -94,16 +88,16 @@ class GoSemgrepReachabilityTest {
         val rule = loadedRules.rulesWithMeta.first()
 
         @Suppress("UNCHECKED_CAST")
-        val firstRule = rule.first as org.opentaint.semgrep.pattern.TaintRuleFromSemgrep<GoSerializedItem>
-        val config: GoTaintConfiguration = GoTaintRuleEmitter().emit(firstRule.ruleId, firstRule)
+        val firstRule = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
+        val config: GoTaintConfiguration = GoTaintRuleEmitter().emit(firstRule)
 
         // Assert the generated config names match the Go IR; a name mismatch must fail loudly here.
         assertTrue(
-            config.sourceForFunction("util.Source").isNotEmpty(),
+            config.sourceForFunction("util.Source".signature(0), allRelevant = false).isNotEmpty(),
             "generated sources must name util.Source",
         )
         assertTrue(
-            config.sinkForFunction("util.Sink").isNotEmpty(),
+            config.sinkForFunction("util.Sink".signature(1)).isNotEmpty(),
             "generated sinks must name util.Sink",
         )
 
@@ -144,6 +138,25 @@ class GoSemgrepReachabilityTest {
                 "util" -> SingletonUnit
                 else -> UnknownUnit
             }
+        }
+    }
+
+    fun String.signature(args: Int): GoFunctionSignature =
+        GoFunctionSignature(this, args, hasReceiver = false)
+
+    private class GoTaintRuleEmitter {
+        fun emit(rule: TaintRuleFromSemgrep<GoSerializedItem>): GoTaintConfiguration =
+            GoTaintConfiguration().also { it.loadConfig(buildSerializedConfig(rule)) }
+
+        fun buildSerializedConfig(rule: TaintRuleFromSemgrep<GoSerializedItem>): GoSerializedTaintConfig {
+            val items = rule.taintRules.flatMap { it.rules }
+            return GoSerializedTaintConfig(
+                globalSource = items.filterIsInstance<GoSerializedGlobalSource>(),
+                source = items.filterIsInstance<GoSerializedRule.Source>(),
+                sink = items.filterIsInstance<GoSerializedRule.Sink>(),
+                passThrough = items.filterIsInstance<GoSerializedRule.PassThrough>(),
+                cleaner = items.filterIsInstance<GoSerializedRule.Cleaner>(),
+            )
         }
     }
 }

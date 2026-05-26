@@ -1,57 +1,54 @@
 package org.opentaint.go.sast.sarif
 
-import org.opentaint.dataflow.configuration.CommonCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
+import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.mkTrue
-import org.opentaint.dataflow.go.rules.GoAssignMark
-import org.opentaint.dataflow.go.rules.GoRuleCondition
-import org.opentaint.dataflow.go.rules.GoTaintConfig
-import org.opentaint.dataflow.go.rules.TaintRules
+import org.opentaint.dataflow.go.rules.GoTaintConfiguration
+import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 
-/**
- * Predefined, in-code Go taint source/sink rules.
- *
- * Rule loading from external config/files is intentionally NOT implemented (out
- * of scope). These stub rules let the Go SAST pipeline run end-to-end with a
- * fixed rule set. The defaults target the functions defined by the Go test
- * samples (`test/util.Source` / `test/util.Sink`).
- */
 object GoStubRules {
     const val TAINT_MARK: String = "taint"
 
     const val SINK_RULE_ID: String = "go-taint-sink"
 
-    /** Default source: a function returning tainted data (Result position). */
-    val defaultSources: List<TaintRules.Source> = listOf(
-        TaintRules.Source(
-            function = "test/util.Source",
-            condition = mkTrue(),
-            actionsAfter = listOf(
-                GoAssignMark(TAINT_MARK, PositionBaseWithModifiers.BaseOnly(PositionBase.Result)),
+    val defaultSources: List<GoSerializedRule.Source> = listOf(
+        GoSerializedRule.Source(
+            function = GoNameMatcher.Simple("test/util.Source"),
+            condition = null,
+            taint = listOf(
+                GoSerializedAssignAction(TAINT_MARK, PositionBaseWithModifiers.BaseOnly(PositionBase.Result)),
             ),
+            info = null
         ),
     )
 
-    /** Default sink: a function whose first argument must not be tainted. */
-    val defaultSinks: List<TaintRules.Sink> = listOf(
-        TaintRules.Sink(
-            function = "test/util.Sink",
-            condition = CommonCondition.Atom(
-                GoRuleCondition.ContainsMark(
-                    PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(0)),
-                    TAINT_MARK,
-                ),
+    val defaultSinks: List<GoSerializedRule.Sink> = listOf(
+        GoSerializedRule.Sink(
+            function = GoNameMatcher.Simple("test/util.Sink"),
+            condition = GoSerializedCondition.ContainsMark(
+                TAINT_MARK,
+                PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(0)),
             ),
             trackFactsReachAnalysisEnd = emptyList(),
             id = SINK_RULE_ID,
-            meta = TaintRules.Sink.DefaultMeta("Taint sink: test/util.Sink"),
+            meta = GoSinkMetaData("Taint sink: test/util.Sink"),
+            info = null
         ),
     )
 
-    fun defaultConfig(
-        sources: List<TaintRules.Source> = defaultSources,
-        sinks: List<TaintRules.Sink> = defaultSinks,
-        propagators: List<TaintRules.PassThrough> = emptyList(),
-    ): GoTaintConfig = GoTaintConfig(sources, sinks, propagators)
+    fun defaultConfig(): GoTaintRulesProvider {
+        val serializedConfig = GoSerializedTaintConfig(
+            source = defaultSources,
+            sink = defaultSinks,
+        )
+
+        val config = GoTaintConfiguration()
+        config.loadConfig(serializedConfig)
+        return GoTaintRulesProvider(config)
+    }
 }

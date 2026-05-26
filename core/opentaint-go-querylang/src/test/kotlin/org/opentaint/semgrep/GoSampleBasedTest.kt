@@ -11,8 +11,6 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
-import org.opentaint.dataflow.go.rules.GoConfigLoader
-import org.opentaint.dataflow.go.rules.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.ifds.SingletonUnit
@@ -29,7 +27,9 @@ import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.go.GoTaintRuleEmitter
+import org.opentaint.GoTaintRuleEmitter
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.go.config.GoConfigLoader
 import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
@@ -276,7 +276,7 @@ class GoSampleBasedTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return GoTaintRuleEmitter().emit(typed.ruleId, typed)
+        return GoTaintRuleEmitter().emit(typed)
     }
 
     private fun runAnalysis(
