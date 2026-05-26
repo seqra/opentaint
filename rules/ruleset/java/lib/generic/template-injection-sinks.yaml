@@ -62,6 +62,32 @@ rules:
       # caller invokes Velocity.evaluate(...) without an instance binding.
       - pattern: org.apache.velocity.app.Velocity.evaluate($_, $_, $_, $UNTRUSTED, ...);
       - pattern: org.apache.velocity.app.Velocity.mergeTemplate($_, $_, $UNTRUSTED, ...);
+      # Context-data SSTI: untrusted value put into a Velocity Context that is then
+      # merged/evaluated. The Context approximation stores the value in a virtual
+      # field, so the whole-Context sinks above can't observe it. Focus the value
+      # entering the Context and require the same Context to reach a merge/evaluate,
+      # exactly like the List.add(..) -> new ProcessBuilder($ARGS) pattern in
+      # command-injection-sinks; pattern-inside factors out the put so it is not
+      # repeated per render method. The Context arg is matched with `...` around it
+      # (mergeTemplate(..., $CTX, ...)): a $CTX bound in the put correlates across
+      # the join only when the consuming call leaves it positionally free, not when
+      # it is pinned with explicit placeholders ($_, $_, $CTX, $_).
+      - patterns:
+          - pattern: $CTX.put($_, $UNTRUSTED)
+          - pattern-either:
+              - pattern-inside: |
+                  ...
+                  org.apache.velocity.app.Velocity.mergeTemplate(..., $CTX, ...);
+              - pattern-inside: |
+                  ...
+                  org.apache.velocity.app.Velocity.evaluate($CTX, ...);
+              - pattern-inside: |
+                  ...
+                  (org.apache.velocity.app.VelocityEngine $ENGINE).mergeTemplate(..., $CTX, ...);
+              - pattern-inside: |
+                  ...
+                  (org.apache.velocity.app.VelocityEngine $ENGINE).evaluate($CTX, ...);
+          - focus-metavariable: $UNTRUSTED
       # ── VelocityEngine (instance) ─────────────────
       - patterns:
           - pattern-either:

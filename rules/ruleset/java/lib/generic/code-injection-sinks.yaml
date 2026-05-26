@@ -181,6 +181,17 @@ rules:
       # CompilationUnit.compile (Argument[this] - tainted compilation unit)
       - pattern: |
           (org.codehaus.groovy.control.CompilationUnit $UNTRUSTED).compile(...);
+      # Untrusted source added to a CompilationUnit then compiled. The unit stores
+      # the source in a virtual field, so the tainted-unit sink above can't observe
+      # it on the whole unit — match the source entering addSource and require a
+      # later compile() (cf. List.add(..) -> new ProcessBuilder($ARGS) in
+      # command-injection-sinks).
+      - patterns:
+          - pattern: |
+              (org.codehaus.groovy.control.CompilationUnit $CU).addSource(..., $UNTRUSTED, ...);
+              ...
+              (org.codehaus.groovy.control.CompilationUnit $CU).compile(...);
+          - focus-metavariable: $UNTRUSTED
 
   - id: dangerous-script-engine-eval
     options:

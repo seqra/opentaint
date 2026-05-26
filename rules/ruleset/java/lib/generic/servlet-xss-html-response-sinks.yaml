@@ -148,6 +148,16 @@ rules:
                   (org.apache.http.HttpResponse $RESPONSE).setEntity($UNTRUSTED)
               - pattern: |
                   org.apache.http.util.EntityUtils.updateEntity($RESPONSE, $UNTRUSTED)
+              # The HC5 StringEntity stores its string content in a virtual field,
+              # so the whole-entity setEntity sink above can't observe it. Match the
+              # untrusted string as it enters a StringEntity set on the response,
+              # both inline and via a local (cf. command-injection-sinks).
+              - pattern: |
+                  (org.apache.hc.core5.http.HttpEntityContainer $CONTAINER).setEntity(new org.apache.hc.core5.http.io.entity.StringEntity($UNTRUSTED, ...))
+              - pattern: |
+                  (org.apache.hc.core5.http.io.entity.StringEntity $E) = new org.apache.hc.core5.http.io.entity.StringEntity($UNTRUSTED, ...);
+                  ...
+                  (org.apache.hc.core5.http.HttpEntityContainer $CONTAINER).setEntity($E);
           - focus-metavariable: $UNTRUSTED
       # ── Jenkins FormValidation.respond ──
       - patterns:

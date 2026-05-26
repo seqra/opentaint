@@ -56,6 +56,83 @@ rules:
       # JMX Connector patterns (jndi-injection kind)
       - pattern: javax.management.remote.JMXConnectorFactory.connect($SINK, ...)
       - pattern: (javax.management.remote.JMXConnector $SINK).connect(...)
+      # A JMXServiceURL stores its service URL in a virtual field, so the connect()
+      # sinks above can't observe it on the whole object. Connect an untrusted URL
+      # entering the JMXServiceURL to the JMXServiceURL reaching a connect (cf. the
+      # List.add(..) -> new ProcessBuilder($ARGS) idiom in command-injection-sinks);
+      # pattern-inside factors out the construction so it is not repeated per sink.
+      - patterns:
+          - pattern-either:
+              - pattern: javax.management.remote.JMXConnectorFactory.connect(..., $URL, ...)
+              - pattern: javax.management.remote.JMXConnectorFactory.newJMXConnector(..., $URL, ...)
+          - pattern-inside: |
+              (javax.management.remote.JMXServiceURL $URL) = new javax.management.remote.JMXServiceURL($UNTRUSTED, ...);
+              ...
+          - focus-metavariable: $UNTRUSTED
+      # A com.unboundid SearchRequest carries its base DN / filter in a virtual field,
+      # so the LDAPConnection.search/asyncSearch sink can't see it on the whole
+      # request. Connect the untrusted value entering the SearchRequest to the
+      # request reaching a search.
+      - patterns:
+          - pattern: |
+              (com.unboundid.ldap.sdk.SearchRequest $REQ) = new com.unboundid.ldap.sdk.SearchRequest(..., $UNTRUSTED, ...);
+              ...
+              (com.unboundid.ldap.sdk.LDAPConnection $C).$METHOD(..., $REQ, ...);
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(search|asyncSearch|searchForEntry)$
+          - focus-metavariable: $UNTRUSTED
+      # Spring LDAP: an untrusted DN / filter / match value enters the LdapQueryBuilder
+      # chain, which (via its this->result propagators) carries it to the resulting
+      # LdapQuery; that query is then searched. The query is held in a virtual field,
+      # so a sink that binds the LdapQuery object expects the object itself tainted and
+      # misses it. Instead focus the untrusted value entering the chain and require the
+      # resulting LdapQuery to reach a find/search (the List.add(..) -> new
+      # ProcessBuilder($ARGS) idiom from command-injection-sinks). The two pattern-inside
+      # clauses share $Q to WIRE the builder call to the search: the first forces the
+      # builder call ($B/$C) to sit in the chain assigned to $Q, the second forces that
+      # same $Q to be the query passed to the search — so an unrelated tainted builder
+      # call next to an unrelated safe query->find does not fire.
+      - patterns:
+          - pattern-either:
+              # untrusted value is a condition match value (the last data call),
+              # which directly yields the searched LdapQuery
+              - patterns:
+                  - pattern: |
+                      (org.springframework.ldap.query.LdapQuery $Q) = (org.springframework.ldap.query.ConditionCriteria $C).$COND($UNTRUSTED);
+                      ...;
+                      ($CTXTYPE $CTX).$METHOD($Q, ...);
+                  - metavariable-regex:
+                      metavariable: $COND
+                      regex: ^(is|like|whitespaceWildcardsLike|gte|lte)$
+              # untrusted value is a raw filter string
+              - pattern: |
+                  (org.springframework.ldap.query.LdapQuery $Q) = (org.springframework.ldap.query.LdapQueryBuilder $X).filter($UNTRUSTED, ...);
+                  ...;
+                  ($CTXTYPE $CTX).$METHOD($Q, ...);
+              # untrusted value is the base DN, carried through where().<cond>() to
+              # the query (the engine chain-splits the fluent chain into let-bindings,
+              # so $B — the base() result — wires to the searched $Q)
+              - patterns:
+                  - pattern: |
+                      $B = (org.springframework.ldap.query.LdapQueryBuilder $X).base($UNTRUSTED);
+                      ...;
+                      (org.springframework.ldap.query.LdapQuery $Q) = $B.where(...).$COND(...);
+                      ...;
+                      ($CTXTYPE $CTX).$METHOD($Q, ...);
+                  - metavariable-regex:
+                      metavariable: $COND
+                      regex: ^(is|like|whitespaceWildcardsLike|gte|lte)$
+          - metavariable-pattern:
+              metavariable: $CTXTYPE
+              pattern-either:
+                - pattern: org.springframework.ldap.core.LdapTemplate
+                - pattern: org.springframework.ldap.core.LdapOperations
+                - pattern: org.springframework.ldap.LdapOperations
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(find|findOne|search|searchForContext|searchForObject|list|lookup|authenticate|findByDn|listBindings|lookupContext|rename)$
+          - focus-metavariable: $UNTRUSTED
       # Spring LDAP (LdapTemplate/LdapOperations) extended methods
       - patterns:
           - pattern-either:

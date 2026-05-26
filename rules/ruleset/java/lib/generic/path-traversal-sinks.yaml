@@ -332,6 +332,19 @@ rules:
               - pattern: (org.apache.tools.ant.taskdefs.Copy $C).setTodir($FILE)
               - pattern: (org.apache.tools.ant.taskdefs.Copy $C).setTofile($FILE)
               - pattern: (org.apache.tools.ant.taskdefs.Copy $C).addFileset($FILE)
+              # A FileSet carries its base dir/file in a virtual field (set via
+              # setDir/setFile), so the addFileset sink above can't see it on the
+              # whole FileSet. Match the untrusted File entering the FileSet and
+              # require the FileSet to reach a Copy task (cf. the List.add(..) ->
+              # new ProcessBuilder($ARGS) pattern in command-injection-sinks).
+              - patterns:
+                  - pattern: |
+                      (org.apache.tools.ant.types.FileSet $FS).$SET($FILE);
+                      ...
+                      (org.apache.tools.ant.taskdefs.Copy $C).addFileset($FS);
+                  - metavariable-regex:
+                      metavariable: $SET
+                      regex: ^(setDir|setFile)$
               - pattern: (org.apache.tools.ant.taskdefs.Expand $E).setDest($FILE)
               - pattern: (org.apache.tools.ant.taskdefs.Expand $E).setSrc($FILE)
               - pattern: (org.apache.tools.ant.taskdefs.Property $P).setFile($FILE)
@@ -399,4 +412,34 @@ rules:
               - pattern: new org.kohsuke.stapler.framework.io.LargeText($FILE, ...)
               - pattern: (org.openjdk.jmh.runner.options.ChainedOptionsBuilder $B).result($FILE)
 
+          - focus-metavariable: $FILE
+
+      # A hudson.FilePath stores its path in a virtual field, so the whole-FilePath
+      # sinks above (own methods, copy targets, DirectoryBrowserSupport, SCM) can't
+      # observe taint that entered through the constructor. Connect a FilePath built
+      # from an untrusted path to a subsequent path-traversal use of it — exactly the
+      # List.add(..) -> new ProcessBuilder($ARGS) idiom in command-injection-sinks.
+      # pattern-inside factors out the "constructed from an untrusted path" part (so
+      # it is not repeated per use), $FP ties the construction to the use, and the
+      # focus stays on $FILE — the constructor argument, where the path is still
+      # whole-object tainted.
+      - patterns:
+          - pattern-either:
+              # used via one of the FilePath's own filesystem methods
+              - patterns:
+                  - pattern: (hudson.FilePath $FP).$METHOD(...)
+                  - metavariable-regex:
+                      metavariable: $METHOD
+                      regex: ^(read|readToString|readFromOffset|write|exists|copyTo|copyToWithPermission|copyRecursiveTo|copyFrom|tar|untar|unzip|unzipFrom|chmod|touch|mkdirs|deleteContents|deleteRecursive|renameTo|moveAllChildrenTo)$
+              # passed as the source/target of another FilePath's copy
+              - pattern: (hudson.FilePath $OTHER).copyTo($FP)
+              - pattern: (hudson.FilePath $OTHER).copyToWithPermission($FP)
+              - pattern: (hudson.FilePath $OTHER).copyFrom($FP)
+              - pattern: (hudson.FilePath $OTHER).copyRecursiveTo(..., $FP, ...)
+              # passed into a FilePath-consuming Jenkins API
+              - pattern: new hudson.model.DirectoryBrowserSupport(..., $FP, ...)
+              - pattern: (hudson.scm.SCM $S).compareRemoteRevisionWith(..., $FP, ...)
+          - pattern-inside: |
+              (hudson.FilePath $FP) = new hudson.FilePath(..., $FILE, ...);
+              ...
           - focus-metavariable: $FILE
