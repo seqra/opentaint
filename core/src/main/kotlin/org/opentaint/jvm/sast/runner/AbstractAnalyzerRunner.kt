@@ -13,6 +13,7 @@ import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
 import org.opentaint.jvm.sast.project.ProjectKind
 import org.opentaint.jvm.sast.util.file
 import org.opentaint.jvm.sast.util.newDirectory
+import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
 import org.opentaint.project.Project
 import org.opentaint.util.CliWithLogger
@@ -94,11 +95,20 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         }
 
         val status = resolvedProject.goProjects.fold(javaStatus) { acc, gp ->
-            logger.warn { "Go project analysis is not implemented: ${gp.projectDir}" }
-            acc
+            maxOf(acc, runGoProjectAnalysis(gp))
         }
 
         exitProcessIfNotOk(status)
+    }
+
+    private fun runGoProjectAnalysis(project: GoProject): ProjectAnalysisStatus = try {
+        logger.info { "Start Go analysis for project: ${project.projectDir}" }
+        analyzeGoProject(project, outputDir, debugOptions).also {
+            logger.info { "Finish Go analysis for project: ${project.projectDir}" }
+        }
+    } catch (ex: Throwable) {
+        logger.error(ex) { "Fail Go analysis for project: ${project.projectDir}" }
+        ProjectAnalysisStatus.EXCEPTION
     }
 
     private fun runProjectAnalysisRecursively(project: JavaProject): ProjectAnalysisStatus = try {
@@ -120,6 +130,8 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         }
         exitProcess(exitCode)
     }
+
+    protected abstract fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path, debugOptions: DebugOptions): ProjectAnalysisStatus
 
     protected abstract fun analyzeProject(project: JavaProject, analyzerOutputDir: Path, debugOptions: DebugOptions): ProjectAnalysisStatus
 

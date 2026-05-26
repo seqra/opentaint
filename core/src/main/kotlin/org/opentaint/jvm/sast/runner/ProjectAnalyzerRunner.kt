@@ -12,6 +12,8 @@ import com.github.ajalt.clikt.parameters.types.path
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.jvm.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
+import org.opentaint.go.sast.project.GoProjectAnalysisOptions
+import org.opentaint.go.sast.project.GoProjectAnalyzer
 import org.opentaint.jvm.sast.project.CommonAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
@@ -20,6 +22,7 @@ import org.opentaint.jvm.sast.project.SarifGenerationOptions
 import org.opentaint.jvm.sast.project.TestProjectAnalyzer
 import org.opentaint.jvm.sast.util.directory
 import org.opentaint.jvm.sast.util.file
+import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
 import org.opentaint.util.newFile
 import java.nio.file.Path
@@ -126,6 +129,39 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
             val testAnalyzer = TestProjectAnalyzer(project, analyzerOutputDir, options)
             testAnalyzer.analyze()
         }
+    }
+
+    override fun analyzeGoProject(
+        project: GoProject,
+        analyzerOutputDir: Path,
+        debugOptions: DebugOptions,
+    ): ProjectAnalysisStatus {
+        val sarifOptions = SarifGenerationOptions(
+            sarifFileName = sarifFileName,
+            sarifCodeFlowLimit = sarifCodeFlowLimit,
+            useSemgrepStyleId = sarifSemgrepStyleId,
+            toolVersion = sarifToolVersion,
+            toolSemanticVersion = sarifToolSemanticVersion,
+            uriBase = sarifUriBase,
+            generateFingerprint = sarifGenerateFingerprint,
+        )
+
+        val options = GoProjectAnalysisOptions(
+            common = CommonAnalysisOptions(
+                customApproximationConfig = approximationsConfig,
+                semgrepRuleSet = semgrepRuleSet,
+                semgrepRuleLoadTrace = semgrepRuleLoadTrace,
+                semgrepSeverity = semgrepRuleSeverity,
+                semgrepRuleId = semgrepRuleId,
+                trackExternalMethods = trackExternalMethods,
+                ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
+                ifdsApMode = ifdsApMode,
+                debugOptions = debugOptions,
+                sarifGenerationOptions = sarifOptions,
+            ),
+        )
+
+        return GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
     }
 
     companion object {
