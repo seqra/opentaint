@@ -554,21 +554,152 @@ Record per-CWE TP/FP per benchmark for the iteration phase (Phase 4). No commit 
 
 ## Phase 4 — Iterate per CWE
 
-Each iteration task follows the same loop. The first iteration is documented explicitly with the specific actions; subsequent iterations follow the same template until the CWE clears 70% TP.
+### Handbook: reading `external-methods-without-rules.yaml`
 
-**Iteration template (apply per CWE):**
+When a benchmark scan emits a non-empty `external-methods-without-rules.yaml`,
+that file is the **iteration signal** — every entry is a method the analyzer
+walked through on a tainted path but had no model for, so it killed the fact.
+Use it as follows:
+
+1. **Open the file** (`head -50 <results>/external-methods-without-rules.yaml`). Each entry is a YAML map like:
+
+   ```yaml
+   - method: "pkg/path.FunctionName"
+     callSites: 17
+     factPositions: ["arg(0)", "this"]
+   ```
+
+   `callSites` tells you how impactful modeling this method would be.
+   `factPositions` tells you which positions the analyzer was carrying taint
+   on at the call — useful for picking the `from:` for the new passThrough.
+
+2. **Filter to the source→sink path of the active CWE.** Inspect the FN source
+   files (Step 1 of the iteration task) and identify which entries from the
+   list appear between the HTTP source and the CWE-specific sink. Methods
+   that don't lie on any plausible source→sink path are no-ops — skip them
+   even if they have high callSites.
+
+3. **For each filtered entry, decide one of three actions:**
+   - **a. Model with a passThrough entry** (most common) — append to
+     `benchmarks/config/go-custom-propagators.yaml`. See the YAML format
+     below.
+   - **b. Model via the security rule's `pattern-either` instead** — if the
+     method is a receiver method (e.g., `(*bytes.Buffer).WriteString`),
+     the v1 loader drops receiver-method passThroughs (see "v1 limitation"
+     below). Add a pattern that captures the caller shape directly in the
+     security yaml.
+   - **c. Skip** — if the method is not on any tainted source→sink path for
+     the active CWE, leave it alone. Approximating no-op methods wastes
+     iteration time.
+
+4. **Confirm the entry "took"** after the next scan: the method should
+   disappear from `external-methods-without-rules.yaml` and appear in
+   `external-methods-with-rules.yaml`. If it does not, the function name /
+   package path doesn't match what the analyzer sees — check the exact
+   strings in the original "without-rules" YAML.
+
+### Go YAML approximation format (passThrough)
+
+The format is **structured**, not the JVM-style `pkg.Class#method` shorthand.
+Parsed by `GoConfigLoader.parsePassThroughRules`. Each rule:
+
+```yaml
+passThrough:
+  - function:
+      package: <import-path>        # e.g. "strings", "encoding/base64"
+      type: <type-name>             # optional, only for receiver methods
+      name: <function-or-method>
+      receiver: true | false        # true ⇒ method on a named type
+    copy:
+      - from: <position>
+        to:   <position>
+      # repeat for each independent taint copy
+```
+
+**Positions:**
+
+| Token | Meaning |
+|-------|---------|
+| `arg(0)`, `arg(1)`, … | nth function argument (excluding receiver) |
+| `this` | receiver of a method call |
+| `result` | single return value |
+| `result(0)`, `result(1)`, … | nth slot of a multi-return |
+| `[arg(0), .[*]]` | YAML list: position + modifier(s). `.[*]` = array/slice element |
+
+**v1 limitation:** `GoConfigLoader.parsePassThroughRules` drops any rule
+with `receiver: true`. Receiver-method approximations are not loaded
+today. For receiver-style helpers, model the caller pattern directly in
+the security rule's `pattern-either` instead.
+
+**Worked example.** If `external-methods-without-rules.yaml` lists
+`go-sec-code/util.MyHelper` and the source at
+`benchmarks/go-sec-code-mutated/util/helpers.go` is:
+
+```go
+package util
+import "strings"
+func MyHelper(s string) string { return strings.ToUpper(s) }
+```
+
+then the approximation entry is:
+
+```yaml
+passThrough:
+  - function:
+      package: go-sec-code/util
+      name: MyHelper
+      receiver: false
+    copy:
+      - from: arg(0)
+        to: result
+```
+
+### Mining propagator definitions from CodeQL ext yamls
+
+CodeQL ships authoritative propagator data in
+`/drive-testcomp/opentaint-go-rules/codeql/go/ql/lib/ext/*.model.yml`
+under `kind=taint`. Each row:
+
+```
+[package, type, qualifierIncluded, method, "", "", from-position, to-position, "taint", "manual"]
+```
+
+Translation table from CodeQL to OpenTaint Go positions:
+
+| CodeQL | OpenTaint Go |
+|--------|--------------|
+| `Argument[N]` | `arg(N)` |
+| `Argument[receiver]` | `this` (but receiver rules don't load — see limitation above) |
+| `ReturnValue` | `result` |
+| `ReturnValue[K]` | `result(K)` |
+| `.ArrayElement` (modifier) | `.[*]` (list form) |
+| `Argument[N..M]` | one rule per index (the parser doesn't expand ranges) |
+
+Quick grep recipe for finding propagators for a known package:
+
+```bash
+grep "\"taint\"" /drive-testcomp/opentaint-go-rules/codeql/go/ql/lib/ext/<pkg>.model.yml | head -40
+```
+
+Replace `<pkg>` with the package path dots (e.g., `fmt`, `strings`,
+`path.filepath`, `encoding.json`). Many of these already ship in the
+bundled `core/opentaint-config/go-config/config/go-config/<pkg>.yaml`
+— check the bundled file first before duplicating.
+
+### Iteration template (apply per CWE)
 
 a. Identify FN URIs: for the active CWE, list URIs in `truth.sarif` (kind=fail) that the report did NOT find.
 b. Read 3-5 of those Go source files.
 c. Decide the gap kind:
    - **Source missing**: a request access pattern not in the source list.
    - **Sink missing**: a sink not in the sink list.
-   - **Propagator missing**: an external method on the source→sink path that isn't in `external-methods-with-rules.yaml` but is in `external-methods-without-rules.yaml`.
+   - **Propagator missing**: an external method on the source→sink path that isn't in `external-methods-with-rules.yaml` but is in `external-methods-without-rules.yaml` — apply the handbook above.
 d. Apply the fix:
    - Source/sink: extend the relevant rule yaml.
-   - Propagator: add an entry to `benchmarks/config/go-custom-propagators.yaml` (create the file on first use).
+   - Propagator: append to `benchmarks/config/go-custom-propagators.yaml` using the YAML format above (create the file on first use with `passThrough: []` as a starting point and add entries below).
 e. Re-scan with `scan.sh`; capture new TP%.
-f. Stop when CWE TP ≥ 70% on both benchmarks (or on the only one that has it, in xss's case).
+f. Verify any new propagator moved from `external-methods-without-rules.yaml` to `external-methods-with-rules.yaml`.
+g. Stop when CWE TP ≥ 70% on both benchmarks (or on the only one that has it, in xss's case).
 
 ### Task 8: Iterate `cmdinj` to ≥70% TP
 
@@ -619,27 +750,19 @@ If a request-access pattern is missing (e.g. `$R.URL.RequestURI()` — not model
 
 - [ ] **Step 4: If the gap is a propagator, extend `go-custom-propagators.yaml`**
 
-Read `external-methods-without-rules.yaml` for either benchmark:
+Read `external-methods-without-rules.yaml` for the benchmark whose FNs you're chasing:
 
 ```bash
 head -30 /drive-testcomp/opentaint-go-rules/benchmarks/go-owasp-converted-mutated/.opentaint/results/external-methods-without-rules.yaml
 ```
 
-For methods that lie between an HTTP source and an `exec.*` sink and aren't already in `external-methods-with-rules.yaml`, append a passThrough entry. Example format (from `core/opentaint-config/go-config/src/main/resources/go-config/fmt.yaml` for reference shape):
+Cross-reference with `external-methods-with-rules.yaml` to confirm the method is genuinely uncovered:
 
-```yaml
-passThrough:
-  - function:
-      package: <pkg>
-      name: <FuncName>
-    copy:
-      - from: arg(0)
-        to: result
+```bash
+grep -A 1 '<MethodName>' /drive-testcomp/opentaint-go-rules/benchmarks/go-owasp-converted-mutated/.opentaint/results/external-methods-with-rules.yaml || echo "not in with-rules — genuinely uncovered"
 ```
 
-Confirm by checking either `core/opentaint-config/go-config/src/main/resources/go-config/strings.yaml` for a sample.
-
-If the file doesn't exist yet:
+If the file doesn't exist yet, initialise it:
 
 ```bash
 mkdir -p /drive-testcomp/opentaint-go-rules/benchmarks/config
@@ -648,7 +771,11 @@ passThrough: []
 EOF
 ```
 
-Then append entries.
+Then append entries using the **Go YAML approximation format** documented at the top of this Phase (see "Handbook: reading `external-methods-without-rules.yaml`" and "Go YAML approximation format"). The handbook also covers:
+- Filtering the list to methods on the active CWE's source→sink path.
+- The v1 receiver-method limitation (use rule patterns instead).
+- Mining additional propagator definitions from CodeQL ext yamls.
+- How to verify the entry "took" via the post-scan diff.
 
 - [ ] **Step 5: Re-scan**
 
