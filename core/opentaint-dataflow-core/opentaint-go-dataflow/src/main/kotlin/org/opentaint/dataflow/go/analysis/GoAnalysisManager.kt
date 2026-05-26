@@ -156,7 +156,7 @@ class GoAnalysisManager(
         currentInst: CommonInst,
     ): MethodSequentPrecondition {
         val ctx = analysisContext as GoMethodAnalysisContext
-        return GoMethodSequentPrecondition(currentInst as GoIRInst, ctx.method)
+        return GoMethodSequentPrecondition(apManager, currentInst as GoIRInst, ctx)
     }
 
     override fun getMethodCallPrecondition(

@@ -3,12 +3,20 @@ package org.opentaint.dataflow.go.trace
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
+import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
+import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
+import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
+import org.opentaint.dataflow.taint.InitialFactReader
+import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
@@ -19,22 +27,15 @@ import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.type.GoIRBinaryOp
+import org.opentaint.util.maybeFlatMap
 
-/**
- * Sequent (intra-procedural) precondition for Go statements. For an out-fact computed
- * after [currentInst], returns the set of in-facts that could have produced it via the
- * corresponding flow function ([org.opentaint.dataflow.go.analysis.GoMethodSequentFlowFunction]).
- *
- * Important: when the flow function emits `Sequent.Unchanged` for a fact (i.e. the fact
- * passes through), the precondition MUST include `SequentPrecondition.Unchanged` rather
- * than the same fact wrapped in [PreconditionFactsForInitialFact]. The trace resolver
- * uses `Unchanged` to skip its "edge exists in analyzer DB" check, which is essential
- * because the analyzer does not record unchanged edges in its lookup structures.
- */
 class GoMethodSequentPrecondition(
+    private val apManager: ApManager,
     private val currentInst: GoIRInst,
-    private val method: GoIRFunction,
+    private val analysisContext: GoMethodAnalysisContext,
 ) : MethodSequentPrecondition {
+
+    private val method: GoIRFunction get() = analysisContext.method
 
     override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
         val result = hashSetOf<SequentPrecondition>()
@@ -45,7 +46,10 @@ class GoMethodSequentPrecondition(
 
     private fun addPreconditions(fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         when (val inst = currentInst) {
-            is GoIRAssignInst -> handleAssign(inst, fact, result)
+            is GoIRAssignInst -> {
+                result.unconditionalGlobalSourcesPrecondition(inst, fact)
+                handleAssign(inst, fact, result)
+            }
             is GoIRStore -> handleStore(inst, fact, result)
             is GoIRReturn -> handleReturn(inst, fact, result)
             is GoIRPhi -> handlePhi(inst, fact, result)
@@ -70,8 +74,6 @@ class GoMethodSequentPrecondition(
     private fun MutableSet<SequentPrecondition>.addKill(target: InitialFactAp) {
         this += PreconditionFactsForInitialFact(target, emptyList())
     }
-
-    // ── Assign ───────────────────────────────────────────────────────
 
     private fun handleAssign(inst: GoIRAssignInst, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
@@ -185,8 +187,6 @@ class GoMethodSequentPrecondition(
         }
     }
 
-    // ── Return ───────────────────────────────────────────────────────
-
     private fun handleReturn(inst: GoIRReturn, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         if (fact.base !is AccessPathBase.Return) return
 
@@ -207,8 +207,6 @@ class GoMethodSequentPrecondition(
         if (pres.isNotEmpty()) result.addPreFacts(fact, pres)
     }
 
-    // ── Phi ──────────────────────────────────────────────────────────
-
     private fun handlePhi(inst: GoIRPhi, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
         if (fact.base != registerBase) return
@@ -220,8 +218,6 @@ class GoMethodSequentPrecondition(
         }
         if (pres.isNotEmpty()) result.addPreFacts(fact, pres)
     }
-
-    // ── Map update ───────────────────────────────────────────────────
 
     private fun handleMapUpdate(inst: GoIRMapUpdate, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method) ?: return
@@ -243,8 +239,6 @@ class GoMethodSequentPrecondition(
         }
     }
 
-    // ── Send ─────────────────────────────────────────────────────────
-
     private fun handleSend(inst: GoIRSend, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method) ?: return
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method) ?: return
@@ -263,7 +257,39 @@ class GoMethodSequentPrecondition(
         }
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────
+    private fun MutableSet<SequentPrecondition>.unconditionalGlobalSourcesPrecondition(
+        inst: GoIRAssignInst,
+        fact: InitialFactAp,
+    ) {
+        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method) ?: return
+        val lhv = AccessPathBase.LocalVar(inst.register.index)
+        if (fact.base != lhv) return
+
+        val sourceRules = analysisContext.taint.taintConfig.sourceRulesForGlobal(globalName)
+        if (sourceRules.isEmpty()) return
+
+        val entryFactReader = InitialFactReader(fact.rebase(AccessPathBase.Return), apManager)
+        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(entryFactReader)
+
+        for (rule in sourceRules) {
+            if (!rule.condition.isTrue()) {
+                TODO("Global source with complex condition")
+            }
+            val assignedMarks = rule.actionsAfter.maybeFlatMap { action ->
+                sourcePreconditionEvaluator.evaluate(
+                    rule, action,
+                    action.pos.resolvePosAccess(),
+                    TaintMarkAccessor(action.mark),
+                )
+            }
+            if (assignedMarks.isNone) continue
+            val sourceActions = assignedMarks.getOrThrow().mapTo(hashSetOf()) { it.second }
+
+            this += MethodSequentPrecondition.SequentSource(
+                fact, TaintRulePrecondition.Source(rule, sourceActions)
+            )
+        }
+    }
 
     private fun handleStringConcatPrecondition(
         fact: InitialFactAp,

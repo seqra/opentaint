@@ -14,17 +14,11 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRCallMode
+import org.opentaint.ir.go.value.GoIRFunctionValue
 import org.opentaint.ir.go.value.GoIRRegister
 import org.opentaint.ir.go.value.GoIRValue
 
-/**
- * Maps taint facts between caller and callee namespaces.
- * Singleton object analogous to JIRMethodCallFactMapper.
- */
 object GoMethodCallFactMapper : MethodCallFactMapper {
-
-    // ── Exit-to-Return (callee → caller) ─────────────────────────────
-
     override fun mapMethodExitToReturnFlowFact(
         callStatement: CommonInst,
         factAp: FinalFactAp,
@@ -48,8 +42,8 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         val goInst = callStatement as GoIRInst
         val callInfo = GoFlowFunctionUtils.extractCallInfo(goInst) ?: return emptyList()
         val method = goInst.location.functionBody.function
-        val isInvoke = callInfo.receiver != null
-        val argOffset = if (isInvoke) 1 else 0
+        val callExpr = buildGoCallExpr(goInst, callInfo)
+        val explicitArgs = callExpr.explicitArgs
 
         return when (factAp.base) {
             is AccessPathBase.Return -> {
@@ -59,30 +53,36 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
             }
             is AccessPathBase.Argument -> {
                 val idx = (factAp.base as AccessPathBase.Argument).idx
-                if (isInvoke && idx == 0) {
-                    val receiver = callInfo.receiver!!
-                    val recvBase = GoFlowFunctionUtils.accessPathBase(receiver, method)
+                if (idx >= 0 && idx < explicitArgs.size) {
+                    val argBase = GoFlowFunctionUtils.accessPathBase(explicitArgs[idx], method)
                         ?: return emptyList()
-                    listOf(factAp.rebase(recvBase))
+                    listOf(factAp.rebase(argBase))
                 } else {
-                    val argIdx = idx - argOffset
-                    if (argIdx >= 0 && argIdx < callInfo.args.size) {
-                        val argBase = GoFlowFunctionUtils.accessPathBase(callInfo.args[argIdx], method)
-                            ?: return emptyList()
-                        listOf(factAp.rebase(argBase))
-                    } else {
-                        mapFreeVarArgToBinding(callInfo, method, factAp, idx, argOffset, rebase)
-                    }
+                    mapFreeVarArgToBinding(callExpr, method, factAp, idx, rebase)
                 }
             }
-            is AccessPathBase.This -> error("This base is not used in Go")
+            is AccessPathBase.This -> {
+                val receiver = callExpr.effectiveReceiver ?: return emptyList()
+                val recvBase = GoFlowFunctionUtils.accessPathBase(receiver, method)
+                    ?: return emptyList()
+                listOf(factAp.rebase(recvBase))
+            }
             is AccessPathBase.ClassStatic -> listOf(factAp)
             is AccessPathBase.Constant -> listOf(factAp)
             else -> emptyList()
         }
     }
 
-    // ── Call-to-Start (caller → callee) ──────────────────────────────
+    /**
+     * Re-build a [GoCallExpr] from a [GoIRInst] for the in-mapper paths that
+     * receive only a [CommonInst]. Mirrors what [org.opentaint.dataflow.go.GoLanguageManager.getCallExpr]
+     * does, including the DIRECT-method shape normalisation.
+     */
+    private fun buildGoCallExpr(goInst: GoIRInst, callInfo: GoIRCallInfo): GoCallExpr {
+        val enclosingMethod = goInst.location.functionBody.function
+        val callee = (callInfo.function as? GoIRFunctionValue)?.function
+        return GoCallExpr(callInfo, callee, enclosingMethod)
+    }
 
     override fun mapMethodCallToStartFlowFact(
         callStatement: CommonInst,
@@ -93,7 +93,7 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         checker: FactTypeChecker,
         onMappedFact: (FinalFactAp, AccessPathBase) -> Unit,
     ) {
-        mapMethodCallToStartFlowAnyFact(callStatement, callExpr, returnValue, factAp, onMappedFact)
+        mapMethodCallToStartFlowAnyFact(callStatement, callExpr, factAp, onMappedFact)
     }
 
     override fun mapMethodCallToStartFlowFact(
@@ -104,34 +104,30 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         fact: InitialFactAp,
         onMappedFact: (InitialFactAp, AccessPathBase) -> Unit,
     ) {
-        mapMethodCallToStartFlowAnyFact(callStatement, callExpr, returnValue, fact, onMappedFact)
+        mapMethodCallToStartFlowAnyFact(callStatement, callExpr, fact, onMappedFact)
     }
 
     fun <F: FactAp> mapMethodCallToStartFlowAnyFact(
         callStatement: CommonInst,
         callExpr: CommonCallExpr,
-        returnValue: CommonValue?,
         factAp: F,
         onMappedFact: (F, AccessPathBase) -> Unit,
     ) {
         val goCallExpr = callExpr as GoCallExpr
-        val callInfo = goCallExpr.callInfo
         val method = (callStatement as GoIRInst).location.functionBody.function
-        val isInvoke = callInfo.receiver != null
-        val argOffset = if (isInvoke) 1 else 0
 
-        if (isInvoke) {
-            val receiverBase = GoFlowFunctionUtils.accessPathBase(callInfo.receiver!!, method)
+        val receiver = goCallExpr.effectiveReceiver
+        if (receiver != null) {
+            val receiverBase = GoFlowFunctionUtils.accessPathBase(receiver, method)
             if (receiverBase != null && factAp.base == receiverBase) {
-                onMappedFact(factAp, AccessPathBase.Argument(0))
+                onMappedFact(factAp, AccessPathBase.This)
             }
         }
 
-        for ((i, arg) in callInfo.args.withIndex()) {
+        for ((i, arg) in goCallExpr.explicitArgs.withIndex()) {
             val argBase = GoFlowFunctionUtils.accessPathBase(arg, method)
             if (argBase != null && factAp.base == argBase) {
-                val calleeBase = AccessPathBase.Argument(i + argOffset)
-                onMappedFact(factAp, calleeBase)
+                onMappedFact(factAp, AccessPathBase.Argument(i))
             }
         }
 
@@ -157,7 +153,10 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         val funcValue = callInfo.function as? GoIRRegister ?: return
         val closureExpr = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, enclosingMethod) ?: return
 
-        val paramCount = closureExpr.fn.params.size
+        // For methods the receiver is `params[0]` and is materialised as
+        // `AccessPathBase.This` (not an Argument), so free vars are indexed
+        // starting from the count of *non-receiver* params.
+        val paramCount = GoFlowFunctionUtils.nonReceiverParamCount(closureExpr.fn)
         for ((i, binding) in closureExpr.bindings.withIndex()) {
             val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method)
             if (bindingBase != null && factAp.base == bindingBase) {
@@ -170,18 +169,18 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
     // ── Free-var exit-to-return mapping ──────────────────────────────
 
     private fun <F: FactAp> mapFreeVarArgToBinding(
-        callInfo: GoIRCallInfo,
+        callExpr: GoCallExpr,
         method: GoIRFunction,
         factAp: F,
         argIdx: Int,
-        argOffset: Int,
         rebase: F.(AccessPathBase) -> F,
     ): List<F> {
+        val callInfo = callExpr.callInfo
         if (callInfo.mode != GoIRCallMode.DYNAMIC) return emptyList()
         val funcValue = callInfo.function as? GoIRRegister ?: return emptyList()
         val closureExpr = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, method) ?: return emptyList()
 
-        val freeVarIdx = argIdx - argOffset - callInfo.args.size
+        val freeVarIdx = argIdx - callExpr.explicitArgs.size
         if (freeVarIdx < 0 || freeVarIdx >= closureExpr.bindings.size) return emptyList()
 
         val bindingBase = GoFlowFunctionUtils.accessPathBase(closureExpr.bindings[freeVarIdx], method)
@@ -189,8 +188,6 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
 
         return listOf(factAp.rebase(bindingBase))
     }
-
-    // ── Relevance and validity checks ────────────────────────────────
 
     override fun factIsRelevantToMethodCall(
         callStatement: CommonInst,
@@ -202,13 +199,14 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         val callInfo = goCallExpr.callInfo
         val method = (callStatement as GoIRInst).location.functionBody.function
 
-        for (arg in callInfo.args) {
+        for (arg in goCallExpr.explicitArgs) {
             val argBase = GoFlowFunctionUtils.accessPathBase(arg, method)
             if (argBase != null && argBase == factAp.base) return true
         }
 
-        if (callInfo.receiver != null) {
-            val recvBase = GoFlowFunctionUtils.accessPathBase(callInfo.receiver!!, method)
+        val recv = goCallExpr.effectiveReceiver
+        if (recv != null) {
+            val recvBase = GoFlowFunctionUtils.accessPathBase(recv, method)
             if (recvBase != null && recvBase == factAp.base) return true
         }
 

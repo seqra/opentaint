@@ -2,12 +2,16 @@ package org.opentaint.dataflow.go.rules
 
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedPassAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
 import org.opentaint.dataflow.configuration.isFalse
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.go.GoFunctionSignature
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -18,19 +22,19 @@ class GoTaintConfiguration {
 
     private val sourceSimple = hashMapOf<String, MutableList<GoSerializedRule.Source>>()
     private val sourcePatterns = mutableListOf<GoSerializedRule.Source>()
-    private val sourceMemo = hashMapOf<String, List<TaintRule.Source>>()
+    private val sourceMemo = hashMapOf<GoFunctionSignature, List<TaintRule.Source>>()
 
     private val sinkSimple = hashMapOf<String, MutableList<GoSerializedRule.Sink>>()
     private val sinkPatterns = mutableListOf<GoSerializedRule.Sink>()
-    private val sinkMemo = hashMapOf<String, List<TaintRule.Sink>>()
+    private val sinkMemo = hashMapOf<GoFunctionSignature, List<TaintRule.Sink>>()
 
     private val passSimple = hashMapOf<String, MutableList<GoSerializedRule.PassThrough>>()
     private val passPatterns = mutableListOf<GoSerializedRule.PassThrough>()
-    private val passMemo = hashMapOf<String, List<TaintRule.PassThrough>>()
+    private val passMemo = hashMapOf<GoFunctionSignature, List<TaintRule.PassThrough>>()
 
     private val cleanerSimple = hashMapOf<String, MutableList<GoSerializedRule.Cleaner>>()
     private val cleanerPatterns = mutableListOf<GoSerializedRule.Cleaner>()
-    private val cleanerMemo = hashMapOf<String, List<TaintRule.Cleaner>>()
+    private val cleanerMemo = hashMapOf<GoFunctionSignature, List<TaintRule.Cleaner>>()
 
     private val ruleIdGen = AtomicInteger()
 
@@ -92,22 +96,22 @@ class GoTaintConfiguration {
     }
 
     @Synchronized
-    fun sourceForFunction(signature: GoFunctionSignature, allRelevant: Boolean): List<TaintRule.Source> = sourceMemo.getOrPut(signature.name) {
+    fun sourceForFunction(signature: GoFunctionSignature, allRelevant: Boolean): List<TaintRule.Source> = sourceMemo.getOrPut(signature) {
         candidates(signature, sourceSimple, sourcePatterns).mapNotNull { specialize(it, signature) }
     }
 
     @Synchronized
-    fun sinkForFunction(signature: GoFunctionSignature): List<TaintRule.Sink> = sinkMemo.getOrPut(signature.name) {
+    fun sinkForFunction(signature: GoFunctionSignature): List<TaintRule.Sink> = sinkMemo.getOrPut(signature) {
         candidates(signature, sinkSimple, sinkPatterns).mapNotNull { specialize(it, signature) }
     }
 
     @Synchronized
-    fun passThroughForFunction(signature: GoFunctionSignature): List<TaintRule.PassThrough> = passMemo.getOrPut(signature.name) {
+    fun passThroughForFunction(signature: GoFunctionSignature): List<TaintRule.PassThrough> = passMemo.getOrPut(signature) {
         candidates(signature, passSimple, passPatterns).mapNotNull { specialize(it, signature) }
     }
 
     @Synchronized
-    fun cleanerForFunction(signature: GoFunctionSignature, allRelevant: Boolean): List<TaintRule.Cleaner> = cleanerMemo.getOrPut(signature.name) {
+    fun cleanerForFunction(signature: GoFunctionSignature, allRelevant: Boolean): List<TaintRule.Cleaner> = cleanerMemo.getOrPut(signature) {
         candidates(signature, cleanerSimple, cleanerPatterns).mapNotNull { specialize(it, signature) }
     }
 
@@ -131,7 +135,70 @@ class GoTaintConfiguration {
     }
 
     private fun specialize(rule: GoSerializedGlobalSource, name: String): TaintRule.GlobalReadSource? {
-        TODO()
+        // Globals have no callee signature. Synthesise one whose only purpose is
+        // to drive position resolution; only Result-typed positions are
+        // meaningful for a global-read source (the LHV of the read).
+        validateNoCallSitePositions(rule, name)
+
+        val fakeSig = GoFunctionSignature(name = name, receiverType = null, paramTypes = emptyList(), resultType = "any")
+        val condition = rule.condition.resolveToRuleCondition(fakeSig)
+        if (condition.isFalse()) return null
+
+        val actions = rule.taint.flatMap { t ->
+            t.pos.resolve(fakeSig).map { GoAssignMark(t.kind, it) }
+        }
+        return TaintRule.GlobalReadSource(name, condition, actions, rule.info)
+    }
+
+    private fun validateNoCallSitePositions(rule: GoSerializedGlobalSource, name: String) {
+        rule.condition?.let { validateConditionForGlobal(it, name) }
+        for (action in rule.taint) {
+            validateAssignActionForGlobal(action, name)
+        }
+    }
+
+    private fun validateConditionForGlobal(condition: GoSerializedCondition, name: String) {
+        when (condition) {
+            GoSerializedCondition.True -> Unit
+            is GoSerializedCondition.And -> condition.allOf.forEach { validateConditionForGlobal(it, name) }
+            is GoSerializedCondition.Or -> condition.anyOf.forEach { validateConditionForGlobal(it, name) }
+            is GoSerializedCondition.Not -> validateConditionForGlobal(condition.not, name)
+
+            is GoSerializedCondition.ContainsMark -> validatePositionWithModifiersForGlobal(condition.pos, name, "condition")
+
+            is GoSerializedCondition.ConstantCmp -> validatePositionBaseForGlobal(condition.pos, name, "condition")
+            is GoSerializedCondition.ConstantMatches -> validatePositionBaseForGlobal(condition.pos, name, "condition")
+            is GoSerializedCondition.IsNull -> validatePositionBaseForGlobal(condition.pos, name, "condition")
+            is GoSerializedCondition.IsConstant -> validatePositionBaseForGlobal(condition.pos, name, "condition")
+            is GoSerializedCondition.IsType -> validatePositionBaseForGlobal(condition.pos, name, "condition")
+
+            is GoSerializedCondition.NumberOfArgs ->
+                error("Global-source rule for $name has condition referencing NumberOfArgs; globals have no arguments")
+        }
+    }
+
+    private fun validateAssignActionForGlobal(action: GoSerializedAssignAction, name: String) {
+        // Modifiers (ArrayElement, Field) are fine on a legal base (e.g. Result + [*]);
+        // only the base must be a Result-shaped position.
+        validatePositionBaseForGlobal(action.pos.base, name, "taint action")
+    }
+
+    private fun validatePositionWithModifiersForGlobal(pos: PositionBaseWithModifiers, name: String, role: String) {
+        validatePositionBaseForGlobal(pos.base, name, role)
+    }
+
+    private fun validatePositionBaseForGlobal(pos: PositionBase, name: String, role: String) {
+        when (pos) {
+            is PositionBase.Argument ->
+                error("Global-source rule for $name targets Argument(${pos.idx ?: "*"}) in $role, but globals have no arguments")
+            is PositionBase.AnyArgument ->
+                error("Global-source rule for $name targets AnyArgument(${pos.classifier}) in $role, but globals have no arguments")
+            PositionBase.This ->
+                error("Global-source rule for $name has $role referencing This; globals have no receiver")
+            is PositionBase.ClassStatic ->
+                error("Global-source rule for $name has $role referencing ClassStatic(${pos.className}); ClassStatic is not supported for Go globals")
+            PositionBase.Result -> Unit // legal: LHV of the read
+        }
     }
 
     private fun specialize(rule: GoSerializedRule.Source, signature: GoFunctionSignature): TaintRule.Source? {

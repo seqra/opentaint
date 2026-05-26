@@ -220,8 +220,6 @@ object GoFlowFunctionUtils {
         return Access.Simple(base)
     }
 
-    // ── Store address resolution ─────────────────────────────────────
-
     /**
      * Resolves the access for a store destination address.
      * If the address was produced by FieldAddrExpr or IndexAddrExpr,
@@ -326,6 +324,53 @@ object GoFlowFunctionUtils {
     fun PositionAccessor.resolvePosAccess(): Accessor = when (this) {
         is PositionAccessor.ElementAccessor -> ElementAccessor
         is PositionAccessor.FieldAccessor -> FieldAccessor(className, fieldName, fieldType)
+    }
+
+    /**
+     * Inspect an assignment's RHS for a "global read".
+     *
+     * Three SSA shapes lower to a tainted destination register:
+     *
+     *  1. `q := slice[i]` over a global-loaded slice, IR-as-IndexExpr:
+     *       `GoIRIndexExpr(x = register-loaded-from-global)`
+     *  2. `q := os.Args[1]` — the dominant CLI-input shape — which Go SSA splits
+     *     into three steps:
+     *       `t0 = *os.Args`            (GoIRUnOpExpr DEREF)
+     *       `t1 = &t0[i]`              (GoIRIndexAddrExpr)
+     *       `q  = *t1`                 (GoIRUnOpExpr DEREF)
+     *     We fire on the outer DEREF, chasing one def-step through the
+     *     `IndexAddrExpr` back to the global.
+     *  3. `q := *globalVar` — a bare slice-as-a-whole load.
+     *
+     * Returns the global's `fullName` if one of the shapes matches.
+     */
+    fun detectGlobalReadName(inst: GoIRAssignInst, method: GoIRFunction): String? {
+        val expr = inst.expr
+        if (expr is GoIRIndexExpr) {
+            return globalBehindValue(expr.x, method)
+        }
+        if (expr is GoIRUnOpExpr && expr.op == GoIRUnaryOp.DEREF) {
+            val src = expr.x as? GoIRRegister
+            if (src != null) {
+                val srcDef = (findDefInst(src, method) as? GoIRAssignInst)?.expr
+                if (srcDef is GoIRIndexAddrExpr) {
+                    val behind = globalBehindValue(srcDef.x, method)
+                    if (behind != null) return behind
+                }
+            }
+        }
+        val ops = expr.operands
+        if (ops.size != 1) return null
+        return (ops[0] as? GoIRGlobalValue)?.global?.fullName
+    }
+
+    private fun globalBehindValue(value: GoIRValue, method: GoIRFunction): String? {
+        if (value is GoIRGlobalValue) return value.global.fullName
+        if (value !is GoIRRegister) return null
+        val defInst = findDefInst(value, method) as? GoIRAssignInst ?: return null
+        val defOps = defInst.expr.operands
+        if (defOps.size != 1) return null
+        return (defOps[0] as? GoIRGlobalValue)?.global?.fullName
     }
 
     private val globalsNotSupportedReported = AtomicBoolean(false)

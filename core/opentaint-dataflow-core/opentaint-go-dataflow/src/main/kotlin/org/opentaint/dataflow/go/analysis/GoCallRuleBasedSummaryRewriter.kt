@@ -7,6 +7,7 @@ import org.opentaint.dataflow.configuration.go.serialized.GoUserDefinedRuleInfo
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.GoFunctionSignature
+import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.Position
 import org.opentaint.dataflow.go.rules.RemoveMark
@@ -28,9 +29,7 @@ class GoCallRuleBasedSummaryRewriter(
     private val config get() = analysisContext.taint.taintConfig
 
     private val callSignature: GoFunctionSignature?
-        get() = callExpr.calleeName?.let {
-            GoFunctionSignature(it, callExpr.explicitArgs.size, callExpr.isMethodCall)
-        }
+        get() = callExpr.signature()
 
     private data class UserRuleDefinedAction(
         val rule: TaintRule,

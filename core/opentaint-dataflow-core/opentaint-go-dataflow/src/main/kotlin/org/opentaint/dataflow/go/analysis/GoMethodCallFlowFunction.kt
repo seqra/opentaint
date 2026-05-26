@@ -17,6 +17,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFa
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFunctionSignature
+import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
@@ -41,13 +42,12 @@ class GoMethodCallFlowFunction(
     private val generateTrace: Boolean,
 ) : MethodCallFlowFunction.Default {
     private val rulesProvider get() = context.taint.taintConfig
-    private val calleeName: String? get() = callExpr.calleeName
 
     private val returnValue: GoIRValue?
         get() = GoFlowFunctionUtils.extractResultRegister(statement)
 
     private val callSignature: GoFunctionSignature?
-        get() = calleeName?.let { GoFunctionSignature(it, callExpr.explicitArgs.size, callExpr.isMethodCall) }
+        get() = callExpr.signature()
 
     private val summaryRewriter by lazy {
         GoCallRuleBasedSummaryRewriter(statement, callExpr, returnValue, context, apManager)
@@ -173,7 +173,7 @@ class GoMethodCallFlowFunction(
             if (startFactBase !is AccessPathBase.ClassStatic) {
                 context.taint.externalMethodTracker?.trackExternalMethod(
                     method = signature.name,
-                    signature = "args:${signature.numArgs}",
+                    signature = "args:${signature.arity}",
                     factPosition = startFactBase.toString(),
                     rulesApplied = passThroughFacts.isSome,
                 )

@@ -22,6 +22,7 @@ import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.rules.accept
+import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.taint.InitialFactReader
 import org.opentaint.dataflow.taint.RuleConditionRewriter
 import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
@@ -43,10 +44,8 @@ class GoMethodCallPrecondition(
     private val returnValue: GoIRValue?
         get() = GoFlowFunctionUtils.extractResultRegister(statement)
 
-    private val calleeName: String? get() = callExpr.calleeName
-
     private val callSignature: GoFunctionSignature?
-        get() = calleeName?.let { GoFunctionSignature(it, callExpr.explicitArgs.size, callExpr.isMethodCall) }
+        get() = callExpr.signature()
 
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)

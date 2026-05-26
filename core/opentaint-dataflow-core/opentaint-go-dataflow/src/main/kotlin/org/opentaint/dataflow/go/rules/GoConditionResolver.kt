@@ -51,7 +51,7 @@ private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature): C
         GoRuleCondition.IsConstant(it)
     }
 
-    is GoSerializedCondition.NumberOfArgs -> if (n == signature.numArgs) mkTrue() else mkFalse()
+    is GoSerializedCondition.NumberOfArgs -> if (n == signature.arity) mkTrue() else mkFalse()
 
     is GoSerializedCondition.IsType -> pos.resolveAny(signature, PositionBase::resolve) {
         GoRuleCondition.IsType(typeName, it)
@@ -75,14 +75,14 @@ private fun GoSerializedCondition.ConstantValue.toTypedConstantValue(): Constant
 fun PositionBase.resolve(signature: GoFunctionSignature): List<Position.Simple> = when (this) {
     is PositionBase.AnyArgument -> {
         // todo: any arg classifier
-        List(signature.numArgs) { Position.Argument(it) }
+        List(signature.arity) { Position.Argument(it) }
     }
 
     is PositionBase.Argument -> {
         val i = idx
         if (i == null) {
-            List(signature.numArgs) { Position.Argument(it) }
-        } else if (i > signature.numArgs) {
+            List(signature.arity) { Position.Argument(it) }
+        } else if (i >= signature.arity) {
             emptyList()
         } else {
             listOf(Position.Argument(i))

@@ -364,7 +364,7 @@ class GoMethodSequentFlowFunction(
 
     private fun applyGlobalReadSourceRules(out: MutableSet<Sequent>) {
         val inst = currentInst as? GoIRAssignInst ?: return
-        val globalName = detectGlobalReadName(inst) ?: return
+        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method) ?: return
 
         val sourceRules = context.taint.taintConfig.sourceRulesForGlobal(globalName) // todo: []
         if (sourceRules.isEmpty()) return
