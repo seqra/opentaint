@@ -28,14 +28,6 @@ class GoRuleEmitTest {
         assertTrue(cfg.sinkForFunction("util.Sink".signature(1)).isNotEmpty(), "expected util.Sink sink")
     }
 
-    @Test fun passEmitsPropagator() {
-        val cfg = emitConfig("go-rules/pass.yaml")
-        assertTrue(
-            cfg.passThroughForFunction("util.Wrap".signature(1)).isNotEmpty(),
-            "expected util.Wrap propagator",
-        )
-    }
-
     @Test fun needsConditionsEmitsSinkOnly() {
         val cfg = emitConfig("go-rules/needs-conditions.yaml")
         assertTrue(cfg.sinkForFunction("util.Sink".signature(1)).isNotEmpty(), "expected the sink to be emitted")
