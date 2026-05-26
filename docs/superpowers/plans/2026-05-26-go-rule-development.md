@@ -552,6 +552,214 @@ Record per-CWE TP/FP per benchmark for the iteration phase (Phase 4). No commit 
 
 ---
 
+## Phase 3.5 — Set up sample-based fast-feedback test
+
+This phase adds a JUnit-driven equivalent of the Java `opentaint dev test-rules` flow. The Go side has no annotation-based runner, but it has `GoSampleBasedTest` and `GoMassiveSampleTest` which both load a yaml rule and assert `Positive_*` / `Negative_*` on top-level Go functions. We reuse that infrastructure by pointing it at our consolidated rule yamls.
+
+### Task 7.5: Add `GoRuleDevSampleTest`
+
+**Files:**
+- Create: `core/opentaint-go-querylang/src/test/kotlin/org/opentaint/semgrep/GoRuleDevSampleTest.kt`
+- Modify: `core/opentaint-go-querylang/build.gradle.kts` (one new `systemProperty` line)
+
+The new test class walks the existing `samples-go-massive/<prefix>_*` directories and, instead of loading each sample's local yaml, loads our consolidated rule yaml from `benchmarks/rules/go/security/`. The prefix→rule mapping:
+
+| Sample prefix | Rule yaml |
+|---------------|-----------|
+| `cmdinj_*` | `cmdinj.yaml` |
+| `path_*` | `path-traversal.yaml` |
+| `sqlinj_*` | `sql-injection.yaml` |
+| `xss_*` | `xss.yaml` |
+
+- [ ] **Step 1: Write the test class**
+
+```kotlin
+package org.opentaint.semgrep
+
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.dataflow.go.analysis.GoAnalysisManager
+import org.opentaint.dataflow.go.graph.GoApplicationGraph
+import org.opentaint.dataflow.go.rules.GoTaintConfiguration
+import org.opentaint.dataflow.ifds.SingletonUnit
+import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.ifds.UnitType
+import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.go.config.GoConfigLoader
+import org.opentaint.ir.api.common.CommonMethod
+import org.opentaint.ir.api.common.cfg.CommonInst
+import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.api.GoIRProgram
+import org.opentaint.ir.go.client.GoIRClient
+import org.opentaint.jvm.sast.dataflow.DummySerializationContext
+import org.opentaint.semgrep.pattern.SemgrepLoadTrace
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
+import org.opentaint.util.analysis.ApplicationGraph
+import java.io.File
+import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.test.assertTrue
+import kotlin.test.fail
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class GoRuleDevSampleTest {
+    private val samplesDir: Path by lazy {
+        val prop = System.getProperty("GO_MASSIVE_SAMPLES_DIR")
+            ?: error("System property GO_MASSIVE_SAMPLES_DIR not set; check build.gradle.kts wiring")
+        Path(prop).also { require(it.toFile().isDirectory) }
+    }
+
+    private val rulesDir: Path by lazy {
+        val prop = System.getProperty("OPENTAINT_GO_DEV_RULES_DIR")
+            ?: error("System property OPENTAINT_GO_DEV_RULES_DIR not set; check build.gradle.kts wiring")
+        Path(prop).also { require(it.toFile().isDirectory) }
+    }
+
+    private val client: GoIRClient by lazy { GoIRClient() }
+
+    @AfterAll
+    fun tearDown() { client.close() }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("discoverSamples")
+    fun ruleDevSample(name: String) = runSample(name)
+
+    @Suppress("unused")
+    fun discoverSamples(): List<String> {
+        val prefixes = listOf("cmdinj_", "path_", "sqlinj_", "xss_")
+        val root = samplesDir.toFile()
+        if (!root.isDirectory) return emptyList()
+        return root.listFiles { f -> f.isDirectory && prefixes.any { f.name.startsWith(it) } }
+            ?.sortedBy { it.name }
+            ?.map { it.name }
+            ?: emptyList()
+    }
+
+    private fun ruleFor(prefix: String): String = when (prefix) {
+        "cmdinj" -> "cmdinj.yaml"
+        "path" -> "path-traversal.yaml"
+        "sqlinj" -> "sql-injection.yaml"
+        "xss" -> "xss.yaml"
+        else -> error("Unknown prefix: $prefix")
+    }
+
+    private fun runSample(name: String) {
+        val sampleDir = samplesDir.resolve(name)
+        val prefix = name.substringBefore('_')
+        val ruleFile = rulesDir.resolve(ruleFor(prefix)).toFile()
+        if (!ruleFile.isFile) fail("Rule file missing: $ruleFile")
+
+        val program = client.buildFromDir(sampleDir, "./...")
+        try {
+            val config = loadConfig(ruleFile)
+            GoConfigLoader.getConfig()?.let { config.loadConfig(it) }
+
+            val entries = program.allFunctions().filter {
+                it.pkg?.importPath == "util" && !it.isSynthetic && it.hasBody &&
+                    it.parent == null &&
+                    (it.name.startsWith("Positive_") || it.name.startsWith("Negative_"))
+            }
+            if (entries.isEmpty()) fail("[$name] no Positive_*/Negative_* entries")
+
+            val failures = mutableListOf<String>()
+            for (entry in entries) {
+                val vulns = runAnalysis(program, config, entry)
+                val isPositive = entry.name.startsWith("Positive_")
+                if (isPositive && vulns.isEmpty()) failures += "Positive ${entry.fullName} reported NO vuln"
+                if (!isPositive && vulns.isNotEmpty()) failures += "Negative ${entry.fullName} reported ${vulns.size}"
+            }
+            if (failures.isNotEmpty()) fail("[$name] " + failures.joinToString("; "))
+        } finally {
+            (program as? AutoCloseable)?.close()
+        }
+    }
+
+    private fun loadConfig(yamlFile: File): GoTaintConfiguration {
+        val yaml = yamlFile.readText()
+        val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
+        loader.registerRuleSet(yaml, Path(yamlFile.name), Path("."), SemgrepLoadTrace())
+        val loaded = loader.loadRules()
+        val rule = loaded.rulesWithMeta.firstOrNull() ?: fail("No rules loaded from ${yamlFile.name}")
+        @Suppress("UNCHECKED_CAST")
+        val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
+        return typed.toGoTaintConfiguration()
+    }
+
+    private fun runAnalysis(program: GoIRProgram, config: GoTaintConfiguration, entry: GoIRFunction): List<*> {
+        val ifdsGraph = GoApplicationGraph(program, UtilUnitResolver)
+        @Suppress("UNCHECKED_CAST")
+        val engine = TaintAnalysisUnitRunnerManager(
+            GoAnalysisManager(program, config),
+            ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
+            unitResolver = UtilUnitResolver as UnitResolver<CommonMethod>,
+            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
+            summarySerializationContext = DummySerializationContext,
+            taintRulesStatsSamplingPeriod = null,
+        )
+        val start = MethodWithContext(entry, EmptyMethodContext)
+        return engine.use { it.runAnalysis(listOf(start), 1.minutes, 10.seconds); it.getVulnerabilities() }
+    }
+
+    private object UtilUnitResolver : UnitResolver<GoIRFunction> {
+        override fun resolve(method: GoIRFunction): UnitType =
+            if (method.pkg?.importPath == "util") SingletonUnit else UnknownUnit
+    }
+}
+```
+
+- [ ] **Step 2: Wire the rules-dir system property in `core/opentaint-go-querylang/build.gradle.kts`**
+
+Find the `tasks.withType<Test>` block (around line 129). Add ONE new line inside `doFirst` (or alongside the existing `systemProperty` calls — wherever the other `GO_*` properties are set):
+
+```kotlin
+systemProperty("OPENTAINT_GO_DEV_RULES_DIR",
+    rootProject.layout.projectDirectory.dir("../benchmarks/rules/go/security").asFile.absolutePath)
+```
+
+If the `../benchmarks/...` path resolution looks off in your gradle layout, hardcode the absolute path `/drive-testcomp/opentaint-go-rules/benchmarks/rules/go/security` for now — the test only needs to *find* the rules dir, and the benchmarks live outside the main repo. (`gradle.rootDir` resolves to the gradle root, which is `core/` in this multi-build setup; absolute paths are clearer here.)
+
+The simplest version that always works:
+
+```kotlin
+systemProperty("OPENTAINT_GO_DEV_RULES_DIR",
+    "/drive-testcomp/opentaint-go-rules/benchmarks/rules/go/security")
+```
+
+- [ ] **Step 3: Verify the test discovers parameters and runs**
+
+Rules don't exist yet (Tasks 3-6 created them). Run the test now to verify the wiring:
+
+```bash
+cd /drive-testcomp/opentaint-go-rules/opentaint/core
+./gradlew :opentaint-go-querylang:test --tests "org.opentaint.semgrep.GoRuleDevSampleTest" 2>&1 | tail -20
+```
+
+Expected: tests run, with most samples likely failing (the rules now exist from Tasks 3-6 but haven't been iterated to convergence). Failures are *expected*; they're the iteration signal. The success criterion for this task: the test class compiles, discovery works, all the cmdinj/path/sqlinj/xss samples are picked up and executed.
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd /drive-testcomp/opentaint-go-rules/opentaint
+git add core/opentaint-go-querylang/src/test/kotlin/org/opentaint/semgrep/GoRuleDevSampleTest.kt \
+       core/opentaint-go-querylang/build.gradle.kts
+git commit -m "Add GoRuleDevSampleTest: dev-time rule yaml against samples-go-massive"
+```
+
+---
+
 ## Phase 4 — Iterate per CWE
 
 ### Handbook: reading `external-methods-without-rules.yaml`
@@ -697,9 +905,19 @@ c. Decide the gap kind:
 d. Apply the fix:
    - Source/sink: extend the relevant rule yaml.
    - Propagator: append to `benchmarks/config/go-custom-propagators.yaml` using the YAML format above (create the file on first use with `passThrough: []` as a starting point and add entries below).
-e. Re-scan with `scan.sh`; capture new TP%.
-f. Verify any new propagator moved from `external-methods-without-rules.yaml` to `external-methods-with-rules.yaml`.
-g. Stop when CWE TP ≥ 70% on both benchmarks (or on the only one that has it, in xss's case).
+e. **Fast feedback** — run `GoRuleDevSampleTest` filtered to the active CWE's prefix to see if the change improved sample-level coverage:
+
+```bash
+cd /drive-testcomp/opentaint-go-rules/opentaint/core
+./gradlew :opentaint-go-querylang:test --tests "org.opentaint.semgrep.GoRuleDevSampleTest" \
+  -i 2>&1 | grep -E "cmdinj_|PASSED|FAILED" | head -40
+```
+
+Use the prefix matching your active CWE (`cmdinj_`, `path_`, `sqlinj_`, `xss_`). This runs in seconds against the 20+ pre-built sample fixtures and catches obviously broken patterns before a full SSA build over the bench.
+
+f. Re-scan benchmarks with `scan.sh`; capture new TP%.
+g. Verify any new propagator moved from `external-methods-without-rules.yaml` to `external-methods-with-rules.yaml`.
+h. Stop when CWE TP ≥ 70% on both benchmarks (or on the only one that has it, in xss's case).
 
 ### Task 8: Iterate `cmdinj` to ≥70% TP
 
