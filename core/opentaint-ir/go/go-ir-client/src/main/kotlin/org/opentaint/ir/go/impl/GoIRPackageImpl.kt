@@ -5,6 +5,8 @@ import org.opentaint.ir.go.api.*
 class GoIRPackageImpl(
     override val importPath: String,
     override val name: String,
+    override val isStdlib: Boolean = false,
+    override val isDependency: Boolean = false,
     private val loader: (() -> Unit)? = null,
 ) : GoIRPackage {
     override fun equals(other: Any?): Boolean {
