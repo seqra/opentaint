@@ -157,10 +157,120 @@ without `--approximations-config`.
 
 After scan 1: read `external-methods-without-rules.yaml`. Any method on a
 plausible source→sink path that isn't already covered gets a custom
-passThrough YAML entry under `.opentaint/config/go-custom-propagators.yaml`,
+passThrough YAML entry under `benchmarks/config/go-custom-propagators.yaml`,
 re-scan, repeat. Sources for new propagators: CodeQL ext yamls
 (`kind=taint`), specifically the `Argument[N] → ReturnValue` and
 `Argument[N] → Argument[M]` rows.
+
+### Go YAML approximation format
+
+The format is **not** the JVM-style `pkg.Class#method` shorthand from the
+`create-yaml-config` skill — Go uses a structured representation parsed by
+`GoConfigLoader.parsePassThroughRules`. Each rule:
+
+```yaml
+passThrough:
+  - function:
+      package: <import-path>        # e.g. "strings", "encoding/base64"
+      type: <type-name>             # optional, only for receiver methods
+      name: <function-or-method>
+      receiver: true | false        # true ⇒ method on a named type
+    copy:
+      - from: <position>
+        to:   <position>
+      # repeat for each independent taint copy
+```
+
+Positions:
+
+| Token | Meaning |
+|-------|---------|
+| `arg(0)`, `arg(1)`, … | nth function argument (excluding receiver) |
+| `this` | receiver of a method call |
+| `result` | single return value |
+| `result(0)`, `result(1)`, … | nth slot of a multi-return |
+| `[arg(0), .[*]]` | YAML list form for position + modifier(s); `.[*]` = array/slice element |
+
+**v1 limitation:** `GoConfigLoader.parsePassThroughRules` drops any rule
+with `receiver: true`. Receiver-method approximations are not loaded today.
+For receiver-style helpers (e.g., `(*bytes.Buffer).WriteString`) the
+workaround is to model the caller pattern directly in the security rule's
+`pattern-either` rather than adding a propagator entry.
+
+### Worked example — custom propagator entry
+
+If `external-methods-without-rules.yaml` lists `go-sec-code/util.myHelper`
+with non-trivial call sites, and the corresponding source in
+`benchmarks/<bench>/util/helpers.go` is
+
+```go
+package util
+import "strings"
+func MyHelper(s string) string { return strings.ToUpper(s) }
+```
+
+the approximation entry is:
+
+```yaml
+passThrough:
+  - function:
+      package: go-sec-code/util
+      name: MyHelper
+      receiver: false
+    copy:
+      - from: arg(0)
+        to: result
+```
+
+Append to `benchmarks/config/go-custom-propagators.yaml`. The next
+`opentaint --experimental scan --approximations-config <path>` picks it
+up. Confirm the entry "took" by re-running and checking the method moved
+from `external-methods-without-rules.yaml` into
+`external-methods-with-rules.yaml`.
+
+### Mining propagator definitions from CodeQL ext yamls
+
+CodeQL ships authoritative propagator data in
+`/drive-testcomp/opentaint-go-rules/codeql/go/ql/lib/ext/*.model.yml`
+under `kind=taint`. Each row has the shape:
+
+```
+[package, type, qualifierIncluded, method, "", "", from-position, to-position, "taint", "manual"]
+```
+
+Translate from CodeQL's position syntax to OpenTaint Go positions:
+
+| CodeQL | OpenTaint Go |
+|--------|--------------|
+| `Argument[N]` | `arg(N)` |
+| `Argument[receiver]` | `this` (but recall: receiver rules don't load today) |
+| `ReturnValue` | `result` |
+| `ReturnValue[K]` | `result(K)` |
+| `.ArrayElement` (modifier) | `.[*]` (list-of-position-and-modifier form) |
+| `Argument[N..M]` | expand to one rule per N..M (the parser doesn't expand ranges) |
+
+Example mining `fmt.model.yml`:
+
+```
+["fmt", "", False, "Sprintf", "", "", "Argument[1].ArrayElement", "ReturnValue", "taint", "manual"]
+```
+
+becomes
+
+```yaml
+- function:
+    package: fmt
+    name: Sprintf
+    receiver: false
+  copy:
+    - from:
+        - arg(1)
+        - .[*]
+      to: result
+```
+
+(In practice the bundled `fmt.yaml` already contains this entry — we mine
+CodeQL only when filling **gaps** in the bundled set.)
 
 ## Iteration loop
 
