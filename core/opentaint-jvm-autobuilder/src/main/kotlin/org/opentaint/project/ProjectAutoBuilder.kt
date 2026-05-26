@@ -9,8 +9,11 @@ import mu.KLogging
 import org.opentaint.util.CliWithLogger
 import org.opentaint.util.directory
 import org.opentaint.util.newDirectory
+import java.nio.file.FileVisitResult
 import java.nio.file.Path
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempDirectory
+import kotlin.io.path.visitFileTree
 
 class ProjectAutoBuilder : CliWithLogger() {
     private val buildDir by option(help = "Project resolver (builder) working directory")
@@ -38,7 +41,6 @@ class ProjectAutoBuilder : CliWithLogger() {
         val resolvedProject = when (val b = buildType) {
             is BuildProject -> {
                 ProjectResolver.resolveProject(projectRootDir, resolverWorkDir)
-                    ?: return
             }
 
             is ProjectFromCP -> {
@@ -46,10 +48,18 @@ class ProjectAutoBuilder : CliWithLogger() {
             }
         }
 
+        val javaProjects = resolvedProject?.let { Project.flattenJavaProject(it) }.orEmpty()
+        val goProjects = findGoProjects(projectRootDir)
+
+        if (javaProjects.isEmpty() && goProjects.isEmpty()) {
+            logger.error { "No projects resolved at $projectRootDir" }
+            return
+        }
+
         val topLevelProject = Project(
             projectRoot = projectRootDir,
-            goProjects = emptyList(),
-            javaProjects = Project.flattenJavaProject(resolvedProject),
+            goProjects = goProjects,
+            javaProjects = javaProjects,
         )
 
         when (val b = build) {
@@ -58,8 +68,12 @@ class ProjectAutoBuilder : CliWithLogger() {
             }
 
             is PortableProjectBuild -> {
-                val portableProjectCreator = PortableProjectCreator(b.resultDir, resolvedProject)
-                portableProjectCreator.create()
+                if (resolvedProject == null) {
+                    topLevelProject.dump(b.resultDir.resolve("project.yaml").createParentDirectories())
+                } else {
+                    val portableProjectCreator = PortableProjectCreator(b.resultDir, resolvedProject)
+                    portableProjectCreator.create()
+                }
             }
         }
     }
@@ -70,4 +84,22 @@ class ProjectAutoBuilder : CliWithLogger() {
         @JvmStatic
         fun main(args: Array<String>) = ProjectAutoBuilder().main(args)
     }
+}
+
+@OptIn(ExperimentalPathApi::class)
+internal fun findGoProjects(root: Path): List<GoProject> {
+    val result = mutableListOf<GoProject>()
+    root.visitFileTree {
+        onPreVisitDirectory { directory, _ ->
+            when {
+                directory.isHiddenSubDirOf(root) -> FileVisitResult.SKIP_SUBTREE
+                directory.resolve("go.mod").toFile().exists() -> {
+                    result += GoProject(directory)
+                    FileVisitResult.SKIP_SUBTREE
+                }
+                else -> FileVisitResult.CONTINUE
+            }
+        }
+    }
+    return result
 }
