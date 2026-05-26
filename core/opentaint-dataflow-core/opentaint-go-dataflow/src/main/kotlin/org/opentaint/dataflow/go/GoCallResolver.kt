@@ -86,15 +86,15 @@ class GoCallResolver(
         }
     }
 
-    private fun buildInterfaceImplementorsMap(): Map<String, List<GoIRNamedType>> {
-        val allTypes = cp.allNamedTypes()
+    private fun buildInterfaceImplementorsMap(): Map<String, List<GoIRNamedType>> = synchronized(cp) {
+        val allTypes = cp.allNamedTypes().toList()
         val interfaces = allTypes.filter { it.kind == GoIRNamedTypeKind.INTERFACE }
         val concreteTypes = allTypes.filter { it.kind != GoIRNamedTypeKind.INTERFACE }
 
-        return interfaces.associate { iface ->
+        interfaces.associate { iface ->
             val requiredMethods = collectInterfaceMethodSignatures(iface)
             val implementors = if (requiredMethods.isEmpty()) {
-                emptyList() // empty interface matches everything — skip for performance
+                emptyList()
             } else {
                 concreteTypes.filter { concrete ->
                     requiredMethods.all { (name, ifaceParamCount) ->
