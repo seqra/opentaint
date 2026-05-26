@@ -9,10 +9,7 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
-import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
-import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
-import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
@@ -33,6 +30,7 @@ import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -89,7 +87,7 @@ class GoSemgrepReachabilityTest {
 
         @Suppress("UNCHECKED_CAST")
         val firstRule = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        val config: GoTaintConfiguration = GoTaintRuleEmitter().emit(firstRule)
+        val config: GoTaintConfiguration = firstRule.toGoTaintConfiguration()
 
         // Assert the generated config names match the Go IR; a name mismatch must fail loudly here.
         assertTrue(
@@ -143,20 +141,4 @@ class GoSemgrepReachabilityTest {
 
     fun String.signature(args: Int): GoFunctionSignature =
         GoFunctionSignature(this, receiverType = null, paramTypes = List(args) { "any" }, resultType = "any")
-
-    private class GoTaintRuleEmitter {
-        fun emit(rule: TaintRuleFromSemgrep<GoSerializedItem>): GoTaintConfiguration =
-            GoTaintConfiguration().also { it.loadConfig(buildSerializedConfig(rule)) }
-
-        fun buildSerializedConfig(rule: TaintRuleFromSemgrep<GoSerializedItem>): GoSerializedTaintConfig {
-            val items = rule.taintRules.flatMap { it.rules }
-            return GoSerializedTaintConfig(
-                globalSource = items.filterIsInstance<GoSerializedGlobalSource>(),
-                source = items.filterIsInstance<GoSerializedRule.Source>(),
-                sink = items.filterIsInstance<GoSerializedRule.Sink>(),
-                passThrough = items.filterIsInstance<GoSerializedRule.PassThrough>(),
-                cleaner = items.filterIsInstance<GoSerializedRule.Cleaner>(),
-            )
-        }
-    }
 }

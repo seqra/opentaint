@@ -1,6 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion.go
 
-import org.opentaint.GoTaintRuleEmitter
+import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
@@ -35,7 +35,7 @@ class GoTaintRuleEmitterTest {
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit(rule)
+        val cfg = rule.toGoTaintConfiguration()
 
         val src = cfg.sourceForFunction("util.Source".signature(0), allRelevant = false).single()
         assertEquals("util.Source", src.function)
@@ -54,7 +54,7 @@ class GoTaintRuleEmitterTest {
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit(rule)
+        val cfg = rule.toGoTaintConfiguration()
         assertTrue(cfg.sourceForFunction("util.Source".signature(0), allRelevant = false).single().actionsAfter.isEmpty())
     }
 
@@ -69,7 +69,7 @@ class GoTaintRuleEmitterTest {
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit(rule)
+        val cfg = rule.toGoTaintConfiguration()
         val sink = cfg.sinkForFunction("util.Sink".signature(1)).single()
         assertEquals("util.Sink", sink.function)
         assertEquals("explicit-id", sink.id)
@@ -89,7 +89,7 @@ class GoTaintRuleEmitterTest {
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit(rule)
+        val cfg = rule.toGoTaintConfiguration()
         val pass = cfg.passThroughForFunction("util.Wrap".signature(1)).single()
         assertEquals("util.Wrap", pass.function)
         assertEquals(1, pass.actionsAfter.size)
@@ -108,7 +108,7 @@ class GoTaintRuleEmitterTest {
 
         // The pattern matcher survives — querying a concrete callee name that matches the
         // pattern materializes the rule on demand.
-        val cfg = GoTaintRuleEmitter().emit(rule)
+        val cfg = rule.toGoTaintConfiguration()
         assertTrue(cfg.sourceForFunction("util.Foo".signature(0), allRelevant = false).isNotEmpty())
         assertTrue(cfg.sourceForFunction("util.Bar".signature(0), allRelevant = false).isNotEmpty())
         // A name that does NOT match the pattern returns no rules.
@@ -125,7 +125,7 @@ class GoTaintRuleEmitterTest {
             ),
         )
 
-        val cfg = GoTaintRuleEmitter().emit(rule)
+        val cfg = rule.toGoTaintConfiguration()
         assertEquals(1, cfg.cleanerForFunction("util.Clean".signature(1), allRelevant = false).size)
         assertEquals("util.Clean", cfg.cleanerForFunction("util.Clean".signature(1), allRelevant = false).single().function)
     }
