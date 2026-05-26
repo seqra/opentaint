@@ -6,7 +6,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
-import org.opentaint.dataflow.python.rules.PIRTaintConfig
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.ir.api.python.*
 
@@ -15,9 +15,6 @@ class PIRMethodSequentFlowFunction(
     private val ctx: PIRMethodAnalysisContext,
     private val apManager: ApManager,
 ) : MethodSequentFlowFunction {
-
-    private val containerLevelTaint: Boolean
-        get() = (ctx.taint.taintConfig as PIRTaintConfig).containerLevelTaint
 
     override fun propagateZeroToZero(): Set<Sequent> = setOf(Sequent.ZeroToZero)
 
@@ -221,6 +218,8 @@ class PIRMethodSequentFlowFunction(
                 // Also keep the original abstract fact
                 results.add(Sequent.Unchanged)
             } else {
+                results.add(mkCopy(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR)))
+
                 // Fact on obj but field doesn't match — pass through
                 results.add(Sequent.Unchanged)
             }
@@ -317,11 +316,6 @@ class PIRMethodSequentFlowFunction(
                 val elementFact = currentFactAp.rebase(assignTo)
                     .prependAccessor(org.opentaint.dataflow.ap.ifds.ElementAccessor)
                 results.add(mkCopy(elementFact))
-                // Container-level taint (over-approximate: whole container is tainted)
-                if (containerLevelTaint) {
-                    val containerFact = currentFactAp.rebase(assignTo)
-                    results.add(mkCopy(containerFact))
-                }
                 results.add(Sequent.Unchanged)  // value keeps its taint
                 return results
             }
@@ -498,10 +492,6 @@ class PIRMethodSequentFlowFunction(
             val results = mutableSetOf<Sequent>()
             val elementFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
             results.add(mkCopy(elementFact))
-            if (containerLevelTaint) {
-                val containerFact = currentFactAp.rebase(objBase)
-                results.add(mkCopy(containerFact))
-            }
             results.add(Sequent.Unchanged)
             return results
         }

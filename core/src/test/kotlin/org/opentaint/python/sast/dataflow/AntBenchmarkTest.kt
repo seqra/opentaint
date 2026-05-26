@@ -15,9 +15,8 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
-import org.opentaint.dataflow.python.rules.PIRTaintConfig
-import org.opentaint.dataflow.python.rules.PythonBuiltinPassRules
 import org.opentaint.dataflow.python.rules.TaintRules
+import org.opentaint.dataflow.python.rules.loadDefaultConfig
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRClasspath
@@ -123,23 +122,17 @@ class AntBenchmarkTest {
             TaintRules.EntrySource(case.functionName, "taint", 0)
         )
 
+        // TODO add them to config
         val sinks = listOf(
             TaintRules.Sink("os.system", "taint", PositionBase.Argument(0), "benchmark"),
             TaintRules.Sink("${case.moduleName}.taint_sink", "taint", PositionBase.Argument(0), "benchmark"),
-        )
-
-        val config = PIRTaintConfig(
-            sources = emptyList(),
-            sinks = sinks,
-            propagators = PythonBuiltinPassRules.all,
-            entrySources = entrySources,
         )
 
         val ifdsGraph = PIRApplicationGraph(cp)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
-            PIRAnalysisManager(cp, config),
+            PIRAnalysisManager(cp, loadDefaultConfig()),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),

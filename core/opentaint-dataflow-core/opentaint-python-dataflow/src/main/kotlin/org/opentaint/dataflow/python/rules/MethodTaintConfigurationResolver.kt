@@ -1,11 +1,14 @@
 package org.opentaint.dataflow.python.rules
 
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.python.AllArguments
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ClassRef
-import org.opentaint.dataflow.configuration.python.Condition
+import org.opentaint.dataflow.configuration.python.ContainsMark
 import org.opentaint.dataflow.configuration.python.KwArgument
+import org.opentaint.dataflow.configuration.python.PIRCondition
 import org.opentaint.dataflow.configuration.python.Position
 import org.opentaint.dataflow.configuration.python.PositionAccessor
 import org.opentaint.dataflow.configuration.python.PositionWithAccess
@@ -167,7 +170,7 @@ internal object MethodTaintConfigurationResolver {
     private inline fun <S : SerializedPythonSourceRule, T> resolveSourceRule(
         serialized: List<S>,
         method: PIRFunction,
-        build: (Condition, List<TaintAssignAction>) -> T,
+        build: (PIRCondition, List<TaintAssignAction>) -> T,
     ): List<T> = serialized.flatMap { rule ->
         val fn = rule.target as? PythonTarget.Function ?: return@flatMap emptyList()
         if (!fn.matches(method)) return@flatMap emptyList()
@@ -289,15 +292,15 @@ internal object MethodTaintConfigurationResolver {
         is PythonPositionModifier.Field -> PositionAccessor.FieldAccessor(m.name)
     }
 
-    private fun convertCondition(c: SerializedPythonCondition?): Condition = when (c) {
-        null -> Condition.ConstantTrue
-        is SerializedPythonCondition.Or -> Condition.Or(c.anyOf.map(::convertCondition))
-        is SerializedPythonCondition.And -> Condition.And(c.allOf.map(::convertCondition))
-        is SerializedPythonCondition.Not -> Condition.Not(convertCondition(c.not))
-        is SerializedPythonCondition.ContainsMark -> Condition.ContainsMark(
+    private fun convertCondition(c: SerializedPythonCondition?): PIRCondition = when (c) {
+        null -> mkTrue()
+        is SerializedPythonCondition.Or -> CommonCondition.Or(c.anyOf.map(::convertCondition))
+        is SerializedPythonCondition.And -> CommonCondition.And(c.allOf.map(::convertCondition))
+        is SerializedPythonCondition.Not -> CommonCondition.Not(convertCondition(c.not))
+        is SerializedPythonCondition.ContainsMark -> CommonCondition.Atom(ContainsMark(
             mark = TaintMark(c.tainted),
             pos = convertPosition(c.pos),
-        )
+        ))
     }
 
     // endregion

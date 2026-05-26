@@ -1,9 +1,9 @@
 package org.opentaint.dataflow.python.rules
 
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.python.AllArguments
 import org.opentaint.dataflow.configuration.python.ClassRef
-import org.opentaint.dataflow.configuration.python.Condition
 import org.opentaint.dataflow.configuration.python.Result
 import org.opentaint.dataflow.configuration.python.Target
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -31,7 +31,7 @@ class PIRTaintConfigurationTest {
         assertEquals(1, sources.size)
         val source = sources.single()
         assertEquals(Target.Function(getenv), source.target)
-        assertEquals(Condition.ConstantTrue, source.condition)
+        assertTrue(source.condition is CommonCondition.True)
         assertEquals("environment", source.taint.single().mark.name)
         assertEquals(Result, source.taint.single().pos)
     }
@@ -52,7 +52,7 @@ class PIRTaintConfigurationTest {
             shortName = "index",
             decorators = listOf(stubDecorator("flask.Flask.route")),
         )
-        val flaskEntries = config.entryPointsForMethod(decorated)
+        val flaskEntries = config.entryPointSourcesForMethod(decorated)
         assertTrue(flaskEntries.isNotEmpty(), "expected flask.Flask.route entry-point to match")
         val first = flaskEntries.first()
         assertEquals(Target.Function(decorated), first.target)
@@ -60,7 +60,7 @@ class PIRTaintConfigurationTest {
         assertTrue(first.taint.any { it.pos is ClassRef })
 
         val bare = stubMethod(qualifiedName = "myapp.helpers.helper", shortName = "helper")
-        assertTrue(config.entryPointsForMethod(bare).isEmpty(),
+        assertTrue(config.entryPointSourcesForMethod(bare).isEmpty(),
             "regex rule must drop scope groups that don't apply")
     }
 
@@ -78,10 +78,10 @@ class PIRTaintConfigurationTest {
             shortName = "dispatch_request",
             enclosingClass = viewCls,
         )
-        assertTrue(config.entryPointsForMethod(dispatch).isNotEmpty())
+        assertTrue(config.entryPointSourcesForMethod(dispatch).isNotEmpty())
 
         val noBase = stubMethod(qualifiedName = "myapp.dispatch_request", shortName = "dispatch_request")
-        assertTrue(config.entryPointsForMethod(noBase).isEmpty(),
+        assertTrue(config.entryPointSourcesForMethod(noBase).isEmpty(),
             "missing baseClass must drop the scope group")
     }
 
@@ -98,9 +98,9 @@ class PIRTaintConfigurationTest {
         assertEquals(listOf(22), sink.meta.cwe)
         assertEquals("path-injection", sink.meta.note)
         assertEquals(CommonTaintConfigurationSinkMeta.Severity.Warning, sink.meta.severity)
-        // anyOf folded into Condition.Or of ContainsMark
-        assertTrue(sink.condition is Condition.Or)
-        assertTrue((sink.condition as Condition.Or).args.all { it is Condition.ContainsMark })
+        // anyOf folded into CommonCondition.Or of ContainsMark
+        assertTrue(sink.condition is CommonCondition.Or)
+        assertTrue((sink.condition as CommonCondition.Or).args.all { it is CommonCondition.Atom })
     }
 
     @Test

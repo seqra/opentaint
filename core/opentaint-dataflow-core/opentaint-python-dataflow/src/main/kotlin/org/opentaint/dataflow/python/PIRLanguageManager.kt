@@ -8,6 +8,8 @@ import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.*
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 open class PIRLanguageManager(
     protected val cp: PIRClasspath,
@@ -58,4 +60,12 @@ open class PIRLanguageManager(
 
     override val methodContextSerializer: MethodContextSerializer =
         PIRMethodContextSerializer()
+}
+
+@OptIn(ExperimentalContracts::class)
+internal inline fun <reified T> pIRDowncast(value: Any?) {
+    contract {
+        returns() implies(value is T)
+    }
+    check(value is T) { "Downcast error: expected ${T::class}, got $value" }
 }

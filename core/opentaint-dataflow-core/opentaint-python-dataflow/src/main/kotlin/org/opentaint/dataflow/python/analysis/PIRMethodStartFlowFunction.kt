@@ -7,32 +7,39 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction.StartFact
-import org.opentaint.dataflow.python.rules.PIRTaintConfig
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
+import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
+import org.opentaint.util.onSome
 
+/**
+ * Python equivalent of `JIRMethodStartFlowFunction` — simpler because Python
+ * entry-point rules have no condition evaluator, no type checking, and only
+ * cover the `propagateZero` direction (entry-point sources inject taint on
+ * method entry).
+ */
 class PIRMethodStartFlowFunction(
     private val ctx: PIRMethodAnalysisContext,
     private val apManager: ApManager,
 ) : MethodStartFlowFunction {
 
-    override fun propagateZero(): List<StartFact> {
-        val results = mutableListOf<StartFact>(StartFact.Zero)
+    override fun propagateZero(): List<StartFact> = buildList {
+        this += StartFact.Zero
 
-        // Entry sources: inject initial taint on parameters of the entry point method.
-        // This is used for benchmarks where the source is the function's parameter.
-        val config = ctx.taint.taintConfig
-        if (config is PIRTaintConfig) {
-            val methodName = ctx.method.qualifiedName
-            for (entrySource in config.entrySources) {
-                if (methodName == entrySource.function || methodName.endsWith(".${entrySource.function}")) {
-                    val base = AccessPathBase.Argument(entrySource.paramIndex)
-                    val fact = apManager.createAbstractAp(base, ExclusionSet.Universe)
-                        .prependAccessor(TaintMarkAccessor(entrySource.mark))
-                    results.add(StartFact.Fact(fact))
+        val rules = ctx.taintRules.entryPointSourcesForMethod(ctx.method)
+        val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
+
+        rules.forEach { rule ->
+            rule.taint.forEach { action ->
+                val pos = action.pos.resolveAp() ?: return@forEach
+                val mark = TaintMarkAccessor(action.mark.name)
+
+                evaluator.evaluate(rule, action, pos, mark).onSome { facts ->
+                    facts.forEach { fact ->
+                        this += StartFact.Fact(fact)
+                    }
                 }
             }
         }
-
-        return results
     }
 
     override fun propagateFact(fact: FinalFactAp): List<StartFact.Fact> =

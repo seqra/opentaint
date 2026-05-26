@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.configuration.python
 
 import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 
 /**
  * In-memory counterparts of the `taint:` / `cleans:` / `copy:` action entries
@@ -22,7 +23,7 @@ sealed interface Action: CommonTaintAction
 data class TaintAssignAction(
     val mark: TaintMark,
     val pos: Position,
-) : Action
+) : Action, CommonTaintAssignAction
 
 /** `cleans:` entry on cleaner rules. A null [mark] removes all marks at [pos]. */
 data class TaintCleanAction(

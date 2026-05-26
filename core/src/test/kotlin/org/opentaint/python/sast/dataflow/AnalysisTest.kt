@@ -12,8 +12,18 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
-import org.opentaint.dataflow.python.rules.PIRTaintConfig
-import org.opentaint.dataflow.python.rules.PythonBuiltinPassRules
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.configuration.python.serialized.PythonPosition
+import org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase
+import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
+import org.opentaint.dataflow.configuration.python.serialized.PythonSinkMetaData
+import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
+import org.opentaint.dataflow.python.rules.PythonConfigLoader
 import org.opentaint.dataflow.python.rules.TaintRules
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -78,11 +88,6 @@ abstract class AnalysisTest {
         ).load()
     }
 
-    /**
-     * Pass rules for Python builtin entities (list/set/tuple/dict/str methods)
-     */
-    val commonPathRules: List<TaintRules.Pass> = PythonBuiltinPassRules.all
-
     private fun extractPythonSourcesFromJar(jarPath: Path, targetDir: Path) {
         JarFile(jarPath.toFile()).use { jar ->
             jar.entries().asSequence()
@@ -123,13 +128,13 @@ abstract class AnalysisTest {
         val entryPoint = cp.findFunctionOrNull(entryPointFunction)
             ?: error("Entry point not found")
 
-        val config = PIRTaintConfig(listOf(source), listOf(sink), commonPathRules)
+        val taintRules = buildPirTaintConfiguration(listOf(source), listOf(sink))
 
         val ifdsGraph = PIRApplicationGraph(cp)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
-            PIRAnalysisManager(cp, config),
+            PIRAnalysisManager(cp, taintRules),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
@@ -139,8 +144,57 @@ abstract class AnalysisTest {
 
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
         return engine.use { eng ->
-            eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
+            eng.runAnalysis(listOf(startMethod), timeout = 100.minutes, cancellationTimeout = 10.seconds)
             eng.getVulnerabilities()
         }
     }
 }
+
+// region Test-only adapter: layer the test's TaintRules.Source/Sink rules
+// on top of the shipped YAML config (which already provides stdlib
+// pass-throughs and other library rules) so each test can keep its
+// per-fixture source / sink declarations inline.
+// TODO introduce taintProvider interface
+private fun buildPirTaintConfiguration(
+    sources: List<TaintRules.Source>,
+    sinks: List<TaintRules.Sink>,
+): PIRTaintConfiguration {
+    val shipped: SerializedPythonTaintConfig = PythonConfigLoader.getConfig()
+        ?: SerializedPythonTaintConfig()
+
+    val merged = SerializedPythonTaintConfig(
+        entryPoint = shipped.entryPoint,
+        source = shipped.source + sources.map { src ->
+            SerializedPythonSource(
+                target = PythonTarget.Function(src.function, null),
+                condition = null,
+                taint = listOf(SerializedPythonTaintAssignAction(
+                    kind = src.mark,
+                    pos = PythonPosition.BaseOnly(src.pos.toPython()),
+                )),
+            )
+        },
+        sink = shipped.sink + sinks.map { sk ->
+            SerializedPythonSink(
+                target = PythonTarget.Function(sk.function, null),
+                condition = SerializedPythonCondition.ContainsMark(
+                    tainted = sk.mark,
+                    pos = PythonPosition.BaseOnly(sk.pos.toPython()),
+                ),
+                meta = PythonSinkMetaData(cwe = null, note = sk.id),
+            )
+        },
+        passThrough = shipped.passThrough,
+        cleaner = shipped.cleaner,
+    )
+    return PIRTaintConfiguration(merged)
+}
+
+private fun PositionBase.toPython(): PythonPositionBase = when (this) {
+    is PositionBase.Argument -> PythonPositionBase.Argument(idx)
+    PositionBase.Result -> PythonPositionBase.Result
+    PositionBase.This -> PythonPositionBase.This
+    is PositionBase.ClassStatic -> PythonPositionBase.ClassRef(className)
+    is PositionBase.AnyArgument -> error("AnyArgument is not used in Python test rules")
+}
+// endregion

@@ -35,8 +35,8 @@ class PIRCallResolver(
     private fun namesFor(method: PIRFunction, call: PIRCall) =
         namesFor(method).getOrDefault(call, emptySet())
 
-    fun resolve(call: PIRCall, method: PIRFunction): Set<PIRFunction> =
-        namesFor(method, call).mapTo(hashSetOf()) {
+    fun resolve(call: PIRCall): Set<PIRFunction> =
+        namesFor(call.location.method, call).mapTo(hashSetOf()) {
             cp.findFunctionOrNull(it)
                 ?: syntheticFor(it)
         }

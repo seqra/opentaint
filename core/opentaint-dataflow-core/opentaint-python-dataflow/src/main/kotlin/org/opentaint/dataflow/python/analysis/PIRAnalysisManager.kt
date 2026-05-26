@@ -28,7 +28,7 @@ import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.python.PIRLanguageManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext
-import org.opentaint.dataflow.python.rules.PIRTaintConfig
+import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -41,7 +41,7 @@ import org.opentaint.util.analysis.ApplicationGraph
 
 class PIRAnalysisManager(
     cp: PIRClasspath,
-    val taintConfig: PIRTaintConfig
+    val taintRules: PIRTaintConfiguration,
 ) : PIRLanguageManager(cp), TaintAnalysisManager {
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
     private val pirApplicationGraph = PIRApplicationGraph(cp)
@@ -55,8 +55,8 @@ class PIRAnalysisManager(
         contextForEmptyMethod: MethodAnalysisContext?,
     ): MethodAnalysisContext {
         val method = methodEntryPoint.method as PIRFunction
-        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintConfig)
-        return PIRMethodAnalysisContext(methodEntryPoint, method, taintCtx, pirCallResolver)
+        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker)
+        return PIRMethodAnalysisContext(methodEntryPoint, method, taintCtx, taintRules)
     }
 
     override fun getMethodInstGraph(
@@ -118,11 +118,9 @@ class PIRAnalysisManager(
         generateTrace: Boolean,
     ): MethodCallFlowFunction {
         val ctx = analysisContext as PIRMethodAnalysisContext
-        val config = ctx.taint.taintConfig
         val pirCall = statement as PIRCall
-        val callee = pirCallResolver.resolve(pirCall, ctx.method).firstOrNull()
         return PIRMethodCallFlowFunction(
-            pirCall, ctx.method, ctx, config, callee, apManager, returnValue
+            pirCall, ctx.method, ctx, apManager, returnValue, pirCallResolver
         )
     }
 
@@ -141,7 +139,7 @@ class PIRAnalysisManager(
     ): MethodCallSummaryHandler {
         val ctx = analysisContext as PIRMethodAnalysisContext
         return PIRMethodCallSummaryHandler(
-            statement as PIRCall, ctx, factTypeChecker
+            statement as PIRCall, ctx, pirCallResolver, factTypeChecker
         )
     }
 

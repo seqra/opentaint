@@ -6,7 +6,9 @@ import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
+import org.opentaint.dataflow.python.pIRDowncast
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
@@ -16,27 +18,17 @@ import org.opentaint.ir.api.python.*
 
 /**
  * Maps facts between caller and callee frames at call boundaries.
- * Constructed per-method with the caller's analysis context, used to
- * resolve callees ([callResolver]) against the caller's classpath.
+ *
+ * Offset-blind: the core mapping methods align `call.args[i]` with
+ * callee `Argument(i)` positionally with no shift for `self`/`cls`.
+ * All implicit-parameter offset arithmetic is encapsulated in
+ * [offsetEnter] / [offsetExit], which are invoked only by
+ * [PIRMethodCallResolver] and [PIRMethodCallSummaryHandler].
  */
-class PIRMethodCallFactMapper(
-    private val callerCtx: PIRMethodAnalysisContext,
-    private val callResolver: PIRCallResolver,
-) : MethodCallFactMapper {
-
-    private val callerMethod: PIRFunction get() = callerCtx.method
+object PIRMethodCallFactMapper : MethodCallFactMapper {
 
     private fun valueToBase(value: PIRValue): AccessPathBase? =
         PIRFlowFunctionUtils.accessPathBase(value)
-
-    /**
-     * Computes the implicit parameter offset (self/cls) for a callee resolved from a call.
-     * Returns 0 if the callee cannot be resolved or has no implicit parameters.
-     */
-    private fun callOffset(call: PIRCall): Int {
-        val callee = callResolver.resolve(call, callerMethod).firstOrNull() ?: return 0
-        return PIRFlowFunctionUtils.implicitParamOffset(callee)
-    }
 
     override fun mapMethodExitToReturnFlowFact(
         callStatement: CommonInst,
@@ -44,12 +36,9 @@ class PIRMethodCallFactMapper(
         checker: FactTypeChecker,
     ): List<FinalFactAp> {
         val call = callStatement as PIRCall
-        val offset = callOffset(call)
         return when (val base = factAp.base) {
             is AccessPathBase.Argument -> {
-                // Callee's Argument(i) maps to caller's call.args[i - offset]
-                val callerArgIdx = base.idx - offset
-                val argValue = call.args.getOrNull(callerArgIdx)?.value ?: return emptyList()
+                val argValue = call.args.getOrNull(base.idx)?.value ?: return emptyList()
                 val callerBase = valueToBase(argValue) ?: return emptyList()
                 listOf(factAp.rebase(callerBase))
             }
@@ -57,6 +46,11 @@ class PIRMethodCallFactMapper(
                 val target = call.target ?: return emptyList()
                 val targetBase = valueToBase(target) ?: return emptyList()
                 listOf(factAp.rebase(targetBase))
+            }
+            is AccessPathBase.This -> {
+                val callee = call.callee
+                val calleeBase = valueToBase(callee) ?: return emptyList()
+                listOf(factAp.rebase(calleeBase))
             }
             is AccessPathBase.LocalVar -> emptyList()  // Cannot escape
             is AccessPathBase.ClassStatic -> listOf(factAp)
@@ -70,11 +64,9 @@ class PIRMethodCallFactMapper(
         factAp: InitialFactAp,
     ): List<InitialFactAp> {
         val call = callStatement as PIRCall
-        val offset = callOffset(call)
         return when (val base = factAp.base) {
             is AccessPathBase.Argument -> {
-                val callerArgIdx = base.idx - offset
-                val argValue = call.args.getOrNull(callerArgIdx)?.value ?: return emptyList()
+                val argValue = call.args.getOrNull(base.idx)?.value ?: return emptyList()
                 val callerBase = valueToBase(argValue) ?: return emptyList()
                 listOf(factAp.rebase(callerBase))
             }
@@ -101,19 +93,18 @@ class PIRMethodCallFactMapper(
     ) {
         val call = (callExpr as PIRCallExprAdapter).pirCall
         val base = factAp.base
-        val calleeFunc = callee as PIRFunction
-        val calleeParamCount = calleeFunc.parameters.size
-        val offset = PIRFlowFunctionUtils.implicitParamOffset(calleeFunc)
 
         for ((i, arg) in call.args.withIndex()) {
-            val calleeArgIdx = i + offset
-            // Don't exceed callee's formal parameter count (avoids AccessPathBaseStorage crash)
-            if (calleeArgIdx >= calleeParamCount) break
             val argBase = valueToBase(arg.value) ?: continue
             if (base == argBase) {
-                val startBase = AccessPathBase.Argument(calleeArgIdx)
-                onMappedFact(factAp.rebase(startBase), startBase)
+                val startBase = AccessPathBase.Argument(i)
+                onMappedFact(factAp, startBase)
             }
+        }
+
+        if (valueToBase(call.callee) == base) {
+            val selfFact = factAp.readAccessor(SELF_ACCESSOR)
+            selfFact?.let { onMappedFact(it, AccessPathBase.This) }
         }
 
         if (base is AccessPathBase.ClassStatic) {
@@ -131,17 +122,11 @@ class PIRMethodCallFactMapper(
     ) {
         val call = (callExpr as PIRCallExprAdapter).pirCall
         val base = fact.base
-        val calleeFunc = callee as PIRFunction
-        val calleeParamCount = calleeFunc.parameters.size
-        val offset = PIRFlowFunctionUtils.implicitParamOffset(calleeFunc)
 
         for ((i, arg) in call.args.withIndex()) {
-            val calleeArgIdx = i + offset
-            // Don't exceed callee's formal parameter count (avoids AccessPathBaseStorage crash)
-            if (calleeArgIdx >= calleeParamCount) break
             val argBase = valueToBase(arg.value) ?: continue
             if (base == argBase) {
-                val startBase = AccessPathBase.Argument(calleeArgIdx)
+                val startBase = AccessPathBase.Argument(i)
                 onMappedFact(fact.rebase(startBase), startBase)
             }
         }
@@ -157,15 +142,28 @@ class PIRMethodCallFactMapper(
         callExpr: CommonCallExpr,
         factAp: FactAp,
     ): Boolean {
+        pIRDowncast<PIRCall>(callStatement)
+        pIRDowncast<PIRLocalVar?>(returnValue)
+        pIRDowncast<PIRCallExprAdapter>(callExpr)
+
+        return factIsRelevantToMethodCall(callStatement, returnValue, callExpr, factAp)
+    }
+
+    private fun factIsRelevantToMethodCall(
+        callStatement: PIRCall,
+        returnValue: PIRValue?,
+        callExpr: PIRCallExprAdapter,
+        factAp: FactAp,
+    ): Boolean {
         val base = factAp.base
         if (base is AccessPathBase.ClassStatic || base is AccessPathBase.Constant) return true
+        if (valueToBase(callStatement.callee) == base) return true
 
-        val call = (callExpr as PIRCallExprAdapter).pirCall
-        for (arg in call.args) {
+        for (arg in callStatement.args) {
             if (base == valueToBase(arg.value)) return true
         }
 
-        if (returnValue != null && returnValue is PIRValue) {
+        if (returnValue != null) {
             if (base == valueToBase(returnValue)) return true
         }
 
@@ -174,4 +172,41 @@ class PIRMethodCallFactMapper(
 
     override fun isValidMethodExitFact(factAp: FactAp): Boolean =
         factAp.base !is AccessPathBase.LocalVar
+
+    /**
+     * Translates a caller-frame [base] into the callee's frame when
+     * entering [callee] at [callSite]. For implicit-parameter callees
+     * (instance methods, classmethods), maps `Argument(i)` to
+     * `Argument(i + offset)`. Other bases are returned unchanged.
+     *
+     * Returns null when the shifted Argument would exceed the callee's
+     * formal parameter count (avoids AccessPathBaseStorage crashes on
+     * extra positional args).
+     *
+     * Only invoked from [PIRMethodCallResolver].
+     */
+    fun offsetEnter(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
+        if (base !is AccessPathBase.Argument) return base
+        val offset = PIRFlowFunctionUtils.implicitParamOffset(callee)
+        val newIdx = base.idx + offset
+        if (newIdx >= callee.parameters.size) return null
+        return AccessPathBase.Argument(newIdx)
+    }
+
+    /**
+     * Inverse of [offsetEnter]: translates a callee-frame [base] back to
+     * the caller's frame when returning from [callee] at [callSite]. Maps
+     * `Argument(i)` to `Argument(i - offset)`. Returns null when the
+     * shifted Argument would underflow (e.g. the implicit receiver slot,
+     * which never escapes back to caller args).
+     *
+     * Only invoked from [PIRMethodCallSummaryHandler].
+     */
+    fun offsetExit(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
+        if (base !is AccessPathBase.Argument) return base
+        val offset = PIRFlowFunctionUtils.implicitParamOffset(callee)
+        val newIdx = base.idx - offset
+        if (newIdx < 0) return null
+        return AccessPathBase.Argument(newIdx)
+    }
 }

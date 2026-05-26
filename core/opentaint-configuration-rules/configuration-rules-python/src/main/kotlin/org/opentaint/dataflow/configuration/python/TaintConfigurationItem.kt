@@ -19,7 +19,7 @@ sealed interface TaintConfigurationItem : CommonTaintConfigurationItem {
     val target: Target
 
     /** [Condition.ConstantTrue] when the rule has no condition. */
-    val condition: Condition
+    val condition: PIRCondition
 }
 
 sealed interface TaintConfigurationSource : TaintConfigurationItem, CommonTaintConfigurationSource {
@@ -43,13 +43,13 @@ sealed interface TaintConfigurationCleaner : TaintConfigurationItem {
 
 data class TaintEntryPointSource(
     override val target: Target,
-    override val condition: Condition,
+    override val condition: PIRCondition,
     override val taint: List<TaintAssignAction>,
 ) : TaintConfigurationSource
 
 data class TaintSource(
     override val target: Target,
-    override val condition: Condition,
+    override val condition: PIRCondition,
     override val taint: List<TaintAssignAction>,
 ) : TaintConfigurationSource
 
@@ -62,20 +62,20 @@ data class TaintSinkMeta(
 
 data class TaintSink(
     override val target: Target,
-    override val condition: Condition,
+    override val condition: PIRCondition,
     override val id: String,
     override val meta: TaintSinkMeta,
 ) : TaintConfigurationSink
 
 data class TaintPassThrough(
     override val target: Target,
-    override val condition: Condition,
+    override val condition: PIRCondition,
     override val copy: List<TaintPassAction>,
 ) : TaintConfigurationPassThrough
 
 data class TaintCleaner(
     override val target: Target,
-    override val condition: Condition,
+    override val condition: PIRCondition,
     override val cleans: List<TaintCleanAction>,
     override val forCategory: String?,
 ) : TaintConfigurationCleaner

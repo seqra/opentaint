@@ -2,6 +2,7 @@ package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -18,83 +19,95 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFa
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFailureFact
-import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
-import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.python.rules.PIRTaintConfig
-import org.opentaint.dataflow.python.rules.TaintRules
-import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
+import org.opentaint.dataflow.python.PIRConditionRewriter
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
+import org.opentaint.dataflow.python.adapter.callExpr
+import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.PositionTypeResolver
+import org.opentaint.dataflow.taint.TaintPassActionEvaluator
+import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
-import org.opentaint.ir.api.python.PIRLoadAttr
-import org.opentaint.ir.api.python.PIRLocalVar
+import org.opentaint.util.onSome
+import kotlin.collections.plusAssign
 
 class PIRMethodCallFlowFunction(
     private val callInst: PIRCall,
     private val method: PIRFunction,
     private val ctx: PIRMethodAnalysisContext,
-    private val taintConfig: PIRTaintConfig,
-    private val calleeMethod: PIRFunction?,
     private val apManager: ApManager,
     private val returnValue: CommonValue?,
+    private val callResolver: PIRCallResolver,
 ) : MethodCallFlowFunction {
+    private val callExpr = callInst.callExpr ?: error("Unexpected null call expr")
+
+    private val resolvedMethods by lazy { callResolver.resolve(callInst) } // TODO apply rules separately
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> {
         val results = mutableSetOf<ZeroCallFact>()
 
-        // Always pass zero through call-to-return
         results.add(CallToReturnZeroFact)
 
-        // Apply source rules: if this call is a taint source, generate new taint fact
-        for (source in taintConfig.sources) {
-            if (matchesCall(source.function, callInst)) {
-                val targetBase = resolvePosition(source.pos, callInst, method)
-                    ?: continue
-                val newFact = apManager.createFinalAp(targetBase, ExclusionSet.Universe)
-                    .prependAccessor(TaintMarkAccessor(source.mark))
-                results.add(CallToReturnZFact(newFact, null))
-            }
+        applySourceRules(ExclusionSet.Universe) { fact, traceInfo ->
+            results += CallToReturnZFact(fact, traceInfo)
         }
 
-        // Propagate zero into callee for interprocedural analysis
-        if (calleeMethod != null) {
-            results.add(CallToStartZeroFact)
-        }
+        results.add(CallToStartZeroFact)
 
         return results
     }
 
-    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<ZeroCallFact> =
-        propagateFact(currentFactAp,
-            mkCallToReturnFact = { _: PIRFactRefinement, fact -> CallToReturnZFact(fact, null) },
-            mkCallToStartFact = { _: PIRFactRefinement, callerFact, startBase -> CallToStartZFact(callerFact, startBase, null) },
-            mkUnchanged = { _ -> @Suppress("UNCHECKED_CAST") (Unchanged as ZeroCallFact) },
+    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<ZeroCallFact> = buildSet {
+        propagateFact(
+            currentFactAp = currentFactAp,
+            skipCall = { this += Unchanged },
+            addCallToStart = { factReader, callerFactAp, startFactBase ->
+                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                this += CallToStartZFact(callerFactAp, startFactBase, null)
+            },
+            addCallToReturn = { factReader, factAp ->
+                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                this += CallToReturnZFact(factAp, null)
+            },
+            addSideEffectRequirement = { factReader ->
+                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+            },
         )
+    }
 
     override fun propagateFactToFact(
         initialFactAp: InitialFactAp,
         currentFactAp: FinalFactAp,
-    ): Set<FactCallFact> =
-        propagateFact(currentFactAp,
-            mkCallToReturnFact = { refinement, fact ->
-                CallToReturnFFact(refinement.refine(initialFactAp), refinement.refine(fact), null)
+    ): Set<FactCallFact> = buildSet {
+        propagateFact(
+            currentFactAp = currentFactAp,
+            skipCall = { this += Unchanged },
+            addSideEffectRequirement = { factReader ->
+                this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
             },
-            mkCallToStartFact = { refinement, callerFact, startBase ->
-                CallToStartFFact(refinement.refine(initialFactAp), refinement.refine(callerFact), startBase, null)
+            addCallToReturn = { factReader, factAp ->
+                this += CallToReturnFFact(
+                    factReader.refineFact(initialFactAp),
+                    factReader.refineFact(factAp),
+                    traceInfo = null
+                )
             },
-            mkUnchanged = { refinement ->
-                if (refinement.hasRefinement) {
-                    CallToReturnFFact(refinement.refine(initialFactAp), refinement.refine(currentFactAp), traceInfo = null)
-                } else {
-                    Unchanged
-                }
+            addCallToStart = { factReader, callerFactAp, startFactBase ->
+                this += CallToStartFFact(
+                    factReader.refineFact(initialFactAp),
+                    factReader.refineFact(callerFactAp),
+                    startFactBase,
+                    traceInfo = null,
+                )
             },
         )
+    }
 
     override fun propagateNDFactToFact(
         initialFacts: Set<InitialFactAp>,
@@ -112,184 +125,37 @@ class PIRMethodCallFlowFunction(
      * [mkCallToStartFact] creates a call-to-start fact from (callerFact, startBase).
      * [mkUnchanged] creates the "unchanged" fact to keep in caller frame.
      */
-    private inline fun <T : CallFact> propagateFact(
+    private fun propagateFact(
         currentFactAp: FinalFactAp,
-        mkCallToReturnFact: (PIRFactRefinement, FinalFactAp) -> T,
-        mkCallToStartFact: (PIRFactRefinement, FinalFactAp, AccessPathBase) -> T,
-        mkUnchanged: (PIRFactRefinement) -> T,
-    ): MutableSet<T> {
-        val results = mutableSetOf<T>()
-        val refinement = PIRFactRefinement()
-
-        // 1. Check sink rules (accumulates refinements for abstract facts)
-        checkSinks(currentFactAp, refinement)
-
-        // 2. Apply pass-through rules
-        for (pass in taintConfig.propagators) {
-            if (matchesCallOrReceiver(pass.function)) {
-                val fromBase = resolvePositionWithModifiers(pass.from, callInst, method)
-                val toBase = resolvePositionWithModifiers(pass.to, callInst, method)
-
-                if (fromBase != null && toBase != null && currentFactAp.base == fromBase) {
-                    val newFact = currentFactAp.rebase(toBase)
-                    results.add(mkCallToReturnFact(refinement, newFact))
-                }
-            }
-        }
-
-        // 3. Call-to-start: map caller fact to callee's argument space
-        if (calleeMethod != null) {
-            val mappings = mapCallToStart(currentFactAp)
-            for ((startBase, callerFact) in mappings) {
-                results.add(mkCallToStartFact(refinement, callerFact, startBase))
-            }
-        }
-
-        // 4. Call-to-return: keep fact in caller frame
-        results.add(mkUnchanged(refinement))
-
-        return results
-    }
-
-    // --- Helpers ---
-
-    private fun checkTaintMarkDeep(
-        factAp: FinalFactAp,
-        accessor: TaintMarkAccessor,
-        sink: TaintRules.Sink,
-        refinement: PIRFactRefinement,
-        depth: Int,
+        skipCall: () -> Unit,
+        addCallToStart: (FinalFactReader, FinalFactAp, AccessPathBase) -> Unit,
+        addCallToReturn: (FinalFactReader, FinalFactAp) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
     ) {
-        if (depth > 5) return
-        if (factAp.startsWithAccessor(accessor)) {
-            ctx.taint.taintSinkTracker.addUnconditionalVulnerability(
-                methodEntryPoint = ctx.methodEntryPoint,
-                statement = callInst,
-                rule = sink.toCommonSink(),
-            )
+        if (!ctx.methodCallFactMapper.factIsRelevantToMethodCall(callInst, returnValue = null, callExpr, currentFactAp)) {
+            skipCall()
             return
         }
-        if (factAp.isAbstract() && accessor !in factAp.exclusions) {
-            refinement.add(accessor)
-            return
-        }
-        for (prefix in factAp.getStartAccessors()) {
-            if (prefix is org.opentaint.dataflow.ap.ifds.ElementAccessor || prefix is org.opentaint.dataflow.ap.ifds.FieldAccessor) {
-                val inner = factAp.readAccessor(prefix) ?: continue
-                checkTaintMarkDeep(inner, accessor, sink, refinement, depth + 1)
-            }
-        }
-    }
 
+        val reader = FinalFactReader(currentFactAp, apManager)
+        applySinkRules(reader)
 
-    /**
-     * Checks sink rules against the current fact.
-     * For concrete facts (taint mark explicitly present), reports vulnerability.
-     * For abstract facts (taint mark might be behind `*`), accumulates refinement
-     * so the framework will re-analyze with more specific facts.
-     */
-    private fun checkSinks(currentFactAp: FinalFactAp, refinement: PIRFactRefinement) {
-        for (sink in taintConfig.sinks) {
-            if (matchesCallOrReceiver(sink.function)) {
-                val sinkBase = resolvePosition(sink.pos, callInst, method)
-                if (sinkBase != null && currentFactAp.base == sinkBase) {
-                    val accessor = TaintMarkAccessor(sink.mark)
-                    checkTaintMarkDeep(currentFactAp, accessor, sink, refinement, 0)
-                }
-            }
-        }
-    }
+        ctx.methodCallFactMapper.mapMethodCallToStartFlowFact(
+            callInst,
+            callInst.location.method,
+            callExpr,
+            returnValue,
+            currentFactAp,
+            FactTypeChecker.Dummy,
+        ) { fact, startBase ->
+            applyPassRules(reader, fact.rebase(startBase), addCallToReturn)
 
-    /**
-     * Maps a caller fact to callee start bases.
-     * Returns list of (startBase, callerFact) pairs.
-     * - startBase: the AccessPathBase in the callee's frame (e.g. Argument(0))
-     * - callerFact: the original fact with the caller's base (NOT rebased)
-     *
-     * A single fact can map to multiple callee parameters (e.g., f(x, x)).
-     * Ensures callee argument indices don't exceed callee's parameter count
-     * to avoid AccessPathBaseStorage crashes.
-     *
-     * For instance/class methods, call args don't include self/cls, so an offset
-     * is applied: args[i] maps to Argument(i + offset) in the callee.
-     */
-    private fun mapCallToStart(
-        callerFact: FinalFactAp,
-    ): List<Pair<AccessPathBase, FinalFactAp>> {
-        val base = callerFact.base
-        val results = mutableListOf<Pair<AccessPathBase, FinalFactAp>>()
-        val calleeParamCount = calleeMethod?.parameters?.size ?: 0
-        val offset = if (calleeMethod != null) PIRFlowFunctionUtils.implicitParamOffset(calleeMethod) else 0
-
-        for ((i, arg) in callInst.args.withIndex()) {
-            val calleeArgIdx = i + offset
-            // Skip if callee-side argument index exceeds formal parameter count
-            if (calleeArgIdx >= calleeParamCount) break
-
-            val argBase = PIRFlowFunctionUtils.accessPathBase(arg.value)
-                ?: continue
-            if (base == argBase) {
-                val startBase = AccessPathBase.Argument(calleeArgIdx)
-                results.add(startBase to callerFact)
-            }
+            addCallToStart(reader, fact, startBase)
         }
 
-        if (base is AccessPathBase.ClassStatic) {
-            results.add(base to callerFact)
+        if (reader.hasRefinement) {
+            addSideEffectRequirement(reader)
         }
-
-        return results
-    }
-
-    /**
-     * Instance-level call matching that also handles unresolved method calls.
-     * For calls where resolvedCallee is null (common for method calls like data.upper()),
-     * attempts to match by finding the defining PIRLoadAttr and constructing a
-     * candidate callee name from the receiver type and attribute name.
-     */
-    private fun matchesCallOrReceiver(ruleFunction: String): Boolean {
-        // Primary: exact match on resolvedCallee
-        val callee = callInst.resolvedCallee
-        if (callee != null) {
-            if (callee == ruleFunction || callee.endsWith(".$ruleFunction")) return true
-        }
-        // Fallback: match using the defining PIRLoadAttr's receiver type + attribute name.
-        // For data.upper(), the PIRLoadAttr has obj=data (type str) and attribute="upper".
-        // We construct candidates like "builtins.str.upper" and "str.upper".
-        val info = receiverInfo
-        if (info != null) {
-            val typeName = info.first  // e.g., "builtins.str" (may be empty if type unknown)
-            val attrName = info.second  // e.g., "upper"
-            if (typeName.isNotEmpty()) {
-                val candidate = "$typeName.$attrName"
-                if (candidate == ruleFunction || candidate.endsWith(".$ruleFunction")) return true
-                if (ruleFunction == candidate || ruleFunction.endsWith(".$candidate")) return true
-            }
-            // Fallback: match if the rule function ends with ".attrName"
-            // e.g., rule "builtins.str.upper" matches attribute "upper"
-            if (ruleFunction.endsWith(".$attrName")) return true
-        }
-        return false
-    }
-
-    /**
-     * Lazily computed receiver info: (receiverTypeName, attributeName) or null.
-     * Found by scanning for the PIRLoadAttr that defines the call's callee.
-     */
-    private val receiverInfo: Pair<String, String>? by lazy {
-        val callee = callInst.callee
-        if (callee !is PIRLocalVar) return@lazy null
-        for (inst in method.instList) {
-            if (inst is PIRLoadAttr && inst.target.index == callee.index) {
-                val attrName = inst.attribute
-                val typeName = inst.obj.type.typeName
-                if (typeName.isNotEmpty() && typeName != "Any" && typeName != "any") {
-                    return@lazy typeName to attrName
-                }
-                return@lazy "" to attrName
-            }
-        }
-        null
     }
 
     override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> =
@@ -320,49 +186,74 @@ class PIRMethodCallFlowFunction(
         )
     }
 
-    companion object {
-        fun matchesCall(ruleFunction: String, call: PIRCall): Boolean {
-            val callee = call.resolvedCallee ?: return false
-            return callee == ruleFunction || callee.endsWith(".$ruleFunction")
+    private fun applySourceRules(
+        exclusionSet: ExclusionSet,
+        createFinalFact: (FinalFactAp, MethodCallFlowFunction.TraceInfo) -> Unit,
+    ) {
+        val sourceRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
+            ctx.taintRules.sourcesForMethod(method)
         }
 
-        fun resolvePosition(
-            pos: PositionBase,
-            call: PIRCall,
-            method: PIRFunction,
-        ): AccessPathBase? = when (pos) {
-            is PositionBase.Result -> {
-                call.target?.let { PIRFlowFunctionUtils.accessPathBase(it) }
-            }
-            is PositionBase.Argument -> {
-                val idx = pos.idx ?: return null
-                call.args.getOrNull(idx)?.value?.let {
-                    PIRFlowFunctionUtils.accessPathBase(it)
+        val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
+        val conditionRewriter = PIRConditionRewriter
+
+        taintUtil.applySourceRules(
+            sourceRules = sourceRules,
+            initialFacts = emptySet(),
+            conditionRewriter = conditionRewriter,
+            factReader = null,
+            exclusion = exclusionSet,
+            createFinalFact = createFinalFact,
+            createEdge = { _, _, _ -> error("Unexpected") },
+            createNDEdge = { _, _, _ -> error("Unexpected") },
+        )
+    }
+
+    private fun applySinkRules(
+        factReader: FinalFactReader,
+    ) {
+        val sinkRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
+            ctx.taintRules.sinksForMethod(method)
+        }
+
+        val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
+        val conditionRewriter = PIRConditionRewriter
+
+        taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyFieldResolver = null)
+    }
+
+    private fun applyPassRules(
+        originalFactReader: FinalFactReader,
+        mappedFact: FinalFactAp,
+        propagateFact: (FinalFactReader, FinalFactAp) -> Unit,
+    ) {
+        val typeChecker = FactTypeChecker.Dummy
+        val passRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
+            ctx.taintRules.passThroughForMethod(method)
+        }
+
+        val reader = FinalFactReader(mappedFact, apManager)
+        val evaluator = TaintPassActionEvaluator(apManager, typeChecker, reader, DummyPositionTypeResolver)
+
+        passRules.forEach { rule ->
+            rule.copy.forEach { action ->
+                val from = action.from.resolveAp() ?: return@forEach
+                val to = action.to.resolveAp() ?: return@forEach
+
+                evaluator.propagateData(rule, action, from, to).onSome { facts ->
+                    facts.forEach { fact ->
+                        ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, fact.fact, typeChecker).forEach { mappedFact ->
+                            propagateFact(reader, mappedFact)
+                        }
+                    }
                 }
             }
-            is PositionBase.This -> {
-                // In Python, PositionBase.This represents the method call receiver.
-                // e.g., for data.upper(), the receiver is `data`.
-                val receiver = PIRFlowFunctionUtils.findMethodCallReceiver(call, method)
-                receiver?.let { PIRFlowFunctionUtils.accessPathBase(it) }
-            }
-            is PositionBase.ClassStatic -> null
-            is PositionBase.AnyArgument -> null
         }
 
-        fun resolvePositionWithModifiers(
-            pos: PositionBaseWithModifiers,
-            call: PIRCall,
-            method: PIRFunction,
-        ): AccessPathBase? = resolvePosition(pos.base, call, method)
+        originalFactReader.updateRefinement(reader)
     }
-}
 
-internal fun TaintRules.Sink.toCommonSink(): CommonTaintConfigurationSink = object : CommonTaintConfigurationSink {
-    override val id: String = this@toCommonSink.id
-    override val meta: CommonTaintConfigurationSinkMeta = object : CommonTaintConfigurationSinkMeta {
-        override val message: String = "Taint sink: ${this@toCommonSink.function}"
-        override val severity: CommonTaintConfigurationSinkMeta.Severity =
-            CommonTaintConfigurationSinkMeta.Severity.Error
+    private object DummyPositionTypeResolver : PositionTypeResolver {
+        override fun resolve(position: PositionAccess): CommonType? = null
     }
 }

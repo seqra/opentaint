@@ -30,7 +30,7 @@ class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
     private val passThroughByAttribute = ConcurrentHashMap<String, List<TaintPassThrough>>()
     private val cleanersByAttribute = ConcurrentHashMap<String, List<TaintCleaner>>()
 
-    fun entryPointsForMethod(method: PIRFunction): List<TaintEntryPointSource> =
+    fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource> =
         entryPointsByMethod.cached(method) { MethodTaintConfigurationResolver.resolveEntryPoints(config.entryPoint, method) }
 
     fun sourcesForMethod(method: PIRFunction): List<TaintSource> =
