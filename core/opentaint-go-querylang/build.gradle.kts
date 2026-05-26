@@ -133,6 +133,8 @@ tasks.withType<Test> {
     systemProperty("GO_SAMPLES_DIR", layout.projectDirectory.dir("samples-go").asFile.absolutePath)
     systemProperty("GO_MASSIVE_SAMPLES_DIR", layout.projectDirectory.dir("samples-go-massive").asFile.absolutePath)
     systemProperty("GO_MASSIVE_OUTPUT_DIR", layout.buildDirectory.dir("go-massive-report").get().asFile.absolutePath)
+    systemProperty("OPENTAINT_GO_DEV_RULES_DIR",
+        "/drive-testcomp/opentaint-go-rules/benchmarks/rules/go/security")
     ensureGoEnvInitialized()
     doFirst {
         goEnvironment().forEach { (key, value) -> environment(key, value) }
