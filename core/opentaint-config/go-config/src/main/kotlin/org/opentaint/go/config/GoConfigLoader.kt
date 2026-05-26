@@ -48,7 +48,7 @@ object GoConfigLoader {
         return GoSerializedTaintConfig(passThrough = passThrough)
     }
 
-    private fun parsePassThroughRules(stream: InputStream): List<GoSerializedRule.PassThrough> {
+    internal fun parsePassThroughRules(stream: InputStream): List<GoSerializedRule.PassThrough> {
         val yaml = Yaml(configuration = YamlConfiguration(codePointLimit = Int.MAX_VALUE))
         val text = stream.bufferedReader(Charsets.UTF_8).readText()
         val root = runCatching { yaml.parseToYamlNode(text) }.getOrNull() ?: return emptyList()
@@ -133,4 +133,9 @@ private fun parseGoPositionScalar(str: String): PositionBase? {
     // `this` belongs to receiver-method rules which we skip at the rule level.
     if (str == "this") return null
     return runCatching { PositionBase.deserialize(str) }.getOrNull()
+}
+
+fun loadGoSerializedTaintConfig(stream: java.io.InputStream): GoSerializedTaintConfig {
+    val passThrough = GoConfigLoader.parsePassThroughRules(stream)
+    return GoSerializedTaintConfig(passThrough = passThrough)
 }
