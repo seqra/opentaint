@@ -1,55 +1,55 @@
 package org.opentaint.semgrep.pattern.conversion
 
 import org.opentaint.semgrep.pattern.ArgPrefix
+import org.opentaint.semgrep.pattern.AssignStmt
+import org.opentaint.semgrep.pattern.BlockStmt
 import org.opentaint.semgrep.pattern.CallArgs
 import org.opentaint.semgrep.pattern.CallExpr
+import org.opentaint.semgrep.pattern.CompositeLit
 import org.opentaint.semgrep.pattern.ConcreteName
+import org.opentaint.semgrep.pattern.DeferStmt
+import org.opentaint.semgrep.pattern.Ellipsis
 import org.opentaint.semgrep.pattern.EllipsisArgPrefix
+import org.opentaint.semgrep.pattern.EllipsisElem
+import org.opentaint.semgrep.pattern.EllipsisMetavarParam
+import org.opentaint.semgrep.pattern.EllipsisParam
+import org.opentaint.semgrep.pattern.EllipsisStmt
 import org.opentaint.semgrep.pattern.ExprStmt
+import org.opentaint.semgrep.pattern.FuncDecl
+import org.opentaint.semgrep.pattern.FuncType
+import org.opentaint.semgrep.pattern.GoStmt
 import org.opentaint.semgrep.pattern.Identifier
+import org.opentaint.semgrep.pattern.IndexExpr
 import org.opentaint.semgrep.pattern.IntLiteral
+import org.opentaint.semgrep.pattern.KeyedElem
 import org.opentaint.semgrep.pattern.MapType
 import org.opentaint.semgrep.pattern.Metavar
 import org.opentaint.semgrep.pattern.MetavarName
+import org.opentaint.semgrep.pattern.MetavarParam
 import org.opentaint.semgrep.pattern.MetavarType
+import org.opentaint.semgrep.pattern.MethodDecl
 import org.opentaint.semgrep.pattern.Name
+import org.opentaint.semgrep.pattern.NamedParam
 import org.opentaint.semgrep.pattern.NamedType
 import org.opentaint.semgrep.pattern.NilLiteral
 import org.opentaint.semgrep.pattern.NoArgs
 import org.opentaint.semgrep.pattern.ParenExpr
 import org.opentaint.semgrep.pattern.PointerType
 import org.opentaint.semgrep.pattern.QualifiedType
+import org.opentaint.semgrep.pattern.ReturnStmt
 import org.opentaint.semgrep.pattern.SelectorExpr
 import org.opentaint.semgrep.pattern.SemgrepGoPattern
+import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
+import org.opentaint.semgrep.pattern.ShortVarDecl
 import org.opentaint.semgrep.pattern.SliceType
 import org.opentaint.semgrep.pattern.StringEllipsis
 import org.opentaint.semgrep.pattern.StringLiteral
 import org.opentaint.semgrep.pattern.TopList
 import org.opentaint.semgrep.pattern.TypeName
+import org.opentaint.semgrep.pattern.TypeOnlyPattern
 import org.opentaint.semgrep.pattern.TypedMetavar
-import org.opentaint.semgrep.pattern.Ellipsis
-import org.opentaint.semgrep.pattern.EllipsisStmt
-import org.opentaint.semgrep.pattern.AssignStmt
-import org.opentaint.semgrep.pattern.FuncDecl
-import org.opentaint.semgrep.pattern.MethodDecl
-import org.opentaint.semgrep.pattern.FuncType
-import org.opentaint.semgrep.pattern.ParameterDecl
-import org.opentaint.semgrep.pattern.NamedParam
-import org.opentaint.semgrep.pattern.EllipsisParam
-import org.opentaint.semgrep.pattern.EllipsisMetavarParam
-import org.opentaint.semgrep.pattern.MetavarParam
-import org.opentaint.semgrep.pattern.BlockStmt
-import org.opentaint.semgrep.pattern.ReturnStmt
-import org.opentaint.semgrep.pattern.DeferStmt
-import org.opentaint.semgrep.pattern.GoStmt
-import org.opentaint.semgrep.pattern.ShortVarDecl
-import org.opentaint.semgrep.pattern.VarDecl
-import org.opentaint.semgrep.pattern.CompositeLit
-import org.opentaint.semgrep.pattern.CompositeElem
-import org.opentaint.semgrep.pattern.KeyedElem
-import org.opentaint.semgrep.pattern.EllipsisElem
 import org.opentaint.semgrep.pattern.UnaryExpr
-import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
+import org.opentaint.semgrep.pattern.VarDecl
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodExit
@@ -116,6 +116,17 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             val recvType = (pattern.receiver as? NamedParam)?.type?.let { transformType(it) }
             transformFuncDecl(pattern.name, pattern.signature, pattern.body, receiverType = recvType)
         }
+
+        // Global-read source: `os.Args[$IDX]` and `os.Args` (bare selector) cover the
+        // common CLI-source pattern. The Go pattern grammar is ambiguous on whether a
+        // qualified name like `os.Args` (optionally indexed) is a type-instantiation
+        // or an expression — the parser commits to TypeOnlyPattern(QualifiedType) for
+        // both `os.Args` and `os.Args[$IDX]` (generic-type-args syntax). We recognise
+        // that shape here and lower it to a synthetic MethodCall.
+        is IndexExpr -> transformGlobalReadOrFail(pattern.obj)
+        is SelectorExpr -> transformGlobalReadOrFail(pattern)
+        is TypeOnlyPattern -> transformGlobalReadFromType(pattern.type)
+
         is BlockStmt -> transformSequence(pattern.stmts)
         is ReturnStmt -> {
             val allActions = mutableListOf<SemgrepPatternAction>()
@@ -197,6 +208,52 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         return SemgrepPatternActionList(actions, hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
     }
 
+    /**
+     * Lower a `pkg.Field` selector — top-level or inside `pkg.Field[IDX]` — into a
+     * synthetic MethodCall.
+     */
+    private fun transformGlobalReadOrFail(sel: SemgrepGoPattern): SemgrepPatternActionList {
+        if (sel !is SelectorExpr) transformationFailed("IndexExpr_obj_not_selector")
+        val pkg = sel.obj as? Identifier ?: transformationFailed("IndexExpr_recv_not_identifier")
+        val pkgName = (pkg.name as? ConcreteName)?.name
+            ?: transformationFailed("IndexExpr_pkg_not_concrete")
+        val fieldName = (sel.sel as? ConcreteName)?.name
+            ?: transformationFailed("IndexExpr_field_not_concrete")
+        return mkGlobalReadActionList(pkgName, fieldName)
+    }
+
+    /**
+     * Lower a TypeOnlyPattern that the parser produced for `pkg.Field` or
+     * `pkg.Field[IDX]` (Go's pattern grammar prefers the type-args reading) into a
+     * synthetic global-read MethodCall — see [transformGlobalReadOrFail] for the
+     * sentinel-naming rationale.
+     */
+    private fun transformGlobalReadFromType(type: TypeName): SemgrepPatternActionList {
+        val qt = type as? QualifiedType ?: transformationFailed("TypeOnly_not_qualified")
+        val pkgName = (qt.pkg as? ConcreteName)?.name
+            ?: transformationFailed("TypeOnly_pkg_not_concrete")
+        val fieldName = (qt.name as? ConcreteName)?.name
+            ?: transformationFailed("TypeOnly_field_not_concrete")
+        return mkGlobalReadActionList(pkgName, fieldName)
+    }
+
+    private fun mkGlobalReadActionList(pkgName: String, fieldName: String): SemgrepPatternActionList {
+        val methodName = SignatureName.Concrete(GoLanguageStrategy.globalReadAuxFnName(fieldName))
+        return SemgrepPatternActionList(
+            listOf(
+                MethodCall(
+                    methodName = methodName,
+                    result = null,
+                    params = ParamConstraint.Concrete(emptyList()),
+                    obj = ParamCondition.True,
+                    enclosingClassName = goNamed(pkgName),
+                )
+            ),
+            hasEllipsisInTheBeginning = false,
+            hasEllipsisInTheEnd = false,
+        )
+    }
+
     private fun decomposeReceiver(
         recv: SemgrepGoPattern,
     ): Triple<List<SemgrepPatternAction>, ParamCondition?, TypeConstraint?> = when (recv) {
@@ -214,10 +271,40 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             )
         }
         is ParenExpr -> decomposeReceiver(recv.inner)
-        is CallExpr -> {
-            val (actions, cond) = transformPatternIntoParamConditionWithActions(recv)
-            Triple(actions, cond ?: ParamCondition.True, null)
-        }
+
+        // todo: wtf?????
+        // Chained method-call receivers (e.g. `$R.URL.Query().Get($K)`). Treat
+        // the inner call the same as a field-access prefix — flatten it away and
+        // emit the source/sink rule only on the OUTERMOST call. The previous
+        // strategy of linearising chains into a (source-on-inner, pass-through-on-outer)
+        // pair did fire the source mark, but the artificial mark feeding the
+        // pass-through is lost across closure-capture boundaries (the engine
+        // has no lambda/anonymous-function tracker on the Go side, unlike Java's
+        // `JIRLambdaTracker`). Collapsing to a single rule on the outer call
+        // means the propagation happens directly on the source mark, which the
+        // engine already carries through local-var assignment and into the
+        // closure body without help. This mirrors the [SelectorExpr] branch
+        // below and is intentionally permissive: an unrelated `something().Get(k)`
+        // call would also fire, just like a `$R.FormValue($K)` rule already
+        // matches any `.FormValue` call regardless of receiver type.
+        is CallExpr -> Triple(emptyList(), ParamCondition.True, null)
+
+        // todo: wtf?
+        // Chained field-access receivers (e.g. `$R.URL.Query().Get($K)`, `$R.Header.Get($K)`).
+        // Go's IR represents `$R.URL` as a direct memory access — there is no implicit
+        // getter method we can hook a source rule on, and the engine's per-callee lookup
+        // only fires on method calls. The pragmatic strategy (mirroring how Java's
+        // PatternToActionListConverter collapses chains via intermediate metavar bindings,
+        // adapted for Go's no-getter semantics): drop the field-access prefix entirely
+        // and emit the source/sink rule on the OUTERMOST method call only. The receiver
+        // metavar `$R` and the intermediate field name are lost — the rule fires on any
+        // `.Get($K)` (or analogous) call site. This is intentionally permissive: it
+        // matches real-world `r.URL.Query().Get(k)` and `r.Header.Get(k)` while
+        // accepting that an unrelated `someMap.Get(k)` would also fire. The same
+        // permissiveness already applies to single-call patterns like `$R.FormValue($K)`,
+        // which match any `.FormValue` method regardless of receiver type.
+        is SelectorExpr -> Triple(emptyList(), ParamCondition.True, null)
+
         else -> transformationFailed("MethodInvocation_obj: ${recv::class.simpleName}")
     }
 
