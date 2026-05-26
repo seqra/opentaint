@@ -311,7 +311,7 @@ class DSUAliasAnalysis(
             is CallReturn -> true
             is LocalAlias.SimpleLoc -> aInfo.loc.isOuter()
             is LocalAlias.Alloc -> false
-            is HeapAlias -> false
+            is HeapAlias -> aInfo.instance.aliasInfoIsSimpleOuter()
         }
 
     private fun evalSimple(stmt: Stmt.NoCall, callFrame: CallTreeNode, state: State): State = when (stmt) {

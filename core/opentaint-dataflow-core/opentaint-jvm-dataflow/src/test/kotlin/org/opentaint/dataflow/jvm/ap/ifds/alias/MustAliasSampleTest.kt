@@ -461,6 +461,7 @@ class MustAliasSampleTest : BasicTestUtils() {
 
         val aa = aaForMethod(method)
         val sink = method.findSinkCall("sinkOneValue")
+        // checking the analysis has finished successfully
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
     }
 
