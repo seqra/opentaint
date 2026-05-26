@@ -10,7 +10,7 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Sev
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.serialized.ItemInfo
 
-sealed interface TaintRule {
+sealed interface TaintRule: CommonTaintConfigurationItem {
     val info: ItemInfo?
 
     data class GlobalReadSource(
