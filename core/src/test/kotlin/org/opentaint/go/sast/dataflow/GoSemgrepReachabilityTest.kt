@@ -142,7 +142,7 @@ class GoSemgrepReachabilityTest {
     }
 
     fun String.signature(args: Int): GoFunctionSignature =
-        GoFunctionSignature(this, args, hasReceiver = false)
+        GoFunctionSignature(this, receiverType = null, paramTypes = List(args) { "any" }, resultType = "any")
 
     private class GoTaintRuleEmitter {
         fun emit(rule: TaintRuleFromSemgrep<GoSerializedItem>): GoTaintConfiguration =

@@ -1,0 +1,69 @@
+package org.opentaint.go.sast.dataflow
+
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.TestInstance
+import kotlin.test.Test
+
+/**
+ * Tests for the 11 IR call shapes the Go SAST engine handles.
+ * Focused on call resolution + argument propagation — fixtures keep
+ * downstream taint propagation trivial so a failure points at the
+ * call edge, not at field/closure/element semantics.
+ *
+ * Shapes that the engine doesn't yet support get @Disabled with a
+ * message naming the gap. The point of this class is to map the
+ * gaps, not to pretend they aren't there.
+ *
+ * See go-sast-issue-02-findings.md §3 for the audit table.
+ */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class CallShapesTest : AnalysisTest() {
+
+    // 1. DIRECT non-method
+    @Test fun directNonMethod001T() = assertReachable("test.directNonMethod001T")
+    @Test fun directNonMethod002F() = assertNotReachable("test.directNonMethod002F")
+
+    // 2. DIRECT value-method
+    @Test fun directValueMethod001T() = assertReachable("test.directValueMethod001T")
+    @Test fun directValueMethod002F() = assertNotReachable("test.directValueMethod002F")
+
+    // 3. DIRECT pointer-method
+    @Test fun directPointerMethod001T() = assertReachable("test.directPointerMethod001T")
+    @Test fun directPointerMethod002F() = assertNotReachable("test.directPointerMethod002F")
+
+    // 4. INVOKE (interface dispatch)
+    @Test fun invoke001T() = assertReachable("test.invoke001T")
+    @Test fun invoke002F() = assertNotReachable("test.invoke002F")
+
+    // 5. DYNAMIC plain (function-valued variable)
+    @Test fun dynamicPlain001T() = assertReachable("test.dynamicPlain001T")
+    @Test fun dynamicPlain002F() = assertNotReachable("test.dynamicPlain002F")
+
+    // 6. DYNAMIC bound-method
+    @Test fun dynamicBoundMethod001T() = assertReachable("test.dynamicBoundMethod001T")
+    @Test fun dynamicBoundMethod002F() = assertNotReachable("test.dynamicBoundMethod002F")
+
+    // 7. Method expression (T.M)
+    @Test fun methodExpression001T() = assertReachable("test.methodExpression001T")
+    @Test fun methodExpression002F() = assertNotReachable("test.methodExpression002F")
+
+    // 8. Embedded promoted method
+    @Test fun embeddedPromoted001T() = assertReachable("test.embeddedPromoted001T")
+    @Test fun embeddedPromoted002F() = assertNotReachable("test.embeddedPromoted002F")
+
+    // 9. Builtin (append)
+    @Disabled("call-shape: builtin append — engine doesn't propagate element taint from append(slice, src) into the resulting slice")
+    @Test fun builtin001T() = assertReachable("test.builtin001T")
+    @Disabled("call-shape: builtin append — negative-control paired with builtin001T (engine doesn't propagate element taint from append(slice, src))")
+    @Test fun builtin002F() = assertNotReachable("test.builtin002F")
+
+    // 10. Unresolved DYNAMIC (function from map lookup)
+    @Disabled("call-shape: unresolved DYNAMIC — engine doesn't resolve a function value loaded from a map[string]func to the underlying callee, so tainted argument doesn't reach the sink")
+    @Test fun unresolvedDynamic001T() = assertReachable("test.unresolvedDynamic001T")
+    @Disabled("call-shape: unresolved DYNAMIC — negative-control paired with unresolvedDynamic001T (engine doesn't trace function values from map lookups to MakeClosure)")
+    @Test fun unresolvedDynamic002F() = assertNotReachable("test.unresolvedDynamic002F")
+
+    // 11. Generic monomorphised
+    @Test fun genericMonomorphised001T() = assertReachable("test.genericMonomorphised001T")
+    @Test fun genericMonomorphised002F() = assertNotReachable("test.genericMonomorphised002F")
+}

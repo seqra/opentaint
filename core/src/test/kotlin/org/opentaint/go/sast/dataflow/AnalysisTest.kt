@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassThrough
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.Sink
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.Source
@@ -136,19 +137,41 @@ abstract class AnalysisTest {
         assertTrue(vulnerabilities.isEmpty(), "Sink should not be reached in $entryPointFunction")
     }
 
+    fun runAnalysisWithGlobalSource(
+        globalSource: GoSerializedGlobalSource,
+        sink: Sink,
+        entryPointFunction: String,
+        extraPassRules: List<PassThrough> = emptyList(),
+    ): List<VulnerabilityWithTrace> {
+        val allPassRules = commonPassRules + extraPassRules
+        val serializedConfig = GoSerializedTaintConfig(
+            globalSource = listOf(globalSource),
+            sink = listOf(sink),
+            passThrough = allPassRules,
+        )
+        return runAnalysisOnConfig(serializedConfig, entryPointFunction)
+    }
+
     fun runAnalysis(
         source: Source,
         sink: Sink,
         entryPointFunction: String,
         extraPassRules: List<PassThrough> = emptyList(),
     ): List<VulnerabilityWithTrace> {
-        val entryPoint = cp.findFunctionByFullName(entryPointFunction)
-            ?: error("Entry point not found: $entryPointFunction")
-
         val allPassRules = commonPassRules + extraPassRules
         val serializedConfig = GoSerializedTaintConfig(
             source = listOf(source), sink = listOf(sink), passThrough = allPassRules
         )
+        return runAnalysisOnConfig(serializedConfig, entryPointFunction)
+    }
+
+    private fun runAnalysisOnConfig(
+        serializedConfig: GoSerializedTaintConfig,
+        entryPointFunction: String,
+    ): List<VulnerabilityWithTrace> {
+        val entryPoint = cp.findFunctionByFullName(entryPointFunction)
+            ?: error("Entry point not found: $entryPointFunction")
+
         val loadedConfig = GoTaintConfiguration()
         loadedConfig.loadConfig(serializedConfig)
 
@@ -168,12 +191,11 @@ abstract class AnalysisTest {
         return engine.use { eng ->
             eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
             val allVulnerabilities = eng.getVulnerabilities()
-
             eng.resolveVulnerabilityTraces(
                 setOf(entryPoint), allVulnerabilities,
                 resolverParams = TraceResolver.Params(),
-                timeout = 1.minutes, cancellationTimeout = 10.seconds
-            ).filter { it.trace != null}
+                timeout = 1.minutes, cancellationTimeout = 10.seconds,
+            ).filter { it.trace != null }
         }
     }
 
