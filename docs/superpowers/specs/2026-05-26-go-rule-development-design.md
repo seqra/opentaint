@@ -277,20 +277,62 @@ CodeQL only when filling **gaps** in the bundled set.)
 Per CWE, in order **cmdinj → path → sql → xss** (simplest sinks first):
 
 1. Write `security/<cwe>.yaml` with full source-list + sink-list (above).
-2. Scan both benchmarks with `--ruleset .opentaint/rules --track-external-methods`.
-3. Run `compare.py` (URI-only, per-rule break-out) and record TP / FP / FN
+2. **Fast feedback** (see "Sample-based fast feedback" below) — run the rule
+   against the relevant `samples-go-massive/<prefix>_*` subset. Each sample
+   has `Positive_*` and `Negative_*` top-level functions; the test asserts
+   the rule yields ≥1 vuln on positives and 0 on negatives. Pinpoints
+   pattern-level mistakes in seconds before a full benchmark scan.
+3. Scan both benchmarks with `--ruleset .opentaint/rules --track-external-methods`.
+4. Run `compare.py` (URI-only, per-rule break-out) and record TP / FP / FN
    for the active CWE.
-4. If TP < 70% on the CWE:
+5. If TP < 70% on the CWE:
    - Read 3-5 missed-flow source files. Identify the gap (source pattern
      missing, sink pattern missing, propagator missing).
    - If propagator missing → add a YAML passThrough entry.
    - If source/sink missing → extend the rule's `pattern-either`.
    - If sanitizer required (rare on this pass) → add `pattern-not`.
-5. Re-scan, repeat until ≥70% TP for that CWE.
-6. Commit the rule and any new propagator entries; move on.
+   - Loop back to step 2 (sample-based test) before re-running the
+     benchmark — the sample test exercises the new patterns in seconds.
+6. Re-scan benchmarks, repeat until ≥70% TP for that CWE.
+7. Commit the rule and any new propagator entries; move on.
 
 After all 4 classes hit ≥70% individually, verify the combined TP across
 both benchmarks also clears 70%.
+
+### Sample-based fast feedback
+
+The OpenTaint Java side has an annotation-based `opentaint dev test-rules`
+runner; the Go side does not, but it has a working equivalent in
+`GoSampleBasedTest` / `GoMassiveSampleTest`. Both load a `*.yaml` rule from
+a sample directory and assert `Positive_*` / `Negative_*` semantics on
+top-level functions.
+
+The "abuse" pattern: redirect that infrastructure to load **our**
+consolidated rule (e.g., `benchmarks/rules/go/security/cmdinj.yaml`)
+instead of each sample's bundled yaml. Then it runs against the existing
+fixtures under `core/opentaint-go-querylang/samples-go-massive/<prefix>_*`
+(20 cmdinj samples, 20 path samples, 20 sqlinj samples, 20 xss samples
+already exist) — instant pattern-level coverage.
+
+Concretely: add a new JUnit test class `GoRuleDevSampleTest` that:
+
+- Reads the rules-under-development directory from a system property
+  (`OPENTAINT_GO_DEV_RULES_DIR`, defaulting to
+  `benchmarks/rules/go/security`).
+- For each CWE prefix → rule mapping
+  (`cmdinj_* → cmdinj.yaml`, `path_* → path-traversal.yaml`,
+  `sqlinj_* → sql-injection.yaml`, `xss_* → xss.yaml`),
+  uses `@ParameterizedTest` to walk every matching sample under
+  `samples-go-massive/` and asserts the Positive/Negative semantics.
+- Reuses the existing `loadConfig` and `runAnalysis` helpers from
+  `GoSampleBasedTest` (extract them to a shared helper file or duplicate
+  the small amount of code — the test class is plumbing-thin).
+
+Pre-existing failing samples in `GoMassiveSampleTest` (the 27 known
+failures) reflect engine limitations rather than rule patterns — the
+new test should expose ONLY new failures, distinct from the existing
+known set. Expected failures should be tracked in a baseline file or
+@Disabled list; new failures are signal.
 
 ## Tooling
 
