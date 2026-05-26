@@ -8,7 +8,4 @@ rules:
       - pattern: "util.Source(...)"
     pattern-sinks:
       - patterns:
-          - pattern: "util.Exec($X)"
-          - metavariable-type:
-              metavariable: "$X"
-              type: "util.Cmd"
+          - pattern: "util.Exec(($X : util.Cmd))"
