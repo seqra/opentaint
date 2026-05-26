@@ -130,7 +130,7 @@ class GoIRDeserializer {
 
     private val errors = mutableListOf<String>()
     private val stubPackage: GoIRPackageImpl by lazy {
-        GoIRPackageImpl(importPath = "_external_stubs_", name = "_stubs_")
+        GoIRPackageImpl(importPath = "_external_stubs_", name = "_stubs_", isDependency = true)
     }
     private var lazySession: GoIRLazySession? = null
 
@@ -200,6 +200,8 @@ class GoIRDeserializer {
             GoIRPackageImpl(
                 importPath = summary.importPath,
                 name = summary.name,
+                isStdlib = summary.isStdlib,
+                isDependency = summary.isDependency,
                 loader = { session.loadPackage(summary.id) },
             )
         }
