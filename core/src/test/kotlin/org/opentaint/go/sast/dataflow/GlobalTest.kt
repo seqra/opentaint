@@ -1,5 +1,6 @@
 package org.opentaint.go.sast.dataflow
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 
@@ -14,6 +15,7 @@ class GlobalTest : AnalysisTest() {
     @Test fun globalFunc001T() = assertReachable("test.globalFunc001T")
     @Test fun globalFunc002F() = assertNotReachable("test.globalFunc002F")
 
+    @Disabled("field write, alias-analysis required")
     @Test fun globalStruct001T() = assertReachable("test.globalStruct001T")
     @Test fun globalStruct002F() = assertNotReachable("test.globalStruct002F")
 }

@@ -3,6 +3,7 @@ package org.opentaint.dataflow.go
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.go.rules.Position
@@ -71,7 +72,21 @@ object GoFlowFunctionUtils {
         ) : Access
     }
 
-    fun accessPathBase(value: GoIRValue, method: GoIRFunction?): AccessPathBase? {
+    fun accessPathBase(
+        value: GoIRValue,
+        method: GoIRFunction?,
+    ): AccessPathBase? = accessPathBase(value, method) {
+        if (globalsNotSupportedReported.compareAndSet(false, true)) {
+            logger.error("TODO: Global values are not supported")
+        }
+        return null
+    }
+
+    private inline fun accessPathBase(
+        value: GoIRValue,
+        method: GoIRFunction?,
+        handleGlobal: (GoIRGlobalValue) -> Nothing
+    ): AccessPathBase? {
         return when (value) {
             is GoIRParameterValue -> {
                 if (method != null && method.isMethod && value.paramIndex == 0) {
@@ -83,12 +98,7 @@ object GoFlowFunctionUtils {
             }
             is GoIRRegister -> AccessPathBase.LocalVar(value.index)
             is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
-            is GoIRGlobalValue -> {
-                if (globalsNotSupportedReported.compareAndSet(false, true)) {
-                    logger.error("TODO: Global values are not supported")
-                }
-                null
-            }
+            is GoIRGlobalValue -> handleGlobal(value)
             is GoIRFunctionValue -> AccessPathBase.Constant("func", value.function.fullName)
             is GoIRBuiltinValue -> AccessPathBase.Constant("builtin", value.name)
             is GoIRFreeVarValue -> {
@@ -201,7 +211,12 @@ object GoFlowFunctionUtils {
     }
 
     private fun singleOperandAccess(value: GoIRValue, method: GoIRFunction): Access? {
-        val base = accessPathBase(value, method) ?: return null
+        val base = accessPathBase(value, method) { globalValue ->
+            return Access.RefAccess(
+                AccessPathBase.ClassStatic,
+                ClassStaticAccessor(globalValue.global.fullName)
+            )
+        } ?: return null
         return Access.Simple(base)
     }
 
@@ -214,7 +229,7 @@ object GoFlowFunctionUtils {
      */
     fun accessForAddr(addr: GoIRValue, method: GoIRFunction): Access? {
         if (addr !is GoIRRegister) {
-            return Access.Simple(accessPathBase(addr, method) ?: return null)
+            return singleOperandAccess(addr, method)
         }
         val defInst = findDefInst(addr, method)
             ?: return Access.Simple(AccessPathBase.LocalVar(addr.index))
