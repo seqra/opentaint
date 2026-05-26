@@ -38,7 +38,6 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.inst.GoIRInst
-import org.opentaint.ir.go.value.GoIRValue
 import org.opentaint.util.analysis.ApplicationGraph
 
 /**
@@ -170,7 +169,6 @@ class GoAnalysisManager(
         val ctx = analysisContext as GoMethodAnalysisContext
         return GoMethodCallPrecondition(
             apManager,
-            returnValue as? GoIRValue,
             callExpr as GoCallExpr,
             statement as GoIRInst,
             ctx,

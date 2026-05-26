@@ -3,29 +3,64 @@ package org.opentaint.dataflow.go
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
+import org.opentaint.dataflow.go.rules.Position
+import org.opentaint.dataflow.go.rules.PositionAccessor
+import org.opentaint.dataflow.go.rules.PositionWithAccess
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
-import org.opentaint.ir.go.expr.*
-import org.opentaint.ir.go.inst.*
-import org.opentaint.ir.go.type.*
-import org.opentaint.ir.go.value.*
+import org.opentaint.ir.go.expr.GoIRAllocExpr
+import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRChangeInterfaceExpr
+import org.opentaint.ir.go.expr.GoIRChangeTypeExpr
+import org.opentaint.ir.go.expr.GoIRConvertExpr
+import org.opentaint.ir.go.expr.GoIRExpr
+import org.opentaint.ir.go.expr.GoIRExtractExpr
+import org.opentaint.ir.go.expr.GoIRFieldAddrExpr
+import org.opentaint.ir.go.expr.GoIRFieldExpr
+import org.opentaint.ir.go.expr.GoIRIndexAddrExpr
+import org.opentaint.ir.go.expr.GoIRIndexExpr
+import org.opentaint.ir.go.expr.GoIRLookupExpr
+import org.opentaint.ir.go.expr.GoIRMakeChanExpr
+import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
+import org.opentaint.ir.go.expr.GoIRMakeInterfaceExpr
+import org.opentaint.ir.go.expr.GoIRMakeMapExpr
+import org.opentaint.ir.go.expr.GoIRMakeSliceExpr
+import org.opentaint.ir.go.expr.GoIRMultiConvertExpr
+import org.opentaint.ir.go.expr.GoIRNextExpr
+import org.opentaint.ir.go.expr.GoIRRangeExpr
+import org.opentaint.ir.go.expr.GoIRSelectExpr
+import org.opentaint.ir.go.expr.GoIRSliceExpr
+import org.opentaint.ir.go.expr.GoIRSliceToArrayPointerExpr
+import org.opentaint.ir.go.expr.GoIRTypeAssertExpr
+import org.opentaint.ir.go.expr.GoIRUnOpExpr
+import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRCall
+import org.opentaint.ir.go.inst.GoIRDefInst
+import org.opentaint.ir.go.inst.GoIRDefer
+import org.opentaint.ir.go.inst.GoIRGo
+import org.opentaint.ir.go.inst.GoIRInst
+import org.opentaint.ir.go.type.GoIRBasicType
+import org.opentaint.ir.go.type.GoIRBasicTypeKind
+import org.opentaint.ir.go.type.GoIRBinaryOp
+import org.opentaint.ir.go.type.GoIRNamedTypeRef
+import org.opentaint.ir.go.type.GoIRPointerType
+import org.opentaint.ir.go.type.GoIRStructType
+import org.opentaint.ir.go.type.GoIRType
+import org.opentaint.ir.go.type.GoIRUnaryOp
+import org.opentaint.ir.go.value.GoIRBuiltinValue
+import org.opentaint.ir.go.value.GoIRConstValue
+import org.opentaint.ir.go.value.GoIRFreeVarValue
+import org.opentaint.ir.go.value.GoIRFunctionValue
+import org.opentaint.ir.go.value.GoIRGlobalValue
+import org.opentaint.ir.go.value.GoIRParameterValue
+import org.opentaint.ir.go.value.GoIRRegister
+import org.opentaint.ir.go.value.GoIRValue
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Foundational utility for mapping Go IR values and expressions to the framework's
- * AccessPathBase and Accessor types. Every flow function depends on this.
- */
 object GoFlowFunctionUtils {
-
-    // ── Access sealed interface ──────────────────────────────────────
-
     sealed interface Access {
         val base: AccessPathBase
 
@@ -36,15 +71,16 @@ object GoFlowFunctionUtils {
         ) : Access
     }
 
-    // ── Value → AccessPathBase ───────────────────────────────────────
-
-    /**
-     * Maps a Go IR value to a framework access path base.
-     * Requires the enclosing method for free variable mapping.
-     */
     fun accessPathBase(value: GoIRValue, method: GoIRFunction?): AccessPathBase? {
         return when (value) {
-            is GoIRParameterValue -> AccessPathBase.Argument(value.paramIndex)
+            is GoIRParameterValue -> {
+                if (method != null && method.isMethod && value.paramIndex == 0) {
+                    AccessPathBase.This
+                } else {
+                    val shift = if (method != null && method.isMethod) 1 else 0
+                    AccessPathBase.Argument(value.paramIndex - shift)
+                }
+            }
             is GoIRRegister -> AccessPathBase.LocalVar(value.index)
             is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
             is GoIRGlobalValue -> {
@@ -57,7 +93,7 @@ object GoFlowFunctionUtils {
             is GoIRBuiltinValue -> AccessPathBase.Constant("builtin", value.name)
             is GoIRFreeVarValue -> {
                 if (method == null) return null
-                val paramCount = method.params.size
+                val paramCount = nonReceiverParamCount(method)
                 AccessPathBase.Argument(paramCount + value.freeVarIndex)
             }
             else -> {
@@ -67,12 +103,14 @@ object GoFlowFunctionUtils {
         }
     }
 
-    // ── Expression → Access ──────────────────────────────────────────
-
     /**
-     * Maps a Go IR expression to an Access.
-     * Returns null for expressions that don't propagate taint (alloc, make, arithmetic).
+     * Number of *non-receiver* parameters of a Go function.
+     * For methods, the IR includes the receiver as `params[0]`, so we subtract 1.
+     * For non-method functions, every entry in `params` is an explicit arg.
      */
+    fun nonReceiverParamCount(method: GoIRFunction): Int =
+        if (method.isMethod) method.params.size - 1 else method.params.size
+
     fun exprToAccess(expr: GoIRExpr, method: GoIRFunction): Access? {
         return when (expr) {
             // Field access
@@ -252,43 +290,27 @@ object GoFlowFunctionUtils {
         }
     }
 
-    // ── Type checks ──────────────────────────────────────────────────
-
     fun isStringType(type: GoIRType): Boolean {
         return type is GoIRBasicType && type.kind == GoIRBasicTypeKind.STRING
     }
 
-    // ── Position resolution (for taint rules) ────────────────────────
-
-    fun resolvePosition(pos: PositionBase): AccessPathBase {
-        return when (pos) {
-            is PositionBase.Result -> AccessPathBase.Return
-            is PositionBase.Argument -> AccessPathBase.Argument(pos.idx ?: 0)
-            is PositionBase.This -> error("This position is not used in Go")
-            is PositionBase.ClassStatic -> AccessPathBase.ClassStatic
-            is PositionBase.AnyArgument -> AccessPathBase.Argument(0)
-        }
+    fun Position.resolvePosAccess(): PositionAccess = when (this) {
+        is Position.Simple -> resolvePosAccess()
+        is PositionWithAccess -> PositionAccess.Complex(base.resolvePosAccess(), access.resolvePosAccess())
     }
 
-    fun resolvePositionAccess(pos: PositionBase): PositionAccess =
-        PositionAccess.Simple(resolvePosition(pos))
-
-    fun resolvePositionAccess(pos: PositionBaseWithModifiers): PositionAccess {
-        val base = PositionAccess.Simple(resolvePosition(pos.base))
-        val accessors = when (pos) {
-            is PositionBaseWithModifiers.BaseOnly -> return base
-            is PositionBaseWithModifiers.WithModifiers -> pos.modifiers.map { mod ->
-                when (mod) {
-                    is PositionModifier.ArrayElement -> ElementAccessor
-                    is PositionModifier.AnyField -> AnyAccessor
-                    is PositionModifier.Field -> FieldAccessor(mod.className, mod.fieldName, mod.fieldType)
-                }
-            }
+    fun Position.Simple.resolvePosAccess(): PositionAccess.Simple {
+        val base = when (this) {
+            is Position.Argument -> AccessPathBase.Argument(index)
+            is Position.Result -> AccessPathBase.Return
+            is Position.This -> AccessPathBase.This
         }
+        return PositionAccess.Simple(base)
+    }
 
-        return accessors.fold(base as PositionAccess) { ac, accessor ->
-            PositionAccess.Complex(ac, accessor)
-        }
+    fun PositionAccessor.resolvePosAccess(): Accessor = when (this) {
+        is PositionAccessor.ElementAccessor -> ElementAccessor
+        is PositionAccessor.FieldAccessor -> FieldAccessor(className, fieldName, fieldType)
     }
 
     private val globalsNotSupportedReported = AtomicBoolean(false)
