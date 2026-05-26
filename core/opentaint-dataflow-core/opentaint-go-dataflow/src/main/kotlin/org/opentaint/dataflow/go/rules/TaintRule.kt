@@ -8,7 +8,7 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
-import org.opentaint.dataflow.configuration.jvm.serialized.ItemInfo
+import org.opentaint.dataflow.configuration.go.serialized.ItemInfo
 
 sealed interface TaintRule: CommonTaintConfigurationItem {
     val info: ItemInfo?
