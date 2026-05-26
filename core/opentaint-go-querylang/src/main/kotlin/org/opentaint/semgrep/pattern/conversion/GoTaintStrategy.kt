@@ -4,9 +4,13 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignActi
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.semgrep.pattern.Mark
+import org.opentaint.semgrep.pattern.TaintRuleMatchAnything
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy.SinkDiscardMode
 import org.opentaint.semgrep.pattern.conversion.go.emitGoTaintRules
+import org.opentaint.semgrep.pattern.conversion.go.matchAnything
 import org.opentaint.semgrep.pattern.conversion.go.mkGoAssignMark
 import org.opentaint.semgrep.pattern.conversion.go.mkGoCleanMark
 import org.opentaint.semgrep.pattern.conversion.go.mkGoContainsMark
@@ -23,7 +27,23 @@ data object GoTaintStrategy :
         ctx: TaintRuleGenerationCtx<GoSerializedItem, *, *, *>,
         ruleCtx: RuleConversionCtx,
         sinkDiscardMode: LanguageStrategy.SinkDiscardMode
-    ): List<GoSerializedItem> = ctx.goCtx().emitGoTaintRules(ruleCtx)
+    ): List<GoSerializedItem> {
+        val rules = ctx.goCtx().emitGoTaintRules(ruleCtx)
+        if (sinkDiscardMode == SinkDiscardMode.NONE) return rules
+
+        return rules.filter { r ->
+            if (r !is GoSerializedRule.Sink) return@filter true
+            val cond = r.condition
+            if (cond != null && cond !is GoSerializedCondition.True) return@filter true
+
+            if (sinkDiscardMode == SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION) {
+                if (!r.function.matchAnything()) return@filter true
+            }
+
+            ruleCtx.trace.error(TaintRuleMatchAnything())
+            false
+        }
+    }
 
     data object GoMarkConditionBuilder : MarkConditionBuilder<GoSerializedCondition> {
         override fun checkMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers) = mark.mkGoContainsMark(pos)

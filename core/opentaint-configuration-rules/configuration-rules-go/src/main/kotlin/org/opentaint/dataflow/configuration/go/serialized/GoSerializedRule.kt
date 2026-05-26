@@ -1,7 +1,5 @@
 package org.opentaint.dataflow.configuration.go.serialized
 
-import org.opentaint.dataflow.configuration.jvm.serialized.ItemInfo
-
 interface ItemInfo
 
 sealed interface GoSerializedItem {
