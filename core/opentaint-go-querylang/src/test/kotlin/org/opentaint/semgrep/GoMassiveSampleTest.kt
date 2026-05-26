@@ -10,6 +10,8 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
@@ -142,10 +144,22 @@ class GoMassiveSampleTest {
 
             val failures = mutableListOf<String>()
             for (entry in entries) {
-                val vulns = runAnalysis(program, config, entry)
+                val result = runAnalysis(program, config, entry)
                 val positive = entry.name.startsWith("Positive_")
-                if (positive && vulns.isEmpty()) failures += "Positive ${entry.fullName} reported NO vuln"
-                if (!positive && vulns.isNotEmpty()) failures += "Negative ${entry.fullName} reported ${vulns.size} vuln(s)"
+                if (positive) {
+                    when {
+                        result.rawVulns.isEmpty() ->
+                            failures += "Positive ${entry.fullName} reported NO vuln"
+                        result.tracedOk.isEmpty() ->
+                            failures += "Positive ${entry.fullName} reported ${result.rawVulns.size} vuln(s) but trace did not resolve"
+                        // else: tracedOk non-empty → PASS
+                    }
+                } else {
+                    if (result.tracedOk.isNotEmpty()) {
+                        failures += "Negative ${entry.fullName} reported ${result.tracedOk.size} traced vuln(s)"
+                    }
+                    // tracedOk empty (even with raw vulns) → PASS (trace filtered the FP)
+                }
             }
             if (failures.isNotEmpty()) {
                 perSampleNotes += "[$name] " + failures.joinToString("; ")
@@ -168,11 +182,17 @@ class GoMassiveSampleTest {
         return GoTaintRuleEmitter().emit(typed)
     }
 
+    private data class AnalysisResult(
+        val rawVulns: List<Any?>,
+        val tracedOk: List<VulnerabilityWithTrace>,
+        val tracedFail: List<VulnerabilityWithTrace>,
+    )
+
     private fun runAnalysis(
         program: GoIRProgram,
         config: GoTaintConfiguration,
         entryPoint: GoIRFunction,
-    ): List<*> {
+    ): AnalysisResult {
         val ifdsGraph = GoApplicationGraph(program, UtilUnitResolver)
 
         @Suppress("UNCHECKED_CAST")
@@ -188,7 +208,15 @@ class GoMassiveSampleTest {
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
         return engine.use { eng ->
             eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
-            eng.getVulnerabilities()
+            val rawVulns = eng.getVulnerabilities()
+            val traced = eng.resolveVulnerabilityTraces(
+                setOf(entryPoint), rawVulns,
+                resolverParams = TraceResolver.Params(),
+                timeout = 1.minutes, cancellationTimeout = 10.seconds,
+            )
+            val tracedOk = traced.filter { it.trace != null }
+            val tracedFail = traced.filter { it.trace == null }
+            AnalysisResult(rawVulns, tracedOk, tracedFail)
         }
     }
 

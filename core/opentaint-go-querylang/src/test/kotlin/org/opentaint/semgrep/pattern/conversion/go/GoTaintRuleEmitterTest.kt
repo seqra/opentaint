@@ -131,5 +131,5 @@ class GoTaintRuleEmitterTest {
     }
 
     fun String.signature(args: Int): GoFunctionSignature =
-        GoFunctionSignature(this, args, hasReceiver = false)
+        GoFunctionSignature(this, receiverType = null, paramTypes = List(args) { "any" }, resultType = "any")
 }
