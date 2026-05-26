@@ -1,3 +1,4 @@
+import OpentaintConfigDependency.opentaintGoConfig
 import OpentaintConfigDependency.opentaintJavaConfig
 import OpentaintIrDependency.opentaint_ir_api_go
 import OpentaintIrDependency.opentaint_ir_api_jvm
@@ -27,6 +28,7 @@ dependencies {
     implementation(opentaintUtilCli)
     implementation(opentaintProject)
     implementation(opentaintJavaConfig)
+    implementation(opentaintGoConfig)
 
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-python")
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
@@ -37,7 +39,7 @@ dependencies {
     implementation("org.opentaint.sast:project")
     implementation("org.opentaint.sast:dataflow")
     implementation(project(":opentaint-java-querylang"))
-    testImplementation(project(":opentaint-go-querylang"))
+    implementation(project(":opentaint-go-querylang"))
 
     implementation(opentaint_ir_api_jvm)
     implementation(opentaint_ir_core)
