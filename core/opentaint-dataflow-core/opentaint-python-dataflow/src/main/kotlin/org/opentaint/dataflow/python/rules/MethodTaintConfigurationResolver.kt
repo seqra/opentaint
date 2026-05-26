@@ -41,6 +41,7 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSo
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintCleanAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintPassAction
+import org.opentaint.dataflow.python.graph.PIRSimpleNameUnknownFunction
 import org.opentaint.ir.api.python.PIRClassType
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRParameter
@@ -216,6 +217,7 @@ internal object MethodTaintConfigurationResolver {
     }
 
     private fun matchesName(name: String, method: PIRFunction): Boolean = when {
+        method is PIRSimpleNameUnknownFunction -> name.substringAfterLast('.') == method.name
         hasRegexMetaChar(name) -> Regex(name).matches(method.qualifiedName)
         '.' in name -> method.qualifiedName == name
         else -> method.name == name

@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.python.analysis
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -12,7 +14,10 @@ import org.opentaint.dataflow.configuration.python.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.python.TaintSink
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
+import org.opentaint.dataflow.taint.FactReader
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.FinalFactReaderWithPrefix
+import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.dataflow.taint.TaintUtil
 import org.opentaint.ir.api.python.PIRInstruction
@@ -104,4 +109,19 @@ class PIRMethodCallTaintUtil(
             }
         }
     }
+
+    override fun patchSinkConditionFactReader(factReaders: List<FinalFactReader>): List<FactReader> {
+        val arrayElementFactReaders = factReaders.arrayElementConditionReaders()
+        return factReaders + arrayElementFactReaders
+    }
+
+    private fun List<FinalFactReader>.arrayElementConditionReaders(): List<FactReader> =
+        mapNotNull {
+            val base = it.factAp.base as? AccessPathBase.Argument ?: return@mapNotNull null
+
+            val arrayElementPosition = PositionAccess.Complex(PositionAccess.Simple(base), ElementAccessor)
+            if (!it.containsPosition(arrayElementPosition)) return@mapNotNull null
+
+            FinalFactReaderWithPrefix(it, ElementAccessor)
+        }
 }

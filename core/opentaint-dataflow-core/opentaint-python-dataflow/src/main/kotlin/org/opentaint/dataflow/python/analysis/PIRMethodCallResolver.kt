@@ -9,11 +9,12 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallResolutionResult
+import org.opentaint.dataflow.python.PIRCallResolver
+import org.opentaint.dataflow.python.graph.PIRUnknownFunction
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
-import org.opentaint.ir.impl.python.PIRUnknownFunction
 
 class PIRMethodCallResolver(
     private val callResolver: PIRCallResolver,
@@ -21,7 +22,7 @@ class PIRMethodCallResolver(
 ) : MethodCallResolver {
 
     /**
-     * Synthetic [PIRUnknownFunction]s are only used by the call flow
+     * Synthetic [org.opentaint.dataflow.python.graph.PIRUnknownFunction]s are only used by the call flow
      * function for rule lookup — they have no CFG to step into, so they
      * must not be surfaced as resolved interprocedural targets.
      */

@@ -1,6 +1,7 @@
 package org.opentaint.ir.impl.python
 
 import org.opentaint.ir.api.python.*
+import org.opentaint.ir.impl.python.PIRCFGImpl.Companion.EMPTY_CFG
 
 // ─── Entity Implementations ────────────────────────────────
 
@@ -164,13 +165,15 @@ class PIRCFGImpl(
     override fun block(inst: PIRInstruction): PIRBasicBlock {
         return block(instToBlock[inst.location.index])
     }
+
+    companion object {
+        val EMPTY_CFG = PIRCFGImpl(emptyList(), emptyList(), 0, emptySet(), emptyList())
+    }
 }
 
 // ─── Unknown Entity Implementations ────────────────────────
 // Returned when a module fails to build (e.g. mypy syntax error).
 // All collections are empty; lookups return further Unknown entities.
-
-private val EMPTY_CFG = PIRCFGImpl(emptyList(), emptyList(), 0, emptySet(), emptyList())
 
 class PIRUnknownModule(
     override val name: String,
@@ -182,9 +185,21 @@ class PIRUnknownModule(
     override val fields: List<PIRField> = emptyList()
     override val imports: List<String> = emptyList()
     override val isUnknown: Boolean = true
-    override val moduleInit: PIRFunction = PIRUnknownFunction(
-        "__module_init__", "$name.__module_init__", this
-    )
+    override val moduleInit: PIRFunction = PIRFunctionImpl(
+        name = "__module_init__",
+        qualifiedName = "$name.__module_init__",
+        parameters = emptyList(),
+        returnType = PIRAnyType,
+        cfg = EMPTY_CFG,
+        decorators = emptyList(),
+        isAsync = false,
+        isGenerator = false,
+        isStaticMethod = false,
+        isClassMethod = false,
+        isProperty = false,
+        closureVars = emptyList(),
+        enclosingClass = null,
+    ).also { it.module = this }
 }
 
 class PIRUnknownClass(
@@ -204,21 +219,3 @@ class PIRUnknownClass(
     override val isEnum: Boolean = false
 }
 
-class PIRUnknownFunction(
-    override val name: String,
-    override val qualifiedName: String,
-    override val module: PIRModule,
-) : PIRFunction {
-    override val parameters: List<PIRParameter> = emptyList()
-    override val returnType: PIRType = PIRAnyType
-    override val cfg: PIRCFG = EMPTY_CFG
-    override val instList: List<PIRInstruction> = emptyList()
-    override val decorators: List<PIRDecorator> = emptyList()
-    override val isAsync: Boolean = false
-    override val isGenerator: Boolean = false
-    override val isStaticMethod: Boolean = false
-    override val isClassMethod: Boolean = false
-    override val isProperty: Boolean = false
-    override val closureVars: List<String> = emptyList()
-    override val enclosingClass: PIRClass? = null
-}

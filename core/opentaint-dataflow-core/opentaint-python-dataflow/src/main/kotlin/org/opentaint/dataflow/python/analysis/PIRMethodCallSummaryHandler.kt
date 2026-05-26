@@ -3,6 +3,7 @@ package org.opentaint.dataflow.python.analysis
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
+import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.ir.api.python.PIRCall
 
 class PIRMethodCallSummaryHandler(

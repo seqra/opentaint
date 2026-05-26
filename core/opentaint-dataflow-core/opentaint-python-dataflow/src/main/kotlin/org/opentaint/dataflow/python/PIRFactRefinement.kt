@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.python.analysis
+package org.opentaint.dataflow.python
 
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet

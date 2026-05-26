@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.python.analysis
+package org.opentaint.dataflow.python
 
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.PIRAssign
@@ -15,48 +15,34 @@ import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRReadName
 import org.opentaint.ir.api.python.targets
 
-class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, applicationGraph: PIRApplicationGraph) {
+class PIRMethodQFNameReconstructor private constructor(
+    method: PIRFunction,
+    applicationGraph: PIRApplicationGraph,
+) : PIRMethodIntraproceduralWalker<PIRMethodQFNameReconstructor.LocalBinding>(method, applicationGraph) {
     private val cp = applicationGraph.cp
-    private val graph = applicationGraph.methodGraph(method)
-    private val queue = mutableListOf<Pair<PIRInstruction, NameBinding>>()
-    private val storage = MutableList(method.instList.size) { hashSetOf<NameBinding>() }
-
     private val result = mutableMapOf<PIRInstruction, MutableSet<String>>()
 
     private fun compute(): Map<PIRInstruction, Set<String>> {
-        graph.statements().forEach { addEntry(it, NameBinding.Empty) }
-        loop()
-
+        walk()
         return result
     }
 
-    private fun loop() {
-        while (queue.isNotEmpty()) {
-            val (inst, entry) = queue.removeLast()
-
-            when (entry) {
-                is NameBinding.Empty -> processEmpty(inst)?.let { propagateToSuccessors(inst, it) }
-                is NameBinding.LocalBinding -> processLocalBinding(inst, entry).forEach { propagateToSuccessors(inst, it) }
-            }
-        }
-    }
-
-    private fun processEmpty(inst: PIRInstruction): NameBinding? {
+    override fun initialBinding(inst: PIRInstruction): LocalBinding? {
         return when (inst) {
             is PIRReadName -> {
                 val name = when (val ref = inst.ref) {
                     is PIRGlobalNameRef -> NameEntry.GlobalRef(ref.qualifiedName)
                     is PIRModuleNameRef -> NameEntry.GlobalRef(ref.module)
                 }
-                NameBinding.LocalBinding(inst.target.index, name)
+                LocalBinding(inst.target.index, name)
             }
 
             is PIRAssign -> when (val rhv = inst.expr) {
                 is PIRParameterRef ->
-                    NameBinding.LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
+                    LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
 
                 is PIRBindFunctionExpr ->
-                    NameBinding.LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
+                    LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
 
                 else -> null
             }
@@ -69,7 +55,7 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 val resultQn = resultTypeQn(resolved)
 
                 if (targetIdx != null && resultQn != null) {
-                    NameBinding.LocalBinding(targetIdx, NameEntry.GlobalRef(resultQn))
+                    LocalBinding(targetIdx, NameEntry.GlobalRef(resultQn))
                 } else {
                     null
                 }
@@ -79,8 +65,8 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
         }
     }
 
-    private fun processLocalBinding(inst: PIRInstruction, entry: NameBinding.LocalBinding): List<NameBinding.LocalBinding> = buildList {
-        val idx = entry.idx
+    override fun transfer(inst: PIRInstruction, payload: LocalBinding): List<LocalBinding> = buildList {
+        val idx = payload.idx
 
         when (inst) {
             is PIRLoadAttr -> {
@@ -88,16 +74,16 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 val objIdx = (inst.obj as? PIRLocal)?.index
 
                 if (objIdx == idx) {
-                    val newName = entry.name.prependSegment(inst.attribute)
+                    val newName = payload.name.prependSegment(inst.attribute)
 
                     if (newName != null) {
-                        this += NameBinding.LocalBinding(targetIdx, newName)
+                        this += LocalBinding(targetIdx, newName)
                         saveResult(inst, newName)
                     }
                 }
 
                 if (targetIdx != idx) {
-                    this += entry
+                    this += payload
                 }
             }
 
@@ -106,11 +92,11 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 val targetIdx = inst.target.index
 
                 if (idx != targetIdx) {
-                    this += entry
+                    this += payload
                 }
 
                 if (sourceIdx == idx) {
-                    this += NameBinding.LocalBinding(targetIdx, entry.name)
+                    this += LocalBinding(targetIdx, payload.name)
                 }
             }
 
@@ -119,19 +105,19 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 val targetIdx = inst.target?.index
 
                 if (calleeIdx == idx) {
-                    saveResult(inst, entry.name)
+                    saveResult(inst, payload.name)
 
                     if (targetIdx != null) {
-                        val qn = entry.name.flattenOrNull()
+                        val qn = payload.name.flattenOrNull()
                         val resultTypeQn = qn?.let { resultTypeQn(it) }
                         if (resultTypeQn != null) {
-                            this += NameBinding.LocalBinding(targetIdx, NameEntry.GlobalRef(resultTypeQn))
+                            this += LocalBinding(targetIdx, NameEntry.GlobalRef(resultTypeQn))
                         }
                     }
                 }
 
                 if (targetIdx != idx) {
-                    this += entry
+                    this += payload
                 }
             }
 
@@ -139,7 +125,7 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
                 val idxReassignment = inst.targets.any { it.index == idx }
 
                 if (!idxReassignment) {
-                    this += entry
+                    this += payload
                 }
             }
         }
@@ -183,25 +169,9 @@ class PIRMethodQFNameReconstructor private constructor(val method: PIRFunction, 
         return NameEntry.NameSegment(segmentName, this)
     }
 
-    private fun propagateToSuccessors(inst: PIRInstruction, entry: NameBinding) {
-        graph.successors(inst).forEach { addEntry(it, entry) }
-    }
+    data class LocalBinding(val idx: Int, val name: NameEntry)
 
-    private fun addEntry(inst: PIRInstruction, entry: NameBinding) {
-        val instStorage = storage[inst.location.index]
-
-        if (instStorage.add(entry)) {
-            queue += inst to entry
-        }
-    }
-
-    private sealed interface NameBinding {
-        data object Empty : NameBinding
-
-        data class LocalBinding(val idx: Int, val name: NameEntry) : NameBinding
-    }
-
-    private sealed interface NameEntry {
+    sealed interface NameEntry {
         val size: UInt
 
         data class ParamRef(val idx: Int) : NameEntry {

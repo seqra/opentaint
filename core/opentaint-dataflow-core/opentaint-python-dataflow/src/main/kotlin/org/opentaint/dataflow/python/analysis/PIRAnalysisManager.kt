@@ -25,6 +25,7 @@ import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRLanguageManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext

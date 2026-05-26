@@ -47,7 +47,7 @@ class PIRLocalVar(
     override val type: PIRType,
     override val index: Int,
 ) : PIRLocal {
-    override fun toString(): String = name
+    override fun toString(): String = "%$index:$name"
     override fun <T> accept(visitor: PIRValueVisitor<T>): T = visitor.visitLocalVar(this)
 
     override fun equals(other: Any?): Boolean =
