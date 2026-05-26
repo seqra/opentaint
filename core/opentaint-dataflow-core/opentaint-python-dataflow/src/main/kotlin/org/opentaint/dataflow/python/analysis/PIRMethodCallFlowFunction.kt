@@ -3,12 +3,10 @@ package org.opentaint.dataflow.python.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
@@ -24,6 +22,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFailureFact
 import org.opentaint.dataflow.python.PIRConditionRewriter
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.taint.FinalFactReader
@@ -47,7 +46,7 @@ class PIRMethodCallFlowFunction(
 ) : MethodCallFlowFunction {
     private val callExpr = callInst.callExpr ?: error("Unexpected null call expr")
 
-    private val resolvedMethods by lazy { callResolver.resolve(callInst) } // TODO apply rules separately
+    private val resolvedMethods by lazy { callResolver.resolveCall(callInst) } // TODO apply rules separately
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> {
         val results = mutableSetOf<ZeroCallFact>()
@@ -233,7 +232,10 @@ class PIRMethodCallFlowFunction(
         }
 
         val reader = FinalFactReader(mappedFact, apManager)
-        val evaluator = TaintPassActionEvaluator(apManager, typeChecker, reader, DummyPositionTypeResolver)
+        val evaluator = TaintPassActionEvaluator(
+            apManager, typeChecker, reader,
+            PIRFlowFunctionUtils.DummyPositionTypeResolver
+        )
 
         passRules.forEach { rule ->
             rule.copy.forEach { action ->
@@ -251,9 +253,5 @@ class PIRMethodCallFlowFunction(
         }
 
         originalFactReader.updateRefinement(reader)
-    }
-
-    private object DummyPositionTypeResolver : PositionTypeResolver {
-        override fun resolve(position: PositionAccess): CommonType? = null
     }
 }

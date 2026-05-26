@@ -23,7 +23,7 @@ class PIRMethodCallSummaryHandler(
      * `self`/`cls` offset before delivering the caller-frame fact.
      */
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> {
-        val callee = callResolver.resolve(callInst).firstOrNull() ?: return emptyList()
+        val callee = callResolver.resolveCall(callInst).firstOrNull() ?: return emptyList()
         return factMapper
             .mapMethodExitToReturnFlowFact(callInst, fact, factTypeChecker)
             .mapNotNull { exitFact ->

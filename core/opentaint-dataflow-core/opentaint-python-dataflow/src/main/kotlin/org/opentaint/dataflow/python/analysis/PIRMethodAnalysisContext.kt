@@ -14,6 +14,6 @@ class PIRMethodAnalysisContext(
     val taintRules: PIRTaintConfiguration,
 ) : MethodAnalysisContext {
 
-    override val methodCallFactMapper: MethodCallFactMapper
+    override val methodCallFactMapper: PIRMethodCallFactMapper
         get() = PIRMethodCallFactMapper
 }

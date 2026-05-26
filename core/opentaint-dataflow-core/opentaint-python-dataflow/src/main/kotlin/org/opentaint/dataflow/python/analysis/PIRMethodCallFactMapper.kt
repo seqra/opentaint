@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
@@ -35,51 +36,16 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         factAp: FinalFactAp,
         checker: FactTypeChecker,
     ): List<FinalFactAp> {
-        val call = callStatement as PIRCall
-        return when (val base = factAp.base) {
-            is AccessPathBase.Argument -> {
-                val argValue = call.args.getOrNull(base.idx)?.value ?: return emptyList()
-                val callerBase = valueToBase(argValue) ?: return emptyList()
-                listOf(factAp.rebase(callerBase))
-            }
-            is AccessPathBase.Return -> {
-                val target = call.target ?: return emptyList()
-                val targetBase = valueToBase(target) ?: return emptyList()
-                listOf(factAp.rebase(targetBase))
-            }
-            is AccessPathBase.This -> {
-                val callee = call.callee
-                val calleeBase = valueToBase(callee) ?: return emptyList()
-                listOf(factAp.rebase(calleeBase))
-            }
-            is AccessPathBase.LocalVar -> emptyList()  // Cannot escape
-            is AccessPathBase.ClassStatic -> listOf(factAp)
-            is AccessPathBase.Constant -> listOf(factAp)
-            else -> emptyList()
-        }
+        pIRDowncast<PIRCall>(callStatement)
+        return listOfNotNull(mapMethodExitToReturnFlowFact(callStatement, factAp, FinalFactAp::rebase))
     }
 
     override fun mapMethodExitToReturnFlowFact(
         callStatement: CommonInst,
         factAp: InitialFactAp,
     ): List<InitialFactAp> {
-        val call = callStatement as PIRCall
-        return when (val base = factAp.base) {
-            is AccessPathBase.Argument -> {
-                val argValue = call.args.getOrNull(base.idx)?.value ?: return emptyList()
-                val callerBase = valueToBase(argValue) ?: return emptyList()
-                listOf(factAp.rebase(callerBase))
-            }
-            is AccessPathBase.Return -> {
-                val target = call.target ?: return emptyList()
-                val targetBase = valueToBase(target) ?: return emptyList()
-                listOf(factAp.rebase(targetBase))
-            }
-            is AccessPathBase.LocalVar -> emptyList()
-            is AccessPathBase.ClassStatic -> listOf(factAp)
-            is AccessPathBase.Constant -> listOf(factAp)
-            else -> emptyList()
-        }
+        pIRDowncast<PIRCall>(callStatement)
+        return listOfNotNull(mapMethodExitToReturnFlowFact(callStatement, factAp, InitialFactAp::rebase))
     }
 
     override fun mapMethodCallToStartFlowFact(
@@ -91,7 +57,74 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         checker: FactTypeChecker,
         onMappedFact: (FinalFactAp, AccessPathBase) -> Unit,
     ) {
-        val call = (callExpr as PIRCallExprAdapter).pirCall
+        pIRDowncast<PIRCall>(callStatement)
+        mapMethodCallToStartFlowFact(callStatement, factAp, onMappedFact)
+    }
+
+    override fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
+        callee: CommonMethod,
+        callExpr: CommonCallExpr,
+        returnValue: CommonValue?,
+        fact: InitialFactAp,
+        onMappedFact: (InitialFactAp, AccessPathBase) -> Unit,
+    ) {
+        pIRDowncast<PIRCall>(callStatement)
+        mapMethodCallToStartFlowFact(callStatement, fact, onMappedFact)
+    }
+
+    fun mapLoadAttributeFactToStart(
+        statement: PIRLoadAttr,
+        fact: FinalFactAp,
+        onMappedFact: (FinalFactAp, AccessPathBase) -> Unit,
+    ) {
+        val objBase = valueToBase(statement.obj) ?: return
+
+        if (objBase == fact.base) {
+            onMappedFact(fact, AccessPathBase.This)
+        }
+    }
+
+    fun mapLoadAttributeFactToReturn(statement: PIRLoadAttr, fact: FinalFactAp): FinalFactAp? =
+        when (fact.base) {
+            is AccessPathBase.Return -> valueToBase(statement.target)?.let { fact.rebase(it) }
+            is AccessPathBase.This -> valueToBase(statement.obj)?.let { fact.rebase(it) }
+            else -> null
+        }
+
+    private fun <F : FactAp> mapMethodExitToReturnFlowFact(
+        call: PIRCall,
+        factAp: F,
+        rebase: F.(AccessPathBase) -> F,
+    ): F? {
+        return when (val base = factAp.base) {
+            is AccessPathBase.Argument -> {
+                val argValue = call.args.getOrNull(base.idx)?.value ?: return null
+                val callerBase = valueToBase(argValue) ?: return null
+                factAp.rebase(callerBase)
+            }
+            is AccessPathBase.Return -> {
+                val target = call.target ?: return null
+                val targetBase = valueToBase(target) ?: return null
+                factAp.rebase(targetBase)
+            }
+            is AccessPathBase.This -> {
+                val callee = call.callee
+                val calleeBase = valueToBase(callee) ?: return null
+                factAp.rebase(calleeBase)
+            }
+            is AccessPathBase.LocalVar -> null // Cannot escape
+            is AccessPathBase.ClassStatic -> factAp
+            is AccessPathBase.Constant -> factAp
+            else -> null
+        }
+    }
+
+    private fun <F> mapMethodCallToStartFlowFact(
+        call: PIRCall,
+        factAp: F,
+        onMappedFact: (F, AccessPathBase) -> Unit,
+    ) where F : FactAp, F : ReadableAccessorList<F> {
         val base = factAp.base
 
         for ((i, arg) in call.args.withIndex()) {
@@ -109,30 +142,6 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
 
         if (base is AccessPathBase.ClassStatic) {
             onMappedFact(factAp, base)
-        }
-    }
-
-    override fun mapMethodCallToStartFlowFact(
-        callStatement: CommonInst,
-        callee: CommonMethod,
-        callExpr: CommonCallExpr,
-        returnValue: CommonValue?,
-        fact: InitialFactAp,
-        onMappedFact: (InitialFactAp, AccessPathBase) -> Unit,
-    ) {
-        val call = (callExpr as PIRCallExprAdapter).pirCall
-        val base = fact.base
-
-        for ((i, arg) in call.args.withIndex()) {
-            val argBase = valueToBase(arg.value) ?: continue
-            if (base == argBase) {
-                val startBase = AccessPathBase.Argument(i)
-                onMappedFact(fact.rebase(startBase), startBase)
-            }
-        }
-
-        if (base is AccessPathBase.ClassStatic) {
-            onMappedFact(fact, base)
         }
     }
 

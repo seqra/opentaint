@@ -57,6 +57,10 @@ abstract class AnalysisTest {
 
     @BeforeAll
     fun setup() {
+        cp = initCp()
+    }
+
+    open fun initCp(): PIRClasspath {
         val jarPath = System.getenv("TEST_SAMPLES_JAR")
             ?: error("TEST_SAMPLES_JAR environment variable not set. Run tests via Gradle.")
 
@@ -67,7 +71,7 @@ abstract class AnalysisTest {
             .filter { it.isRegularFile() && it.extension == "py" }
             .mapTo(mutableListOf()) { it.absolutePathString() }
 
-        cp = createClasspath(pyFiles)
+        return createClasspath(pyFiles)
     }
 
     @AfterAll
@@ -82,7 +86,11 @@ abstract class AnalysisTest {
         return PIRClasspathLoader(
             PIRSettings(
                 sources = pyFiles,
-                mypyFlags = listOf("--ignore-missing-imports"),
+                mypyFlags = listOf(
+                    "--ignore-missing-imports",
+                    "--namespace-packages",
+                    "--explicit-package-bases",
+                ),
                 rpcTimeout = java.time.Duration.ofSeconds(1200),
             )
         ).load()
@@ -103,11 +111,19 @@ abstract class AnalysisTest {
     }
 
     fun assertSinkReachable(
+        entryPointFunction: String
+    ) {
+        val vulnerabilities = runAnalysis(shippedRules(), entryPointFunction)
+        assertTrue(vulnerabilities.isNotEmpty(), "Sink was not reached")
+    }
+
+    fun assertSinkReachable(
         source: TaintRules.Source,
         sink: TaintRules.Sink,
         entryPointFunction: String
     ) {
-        val vulnerabilities = runAnalysis(source, sink, entryPointFunction)
+        val taintRules = buildPirTaintConfiguration(listOf(source), listOf(sink))
+        val vulnerabilities = runAnalysis(taintRules, entryPointFunction)
         assertTrue(vulnerabilities.isNotEmpty(), "Sink was not reached")
     }
 
@@ -116,25 +132,29 @@ abstract class AnalysisTest {
         sink: TaintRules.Sink,
         entryPointFunction: String
     ) {
-        val vulnerabilities = runAnalysis(source, sink, entryPointFunction)
+        val taintRules = buildPirTaintConfiguration(listOf(source), listOf(sink))
+        val vulnerabilities = runAnalysis(taintRules, entryPointFunction)
         assertTrue(vulnerabilities.isEmpty(), "Sink should not be reached")
     }
 
+    private fun shippedRules(): PIRTaintConfiguration {
+        val serializedConfig = PythonConfigLoader.getConfig()
+            ?: error("Couldn't resolve python config")
+        return PIRTaintConfiguration(serializedConfig)
+    }
+
     fun runAnalysis(
-        source: TaintRules.Source,
-        sink: TaintRules.Sink,
+        taintConfig: PIRTaintConfiguration,
         entryPointFunction: String,
     ): List<TaintSinkTracker.TaintVulnerability> {
         val entryPoint = cp.findFunctionOrNull(entryPointFunction)
             ?: error("Entry point not found")
 
-        val taintRules = buildPirTaintConfiguration(listOf(source), listOf(sink))
-
         val ifdsGraph = PIRApplicationGraph(cp)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
-            PIRAnalysisManager(cp, taintRules),
+            PIRAnalysisManager(cp, taintConfig),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),

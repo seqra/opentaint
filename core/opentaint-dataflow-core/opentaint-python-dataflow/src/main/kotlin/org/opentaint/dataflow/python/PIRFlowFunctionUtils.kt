@@ -15,6 +15,8 @@ import org.opentaint.dataflow.configuration.python.PositionWithAccess
 import org.opentaint.dataflow.configuration.python.Result
 import org.opentaint.dataflow.configuration.python.This
 import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.PositionTypeResolver
+import org.opentaint.ir.api.common.CommonType
 
 object PIRFlowFunctionUtils {
     fun Position.resolveAp() = resolveBaseAp()?.let { resolveAp(it) }
@@ -53,6 +55,10 @@ object PIRFlowFunctionUtils {
     private fun PositionAccessor.resolve(): Accessor = when (this) {
         PositionAccessor.ElementAccessor -> ElementAccessor
         is PositionAccessor.FieldAccessor -> FieldAccessor("", name, "")
+    }
+
+    object DummyPositionTypeResolver : PositionTypeResolver {
+        override fun resolve(position: PositionAccess): CommonType? = null
     }
 
     val SELF_ACCESSOR = FieldAccessor("", "\$PIR_SELF", "")

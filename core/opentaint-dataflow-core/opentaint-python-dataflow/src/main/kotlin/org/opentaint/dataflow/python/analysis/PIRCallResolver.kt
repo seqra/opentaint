@@ -32,11 +32,13 @@ class PIRCallResolver(
             PIRMethodQFNameReconstructor.compute(method, applicationGraph)
         }
 
-    private fun namesFor(method: PIRFunction, call: PIRCall) =
+    private fun namesFor(method: PIRFunction, call: PIRInstruction) =
         namesFor(method).getOrDefault(call, emptySet())
 
-    fun resolve(call: PIRCall): Set<PIRFunction> =
-        namesFor(call.location.method, call).mapTo(hashSetOf()) {
+    fun resolveNames(loadAttr: PIRInstruction) = namesFor(loadAttr.location.method, loadAttr)
+
+    fun resolveCall(call: PIRCall): Set<PIRFunction> =
+        resolveNames(call).mapTo(hashSetOf()) {
             cp.findFunctionOrNull(it)
                 ?: syntheticFor(it)
         }

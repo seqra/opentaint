@@ -1,22 +1,56 @@
 package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
+import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.TaintPassActionEvaluator
+import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.api.python.*
+import org.opentaint.util.onSome
+import kotlin.collections.plusAssign
 
 class PIRMethodSequentFlowFunction(
     private val instruction: PIRInstruction,
     private val ctx: PIRMethodAnalysisContext,
     private val apManager: ApManager,
+    private val callResolver: PIRCallResolver,
 ) : MethodSequentFlowFunction {
 
-    override fun propagateZeroToZero(): Set<Sequent> = setOf(Sequent.ZeroToZero)
+    private val resolvedNames by lazy { callResolver.resolveNames(instruction) }
+
+    override fun propagateZeroToZero(): Set<Sequent> = buildSet {
+        this += Sequent.ZeroToZero
+
+        if (instruction !is PIRLoadAttr) return@buildSet
+
+        val sourceRules = resolvedNames.flatMap { ctx.taintRules.sourcesForAttribute(it) }
+        val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
+
+        sourceRules.forEach { rule ->
+            rule.taint.forEach { action ->
+                val pos = action.pos.resolveAp() ?: return@forEach
+                val mark = TaintMarkAccessor(action.mark.name)
+
+                evaluator.evaluate(rule, action, pos, mark).onSome { facts ->
+                    facts.forEach { fact ->
+                        ctx.methodCallFactMapper.mapLoadAttributeFactToReturn(instruction, fact)?.let {
+                            this += Sequent.ZeroToFact(it, traceInfo = null)
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> {
         return when (instruction) {
@@ -151,7 +185,15 @@ class PIRMethodSequentFlowFunction(
     ): Set<Sequent> {
         val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target)
             ?: return setOf(Sequent.Unchanged)
-        return handleAttrRead(inst, assignTo, currentFactAp) { Sequent.ZeroToFact(it, null) }
+        return handleAttrRead(
+            inst,
+            assignTo,
+            currentFactAp,
+            mkCopy = { Sequent.ZeroToFact(it, null) },
+            addSideEffectRequirement = { factReader ->
+                error { "Can't refine Zero fact" }
+            }
+        )
     }
 
     private fun handleLoadAttrFact(
@@ -161,9 +203,15 @@ class PIRMethodSequentFlowFunction(
     ): Set<Sequent> {
         val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target)
             ?: return setOf(Sequent.Unchanged)
-        return handleAttrRead(inst, assignTo, currentFactAp) {
-            Sequent.FactToFact(initialFactAp, it, null)
-        }
+        return handleAttrRead(
+            inst,
+            assignTo,
+            currentFactAp,
+            mkCopy = { Sequent.FactToFact(initialFactAp, it, null) },
+            addSideEffectRequirement = { factReader ->
+                Sequent.SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
+            }
+        )
     }
 
     /**
@@ -179,8 +227,23 @@ class PIRMethodSequentFlowFunction(
         inst: PIRLoadAttr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
+        crossinline mkCopy: (FinalFactAp) -> Sequent,
+        addSideEffectRequirement: (FinalFactReader) -> Sequent,
     ): Set<Sequent> {
+        val results = mutableSetOf<Sequent>()
+
+        val passRulesReader = FinalFactReader(currentFactAp, apManager)
+        ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, currentFactAp) { fact, newBase ->
+            val mappedFact = fact.rebase(newBase)
+            applyLoadAttrPassRules(inst, passRulesReader, mappedFact) {
+                results += mkCopy(it)
+            }
+        }
+
+        if (passRulesReader.hasRefinement) {
+            results += addSideEffectRequirement(passRulesReader)
+        }
+
         val objBase = PIRFlowFunctionUtils.accessPathBase(inst.obj)
             ?: return if (currentFactAp.base == assignTo) emptySet() else setOf(Sequent.Unchanged)
         val accessor = org.opentaint.dataflow.ap.ifds.FieldAccessor(
@@ -189,7 +252,6 @@ class PIRMethodSequentFlowFunction(
             inst.resultType.typeName,
         )
 
-        val results = mutableSetOf<Sequent>()
 
         if (currentFactAp.base == objBase) {
             if (currentFactAp.startsWithAccessor(accessor)) {
@@ -231,6 +293,41 @@ class PIRMethodSequentFlowFunction(
         }
 
         return if (results.isEmpty()) emptySet() else results
+    }
+
+    private fun applyLoadAttrPassRules(
+        inst: PIRLoadAttr,
+        originalFactReader: FinalFactReader,
+        mappedFact: FinalFactAp,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
+        val reader = FinalFactReader(mappedFact, apManager)
+
+        val rules = resolvedNames.flatMap { ctx.taintRules.passThroughForAttribute(it) }
+        val typeChecker = FactTypeChecker.Dummy
+        val evaluator = TaintPassActionEvaluator(
+            apManager, typeChecker, reader,
+            org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
+        )
+
+        rules.forEach { rule ->
+            rule.copy.forEach { action ->
+                val from = action.from.resolveAp() ?: return@forEach
+                val to = action.to.resolveAp() ?: return@forEach
+
+                evaluator.propagateData(rule, action, from, to).onSome { facts ->
+                    facts.forEach { fact ->
+                        ctx.methodCallFactMapper.mapLoadAttributeFactToReturn(inst, fact.fact)?.let { mappedFact ->
+                            propagateFact(mappedFact)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (reader.hasRefinement) {
+            originalFactReader.updateRefinement(reader)
+        }
     }
 
     /**

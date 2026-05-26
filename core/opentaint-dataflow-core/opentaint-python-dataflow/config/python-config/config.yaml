@@ -4440,6 +4440,10 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: flask.request.cookies.get
+  copy:
+    - from: this
+      to: result
 - attribute: flask.request.mimetype_params
   copy:
   - from: this

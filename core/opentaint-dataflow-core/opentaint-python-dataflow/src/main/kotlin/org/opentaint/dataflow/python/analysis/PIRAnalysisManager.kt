@@ -105,7 +105,7 @@ class PIRAnalysisManager(
     ): MethodSequentFlowFunction {
         val ctx = analysisContext as PIRMethodAnalysisContext
         return PIRMethodSequentFlowFunction(
-            currentInst as PIRInstruction, ctx, apManager
+            currentInst as PIRInstruction, ctx, apManager, pirCallResolver
         )
     }
 
@@ -156,7 +156,7 @@ class PIRAnalysisManager(
         analysisContext: MethodAnalysisContext,
         base: AccessPathBase,
         statement: CommonInst,
-    ): Boolean = true
+    ): Boolean = true // TODO
 
     override fun isValidMethodExitFact(
         apManager: ApManager,
