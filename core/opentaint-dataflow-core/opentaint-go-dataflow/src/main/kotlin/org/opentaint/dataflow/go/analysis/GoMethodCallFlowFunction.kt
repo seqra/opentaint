@@ -18,7 +18,7 @@ import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
-import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowFact
+import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.accept
@@ -28,7 +28,6 @@ import org.opentaint.dataflow.taint.PositionTypeResolver
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
 import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.common.cfg.CommonValue
-import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.value.GoIRValue
 import org.opentaint.util.maybeFlatMap
@@ -41,7 +40,6 @@ class GoMethodCallFlowFunction(
     private val statement: GoIRInst,
     private val generateTrace: Boolean,
 ) : MethodCallFlowFunction.Default {
-    private val method: GoIRFunction get() = context.method
     private val rulesProvider get() = context.taint.taintConfig
     private val calleeName: String? get() = callExpr.calleeName
 
@@ -221,13 +219,10 @@ class GoMethodCallFlowFunction(
         mapMethodExitToReturnFlowFact(statement, this, FactTypeChecker.Dummy).singleOrNull()
 
     private fun FinalFactAp.mapCall2Start(body: (FinalFactAp, AccessPathBase) -> Unit) {
-        mapMethodCallToStartFlowFact(
+        mapMethodCallToStartFlowAnyFact(
             statement,
-            callee = method, // todo: remove hack
             callExpr,
-            returnValue,
             this,
-            FactTypeChecker.Dummy
         ) { fact, startBase ->
             body(fact, startBase)
         }

@@ -13,7 +13,7 @@ import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
-import org.opentaint.dataflow.go.GoMethodCallFactMapper
+import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
 import org.opentaint.dataflow.go.rules.GoAssignMark
 import org.opentaint.dataflow.go.rules.GoRuleCondition
@@ -73,13 +73,10 @@ class GoMethodCallTaintUtil(
 
     override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> {
         val readers = mutableListOf<FinalFactReader>()
-        GoMethodCallFactMapper.mapMethodCallToStartFlowFact(
+        mapMethodCallToStartFlowAnyFact(
             statement,
-            callee = callExpr.enclosingMethod, // todo: remove hack
             callExpr,
-            returnValue,
             factReader.factAp,
-            FactTypeChecker.Dummy
         ) { fact, startBase ->
             readers += FinalFactReader(fact.rebase(startBase), apManager)
         }
