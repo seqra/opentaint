@@ -96,7 +96,7 @@ class GoSampleBasedTest {
 
     @Test fun multipleSourcesOneSink() = runSample("MultipleSourcesOneSink")
 
-//    @Disabled("metavariable-type filter on Go sinks is not yet supported by the rule loader: 'No rules loaded'")
+    @Disabled // todo: Fix IsType matching
     @Test fun typeBasedSink() = runSample("TypeBasedSink")
 
     // ─── Ports of example.* Java sample tests ───────────────────────────────
