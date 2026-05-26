@@ -15,7 +15,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModif
 import org.opentaint.dataflow.go.GoFunctionSignature
 import java.util.concurrent.atomic.AtomicInteger
 
-class GoTaintConfiguration {
+class GoTaintConfiguration : GoTaintRulesProvider {
     private val globalSourceSimple = hashMapOf<String, MutableList<GoSerializedGlobalSource>>()
     private val globalSourcePatterns = mutableListOf<GoSerializedGlobalSource>()
     private val globalSourceMemo = hashMapOf<String, List<TaintRule.GlobalReadSource>>()
@@ -53,6 +53,23 @@ class GoTaintConfiguration {
         passMemo.clear()
         cleanerMemo.clear()
     }
+
+    override fun sourceRulesForGlobal(globalName: String): List<TaintRule.GlobalReadSource> =
+        sourceForGlobal(globalName)
+
+    override fun sourceRulesForCall(
+        signature: GoFunctionSignature, allRelevant: Boolean,
+    ): List<TaintRule.Source> = sourceForFunction(signature, allRelevant)
+
+    override fun sinkRulesForCall(signature: GoFunctionSignature): List<TaintRule.Sink> =
+        sinkForFunction(signature)
+
+    override fun passThroughRulesForCall(signature: GoFunctionSignature): List<TaintRule.PassThrough> =
+        passThroughForFunction(signature)
+
+    override fun cleanerRulesForCall(
+        signature: GoFunctionSignature, allRelevant: Boolean,
+    ): List<TaintRule.Cleaner> = cleanerForFunction(signature, allRelevant)
 
     private fun addRule(rule: GoSerializedGlobalSource) {
         when (val gv = rule.global) {

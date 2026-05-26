@@ -21,33 +21,67 @@ Wire the Go SAST pipeline end-to-end behind the same CLI surface (`ProjectAnalyz
 
 ## Architecture
 
-### Shared options
+### Shared options (composition)
 
 Today `ProjectAnalysisOptions` mixes language-neutral knobs (semgrep rules,
 ifds timeout, sarif options, debug, external-method tracking, approximation
 YAMLs) with JVM-specific ones (SE, JIR approximation classpath, project kind).
 
-We extract the neutral subset into a new interface `CommonAnalysisOptions`:
+We extract the neutral subset into a new **data class** and reference it from
+both option types — interfaces would force us to re-declare every field on every
+implementation, which defeats the goal.
 
 ```kotlin
-interface CommonAnalysisOptions {
-    val customApproximationConfig: List<Path>
-    val semgrepRuleSet: List<Path>
-    val semgrepRuleLoadTrace: Path?
-    val semgrepSeverity: List<Severity>
-    val semgrepRuleId: List<String>
-    val trackExternalMethods: Boolean
-    val ifdsAnalysisTimeout: Duration
-    val ifdsApMode: ApMode
-    val debugOptions: DebugOptions?
-    val sarifGenerationOptions: SarifGenerationOptions
+data class CommonAnalysisOptions(
+    val customApproximationConfig: List<Path> = emptyList(),
+    val semgrepRuleSet: List<Path> = emptyList(),
+    val semgrepRuleLoadTrace: Path? = null,
+    val semgrepSeverity: List<Severity> = emptyList(),
+    val semgrepRuleId: List<String> = emptyList(),
+    val trackExternalMethods: Boolean = false,
+    val ifdsAnalysisTimeout: Duration = Duration.ZERO,
+    val ifdsApMode: ApMode = ApMode.Tree,
+    val debugOptions: DebugOptions? = null,
+    val sarifGenerationOptions: SarifGenerationOptions = SarifGenerationOptions(),
+)
+```
+
+- `ProjectAnalysisOptions` (JVM) holds `val common: CommonAnalysisOptions` plus
+  the JVM-only knobs (`cwe`, SE, `experimentalAAInterProcCallDepth`,
+  `projectKind`, `storeSummaries`, `approximationOptions`). All existing call
+  sites that read shared fields are rewritten to go through `.common`.
+- New `GoProjectAnalysisOptions` (Go) holds `val common: CommonAnalysisOptions`
+  and nothing else for v1.
+- Shared loaders such as `loadSemgrepRules()` become extensions on
+  `CommonAnalysisOptions`, parameterised by the language strategy.
+
+### `GoTaintRulesProvider` becomes an interface
+
+To support rule combination on Go (analogous to Java's `JIRCombinedTaintRulesProvider`),
+we promote the current concrete `GoTaintRulesProvider` class to an interface.
+
+```kotlin
+interface GoTaintRulesProvider {
+    fun sourceRulesForGlobal(globalName: String): List<TaintRule.GlobalReadSource>
+    fun sourceRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean = false): List<TaintRule.Source>
+    fun sinkRulesForCall(signature: GoFunctionSignature): List<TaintRule.Sink>
+    fun passThroughRulesForCall(signature: GoFunctionSignature): List<TaintRule.PassThrough>
+    fun cleanerRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean = false): List<TaintRule.Cleaner>
 }
 ```
 
-- `ProjectAnalysisOptions` (existing, JVM) implements it without losing any field.
-- New `GoProjectAnalysisOptions` (Go) implements it; no extra fields for v1.
-- `loadSemgrepRules()` becomes an extension on `CommonAnalysisOptions` parameterised
-  by the language strategy, removing the only duplicated bit of Java-only logic.
+`GoTaintConfiguration` (the rule store) implements `GoTaintRulesProvider` directly
+by delegating to its existing `*Function`/`*Global` lookups (rename of internal
+methods if needed, no behaviour change).
+
+New `GoCombinedTaintRulesProvider(base, combined, options)` mirrors the JVM
+`JIRCombinedTaintRulesProvider`:
+
+- Default modes: `passThrough = EXTEND`, `source/sink/cleaner = OVERRIDE`,
+  matching the JVM defaults.
+- Used by `GoProjectAnalyzer` only when the user supplied custom
+  approximation YAMLs; otherwise the provider returned is the plain
+  `GoTaintConfiguration`.
 
 ### Rule loading on Go
 
@@ -57,17 +91,22 @@ Mirrors the JVM `preloadRules` → `loadTaintConfig` chain:
    producing `TaintRuleFromSemgrep<GoSerializedItem>` entries.
 2. Each rule is converted into `GoSerializedTaintConfig` via a new top-level
    extension `TaintRuleFromSemgrep<GoSerializedItem>.toGoSerializedTaintConfig()`
+   in `opentaint-go-querylang/src/main/.../conversion/GoTaintRuleEmit.kt`
    (replaces the test-only `GoTaintRuleEmitter` class).
-3. All converted configs are loaded into a single `GoTaintConfiguration`.
-4. The bundled `GoConfigLoader.getConfig()` passThrough rules are loaded on top.
+3. All converted configs are loaded into a single `GoTaintConfiguration` (call
+   it `userConfig`).
+4. The bundled `GoConfigLoader.getConfig()` passThrough rules are loaded into
+   `userConfig` first so user rules can extend them.
 5. User-supplied `customApproximationConfig` YAMLs are parsed via a new public
    `loadGoSerializedTaintConfig(InputStream): GoSerializedTaintConfig` helper
-   (extracted from the private parser inside `GoConfigLoader`) and loaded last.
-   `GoTaintConfiguration.loadConfig` is additive — for v1, custom passThrough
-   rules stack on top of the bundled ones rather than overriding them. JVM-style
-   `CombinationMode.OVERRIDE` parity is out of scope; a follow-up can add it
-   once a concrete override case appears.
-6. The resulting `GoTaintRulesProvider` is handed to `GoTaintAnalyzer`.
+   (extracted from the private parser inside `GoConfigLoader`). Approximation
+   YAMLs only carry `passThrough` entries by definition (see
+   `create-yaml-config` skill); no other rule kinds need to deserialize, so the
+   `GoSerializedTaintConfig.@Serializable` gap is irrelevant here.
+6. If approximation YAMLs are present, they are loaded into a separate
+   `GoTaintConfiguration` (call it `approxConfig`) and exposed through
+   `GoCombinedTaintRulesProvider(userConfig, approxConfig, defaultOptions)`.
+   Otherwise the analyzer receives `userConfig` directly.
 
 ### Analyzer wiring
 
@@ -77,13 +116,13 @@ Mirrors the JVM `preloadRules` → `loadTaintConfig` chain:
 GoIRClient().use { client ->
     val cp = client.buildFromDir(project.projectDir, "./...")
     val provider = loadRules(...)
-    val tracker = if (options.trackExternalMethods) ExternalMethodTracker() else null
+    val tracker = if (options.common.trackExternalMethods) ExternalMethodTracker() else null
     val analyzer = GoTaintAnalyzer(
         cp = cp,
         taintConfig = provider,
         unitResolver = GoUnitResolver(cp.packages.keys.toSet()),
-        externalMethodTracker = tracker,                    // new param, threaded into GoAnalysisManager
-        analysisTimeout = options.ifdsAnalysisTimeout,
+        externalMethodTracker = tracker,
+        analysisTimeout = options.common.ifdsAnalysisTimeout,
     )
     val traces = analyzer.analyzeWithIfds(entryPoints)
     writeSarif(traces)
@@ -107,9 +146,10 @@ GoIRClient().use { client ->
 
 `ProjectAnalyzerRunner.analyzeGoProject`:
 
-- Builds a `GoProjectAnalysisOptions` from the same CLI flags as the JVM run
-  (approximations, semgrep ruleset/severity/id/trace, track-external, IFDS timeout/AP mode,
-  debug, SARIF options). JVM-only flags (`cwe`, `useSymbolicExecution`, `dataflowApproximations`,
+- Builds a `GoProjectAnalysisOptions` whose `common` field comes from the same
+  CLI flags as the JVM run (approximations, semgrep ruleset/severity/id/trace,
+  track-external, IFDS timeout/AP mode, debug, SARIF options). JVM-only flags
+  (`cwe`, `useSymbolicExecution`, `dataflowApproximations`,
   `experimentalAAInterProcCallDepth`, `projectKind`) are ignored.
 
 ### Autobuilder Go support
@@ -152,37 +192,93 @@ No other modules need new dependencies: the new emitter file lives in
 `opentaint-go-querylang/src/main/`, which already depends on
 configuration-rules-go and opentaint-go-dataflow.
 
-## Rule iteration plan (benchmarks)
+## Wiring the modified jars into `opentaint`
+
+`opentaint compile` and `opentaint scan` download pinned production jars by
+default. To exercise our refactor end-to-end on the benchmarks, both commands
+must be pointed at the locally built jars via the experimental dev overrides:
+
+```bash
+./gradlew :core:projectAnalyzerJar :core:opentaint-jvm-autobuilder:autobuilderJar
+ANALYZER_JAR=$(pwd)/core/build/libs/opentaint-project-analyzer-all.jar
+AUTOBUILDER_JAR=$(pwd)/core/opentaint-jvm-autobuilder/build/libs/opentaint-jvm-autobuilder-all.jar
+
+opentaint --experimental compile <bench> \
+  --analyzer-jar "$ANALYZER_JAR" \
+  --autobuilder-jar "$AUTOBUILDER_JAR" \
+  -o .opentaint/project
+
+opentaint --experimental scan --project-model .opentaint/project \
+  --analyzer-jar "$ANALYZER_JAR" \
+  --autobuilder-jar "$AUTOBUILDER_JAR" \
+  -o .opentaint/results/report.sarif \
+  --ruleset builtin --ruleset .opentaint/rules \
+  --track-external-methods
+```
+
+Until both jars are explicitly forwarded, `opentaint` falls back to the bundled
+artifacts and our Go pipeline is invisible.
+
+## Benchmark verification phase
 
 For each of `go-owasp-converted-mutated` and `go-sec-code-mutated`:
 
 1. Clone fresh into `/drive-testcomp/opentaint-go-rules/benchmarks/<name>`.
-2. `opentaint compile` → `.opentaint/project` for the benchmark.
-3. Initial scan with built-in rules only → baseline SARIF + external-methods YAMLs.
-4. Compare baseline SARIF to `truth.sarif` (pass=FP, fail=TP) via a small script
-   that reports per-rule and per-CWE TP/FP counts.
-5. Iterate, in the order recommended by the `analyze-findings` skill:
-   - Author new rules under `.opentaint/rules/go/...` following the
-     `samples-go-massive/<class>` patterns (one source, one sink, optional cleaner).
-   - Add passThrough YAMLs for generic propagators in
-     `external-methods-without-rules.yaml` (collections, builders, fmt helpers).
-   - Re-scan; loop until TP fraction >70%.
-6. Commit each rule/approximation batch separately to preserve attribution.
+2. `opentaint --experimental compile … --analyzer-jar … --autobuilder-jar …`
+   → `.opentaint/project` for the benchmark.
+3. Initial scan with built-in rules only (locally built jars) → baseline SARIF
+   + external-methods YAMLs.
+4. Compare baseline SARIF to `truth.sarif` (in benchmark root; `kind=pass`
+   means FP, `kind=fail` means TP). A small script reports per-rule and per-CWE
+   TP/FP counts.
+
+This first phase only validates that the end-to-end Go pipeline is wired
+correctly — we expect ~0 findings because **no Go rules ship in the
+production rule set today**. Rule authoring is the next phase.
+
+## Second brainstorming round before rule development
+
+Once the analyzer runs cleanly on both benchmarks and produces SARIF (even an
+empty one), the remaining work — designing Go-side detection rules and
+approximations — is creative enough to merit its own brainstorming pass before
+implementation. We **must** invoke the `superpowers:brainstorming` skill again
+at that boundary to:
+
+- Inventory the benchmark vulnerability classes (CWEs, languages used to
+  exploit them, what idioms appear repeatedly).
+- Decide the rule taxonomy (one rule per CWE? per source/sink pair? library
+  split?) and the directory layout under `.opentaint/rules/go/`.
+- Pick the order in which classes are tackled and define exit criteria per
+  class beyond the global >70% TP target.
+
+Do not skip this round even if the production code is fully wired — the rule
+language is sufficiently expressive that ad-hoc authoring drifts without a
+deliberate taxonomy.
+
+## Iteration plan (rule development phase, post-second-brainstorm)
+
+Following the `analyze-findings` skill, in priority order:
+
+1. Author new rules under `.opentaint/rules/go/...` following the
+   `samples-go-massive/<class>` patterns (one source, one sink, optional cleaner).
+2. Add passThrough YAMLs for generic propagators in
+   `external-methods-without-rules.yaml` (collections, builders, fmt helpers).
+3. Re-scan; loop until TP fraction >70%.
+4. Commit each rule/approximation batch separately to preserve attribution.
 
 ## Testing strategy
 
-- Reuse `GoMassiveSampleTest` to ensure the refactored emitter still passes.
-- Add a tiny unit test for `findGoProjects` covering: single root, nested modules,
-  hidden dirs, mixed Java+Go.
-- E2E: run the analyzer on one of `samples-go-massive/*` as a smoke test before
-  attacking the real benchmarks.
+- `GoMassiveSampleTest` currently has 27 failing tests on `main`; this refactor
+  is not expected to change that count. We only need to ensure no *new*
+  regressions in that suite after the rule-store refactor (provider interface
+  + emitter relocation).
+- Add a tiny unit test for `findGoProjects` covering: single root, nested
+  modules, hidden dirs, mixed Java+Go.
+- E2E: run the analyzer on one of `samples-go-massive/*` as a smoke test
+  before attacking the real benchmarks.
 
 ## Risks / open questions
 
-- **Custom approximation YAML format**: `GoSerializedTaintConfig` is not
-  `@Serializable`. The new helper will parse only the `passThrough` section
-  (matching today's `GoConfigLoader` behaviour); source/sink/cleaner custom
-  YAMLs are out of scope until the serialized types become `@Serializable`.
 - **External method tracking parity**: `GoAnalysisManager` already accepts an
   `ExternalMethodTracker`, but no production code threads one in. Surface-area
   change: one optional constructor parameter on `GoTaintAnalyzer`.
@@ -201,6 +297,9 @@ Touch only the following files.
 - update: `core/opentaint-go-querylang/src/test/kotlin/org/opentaint/semgrep/pattern/{GoRuleEmitTest,conversion/go/GoTaintRuleEmitterTest}.kt`
 - update: `core/src/test/kotlin/org/opentaint/go/sast/dataflow/GoSemgrepReachabilityTest.kt`
 - update: `core/opentaint-config/go-config/.../GoConfigLoader.kt` (expose `loadGoSerializedTaintConfig`)
+- new: `core/opentaint-dataflow-core/opentaint-go-dataflow/.../GoCombinedTaintRulesProvider.kt`
+- update: `core/opentaint-dataflow-core/opentaint-go-dataflow/.../GoTaintRulesProvider.kt` (class → interface)
+- update: `core/opentaint-dataflow-core/opentaint-go-dataflow/.../GoTaintConfiguration.kt` (implements provider)
 - new: `core/src/main/kotlin/org/opentaint/jvm/sast/project/CommonAnalysisOptions.kt`
 - new: `core/src/main/kotlin/org/opentaint/go/sast/project/GoProjectAnalysisOptions.kt`
 - update: `core/src/main/kotlin/org/opentaint/jvm/sast/project/ProjectAnalysisOptions.kt`

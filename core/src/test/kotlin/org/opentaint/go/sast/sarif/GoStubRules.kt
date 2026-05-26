@@ -49,6 +49,6 @@ object GoStubRules {
 
         val config = GoTaintConfiguration()
         config.loadConfig(serializedConfig)
-        return GoTaintRulesProvider(config)
+        return config
     }
 }

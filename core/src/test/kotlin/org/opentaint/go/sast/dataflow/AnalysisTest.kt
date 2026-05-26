@@ -25,7 +25,6 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModif
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
-import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
@@ -179,7 +178,7 @@ abstract class AnalysisTest {
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
-            GoAnalysisManager(cp, GoTaintRulesProvider(loadedConfig)),
+            GoAnalysisManager(cp, loadedConfig),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = TestUnitResolver as UnitResolver<CommonMethod>,
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
