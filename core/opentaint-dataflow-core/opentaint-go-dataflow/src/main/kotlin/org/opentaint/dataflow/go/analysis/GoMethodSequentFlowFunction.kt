@@ -2,15 +2,24 @@ package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
+import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
+import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
+import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRIndexAddrExpr
+import org.opentaint.ir.go.expr.GoIRIndexExpr
+import org.opentaint.ir.go.expr.GoIRUnOpExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRMapUpdate
@@ -19,11 +28,12 @@ import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.type.GoIRBinaryOp
+import org.opentaint.ir.go.type.GoIRUnaryOp
+import org.opentaint.ir.go.value.GoIRGlobalValue
+import org.opentaint.ir.go.value.GoIRRegister
+import org.opentaint.ir.go.value.GoIRValue
+import org.opentaint.util.onSome
 
-/**
- * Handles intraprocedural taint propagation: assignments, stores, returns, phi nodes, map updates.
- * This is the most complex flow function.
- */
 class GoMethodSequentFlowFunction(
     private val apManager: ApManager,
     private val context: GoMethodAnalysisContext,
@@ -34,7 +44,9 @@ class GoMethodSequentFlowFunction(
     private val method: GoIRFunction get() = context.method
 
     override fun propagateZeroToZero(): Set<Sequent> {
-        return setOf(Sequent.ZeroToZero)
+        val zeroSequents = mutableSetOf<Sequent>(Sequent.ZeroToZero)
+        applyGlobalReadSourceRules(zeroSequents)
+        return zeroSequents
     }
 
     override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> {
@@ -350,8 +362,43 @@ class GoMethodSequentFlowFunction(
         }
     }
 
+    private fun applyGlobalReadSourceRules(out: MutableSet<Sequent>) {
+        val inst = currentInst as? GoIRAssignInst ?: return
+        val globalName = detectGlobalReadName(inst) ?: return
+
+        val sourceRules = context.taint.taintConfig.sourceRulesForGlobal(globalName) // todo: []
+        if (sourceRules.isEmpty()) return
+
+        val lhv = AccessPathBase.LocalVar(inst.register.index)
+
+        val sourceEvaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
+
+        for (rule in sourceRules) {
+            if (!rule.condition.isTrue()) {
+                TODO("Global source with complex condition")
+            }
+
+            for (action in rule.actionsAfter) {
+                val pos = action.pos.resolvePosAccess()
+                val mark = TaintMarkAccessor(action.mark)
+
+                sourceEvaluator.evaluate(rule, action, pos, mark).onSome { evaluatedFacts ->
+                    val trace = TraceInfo.Rule(rule, action)
+
+                    evaluatedFacts.mapTo(out) {
+                        if (it.base !is AccessPathBase.Return) {
+                            TODO("Field source with non-result assign")
+                        }
+
+                        Sequent.ZeroToFact(it.rebase(lhv), trace)
+                    }
+                }
+            }
+        }
+    }
+
     private fun makeEdge(initialFact: InitialFactAp?, newFact: FinalFactAp): Sequent {
-        val traceInfo = if (generateTrace) MethodSequentFlowFunction.TraceInfo.Flow else null
+        val traceInfo = traceInfoOrNull()
         return if (initialFact != null) {
             val syncedInitial = if (initialFact.exclusions != newFact.exclusions) {
                 initialFact.replaceExclusions(newFact.exclusions)
@@ -363,4 +410,6 @@ class GoMethodSequentFlowFunction(
             Sequent.ZeroToFact(newFact, traceInfo)
         }
     }
+
+    private fun traceInfoOrNull(): TraceInfo? = if (generateTrace) TraceInfo.Flow else null
 }
