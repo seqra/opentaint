@@ -289,9 +289,14 @@ class GoIRDeserializer {
     // ─── Packages ───────────────────────────────────────────────────
 
     private fun deserializePackage(pp: ProtoPackage) {
+        // Fallback path: if a package body arrives without a prior summary,
+        // we have no project/stdlib/dependency classification. Treat as a
+        // dependency so the unit resolver returns UnknownUnit; the analyzer
+        // will rely on rules / approximations for any cross-boundary call.
         val pkg = packagesById[pp.id] ?: GoIRPackageImpl(
             importPath = pp.importPath,
             name = pp.name,
+            isDependency = true,
         ).also { packagesById[pp.id] = it }
 
         // Named types

@@ -339,7 +339,12 @@ func (s *lazySession) protoPackageSummaries() []*pb.ProtoPackageSummary {
 			pp.ModuleDir = pkg.Module.Dir
 		}
 		pp.IsStdlib = pkg.Module == nil && !strings.Contains(pkg.PkgPath, ".")
-		pp.IsDependency = !rootPaths[pkg.PkgPath]
+		// A package is "dependency" unless it belongs to the main module of
+		// the workspace being analyzed. The `Module.Main` flag is set by
+		// `go/packages` for packages whose module is the module containing
+		// the request's WorkingDir. Falling back to the literal-pattern
+		// match handles edge cases where Module.Main is unavailable (rare).
+		pp.IsDependency = !(pkg.Module != nil && pkg.Module.Main) && !rootPaths[pkg.PkgPath]
 		for _, e := range pkg.Errors {
 			pp.Errors = append(pp.Errors, e.Msg)
 		}
