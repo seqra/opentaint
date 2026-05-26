@@ -1,0 +1,10 @@
+rules:
+  - id: path-05-args-ioutil-readfile
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args reaches ioutil.ReadFile (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: ioutil.ReadFile($P)

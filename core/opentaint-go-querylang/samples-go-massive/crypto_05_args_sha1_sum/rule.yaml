@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-05-args-sha1-sum
+    languages: [go]
+    severity: WARNING
+    message: Tainted CLI arg reaches sha1.Sum (weak hash on tainted input)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: sha1.Sum($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: path-14-closure-open
+    languages: [go]
+    severity: WARNING
+    message: Closure captures tainted query value and calls os.Open (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: os.Open($P)

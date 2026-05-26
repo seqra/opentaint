@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-09-cookie-get
+    languages: [go]
+    severity: WARNING
+    message: Tainted Cookie header value reaches http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

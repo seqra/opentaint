@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-12-env-defer-md5
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches deferred md5.Sum (weak hash)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: md5.Sum($X)

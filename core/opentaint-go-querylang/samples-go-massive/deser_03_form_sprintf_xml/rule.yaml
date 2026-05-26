@@ -1,0 +1,10 @@
+rules:
+  - id: deser-03-form-sprintf-xml
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches xml.Unmarshal via fmt.Sprintf
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

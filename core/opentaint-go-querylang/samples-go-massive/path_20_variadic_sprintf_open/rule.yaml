@@ -1,0 +1,10 @@
+rules:
+  - id: path-20-variadic-sprintf-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value flows through variadic fmt.Sprintf into os.Open (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: os.Open($P)

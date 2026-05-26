@@ -1,0 +1,10 @@
+rules:
+  - id: deser-06-cookie-json
+    languages: [go]
+    severity: WARNING
+    message: Tainted Cookie header reaches json.Unmarshal (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: json.Unmarshal($DATA, $TARGET)

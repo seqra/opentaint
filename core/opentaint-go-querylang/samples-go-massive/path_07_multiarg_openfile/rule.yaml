@@ -1,0 +1,12 @@
+rules:
+  - id: path-07-multiarg-openfile
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches the path argument of os.OpenFile (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: os.OpenFile($P, $FLAG, $PERM)
+          - focus-metavariable: $P

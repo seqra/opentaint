@@ -1,0 +1,10 @@
+rules:
+  - id: deser-05-args-xml
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args value reaches xml.Unmarshal (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$N]
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

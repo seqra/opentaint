@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-08-env-aes-key
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches aes.NewCipher key (cipher key from environment)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: aes.NewCipher($X)

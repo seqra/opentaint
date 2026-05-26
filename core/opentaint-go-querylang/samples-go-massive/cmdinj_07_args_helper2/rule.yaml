@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-07-args-helper2
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args via two-hop helper reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: util.Sink_ExecCommand($X)

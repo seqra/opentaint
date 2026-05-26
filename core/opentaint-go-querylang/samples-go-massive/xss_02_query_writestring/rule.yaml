@@ -1,0 +1,10 @@
+rules:
+  - id: xss-02-query-writestring
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query reaches w.WriteString (reflected XSS via response writer)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: $W.WriteString($S)

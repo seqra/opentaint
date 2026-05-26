@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-06-env-helper1
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via helper reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("ORDER_BY")
+    pattern-sinks:
+      - pattern: util.Sink_DbQuery($X)

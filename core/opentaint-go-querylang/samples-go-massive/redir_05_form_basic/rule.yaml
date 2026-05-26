@@ -1,0 +1,12 @@
+rules:
+  - id: redir-05-form-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches http.Redirect URL (open redirect)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.Redirect($W, $R, $URL, $CODE)
+          - focus-metavariable: $URL

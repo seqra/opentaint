@@ -1,0 +1,11 @@
+rules:
+  - id: xss-15-two-sources-merge
+    languages: [go]
+    severity: WARNING
+    message: Tainted env or header merge into w.Write body (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

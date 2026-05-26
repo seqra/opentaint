@@ -1,0 +1,10 @@
+rules:
+  - id: xss-09-if-branch
+    languages: [go]
+    severity: WARNING
+    message: Tainted env, picked up on if-branch, reaches w.Write (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

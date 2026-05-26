@@ -1,0 +1,12 @@
+rules:
+  - id: ssrf-11-branch-postform
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL on conditional branch reaches http.PostForm (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.PostForm($URL, $DATA)
+          - focus-metavariable: $URL

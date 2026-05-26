@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-20-env-full-chain
+    languages: [go]
+    severity: WARNING
+    message: Tainted env through long chain reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("X")
+    pattern-sinks:
+      - pattern: util.Sink_ExecCommand($X)

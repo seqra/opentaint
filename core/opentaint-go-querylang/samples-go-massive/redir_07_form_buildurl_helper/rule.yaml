@@ -1,0 +1,12 @@
+rules:
+  - id: redir-07-form-buildurl-helper
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue passes through buildRedirectURL into http.Redirect (open redirect)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.Redirect($W, $R, $URL, $CODE)
+          - focus-metavariable: $URL

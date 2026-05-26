@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-12-loop-get
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL iterated in a loop reaches http.Get (SSRF per iteration)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

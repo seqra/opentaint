@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-20-form-sprintf-md5
+    languages: [go]
+    severity: WARNING
+    message: Tainted form via fmt.Sprintf reaches md5.Sum (weak hash)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: md5.Sum($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: xss-05-urlpath-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query path component reaches w.Write (path reflection XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

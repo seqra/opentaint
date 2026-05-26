@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-04-header-md5-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted header reaches md5 hash.Write (weak hash)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: $H.Write($X)

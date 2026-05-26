@@ -1,0 +1,12 @@
+rules:
+  - id: crypto-09-env-hmac-key
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches hmac.New key argument (HMAC key from user input)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - patterns:
+          - pattern: hmac.New($HASH, $KEY)
+          - focus-metavariable: $KEY

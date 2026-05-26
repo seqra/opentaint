@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-06-query-path
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL path component reaches http.Get (SSRF via path traversal of host)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

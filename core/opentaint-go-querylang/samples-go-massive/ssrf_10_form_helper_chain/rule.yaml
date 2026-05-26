@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-10-form-helper-chain
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value flows through helper chain into http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: http.Get($U)
