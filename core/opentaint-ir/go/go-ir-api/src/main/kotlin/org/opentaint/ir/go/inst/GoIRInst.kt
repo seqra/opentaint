@@ -69,6 +69,7 @@ data class GoIRAssignInst(
 ) : GoIRDefInst {
     override val operands: List<GoIRValue> get() = expr.operands
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitAssign(this)
+    override fun toString(): String = "$register = $expr"
 }
 
 /**
@@ -83,6 +84,12 @@ data class GoIRPhi(
 ) : GoIRDefInst {
     override val operands: List<GoIRValue> get() = edges.entries.sortedBy { it.key.index }.map { it.value }
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitPhi(this)
+    override fun toString(): String {
+        val args = edges.entries.sortedBy { it.key.index }
+            .joinToString(", ") { (ref, value) -> "${ref.index}: $value" }
+        val suffix = comment?.let { "  // $it" } ?: ""
+        return "$register = phi($args)$suffix"
+    }
 }
 
 /**
@@ -95,6 +102,7 @@ data class GoIRCall(
 ) : GoIRDefInst {
     override val operands: List<GoIRValue> get() = call.allOperands()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitCall(this)
+    override fun toString(): String = "$register = ${call.render()}"
 }
 
 // ─── Terminators ────────────────────────────────────────────────────
@@ -106,6 +114,7 @@ data class GoIRJump(
     override val operands: List<GoIRValue> get() = emptyList()
     override val successors: List<GoIRInstRef> get() = listOf(target)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitJump(this)
+    override fun toString(): String = "jump $target"
 }
 
 data class GoIRIf(
@@ -117,6 +126,7 @@ data class GoIRIf(
     override val operands: List<GoIRValue> get() = listOf(cond)
     override val successors: List<GoIRInstRef> get() = listOf(trueBranch, falseBranch)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitIf(this)
+    override fun toString(): String = "if ($cond) then $trueBranch else $falseBranch"
 }
 
 data class GoIRReturn(
@@ -125,6 +135,8 @@ data class GoIRReturn(
 ) : GoIRTerminator {
     override val operands: List<GoIRValue> get() = results
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitReturn(this)
+    override fun toString(): String =
+        if (results.isEmpty()) "return" else "return ${results.joinToString(", ")}"
 }
 
 data class GoIRPanic(
@@ -133,6 +145,7 @@ data class GoIRPanic(
 ) : GoIRTerminator {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitPanic(this)
+    override fun toString(): String = "panic $x"
 }
 
 // ─── Effect-only instructions ───────────────────────────────────────
@@ -144,6 +157,7 @@ data class GoIRStore(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = listOf(addr, value)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitStore(this)
+    override fun toString(): String = "*$addr = $value"
 }
 
 data class GoIRMapUpdate(
@@ -154,6 +168,7 @@ data class GoIRMapUpdate(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = listOf(map, key, value)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitMapUpdate(this)
+    override fun toString(): String = "$map[$key] = $value"
 }
 
 data class GoIRSend(
@@ -163,6 +178,7 @@ data class GoIRSend(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = listOf(chan, x)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitSend(this)
+    override fun toString(): String = "send $chan <- $x"
 }
 
 data class GoIRGo(
@@ -171,6 +187,7 @@ data class GoIRGo(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = call.allOperands()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitGo(this)
+    override fun toString(): String = "go ${call.render()}"
 }
 
 data class GoIRDefer(
@@ -179,6 +196,7 @@ data class GoIRDefer(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = call.allOperands()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitDefer(this)
+    override fun toString(): String = "defer ${call.render()}"
 }
 
 data class GoIRRunDefers(
@@ -186,6 +204,7 @@ data class GoIRRunDefers(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = emptyList()
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitRunDefers(this)
+    override fun toString(): String = "rundefers"
 }
 
 data class GoIRDebugRef(
@@ -195,4 +214,14 @@ data class GoIRDebugRef(
 ) : GoIRInst {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitDebugRef(this)
+    override fun toString(): String = "debugref ${if (isAddr) "&" else ""}$x"
+}
+
+private fun GoIRCallInfo.render(): String {
+    val argsStr = args.joinToString(", ")
+    return when {
+        receiver != null && methodName != null -> "$receiver.$methodName($argsStr)"
+        function != null -> "$function($argsStr)"
+        else -> "call($argsStr)"
+    }
 }

@@ -32,6 +32,11 @@ data class GoIRAllocExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = emptyList()
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitAlloc(this)
+    override fun toString(): String {
+        val kind = if (isHeap) "new" else "local"
+        val suffix = comment?.let { "  // $it" } ?: ""
+        return "$kind ${allocType.typeName}$suffix"
+    }
 }
 
 // ─── Arithmetic / logic ─────────────────────────────────────────────
@@ -44,6 +49,7 @@ data class GoIRBinOpExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x, y)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitBinOp(this)
+    override fun toString(): String = "$x ${op.symbol} $y"
 }
 
 data class GoIRUnOpExpr(
@@ -54,6 +60,7 @@ data class GoIRUnOpExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitUnOp(this)
+    override fun toString(): String = "${op.symbol}$x${if (commaOk) ",ok" else ""}"
 }
 
 // ─── Type conversions ───────────────────────────────────────────────
@@ -64,6 +71,7 @@ data class GoIRChangeTypeExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitChangeType(this)
+    override fun toString(): String = "changetype<${type.typeName}>($x)"
 }
 
 data class GoIRConvertExpr(
@@ -72,6 +80,7 @@ data class GoIRConvertExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitConvert(this)
+    override fun toString(): String = "convert<${type.typeName}>($x)"
 }
 
 data class GoIRMultiConvertExpr(
@@ -82,6 +91,7 @@ data class GoIRMultiConvertExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitMultiConvert(this)
+    override fun toString(): String = "multiconvert<${fromType.typeName} -> ${toType.typeName}>($x)"
 }
 
 data class GoIRChangeInterfaceExpr(
@@ -90,6 +100,7 @@ data class GoIRChangeInterfaceExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitChangeInterface(this)
+    override fun toString(): String = "changeinterface<${type.typeName}>($x)"
 }
 
 data class GoIRSliceToArrayPointerExpr(
@@ -98,6 +109,7 @@ data class GoIRSliceToArrayPointerExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitSliceToArrayPointer(this)
+    override fun toString(): String = "slicetoarrayptr<${type.typeName}>($x)"
 }
 
 // ─── Interface / type assertion ─────────────────────────────────────
@@ -108,6 +120,7 @@ data class GoIRMakeInterfaceExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitMakeInterface(this)
+    override fun toString(): String = "makeinterface<${type.typeName}>($x)"
 }
 
 data class GoIRTypeAssertExpr(
@@ -118,6 +131,7 @@ data class GoIRTypeAssertExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitTypeAssert(this)
+    override fun toString(): String = "$x.(${assertedType.typeName})${if (commaOk) ",ok" else ""}"
 }
 
 // ─── Closures ───────────────────────────────────────────────────────
@@ -129,6 +143,7 @@ data class GoIRMakeClosureExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = bindings
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitMakeClosure(this)
+    override fun toString(): String = "makeclosure ${fn.name}[${bindings.joinToString(", ")}]"
 }
 
 // ─── Container construction ─────────────────────────────────────────
@@ -139,6 +154,7 @@ data class GoIRMakeMapExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOfNotNull(reserve)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitMakeMap(this)
+    override fun toString(): String = "make ${type.typeName}${reserve?.let { "($it)" } ?: ""}"
 }
 
 data class GoIRMakeChanExpr(
@@ -147,6 +163,7 @@ data class GoIRMakeChanExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(size)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitMakeChan(this)
+    override fun toString(): String = "make ${type.typeName}($size)"
 }
 
 data class GoIRMakeSliceExpr(
@@ -156,6 +173,7 @@ data class GoIRMakeSliceExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(len, cap)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitMakeSlice(this)
+    override fun toString(): String = "make ${type.typeName}($len, $cap)"
 }
 
 // ─── Field access ───────────────────────────────────────────────────
@@ -168,6 +186,7 @@ data class GoIRFieldAddrExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitFieldAddr(this)
+    override fun toString(): String = "&$x.$fieldName"
 }
 
 data class GoIRFieldExpr(
@@ -178,6 +197,7 @@ data class GoIRFieldExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitField(this)
+    override fun toString(): String = "$x.$fieldName"
 }
 
 // ─── Indexing ───────────────────────────────────────────────────────
@@ -189,6 +209,7 @@ data class GoIRIndexAddrExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x, indexValue)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitIndexAddr(this)
+    override fun toString(): String = "&$x[$indexValue]"
 }
 
 data class GoIRIndexExpr(
@@ -198,6 +219,7 @@ data class GoIRIndexExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x, indexValue)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitIndex(this)
+    override fun toString(): String = "$x[$indexValue]"
 }
 
 data class GoIRSliceExpr(
@@ -209,6 +231,12 @@ data class GoIRSliceExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOfNotNull(x, low, high, max)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitSlice(this)
+    override fun toString(): String {
+        val l = low?.toString() ?: ""
+        val h = high?.toString() ?: ""
+        val m = max?.let { ":$it" } ?: ""
+        return "$x[$l:$h$m]"
+    }
 }
 
 data class GoIRLookupExpr(
@@ -219,6 +247,7 @@ data class GoIRLookupExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x, indexValue)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitLookup(this)
+    override fun toString(): String = "$x[$indexValue]${if (commaOk) ",ok" else ""}"
 }
 
 // ─── Iteration ──────────────────────────────────────────────────────
@@ -229,6 +258,7 @@ data class GoIRRangeExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(x)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitRange(this)
+    override fun toString(): String = "range $x"
 }
 
 data class GoIRNextExpr(
@@ -238,6 +268,7 @@ data class GoIRNextExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(iter)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitNext(this)
+    override fun toString(): String = "next${if (isString) "<string>" else ""}($iter)"
 }
 
 // ─── Channels ───────────────────────────────────────────────────────
@@ -250,6 +281,16 @@ data class GoIRSelectExpr(
     override val operands: List<GoIRValue> get() =
         states.flatMap { listOfNotNull(it.chan, it.send) }
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitSelect(this)
+    override fun toString(): String {
+        val kind = if (isBlocking) "select" else "select-nonblocking"
+        val cases = states.joinToString(", ") { s ->
+            when (s.send) {
+                null -> "<-${s.chan}"
+                else -> "${s.chan}<-${s.send}"
+            }
+        }
+        return "$kind [$cases]"
+    }
 }
 
 // ─── Tuple extraction ───────────────────────────────────────────────
@@ -261,4 +302,35 @@ data class GoIRExtractExpr(
 ) : GoIRExpr {
     override val operands: List<GoIRValue> get() = listOf(tuple)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitExtract(this)
+    override fun toString(): String = "extract $tuple #$extractIndex"
 }
+
+private val GoIRBinaryOp.symbol: String
+    get() = when (this) {
+        GoIRBinaryOp.ADD -> "+"
+        GoIRBinaryOp.SUB -> "-"
+        GoIRBinaryOp.MUL -> "*"
+        GoIRBinaryOp.DIV -> "/"
+        GoIRBinaryOp.REM -> "%"
+        GoIRBinaryOp.AND -> "&"
+        GoIRBinaryOp.OR -> "|"
+        GoIRBinaryOp.XOR -> "^"
+        GoIRBinaryOp.SHL -> "<<"
+        GoIRBinaryOp.SHR -> ">>"
+        GoIRBinaryOp.AND_NOT -> "&^"
+        GoIRBinaryOp.EQ -> "=="
+        GoIRBinaryOp.NEQ -> "!="
+        GoIRBinaryOp.LT -> "<"
+        GoIRBinaryOp.LEQ -> "<="
+        GoIRBinaryOp.GT -> ">"
+        GoIRBinaryOp.GEQ -> ">="
+    }
+
+private val GoIRUnaryOp.symbol: String
+    get() = when (this) {
+        GoIRUnaryOp.NOT -> "!"
+        GoIRUnaryOp.NEG -> "-"
+        GoIRUnaryOp.XOR -> "^"
+        GoIRUnaryOp.DEREF -> "*"
+        GoIRUnaryOp.ARROW -> "<-"
+    }

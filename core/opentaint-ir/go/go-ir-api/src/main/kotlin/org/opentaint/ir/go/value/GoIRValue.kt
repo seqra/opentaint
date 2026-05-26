@@ -52,6 +52,14 @@ data class GoIRConstValue(
     val value: GoIRConstantValue,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitConst(this)
+    override fun toString(): String = when (value) {
+        is GoIRConstantValue.IntConst -> value.value.toString()
+        is GoIRConstantValue.FloatConst -> value.value.toString()
+        is GoIRConstantValue.ComplexConst -> "(${value.real}+${value.imag}i)"
+        is GoIRConstantValue.StringConst -> "\"${value.value}\""
+        is GoIRConstantValue.BoolConst -> value.value.toString()
+        GoIRConstantValue.NilConst -> "nil"
+    }
 }
 
 data class GoIRParameterValue(
@@ -60,6 +68,7 @@ data class GoIRParameterValue(
     val paramIndex: Int,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitParameter(this)
+    override fun toString(): String = name
 }
 
 data class GoIRFreeVarValue(
@@ -68,6 +77,7 @@ data class GoIRFreeVarValue(
     val freeVarIndex: Int,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitFreeVar(this)
+    override fun toString(): String = name
 }
 
 data class GoIRGlobalValue(
@@ -76,6 +86,7 @@ data class GoIRGlobalValue(
     val global: GoIRGlobal,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitGlobal(this)
+    override fun toString(): String = name
 }
 
 data class GoIRFunctionValue(
@@ -84,6 +95,7 @@ data class GoIRFunctionValue(
     val function: GoIRFunction,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitFunction(this)
+    override fun toString(): String = name
 }
 
 data class GoIRBuiltinValue(
@@ -91,4 +103,5 @@ data class GoIRBuiltinValue(
     override val name: String,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitBuiltin(this)
+    override fun toString(): String = name
 }
