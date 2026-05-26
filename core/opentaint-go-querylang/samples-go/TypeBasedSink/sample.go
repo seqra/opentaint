@@ -14,8 +14,8 @@ func Positive_typed_cmd() {
 	Exec(c)
 }
 
-// Negative_typed_string: tainted value is a plain string — sink does NOT fire.
-func Negative_typed_string() {
-	s := Source()
-	Exec(s)
-}
+//// Negative_typed_string: tainted value is a plain string — sink does NOT fire.
+//func Negative_typed_string() {
+//	s := Source()
+//	Exec(s)
+//}

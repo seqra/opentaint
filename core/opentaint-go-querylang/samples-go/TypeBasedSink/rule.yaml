@@ -5,7 +5,7 @@ rules:
     message: "Taint reaches util.Exec on a util.Cmd argument"
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "util.SourceCmd(...)"
     pattern-sinks:
       - patterns:
           - pattern: "util.Exec(($X : util.Cmd))"
