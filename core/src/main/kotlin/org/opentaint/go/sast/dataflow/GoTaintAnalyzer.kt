@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
@@ -25,6 +26,7 @@ class GoTaintAnalyzer(
     private val cp: GoIRProgram,
     private val taintConfig: GoTaintRulesProvider,
     private val unitResolver: UnitResolver<GoIRFunction>,
+    private val externalMethodTracker: ExternalMethodTracker? = null,
     private val analysisTimeout: Duration = 1.minutes,
     private val cancellationTimeout: Duration = 10.seconds,
 ) {
@@ -33,7 +35,7 @@ class GoTaintAnalyzer(
         val ifdsGraph = GoApplicationGraph(cp, unitResolver)
 
         val engine = TaintAnalysisUnitRunnerManager(
-            GoAnalysisManager(cp, taintConfig),
+            GoAnalysisManager(cp, taintConfig, externalMethodTracker = externalMethodTracker),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = unitResolver as UnitResolver<CommonMethod>,
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
