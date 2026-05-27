@@ -13,6 +13,7 @@ import org.opentaint.ir.api.python.PIRLocal
 import org.opentaint.ir.api.python.PIRModuleNameRef
 import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRReadName
+import org.opentaint.ir.api.python.PIRType
 import org.opentaint.ir.api.python.targets
 
 class PIRMethodQFNameReconstructor private constructor(
@@ -38,8 +39,11 @@ class PIRMethodQFNameReconstructor private constructor(
             }
 
             is PIRAssign -> when (val rhv = inst.expr) {
-                is PIRParameterRef ->
-                    LocalBinding(inst.target.index, NameEntry.ParamRef(rhv.index))
+                is PIRParameterRef -> {
+                    val name = classQnOrNull(rhv.type)?.let { NameEntry.GlobalRef(it) }
+                        ?: NameEntry.ParamRef(rhv.index)
+                    LocalBinding(inst.target.index, name)
+                }
 
                 is PIRBindFunctionExpr ->
                     LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
@@ -74,12 +78,14 @@ class PIRMethodQFNameReconstructor private constructor(
                 val objIdx = (inst.obj as? PIRLocal)?.index
 
                 if (objIdx == idx) {
-                    val newName = payload.name.prependSegment(inst.attribute)
+                    val chainedName = payload.name.prependSegment(inst.attribute)
+                    val declaredType = attributeTypeQn(payload.name, inst.attribute)?.let { NameEntry.GlobalRef(it) }
 
-                    if (newName != null) {
-                        this += LocalBinding(targetIdx, newName)
-                        saveResult(inst, newName)
-                    }
+                    // Bind the target to the attribute's declared type so a later
+                    // `target.method()` resolves against that type instead of textually
+                    // chaining onto the base; record the chained name for this read.
+                    (declaredType ?: chainedName)?.let { this += LocalBinding(targetIdx, it) }
+                    chainedName?.let { saveResult(inst, it) }
                 }
 
                 if (targetIdx != idx) {
@@ -131,14 +137,32 @@ class PIRMethodQFNameReconstructor private constructor(
         }
     }
 
+    private fun classQnOrNull(type: PIRType?): String? =
+        (type as? PIRClassType)?.qualifiedName?.ifEmpty { null }
+
+    private fun attributeTypeQn(baseName: NameEntry, attribute: String): String? {
+        val baseQn = baseName.flattenOrNull() ?: return null
+
+        // `mro` includes the class itself as its first element. Stop at the first
+        // class that declares the attribute so a subclass override shadows the parent.
+        val mro = cp.findClassOrNull(baseQn)?.mro ?: return null
+        for (qn in mro) {
+            val cls = cp.findClassOrNull(qn) ?: continue
+            val attrType = cls.fields.find { it.name == attribute }?.type
+                ?: cls.properties.find { it.name == attribute }?.type
+                ?: continue
+            return classQnOrNull(attrType)
+        }
+        return null
+    }
+
     private fun resultTypeQn(calleeQn: String): String? {
         if (cp.findClassOrNull(calleeQn) != null) return calleeQn
-        val returnType = cp.findFunctionOrNull(calleeQn)?.returnType as? PIRClassType ?: return null
-        return returnType.qualifiedName.ifEmpty { null }
+        return classQnOrNull(cp.findFunctionOrNull(calleeQn)?.returnType)
     }
 
     private fun saveResult(inst: PIRInstruction, nameEntry: NameEntry) {
-        val qfName = nameEntry.flattenOrNull() ?: return // parameters are not supported yet
+        val qfName = nameEntry.flattenOrNull() ?: return // unresolved parameter (no declared type)
 
         result.getOrPut(inst) { hashSetOf() }
             .add(qfName)
