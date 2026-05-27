@@ -11,22 +11,22 @@ import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.jvm.optionals.getOrNull
 
-interface SemgrepPatternParser {
+interface SemgrepPatternParser<P : Any> {
     fun parseOrNull(
         pattern: String,
         semgrepTrace: SemgrepRuleLoadStepTrace,
-    ): SemgrepJavaPattern?
+    ): P?
 
-    fun cached() = CachedSemgrepPatternParser(this)
+    fun cached(): SemgrepPatternParser<P> = CachedSemgrepPatternParser(this)
 
     companion object {
-        fun create(): SemgrepPatternParser = DefaultSemgrepPatternParser()
+        fun createJava(): SemgrepPatternParser<SemgrepJavaPattern> = DefaultSemgrepPatternParser()
     }
 }
 
 class DefaultSemgrepPatternParser(
     private val parser: SemgrepJavaPatternParser = SemgrepJavaPatternParser()
-) : SemgrepPatternParser {
+) : SemgrepPatternParser<SemgrepJavaPattern> {
     override fun parseOrNull(
         pattern: String,
         semgrepTrace: SemgrepRuleLoadStepTrace,
@@ -59,15 +59,15 @@ class DefaultSemgrepPatternParser(
     }
 }
 
-class CachedSemgrepPatternParser(
-    private val parser: SemgrepPatternParser,
-) : SemgrepPatternParser {
-    private val cache = ConcurrentHashMap<String, Optional<SemgrepJavaPattern>>()
+class CachedSemgrepPatternParser<P : Any>(
+    private val parser: SemgrepPatternParser<P>,
+) : SemgrepPatternParser<P> {
+    private val cache = ConcurrentHashMap<String, Optional<P>>()
 
     override fun parseOrNull(
         pattern: String,
         semgrepTrace: SemgrepRuleLoadStepTrace,
-    ): SemgrepJavaPattern? =
+    ): P? =
         cache.computeIfAbsent(pattern) {
             Optional.ofNullable(parser.parseOrNull(pattern, semgrepTrace))
         }.getOrNull()

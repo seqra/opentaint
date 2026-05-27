@@ -45,7 +45,7 @@ import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureMo
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifierValue
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
 
-class PatternToActionListConverter: ActionListBuilder {
+class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
     private var nextArtificialMetavarId = 0
 
     private fun provideArtificialMetavar(): MetavarAtom {
@@ -213,21 +213,21 @@ class PatternToActionListConverter: ActionListBuilder {
         hashSetOf("byte", "short", "char", "int", "long", "float", "double", "boolean")
     }
 
-    private fun transformTypeName(typeName: TypeName): TypeNamePattern = when (typeName) {
+    private fun transformTypeName(typeName: TypeName): TypeConstraint = when (typeName) {
         is TypeName.SimpleTypeName -> transformSimpleTypeName(typeName)
         is TypeName.ArrayTypeName -> {
             val elementTypePattern = transformTypeName(typeName.elementType)
-            TypeNamePattern.ArrayType(elementTypePattern)
+            javaArray(elementTypePattern)
         }
-        is TypeName.WildcardTypeName -> TypeNamePattern.AnyType
+        is TypeName.WildcardTypeName -> TypeConstraint.Any
     }
 
-    private fun transformSimpleTypeName(typeName: TypeName.SimpleTypeName): TypeNamePattern {
+    private fun transformSimpleTypeName(typeName: TypeName.SimpleTypeName): TypeConstraint {
         val typeArgs = typeName.typeArgs.map { transformTypeName(it) }
 
         if (typeName.dotSeparatedParts.size == 1) {
             val name = typeName.dotSeparatedParts.single()
-            if (name is MetavarName) return TypeNamePattern.MetaVar(name.metavarName)
+            if (name is MetavarName) return TypeConstraint.MetaVar(name.metavarName)
         }
 
         val concreteNames = typeName.dotSeparatedParts.filterIsInstance<ConcreteName>()
@@ -235,18 +235,18 @@ class PatternToActionListConverter: ActionListBuilder {
             if (concreteNames.size == 1) {
                 val className = concreteNames.single().name
                 if (className.first().isUpperCase()) {
-                    return TypeNamePattern.ClassName(className, typeArgs)
+                    return javaClass(className, typeArgs)
                 }
 
                 if (className in primitiveTypeNames) {
-                    return TypeNamePattern.PrimitiveName(className)
+                    return javaPrimitive(className)
                 }
 
                 transformationFailed("TypeName_concrete_unexpected")
             }
 
             val fqn = concreteNames.joinToString(".") { it.name }
-            return TypeNamePattern.FullyQualified(fqn, typeArgs)
+            return javaFq(fqn, typeArgs)
         }
 
         transformationFailed("TypeName_non_concrete_unsupported")
@@ -297,7 +297,7 @@ class PatternToActionListConverter: ActionListBuilder {
     private fun methodArgumentsToPatternList(pattern: MethodArguments): List<SemgrepJavaPattern> =
         parseMethodArgs(pattern)
 
-    private fun tryConvertPatternIntoTypeName(pattern: SemgrepJavaPattern): TypeNamePattern? {
+    private fun tryConvertPatternIntoTypeName(pattern: SemgrepJavaPattern): TypeConstraint? {
         if (pattern !is TypedMetavar) return null
         return transformTypeName(pattern.type)
     }
@@ -349,7 +349,7 @@ class PatternToActionListConverter: ActionListBuilder {
             result = null,
             params = ParamConstraint.Partial(emptyList()),
             obj = objCondition,
-            enclosingClassName = className ?: TypeNamePattern.AnyType,
+            enclosingClassName = className ?: TypeConstraint.Any,
         )
         actionList += methodInvocationAction
         return SemgrepPatternActionList(actionList, hasEllipsisInTheEnd = false, hasEllipsisInTheBeginning = false)
@@ -476,12 +476,12 @@ class PatternToActionListConverter: ActionListBuilder {
         val classConstraints = mutableListOf<ClassConstraint>()
 
         if (pattern.extends != null) {
-            classConstraints += ClassConstraint.TypeConstraint(transformTypeName(pattern.extends))
+            classConstraints += ClassConstraint.SuperType(transformTypeName(pattern.extends))
         }
 
         if (pattern.implements.isNotEmpty()) {
             pattern.implements.mapTo(classConstraints) {
-                ClassConstraint.TypeConstraint(transformTypeName(it))
+                ClassConstraint.SuperType(transformTypeName(it))
             }
         }
 
@@ -530,7 +530,7 @@ class PatternToActionListConverter: ActionListBuilder {
                 ?: transformationFailed("Return value: ${retValue::class.simpleName}")
         }
 
-        val methodExit = SemgrepPatternAction.MethodExit(cond ?: ParamCondition.True)
+        val methodExit = SemgrepPatternAction.MethodExit(listOf(cond ?: ParamCondition.True))
 
         return SemgrepPatternActionList(
             actions + listOf(methodExit),
@@ -548,7 +548,7 @@ class PatternToActionListConverter: ActionListBuilder {
             is MetavarName -> SignatureName.MetaVar(name.metavarName)
         }
 
-        val returnTypePattern: TypeNamePattern? = pattern.returnType?.let { transformTypeName(it) }
+        val returnTypePattern: TypeConstraint? = pattern.returnType?.let { transformTypeName(it) }
 
         val paramConditions = mutableListOf<ParamPattern>()
 

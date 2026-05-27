@@ -36,7 +36,7 @@ private fun AutomataBuilderCtx.simplifyEdge(
 ): AutomataEdgeType {
     if (edge !is AutomataEdgeType.AutomataEdgeTypeWithFormula) return edge
 
-    val simplifiedFormula = trySimplifyMethodFormula(manager, edge.formula, metaVarInfo, cancelation)
+    val simplifiedFormula = trySimplifyMethodFormula(manager, edge.formula, metaVarInfo, cancelation, typeOps)
 
     return when (edge) {
         is AutomataEdgeType.MethodCall -> AutomataEdgeType.MethodCall(simplifiedFormula)

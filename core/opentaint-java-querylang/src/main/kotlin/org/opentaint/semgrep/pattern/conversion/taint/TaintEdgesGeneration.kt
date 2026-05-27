@@ -12,8 +12,10 @@ import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ClassConstr
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifier
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifierValue
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
+import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
 import org.opentaint.semgrep.pattern.conversion.SpecificConstantValue
-import org.opentaint.semgrep.pattern.conversion.TypeNamePattern
+import org.opentaint.semgrep.pattern.conversion.TypeConstraint
+import org.opentaint.semgrep.pattern.conversion.collectMetavars
 import org.opentaint.semgrep.pattern.conversion.automata.ClassModifierConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodModifierConstraint
@@ -152,7 +154,7 @@ fun RuleConversionCtx.generateTaintEdges(
 
     val metVarConstraints = hashMapOf<String, MetaVarConstraintOrPlaceHolder>()
 
-    val placeHolders = computePlaceHolders(taintRuleEdges, finalAcceptEdges, finalDeadEdges)
+    val placeHolders = computePlaceHolders(taintRuleEdges, finalAcceptEdges, finalDeadEdges, typeOps)
     placeHolders.placeHolderRequiredMetaVars.forEach {
         metVarConstraints[it] = MetaVarConstraintOrPlaceHolder.PlaceHolder(metaVarInfo.metaVarConstraints[it])
     }
@@ -208,7 +210,7 @@ private fun RuleConversionCtx.edgeDescriptor(edge: Edge): TaintEdgeDescriptor? =
 }
 
 
-private class MetaVarCtx {
+private class MetaVarCtx(val typeOps: LanguageTypeOps) {
     val metaVarIdx = hashMapOf<String, Int>()
     val metaVars = mutableListOf<String>()
 
@@ -226,13 +228,14 @@ private fun computePlaceHolders(
     taintRuleEdges: List<TaintRuleEdge>,
     finalAcceptEdges: List<TaintRuleEdge>,
     finalDeadEdges: List<TaintRuleEdge>,
+    typeOps: LanguageTypeOps,
 ): MetaVarPlaceHolders {
     val predecessors = hashMapOf<State, MutableList<TaintRuleEdge>>()
     taintRuleEdges.forEach { predecessors.getOrPut(it.stateTo, ::mutableListOf).add(it) }
     finalAcceptEdges.forEach { predecessors.getOrPut(it.stateTo, ::mutableListOf).add(it) }
     finalDeadEdges.forEach { predecessors.getOrPut(it.stateTo, ::mutableListOf).add(it) }
 
-    val metaVarCtx = MetaVarCtx()
+    val metaVarCtx = MetaVarCtx(typeOps)
 
     val resultPlaceHolders = BitSet()
     val unprocessed = mutableListOf<Pair<State, PersistentBitSet>>()
@@ -310,7 +313,7 @@ private fun MetaVarCtx.methodConstraintMetaVars(signature: MethodConstraint, met
 private fun MetaVarCtx.classConstraintMetaVars(signature: ClassConstraint, metaVars: BitSet) {
     when (signature) {
         is ClassConstraint.Signature -> signatureModifierMetaVars(signature.modifier, metaVars)
-        is ClassConstraint.TypeConstraint -> typeNameMetaVars(signature.superType, metaVars)
+        is ClassConstraint.SuperType -> typeNameMetaVars(signature.superType, metaVars)
     }
 }
 
@@ -350,27 +353,6 @@ private fun MetaVarCtx.paramConditionMetaVars(pc: ParamCondition.Atom, metaVars:
     }
 }
 
-private fun MetaVarCtx.typeNameMetaVars(typeName: TypeNamePattern, metaVars: BitSet) {
-    when (typeName) {
-        is TypeNamePattern.MetaVar -> {
-            metaVars.set(typeName.metaVar.idx())
-        }
-
-        is TypeNamePattern.ArrayType -> {
-            typeNameMetaVars(typeName.element, metaVars)
-        }
-
-        TypeNamePattern.AnyType,
-        is TypeNamePattern.PrimitiveName -> {
-            // no metavars
-        }
-
-        is TypeNamePattern.ClassName -> {
-            typeName.typeArgs.forEach { typeNameMetaVars(it, metaVars) }
-        }
-
-        is TypeNamePattern.FullyQualified -> {
-            typeName.typeArgs.forEach { typeNameMetaVars(it, metaVars) }
-        }
-    }
+private fun MetaVarCtx.typeNameMetaVars(typeName: TypeConstraint, metaVars: BitSet) {
+    typeName.collectMetavars(typeOps).forEach { metaVars.set(it.idx()) }
 }

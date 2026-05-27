@@ -287,7 +287,7 @@ private fun MethodConstraint.prettyPrint(): String = when (this) {
 
 private fun ClassConstraint.prettyPrint(): String = when (this) {
     is ClassConstraint.Signature -> "$modifier"
-    is ClassConstraint.TypeConstraint -> "it $superType"
+    is ClassConstraint.SuperType -> "it $superType"
 }
 
 private fun ParamConstraint.prettyPrint(): String {

@@ -125,7 +125,7 @@ private fun AutomataBuilderCtx.intersectMethodFormula(
     f2: MethodFormula
 ): MethodFormula? {
     val result = formulaManager.mkAnd(listOf(f1, f2))
-    if (!methodFormulaSat(formulaManager, result, metaVarInfo, cancelation)) {
+    if (!methodFormulaSat(formulaManager, result, metaVarInfo, cancelation, typeOps)) {
         return null
     }
 

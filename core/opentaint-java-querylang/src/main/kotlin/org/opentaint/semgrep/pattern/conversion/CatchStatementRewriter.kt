@@ -11,7 +11,7 @@ import org.opentaint.semgrep.pattern.SemgrepJavaPattern
 import org.opentaint.semgrep.pattern.TypeName
 
 // todo: for now we rewrite all catch statements as typed assign
-fun rewriteCatchStatement(rule: NormalizedSemgrepRule): List<NormalizedSemgrepRule> {
+fun rewriteCatchStatement(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val rewriter = object : PatternRewriter {
         override fun createCatchStatement(
             exceptionTypes: List<TypeName>,

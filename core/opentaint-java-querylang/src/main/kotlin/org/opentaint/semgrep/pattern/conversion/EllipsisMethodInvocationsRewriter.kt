@@ -4,7 +4,7 @@ import org.opentaint.semgrep.pattern.EllipsisMethodInvocations
 import org.opentaint.semgrep.pattern.NormalizedSemgrepRule
 import org.opentaint.semgrep.pattern.SemgrepJavaPattern
 
-fun rewriteEllipsisMethodInvocations(rule: NormalizedSemgrepRule): List<NormalizedSemgrepRule> {
+fun rewriteEllipsisMethodInvocations(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val rewriter = object : PatternRewriter {
         override fun createEllipsisMethodInvocations(obj: SemgrepJavaPattern): List<SemgrepJavaPattern> {
             return listOf(

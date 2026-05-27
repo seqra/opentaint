@@ -5,7 +5,7 @@ import org.opentaint.semgrep.pattern.conversion.ParamCondition
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ClassConstraint
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifier
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
-import org.opentaint.semgrep.pattern.conversion.TypeNamePattern
+import org.opentaint.semgrep.pattern.conversion.TypeConstraint
 
 typealias PredicateId = Int
 
@@ -19,7 +19,7 @@ data class Predicate(
 data class MethodSignature(
     val methodName: MethodName,
     val enclosingClassName: MethodEnclosingClassName,
-    val returnType: TypeNamePattern? = null,
+    val returnType: TypeConstraint? = null,
 )
 
 @Serializable
@@ -44,9 +44,9 @@ data class MethodModifierConstraint(val modifier: SignatureModifier) : MethodCon
 data class MethodName(val name: SignatureName)
 
 @Serializable
-data class MethodEnclosingClassName(val name: TypeNamePattern) {
+data class MethodEnclosingClassName(val name: TypeConstraint) {
     companion object {
-        val anyClassName = MethodEnclosingClassName(name = TypeNamePattern.AnyType)
+        val anyClassName = MethodEnclosingClassName(name = TypeConstraint.Any)
     }
 }
 

@@ -17,7 +17,7 @@ fun isGeneratedMethodInvocationObjMetaVar(metaVar: String): Boolean =
 fun mkGeneratedMethodInvocationObjMetaVar(idx: Int): String =
     "$GeneratedObjMetaVarPrefix${idx}$GeneratedObjMetaVarSuffix"
 
-fun rewriteMethodInvocationObj(rule: NormalizedSemgrepRule): List<NormalizedSemgrepRule> {
+fun rewriteMethodInvocationObj(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val nameMetaVars = hashMapOf<List<Name>, String>()
 
     val rewriter = object : PatternRewriter {

@@ -5,18 +5,18 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
-data class TaintRuleFromSemgrep(
+data class TaintRuleFromSemgrep<R>(
     val ruleId: String,
-    val taintRules: List<TaintRuleGroup>
+    val taintRules: List<TaintRuleGroup<R>>
 ) {
     val size: Int get() = taintRules.sumOf { it.size }
 
-    data class TaintRuleGroup(val rules: List<SerializedItem>) {
+    data class TaintRuleGroup<R>(val rules: List<R>) {
         val size: Int get() = rules.size
     }
 }
 
-fun TaintRuleFromSemgrep.createTaintConfig(): SerializedTaintConfig {
+fun TaintRuleFromSemgrep<SerializedItem>.createTaintConfig(): SerializedTaintConfig {
     val rules = taintRules.flatMap { it.rules }
     return SerializedTaintConfig(
         entryPoint = rules.filterIsInstance<SerializedRule.EntryPoint>(),

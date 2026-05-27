@@ -8,7 +8,7 @@ import org.opentaint.semgrep.pattern.TypeName
 
 const val generatedAnyValueGeneratorMethodName = "__anyValue__"
 
-fun rewriteAssignEllipsis(rule: NormalizedSemgrepRule): List<NormalizedSemgrepRule> {
+fun rewriteAssignEllipsis(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val rewriter = object : PatternRewriter {
         override fun createVariableAssignment(
             type: TypeName?,

@@ -3,42 +3,10 @@ package org.opentaint.semgrep.pattern.conversion
 import kotlinx.serialization.Serializable
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifier
 
-@Serializable
-sealed interface TypeNamePattern {
-    @Serializable
-    data class FullyQualified(val name: String, val typeArgs: List<TypeNamePattern> = emptyList()) : TypeNamePattern {
-        override fun toString(): String = if (typeArgs.isEmpty()) name else "$name<${typeArgs.joinToString(", ")}>"
-    }
-
-    @Serializable
-    data class ClassName(val name: String, val typeArgs: List<TypeNamePattern> = emptyList()) : TypeNamePattern {
-        override fun toString(): String = if (typeArgs.isEmpty()) "*.$name" else "*.$name<${typeArgs.joinToString(", ")}>"
-    }
-
-    @Serializable
-    data class PrimitiveName(val name: String) : TypeNamePattern{
-        override fun toString(): String = name
-    }
-
-    @Serializable
-    data class MetaVar(val metaVar: String) : TypeNamePattern {
-        override fun toString(): String = metaVar
-    }
-
-    @Serializable
-    data object AnyType : TypeNamePattern {
-        override fun toString(): String = "*"
-    }
-
-    @Serializable
-    data class ArrayType(val element: TypeNamePattern) : TypeNamePattern {
-        override fun toString(): String = "${element}[]"
-    }
-}
-
 sealed interface ParamPosition {
     data class Concrete(val idx: Int) : ParamPosition
     data class Any(val paramClassifier: String) : ParamPosition
+    data class Named(val field: String) : ParamPosition
 }
 
 @Serializable
@@ -53,7 +21,7 @@ sealed interface ParamCondition {
     sealed interface Atom : ParamCondition
 
     @Serializable
-    data class TypeIs(val typeName: TypeNamePattern) : Atom
+    data class TypeIs(val typeName: TypeConstraint) : Atom
 
     @Serializable
     data object AnyStringLiteral : Atom
@@ -65,7 +33,7 @@ sealed interface ParamCondition {
     data class ParamModifier(val modifier: SignatureModifier): Atom
 
     @Serializable
-    data class SpecificStaticFieldValue(val fieldName: String, val fieldClass: TypeNamePattern) : Atom
+    data class SpecificStaticFieldValue(val fieldName: String, val fieldClass: TypeConstraint) : Atom
 }
 
 @Serializable

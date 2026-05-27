@@ -4,9 +4,8 @@ import com.charleskorn.kaml.YamlMap
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
-import org.opentaint.semgrep.pattern.conversion.ActionListBuilder
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
-import org.opentaint.semgrep.pattern.conversion.SemgrepPatternParser
 import org.opentaint.semgrep.pattern.conversion.SemgrepRuleAutomataBuilder
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintAutomataJoinMetaVarRef
@@ -31,9 +30,19 @@ data class RuleMetadata(
 private typealias BuiltRule = RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>
 
 class SemgrepRuleLoader(
-    private val parser: SemgrepPatternParser = SemgrepPatternParser.create().cached(),
-    private val converter: ActionListBuilder = ActionListBuilder.create().cached()
+    strategies: List<LanguageStrategy<*, *>>
 ) {
+    private val strategies: Map<String, LanguageStrategy<*, *>> =
+        strategies.associateBy { it.language }
+
+    private fun strategyFor(rule: SemgrepYamlRule): LanguageStrategy<*, *>? =
+        rule.languages.orEmpty().firstNotNullOfOrNull { strategies[it.lowercase()] }
+
+    private fun strategyFor(ruleInfo: RuleInfo): LanguageStrategy<*, *>? =
+        ruleInfo.language?.let { strategies[it.lowercase()] }
+
+    private fun <P : Any, R> automataBuilder(strategy: LanguageStrategy<P, R>) = SemgrepRuleAutomataBuilder(strategy)
+
     private data class RegisteredRule(
         val ruleId: String,
         val rule: SemgrepYamlRule,
@@ -67,7 +76,7 @@ class SemgrepRuleLoader(
     ) {
         val ruleSet = parseSemgrepYaml(ruleSetText, semgrepFileTrace) ?: return
 
-        val (supportedRules, otherRules) = ruleSet.rules.partition { it.isJavaRule() || it.isJoinRule() }
+        val (supportedRules, otherRules) = ruleSet.rules.partition { it.isSupportedRule() || it.isJoinRule() }
         semgrepFileTrace.info("Found ${supportedRules.size} supported rules")
 
         otherRules.forEach {
@@ -97,7 +106,7 @@ class SemgrepRuleLoader(
     }
 
     data class RuleLoadResult(
-        val rulesWithMeta: List<Pair<TaintRuleFromSemgrep, RuleMetadata>>,
+        val rulesWithMeta: List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>,
         val disabledRules: Set<String>,
     )
 
@@ -116,7 +125,7 @@ class SemgrepRuleLoader(
             .filterIsInstance<NormalRule<Formula>>()
             .forEach { buildNormalRule(it) }
 
-        val loaded = mutableListOf<Pair<TaintRuleFromSemgrep, RuleMetadata>>()
+        val loaded = mutableListOf<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>()
         builtNormalRules.values
             .filterNot { it.skip() }
             .forEach {
@@ -136,6 +145,7 @@ class SemgrepRuleLoader(
     private data class RuleInfo(
         val ruleId: String,
         val shortRuleId: String,
+        val language: String?,
         val overridesRuleId: String?,
         val isLibraryRule: Boolean,
         val isDisabled: Boolean,
@@ -268,7 +278,8 @@ class SemgrepRuleLoader(
     private fun buildNormalRule(rule: NormalRule<Formula>) {
         val trace = rule.info.ruleTrace
 
-        val ruleAutomataBuilder = SemgrepRuleAutomataBuilder(parser, converter)
+        val strategy =  strategyFor(rule.info) ?: return
+        val ruleAutomataBuilder = automataBuilder(strategy)
         val ruleAutomata = runCatching {
             ruleAutomataBuilder.build(rule.rule, trace)
         }.onFailure { ex ->
@@ -282,7 +293,7 @@ class SemgrepRuleLoader(
         }
 
         val btaTrace = trace.stepTrace(Step.BUILD_TAINT_AUTOMATA)
-        val taintAutomata = createTaintAutomata(ruleAutomata, btaTrace)
+        val taintAutomata = createTaintAutomata(ruleAutomata, btaTrace, strategy.typeOps)
 
         if (taintAutomata.isEmpty && !rule.info.isLibraryRule) {
             trace.stepTrace(Step.BUILD).error(EmptyRuleAfterBuild())
@@ -292,13 +303,15 @@ class SemgrepRuleLoader(
         builtNormalRules[rule.info.ruleId] = NormalRule(taintAutomata, rule.info)
     }
 
-    private fun loadNormalRule(rule: NormalRule<BuiltRule>): Pair<TaintRuleFromSemgrep, RuleMetadata>? {
+    private fun loadNormalRule(rule: NormalRule<BuiltRule>): Pair<TaintRuleFromSemgrep<*>, RuleMetadata>? {
         val trace = rule.info.ruleTrace
 
         val a2trTrace = trace.stepTrace(Step.AUTOMATA_TO_TAINT_RULE)
+        val strategy = strategyFor(rule.info) ?: return null
+        val typeOps = strategy.typeOps
         return runCatching {
-            val ctx = RuleConversionCtx(rule.info.ruleId, rule.info.sinkMeta, a2trTrace)
-            val rules = ctx.convertTaintAutomataToTaintRules(rule.rule)
+            val ctx = RuleConversionCtx(rule.info.ruleId, rule.info.sinkMeta, a2trTrace, typeOps)
+            val rules = convertNormalRuleWithStrategy(strategy, ctx, rule.rule)
             rules to rule.info.metadata
         }.onFailure { ex ->
             a2trTrace.error(FailedToCreateTaintRules(ex.message))
@@ -308,16 +321,24 @@ class SemgrepRuleLoader(
         }
     }
 
-    private fun loadJoinRule(rule: JoinRule<*>): Pair<TaintRuleFromSemgrep, RuleMetadata>? {
+    private fun <P : Any, R> convertNormalRuleWithStrategy(
+        strategy: LanguageStrategy<P, R>,
+        ctx: RuleConversionCtx,
+        rule: SemgrepRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
+    ): TaintRuleFromSemgrep<R> = ctx.convertTaintAutomataToTaintRules(strategy.taintRuleStrategy, rule)
+
+    private fun loadJoinRule(rule: JoinRule<*>): Pair<TaintRuleFromSemgrep<*>, RuleMetadata>? {
         val trace = rule.info.ruleTrace
 
         val taintAutomata = buildJoinRule(rule, trace.stepTrace(Step.BUILD))
             ?: return null
 
         val a2trTrace = trace.stepTrace(Step.AUTOMATA_TO_TAINT_RULE)
+        val strategy = strategyFor(rule.info) ?: return null
+        val typeOps = strategy.typeOps
         return runCatching {
-            val ctx = RuleConversionCtx(rule.info.ruleId, rule.info.sinkMeta, a2trTrace)
-            val rules = ctx.convertTaintAutomataJoinToTaintRules(taintAutomata)
+            val ctx = RuleConversionCtx(rule.info.ruleId, rule.info.sinkMeta, a2trTrace, typeOps)
+            val rules = convertJoinRuleWithStrategy(strategy, ctx, taintAutomata)
                 ?: return null
             rules to rule.info.metadata
         }.onFailure { ex ->
@@ -327,6 +348,12 @@ class SemgrepRuleLoader(
             trace.info("Generate ${it.first.size} rules from ${it.first.ruleId}")
         }
     }
+
+    private fun <P : Any, R> convertJoinRuleWithStrategy(
+        strategy: LanguageStrategy<P, R>,
+        ctx: RuleConversionCtx,
+        taintAutomata: TaintAutomataJoinRule,
+    ): TaintRuleFromSemgrep<R>? = ctx.convertTaintAutomataJoinToTaintRules(strategy.taintRuleStrategy, taintAutomata)
 
     private fun resolveBuiltRuleWrtOverrides(
         ruleId: String,
@@ -361,14 +388,16 @@ class SemgrepRuleLoader(
         val items = hashMapOf<String, TaintAutomataJoinRuleItem>()
         val itemRenames = hashMapOf<String, List<Pair<MetavarAtom, MetavarAtom>>>()
 
+        val strategy = strategyFor(rule.info) ?: return null
+
         for (ref in rule.refs) {
             val refId = resolveRefRuleId(ref.rule, rule.info.pathInfo.ruleRelativePath)
             val itemAutomata = resolveBuiltRuleWrtOverrides(refId, trace, hashSetOf())
                 ?: return null
 
             val renames = ref.renames.map {
-                val from = parseMetaVar(it.from, trace) ?: return null
-                val to = parseMetaVar(it.to, trace) ?: return null
+                val from = strategy.parseMetaVar(it.from, trace) ?: return null
+                val to = strategy.parseMetaVar(it.to, trace) ?: return null
                 Pair(from, to)
             }
 
@@ -382,8 +411,8 @@ class SemgrepRuleLoader(
                 return null
             }
 
-            val lhs = parseJoinMetaVarWithRenames(op.left, itemRenames, trace) ?: return null
-            val rhs = parseJoinMetaVarWithRenames(op.right, itemRenames, trace) ?: return null
+            val lhs = strategy.parseJoinMetaVarWithRenames(op.left, itemRenames, trace) ?: return null
+            val rhs = strategy.parseJoinMetaVarWithRenames(op.right, itemRenames, trace) ?: return null
 
             TaintAutomataJoinOperation(op.op, lhs, rhs)
         }
@@ -396,7 +425,7 @@ class SemgrepRuleLoader(
         return TaintAutomataJoinRule(items, operations)
     }
 
-    private fun parseJoinMetaVarWithRenames(
+    private fun LanguageStrategy<*, *>.parseJoinMetaVarWithRenames(
         ref: SemgrepJoinRuleOnVar,
         renames: Map<String, List<Pair<MetavarAtom, MetavarAtom>>>,
         trace: SemgrepRuleLoadStepTrace
@@ -413,15 +442,6 @@ class SemgrepRuleLoader(
         return TaintAutomataJoinMetaVarRef(ref.ruleName, metaVar)
     }
 
-    private fun parseMetaVar(metaVarStr: String, trace: SemgrepRuleLoadStepTrace): MetavarAtom? {
-        val parsed = parser.parseOrNull(metaVarStr, trace) ?: return null
-        if (parsed !is Metavar) {
-            trace.error(JoinRuleMetavarExpected(metaVarStr))
-            return null
-        }
-        return MetavarAtom.create(parsed.name)
-    }
-
     private fun parseRuleInfo(rule: RegisteredRule, forceLibraryMode: Boolean): RuleInfo {
         val semgrepRule = rule.rule
         val ruleCwe = semgrepRule.cweInfo()
@@ -434,8 +454,10 @@ class SemgrepRuleLoader(
         val sinkMeta = SinkMetaData(ruleCwe, semgrepRule.message, severity)
         val metadata = RuleMetadata(rule.ruleId, semgrepRule.id, semgrepRule.message, severity, semgrepRule.metadata)
         val overrides = semgrepRule.overrides(rule.pathInfo.ruleRelativePath)
+        val language = strategyFor(semgrepRule)?.language
         return RuleInfo(
             rule.ruleId, semgrepRule.id,
+            language = language,
             overridesRuleId = overrides,
             isLibraryRule = forceLibraryMode || semgrepRule.isLibraryRule(),
             isDisabled = semgrepRule.isDisabled(),
@@ -443,8 +465,7 @@ class SemgrepRuleLoader(
         )
     }
 
-    private fun SemgrepYamlRule.isJavaRule(): Boolean =
-        languages.orEmpty().any { it.equals("java", ignoreCase = true) }
+    private fun SemgrepYamlRule.isSupportedRule(): Boolean = strategyFor(this) != null
 
     private fun SemgrepYamlRule.isJoinRule(): Boolean =
         mode?.equals("join", ignoreCase = true) ?: false

@@ -95,7 +95,7 @@ private inline fun <reified EdgeType : AutomataEdgeTypeWithFormula> AutomataBuil
     val formulas = node.outEdges.mapNotNull { (it.first as? EdgeType)?.formula?.complement() }
 
     val result = formulaManager.mkAnd(formulas)
-    if (!methodFormulaSat(formulaManager, result, metaVarInfo, cancelation)) {
+    if (!methodFormulaSat(formulaManager, result, metaVarInfo, cancelation, typeOps)) {
         return null
     }
 

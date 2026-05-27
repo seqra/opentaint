@@ -165,7 +165,7 @@ private fun AutomataBuilderCtx.transformEdge(
         return edge to context
     }
 
-    if (!methodFormulaSat(formulaManager, newFormula, metaVarInfo, cancelation)) {
+    if (!methodFormulaSat(formulaManager, newFormula, metaVarInfo, cancelation, typeOps)) {
         return null
     }
 
@@ -267,7 +267,7 @@ private fun MetavarUnificationContext.extendByFormulaPositivePredicates(
     formula: MethodFormula,
     automataCtx: AutomataBuilderCtx
 ): MetavarUnificationContext? {
-    val cubes = simplifyMethodFormula(automataCtx.formulaManager, formula, automataCtx.metaVarInfo, automataCtx.cancelation)
+    val cubes = simplifyMethodFormula(automataCtx.formulaManager, formula, automataCtx.metaVarInfo, automataCtx.cancelation, automataCtx.typeOps)
 
     val cubeContexts = cubes.map {
         val positivePredicates = it.cube.positiveLiterals.toSet()

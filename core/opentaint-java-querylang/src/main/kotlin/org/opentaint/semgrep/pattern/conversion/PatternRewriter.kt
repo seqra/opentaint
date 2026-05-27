@@ -408,9 +408,9 @@ inline fun PatternRewriter.safeRewrite(
 }
 
 inline fun PatternRewriter.safeRewrite(
-    rule: NormalizedSemgrepRule,
+    rule: NormalizedSemgrepRule<SemgrepJavaPattern>,
     onException: (RewriteException) -> Nothing,
-): List<NormalizedSemgrepRule> {
+): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val newPatternsOptions = rule.patterns
         .map { safeRewrite(it, onException) }
         .cartesianProductMapTo { it.toList() }

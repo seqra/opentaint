@@ -1,21 +1,11 @@
 package org.opentaint.semgrep.pattern.conversion.taint
 
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedCondition
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintCleanAction
-import org.opentaint.dataflow.configuration.jvm.serialized.SinkRule
 import org.opentaint.semgrep.pattern.GeneratedTaintMark
 import org.opentaint.semgrep.pattern.Mark
 import org.opentaint.semgrep.pattern.Mark.RuleUniqueMarkPrefix
 import org.opentaint.semgrep.pattern.NoRequirement
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 import org.opentaint.semgrep.pattern.RuleWithMetaVars
-import org.opentaint.semgrep.pattern.SinkRequiresWithMetaVarIgnored
-import org.opentaint.semgrep.pattern.TaintRuleHasNoLabels
-import org.opentaint.semgrep.pattern.TaintRuleMatchAnything
-import org.opentaint.semgrep.pattern.TaintRuleWithoutSources
 import org.opentaint.semgrep.pattern.SemgrepSinkTaintRequirement
 import org.opentaint.semgrep.pattern.SemgrepTaintAnd
 import org.opentaint.semgrep.pattern.SemgrepTaintLabel
@@ -23,9 +13,15 @@ import org.opentaint.semgrep.pattern.SemgrepTaintNot
 import org.opentaint.semgrep.pattern.SemgrepTaintOr
 import org.opentaint.semgrep.pattern.SemgrepTaintRequires
 import org.opentaint.semgrep.pattern.SemgrepTaintRule
+import org.opentaint.semgrep.pattern.SinkRequiresWithMetaVarIgnored
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.TaintRuleHasNoLabels
+import org.opentaint.semgrep.pattern.TaintRuleWithoutSources
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy.SinkDiscardMode
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
+import org.opentaint.semgrep.pattern.conversion.TaintRuleStrategy
 import org.opentaint.semgrep.pattern.conversion.automata.ParamConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.Position
 import org.opentaint.semgrep.pattern.conversion.automata.Predicate
@@ -34,25 +30,31 @@ import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeEffect
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.MethodPredicate
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.State
+import org.opentaint.semgrep.pattern.conversion.taint.composition.TaintCleanCompositionStrategy
+import org.opentaint.semgrep.pattern.conversion.taint.composition.TaintPassCompositionStrategy
+import org.opentaint.semgrep.pattern.conversion.taint.composition.TaintSinkCompositionStrategy
+import org.opentaint.semgrep.pattern.conversion.taint.composition.TaintSourceCompositionStrategy
 
-fun RuleConversionCtx.convertTaintRuleToTaintRules(
+fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintRuleToTaintRules(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     rule: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
-): TaintRuleFromSemgrep {
+): TaintRuleFromSemgrep<Item> {
     val rulesWithVars = prepareTaintRules(rule)
-    return convertTaintRuleToTaintRules(rulesWithVars, ignoreEmptySources = false)
+    return convertTaintRuleToTaintRules(strategy, rulesWithVars, ignoreEmptySources = false)
 }
 
-fun RuleConversionCtx.convertTaintRuleToTaintRules(
+fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintRuleToTaintRules(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     rulesWithVars: ProcessedTaintRule<RuleWithMetaVars<TaintRegisterStateAutomataWithStateVars, ResolvedMetaVarInfo>>,
     ignoreEmptySources: Boolean
-): TaintRuleFromSemgrep {
+): TaintRuleFromSemgrep<Item> {
     val taintAutomata = rulesWithVars.flatMap {
         safeConvertToTaintRules {
             listOf(generateTaintAutomataEdges(it.rule, it.metaVarInfo))
         }.orEmpty()
     }
 
-    val taintCtx = generateEdgeCtx(taintAutomata)
+    val taintCtx = generateEdgeCtx(taintAutomata, strategy)
 
     if (taintCtx.source.isEmpty() && !ignoreEmptySources) {
         trace.error(TaintRuleWithoutSources())
@@ -60,19 +62,12 @@ fun RuleConversionCtx.convertTaintRuleToTaintRules(
 
     val taintRules = taintCtx.flatMap {
         safeConvertToTaintRules {
-            val generatedRules = it.generateTaintRules(this)
-            val filteredRules = generatedRules.filter { r ->
-                if (r !is SinkRule) return@filter true
-                if (r.condition != null && r.condition !is SerializedCondition.True) return@filter true
-
-                trace.error(TaintRuleMatchAnything())
-                false
-            }
-            listOf(TaintRuleFromSemgrep.TaintRuleGroup(filteredRules))
+            val generatedRules = strategy.generateTaintRules(it, this, SinkDiscardMode.TRIVIAL_CONDITION)
+            listOf(TaintRuleFromSemgrep.TaintRuleGroup(generatedRules))
         }.orEmpty()
     }
 
-    val ruleGroups = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup>()
+    val ruleGroups = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup<Item>>()
     taintRules.source.mapTo(ruleGroups) { it.rule }
     taintRules.sink.mapTo(ruleGroups) { it.rule }
     taintRules.pass.mapTo(ruleGroups) { it.rule }
@@ -129,138 +124,28 @@ data class ProcessedTaintRule<R>(
     )
 }
 
-private fun ProcessedTaintSourceRule<TaintAutomataEdges>.compositionStrategy() =
-    object : TaintRuleGenerationCtx.CompositionStrategy {
-        private val initialStateId = rule.automata.stateId(rule.automata.initial)
+private fun <Item, Cond, Assign, Clean> ProcessedTaintSourceRule<TaintAutomataEdges>.compositionStrategy(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
+) = TaintSourceCompositionStrategy(rule, requires, taintedVars, label, strategy)
 
-        override fun stateContains(
-            state: State,
-            varName: MetavarAtom,
-            pos: PositionBaseWithModifiers
-        ): SerializedCondition? {
-            if (requires == null) return null
+private fun <Item, Cond, Assign, Clean> ProcessedTaintSinkRule<TaintAutomataEdges>.compositionStrategy(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
+) = TaintSinkCompositionStrategy(rule, requires, strategy)
 
-            val value = state.register.assignedVars[varName]
-            if (value != initialStateId) return null
-
-            return requires.build(pos)
-        }
-
-        override fun stateAssign(
-            state: State,
-            varName: MetavarAtom,
-            pos: PositionBaseWithModifiers
-        ): List<SerializedTaintAssignAction>? {
-            if (state !in rule.automata.finalAcceptStates) return null
-            if (varName !in taintedVars) return null
-            return listOf(label.mkAssignMark(pos))
-        }
-
-        override fun stateAccessedMarks(state: State, varName: MetavarAtom): Set<Mark.GeneratedMark>? {
-            if (requires == null) return null
-
-            val value = state.register.assignedVars[varName]
-            if (value == initialStateId) {
-                return requires.collectLabels(hashSetOf())
-            }
-
-            if (state in rule.automata.finalAcceptStates) {
-                if (varName in taintedVars) {
-                    return setOf(label)
-                }
-            }
-
-            return null
-        }
-    }
-
-private fun ProcessedTaintSinkRule<TaintAutomataEdges>.compositionStrategy() =
-    object : TaintRuleGenerationCtx.CompositionStrategy {
-        private val initialStateId = rule.automata.stateId(rule.automata.initial)
-
-        override fun stateContains(
-            state: State,
-            varName: MetavarAtom,
-            pos: PositionBaseWithModifiers
-        ): SerializedCondition? {
-            val value = state.register.assignedVars[varName]
-            if (value != initialStateId) return null
-            return requires.build(pos)
-        }
-
-        override fun stateAccessedMarks(state: State, varName: MetavarAtom): Set<Mark.GeneratedMark>? {
-            val value = state.register.assignedVars[varName]
-            if (value != initialStateId) return null
-            return requires.collectLabels(hashSetOf())
-        }
-    }
-
-
-private fun ProcessedTaintPassRule<TaintAutomataEdges>.compositionStrategy(
+private fun <Item, Cond, Assign, Clean> ProcessedTaintPassRule<TaintAutomataEdges>.compositionStrategy(
     markName: Mark.GeneratedMark,
-    markRequires: TaintMarkCheckBuilder
-) = object : TaintRuleGenerationCtx.CompositionStrategy {
-    private val initialStateId = rule.automata.stateId(rule.automata.initial)
+    markRequires: TaintMarkCheckBuilder,
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
+) = TaintPassCompositionStrategy(rule, markRequires, markName, strategy)
 
-    override fun stateContains(
-        state: State,
-        varName: MetavarAtom,
-        pos: PositionBaseWithModifiers
-    ): SerializedCondition? {
-        val value = state.register.assignedVars[varName]
-        if (value != initialStateId) return null
-        return markRequires.build(pos)
-    }
+private fun <Item, Cond, Assign, Clean> ProcessedTaintCleanRule<TaintAutomataEdges>.compositionStrategy(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
+) = TaintCleanCompositionStrategy(rule, bySideEffect, cleans, strategy)
 
-    override fun stateAssign(
-        state: State,
-        varName: MetavarAtom,
-        pos: PositionBaseWithModifiers
-    ): List<SerializedTaintAssignAction>? {
-        if (state !in rule.automata.finalAcceptStates) return null
-        return listOf(markName.mkAssignMark(pos))
-    }
-
-    override fun stateAccessedMarks(state: State, varName: MetavarAtom): Set<Mark.GeneratedMark>? {
-        val value = state.register.assignedVars[varName]
-        if (value == initialStateId) {
-            return markRequires.collectLabels(hashSetOf())
-        }
-        if (state in rule.automata.finalAcceptStates) {
-            return setOf(markName)
-        }
-        return null
-    }
-}
-
-private fun ProcessedTaintCleanRule<TaintAutomataEdges>.compositionStrategy() =
-    object : TaintRuleGenerationCtx.CompositionStrategy {
-        override fun stateClean(
-            state: State,
-            stateBefore: State,
-            varName: MetavarAtom?,
-            pos: PositionBaseWithModifiers?
-        ): List<SerializedTaintCleanAction>? {
-            if (state !in rule.automata.finalAcceptStates) return null
-
-            val cleanerPos = mutableListOf(PositionBase.Result.base())
-            if (bySideEffect) {
-                cleanerPos += PositionBase.AnyArgument(classifier = "tainted").base()
-                cleanerPos += PositionBase.This.base()
-            }
-
-            return cleans.flatMap { c -> cleanerPos.map { c.mkCleanMark(it) } }
-        }
-
-        override fun stateAccessedMarks(state: State, varName: MetavarAtom): Set<Mark.GeneratedMark>? {
-            if (state !in rule.automata.finalAcceptStates) return null
-            return cleans
-        }
-    }
-
-private fun RuleConversionCtx.generateEdgeCtx(
-    rule: ProcessedTaintRule<TaintAutomataEdges>
-): ProcessedTaintRule<TaintRuleGenerationCtx> {
+private fun <Item, Cond, Assign, Clean> RuleConversionCtx.generateEdgeCtx(
+    rule: ProcessedTaintRule<TaintAutomataEdges>,
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
+): ProcessedTaintRule<TaintRuleGenerationCtx<Item, Cond, Assign, Clean>> {
     val source = rule.source.flatMapIndexed { i, r ->
         val automata = r.rule
         val sourceAutomata = automata.copy(
@@ -272,7 +157,8 @@ private fun RuleConversionCtx.generateEdgeCtx(
             TaintRuleGenerationCtx(
                 prefix = RuleUniqueMarkPrefix(ruleId, i, "source"),
                 automataEdges = sourceAutomata,
-                compositionStrategy = r.compositionStrategy()
+                compositionStrategy = r.compositionStrategy(strategy),
+                strategy
             ).let { listOf(it) }
         }
     }
@@ -282,7 +168,8 @@ private fun RuleConversionCtx.generateEdgeCtx(
             TaintRuleGenerationCtx(
                 prefix = RuleUniqueMarkPrefix(ruleId, i, "sink"),
                 automataEdges = r.rule,
-                compositionStrategy = r.compositionStrategy()
+                compositionStrategy = r.compositionStrategy(strategy),
+                strategy
             ).let { listOf(it) }
         }
     }
@@ -299,7 +186,8 @@ private fun RuleConversionCtx.generateEdgeCtx(
                 TaintRuleGenerationCtx(
                     prefix = RuleUniqueMarkPrefix(ruleId, i, "pass_$p"),
                     automataEdges = passAutomata,
-                    compositionStrategy = r.compositionStrategy(markName, markCondition)
+                    compositionStrategy = r.compositionStrategy(markName, markCondition, strategy),
+                    strategy
                 )
             }
         }
@@ -316,7 +204,8 @@ private fun RuleConversionCtx.generateEdgeCtx(
             TaintRuleGenerationCtx(
                 prefix = RuleUniqueMarkPrefix(ruleId, i, "clean"),
                 automataEdges = cleanAutomata,
-                compositionStrategy = r.compositionStrategy()
+                compositionStrategy = r.compositionStrategy(strategy),
+                strategy
             ).let { listOf(it) }
         }
     }

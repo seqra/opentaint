@@ -8,14 +8,15 @@ import org.opentaint.semgrep.pattern.MetavarName
 import org.opentaint.semgrep.pattern.Name
 import org.opentaint.semgrep.pattern.NormalizedSemgrepRule
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
+import org.opentaint.semgrep.pattern.SemgrepJavaPattern
 import org.opentaint.semgrep.pattern.TypeName
 import org.opentaint.semgrep.pattern.flatMap
 import org.opentaint.semgrep.pattern.transform
 
 fun rewriteTypeNameWithMetaVar(
-    rule: NormalizedSemgrepRule,
+    rule: NormalizedSemgrepRule<SemgrepJavaPattern>,
     metaVarInfo: ResolvedMetaVarInfo
-): Pair<List<NormalizedSemgrepRule>, ResolvedMetaVarInfo> {
+): Pair<List<NormalizedSemgrepRule<SemgrepJavaPattern>>, ResolvedMetaVarInfo> {
     val generatedMetaVars = hashMapOf<TypeName.SimpleTypeName, String>()
 
     val rewriter = object : PatternRewriter {

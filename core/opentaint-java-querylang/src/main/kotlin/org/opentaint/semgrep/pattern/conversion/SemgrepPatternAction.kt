@@ -30,7 +30,7 @@ sealed interface SemgrepPatternAction {
         override val result: ParamCondition?,
         val params: ParamConstraint,
         val obj: ParamCondition?,
-        val enclosingClassName: TypeNamePattern?,
+        val enclosingClassName: TypeConstraint?,
     ) : SemgrepPatternAction {
         override val metavars: List<MetavarAtom>
             get() {
@@ -51,7 +51,7 @@ sealed interface SemgrepPatternAction {
     }
 
     data class ConstructorCall(
-        val className: TypeNamePattern,
+        val className: TypeConstraint,
         override val result: ParamCondition?,
         val params: ParamConstraint,
     ) : SemgrepPatternAction {
@@ -91,19 +91,19 @@ sealed interface SemgrepPatternAction {
         @Serializable
         data class Signature(val modifier: SignatureModifier) : ClassConstraint
         @Serializable
-        data class TypeConstraint(val superType: TypeNamePattern) : ClassConstraint
+        data class SuperType(val superType: TypeConstraint) : ClassConstraint
     }
 
     @Serializable
     data class SignatureModifier(
-        val type: TypeNamePattern,
+        val type: TypeConstraint,
         val value: SignatureModifierValue
     )
 
     data class MethodSignature(
         val methodName: SignatureName,
         val params: ParamConstraint.Partial,
-        val returnType: TypeNamePattern? = null,
+        val returnType: TypeConstraint? = null,
         val modifiers: List<SignatureModifier>,
         val enclosingClassMetavar: String?,
         val enclosingClassConstraints: List<ClassConstraint>,
@@ -122,11 +122,11 @@ sealed interface SemgrepPatternAction {
         }
     }
 
-    data class MethodExit(val retVal: ParamCondition) : SemgrepPatternAction {
+    data class MethodExit(val retVals: List<ParamCondition>) : SemgrepPatternAction {
         override val metavars: List<MetavarAtom>
             get() {
                 val metavars = mutableSetOf<MetavarAtom>()
-                retVal.collectMetavarTo(metavars)
+                retVals.forEach { it.collectMetavarTo(metavars) }
                 return metavars.toList()
             }
 

@@ -10,6 +10,8 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SourceRule
 import org.opentaint.semgrep.pattern.Mark
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.semgrep.pattern.createTaintConfig
 import kotlin.io.path.Path
 import kotlin.test.assertNotNull
@@ -32,14 +34,16 @@ abstract class SampleBasedTest(
         val data = sampleData[sampleClassName] ?: error("No sample data for $sampleClassName")
 
         val trace = SemgrepLoadTrace()
-        val loader = SemgrepRuleLoader()
+        val loader = SemgrepRuleLoader(listOf(JavaLanguageStrategy()))
         loader.registerRuleSet(ruleSetText = data.rule, ruleRelativePath = Path(data.rulePath), rulesRoot = Path("."), trace)
 
         val loadedRules = loader.loadRules().rulesWithMeta
         val (rule, _) = loadedRules.singleOrNull()
             ?: error("Not a single rule for ${data.rulePath}")
 
-        val taintConfig = rule.createTaintConfig()
+        @Suppress("UNCHECKED_CAST")
+        val javaRule = rule as TaintRuleFromSemgrep<SerializedItem>
+        val taintConfig = javaRule.createTaintConfig()
 
         val stateVarExists = doesCreateStateVar(taintConfig)
         if (!expectStateVar && stateVarExists) {

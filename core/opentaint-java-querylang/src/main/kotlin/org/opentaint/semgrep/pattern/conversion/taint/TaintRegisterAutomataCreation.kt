@@ -8,6 +8,7 @@ import org.opentaint.semgrep.pattern.EmptyAutomataAfterGeneratedEdgeElimination
 import org.opentaint.semgrep.pattern.TaintAutomataCreationFailure
 import org.opentaint.semgrep.pattern.SemgrepRule
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
+import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.automata.AutomataEdgeType
 import org.opentaint.semgrep.pattern.conversion.automata.AutomataNode
@@ -24,16 +25,18 @@ import kotlin.time.Duration.Companion.seconds
 
 data class TaintAutomataConversionCtx(
     val semgrepRuleTrace: SemgrepRuleLoadStepTrace,
-    val operationTimeout: Duration
+    val operationTimeout: Duration,
+    val typeOps: LanguageTypeOps,
 )
 
 private val automataCreationTimeout = 2.seconds
 
 fun createTaintAutomata(
     rule: SemgrepRule<RuleWithMetaVars<SemgrepRuleAutomata, ResolvedMetaVarInfo>>,
-    semgrepRuleTrace: SemgrepRuleLoadStepTrace
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+    typeOps: LanguageTypeOps,
 ): SemgrepRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>> {
-    val ctx = TaintAutomataConversionCtx(semgrepRuleTrace, automataCreationTimeout)
+    val ctx = TaintAutomataConversionCtx(semgrepRuleTrace, automataCreationTimeout, typeOps)
     return rule.flatMap {
         val taintAutomata = ctx.createAutomataWithEdgeElimination(
             it.rule.formulaManager, it.metaVarInfo, it.rule.initialNode
@@ -60,7 +63,7 @@ private fun TaintAutomataConversionCtx.createAutomataWithEdgeEliminationUnsafe(
     metaVarInfo: ResolvedMetaVarInfo,
     initialNode: AutomataNode,
 ): TaintRegisterStateAutomata? {
-    val automata = createAutomata(formulaManager, metaVarInfo, initialNode, operationTimeout)
+    val automata = createAutomata(formulaManager, metaVarInfo, initialNode, operationTimeout, typeOps)
 
     val anyValueGeneratorEdgeEliminator = edgeTypePreservingEdgeEliminator(::eliminateAnyValueGenerator)
     val automataWithoutGeneratedEdges = eliminateEdges(
@@ -89,6 +92,7 @@ private fun createAutomata(
     metaVarInfo: ResolvedMetaVarInfo,
     initialNode: AutomataNode,
     automataCreationTimeout: Duration,
+    typeOps: LanguageTypeOps,
 ): TaintRegisterStateAutomata {
     val cancelation = OperationCancelation(automataCreationTimeout)
 
@@ -111,7 +115,7 @@ private fun createAutomata(
         }
 
         for ((edgeCondition, dstNode) in node.outEdges) {
-            for (simplifiedEdge in simplifyEdgeCondition(formulaManager, metaVarInfo, cancelation, edgeCondition)) {
+            for (simplifiedEdge in simplifyEdgeCondition(formulaManager, metaVarInfo, cancelation, typeOps, edgeCondition)) {
                 val nextState = result.newState(dstNode)
                 result.successors.getOrPut(state, ::hashSetOf).add(simplifiedEdge to nextState)
                 unprocessed.add(nextState to dstNode)
@@ -130,11 +134,12 @@ private fun simplifyEdgeCondition(
     formulaManager: MethodFormulaManager,
     metaVarInfo: ResolvedMetaVarInfo,
     cancelation: OperationCancelation,
+    typeOps: LanguageTypeOps,
     edge: AutomataEdgeType
 ) = when (edge) {
     is AutomataEdgeType.AutomataEdgeTypeWithFormula -> {
         simplifyMethodFormula(
-            formulaManager, edge.formula, metaVarInfo, cancelation, applyNotEquivalentTransformations = true
+            formulaManager, edge.formula, metaVarInfo, cancelation, typeOps, applyNotEquivalentTransformations = true
         ).map {
             val (effect, cond) = edgeEffectAndCondition(it, formulaManager)
 

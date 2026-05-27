@@ -8,7 +8,7 @@ import org.opentaint.semgrep.pattern.SemgrepJavaPattern
 import org.opentaint.semgrep.pattern.StaticFieldAccess
 import org.opentaint.semgrep.pattern.TypeName
 
-fun rewriteStaticFieldAccess(rule: NormalizedSemgrepRule): List<NormalizedSemgrepRule> {
+fun rewriteStaticFieldAccess(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val rewriter = object : PatternRewriter {
         override fun FieldAccess.rewriteFieldAccess(): List<SemgrepJavaPattern> {
             val objPattern = when (obj) {

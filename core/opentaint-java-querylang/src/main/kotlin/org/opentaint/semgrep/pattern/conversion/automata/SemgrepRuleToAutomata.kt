@@ -2,6 +2,7 @@ package org.opentaint.semgrep.pattern.conversion.automata
 
 import org.opentaint.semgrep.pattern.ActionListSemgrepRule
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
+import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternActionList
 import org.opentaint.semgrep.pattern.conversion.automata.operations.acceptIfCurrentAutomataAcceptsPrefix
@@ -21,11 +22,12 @@ import kotlin.time.Duration
 fun transformSemgrepRuleToAutomata(
     rule: ActionListSemgrepRule,
     metaVarInfo: ResolvedMetaVarInfo,
+    typeOps: LanguageTypeOps,
     timeout: Duration
 ): SemgrepRuleAutomata {
     val formulaManager = MethodFormulaManager()
     val cancelation = OperationCancelation(timeout)
-    val ctx = AutomataBuilderCtx(cancelation, formulaManager, metaVarInfo)
+    val ctx = AutomataBuilderCtx(cancelation, formulaManager, metaVarInfo, typeOps)
     return ctx.transformSemgrepRuleToAutomata(rule)
 }
 
@@ -33,6 +35,7 @@ class AutomataBuilderCtx(
     val cancelation: OperationCancelation,
     val formulaManager: MethodFormulaManager,
     val metaVarInfo: ResolvedMetaVarInfo,
+    val typeOps: LanguageTypeOps,
 )
 
 private fun AutomataBuilderCtx.transformSemgrepRuleToAutomata(

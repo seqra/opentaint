@@ -16,6 +16,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadErrorMessage
 import org.opentaint.semgrep.pattern.SemgrepErrorEntry
 import org.opentaint.semgrep.pattern.SemgrepErrorEntry.Category.INTERNAL_WARNING
@@ -28,6 +29,8 @@ import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.PatternToActionListConverter
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternParser
 import java.nio.file.Path
@@ -338,7 +341,7 @@ private fun collectParsingStats(path: Path): List<Pair<SemgrepJavaPattern, Strin
     val parser = SemgrepJavaPatternParser()
     val converter = PatternToActionListConverter()
 
-    val patternParser = object : SemgrepPatternParser {
+    val patternParser = object : SemgrepPatternParser<SemgrepJavaPattern> {
         override fun parseOrNull(
             pattern: String,
             semgrepTrace: SemgrepRuleLoadStepTrace,
@@ -379,7 +382,13 @@ private fun collectParsingStats(path: Path): List<Pair<SemgrepJavaPattern, Strin
         }
     }
 
-    val loader = SemgrepRuleLoader(patternParser, converter)
+    val javaStrategy = JavaLanguageStrategy()
+    val instrumentedConverter = converter
+    val instrumentedStrategy = object : LanguageStrategy<SemgrepJavaPattern, SerializedItem> by javaStrategy {
+        override val parser = patternParser
+        override val converter = instrumentedConverter
+    }
+    val loader = SemgrepRuleLoader(listOf(instrumentedStrategy))
 
     val rootDir = path.toFile()
     rootDir.walk().filter { it.isFile }.forEach { file ->
@@ -518,7 +527,7 @@ private fun testStabilityOnePass(path: Path, allRules: List<Path>, seed: Int) {
 
 private fun collectRuleSetStat(semgrepRulesPath: Path, allRules: List<Path>): HashMap<String, List<Map<String, Int>>> {
     val stats = hashMapOf<String, List<Map<String, Int>>>()
-    val loader = SemgrepRuleLoader()
+    val loader = SemgrepRuleLoader(listOf(JavaLanguageStrategy()))
     val trace = SemgrepLoadTrace()
     for (rulePath in allRules) {
         loader.registerRuleSet(rulePath.readText(), rulePath, semgrepRulesPath, trace)
@@ -530,8 +539,8 @@ private fun collectRuleSetStat(semgrepRulesPath: Path, allRules: List<Path>): Ha
     return stats
 }
 
-private fun TaintRuleFromSemgrep.stats(): List<Map<String, Int>> =
+private fun TaintRuleFromSemgrep<*>.stats(): List<Map<String, Int>> =
     taintRules.map { it.stats() }
 
-private fun TaintRuleFromSemgrep.TaintRuleGroup.stats(): Map<String, Int> =
-    rules.groupingBy { it::class.java.simpleName }.eachCount()
+private fun TaintRuleFromSemgrep.TaintRuleGroup<*>.stats(): Map<String, Int> =
+    rules.filterNotNull().groupingBy { it::class.java.simpleName }.eachCount()

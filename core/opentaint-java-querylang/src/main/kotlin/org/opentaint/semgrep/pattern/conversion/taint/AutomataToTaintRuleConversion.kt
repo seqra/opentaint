@@ -37,9 +37,11 @@ import org.opentaint.semgrep.pattern.SemgrepRule
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.SemgrepTaintRule
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.semgrep.pattern.TaintRuleMatchAnything
 import org.opentaint.semgrep.pattern.UserRuleFromSemgrepInfo
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
+import org.opentaint.semgrep.pattern.conversion.JavaConcreteType
+import org.opentaint.semgrep.pattern.conversion.JavaTaintRuleGenerationCtx
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy.SinkDiscardMode
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
 import org.opentaint.semgrep.pattern.conversion.ParamCondition.StringValueMetaVar
@@ -51,7 +53,8 @@ import org.opentaint.semgrep.pattern.conversion.SpecificBoolValue
 import org.opentaint.semgrep.pattern.conversion.SpecificIntValue
 import org.opentaint.semgrep.pattern.conversion.SpecificNullValue
 import org.opentaint.semgrep.pattern.conversion.SpecificStringValue
-import org.opentaint.semgrep.pattern.conversion.TypeNamePattern
+import org.opentaint.semgrep.pattern.conversion.TaintRuleStrategy
+import org.opentaint.semgrep.pattern.conversion.TypeConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.ClassModifierConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodEnclosingClassName
@@ -68,11 +71,12 @@ import org.opentaint.semgrep.pattern.flatMap
 import org.opentaint.semgrep.pattern.toDNF
 import org.opentaint.semgrep.pattern.transform
 
-fun RuleConversionCtx.convertTaintAutomataToTaintRules(
+fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintAutomataToTaintRules(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     rule: SemgrepRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
-): TaintRuleFromSemgrep = when (rule) {
-    is SemgrepMatchingRule -> convertMatchingRuleToTaintRules(rule)
-    is SemgrepTaintRule -> convertTaintRuleToTaintRules(rule)
+): TaintRuleFromSemgrep<Item> = when (rule) {
+    is SemgrepMatchingRule -> convertMatchingRuleToTaintRules(strategy, rule)
+    is SemgrepTaintRule -> convertTaintRuleToTaintRules(strategy, rule)
 }
 
 fun <R> RuleConversionCtx.safeConvertToTaintRules(body: () -> R): R? =
@@ -82,15 +86,16 @@ fun <R> RuleConversionCtx.safeConvertToTaintRules(body: () -> R): R? =
         trace.error(FailedToConvertToTaintRule(ex.message))
     }.getOrNull()
 
-private fun RuleConversionCtx.convertMatchingRuleToTaintRules(
+private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertMatchingRuleToTaintRules(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     rule: SemgrepMatchingRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
-): TaintRuleFromSemgrep {
+): TaintRuleFromSemgrep<Item> {
     val ruleGroups = rule.rules.mapIndexedNotNull { idx, r ->
         val rules = safeConvertToTaintRules {
-            convertAutomataToTaintRules(r.metaVarInfo, r.rule, RuleUniqueMarkPrefix(ruleId, idx))
+            convertAutomataToTaintRules(strategy, r.metaVarInfo, r.rule, RuleUniqueMarkPrefix(ruleId, idx))
         }
 
-        rules?.let(TaintRuleFromSemgrep::TaintRuleGroup)
+        rules?.let { TaintRuleFromSemgrep.TaintRuleGroup(it) }
     }
 
     if (ruleGroups.isEmpty()) {
@@ -100,37 +105,21 @@ private fun RuleConversionCtx.convertMatchingRuleToTaintRules(
     return TaintRuleFromSemgrep(ruleId, ruleGroups)
 }
 
-private fun RuleConversionCtx.convertAutomataToTaintRules(
+private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertAutomataToTaintRules(
+    strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     metaVarInfo: ResolvedMetaVarInfo,
     taintAutomata: TaintRegisterStateAutomata,
     markPrefix: RuleUniqueMarkPrefix,
-): List<SerializedItem> {
+): List<Item> {
     val automataWithVars = TaintRegisterStateAutomataWithStateVars(
         taintAutomata,
         initialStateVars = emptySet(),
         acceptStateVars = emptySet()
     )
     val taintEdges = generateTaintAutomataEdges(automataWithVars, metaVarInfo)
-    val ctx = TaintRuleGenerationCtx(markPrefix, taintEdges, compositionStrategy = null)
+    val ctx = TaintRuleGenerationCtx(markPrefix, taintEdges, compositionStrategy = null, strategy)
 
-    val rules = ctx.generateTaintRules(this)
-    val filteredRules = rules.filter { r ->
-        if (r !is SinkRule) return@filter true
-        if (r.condition != null && r.condition !is SerializedCondition.True) return@filter true
-
-        val function = when (r) {
-            is SerializedRule.MethodEntrySink -> r.function
-            is SerializedRule.MethodExitSink -> r.function
-            is SerializedRule.Sink -> r.function
-        }
-
-        if (!function.matchAnything()) return@filter true
-
-        trace.error(TaintRuleMatchAnything())
-        false
-    }
-
-    return filteredRules
+    return strategy.generateTaintRules(ctx, this, SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION)
 }
 
 private data class RegisterVarPosition(val varName: MetavarAtom, val positions: MutableSet<PositionBase>)
@@ -241,7 +230,7 @@ private enum class TaintEdgeKind {
     POSITIVE, CLEANER
 }
 
-fun TaintRuleGenerationCtx.generateTaintRules(ctx: RuleConversionCtx): List<SerializedItem> {
+fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<SerializedItem> {
     val rules = mutableListOf<SerializedItem>()
 
     fun evaluateWithStateCheck(edge: TaintRuleEdge, kind: TaintEdgeKind, state: State): List<EvaluatedEdgeCondition> =
@@ -346,7 +335,7 @@ fun TaintRuleGenerationCtx.generateTaintRules(ctx: RuleConversionCtx): List<Seri
     return rules
 }
 
-private fun TaintRuleGenerationCtx.buildStateAssignAction(
+private fun JavaTaintRuleGenerationCtx.buildStateAssignAction(
     state: State,
     edgeCondition: EvaluatedEdgeCondition
 ): List<SerializedTaintAssignAction> {
@@ -365,7 +354,7 @@ private fun TaintRuleGenerationCtx.buildStateAssignAction(
     return result
 }
 
-private fun TaintRuleGenerationCtx.buildStateCleanAction(
+private fun JavaTaintRuleGenerationCtx.buildStateCleanAction(
     state: State,
     stateBefore: State,
     edgeCondition: EvaluatedEdgeCondition
@@ -386,7 +375,7 @@ private fun TaintRuleGenerationCtx.buildStateCleanAction(
 }
 
 private fun EvaluatedEdgeCondition.addStateCheck(
-    ctx: TaintRuleGenerationCtx,
+    ctx: JavaTaintRuleGenerationCtx,
     checkGlobalState: Boolean,
     state: State
 ): EvaluatedEdgeCondition {
@@ -443,7 +432,7 @@ private class RuleConditionBuilder {
     )
 }
 
-private fun TaintRuleGenerationCtx.evaluateMethodConditionAndEffect(
+private fun JavaTaintRuleGenerationCtx.evaluateMethodConditionAndEffect(
     edgeKind: TaintEdgeKind,
     state: State,
     condition: EdgeCondition,
@@ -506,7 +495,7 @@ private fun MethodSignature.notEvaluatedSignature(evaluated: MethodSignature): M
     )
 }
 
-private fun TaintRuleGenerationCtx.evaluateConditionAndEffectSignatures(
+private fun JavaTaintRuleGenerationCtx.evaluateConditionAndEffectSignatures(
     effect: EdgeEffect,
     condition: EdgeCondition,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
@@ -533,7 +522,7 @@ private fun TaintRuleGenerationCtx.evaluateConditionAndEffectSignatures(
     return evaluateFormulaSignature(signatures, semgrepRuleTrace)
 }
 
-private fun TaintRuleGenerationCtx.evaluateFormulaSignature(
+private fun JavaTaintRuleGenerationCtx.evaluateFormulaSignature(
     signatures: List<MethodSignature>,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ): Pair<MethodSignature, List<RuleConditionBuilder>> {
@@ -624,8 +613,8 @@ private fun TaintRuleGenerationCtx.evaluateFormulaSignature(
     return signature to buildersWithClass
 }
 
-private fun TaintRuleGenerationCtx.evaluateFormulaSignatureReturnType(
-    returnType: TypeNamePattern,
+private fun JavaTaintRuleGenerationCtx.evaluateFormulaSignatureReturnType(
+    returnType: TypeConstraint,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ): SerializedCondition {
     val returnTypeFormula = typeMatcher(returnType, semgrepRuleTrace)
@@ -634,7 +623,7 @@ private fun TaintRuleGenerationCtx.evaluateFormulaSignatureReturnType(
     }
 }
 
-private fun TaintRuleGenerationCtx.evaluateFormulaSignatureMethodName(
+private fun JavaTaintRuleGenerationCtx.evaluateFormulaSignatureMethodName(
     methodName: SignatureName,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ): List<Pair<Simple?, SerializedCondition?>> {
@@ -707,7 +696,7 @@ private fun anyClassPattern(): SerializedTypeNameMatcher.ClassPattern =
         `class` = anyName()
     )
 
-private fun TaintRuleGenerationCtx.evaluateEdgePredicateConstraint(
+private fun JavaTaintRuleGenerationCtx.evaluateEdgePredicateConstraint(
     edgeKind: TaintEdgeKind,
     state: State,
     signature: MethodSignature?,
@@ -742,7 +731,7 @@ private fun TaintRuleGenerationCtx.evaluateEdgePredicateConstraint(
     }
 }
 
-private fun TaintRuleGenerationCtx.evaluateMethodConstraints(
+private fun JavaTaintRuleGenerationCtx.evaluateMethodConstraints(
     edgeKind: TaintEdgeKind,
     state: State,
     signature: MethodSignature?,
@@ -767,7 +756,7 @@ private fun TaintRuleGenerationCtx.evaluateMethodConstraints(
                     }
                 }
 
-                is ClassConstraint.TypeConstraint -> {
+                is ClassConstraint.SuperType -> {
                     // note: class type constraint is meaningful only for instance methods
                     conditions += typeMatcher(c.superType, semgrepRuleTrace).toSerializedCondition { typeNameMatcher ->
                         SerializedCondition.IsType(typeNameMatcher, PositionBase.This)
@@ -795,7 +784,7 @@ private fun TaintRuleGenerationCtx.evaluateMethodConstraints(
     }
 }
 
-private fun TaintRuleGenerationCtx.evaluateMethodSignatureCondition(
+private fun JavaTaintRuleGenerationCtx.evaluateMethodSignatureCondition(
     signature: MethodSignature,
     conditions: MutableSet<SerializedCondition>,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
@@ -831,30 +820,42 @@ private fun findMetaVarPosition(
     findMetaVarPosition(constraint, varPositions)
 }
 
-private fun TaintRuleGenerationCtx.typeMatcher(
-    typeName: TypeNamePattern,
-    semgrepRuleTrace: SemgrepRuleLoadStepTrace
+private fun JavaTaintRuleGenerationCtx.typeMatcher(
+    typeName: TypeConstraint,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): MetaVarConstraintFormula<SerializedTypeNameMatcher>? = when (typeName) {
+    TypeConstraint.Any -> null
+    is TypeConstraint.MetaVar -> metaVarTypeMatcher(typeName.metaVar, semgrepRuleTrace)
+    is TypeConstraint.Concrete -> when (val t = typeName.type) {
+        is JavaConcreteType -> javaConcreteTypeMatcher(t, semgrepRuleTrace)
+        else -> MetaVarConstraintFormula.Constraint(Simple(t.toString()))
+    }
+}
+
+private fun JavaTaintRuleGenerationCtx.javaConcreteTypeMatcher(
+    type: JavaConcreteType,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ): MetaVarConstraintFormula<SerializedTypeNameMatcher>? {
-    return when (typeName) {
-        is TypeNamePattern.ClassName -> {
-            val serializedTypeArgs = typeArgsMatcher(typeName.typeArgs, semgrepRuleTrace)
+    return when (type) {
+        is JavaConcreteType.ClassName -> {
+            val serializedTypeArgs = typeArgsMatcher(type.typeArgs, semgrepRuleTrace)
             MetaVarConstraintFormula.Constraint(
                 SerializedTypeNameMatcher.ClassPattern(
                     `package` = anyName(),
-                    `class` = Simple(typeName.name),
+                    `class` = Simple(type.name),
                     typeArgs = serializedTypeArgs
                 )
             )
         }
 
-        is TypeNamePattern.FullyQualified -> {
-            val serializedTypeArgs = typeArgsMatcher(typeName.typeArgs, semgrepRuleTrace)
+        is JavaConcreteType.FullyQualified -> {
+            val serializedTypeArgs = typeArgsMatcher(type.typeArgs, semgrepRuleTrace)
             if (serializedTypeArgs == null) {
                 MetaVarConstraintFormula.Constraint(
-                    Simple(typeName.name)
+                    Simple(type.name)
                 )
             } else {
-                val (pkg, cls) = classNamePartsFromConcreteString(typeName.name)
+                val (pkg, cls) = classNamePartsFromConcreteString(type.name)
                 MetaVarConstraintFormula.Constraint(
                     SerializedTypeNameMatcher.ClassPattern(
                         `package` = pkg,
@@ -865,82 +866,83 @@ private fun TaintRuleGenerationCtx.typeMatcher(
             }
         }
 
-        is TypeNamePattern.PrimitiveName -> {
+        is JavaConcreteType.PrimitiveName -> {
             MetaVarConstraintFormula.Constraint(
-                Simple(typeName.name)
+                Simple(type.name)
             )
         }
 
-        is TypeNamePattern.ArrayType -> {
-            typeMatcher(typeName.element, semgrepRuleTrace)?.transform { matcher ->
+        is JavaConcreteType.ArrayType -> {
+            typeMatcher(type.element, semgrepRuleTrace)?.transform { matcher ->
                 SerializedTypeNameMatcher.Array(matcher)
             }
         }
+    }
+}
 
-        is TypeNamePattern.AnyType -> null
+private fun JavaTaintRuleGenerationCtx.metaVarTypeMatcher(
+    metaVar: String,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): MetaVarConstraintFormula<SerializedTypeNameMatcher>? {
+    val constraints = metaVarInfo.constraints[metaVar]
+    val constraint = when (constraints) {
+        null -> null
+        is MetaVarConstraintOrPlaceHolder.Constraint -> constraints.constraint.constraint
+        is MetaVarConstraintOrPlaceHolder.PlaceHolder -> {
+            semgrepRuleTrace.error(PlaceholderTypeName())
+            constraints.constraint?.constraint
+        }
+    }
 
-        is TypeNamePattern.MetaVar -> {
-            val constraints = metaVarInfo.constraints[typeName.metaVar]
-            val constraint = when (constraints) {
-                null -> null
-                is MetaVarConstraintOrPlaceHolder.Constraint -> constraints.constraint.constraint
-                is MetaVarConstraintOrPlaceHolder.PlaceHolder -> {
-                    semgrepRuleTrace.error(PlaceholderTypeName())
-                    constraints.constraint?.constraint
+    if (constraint == null) return null
+
+    return constraint.transform { value ->
+        // todo hack: here we assume that if name contains '.' then name is fqn
+        when (value) {
+            is MetaVarConstraint.Concrete -> {
+                if (value.value.contains('.')) {
+                    Simple(value.value)
+                } else {
+                    SerializedTypeNameMatcher.ClassPattern(
+                        `package` = anyName(),
+                        `class` = Simple(value.value)
+                    )
                 }
             }
 
-            if (constraint == null) return null
-
-            constraint.transform { value ->
-                // todo hack: here we assume that if name contains '.' then name is fqn
-                when (value) {
-                    is MetaVarConstraint.Concrete -> {
-                        if (value.value.contains('.')) {
-                            Simple(value.value)
-                        } else {
+            is MetaVarConstraint.RegExp -> {
+                val pkgPattern = value.regex.substringBeforeLast("\\.", missingDelimiterValue = "")
+                if (pkgPattern.isNotEmpty()) {
+                    val clsPattern = value.regex.substringAfterLast("\\.")
+                    if (clsPattern.patternCanMatchDot()) {
+                        if (value.regex.endsWith('*') && value.regex.let { it.lowercase() == it }) {
+                            // consider pattern as package pattern
                             SerializedTypeNameMatcher.ClassPattern(
-                                `package` = anyName(),
-                                `class` = Simple(value.value)
+                                `package` = Pattern(value.regex),
+                                `class` = anyName()
                             )
-                        }
-                    }
-
-                    is MetaVarConstraint.RegExp -> {
-                        val pkgPattern = value.regex.substringBeforeLast("\\.", missingDelimiterValue = "")
-                        if (pkgPattern.isNotEmpty()) {
-                            val clsPattern = value.regex.substringAfterLast("\\.")
-                            if (clsPattern.patternCanMatchDot()) {
-                                if (value.regex.endsWith('*') && value.regex.let { it.lowercase() == it }) {
-                                    // consider pattern as package pattern
-                                    SerializedTypeNameMatcher.ClassPattern(
-                                        `package` = Pattern(value.regex),
-                                        `class` = anyName()
-                                    )
-                                } else {
-                                    Pattern(value.regex)
-                                }
-                            } else {
-                                SerializedTypeNameMatcher.ClassPattern(
-                                    `package` = Pattern(pkgPattern),
-                                    `class` = Pattern(clsPattern)
-                                )
-                            }
                         } else {
-                            SerializedTypeNameMatcher.ClassPattern(
-                                `package` = anyName(),
-                                `class` = Pattern(value.regex)
-                            )
+                            Pattern(value.regex)
                         }
+                    } else {
+                        SerializedTypeNameMatcher.ClassPattern(
+                            `package` = Pattern(pkgPattern),
+                            `class` = Pattern(clsPattern)
+                        )
                     }
+                } else {
+                    SerializedTypeNameMatcher.ClassPattern(
+                        `package` = anyName(),
+                        `class` = Pattern(value.regex)
+                    )
                 }
             }
         }
     }
 }
 
-private fun TaintRuleGenerationCtx.typeArgsMatcher(
-    typeArgs: List<TypeNamePattern>,
+private fun JavaTaintRuleGenerationCtx.typeArgsMatcher(
+    typeArgs: List<TypeConstraint>,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace
 ): List<SerializedTypeNameMatcher>? = typeArgs.takeIf { it.isNotEmpty() }?.map {
     (typeMatcher(it, semgrepRuleTrace) as? MetaVarConstraintFormula.Constraint<SerializedTypeNameMatcher>)?.constraint
@@ -950,7 +952,7 @@ private fun TaintRuleGenerationCtx.typeArgsMatcher(
 private fun String.patternCanMatchDot(): Boolean =
     '.' in this || '-' in this // [A-Z]
 
-private fun TaintRuleGenerationCtx.signatureModifierConstraint(
+private fun JavaTaintRuleGenerationCtx.signatureModifierConstraint(
     modifier: SignatureModifier,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace
 ): MetaVarConstraintFormula<SerializedCondition.AnnotationConstraint> {
@@ -1040,7 +1042,7 @@ private fun Position.toSerializedPosition(): PositionBase = when (this) {
     is Position.Result -> PositionBase.Result
 }
 
-private fun TaintRuleGenerationCtx.evaluateParamConstraints(
+private fun JavaTaintRuleGenerationCtx.evaluateParamConstraints(
     edgeKind: TaintEdgeKind,
     state: State,
     param: ParamConstraint,
@@ -1075,7 +1077,7 @@ private fun findMetaVarPosition(
     varPosition.positions.add(position)
 }
 
-private fun TaintRuleGenerationCtx.evaluateParamCondition(
+private fun JavaTaintRuleGenerationCtx.evaluateParamCondition(
     edgeKind: TaintEdgeKind,
     state: State,
     position: PositionBase,

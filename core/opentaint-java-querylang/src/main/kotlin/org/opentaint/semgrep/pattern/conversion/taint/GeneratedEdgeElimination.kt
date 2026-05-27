@@ -5,7 +5,7 @@ import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
 import org.opentaint.semgrep.pattern.conversion.ParamCondition.StringValueMetaVar
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
-import org.opentaint.semgrep.pattern.conversion.TypeNamePattern
+import org.opentaint.semgrep.pattern.conversion.javaFq
 import org.opentaint.semgrep.pattern.conversion.automata.ClassModifierConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodEnclosingClassName
@@ -365,7 +365,7 @@ data class StringConcatCtx(
         val EMPTY: StringConcatCtx = StringConcatCtx(emptyMap())
 
         val stringType by lazy {
-            TypeNamePattern.FullyQualified("java.lang.String")
+            javaFq("java.lang.String")
         }
 
         val stringConcatMethodSignature by lazy {

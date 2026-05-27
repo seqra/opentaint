@@ -14,7 +14,7 @@ import org.opentaint.semgrep.pattern.conversion.IsMetavar
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction
-import org.opentaint.semgrep.pattern.conversion.TypeNamePattern
+import org.opentaint.semgrep.pattern.conversion.TypeConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodEnclosingClassName
 import org.opentaint.semgrep.pattern.conversion.automata.MethodSignature
@@ -986,16 +986,9 @@ private fun EdgeCondition.isDummyCondition(metaVarInfo: ResolvedMetaVarInfo): Bo
         }
 
         when (val cn = sig.enclosingClassName.name) {
-            TypeNamePattern.AnyType -> {}
-            is TypeNamePattern.MetaVar -> {
-                if (metaVarInfo.metaVarConstraints[cn.metaVar] != null) {
-                    return false
-                }
-            }
-            is TypeNamePattern.ArrayType,
-            is TypeNamePattern.ClassName,
-            is TypeNamePattern.FullyQualified,
-            is TypeNamePattern.PrimitiveName -> return false
+            TypeConstraint.Any -> {}
+            is TypeConstraint.MetaVar -> if (metaVarInfo.metaVarConstraints[cn.metaVar] != null) return false
+            is TypeConstraint.Concrete -> return false
         }
     }
 

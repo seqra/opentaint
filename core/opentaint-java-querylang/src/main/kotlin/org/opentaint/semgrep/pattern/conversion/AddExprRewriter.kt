@@ -9,7 +9,7 @@ import org.opentaint.semgrep.pattern.SemgrepJavaPattern
 // todo: rewrite all AddExpr as string concat for now
 // we can consider split on string/non-string
 // or opentaint.plus utility method with special handling in engine
-fun rewriteAddExpr(rule: NormalizedSemgrepRule): List<NormalizedSemgrepRule> {
+fun rewriteAddExpr(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List<NormalizedSemgrepRule<SemgrepJavaPattern>> {
     val rewriter = object : PatternRewriter {
         override fun createAddExpr(left: SemgrepJavaPattern, right: SemgrepJavaPattern): List<SemgrepJavaPattern> =
             listOf(generateStringConcat(left, right))

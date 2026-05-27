@@ -45,20 +45,20 @@ data class ResolvedMetaVarInfo(
     val metaVarConstraints: Map<String, MetaVarConstraints>
 )
 
-data class NormalizedSemgrepRule(
-    val patterns: List<SemgrepJavaPattern>,
-    val patternNots: List<SemgrepJavaPattern>,
-    val patternInsides: List<SemgrepJavaPattern>,
-    val patternNotInsides: List<SemgrepJavaPattern>,
+data class NormalizedSemgrepRule<P>(
+    val patterns: List<P>,
+    val patternNots: List<P>,
+    val patternInsides: List<P>,
+    val patternNotInsides: List<P>,
 )
 
-inline fun NormalizedSemgrepRule.map(
-    body: (SemgrepJavaPattern) -> SemgrepJavaPattern
-): NormalizedSemgrepRule = NormalizedSemgrepRule(
-    patterns.map { body(it) },
-    patternNots.map { body(it) },
-    patternInsides.map { body(it) },
-    patternNotInsides.map { body(it) },
+inline fun <P> NormalizedSemgrepRule<P>.map(
+    body: (P) -> P
+): NormalizedSemgrepRule<P> = NormalizedSemgrepRule(
+    patterns.map(body),
+    patternNots.map(body),
+    patternInsides.map(body),
+    patternNotInsides.map(body),
 )
 
 data class ActionListSemgrepRule(

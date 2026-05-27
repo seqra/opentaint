@@ -296,15 +296,14 @@ private fun constructExitFormula(
     action: SemgrepPatternAction.MethodExit
 ): MethodFormula {
     val builder = MethodFormulaBuilder(formulaManager)
-    val idx = Position.ArgumentIndex.Concrete(0)
-    builder.addParamConstraint(Position.Argument(idx), action.retVal)
-
+    action.retVals.forEachIndexed { i, cond ->
+        builder.addParamConstraint(Position.Argument(Position.ArgumentIndex.Concrete(i)), cond)
+    }
     val signature = MethodSignature(
         methodName = MethodName(SemgrepPatternAction.SignatureName.AnyName),
         enclosingClassName = MethodEnclosingClassName.anyClassName,
     )
     builder.addSignature(signature)
-
     return builder.build()
 }
 
@@ -327,6 +326,7 @@ private fun collectParameterConstraints(
                 val argIdx = when (val pos = pattern.position) {
                     is ParamPosition.Any -> Position.ArgumentIndex.Any(pos.paramClassifier)
                     is ParamPosition.Concrete -> Position.ArgumentIndex.Concrete(pos.idx)
+                    is ParamPosition.Named -> Position.ArgumentIndex.Any(pos.field)
                 }
                 builder.addParamConstraint(Position.Argument(argIdx), pattern.condition)
             }

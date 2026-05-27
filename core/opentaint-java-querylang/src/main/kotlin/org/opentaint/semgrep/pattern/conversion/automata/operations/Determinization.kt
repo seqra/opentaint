@@ -160,7 +160,7 @@ private inline fun <reified Type : AutomataEdgeType.AutomataEdgeTypeWithFormula>
 
             val formula = formulaManager.mkAnd(formulaLits)
 
-            if (!methodFormulaSat(formulaManager, formula, metaVarInfo, cancelation)) {
+            if (!methodFormulaSat(formulaManager, formula, metaVarInfo, cancelation, typeOps)) {
                 return@inner
             }
 

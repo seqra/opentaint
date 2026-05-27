@@ -6,26 +6,26 @@ import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.jvm.optionals.getOrNull
 
-interface ActionListBuilder {
+interface ActionListBuilder<P : Any> {
     fun createActionList(
-        pattern: SemgrepJavaPattern,
+        pattern: P,
         semgrepTrace: SemgrepRuleLoadStepTrace,
     ): SemgrepPatternActionList?
 
-    fun cached() = CachedActionListBuilder(this)
+    fun cached(): ActionListBuilder<P> = CachedActionListBuilder(this)
 
     companion object {
-        fun create(): ActionListBuilder = PatternToActionListConverter()
+        fun createJava(): ActionListBuilder<SemgrepJavaPattern> = PatternToActionListConverter()
     }
 }
 
-class CachedActionListBuilder(
-    private val builder: ActionListBuilder
-) : ActionListBuilder {
-    private val cache = ConcurrentHashMap<SemgrepJavaPattern, Optional<SemgrepPatternActionList>>()
+class CachedActionListBuilder<P : Any>(
+    private val builder: ActionListBuilder<P>
+) : ActionListBuilder<P> {
+    private val cache = ConcurrentHashMap<P, Optional<SemgrepPatternActionList>>()
 
     override fun createActionList(
-        pattern: SemgrepJavaPattern,
+        pattern: P,
         semgrepTrace: SemgrepRuleLoadStepTrace,
     ): SemgrepPatternActionList? =
         cache.computeIfAbsent(pattern) {
