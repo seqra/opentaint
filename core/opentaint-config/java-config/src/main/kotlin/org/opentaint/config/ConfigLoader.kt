@@ -9,7 +9,7 @@ import java.util.Collections
 import kotlin.streams.asSequence
 
 object ConfigLoader {
-    private const val CONFIG_ROOT = "/config"
+    private const val CONFIG_ROOT = "/java-config"
     private val config = lazy { loadConfig() }
 
     fun getConfig() = config.value
