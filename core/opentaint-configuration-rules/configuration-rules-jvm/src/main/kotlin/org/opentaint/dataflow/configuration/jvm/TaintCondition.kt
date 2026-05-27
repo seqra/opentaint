@@ -1,13 +1,12 @@
 package org.opentaint.dataflow.configuration.jvm
 
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.ir.api.jvm.JIRType
 import java.util.Objects
 
-interface ConditionVisitor<out R> {
-    fun visit(condition: ConstantTrue): R
-    fun visit(condition: Not): R
-    fun visit(condition: And): R
-    fun visit(condition: Or): R
+typealias Condition = CommonCondition<JirCondition>
+
+interface JirConditionVisitor<out R> {
     fun visit(condition: IsConstant): R
     fun visit(condition: IsNull): R
     fun visit(condition: ConstantEq): R
@@ -20,79 +19,56 @@ interface ConditionVisitor<out R> {
     fun visit(condition: IsStaticField): R
 }
 
-interface Condition {
-    fun <R> accept(conditionVisitor: ConditionVisitor<R>): R
-}
-
-data object ConstantTrue : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
-    override fun toString(): String = javaClass.simpleName
-}
-
-data class Not(
-    val arg: Condition,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
-}
-
-data class And(
-    val args: List<Condition>,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
-}
-
-data class Or(
-    val args: List<Condition>,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+interface JirCondition {
+    fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R
 }
 
 data class IsConstant(
     val position: Position,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 data class IsNull(
     val position: Position,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 data class ConstantEq(
     val position: Position,
     val value: ConstantValue,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 data class ConstantLt(
     val position: Position,
     val value: ConstantValue,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 data class ConstantGt(
     val position: Position,
     val value: ConstantValue,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 data class ConstantMatches(
     val position: Position,
     val pattern: Regex,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 @Suppress("EqualsOrHashCode")
 data class ContainsMark(
     val position: Position,
     val mark: TaintMark,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 
     private val hash = Objects.hash(position, mark)
     override fun hashCode(): Int = hash
@@ -101,8 +77,8 @@ data class ContainsMark(
 data class TypeMatches(
     val position: Position,
     val type: JIRType,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 sealed interface ConditionNameMatcher {
@@ -120,8 +96,8 @@ data class TypeMatchesPattern(
     val position: Position,
     val pattern: ConditionNameMatcher,
     val typeArgs: List<TypeArgMatcher>? = null,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
 
 sealed interface ConstantValue
@@ -136,6 +112,6 @@ data class IsStaticField(
     val position: Position,
     val className: ConditionNameMatcher,
     val fieldName: ConditionNameMatcher.Simple,
-) : Condition {
-    override fun <R> accept(conditionVisitor: ConditionVisitor<R>): R = conditionVisitor.visit(this)
+) : JirCondition {
+    override fun <R> accept(conditionVisitor: JirConditionVisitor<R>): R = conditionVisitor.visit(this)
 }
