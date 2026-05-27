@@ -71,7 +71,10 @@ includeBuild("opentaint-utils") {
 
 includeBuild("opentaint-config") {
     dependencySubstitution {
-        substitute(module("org.opentaint.config:opentaint-config")).using(project(":"))
+        val modules = listOf(
+            "java-config",
+        )
+        substituteProjects("org.opentaint.config", modules)
     }
 }
 

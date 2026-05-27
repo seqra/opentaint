@@ -3,14 +3,13 @@ package org.opentaint.config
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.loadSerializedTaintConfig
-import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.Collections
 import kotlin.streams.asSequence
 
 object ConfigLoader {
-    private const val CONFIG_ROOT = "/config"
+    private const val CONFIG_ROOT = "/java-config"
     private val config = lazy { loadConfig() }
 
     fun getConfig() = config.value

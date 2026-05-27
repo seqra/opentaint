@@ -1,4 +1,4 @@
-import OpentaintConfigDependency.opentaintConfig
+import OpentaintConfigDependency.opentaintJavaConfig
 import OpentaintIrDependency.opentaint_ir_api_jvm
 import OpentaintIrDependency.opentaint_ir_api_storage
 import OpentaintIrDependency.opentaint_ir_approximations
@@ -21,7 +21,7 @@ dependencies {
     implementation(opentaintUtilJvm)
     implementation(opentaintUtilCli)
     implementation(opentaintProject)
-    implementation(opentaintConfig)
+    implementation(opentaintJavaConfig)
 
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
     implementation("org.opentaint.opentaint-dataflow-core:opentaint-jvm-dataflow")

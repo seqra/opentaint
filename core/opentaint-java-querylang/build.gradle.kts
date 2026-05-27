@@ -1,4 +1,4 @@
-import OpentaintConfigDependency.opentaintConfig
+import OpentaintConfigDependency.opentaintJavaConfig
 import OpentaintIrDependency.opentaint_ir_api_storage
 import OpentaintIrDependency.opentaint_ir_approximations
 import OpentaintIrDependency.opentaint_ir_core
@@ -23,7 +23,7 @@ dependencies {
     implementation("org.opentaint.opentaint-dataflow-core:opentaint-jvm-dataflow")
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
     implementation(opentaintUtilJvm)
-    implementation(opentaintConfig)
+    implementation(opentaintJavaConfig)
 
     implementation(KotlinDependency.Libs.kaml)
 
