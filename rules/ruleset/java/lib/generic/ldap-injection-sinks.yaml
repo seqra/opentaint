@@ -88,23 +88,23 @@ rules:
       # so a sink that binds the LdapQuery object expects the object itself tainted and
       # misses it. Instead focus the untrusted value entering the chain and require the
       # resulting LdapQuery to reach a find/search (the List.add(..) -> new
-      # ProcessBuilder($ARGS) idiom from command-injection-sinks). The two pattern-inside
-      # clauses share $Q to WIRE the builder call to the search: the first forces the
-      # builder call ($B/$C) to sit in the chain assigned to $Q, the second forces that
-      # same $Q to be the query passed to the search — so an unrelated tainted builder
-      # call next to an unrelated safe query->find does not fire.
+      # ProcessBuilder($ARGS) idiom from command-injection-sinks). Each pattern shares $Q
+      # to WIRE the builder call to the search, so an unrelated tainted builder call next
+      # to an unrelated safe query->find does not fire.
+      # $COND is left unconstrained on purpose: the sink call already binds the
+      # constrained $METHOD metavar, and the automata transform cannot intersect two
+      # constrained method-name metavars (MethodName.unify TODO) — a metavariable-regex
+      # OR metavariable-pattern on $COND reintroduces that crash. The ConditionCriteria
+      # receiver type plus the single-argument arity already restrict $COND to the
+      # value-carrying condition methods (is/like/whitespaceWildcardsLike/gte/lte).
       - patterns:
           - pattern-either:
               # untrusted value is a condition match value (the last data call),
               # which directly yields the searched LdapQuery
-              - patterns:
-                  - pattern: |
-                      (org.springframework.ldap.query.LdapQuery $Q) = (org.springframework.ldap.query.ConditionCriteria $C).$COND($UNTRUSTED);
-                      ...;
-                      ($CTXTYPE $CTX).$METHOD($Q, ...);
-                  - metavariable-regex:
-                      metavariable: $COND
-                      regex: ^(is|like|whitespaceWildcardsLike|gte|lte)$
+              - pattern: |
+                  (org.springframework.ldap.query.LdapQuery $Q) = (org.springframework.ldap.query.ConditionCriteria $C).$COND($UNTRUSTED);
+                  ...;
+                  ($CTXTYPE $CTX).$METHOD($Q, ...);
               # untrusted value is a raw filter string
               - pattern: |
                   (org.springframework.ldap.query.LdapQuery $Q) = (org.springframework.ldap.query.LdapQueryBuilder $X).filter($UNTRUSTED, ...);
@@ -113,16 +113,12 @@ rules:
               # untrusted value is the base DN, carried through where().<cond>() to
               # the query (the engine chain-splits the fluent chain into let-bindings,
               # so $B — the base() result — wires to the searched $Q)
-              - patterns:
-                  - pattern: |
-                      $B = (org.springframework.ldap.query.LdapQueryBuilder $X).base($UNTRUSTED);
-                      ...;
-                      (org.springframework.ldap.query.LdapQuery $Q) = $B.where(...).$COND(...);
-                      ...;
-                      ($CTXTYPE $CTX).$METHOD($Q, ...);
-                  - metavariable-regex:
-                      metavariable: $COND
-                      regex: ^(is|like|whitespaceWildcardsLike|gte|lte)$
+              - pattern: |
+                  $B = (org.springframework.ldap.query.LdapQueryBuilder $X).base($UNTRUSTED);
+                  ...;
+                  (org.springframework.ldap.query.LdapQuery $Q) = $B.where(...).$COND(...);
+                  ...;
+                  ($CTXTYPE $CTX).$METHOD($Q, ...);
           - metavariable-pattern:
               metavariable: $CTXTYPE
               pattern-either:
