@@ -94,6 +94,10 @@ tasks.withType<Test> {
         val antBenchmarkJar = project("samples").tasks.named<Jar>("antBenchmarkJar").get().archiveFile.get().asFile
         environment("ANT_BENCHMARK_SAMPLES_JAR", antBenchmarkJar.absolutePath)
 
+        // OWASP benchmark samples JAR
+        val owaspBenchmarkJar = project("samples").tasks.named<Jar>("owaspBenchmarkJar").get().archiveFile.get().asFile
+        environment("OWASP_BENCHMARK_SAMPLES_JAR", owaspBenchmarkJar.absolutePath)
+
         pirEnvironment().forEach { (key, value) -> environment(key, value) }
         goEnvironment().forEach { (key, value) -> environment(key, value) }
     }

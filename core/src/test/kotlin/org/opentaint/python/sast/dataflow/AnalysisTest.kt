@@ -117,6 +117,13 @@ abstract class AnalysisTest {
         assertTrue(vulnerabilities.isNotEmpty(), "Sink was not reached")
     }
 
+    fun assertSinkNotReachable(
+        entryPointFunction: String
+    ) {
+        val vulnerabilities = runAnalysis(shippedRules(), entryPointFunction)
+        assertTrue(vulnerabilities.isEmpty(), "Sink should not be reached")
+    }
+
     fun assertSinkReachable(
         source: TaintRules.Source,
         sink: TaintRules.Sink,
