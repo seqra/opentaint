@@ -53,7 +53,7 @@ class PIRMethodQFNameReconstructor private constructor(
 
             is PIRCall -> {
                 val resolved = inst.resolvedCallee ?: return null
-                saveResult(inst, NameEntry.GlobalRef(resolved))
+                saveCallResult(inst, NameEntry.GlobalRef(resolved))
 
                 val targetIdx = inst.target?.index
                 val resultQn = resultTypeQn(resolved)
@@ -111,7 +111,7 @@ class PIRMethodQFNameReconstructor private constructor(
                 val targetIdx = inst.target?.index
 
                 if (calleeIdx == idx) {
-                    saveResult(inst, payload.name)
+                    saveCallResult(inst, payload.name)
 
                     if (targetIdx != null) {
                         val qn = payload.name.flattenOrNull()
@@ -159,6 +159,23 @@ class PIRMethodQFNameReconstructor private constructor(
     private fun resultTypeQn(calleeQn: String): String? {
         if (cp.findClassOrNull(calleeQn) != null) return calleeQn
         return classQnOrNull(cp.findFunctionOrNull(calleeQn)?.returnType)
+    }
+
+    private fun saveCallResult(inst: PIRInstruction, calleeName: NameEntry) {
+        val initQn = constructorInitQnOrNull(calleeName)
+        if (initQn != null) {
+            saveResult(inst, NameEntry.GlobalRef(initQn))
+        } else {
+            saveResult(inst, calleeName)
+        }
+    }
+
+    /** A resolved class-name callee with an `__init__` body → that `__init__` QN. */
+    private fun constructorInitQnOrNull(calleeName: NameEntry): String? {
+        val qn = calleeName.flattenOrNull() ?: return null
+        if (cp.findClassOrNull(qn) == null) return null
+        val initQn = "$qn.__init__"
+        return if (cp.findFunctionOrNull(initQn) != null) initQn else null
     }
 
     private fun saveResult(inst: PIRInstruction, nameEntry: NameEntry) {

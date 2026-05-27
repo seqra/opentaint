@@ -1,0 +1,48 @@
+package org.opentaint.python.sast.dataflow
+
+import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.python.rules.TaintRules.Sink
+import org.opentaint.dataflow.python.rules.TaintRules.Source
+import kotlin.test.Test
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ConstructorFlowTest : AnalysisTest() {
+
+    // --- ConstructorArgFlow.py ---
+
+    // Tainted constructor argument is stepped into __init__ and reaches the sink there.
+    @Test
+    fun testConstructorArgToSink() = assertSinkReachable(
+        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
+        sink = Sink("ConstructorArgFlow.sink", "taint", PositionBase.Argument(0), "ctor"),
+        entryPointFunction = "ConstructorArgFlow.ctor_arg_to_sink"
+    )
+
+    // A sink rule keyed on the bare class QN (no __init__) still matches the
+    // resolved MyService.__init__ via the matcher's .__init__ strip.
+    @Test
+    fun testConstructorClassQnSink() = assertSinkReachable(
+        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
+        sink = Sink("ConstructorArgFlow.MyService", "taint", PositionBase.Argument(0), "ctor"),
+        entryPointFunction = "ConstructorArgFlow.ctor_arg_to_sink"
+    )
+
+    // No __init__ body: class-QN fallback in the reconstructor; result-type
+    // binding still resolves `obj.handle(...)` to NoInitService.handle.
+    @Test
+    fun testNoInitClassChainedMethod() = assertSinkReachable(
+        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
+        sink = Sink("ConstructorArgFlow.sink", "taint", PositionBase.Argument(0), "ctor"),
+        entryPointFunction = "ConstructorArgFlow.no_init_chained_method"
+    )
+
+    // Class-QN constructor sink must not fire when arg(0) is untainted, even
+    // though a source was produced elsewhere in the entry point.
+    @Test
+    fun testConstructorClassQnSinkNotReachableWhenArgUntainted() = assertSinkNotReachable(
+        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
+        sink = Sink("ConstructorArgFlow.MyService", "taint", PositionBase.Argument(0), "ctor"),
+        entryPointFunction = "ConstructorArgFlow.ctor_untainted_arg"
+    )
+}

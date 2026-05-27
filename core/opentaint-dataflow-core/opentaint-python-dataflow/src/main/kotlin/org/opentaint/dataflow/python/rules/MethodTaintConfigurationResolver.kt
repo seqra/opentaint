@@ -216,11 +216,19 @@ internal object MethodTaintConfigurationResolver {
         return true
     }
 
-    private fun matchesName(name: String, method: PIRFunction): Boolean = when {
-        method is PIRSimpleNameUnknownFunction -> name.substringAfterLast('.') == method.name
-        hasRegexMetaChar(name) -> Regex(name).matches(method.qualifiedName)
-        '.' in name -> method.qualifiedName == name
-        else -> method.name == name
+    private fun matchesName(name: String, method: PIRFunction): Boolean {
+        if (method is PIRSimpleNameUnknownFunction) return name.substringAfterLast('.') == method.name
+
+        val qn = method.qualifiedName
+        val ctorQn = if (method.enclosingClass != null) qn.removeSuffix(".__init__") else qn
+        return when {
+            hasRegexMetaChar(name) -> {
+                val rx = Regex(name)
+                rx.matches(qn) || (ctorQn != qn && rx.matches(ctorQn))
+            }
+            '.' in name -> qn == name || ctorQn == name
+            else -> method.name == name
+        }
     }
 
     /** `.` is treated as a literal FQN separator, not a regex meta char. */
