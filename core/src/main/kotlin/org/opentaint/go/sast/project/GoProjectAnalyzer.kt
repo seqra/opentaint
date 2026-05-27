@@ -48,6 +48,7 @@ class GoProjectAnalyzer(
                 taintConfig = rulesProvider,
                 unitResolver = GoUnitResolver(),
                 externalMethodTracker = tracker,
+                analysisTimeout = options.common.ifdsAnalysisTimeout,
             )
             val entryPoints = selectEntryPoints(cp)
             logger.info { "Selected ${entryPoints.size} Go entry points" }
