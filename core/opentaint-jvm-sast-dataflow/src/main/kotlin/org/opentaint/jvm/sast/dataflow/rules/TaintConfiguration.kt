@@ -1,7 +1,6 @@
 package org.opentaint.jvm.sast.dataflow.rules
 
 import org.opentaint.dataflow.configuration.jvm.AssignMark
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.Result
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
@@ -23,6 +22,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedSimpleNameM
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedSimpleNameMatcher.Simple
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTypeNameMatcher.ClassPattern
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.util.JIRHierarchyInfo
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRField
@@ -211,7 +211,7 @@ class TaintConfiguration(private val cp: JIRClasspath) {
                     }
                     actions += AssignMark(taintMarkManager.taintMark(action.kind), Result)
                 }
-                return listOf(TaintStaticFieldSource(field, ConstantTrue, actions, info))
+                return listOf(TaintStaticFieldSource(field, mkTrue(), actions, info))
             }
         }
     }

@@ -23,6 +23,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction.TraceSummaryEdge
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
@@ -36,7 +37,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSummarySerializationContext
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
-import org.opentaint.dataflow.jvm.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.dataflow.jvm.ifds.PackageUnit

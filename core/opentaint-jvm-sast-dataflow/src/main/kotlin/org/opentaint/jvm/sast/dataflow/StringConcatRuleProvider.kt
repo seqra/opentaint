@@ -2,10 +2,10 @@ package org.opentaint.jvm.sast.dataflow
 
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.configuration.jvm.Argument
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
 import org.opentaint.dataflow.configuration.jvm.Result
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -23,7 +23,7 @@ class StringConcatRuleProvider(private val base: TaintRulesProvider) : TaintRule
 
         return TaintPassThrough(
             method = method,
-            condition = ConstantTrue,
+            condition = mkTrue(),
             actionsAfter = possibleArgs.map { CopyAllMarks(from = it, to = Result) },
             info = null
         )

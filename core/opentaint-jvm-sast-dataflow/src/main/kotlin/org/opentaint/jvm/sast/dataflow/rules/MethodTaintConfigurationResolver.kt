@@ -2,7 +2,9 @@ package org.opentaint.jvm.sast.dataflow.rules
 
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentHashMapOf
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.isFalse
 import org.opentaint.dataflow.configuration.jvm.Action
 import org.opentaint.dataflow.configuration.jvm.Argument
 import org.opentaint.dataflow.configuration.jvm.AssignMark
@@ -16,14 +18,13 @@ import org.opentaint.dataflow.configuration.jvm.ConstantIntValue
 import org.opentaint.dataflow.configuration.jvm.ConstantLt
 import org.opentaint.dataflow.configuration.jvm.ConstantMatches
 import org.opentaint.dataflow.configuration.jvm.ConstantStringValue
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
 import org.opentaint.dataflow.configuration.jvm.CopyMark
 import org.opentaint.dataflow.configuration.jvm.IsConstant
 import org.opentaint.dataflow.configuration.jvm.IsNull
 import org.opentaint.dataflow.configuration.jvm.IsStaticField
-import org.opentaint.dataflow.configuration.jvm.Not
+import org.opentaint.dataflow.configuration.jvm.JirCondition
 import org.opentaint.dataflow.configuration.jvm.Position
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
@@ -42,12 +43,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.This
 import org.opentaint.dataflow.configuration.jvm.TypeMatchesPattern
-import org.opentaint.dataflow.configuration.jvm.isFalse
 import org.opentaint.dataflow.configuration.jvm.matchType
-import org.opentaint.dataflow.configuration.jvm.mkAnd
-import org.opentaint.dataflow.configuration.jvm.mkFalse
-import org.opentaint.dataflow.configuration.jvm.mkOr
-import org.opentaint.dataflow.configuration.jvm.mkTrue
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
@@ -65,7 +61,11 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTypeNameMat
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkRule
 import org.opentaint.dataflow.configuration.jvm.serialized.SourceRule
-import org.opentaint.dataflow.configuration.jvm.simplify
+import org.opentaint.dataflow.configuration.mkAnd
+import org.opentaint.dataflow.configuration.mkFalse
+import org.opentaint.dataflow.configuration.mkOr
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassType
@@ -378,11 +378,11 @@ class MethodTaintConfigurationResolver(
     private fun SerializedCondition?.resolve(
         ctx: AnyArgSpecializationCtx,
     ): Condition = when (this) {
-        null -> ConstantTrue
-        is SerializedCondition.Not -> Not(not.resolve(ctx))
+        null -> mkTrue()
+        is SerializedCondition.Not -> CommonCondition.Not(not.resolve(ctx))
         is SerializedCondition.And -> mkAnd(allOf.map { it.resolve(ctx) })
         is SerializedCondition.Or -> mkOr(anyOf.map { it.resolve(ctx) })
-        is SerializedCondition.True -> ConstantTrue
+        is SerializedCondition.True -> mkTrue()
         is SerializedCondition.AnnotationType -> {
             val containsAnnotation = pos.resolveWithAnnotationConstraint(
                 ctx,
@@ -403,25 +403,25 @@ class MethodTaintConfigurationResolver(
                     SerializedCondition.ConstantCmpType.Eq -> ConstantEq(it, value)
                     SerializedCondition.ConstantCmpType.Lt -> ConstantLt(it, value)
                     SerializedCondition.ConstantCmpType.Gt -> ConstantGt(it, value)
-                }
+                }.atom()
             }.let { mkOr(it) }
         }
 
         is SerializedCondition.ConstantEq -> mkOr(
-            pos.resolve(ctx).map { ConstantEq(it, ConstantStringValue(constantEq)) })
+            pos.resolve(ctx).map { ConstantEq(it, ConstantStringValue(constantEq)).atom() })
 
         is SerializedCondition.ConstantGt -> mkOr(
-            pos.resolve(ctx).map { ConstantGt(it, ConstantStringValue(constantGt)) })
+            pos.resolve(ctx).map { ConstantGt(it, ConstantStringValue(constantGt)).atom() })
 
         is SerializedCondition.ConstantLt -> mkOr(
-            pos.resolve(ctx).map { ConstantLt(it, ConstantStringValue(constantLt)) })
+            pos.resolve(ctx).map { ConstantLt(it, ConstantStringValue(constantLt)).atom() })
 
         is SerializedCondition.ConstantMatches -> mkOr(
-            pos.resolve(ctx).map { ConstantMatches(it, patternManager.compilePattern(constantMatches)) })
+            pos.resolve(ctx).map { ConstantMatches(it, patternManager.compilePattern(constantMatches)).atom() })
 
-        is SerializedCondition.IsConstant -> mkOr(isConstant.resolve(ctx).map { IsConstant(it) })
+        is SerializedCondition.IsConstant -> mkOr(isConstant.resolve(ctx).map { IsConstant(it).atom() })
 
-        is SerializedCondition.IsNull -> mkOr(isNull.resolve(ctx).map { IsNull(it) })
+        is SerializedCondition.IsNull -> mkOr(isNull.resolve(ctx).map { IsNull(it).atom() })
 
         is SerializedCondition.IsStaticField -> {
             val className = className.normalizeAnyName()
@@ -438,7 +438,7 @@ class MethodTaintConfigurationResolver(
                         it,
                         className ?: ConditionNameMatcher.AnyName,
                         fieldName ?: ConditionNameMatcher.AnyName
-                    )
+                    ).atom()
                 })
             }
         }
@@ -446,7 +446,7 @@ class MethodTaintConfigurationResolver(
         is SerializedCondition.ContainsMark -> mkOr(
             pos.resolvePosition(ctx)
                 .flatMap { it.resolveArrayPosition() }
-                .map { ContainsMark(it, taintMarkManager.taintMark(tainted)) }
+                .map { ContainsMark(it, taintMarkManager.taintMark(tainted)).atom() }
         )
 
         is SerializedCondition.IsType -> resolveIsType(ctx)
@@ -519,7 +519,7 @@ class MethodTaintConfigurationResolver(
         val typeArgs = (normalizedTypeIs as? ClassPattern)?.typeArgs
             ?.map { it.toTypeArgMatcher(patternManager) }
 
-        return mkOr(nonFalsePositions.map { TypeMatchesPattern(it, matcher, typeArgs) })
+        return mkOr(nonFalsePositions.map { TypeMatchesPattern(it, matcher, typeArgs).atom() })
     }
 
     private fun JIRTypedMethod.positionType(pos: Position): JIRType? = when (pos) {
@@ -717,4 +717,6 @@ class MethodTaintConfigurationResolver(
 
     private fun Any.flatAnnotationValues(): List<Any> =
         if (this !is List<*>) listOf(this) else flatMap { it?.flatAnnotationValues().orEmpty() }
+
+    fun JirCondition.atom() = CommonCondition.Atom(this)
 }

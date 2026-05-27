@@ -1,13 +1,13 @@
 package org.opentaint.jvm.sast.dataflow
 
 import org.opentaint.dataflow.ap.ifds.access.FactAp
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
 import org.opentaint.dataflow.configuration.jvm.Result
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.This
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -39,7 +39,7 @@ class JIRMethodGetDefaultProvider(
             actions = actions + getDefaultArrayActions
         }
 
-        val getDefaultRule = TaintPassThrough(method, ConstantTrue, actions, info = null)
+        val getDefaultRule = TaintPassThrough(method, mkTrue(), actions, info = null)
         return baseRules + getDefaultRule
     }
 

@@ -6,9 +6,9 @@ import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.jvm.AssignMark
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
@@ -21,6 +21,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -135,7 +136,7 @@ private fun createTestConfig(
 
             TaintMethodSource(
                 method = method,
-                condition = ConstantTrue,
+                condition = mkTrue(),
                 actionsAfter = listOf(AssignMark(mark, specializePosition(it, source.position).single())),
                 info = null
             )
@@ -152,7 +153,7 @@ private fun createTestConfig(
             )
             TaintMethodSink(
                 method = method,
-                condition = ContainsMark(specializePosition(it, sink.position).single(), TaintMark(sink.mark)),
+                condition = CommonCondition.Atom(ContainsMark(specializePosition(it, sink.position).single(), TaintMark(sink.mark))),
                 trackFactsReachAnalysisEnd = emptyList(),
                 id = sink.mark,
                 meta = meta,
@@ -250,8 +251,9 @@ private fun getStats(
         val rule = it.vulnerability.rule
         val condition = (rule as TaintMethodSink).condition
 
-        check(condition is ContainsMark) { "Unexpected rule with non-trivial condition: $condition" }
-        condition.mark
+        val cond = (condition as? CommonCondition.Atom)?.atom
+        check(cond is ContainsMark) { "Unexpected rule with non-trivial condition: $condition" }
+        cond.mark
     }.toSet()
 
     val allMarks = testData.testDataByMark.keys.mapTo(hashSetOf()) { TaintMark(it) }
