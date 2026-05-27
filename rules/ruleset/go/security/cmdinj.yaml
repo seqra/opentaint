@@ -1,0 +1,83 @@
+rules:
+  - id: go-command-injection
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input reaches OS command execution (command injection)
+    metadata:
+      cwe: CWE-78
+      short-description: Command injection
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          # net/http.Request — method calls
+          - pattern: $R.FormValue($K)
+          - pattern: $R.PostFormValue($K)
+          - pattern: $R.FormFile($K)
+          - pattern: $R.Cookie($K)
+          - pattern: $R.Cookies()
+          - pattern: $R.MultipartReader()
+          - pattern: $R.Referer()
+          - pattern: $R.UserAgent()
+          # net/http.Request — URL chain
+          - pattern: $R.URL.Query()
+          - pattern: $R.URL.Query().Get($K)
+          - pattern: $R.URL.Path
+          - pattern: $R.URL.RawQuery
+          - pattern: $R.URL.RawPath
+          # net/http.Request — Header chain
+          - pattern: $R.Header.Get($K)
+          - pattern: $R.Header.Values($K)
+          # net/http.Request — Form chain
+          - pattern: $R.Form.Get($K)
+          - pattern: $R.PostForm.Get($K)
+          # net/http.Request — field reads
+          - pattern: $R.Body
+          - pattern: $R.GetBody
+          - pattern: $R.Form
+          - pattern: $R.PostForm
+          - pattern: $R.MultipartForm
+          - pattern: $R.Header
+          - pattern: $R.Trailer
+          - pattern: $R.URL
+          # env / args
+          - pattern: os.Getenv($K)
+          - pattern: os.LookupEnv($K)
+          - pattern: os.Args
+          # beego Controller methods
+          - pattern: $C.GetString($K)
+          - pattern: $C.GetString($K, $DEF)
+          - pattern: $C.GetStrings($K)
+          - pattern: $C.GetStrings($K, $DEF)
+          - pattern: $C.GetInt($K)
+          - pattern: $C.GetInt($K, $DEF)
+          - pattern: $C.GetInt8($K)
+          - pattern: $C.GetInt16($K)
+          - pattern: $C.GetInt32($K)
+          - pattern: $C.GetInt64($K)
+          - pattern: $C.GetUint8($K)
+          - pattern: $C.GetUint16($K)
+          - pattern: $C.GetUint32($K)
+          - pattern: $C.GetUint64($K)
+          - pattern: $C.GetFloat($K)
+          - pattern: $C.GetBool($K)
+          - pattern: $C.GetFile($K)
+          - pattern: $C.GetFiles($K)
+          - pattern: $C.GetSession($K)
+          - pattern: $C.Input()
+          - pattern: $C.ParseForm($PTR)
+          # beego Context.Input methods (c.Ctx.Input.X)
+          - pattern: $X.Param($K)
+          - pattern: $X.Params()
+          - pattern: $X.URI()
+          - pattern: $X.URL()
+          - pattern: $X.RequestBody
+          - pattern: $X.Bind($PTR)
+    pattern-sinks:
+      - pattern-either:
+          - pattern: exec.Command($NAME, ...)
+          - pattern: exec.CommandContext($CTX, $NAME, ...)
+          - pattern: exec.LookPath($NAME)
+          - pattern: os.StartProcess($NAME, ...)
+          - pattern: syscall.Exec($NAME, ...)
+          - pattern: syscall.ForkExec($NAME, ...)
+          - pattern: syscall.StartProcess($NAME, ...)
