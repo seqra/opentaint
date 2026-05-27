@@ -4528,6 +4528,174 @@ passThrough:
   copy:
   - from: this
     to: result
+- attribute: flask.wrappers.Request.path
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.full_path
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.base_url
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.url
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.access_control_request_method
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.content_encoding
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.content_md5
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.content_type
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.data
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.method
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.mimetype
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.origin
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.query_string
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.referrer
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.remote_addr
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.remote_user
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.user_agent
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.environ
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.cookies
+  copy:
+  - from: this
+    to: result
+- function: flask.wrappers.Request.cookies.get
+  copy:
+    - from: this
+      to: result
+- attribute: flask.wrappers.Request.mimetype_params
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.view_args
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.json
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.access_route
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.stream
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.input_stream
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.args
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.values
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.form
+  copy:
+  - from: this
+    to: result
+- function: flask.wrappers.Request.form.get
+  copy:
+    - from: this
+      to: result
+- attribute: flask.wrappers.Request.files
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.access_control_request_headers
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.pragma
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.accept_charsets
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.accept_encodings
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.accept_languages
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.accept_mimetypes
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.authorization
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.cache_control
+  copy:
+  - from: this
+    to: result
+- attribute: flask.wrappers.Request.headers
+  copy:
+  - from: this
+    to: result
+- function: flask.wrappers.Request.get_data
+  copy:
+  - from: this
+    to: result
+- function: flask.wrappers.Request.get_json
+  copy:
+  - from: this
+    to: result
 - function: flask.render_template_string
   copy:
   - from: arg(0)
