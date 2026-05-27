@@ -11,15 +11,15 @@ import kotlin.io.path.name
 import kotlin.io.path.relativeTo
 
 class PortableProjectCreator(
-    private val portableProjectPath: Path,
-    private val rootProject: JavaProject
+    private val portableProjectRootPath: Path,
+    private val topLevelProject: Project
 ) {
     sealed interface PortAction {
         data class Copy(val dst: Path) : PortAction
         data class Ported(val path: Path) : PortAction
     }
 
-    private inner class ProjectPortContext(
+    private class ProjectPortContext(
         val sources: Path,
         val classes: Path,
         val dependencies: Path,
@@ -64,12 +64,50 @@ class PortableProjectCreator(
     }
 
     fun create() {
+        val portableJava = topLevelProject.javaProjects.mapIndexed { index, project ->
+            val projectPath = portableProjectRootPath.resolve("java_$index")
+            createJava(project, projectPath) ?: return
+        }
+
+        val portableGo = topLevelProject.goProjects.mapIndexed { index, project ->
+            val projectPath = portableProjectRootPath.resolve("go_$index")
+            createGo(project, projectPath) ?: return
+        }
+
+        val portableProject = Project(
+            goProjects = portableGo,
+            javaProjects = portableJava,
+        )
+
+        portableProject.dump(portableProjectRootPath.resolve("project.yaml"))
+    }
+
+    fun createGo(rootProject: GoProject, portableProjectPath: Path): GoProject? {
         logger.info { "Start portable project creation" }
 
         if (portableProjectPath.exists()) {
             if (!portableProjectPath.isDirectory() || portableProjectPath.isNotEmpty()) {
                 logger.error { "Portable project path exists" }
-                return
+                return null
+            }
+        }
+
+        portableProjectPath.createDirectories()
+
+        copy(rootProject.projectDir, portableProjectPath)
+
+        val portableProject = GoProject(portableProjectPath)
+        val relativeProject = portableProject.relativeTo(portableProjectRootPath)
+        return relativeProject
+    }
+
+    fun createJava(rootProject: JavaProject, portableProjectPath: Path): JavaProject? {
+        logger.info { "Start portable project creation" }
+
+        if (portableProjectPath.exists()) {
+            if (!portableProjectPath.isDirectory() || portableProjectPath.isNotEmpty()) {
+                logger.error { "Portable project path exists" }
+                return null
             }
         }
 
@@ -85,26 +123,25 @@ class PortableProjectCreator(
         rootProject.sourceRoot?.let { copyDirectory(it, ctx.sources) }
 
         val portableProject = create(ctx, rootProject)
-        val relativeProject = portableProject.relativeTo(portableProjectPath)
-
-        relativeProject.dump(portableProjectPath.resolve("project.yaml"))
+        val relativeProject = portableProject.relativeTo(portableProjectRootPath)
+        return relativeProject
     }
 
     private fun create(ctx: ProjectPortContext, project: JavaProject): JavaProject = JavaProject(
-        sourceRoot = project.sourceRoot?.let { copySources(ctx, it) },
+        sourceRoot = project.sourceRoot?.let { copySources(ctx, project, it) },
         javaToolchain = project.javaToolchain?.let { copyToolchain(ctx, it) },
-        modules = project.modules.map { create(ctx, it) },
+        modules = project.modules.map { create(ctx, project, it) },
         dependencies = project.dependencies.map { copyDependency(ctx, it) },
         subProjects = project.subProjects.map { create(ctx, it) }
     )
 
-    private fun create(ctx: ProjectPortContext, module: ProjectModuleClasses) = ProjectModuleClasses(
+    private fun create(ctx: ProjectPortContext, rootProject: JavaProject, module: ProjectModuleClasses) = ProjectModuleClasses(
         packages = module.packages,
-        moduleSourceRoot = module.moduleSourceRoot?.let { copySources(ctx, it) },
+        moduleSourceRoot = module.moduleSourceRoot?.let { copySources(ctx, rootProject, it) },
         moduleClasses = module.moduleClasses.map { copyClasses(ctx, it) }
     )
 
-    private fun copySources(ctx: ProjectPortContext, source: Path): Path {
+    private fun copySources(ctx: ProjectPortContext, rootProject: JavaProject, source: Path): Path {
         val relativeOriginal = rootProject.sourceRoot?.let { source.relativeTo(it) } ?: source
         return ctx.sources.resolve(relativeOriginal)
     }

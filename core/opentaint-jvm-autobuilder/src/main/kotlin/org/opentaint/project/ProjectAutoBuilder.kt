@@ -9,11 +9,8 @@ import mu.KLogging
 import org.opentaint.util.CliWithLogger
 import org.opentaint.util.directory
 import org.opentaint.util.newDirectory
-import java.nio.file.FileVisitResult
 import java.nio.file.Path
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempDirectory
-import kotlin.io.path.visitFileTree
 
 class ProjectAutoBuilder : CliWithLogger() {
     private val buildDir by option(help = "Project resolver (builder) working directory")
@@ -49,7 +46,7 @@ class ProjectAutoBuilder : CliWithLogger() {
         }
 
         val javaProjects = resolvedProject?.let { Project.flattenJavaProject(it) }.orEmpty()
-        val goProjects = findGoProjects(projectRootDir)
+        val goProjects = GoProjectResolver.resolveProject(projectRootDir, resolverWorkDir)
 
         if (javaProjects.isEmpty() && goProjects.isEmpty()) {
             logger.error { "No projects resolved at $projectRootDir" }
@@ -68,12 +65,8 @@ class ProjectAutoBuilder : CliWithLogger() {
             }
 
             is PortableProjectBuild -> {
-                if (resolvedProject == null) {
-                    topLevelProject.dump(b.resultDir.resolve("project.yaml").createParentDirectories())
-                } else {
-                    val portableProjectCreator = PortableProjectCreator(b.resultDir, resolvedProject)
-                    portableProjectCreator.create()
-                }
+                val portableProjectCreator = PortableProjectCreator(b.resultDir, topLevelProject)
+                portableProjectCreator.create()
             }
         }
     }
@@ -84,22 +77,4 @@ class ProjectAutoBuilder : CliWithLogger() {
         @JvmStatic
         fun main(args: Array<String>) = ProjectAutoBuilder().main(args)
     }
-}
-
-@OptIn(ExperimentalPathApi::class)
-internal fun findGoProjects(root: Path): List<GoProject> {
-    val result = mutableListOf<GoProject>()
-    root.visitFileTree {
-        onPreVisitDirectory { directory, _ ->
-            when {
-                directory.isHiddenSubDirOf(root) -> FileVisitResult.SKIP_SUBTREE
-                directory.resolve("go.mod").toFile().exists() -> {
-                    result += GoProject(directory)
-                    FileVisitResult.SKIP_SUBTREE
-                }
-                else -> FileVisitResult.CONTINUE
-            }
-        }
-    }
-    return result
 }
