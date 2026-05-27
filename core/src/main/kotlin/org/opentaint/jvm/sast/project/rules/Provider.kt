@@ -1,5 +1,6 @@
 package org.opentaint.jvm.sast.project.rules
 
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.jvm.JIRClasspath
@@ -14,7 +15,7 @@ import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.createTaintConfig
 
-fun List<TaintRuleFromSemgrep>.semgrepRulesWithDefaultConfig(
+fun List<TaintRuleFromSemgrep<SerializedItem>>.semgrepRulesWithDefaultConfig(
     cp: JIRClasspath
 ): JIRTaintRulesProvider {
     val defaultRules = loadDefaultConfig()

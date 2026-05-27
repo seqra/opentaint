@@ -6,11 +6,12 @@ import com.charleskorn.kaml.encodeToStream
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
+import org.opentaint.dataflow.ap.ifds.taint.SkippedExternalMethods
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.loadSerializedTaintConfig
-import org.opentaint.dataflow.jvm.ap.ifds.taint.ExternalMethodTracker
-import org.opentaint.dataflow.jvm.ap.ifds.taint.SkippedExternalMethods
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRClasspath
@@ -34,6 +35,7 @@ import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.Project
 import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.semgrep.pattern.createTaintConfig
 import java.io.OutputStream
 import java.nio.file.Path
@@ -60,16 +62,17 @@ class ProjectAnalyzer(
     }
 
     private data class PreloadedRules(
-        val rules: List<TaintRuleFromSemgrep>,
+        val rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         val customApproximationConfig: List<SerializedTaintConfig>,
     )
 
     private fun preloadRules(): PreloadedRules {
-        val loadedRules = options.loadSemgrepRules()
+        val loadedRules = options.common.loadSemgrepRules(JavaLanguageStrategy())
         ruleMetadatas += loadedRules.rulesWithMeta.map { it.second }
-        val rules = loadedRules.rulesWithMeta.map { it.first }
+        @Suppress("UNCHECKED_CAST")
+        val rules = loadedRules.rulesWithMeta.map { it.first as TaintRuleFromSemgrep<SerializedItem> }
 
-        val approximations = options.customApproximationConfig.map { cfg ->
+        val approximations = options.common.customApproximationConfig.map { cfg ->
             cfg.inputStream().use { cfgStream ->
                 loadSerializedTaintConfig(cfgStream)
             }
@@ -100,7 +103,7 @@ class ProjectAnalyzer(
     }
 
     private fun ProjectAnalysisContext.runAnalyzer(entryPoints: List<JIRMethod>, rules: PreloadedRules): ProjectAnalysisStatus {
-        val externalMethodTracker = if (options.trackExternalMethods) ExternalMethodTracker() else null
+        val externalMethodTracker = if (options.common.trackExternalMethods) ExternalMethodTracker() else null
 
         val analysisResult = runAnalyzerWithTraceResolver(entryPoints, rules, externalMethodTracker)
         generateReportFromAnalysisResult(analysisResult)
@@ -140,7 +143,7 @@ class ProjectAnalyzer(
 
             var result = AnalysisResult(status, traces)
 
-            if (options.debugOptions?.factReachabilitySarif == true) {
+            if (options.common.debugOptions?.factReachabilitySarif == true) {
                 val stmtsWithFact = analyzer.statementsWithFacts()
                 result = result.copy(debugStatementsWithFact = stmtsWithFact)
             }
@@ -169,7 +172,7 @@ class ProjectAnalyzer(
 
         val sourcesResolver = project.sourceResolver(projectClasses)
 
-        (resultDir / options.sarifGenerationOptions.sarifFileName).outputStream().use {
+        (resultDir / options.common.sarifGenerationOptions.sarifFileName).outputStream().use {
             generateSarifReportFromTraces(it, sourcesResolver, result.traces)
         }
 
@@ -180,7 +183,7 @@ class ProjectAnalyzer(
         }
 
         result.seVerifiedTraces?.let { seVerifiedTraces ->
-            val reportName = options.sarifGenerationOptions.sarifFileName + ".se-verified.sarif"
+            val reportName = options.common.sarifGenerationOptions.sarifFileName + ".se-verified.sarif"
             (resultDir / reportName).outputStream().use {
                 generateSarifReportFromTraces(it, sourcesResolver, seVerifiedTraces)
             }
@@ -195,7 +198,7 @@ class ProjectAnalyzer(
         traces: List<VulnerabilityWithTrace>
     ) {
         val generator = SarifGenerator(
-            options.sarifGenerationOptions, project.sourceRoot,
+            options.common.sarifGenerationOptions, project.sourceRoot,
             sourceFileResolver, JIRSarifTraits(cp)
         )
 
@@ -213,7 +216,7 @@ class ProjectAnalyzer(
         reachableFacts: Map<CommonInst, Set<FinalFactAp>>,
     ) {
         val generator = DebugFactReachabilitySarifGenerator(
-            options.sarifGenerationOptions,
+            options.common.sarifGenerationOptions,
             sourceFileResolver, JIRSarifTraits(cp)
         )
         generator.generateSarif(output, reachableFacts)

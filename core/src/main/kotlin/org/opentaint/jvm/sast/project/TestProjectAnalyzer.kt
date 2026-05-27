@@ -13,11 +13,13 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.project.rules.analysisConfig
 import org.opentaint.jvm.sast.project.rules.loadSemgrepRules
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.jvm.sast.project.rules.semgrepRulesWithDefaultConfig
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.SarifGenerator
 import org.opentaint.jvm.sast.util.locationChecker
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.project.Project
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
@@ -33,7 +35,7 @@ class TestProjectAnalyzer(
 ) {
     private val options = providedOptions.copy(storeSummaries = false)
     private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, options)
-    private val loadedRules = options.loadSemgrepRules()
+    private val loadedRules = options.common.loadSemgrepRules(JavaLanguageStrategy())
 
     @Serializable
     data class RuleInfo(val rulePath: String, val ruleId: String?)
@@ -107,7 +109,7 @@ class TestProjectAnalyzer(
 
         logger.info { "Select test analysis rules" }
 
-        val testWithRule = mutableListOf<Pair<TestSample, List<TaintRuleFromSemgrep>>>()
+        val testWithRule = mutableListOf<Pair<TestSample, List<TaintRuleFromSemgrep<SerializedItem>>>>()
         val testGroups = testSamples.groupBy { it.info.rule }
         for ((ruleInfo, testGroup) in testGroups) {
             val rules = when (val result = selectRules(ruleInfo)) {
@@ -142,7 +144,7 @@ class TestProjectAnalyzer(
     }
 
     private sealed interface RuleSelectResult {
-        data class Rules(val rules: List<TaintRuleFromSemgrep>): RuleSelectResult
+        data class Rules(val rules: List<TaintRuleFromSemgrep<SerializedItem>>): RuleSelectResult
         data object MultipleRules: RuleSelectResult
         data object NoRules: RuleSelectResult
         data object RuleDisabled: RuleSelectResult
@@ -162,7 +164,10 @@ class TestProjectAnalyzer(
         val relevantRules = loadedRules.rulesWithMeta.filter { ruleIdMatcher(it.first.ruleId) }
 
         return when (relevantRules.size) {
-            1 -> RuleSelectResult.Rules(relevantRules.map { it.first })
+            1 -> {
+                @Suppress("UNCHECKED_CAST")
+                RuleSelectResult.Rules(relevantRules.map { it.first as TaintRuleFromSemgrep<SerializedItem> })
+            }
 
             0 -> {
                 if (loadedRules.disabledRules.any { ruleIdMatcher(it) }){
@@ -182,7 +187,7 @@ class TestProjectAnalyzer(
     }
 
     private fun ProjectAnalysisContext.analyzeTestSample(
-        rules: List<TaintRuleFromSemgrep>,
+        rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         sample: TestSample
     ): Pair<List<VulnerabilityWithTrace>, JIRTaintAnalyzer.Status> {
         val loadedConfig = rules.semgrepRulesWithDefaultConfig(cp)
@@ -236,10 +241,10 @@ class TestProjectAnalyzer(
     private fun ProjectAnalysisContext.generateSarif(traces: List<VulnerabilityWithTrace>, testSetName: String) {
         val sourcesResolver = project.sourceResolver(projectClasses)
         val generator = SarifGenerator(
-            options.sarifGenerationOptions, project.sourceRoot,
+            options.common.sarifGenerationOptions, project.sourceRoot,
             sourcesResolver, JIRSarifTraits(cp)
         )
-        (resultDir / (testSetName + options.sarifGenerationOptions.sarifFileName)).outputStream().use { out ->
+        (resultDir / (testSetName + options.common.sarifGenerationOptions.sarifFileName)).outputStream().use { out ->
             generator.generateSarif(out, traces.asSequence(), loadedRules.rulesWithMeta.map { it.second })
         }
     }

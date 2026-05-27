@@ -4,13 +4,14 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.configuration.CommonConditionRewriter
 import org.opentaint.dataflow.configuration.jvm.Argument
 import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.ClassStatic
 import org.opentaint.dataflow.configuration.jvm.Condition
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
+import org.opentaint.dataflow.configuration.jvm.JirCondition
 import org.opentaint.dataflow.configuration.jvm.Position
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
@@ -26,7 +27,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.configuration.jvm.This
-import org.opentaint.dataflow.jvm.ap.ifds.taint.ConditionRewriter
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
@@ -115,7 +116,7 @@ class SpringRuleProvider(
             val cleanupPositions = currentFact.cleanupPositions() ?: return emptyList()
 
             val cleaner = TaintCleaner(
-                method, ConstantTrue,
+                method, mkTrue(),
                 cleanupPositions.map { RemoveAllMarks(it) },
                 info = null
             )
@@ -161,7 +162,7 @@ class SpringRuleProvider(
         val repoActions = springRepoMethodInfo.actions()
             ?: return rules
 
-        val repoRule = TaintPassThrough(method, ConstantTrue, repoActions, info = null)
+        val repoRule = TaintPassThrough(method, mkTrue(), repoActions, info = null)
         return rules + repoRule
     }
 
@@ -247,11 +248,12 @@ class SpringRuleProvider(
     private fun unfoldObjectContainsMark(position: Position, condition: Condition): Condition =
         condition.accept(ContainsMarkRewriter(position))
 
-    private class ContainsMarkRewriter(val position: Position) : ConditionRewriter {
-        override fun visit(condition: ContainsMark): Condition {
-            if (condition.position != position) return condition
+    private class ContainsMarkRewriter(val position: Position) : CommonConditionRewriter<JirCondition> {
+        override fun rewriteAtom(atom: JirCondition): JirCondition {
+            if (atom !is ContainsMark) return atom
 
-            return ContainsMarkOnAnyField(position, condition.mark)
+            if (atom.position != position) return atom
+            return ContainsMarkOnAnyField(position, atom.mark)
         }
     }
 

@@ -4,9 +4,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
-import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
+import org.opentaint.jvm.sast.project.CommonAnalysisOptions
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import java.nio.file.Path
 import kotlin.io.path.extension
 import kotlin.io.path.outputStream
@@ -16,47 +17,38 @@ import kotlin.io.path.walk
 
 private val logger = object : KLogging() {}.logger
 
-fun ProjectAnalysisOptions.loadSemgrepRules(): SemgrepRuleLoader.RuleLoadResult {
+fun CommonAnalysisOptions.loadSemgrepRules(strategy: LanguageStrategy<*, *>): SemgrepRuleLoader.RuleLoadResult {
     val trace = SemgrepLoadTrace()
-    val semgrepRules = parseSemgrepRules(semgrepRuleSet, semgrepSeverity, semgrepRuleId, trace)
+    val rules = parseSemgrepRules(strategy, semgrepRuleSet, semgrepSeverity, semgrepRuleId, trace)
+    semgrepRuleLoadTrace?.let { writeTrace(it, trace) }
+    return rules
+}
 
-    val compressedTrace by lazy { trace.compressed() }
-    semgrepRuleLoadTrace?.let { traceFile ->
-        runCatching {
-            val prettyJson = Json {
-                prettyPrint = true
-            }
-            traceFile.outputStream().bufferedWriter().use { writer ->
-                writer.write(prettyJson.encodeToString(compressedTrace))
-            }
-            logger.info { "Wrote semgrep load trace to $traceFile" }
-        }.onFailure { ex ->
-            logger.error(ex) { "Failed to write semgrep load trace to $traceFile: ${ex.message}" }
-        }
-    }
-
-    return semgrepRules
+private fun writeTrace(traceFile: Path, trace: SemgrepLoadTrace) {
+    val compressed = trace.compressed()
+    runCatching {
+        val pretty = Json { prettyPrint = true }
+        traceFile.outputStream().bufferedWriter().use { it.write(pretty.encodeToString(compressed)) }
+        logger.info { "Wrote semgrep load trace to $traceFile" }
+    }.onFailure { logger.error(it) { "Failed to write semgrep load trace to $traceFile: ${it.message}" } }
 }
 
 private fun parseSemgrepRules(
-    semgrepRulesPath: List<Path>,
-    semgrepSeverity: List<Severity>,
-    semgrepRuleId: List<String>,
-    semgrepTrace: SemgrepLoadTrace
+    strategy: LanguageStrategy<*, *>,
+    rulesPath: List<Path>,
+    severity: List<Severity>,
+    ruleId: List<String>,
+    semgrepTrace: SemgrepLoadTrace,
 ): SemgrepRuleLoader.RuleLoadResult {
-    val loader = SemgrepRuleLoader()
-
-    val ruleExtensions = arrayOf("yaml", "yml")
-    for (rulesRoot in semgrepRulesPath) {
-        rulesRoot.walk().filter { it.extension in ruleExtensions }.forEach { rulePath ->
-            val relativePath = rulePath.relativeTo(rulesRoot)
-            loader.registerRuleSet(rulePath.readText(), relativePath, rulesRoot, semgrepTrace)
+    val loader = SemgrepRuleLoader(listOf(strategy))
+    val ruleExt = arrayOf("yaml", "yml")
+    for (rulesRoot in rulesPath) {
+        rulesRoot.walk().filter { it.extension in ruleExt }.forEach { rulePath ->
+            val rel = rulePath.relativeTo(rulesRoot)
+            loader.registerRuleSet(rulePath.readText(), rel, rulesRoot, semgrepTrace)
         }
     }
-
-    val loadedRules = loader.loadRules(semgrepSeverity, semgrepRuleId)
-
-    logger.info { "Total loaded ${loadedRules.rulesWithMeta.sumOf { it.first.size }} rules" }
-
-    return loadedRules
+    val loaded = loader.loadRules(severity, ruleId)
+    logger.info { "Total loaded ${loaded.rulesWithMeta.sumOf { it.first.size }} rules" }
+    return loaded
 }

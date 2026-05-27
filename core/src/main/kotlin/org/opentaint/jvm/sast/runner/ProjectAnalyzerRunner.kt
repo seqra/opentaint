@@ -12,6 +12,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.jvm.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
+import org.opentaint.jvm.sast.project.CommonAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
 import org.opentaint.jvm.sast.project.ProjectAnalyzer
@@ -95,22 +96,24 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         )
 
         val options = ProjectAnalysisOptions(
-            customApproximationConfig = approximationsConfig,
-            semgrepRuleSet = semgrepRuleSet,
-            semgrepSeverity = semgrepRuleSeverity,
-            semgrepRuleId = semgrepRuleId,
-            semgrepRuleLoadTrace = semgrepRuleLoadTrace,
-            trackExternalMethods = trackExternalMethods,
+            common = CommonAnalysisOptions(
+                customApproximationConfig = approximationsConfig,
+                semgrepRuleSet = semgrepRuleSet,
+                semgrepRuleLoadTrace = semgrepRuleLoadTrace,
+                semgrepSeverity = semgrepRuleSeverity,
+                semgrepRuleId = semgrepRuleId,
+                trackExternalMethods = trackExternalMethods,
+                ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
+                ifdsApMode = ifdsApMode,
+                debugOptions = debugOptions,
+                sarifGenerationOptions = sarifOptions,
+            ),
             cwe = cwe,
             useSymbolicExecution = useSymbolicExecution,
             symbolicExecutionTimeout = symbolicExecutionTimeout.seconds,
-            ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
-            ifdsApMode = ifdsApMode,
             projectKind = projectKind,
             storeSummaries = false,
             experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
-            debugOptions = debugOptions,
-            sarifGenerationOptions = sarifOptions,
             approximationOptions = DataFlowApproximationLoader.Options(
                 customApproximationPaths = dataflowApproximations,
             ),

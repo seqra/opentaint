@@ -19,7 +19,7 @@ private fun ProjectAnalysisContext.getEntryPoints(options: ProjectAnalysisOption
 }
 
 private fun ProjectAnalysisContext.allProjectEntryPoints(options: ProjectAnalysisOptions): List<JIRMethod> {
-    val debugEp = options.debugOptions?.debugRunAnalysisOnSelectedEntryPoints
+    val debugEp = options.common.debugOptions?.debugRunAnalysisOnSelectedEntryPoints
     if (debugEp == null) {
         return projectClasses.projectPublicClasses()
             .flatMapTo(mutableListOf()) { it.publicAndProtectedMethods() }
