@@ -35,6 +35,7 @@ object GoIRSanityChecker {
         checkEntityInvariants(program, errors)
 
         for (fn in program.allFunctions()) {
+            if (!fn.bodyAvailable) continue
             val body = fn.body ?: continue
             checkIndexing(body, errors)
             checkCFGInvariants(body, errors, warnings)

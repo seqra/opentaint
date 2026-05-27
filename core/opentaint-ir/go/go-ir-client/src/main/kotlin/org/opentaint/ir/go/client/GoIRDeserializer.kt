@@ -58,11 +58,8 @@ import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.inst.GoInstLocation
 
-import org.opentaint.ir.go.proto.LoadFunctionBodyResponse
-import org.opentaint.ir.go.proto.LoadPackageResponse
-import org.opentaint.ir.go.proto.OpenSessionResponse
+import org.opentaint.ir.go.proto.BuildProgramResponse
 import org.opentaint.ir.go.proto.ProtoBasicTypeKind
-import org.opentaint.ir.go.proto.ProtoPackageSummary
 import org.opentaint.ir.go.proto.ProtoBinaryOp
 import org.opentaint.ir.go.proto.ProtoCallInfo
 import org.opentaint.ir.go.proto.ProtoCallMode
@@ -109,10 +106,6 @@ import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
 import org.opentaint.ir.go.value.GoIRValue
 
-/**
- * Deserializes lazy-protocol responses (OpenSession + LoadPackage +
- * LoadFunctionBody) into a [GoIRProgram] with on-demand placeholders.
- */
 class GoIRDeserializer {
 
     // ID resolution maps populated during deserialization
@@ -132,7 +125,6 @@ class GoIRDeserializer {
     private val stubPackage: GoIRPackageImpl by lazy {
         GoIRPackageImpl(importPath = "_external_stubs_", name = "_stubs_", isDependency = true)
     }
-    private var lazySession: GoIRLazySession? = null
 
     /** Time reported by the Go server for SSA build + serialization (ms). */
     var serverBuildTimeMs: Long = 0L
@@ -140,52 +132,24 @@ class GoIRDeserializer {
 
     private fun getOrCreateStubPackage(): GoIRPackageImpl = stubPackage
 
-    internal fun deserializeLazy(openResponse: OpenSessionResponse, sessionFactory: (GoIRDeserializer) -> GoIRLazySession): GoIRProgram {
-        if (openResponse.hasError()) {
-            handleError(openResponse.error.message, openResponse.error.fatal)
-        }
-        if (openResponse.hasSummary()) {
-            serverBuildTimeMs = openResponse.summary.buildTimeMs
-        }
-        val session = sessionFactory(this)
-        lazySession = session
-        for (summary in openResponse.packagesList) {
-            deserializePackageSummary(summary, session)
-        }
-        return GoIRProgramImpl(packagesById.values.associateBy { it.importPath }, session)
-    }
-
-    internal fun mergePackageResponses(responses: Iterator<LoadPackageResponse>) {
-        mergeLazyStream(responses.asSequence().map(::LazyResponse))
-    }
-
-    internal fun mergeFunctionBodyResponses(responses: Iterator<LoadFunctionBodyResponse>) {
-        mergeLazyStream(responses.asSequence().map(::LazyResponse))
-    }
-
-    /** Common dispatch loop shared by [mergePackageResponses] and [mergeFunctionBodyResponses]. */
-    private fun mergeLazyStream(responses: Sequence<LazyResponse>) {
-        val deferredBodies = mutableListOf<ProtoFunctionBody>()
+    fun deserialize(responses: Iterator<BuildProgramResponse>): GoIRProgram {
+        val deferredBodies = mutableListOf<org.opentaint.ir.go.proto.ProtoFunctionBody>()
         for (r in responses) {
-            when (r.kind) {
-                LazyResponseKind.TYPE_DEF -> deserializeType(r.typeDef!!)
-                LazyResponseKind.PACKAGE_DEF -> deserializePackage(r.packageDef!!)
-                LazyResponseKind.FUNCTION_DEF -> deserializeFunction(r.functionDef!!)
-                LazyResponseKind.FUNCTION_BODY -> deferredBodies.add(r.functionBody!!)
-                LazyResponseKind.SUMMARY -> serverBuildTimeMs = r.summaryBuildTimeMs
-                LazyResponseKind.ERROR -> handleError(r.errorMessage!!, r.errorFatal)
-                LazyResponseKind.UNKNOWN -> {}
+            when (r.payloadCase) {
+                BuildProgramResponse.PayloadCase.TYPE_DEF -> deserializeType(r.typeDef)
+                BuildProgramResponse.PayloadCase.PACKAGE_DEF -> deserializePackage(r.packageDef)
+                BuildProgramResponse.PayloadCase.FUNCTION_BODY -> deferredBodies.add(r.functionBody)
+                BuildProgramResponse.PayloadCase.SUMMARY -> serverBuildTimeMs = r.summary.buildTimeMs
+                BuildProgramResponse.PayloadCase.ERROR -> handleError(r.error.message, r.error.fatal)
+                BuildProgramResponse.PayloadCase.PAYLOAD_NOT_SET -> {}
             }
         }
-        finalizeIncrementalMerge(deferredBodies)
-    }
-
-    private fun finalizeIncrementalMerge(deferredBodies: List<ProtoFunctionBody>) {
         resolveNamedTypeRefs()
         for (fb in deferredBodies) {
             deserializeFunctionBody(fb)
         }
         resolveReferences()
+        return GoIRProgramImpl(packagesById.values.associateBy { it.importPath })
     }
 
     private fun handleError(message: String, fatal: Boolean) {
@@ -193,18 +157,6 @@ class GoIRDeserializer {
             throw RuntimeException("Fatal error from Go server: $message")
         }
         errors.add(message)
-    }
-
-    private fun deserializePackageSummary(summary: ProtoPackageSummary, session: GoIRLazySession) {
-        packagesById.getOrPut(summary.id) {
-            GoIRPackageImpl(
-                importPath = summary.importPath,
-                name = summary.name,
-                isStdlib = summary.isStdlib,
-                isDependency = summary.isDependency,
-                loader = { session.loadPackage(summary.id) },
-            )
-        }
     }
 
 
@@ -289,14 +241,11 @@ class GoIRDeserializer {
     // ─── Packages ───────────────────────────────────────────────────
 
     private fun deserializePackage(pp: ProtoPackage) {
-        // Fallback path: if a package body arrives without a prior summary,
-        // we have no project/stdlib/dependency classification. Treat as a
-        // dependency so the unit resolver returns UnknownUnit; the analyzer
-        // will rely on rules / approximations for any cross-boundary call.
         val pkg = packagesById[pp.id] ?: GoIRPackageImpl(
             importPath = pp.importPath,
             name = pp.name,
-            isDependency = true,
+            isStdlib = pp.isStdlib,
+            isDependency = pp.isDependency,
         ).also { packagesById[pp.id] = it }
 
         // Named types
@@ -395,14 +344,6 @@ class GoIRDeserializer {
         pkg.initFunctionId = pp.initFunctionId
     }
 
-    private fun deserializeFunction(pf: ProtoFunction): GoIRFunctionImpl {
-        val pkg = packagesById[pf.packageId] ?: getOrCreateStubPackage()
-        val fn = deserializeFunction(pf, pkg)
-        functionsById[pf.id] = fn
-        pkg.addFunction(fn)
-        return fn
-    }
-
     private fun deserializeFunction(pf: ProtoFunction, pkg: GoIRPackageImpl): GoIRFunctionImpl {
         functionsById[pf.id]?.let { return it }
         return GoIRFunctionImpl(
@@ -410,12 +351,8 @@ class GoIRDeserializer {
             fullName = pf.fullName,
             pkg = pkg,
             signature = resolveType(pf.signatureTypeId) as GoIRFuncType,
-            params = pf.paramsList.map { p ->
-                GoIRParameter(p.name, resolveType(p.typeId), p.index)
-            },
-            freeVars = pf.freeVarsList.map { fv ->
-                GoIRFreeVar(fv.name, resolveType(fv.typeId), fv.index)
-            },
+            params = pf.paramsList.map { p -> GoIRParameter(p.name, resolveType(p.typeId), p.index) },
+            freeVars = pf.freeVarsList.map { fv -> GoIRFreeVar(fv.name, resolveType(fv.typeId), fv.index) },
             position = positionFromProto(pf.position),
             isMethod = pf.isMethod,
             isPointerReceiver = pf.isPointerReceiver,
@@ -423,11 +360,6 @@ class GoIRDeserializer {
             isSynthetic = pf.isSynthetic,
             syntheticKind = pf.syntheticKind.ifEmpty { null },
             declaredHasBody = pf.hasBody,
-            // Body load only requires the function's own id; do NOT pre-force the
-            // owning package — the server's LoadFunctionBody streams any needed
-            // package stubs and type/function defs, and forcing ensureLoaded here
-            // can recursively trigger unrelated package loads.
-            bodyLoader = if (pf.hasBody) { { lazySession?.loadFunctionBody(pf.id) } } else null,
             receiverTypeId = pf.receiverTypeId,
             parentFunctionId = pf.parentFunctionId,
             anonFunctionIds = pf.anonFunctionIdsList.toList(),
@@ -1025,46 +957,6 @@ class GoIRDeserializer {
             ProtoNamedTypeKind.NAMED_TYPE_ALIAS -> GoIRNamedTypeKind.ALIAS
             ProtoNamedTypeKind.NAMED_TYPE_OTHER -> GoIRNamedTypeKind.OTHER
             else -> GoIRNamedTypeKind.OTHER
-        }
-    }
-}
-
-/**
- * Adapter that hides the structural difference between the lazy-response
- * oneof variants. The function-body variant adds `function_def` and
- * `function_body` cases; everything else is identical.
- */
-private enum class LazyResponseKind { TYPE_DEF, PACKAGE_DEF, FUNCTION_DEF, FUNCTION_BODY, SUMMARY, ERROR, UNKNOWN }
-
-private class LazyResponse {
-    var kind: LazyResponseKind = LazyResponseKind.UNKNOWN
-    var typeDef: ProtoTypeDefinition? = null
-    var packageDef: org.opentaint.ir.go.proto.ProtoPackage? = null
-    var functionDef: org.opentaint.ir.go.proto.ProtoFunction? = null
-    var functionBody: ProtoFunctionBody? = null
-    var summaryBuildTimeMs: Long = 0L
-    var errorMessage: String? = null
-    var errorFatal: Boolean = false
-
-    constructor(r: LoadPackageResponse) {
-        when (r.payloadCase) {
-            LoadPackageResponse.PayloadCase.TYPE_DEF -> { kind = LazyResponseKind.TYPE_DEF; typeDef = r.typeDef }
-            LoadPackageResponse.PayloadCase.PACKAGE_DEF -> { kind = LazyResponseKind.PACKAGE_DEF; packageDef = r.packageDef }
-            LoadPackageResponse.PayloadCase.SUMMARY -> { kind = LazyResponseKind.SUMMARY; summaryBuildTimeMs = r.summary.buildTimeMs }
-            LoadPackageResponse.PayloadCase.ERROR -> { kind = LazyResponseKind.ERROR; errorMessage = r.error.message; errorFatal = r.error.fatal }
-            else -> {}
-        }
-    }
-
-    constructor(r: LoadFunctionBodyResponse) {
-        when (r.payloadCase) {
-            LoadFunctionBodyResponse.PayloadCase.TYPE_DEF -> { kind = LazyResponseKind.TYPE_DEF; typeDef = r.typeDef }
-            LoadFunctionBodyResponse.PayloadCase.PACKAGE_DEF -> { kind = LazyResponseKind.PACKAGE_DEF; packageDef = r.packageDef }
-            LoadFunctionBodyResponse.PayloadCase.FUNCTION_DEF -> { kind = LazyResponseKind.FUNCTION_DEF; functionDef = r.functionDef }
-            LoadFunctionBodyResponse.PayloadCase.FUNCTION_BODY -> { kind = LazyResponseKind.FUNCTION_BODY; functionBody = r.functionBody }
-            LoadFunctionBodyResponse.PayloadCase.SUMMARY -> { kind = LazyResponseKind.SUMMARY; summaryBuildTimeMs = r.summary.buildTimeMs }
-            LoadFunctionBodyResponse.PayloadCase.ERROR -> { kind = LazyResponseKind.ERROR; errorMessage = r.error.message; errorFatal = r.error.fatal }
-            else -> {}
         }
     }
 }

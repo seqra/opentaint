@@ -21,6 +21,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
+import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
@@ -223,7 +224,7 @@ class GoSampleBasedTest {
         }
 
         val program = programCache.getOrPut(sampleDir) {
-            client.buildFromDir(sampleDir, "./...")
+            client.buildFromDir(sampleDir, GoIRLoadConfig()).program
         }
 
         val yamlFile = sampleDir.toFile().listFiles { f -> f.extension == "yaml" }

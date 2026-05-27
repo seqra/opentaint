@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.test.*
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
@@ -34,7 +35,7 @@ class RealWorldBenchmarkTest {
         // 2. Build IR with fresh server per project (isolates crashes)
         GoIRTestBuilder().use { builder ->
             val buildResult = try {
-                builder.buildFromDirWithTimings(projectDir, *project.patterns.toTypedArray())
+                builder.buildFromDirWithTimings(projectDir, GoIRLoadConfig(patterns = project.patterns))
             } catch (e: OutOfMemoryError) {
                 throw AssertionError("OutOfMemoryError for ${project.module}", e)
             } catch (e: Exception) {
@@ -43,10 +44,6 @@ class RealWorldBenchmarkTest {
             val prog = buildResult.program
             val timings = buildResult.timings
 
-            // 3. Force lazy materialization of every package/body and run the
-            //    sanity checker; measure end-to-end wall-clock. Under the lazy
-            //    flow `timings.totalMs` only covers `OpenSession`, so this is
-            //    where the actual per-project cost shows up.
             var totalInstructions = 0
             var totalBlocks = 0
             var functionCount = 0
@@ -55,6 +52,7 @@ class RealWorldBenchmarkTest {
                 val fns = prog.allFunctions()
                 functionCount = fns.size
                 for (fn in fns) {
+                    if (!fn.bodyAvailable) continue
                     val b = fn.body
                     if (b != null) {
                         totalInstructions += b.instructionCount
@@ -66,10 +64,10 @@ class RealWorldBenchmarkTest {
 
             // 4. Print detailed timing and metrics
             println("=== BENCHMARK: ${project.module} @ ${project.commitHash.take(8)} ===")
-            println("  OpenSession (server): ${timings.serverBuildMs}ms")
-            println("  OpenSession (deser):  ${timings.deserializeMs}ms")
-            println("  OpenSession (total):  ${timings.totalMs}ms")
-            println("  Lazy walk+sanity:     ${walkMs}ms")
+            println("  Build (server): ${timings.serverBuildMs}ms")
+            println("  Build (deser):  ${timings.deserializeMs}ms")
+            println("  Build (total):  ${timings.totalMs}ms")
+            println("  Walk+sanity:    ${walkMs}ms")
             println("  ──────────────────")
             println("  Packages:      ${prog.packages.size}")
             println("  Functions:     $functionCount")
@@ -84,7 +82,6 @@ class RealWorldBenchmarkTest {
             }
             println("===")
 
-            // 5. Assert — combined wall-clock (OpenSession + lazy walk) within limit
             val combinedMs = timings.totalMs + walkMs
             assertThat(combinedMs)
                 .withFailMessage("Extraction took ${combinedMs}ms (open=${timings.totalMs}ms, walk=${walkMs}ms), limit is ${project.maxTimeSeconds * 1000}ms")

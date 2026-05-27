@@ -13,7 +13,7 @@ class GoSsaServerProcess(
     private val serverBinaryPath: String =
         System.getProperty("goir.server.binary")
             ?: System.getenv("GOIR_SERVER_BINARY")
-            ?: "go-ssa-server", // hope it's on PATH
+            ?: error("GOIR_SERVER_BINARY not set"),
 ) : AutoCloseable {
     private var process: Process? = null
     private var channel: ManagedChannel? = null

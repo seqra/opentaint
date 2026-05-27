@@ -26,6 +26,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
+import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
@@ -110,7 +111,7 @@ class GoMassiveSampleTest {
             ?: fail("[$name] expected exactly one *.yaml rule under $sampleDir")
 
         val program = try {
-            client.buildFromDir(sampleDir, "./...")
+            client.buildFromDir(sampleDir, GoIRLoadConfig()).program
         } catch (e: Throwable) {
             perSampleNotes += "[$name] go build failed: ${e.message}"
             fail("[$name] go build failed: ${e.message}")

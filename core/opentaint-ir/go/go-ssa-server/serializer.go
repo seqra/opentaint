@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 
@@ -53,28 +54,17 @@ type serializer struct {
 	collectedFunctions map[*ssa.Function]bool
 	collectedGlobals   map[*ssa.Global]bool
 
-	// Body-local referenced entities discovered while collecting a single lazy body.
-	// When non-nil, externalPackageStubs only emits metadata for these references.
-	referencedFunctions map[*ssa.Function]bool
-	referencedGlobals   map[*ssa.Global]bool
-
 	// Tracks which functions have already been serialized as ProtoFunction
 	serializedFunctions map[*ssa.Function]bool
-
-	// Non-user SSA packages imported by any user package being serialized.
-	// Used to emit minimal ProtoPackage stubs so clients can resolve
-	// ImportIds for stdlib/external packages.
-	importedExternalSSA []*ssa.Package
 
 	// Maps for value IDs within a function
 	funcValueIDs map[ssa.Value]int32
 
 	stats serializerStats
 
-	// When non-nil, this serializer represents a package whose SSA build was
-	// skipped. The server's LoadPackage handler picks this up and emits a
-	// minimal ProtoPackage stub for it instead of a normal serializePackage.
-	placeholderPackage *packageSummary
+	mode               pb.LoadMode
+	projectModulePaths map[string]bool
+	loadInfo           map[string]*packages.Package
 }
 
 func newSerializerWithIDs(prog *ssa.Program, pkgs []*ssa.Package, ids *idAllocator) *serializer {
@@ -89,131 +79,123 @@ func newSerializerWithIDs(prog *ssa.Program, pkgs []*ssa.Package, ids *idAllocat
 	}
 }
 
-func newLazyPackageSerializer(prog *ssa.Program, pkg *ssa.Package, ids *idAllocator) *serializer {
-	s := newSerializerWithIDs(prog, []*ssa.Package{pkg}, ids)
-	s.collectPackageSignatures(pkg)
+func newSerializerForBuild(prog *ssa.Program, pkgs []*ssa.Package, info map[string]*packages.Package, mode pb.LoadMode, projectModulePaths map[string]bool) *serializer {
+	s := newSerializerWithIDs(prog, pkgs, newIDAllocator())
+	s.mode = mode
+	s.projectModulePaths = projectModulePaths
+	s.loadInfo = info
+	s.collectAll()
 	return s
 }
 
-// newPlaceholderPackageSerializer returns a serializer that streams a minimal
-// empty ProtoPackage for a package that has no SSA representation (e.g. it
-// transitively imports an ill-typed dependency so ssautil.AllPackages skipped
-// it). The eager BuildProgram path silently omits such packages from the
-// stream; in the lazy path, the client has already received a package summary
-// and will attempt to load it, so we emit a minimal stub instead of erroring.
-func newPlaceholderPackageSerializer(prog *ssa.Program, ps *packageSummary, ids *idAllocator) *serializer {
-	s := newSerializerWithIDs(prog, nil, ids)
-	s.placeholderPackage = ps
-	return s
-}
-
-// serializePlaceholderPackage emits a minimal ProtoPackage stub for a package
-// whose SSA build was skipped. Only valid when placeholderPackage is non-nil.
-func (s *serializer) serializePlaceholderPackage() *pb.ProtoPackage {
-	ps := s.placeholderPackage
-	return &pb.ProtoPackage{
-		Id:         ps.id,
-		ImportPath: ps.pkg.PkgPath,
-		Name:       ps.pkg.Name,
+func (s *serializer) collectAll() {
+	for _, pkg := range s.pkgs {
+		s.ids.packageID(pkg)
 	}
-}
-
-func newLazyFunctionBodySerializer(prog *ssa.Program, fn *ssa.Function, ids *idAllocator) *serializer {
-	s := newSerializerWithIDs(prog, nil, ids)
-	s.referencedFunctions = make(map[*ssa.Function]bool)
-	s.referencedGlobals = make(map[*ssa.Global]bool)
-	s.collectFunctionBody(fn)
-	return s
-}
-
-// ─── Collection phase ───────────────────────────────────────────────
-
-func (s *serializer) collectPackageSignatures(pkg *ssa.Package) {
-	s.ids.packageID(pkg)
-	for _, mem := range sortedMembers(pkg) {
-		switch m := mem.(type) {
-		case *ssa.Function:
-			s.ids.functionID(m)
-			s.collectType(m.Signature)
-			for _, p := range m.Params {
-				s.collectType(p.Type())
+	for _, pkg := range s.pkgs {
+		for _, mem := range sortedMembers(pkg) {
+			switch m := mem.(type) {
+			case *ssa.Function:
+				s.collectFunctionSignature(m)
+			case *ssa.Global:
+				s.ids.globalID(m)
+				s.collectType(m.Type())
+			case *ssa.NamedConst:
+				s.ids.constID(m)
+				s.collectType(m.Type())
 			}
-			for _, fv := range m.FreeVars {
-				s.collectType(fv.Type())
-			}
-		case *ssa.Type:
-			named := m.Object().(*types.TypeName)
-			s.ids.namedID(named)
-			s.collectType(named.Type())
-			s.collectType(named.Type().Underlying())
-		case *ssa.Global:
-			s.ids.globalID(m)
-			s.collectType(m.Type())
-		case *ssa.NamedConst:
-			s.ids.constID(m)
-			s.collectType(m.Type())
 		}
-	}
-	for _, mem := range sortedMembers(pkg) {
-		if t, ok := mem.(*ssa.Type); ok {
-			named := t.Object().(*types.TypeName)
-			mset := s.prog.MethodSets.MethodSet(named.Type())
-			for i := 0; i < mset.Len(); i++ {
-				if fn := s.prog.MethodValue(mset.At(i)); fn != nil {
-					s.ids.functionID(fn)
-					s.collectType(fn.Signature)
+		for _, mem := range sortedMembers(pkg) {
+			if t, ok := mem.(*ssa.Type); ok {
+				named := t.Object().(*types.TypeName)
+				s.ids.namedID(named)
+				s.collectType(named.Type())
+				s.collectType(named.Type().Underlying())
+				mset := s.prog.MethodSets.MethodSet(named.Type())
+				for i := 0; i < mset.Len(); i++ {
+					if fn := s.prog.MethodValue(mset.At(i)); fn != nil {
+						s.collectFunctionSignature(fn)
+					}
 				}
-			}
-			pmset := s.prog.MethodSets.MethodSet(types.NewPointer(named.Type()))
-			for i := 0; i < pmset.Len(); i++ {
-				if fn := s.prog.MethodValue(pmset.At(i)); fn != nil {
-					s.ids.functionID(fn)
-					s.collectType(fn.Signature)
+				pmset := s.prog.MethodSets.MethodSet(types.NewPointer(named.Type()))
+				for i := 0; i < pmset.Len(); i++ {
+					if fn := s.prog.MethodValue(pmset.At(i)); fn != nil {
+						s.collectFunctionSignature(fn)
+					}
 				}
 			}
 		}
 	}
-
-	// Enumerate every function known to the SSA program whose declared
-	// package matches the loaded one. This mirrors eager `collectAll`'s
-	// ssautil.AllFunctions pass and brings synthetic wrappers, anonymous
-	// closures, and instantiated generics into the package's function list
-	// so they appear in pp.Functions on first LoadPackage rather than only
-	// being discovered later via body loads.
-	//
-	// We also adopt package-less synthetic functions whose declared package
-	// resolves to nil (e.g. `(error).Error$bound` bound-method wrappers for
-	// built-in interface methods from the universe scope). These synthetics
-	// have no owning package, so they would otherwise never be streamed.
-	// Eager `serializePackage` attaches them to s.pkgs[0]; the lazy path
-	// loads one user package per call, so we adopt them here. Doing this
-	// only once per session is safe because `isFunctionStreamed` will skip
-	// any subsequent LoadPackage call from re-emitting them.
 	for fn := range ssautil.AllFunctions(s.prog) {
-		dp := declaredPackage(fn)
-		switch {
-		case dp == pkg:
-			// declared in this package
-		case dp == nil && fn.Package() == nil && !s.ids.isFunctionStreamed(fn):
-			// orphan synthetic; adopt on first LoadPackage that sees it.
-		default:
-			continue
-		}
-		if s.collectedFunctions[fn] {
-			continue
-		}
-		s.collectedFunctions[fn] = true
-		s.ids.functionID(fn)
-		s.collectType(fn.Signature)
-		for _, p := range fn.Params {
-			s.collectType(p.Type())
-		}
-		for _, fv := range fn.FreeVars {
-			s.collectType(fv.Type())
-		}
-		// Track for serialization in serializePackage.
-		s.allFunctions = append(s.allFunctions, fn)
+		s.collectFunctionSignature(fn)
 	}
+	for fn := range ssautil.AllFunctions(s.prog) {
+		if s.shouldEmitBody(fn) {
+			s.collectFunctionBody(fn)
+		}
+	}
+}
+
+func (s *serializer) shouldEmitBody(fn *ssa.Function) bool {
+	if len(fn.Blocks) == 0 {
+		return false
+	}
+	if s.mode == pb.LoadMode_LOAD_MODE_FULL {
+		return true
+	}
+	dp := declaredPackage(fn)
+	if dp == nil {
+		return fn.Package() == nil
+	}
+	isStdlib, isDep := classifyPackage(s.loadInfo[dp.Pkg.Path()], s.projectModulePaths)
+	return !isDep && !isStdlib
+}
+
+func (s *serializer) streamTypes(stream pb.GoSSAService_BuildProgramServer) error {
+	for _, t := range s.allTypes {
+		td := s.serializeType(t)
+		if td == nil {
+			continue
+		}
+		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_TypeDef{TypeDef: td}}); err != nil {
+			return err
+		}
+		s.stats.typeCount++
+	}
+	return nil
+}
+
+func (s *serializer) streamPackages(stream pb.GoSSAService_BuildProgramServer) error {
+	for _, pkg := range s.pkgs {
+		pp := s.serializePackage(pkg)
+		isStdlib, isDep := classifyPackage(s.loadInfo[pkg.Pkg.Path()], s.projectModulePaths)
+		pp.IsStdlib = isStdlib
+		pp.IsDependency = isDep
+		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_PackageDef{PackageDef: pp}}); err != nil {
+			return err
+		}
+		s.stats.packageCount++
+	}
+	return nil
+}
+
+func (s *serializer) streamFunctionBodies(stream pb.GoSSAService_BuildProgramServer) error {
+	for _, fn := range s.allFunctions {
+		if len(fn.Blocks) == 0 {
+			continue
+		}
+		body, err := s.serializeFunctionBody(fn)
+		if err != nil {
+			stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_Error{Error: &pb.ProtoError{
+				Message: fmt.Sprintf("serializing %s: %v", fn.String(), err), FunctionName: fn.String(), Fatal: false,
+			}}})
+			continue
+		}
+		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_FunctionBody{FunctionBody: body}}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *serializer) collectFunction(fn *ssa.Function) {
@@ -294,9 +276,6 @@ func (s *serializer) collectInstructionTypes(inst ssa.Instruction) {
 }
 
 func (s *serializer) collectReferencedFunction(fn *ssa.Function) {
-	if s.referencedFunctions != nil {
-		s.referencedFunctions[fn] = true
-	}
 	s.ids.functionID(fn)
 	s.collectType(fn.Signature)
 	for _, p := range fn.Params {
@@ -315,9 +294,6 @@ func (s *serializer) collectReferencedFunction(fn *ssa.Function) {
 }
 
 func (s *serializer) collectReferencedGlobal(g *ssa.Global) {
-	if s.referencedGlobals != nil {
-		s.referencedGlobals[g] = true
-	}
 	s.ids.globalID(g)
 	s.collectType(g.Type())
 	if s.collectedGlobals[g] {
@@ -564,131 +540,6 @@ func (s *serializer) serializeFuncType(sig *types.Signature) *pb.ProtoFuncType {
 
 
 
-// importStubPackages emits minimal ProtoPackage stubs for non-user packages
-// that the loaded user package imports. Each stub carries id+name+path so
-// clients can resolve ImportIds without needing a full LoadPackage round-trip.
-// Idempotent across calls: a stub is only emitted once per session, tracked
-// via the streamedFunctions/streamedTypes pattern using a dedicated map.
-func (s *serializer) importStubPackages() []*pb.ProtoPackage {
-	if len(s.importedExternalSSA) == 0 {
-		return nil
-	}
-	seen := make(map[*ssa.Package]bool, len(s.importedExternalSSA))
-	ordered := make([]*ssa.Package, 0, len(s.importedExternalSSA))
-	for _, sp := range s.importedExternalSSA {
-		if sp == nil || seen[sp] {
-			continue
-		}
-		seen[sp] = true
-		ordered = append(ordered, sp)
-	}
-	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Pkg.Path() < ordered[j].Pkg.Path() })
-	out := make([]*pb.ProtoPackage, 0, len(ordered))
-	for _, sp := range ordered {
-		out = append(out, &pb.ProtoPackage{
-			Id:         s.ids.packageID(sp),
-			ImportPath: sp.Pkg.Path(),
-			Name:       sp.Pkg.Name(),
-		})
-	}
-	return out
-}
-
-func (s *serializer) externalPackageStubs() []*pb.ProtoPackage {
-	userPkgs := make(map[*ssa.Package]bool)
-	for _, pkg := range s.pkgs {
-		userPkgs[pkg] = true
-	}
-
-	// Track which external packages need to be sent
-	type extPkgData struct {
-		funcs   []*ssa.Function
-		globals []*ssa.Global
-	}
-	extPkgs := make(map[*ssa.Package]*extPkgData)
-
-	getOrCreate := func(pkg *ssa.Package) *extPkgData {
-		if d, ok := extPkgs[pkg]; ok {
-			return d
-		}
-		d := &extPkgData{}
-		extPkgs[pkg] = d
-		return d
-	}
-
-	// Collect unserialized functions. Lazy body serializers narrow this to
-	// references discovered in the requested body, avoiding re-streaming every
-	// function whose ID is already known from prior package loads.
-	for fn := range s.ids.snapshotFunctionIDs() {
-		if s.serializedFunctions[fn] {
-			continue
-		}
-		if s.referencedFunctions != nil && !s.referencedFunctions[fn] {
-			continue
-		}
-		if s.ids.isFunctionStreamed(fn) {
-			continue
-		}
-		pkg := declaredPackage(fn)
-		if pkg != nil && !userPkgs[pkg] {
-			getOrCreate(pkg).funcs = append(getOrCreate(pkg).funcs, fn)
-		}
-	}
-
-	// Collect unserialized globals
-	serializedGlobals := make(map[*ssa.Global]bool)
-	for _, pkg := range s.pkgs {
-		for _, mem := range sortedMembers(pkg) {
-			if g, ok := mem.(*ssa.Global); ok {
-				serializedGlobals[g] = true
-			}
-		}
-	}
-	for g := range s.ids.snapshotGlobalIDs() {
-		if serializedGlobals[g] {
-			continue
-		}
-		if s.referencedGlobals != nil && !s.referencedGlobals[g] {
-			continue
-		}
-		if s.ids.isGlobalStreamed(g) {
-			continue
-		}
-		pkg := g.Package()
-		if pkg != nil && !userPkgs[pkg] {
-			getOrCreate(pkg).globals = append(getOrCreate(pkg).globals, g)
-		}
-	}
-
-	// Send external packages in deterministic order.
-	pkgs := make([]*ssa.Package, 0, len(extPkgs))
-	for pkg := range extPkgs {
-		pkgs = append(pkgs, pkg)
-	}
-	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].Pkg.Path() < pkgs[j].Pkg.Path() })
-	out := make([]*pb.ProtoPackage, 0, len(pkgs))
-	for _, pkg := range pkgs {
-		data := extPkgs[pkg]
-		sort.Slice(data.funcs, func(i, j int) bool { return data.funcs[i].String() < data.funcs[j].String() })
-		sort.Slice(data.globals, func(i, j int) bool { return data.globals[i].String() < data.globals[j].String() })
-		pp := &pb.ProtoPackage{
-			Id:         s.ids.packageID(pkg),
-			ImportPath: pkg.Pkg.Path(),
-			Name:       pkg.Pkg.Name(),
-		}
-		for _, fn := range data.funcs {
-			pf := s.serializeFunction(fn)
-			pp.Functions = append(pp.Functions, pf)
-			s.serializedFunctions[fn] = true
-		}
-		for _, g := range data.globals {
-			pp.Globals = append(pp.Globals, s.serializeGlobal(g))
-		}
-		out = append(out, pp)
-	}
-	return out
-}
-
 func (s *serializer) serializePackage(pkg *ssa.Package) *pb.ProtoPackage {
 	pp := &pb.ProtoPackage{
 		Id:         s.ids.packageID(pkg),
@@ -712,19 +563,6 @@ func (s *serializer) serializePackage(pkg *ssa.Package) *pb.ProtoPackage {
 			importedSSA = append(importedSSA, sp)
 		}
 	}
-	// Record imported SSA packages so the per-call import stubs path below
-	// can emit minimal external ProtoPackage stubs for stdlib/external
-	// dependencies of the loaded package.
-	userSet := make(map[*ssa.Package]bool, len(s.pkgs))
-	for _, up := range s.pkgs {
-		userSet[up] = true
-	}
-	for _, sp := range importedSSA {
-		if !userSet[sp] {
-			s.importedExternalSSA = append(s.importedExternalSSA, sp)
-		}
-	}
-
 	// Members
 	for _, mem := range sortedMembers(pkg) {
 		switch m := mem.(type) {

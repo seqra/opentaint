@@ -19,6 +19,8 @@ import org.opentaint.go.sast.sarif.GoSarifGenerator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
+import org.opentaint.ir.go.client.GoIRLoadConfig
+import org.opentaint.ir.go.client.GoIRLoadMode
 import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
 import org.opentaint.jvm.sast.project.rules.loadSemgrepRules
 import org.opentaint.project.GoProject
@@ -38,7 +40,7 @@ class GoProjectAnalyzer(
     fun analyze(): ProjectAnalysisStatus = try {
         GoIRClient().use { client ->
             logger.info { "Building Go IR for project: ${project.projectDir}" }
-            val cp = client.buildFromDir(project.projectDir, "./...")
+            val cp = client.buildFromDir(project.projectDir, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).program
 
             val rulesProvider = loadRules()
             val tracker = if (options.common.trackExternalMethods) ExternalMethodTracker() else null

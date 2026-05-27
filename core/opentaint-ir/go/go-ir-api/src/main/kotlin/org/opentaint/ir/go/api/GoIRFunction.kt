@@ -33,6 +33,7 @@ interface GoIRFunction: CommonMethod {
     // Body (null for external/unbuilt functions)
     val body: GoIRBody?
     val hasBody: Boolean get() = body != null
+    val bodyAvailable: Boolean get() = hasBody
 
     // Closure
     val parent: GoIRFunction?

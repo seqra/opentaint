@@ -73,7 +73,7 @@ class GoIRToGoCodeGenerator {
         // Generate functions (excluding anonymous, init, and external stubs)
         for (fn in allFunctions) {
             if (fn.parent != null) continue // skip anonymous functions (generated inline)
-            if (!fn.hasBody) continue
+            if (!fn.bodyAvailable) continue
             if (fn.name == "init") continue // skip init for round-trip
             if (fn.isSynthetic) continue // skip synthetic wrappers
             if (fn.pkg != null && fn.pkg != pkg) continue // skip functions from other packages
@@ -104,6 +104,7 @@ class GoIRToGoCodeGenerator {
             if (fn.name == "init") continue
             if (fn.isSynthetic) continue
             if (fn.parent != null) continue
+            if (!fn.bodyAvailable) continue
             val body = fn.body ?: continue
             for (inst in body.instructions) {
                 when (inst) {
@@ -348,6 +349,7 @@ class GoIRToGoCodeGenerator {
     private val deferredCalls = mutableListOf<String>()
 
     private fun generateFunction(sb: StringBuilder, fn: GoIRFunction) {
+        if (!fn.bodyAvailable) return
         val body = fn.body ?: return
         deferredCalls.clear()
         val phiResult = PhiEliminator.eliminate(body)

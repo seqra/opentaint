@@ -7,7 +7,6 @@ class GoIRPackageImpl(
     override val name: String,
     override val isStdlib: Boolean = false,
     override val isDependency: Boolean = false,
-    private val loader: (() -> Unit)? = null,
 ) : GoIRPackage {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -16,9 +15,6 @@ class GoIRPackageImpl(
     }
 
     override fun hashCode(): Int = importPath.hashCode()
-
-    private val loadLock = Any()
-    @Volatile private var loaded: Boolean = loader == null
 
     private val _functions = mutableListOf<GoIRFunction>()
     private val _namedTypes = mutableListOf<GoIRNamedType>()
@@ -31,27 +27,16 @@ class GoIRPackageImpl(
     private val _constantSet = HashSet<GoIRConst>()
     private val _importSet = HashSet<GoIRPackage>()
 
-    override val functions: List<GoIRFunction> get() { ensureLoaded(); return _functions }
-    override val namedTypes: List<GoIRNamedType> get() { ensureLoaded(); return _namedTypes }
-    override val globals: List<GoIRGlobal> get() { ensureLoaded(); return _globals }
-    override val constants: List<GoIRConst> get() { ensureLoaded(); return _constants }
-    override val imports: List<GoIRPackage> get() { ensureLoaded(); return _imports }
+    override val functions: List<GoIRFunction> get() = _functions
+    override val namedTypes: List<GoIRNamedType> get() = _namedTypes
+    override val globals: List<GoIRGlobal> get() = _globals
+    override val constants: List<GoIRConst> get() = _constants
+    override val imports: List<GoIRPackage> get() = _imports
     override var initFunction: GoIRFunction? = null
-        get() { ensureLoaded(); return field }
 
     // Deferred resolution data
     internal var importIds: List<Int> = emptyList()
     internal var initFunctionId: Int = 0
-
-    fun ensureLoaded() {
-        if (loaded) return
-        synchronized(loadLock) {
-            if (!loaded) {
-                loader?.invoke()
-                loaded = true
-            }
-        }
-    }
 
     fun addFunction(fn: GoIRFunction) { if (_functionSet.add(fn)) _functions.add(fn) }
     fun addNamedType(nt: GoIRNamedType) { if (_namedTypeSet.add(nt)) _namedTypes.add(nt) }

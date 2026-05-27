@@ -34,6 +34,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
+import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.ext.findFunctionByFullName
 import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.util.analysis.ApplicationGraph
@@ -95,7 +96,7 @@ abstract class AnalysisTest {
     }
 
     private fun createClasspath(): GoIRProgram {
-        return client.buildFromDir(sourcesDir, "./...")
+        return client.buildFromDir(sourcesDir, GoIRLoadConfig()).program
     }
 
     private fun extractGoSourcesFromJar(jarPath: Path, targetDir: Path) {
