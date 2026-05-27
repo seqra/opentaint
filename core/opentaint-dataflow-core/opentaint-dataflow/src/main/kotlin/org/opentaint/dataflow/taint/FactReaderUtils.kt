@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.taint
+package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -7,10 +7,6 @@ import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
-import org.opentaint.ir.api.jvm.cfg.JIRInst
 
 inline fun <R> readPosition(
     ap: FinalFactAp,
@@ -186,38 +182,3 @@ fun <F> readAnyPositionUtil(
 
     return null
 }
-
-fun JIRLocalAliasAnalysis.forEachAliasAfterStatement(
-    statement: JIRInst,
-    reader: FinalFactReader,
-    newBase: AccessPathBase.LocalVar,
-    body: (FinalFactAp, AliasApInfo) -> Unit
-) {
-    val aliases = findAliasAfterStatement(newBase, statement) ?: return
-    aliases.filterIsInstance<AliasApInfo>()
-        .filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { alias -> applyAlias(reader, newBase, alias, body) }
-}
-
-private fun applyAlias(
-    reader: FinalFactReader,
-    newBase: AccessPathBase.LocalVar,
-    alias: AliasApInfo,
-    body: (FinalFactAp, AliasApInfo) -> Unit
-) {
-    if (!reader.containsPosition(alias.toAp())) {
-        return
-    }
-
-    val result = alias.accessors.fold(reader.factAp.rebase(newBase)) { f, accessor ->
-        val apAccessor = accessor.apAccessor()
-        f.readAccessor(apAccessor) ?: error("Unexpected null accessor read")
-    }
-
-    body(result, alias)
-}
-
-fun AliasApInfo.toAp(): PositionAccess =
-    accessors.fold(PositionAccess.Simple(base)) { acc: PositionAccess, accessor ->
-        PositionAccess.Complex(acc, accessor.apAccessor())
-    }

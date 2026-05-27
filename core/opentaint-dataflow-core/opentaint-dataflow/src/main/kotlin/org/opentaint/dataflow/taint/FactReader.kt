@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.taint
+package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -8,19 +8,18 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.configuration.jvm.TaintMark
 
 interface FactReader {
     val base: AccessPathBase
 
     fun containsPosition(position: PositionAccess): Boolean
     fun containsAnyPosition(position: PositionAccess): PositionAccess?
-    fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMark): InitialFactAp
+    fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor): InitialFactAp
 
-    fun containsPositionWithTaintMark(position: PositionAccess, mark: TaintMark): Boolean =
+    fun containsPositionWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor): Boolean =
         containsPosition(position.withSuffix(taintedPosSuffix(mark)))
 
-    private fun taintedPosSuffix(mark: TaintMark): List<Accessor> = listOf(TaintMarkAccessor(mark.name), FinalAccessor)
+    private fun taintedPosSuffix(mark: TaintMarkAccessor): List<Accessor> = listOf(mark, FinalAccessor)
 }
 
 class FinalFactReader(
@@ -32,8 +31,8 @@ class FinalFactReader(
     private var refinement: ExclusionSet = ExclusionSet.Empty
     val hasRefinement: Boolean get() = refinement !is ExclusionSet.Empty
 
-    override fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMark): InitialFactAp {
-        val positionWithMark = PositionAccess.Complex(position, TaintMarkAccessor(mark.name))
+    override fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor): InitialFactAp {
+        val positionWithMark = PositionAccess.Complex(position, mark)
         return apManager.mkInitialAccessPath(positionWithMark, ExclusionSet.Universe)
     }
 
@@ -86,7 +85,7 @@ class FinalFactReaderWithPrefix(
     override fun containsAnyPosition(position: PositionAccess): PositionAccess? =
         reader.containsAnyPosition(position.withPrefix(prefix))?.removePrefix(prefix)
 
-    override fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMark): InitialFactAp =
+    override fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor): InitialFactAp =
         reader.createInitialFactWithTaintMark(position.withPrefix(prefix), mark)
 }
 
@@ -101,8 +100,8 @@ class InitialFactReader(val fact: InitialFactAp, val apManager: ApManager): Fact
             matchedNode = { true }
         )
 
-    override fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMark): InitialFactAp {
-        val positionWithMark = PositionAccess.Complex(position, TaintMarkAccessor(mark.name))
+    override fun createInitialFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor): InitialFactAp {
+        val positionWithMark = PositionAccess.Complex(position, mark)
         return apManager.mkInitialAccessPath(positionWithMark, ExclusionSet.Universe)
     }
 

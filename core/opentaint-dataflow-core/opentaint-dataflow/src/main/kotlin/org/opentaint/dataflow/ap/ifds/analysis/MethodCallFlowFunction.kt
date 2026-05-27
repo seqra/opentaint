@@ -1,11 +1,13 @@
 package org.opentaint.dataflow.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.taint.FinalFactReader
 
 interface MethodCallFlowFunction {
     sealed interface CallFact
@@ -90,4 +92,163 @@ interface MethodCallFlowFunction {
     fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<ZeroCallFailureFact>
     fun propagateFactToFactResolutionFailure(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<FactCallFailureFact>
     fun propagateNDFactToFactResolutionFailure(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<NDFactCallFailureFact>
+
+    interface Default : MethodCallFlowFunction {
+        override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {
+            propagateFact(
+                initialFacts = emptySet(),
+                exclusion = ExclusionSet.Universe,
+                factAp = currentFactAp,
+                skipCall = { this += Unchanged },
+                addSideEffectRequirement = { factReader ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                    this += CallToReturnZFact(factAp, trace)
+                },
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                    this += CallToStartZFact(callerFactAp, startFactBase, trace)
+                },
+                addUnchecked = {
+                    check(it is ZeroCallFact) { "unexpected" }
+                    this += it
+                },
+            )
+        }
+
+        override fun propagateFactToFact(
+            initialFactAp: InitialFactAp,
+            currentFactAp: FinalFactAp
+        ) = buildSet {
+            propagateFact(
+                initialFacts = setOf(initialFactAp),
+                exclusion = initialFactAp.exclusions,
+                factAp = currentFactAp,
+                skipCall = { this += Unchanged },
+                addSideEffectRequirement = { factReader ->
+                    this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    this += CallToReturnFFact(
+                        factReader.refineFact(initialFactAp),
+                        factReader.refineFact(factAp),
+                        trace
+                    )
+                },
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    this += CallToStartFFact(
+                        factReader.refineFact(initialFactAp),
+                        factReader.refineFact(callerFactAp),
+                        startFactBase, trace
+                    )
+                },
+                addUnchecked = {
+                    check(it is FactCallFact) { "unexpected" }
+                    this += it
+                },
+            )
+        }
+
+        override fun propagateNDFactToFact(
+            initialFacts: Set<InitialFactAp>,
+            currentFactAp: FinalFactAp
+        ): Set<NDFactCallFact> = buildSet {
+            propagateFact(
+                initialFacts = initialFacts,
+                exclusion = ExclusionSet.Universe,
+                factAp = currentFactAp,
+                skipCall = { this += Unchanged },
+                addSideEffectRequirement = { factReader ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                    this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
+                },
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                    this += CallToStartNDFFact(
+                        initialFacts, callerFactAp,
+                        startFactBase, trace
+                    )
+                },
+                addUnchecked = {
+                    check(it is NDFactCallFact) { "unexpected" }
+                    this += it
+                },
+            )
+        }
+
+        override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> =
+            setOf(CallToReturnZeroFact)
+
+        override fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase) = buildSet {
+            propagateUnresolvedCallFact(
+                factAp = currentFactAp,
+                addSideEffectRequirement = { factReader ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                    this += CallToReturnZFact(factAp, trace)
+                },
+            )
+        }
+
+        override fun propagateFactToFactResolutionFailure(
+            initialFactAp: InitialFactAp,
+            currentFactAp: FinalFactAp,
+            startFactBase: AccessPathBase
+        ): Set<FactCallFailureFact> = buildSet {
+            propagateUnresolvedCallFact(
+                factAp = currentFactAp,
+                addSideEffectRequirement = { factReader ->
+                    this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    this += CallToReturnFFact(
+                        factReader.refineFact(initialFactAp),
+                        factReader.refineFact(factAp),
+                        trace
+                    )
+                },
+            )
+        }
+
+        override fun propagateNDFactToFactResolutionFailure(
+            initialFacts: Set<InitialFactAp>,
+            currentFactAp: FinalFactAp,
+            startFactBase: AccessPathBase
+        ) = buildSet {
+            propagateUnresolvedCallFact(
+                factAp = currentFactAp,
+                addSideEffectRequirement = { factReader ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                    this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
+                },
+            )
+        }
+
+        fun propagateFact(
+            initialFacts: Set<InitialFactAp>,
+            exclusion: ExclusionSet,
+            factAp: FinalFactAp,
+            skipCall: () -> Unit,
+            addSideEffectRequirement: (FinalFactReader) -> Unit,
+            addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+            addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
+            addUnchecked: (CallFact) -> Unit,
+        )
+
+        fun propagateUnresolvedCallFact(
+            factAp: FinalFactAp,
+            addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
+            addSideEffectRequirement: (FinalFactReader) -> Unit,
+        )
+    }
 }

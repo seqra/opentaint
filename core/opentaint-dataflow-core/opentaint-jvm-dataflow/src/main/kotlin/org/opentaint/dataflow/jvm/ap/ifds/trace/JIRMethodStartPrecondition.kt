@@ -10,9 +10,9 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSimpleFactAwareConditionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
-import org.opentaint.dataflow.jvm.ap.ifds.taint.InitialFactReader
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintSourceActionPreconditionEvaluator
+import org.opentaint.dataflow.taint.InitialFactReader
+import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.util.onSome
 

@@ -23,6 +23,7 @@ interface MethodCallFactMapper {
     ): List<InitialFactAp>
 
     fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
         callee: CommonMethod,
         callExpr: CommonCallExpr,
         returnValue: CommonValue?,
@@ -32,6 +33,7 @@ interface MethodCallFactMapper {
     )
 
     fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
         callee: CommonMethod,
         callExpr: CommonCallExpr,
         returnValue: CommonValue?,
@@ -39,6 +41,12 @@ interface MethodCallFactMapper {
         onMappedFact: (InitialFactAp, AccessPathBase) -> Unit
     )
 
-    fun factIsRelevantToMethodCall(returnValue: CommonValue?, callExpr: CommonCallExpr, factAp: FactAp): Boolean
+    fun factIsRelevantToMethodCall(
+        callStatement: CommonInst,
+        returnValue: CommonValue?,
+        callExpr: CommonCallExpr,
+        factAp: FactAp
+    ): Boolean
+
     fun isValidMethodExitFact(factAp: FactAp): Boolean
 }

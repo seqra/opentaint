@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
@@ -8,39 +9,37 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PassRuleConditionFacts
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
-import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
-import org.opentaint.dataflow.configuration.jvm.CopyMark
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
+import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionExpr
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
+import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
-import org.opentaint.dataflow.jvm.ap.ifds.taint.InitialFactReader
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintPassActionPreconditionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintSourceActionPreconditionEvaluator
+import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
+import org.opentaint.dataflow.taint.InitialFactReader
+import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
+import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
+import org.opentaint.dataflow.taint.evaluatePassRulePrecondition
+import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.util.Maybe
-import org.opentaint.util.maybeFlatMap
-import kotlin.collections.plusAssign
 
 class JIRMethodCallPrecondition(
-    private val apManager: ApManager,
+    override val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
-) : MethodCallPrecondition {
+) : MethodCallPrecondition.Default {
     private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
 
     private val jIRValueResolver = CallPositionToJIRValueResolver(callExpr, returnValue)
@@ -77,7 +76,7 @@ class JIRMethodCallPrecondition(
     }
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
-        if (!JIRMethodCallFactMapper.factIsRelevantToMethodCall(returnValue, callExpr, fact)) {
+        if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) {
             return null
         }
 
@@ -91,7 +90,12 @@ class JIRMethodCallPrecondition(
         }
 
         val method = callExpr.callee
-        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(method, callExpr, returnValue = null, fact = fact) { callerFact, startFactBase ->
+        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
+            statement, method,
+            callExpr,
+            returnValue = null,
+            fact = fact
+        ) { callerFact, startFactBase ->
             preconditions.preconditionForFact(callerFact, startFactBase)
         }
 
@@ -107,17 +111,14 @@ class JIRMethodCallPrecondition(
         this += CallPreconditionFact.CallToStart(fact, startBase)
     }
 
-    private fun rulePreconditionForFactResolutionFailure(fact: InitialFactAp, startBase: AccessPathBase): List<CallFailurePreconditionFact> {
+    private fun rulePreconditionForFactResolutionFailure(
+        fact: InitialFactAp,
+        startBase: AccessPathBase
+    ): List<CallFailurePreconditionFact> {
         val rulePreconditions = mutableListOf<TaintRulePrecondition>()
         rulePreconditions.factPassRulePrecondition(fact, startBase)
 
         return rulePreconditions.map { CallPreconditionFact.CallToReturnTaintRule(it) }
-    }
-
-    sealed interface JIRPassRuleCondition : PassRuleCondition {
-        data class Expr(val expr: JIRMarkAwareConditionExpr) : JIRPassRuleCondition
-        data class Fact(val fact: InitialFactAp) : JIRPassRuleCondition
-        data class FactWithExpr(val fact: InitialFactAp, val expr: JIRMarkAwareConditionExpr) : JIRPassRuleCondition
     }
 
     private fun MutableList<TaintRulePrecondition>.factSourceRulePrecondition(
@@ -139,20 +140,6 @@ class JIRMethodCallPrecondition(
         }
     }
 
-    private fun MutableList<TaintRulePrecondition>.evaluateSourceRulePrecondition(
-        rule: TaintMethodSource,
-        sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
-        conditionRewriter: JIRMarkAwareConditionRewriter,
-    ) {
-        return evaluateSourceRulePrecondition(
-            rule,
-            sourcePreconditionEvaluator,
-            conditionRewriter,
-            { r, a -> this += TaintRulePrecondition.Source(r, a) },
-            { r, a, e -> this += TaintRulePrecondition.Pass(r, a, JIRPassRuleCondition.Expr(e)) }
-        )
-    }
-
     private fun MutableList<TaintRulePrecondition>.factPassRulePrecondition(
         fact: InitialFactAp,
         startBase: AccessPathBase,
@@ -169,66 +156,41 @@ class JIRMethodCallPrecondition(
         )
 
         for (rule in passRules) {
-            val actions = rule.actionsAfter.maybeFlatMap {
-                when (it) {
-                    is CopyMark -> rulePreconditionEvaluator.evaluate(rule, it)
-                    is CopyAllMarks -> rulePreconditionEvaluator.evaluate(rule, it)
-                    else -> Maybe.none()
-                }
-            }
-            if (actions.isNone) continue
-
-            val passActions = actions.getOrThrow()
-
-            val simplifiedCondition = conditionRewriter.rewrite(rule.condition)
-
-            val simplifiedExpr = when {
-                simplifiedCondition.isFalse -> continue
-                simplifiedCondition.isTrue -> null
-                else -> simplifiedCondition.expr
-            }
-
-            // We always treat negated mark condition as satisfied
-            val exprWithoutNegations = simplifiedExpr?.removeNegated()
-
-            val mappedAction = passActions.flatMap { (action, fact) ->
-                methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact).map { action to it }
-            }
-
-            mappedAction.mapTo(this) { (action, fact) ->
-                val cond = if (exprWithoutNegations == null) {
-                    JIRPassRuleCondition.Fact(fact)
-                } else {
-                    JIRPassRuleCondition.FactWithExpr(fact, exprWithoutNegations)
-                }
-                TaintRulePrecondition.Pass(rule, setOf(action), cond)
-            }
+            evaluatePassRulePrecondition(rule, rulePreconditionEvaluator, conditionRewriter)
         }
     }
 
-    override fun resolvePassRuleCondition(precondition: PassRuleCondition): List<PassRuleConditionFacts> {
-        precondition as JIRPassRuleCondition
-
-        return when (precondition) {
-            is JIRPassRuleCondition.Fact -> {
-                listOf(PassRuleConditionFacts(listOf(precondition.fact)))
-            }
-
-            is JIRPassRuleCondition.Expr -> {
-                precondition.expr.preconditionDnf().map { PassRuleConditionFacts(it.facts.toList()) }
-            }
-
-            is JIRPassRuleCondition.FactWithExpr -> {
-                precondition.expr.preconditionDnf().map {
-                    val allFacts = it.facts + precondition.fact
-                    PassRuleConditionFacts(allFacts.toList())
-                }
-            }
-        }
+    private fun MutableList<TaintRulePrecondition>.evaluateSourceRulePrecondition(
+        rule: TaintMethodSource,
+        sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
+        conditionRewriter: JIRMarkAwareConditionRewriter,
+    ) {
+        this += evaluateSourceRulePrecondition(
+            rule,
+            rule.actionsAfter,
+            ruleCondition = { this.condition },
+            sourcePreconditionEvaluator = sourcePreconditionEvaluator,
+            evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
+            conditionRewriter = conditionRewriter,
+        )
     }
 
-    private fun JIRMarkAwareConditionExpr.preconditionDnf(): List<PreconditionCube> =
-        preconditionDnf(apManager) { preconditionFact ->
-            methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, preconditionFact)
-        }
+    private fun MutableList<TaintRulePrecondition>.evaluatePassRulePrecondition(
+        rule: TaintPassThrough,
+        rulePreconditionEvaluator: TaintPassActionPreconditionEvaluator,
+        conditionRewriter: JIRMarkAwareConditionRewriter
+    ) {
+        this += evaluatePassRulePrecondition(
+            rule,
+            rule.actionsAfter,
+            { condition },
+            rulePreconditionEvaluator,
+            evalAction = { r, a -> accept(r, a) },
+            conditionRewriter,
+            { mapExit2Return(it) }
+        )
+    }
+
+    override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
+        methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 }

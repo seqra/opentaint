@@ -17,6 +17,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
@@ -31,7 +32,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
-import org.opentaint.dataflow.jvm.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition

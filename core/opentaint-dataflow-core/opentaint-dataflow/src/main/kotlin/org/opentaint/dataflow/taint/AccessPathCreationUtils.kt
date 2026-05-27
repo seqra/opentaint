@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.taint
+package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -13,10 +13,16 @@ fun ApManager.mkAccessPath(
     position: PositionAccess,
     exclusionSet: ExclusionSet,
     mark: String,
+): FinalFactAp = mkAccessPath(position, exclusionSet, TaintMarkAccessor(mark))
+
+fun ApManager.mkAccessPath(
+    position: PositionAccess,
+    exclusionSet: ExclusionSet,
+    mark: TaintMarkAccessor,
 ): FinalFactAp = mkAccessPath(
     position,
     // we use stub base and exclusion here
-    createFinalAp(AccessPathBase.This, ExclusionSet.Universe).prependAccessor(TaintMarkAccessor(mark)),
+    createFinalAp(AccessPathBase.This, ExclusionSet.Universe).prependAccessor(mark),
     exclusionSet
 )
 

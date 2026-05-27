@@ -10,11 +10,11 @@ import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleanerActions
-import org.opentaint.dataflow.jvm.ap.ifds.taint.EvaluatedCleanAction
-import org.opentaint.dataflow.jvm.ap.ifds.taint.FinalFactReader
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintCleanActionEvaluator
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ap.ifds.taint.UserDefinedRuleInfo
+import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
+import org.opentaint.dataflow.taint.EvaluatedCleanAction
+import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -77,7 +77,7 @@ class JIRMethodCallRuleBasedSummaryRewriter(
         val startFactReader = FinalFactReader(fact, apManager)
 
         val typeResolver = JIRMethodPositionBaseTypeResolver(callExpr.method.method)
-        val cleanEvaluator = TaintCleanActionEvaluator(typeResolver)
+        val cleanEvaluator = JIRTaintCleanActionEvaluator(typeResolver)
 
         val cleanedFact = userRuleDefinedActions.applyCleanerActions(
             evaluator = cleanEvaluator,

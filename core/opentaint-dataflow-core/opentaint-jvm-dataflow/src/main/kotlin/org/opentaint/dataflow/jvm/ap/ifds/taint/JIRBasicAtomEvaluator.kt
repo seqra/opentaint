@@ -1,9 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.taint
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.configuration.jvm.And
 import org.opentaint.dataflow.configuration.jvm.ConditionNameMatcher
-import org.opentaint.dataflow.configuration.jvm.ConditionVisitor
 import org.opentaint.dataflow.configuration.jvm.ConstantBooleanValue
 import org.opentaint.dataflow.configuration.jvm.ConstantEq
 import org.opentaint.dataflow.configuration.jvm.ConstantGt
@@ -11,14 +9,12 @@ import org.opentaint.dataflow.configuration.jvm.ConstantIntValue
 import org.opentaint.dataflow.configuration.jvm.ConstantLt
 import org.opentaint.dataflow.configuration.jvm.ConstantMatches
 import org.opentaint.dataflow.configuration.jvm.ConstantStringValue
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
 import org.opentaint.dataflow.configuration.jvm.ConstantValue
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.IsConstant
 import org.opentaint.dataflow.configuration.jvm.IsNull
 import org.opentaint.dataflow.configuration.jvm.IsStaticField
-import org.opentaint.dataflow.configuration.jvm.Not
-import org.opentaint.dataflow.configuration.jvm.Or
+import org.opentaint.dataflow.configuration.jvm.JirConditionVisitor
 import org.opentaint.dataflow.configuration.jvm.Position
 import org.opentaint.dataflow.configuration.jvm.PositionResolver
 import org.opentaint.dataflow.configuration.jvm.TypeArgMatcher
@@ -57,17 +53,9 @@ class JIRBasicAtomEvaluator(
     private val typeChecker: JIRFactTypeChecker,
     private val aliasAnalysis: JIRLocalAliasAnalysis?,
     private val statement: CommonInst,
-) : ConditionVisitor<Boolean> {
-    override fun visit(condition: Not): Boolean = error("Non-atomic condition")
-    override fun visit(condition: And): Boolean = error("Non-atomic condition")
-    override fun visit(condition: Or): Boolean = error("Non-atomic condition")
-
+) : JirConditionVisitor<Boolean> {
     override fun visit(condition: ContainsMark): Boolean {
         error("This visitor does not support condition $condition. Use FactAwareConditionEvaluator instead")
-    }
-
-    override fun visit(condition: ConstantTrue): Boolean {
-        return true
     }
 
     override fun visit(condition: IsConstant): Boolean =

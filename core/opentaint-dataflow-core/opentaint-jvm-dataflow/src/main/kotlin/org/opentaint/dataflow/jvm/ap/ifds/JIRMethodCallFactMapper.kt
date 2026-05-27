@@ -40,6 +40,7 @@ object JIRMethodCallFactMapper : MethodCallFactMapper {
     }
 
     override fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
         callee: CommonMethod,
         callExpr: CommonCallExpr,
         returnValue: CommonValue?,
@@ -53,6 +54,7 @@ object JIRMethodCallFactMapper : MethodCallFactMapper {
     }
 
     override fun mapMethodCallToStartFlowFact(
+        callStatement: CommonInst,
         callee: CommonMethod,
         callExpr: CommonCallExpr,
         returnValue: CommonValue?,
@@ -65,6 +67,7 @@ object JIRMethodCallFactMapper : MethodCallFactMapper {
     }
 
     override fun factIsRelevantToMethodCall(
+        callStatement: CommonInst,
         returnValue: CommonValue?,
         callExpr: CommonCallExpr,
         factAp: FactAp

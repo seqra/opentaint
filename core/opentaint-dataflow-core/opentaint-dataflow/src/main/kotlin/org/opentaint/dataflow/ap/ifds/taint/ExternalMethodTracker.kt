@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.taint
+package org.opentaint.dataflow.ap.ifds.taint
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

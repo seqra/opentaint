@@ -4,22 +4,27 @@ import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.configuration.jvm.ConstantTrue
+import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
-import org.opentaint.dataflow.jvm.ap.ifds.taint.InitialFactReader
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintSourceActionPreconditionEvaluator
+import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
+import org.opentaint.dataflow.taint.InitialFactReader
+import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
+import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
+import org.opentaint.dataflow.taint.preconditionDnf
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
@@ -282,12 +287,12 @@ class JIRMethodSequentPrecondition(
         )
 
         for (sourceRule in sourceRules) {
-            if (sourceRule.condition !is ConstantTrue) {
+            if (!sourceRule.condition.isTrue()) {
                 TODO("Field source with complex condition")
             }
 
             val assignedMarks = sourceRule.actionsAfter.maybeFlatMap {
-                sourcePreconditionEvaluator.evaluate(sourceRule, it)
+                sourcePreconditionEvaluator.accept(sourceRule, it)
             }
             if (assignedMarks.isNone) continue
 
@@ -305,9 +310,7 @@ class JIRMethodSequentPrecondition(
         if (sourceRules.isEmpty()) return
 
         val entryFactReader = InitialFactReader(fact, apManager)
-        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(
-            entryFactReader
-        )
+        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(entryFactReader)
 
         val valueResolver = CalleePositionToJIRValueResolver(currentInst.location.method)
         val conditionRewriter = JIRMarkAwareConditionRewriter(
@@ -316,14 +319,14 @@ class JIRMethodSequentPrecondition(
 
         for (rule in sourceRules) {
             evaluateSourceRulePrecondition(
-                rule,
-                sourcePreconditionEvaluator,
-                conditionRewriter,
-                { r, a ->
+                rule, rule.actionsAfter, { condition }, sourcePreconditionEvaluator,
+                evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
+                conditionRewriter = conditionRewriter,
+                mkSource = { r, a ->
                     val src = TaintRulePrecondition.Source(r, a)
                     this += MethodSequentPrecondition.SequentSource(fact, src)
                 },
-                { _, _, e ->
+                mkPass = { _, _, e ->
                     val preconditionFacts = e.preconditionDnf(apManager) { listOf(it) }
                     for (factCube in preconditionFacts) {
                         if (factCube.facts.size != 1) {

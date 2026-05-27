@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.taint.FactWithMarkAfterAnyAccessorResolver
 
 data class TaintMarkFieldUnfoldRequest(
     val method: MethodEntryPoint,
@@ -15,8 +16,8 @@ data class JIRFactWithMarkAfterAnyFieldResolver(
     private val method: MethodEntryPoint,
     private val initialFact: InitialFactAp,
     private val addSideEffect: (InitialFactAp, SideEffectKind) -> Unit
-) {
-    fun resolve(mark: TaintMarkAccessor) {
+): FactWithMarkAfterAnyAccessorResolver {
+    override fun resolve(mark: TaintMarkAccessor) {
         addSideEffect(initialFact, TaintMarkFieldUnfoldRequest(method, initialFact, mark))
     }
 

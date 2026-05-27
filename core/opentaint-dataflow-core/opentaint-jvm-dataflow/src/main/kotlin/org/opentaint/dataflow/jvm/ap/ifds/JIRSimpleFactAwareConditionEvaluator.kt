@@ -2,10 +2,11 @@ package org.opentaint.dataflow.jvm.ap.ifds
 
 import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ConditionEvaluator
+import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 
 class JIRSimpleFactAwareConditionEvaluator(
     private val conditionRewriter: JIRMarkAwareConditionRewriter,
-    private val evaluator: JIRFactAwareConditionEvaluator?,
+    private val evaluator: TaintFactAwareConditionEvaluator?,
 ) : ConditionEvaluator<Boolean> {
     override fun eval(condition: Condition): Boolean {
         val simplifiedCondition = conditionRewriter.rewrite(condition)

@@ -16,9 +16,10 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRArgumentTypeMethodContext
 import org.opentaint.dataflow.jvm.ap.ifds.JIRInstanceTypeMethodContext
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSimpleFactAwareConditionEvaluator
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyEntryPointConfig
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintSourceActionEvaluator
+import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.ext.toType
@@ -131,7 +132,7 @@ class JIRMethodStartFlowFunction(
 
             val requiredEndFacts = hashSetOf<FinalFactAp>()
             rule.trackFactsReachAnalysisEnd.forEach { action ->
-                sourceEvaluator.evaluate(rule, action).onSome { facts ->
+                sourceEvaluator.accept(rule, action).onSome { facts ->
                     facts.forEach { f ->
                         requiredEndFacts += f
                         factsAfterSink += f
