@@ -58,7 +58,7 @@ type AnalyzerBuilder struct {
 	jarPath                               string
 	maxMemory                             string
 	ruleIDs                               []string
-	approximationsConfig                  []string
+	passthroughApproximations             []string
 	dataflowApproximations                []string
 	trackExternalMethods                  bool
 	debugFactReachabilitySarif            bool
@@ -146,8 +146,8 @@ func (a *AnalyzerBuilder) AddRuleID(ruleID string) *AnalyzerBuilder {
 	return a
 }
 
-func (a *AnalyzerBuilder) AddApproximationsConfig(configPath string) *AnalyzerBuilder {
-	a.approximationsConfig = append(a.approximationsConfig, configPath)
+func (a *AnalyzerBuilder) AddPassthroughApproximations(path string) *AnalyzerBuilder {
+	a.passthroughApproximations = append(a.passthroughApproximations, path)
 	return a
 }
 
@@ -249,8 +249,8 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 		flags = append(flags, "--semgrep-rule-id", ruleID)
 	}
 
-	for _, configPath := range a.approximationsConfig {
-		flags = append(flags, "--approximations-config", configPath)
+	for _, passthrough := range a.passthroughApproximations {
+		flags = append(flags, "--passthrough-approximations", passthrough)
 	}
 
 	for _, approxPath := range a.dataflowApproximations {

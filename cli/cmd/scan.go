@@ -34,7 +34,7 @@ var (
 	Recompile                             bool
 	ScanLogFile                           string
 	RuleID                                []string
-	ApproximationsConfig                  []string
+	PassthroughApproximations             []string
 	DataflowApproximations                []string
 	TrackExternalMethods                  bool
 	DebugFactReachabilitySarif            bool
@@ -143,13 +143,13 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
 	cmd.Flags().StringVar(&ScanLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 
-	cmd.Flags().StringArrayVar(&ApproximationsConfig, "approximations-config", nil, "YAML passThrough approximations config (OVERRIDE mode, repeatable)")
-	_ = cmd.Flags().MarkHidden("approximations-config")
+	cmd.Flags().StringArrayVar(&PassthroughApproximations, "passthrough-approximations", nil, "passThrough approximation YAML file or directory of them (OVERRIDE mode, repeatable)")
+	_ = cmd.Flags().MarkHidden("passthrough-approximations")
 
-	cmd.Flags().StringArrayVar(&DataflowApproximations, "dataflow-approximations", nil, "Directory of compiled approximation class files (repeatable)")
+	cmd.Flags().StringArrayVar(&DataflowApproximations, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
 	_ = cmd.Flags().MarkHidden("dataflow-approximations")
 
-	cmd.Flags().BoolVar(&TrackExternalMethods, "track-external-methods", false, "Write external-methods-{without,with}-rules.yaml next to the SARIF report")
+	cmd.Flags().BoolVar(&TrackExternalMethods, "track-external-methods", false, "Write dropped-external-methods.yaml and approximated-external-methods.yaml next to the SARIF report")
 	_ = cmd.Flags().MarkHidden("track-external-methods")
 }
 
@@ -369,9 +369,9 @@ func scan(cmd *cobra.Command) {
 	for _, ruleID := range RuleID {
 		nativeBuilder.AddRuleID(ruleID)
 	}
-	for _, approxConfig := range ApproximationsConfig {
-		absApproxConfig := log.AbsPathOrExit(approxConfig, "approximations-config")
-		nativeBuilder.AddApproximationsConfig(absApproxConfig)
+	for _, passthrough := range PassthroughApproximations {
+		absPassthrough := log.AbsPathOrExit(passthrough, "passthrough-approximations")
+		nativeBuilder.AddPassthroughApproximations(absPassthrough)
 	}
 	if TrackExternalMethods {
 		nativeBuilder.SetTrackExternalMethods(true)

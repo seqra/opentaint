@@ -360,15 +360,15 @@ def sarif_findings_for_rule(data: dict, rule_id: str) -> list:
 def _derive_external_methods_paths(sarif_path: Path) -> tuple:
     """Return the two fixed external-methods file paths next to the SARIF.
 
-    The analyzer always writes ``external-methods-without-rules.yaml`` and
-    ``external-methods-with-rules.yaml`` into its output directory. Here we
+    The analyzer always writes ``dropped-external-methods.yaml`` and
+    ``approximated-external-methods.yaml`` into its output directory. Here we
     key off the SARIF path (or its parent directory), matching how the
     Go CLI routes ``-o`` to ``--output-dir``.
     """
     parent = sarif_path if sarif_path.is_dir() else sarif_path.parent
     return (
-        parent / "external-methods-without-rules.yaml",
-        parent / "external-methods-with-rules.yaml",
+        parent / "dropped-external-methods.yaml",
+        parent / "approximated-external-methods.yaml",
     )
 
 

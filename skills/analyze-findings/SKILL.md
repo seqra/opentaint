@@ -1,105 +1,68 @@
 ---
 name: analyze-findings
-description: Triage OpenTaint scan results — classify each finding as true positive, fixable false positive, or false negative — and pick the next action. Use when a SARIF report and external-methods YAMLs are available.
+description: Triage OpenTaint findings — split a rule's results into distinct vulnerabilities and classify each true positive or false positive. Use when scan findings need a TP/FP verdict
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.1"
+  version: "0.2"
 ---
 
 # Skill: Analyze Findings
 
-Interpret SARIF findings and the external methods list to classify results and plan next actions.
+A finding file bundles all of one rule's results. Read each result's code flow, split the bundle into distinct vulnerabilities, and give each a TP/FP verdict on its own evidence
 
-## Prerequisites
+## Inputs
 
-- Analysis run complete (run-analysis skill)
-- SARIF report and external methods YAML available
+From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-## Procedure
+- Findings to triage `<findings>` — the finding tracking file(s); each bundles all of one rule's SARIF results in `sarif_hashes` 
+- SARIF report `<report.sarif>` — the raw scan output holding the code-flow traces. Default: `.opentaint/results/report.sarif`
 
-### 1. Read SARIF findings
+## Workflow
 
-For each finding in `runs[0].results[]`:
-- `ruleId`: Which rule triggered
-- `locations[]`: Sink location (file, line)
-- `codeFlows[]`: Taint trace from source to sink
+### 1. One result at a time — STOP checklist
 
-Read the trace:
-- First location = **source** (where tainted data enters)
-- Last location = **sink** (where tainted data is used dangerously)
-- Intermediate locations = dataflow path
+For each hash in the bundle, before any verdict:
 
-### 2. Classify each finding
+- found its SARIF result via `sarif_hashes` and read the raw `codeFlows[]`
+- walk every step, source → hops → sink, confirming it's the same tainted value end to end
+- judging each result on its own trace — no verdict shared across results just because they share the rule
 
-**TRUE POSITIVE (TP)**: Real vulnerability.
-- Source genuinely provides attacker-controlled data
-- Sink genuinely performs a dangerous operation
-- No sanitization between source and sink
-- **Action**: Generate PoC (generate-poc skill), document in `.opentaint/vulnerabilities.md`
-- **Report as**: rule ID, CWE (from `runs[0].tool.driver.rules[].properties.cwe`), severity, source/sink locations, brief trace
+### 2. Split the bundle into logical findings
 
-**FALSE POSITIVE — fixable via Rule**: Over-broad pattern matching.
-- Sink pattern too broad, sanitizer not recognized, source matches non-attacker data
-- **Action**: Add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or narrow `metavariable-regex`. Update tests. Re-run.
-- **Report as**: `suggested fix kind: pattern-not` or `pattern-sanitizers` (pick the most applicable)
+The results in the file all fired one rule, but may be several different vulnerabilities. Keep results that are the same vulnerability (same sink, same essential flow) together as one finding; move genuinely distinct ones (different sink, or a different flow) into their own finding file with a new `finding_name` and their `sarif_hashes`
 
-**FALSE POSITIVE — fixable via Approximation** (non-preferred): Imprecise taint propagation through a library method.
-- Library method modeled as propagating taint when it actually neutralizes the threat
-- **Action**: Override passThrough approximation. Re-run.
-- **Report as**: `suggested fix kind: passThrough override`
+### 3. Classify and record
 
-### 3. Process external methods (FN discovery)
+Verdict each logical finding from its flow:
 
-The `--track-external-methods` flag produces two files next to the SARIF report:
-- **`.opentaint/results/external-methods-without-rules.yaml`** — Methods where the analyzer **killed dataflow facts** (no approximation model). **This is the only list worth approximating.** Every false negative caused by a missing library model is rooted here.
-- **`.opentaint/results/external-methods-with-rules.yaml`** — Methods that already have an approximation model. Do NOT target these with custom approximations or YAML `passThrough` rules — you would OVERRIDE an existing model, which is usually a regression.
+- TP — the source is attacker-controlled, the sink is genuinely dangerous with that input, and nothing sanitizes it in between
+- FP — a sanitizer/validator neutralizes it, the source isn't actually attacker-controlled (config, constant, server-set), the sink is safe for this input (parameterized, escaped), or the path is infeasible. Record which one, so the suppress-FP stage knows what to narrow
 
-Filenames and directory are fixed; the flag is a boolean.
+Set `verdict` and append the reasoning to `notes`, below the analyzer report already seeded there. Leave `poc` for generate-poc
 
-**Approximation scope — hard rules**:
-- Only methods listed in `external-methods-without-rules.yaml` are candidates for a new YAML `passThrough` rule or a code-based approximation.
-- Methods not listed in either file were never reached on a tainted path during the scan; approximating them is a no-op until that changes (different sources/rules/entry points).
-- Application-internal methods are never in these lists — approximations don't apply to them. Fix those via rule patterns, not approximations.
+## Output
 
-Read `external-methods-without-rules.yaml`. **Prioritize generic data-flow propagators** over vulnerability-specific methods. The most common cause of killed facts is mundane collection/utility methods, not the vulnerability-relevant operations themselves.
+- Each logical finding in its own file with `verdict` set and the rationale in `notes`
+- A brief summary to the caller: one line per finding — name, verdict, one-clause reason
 
-**HIGH PRIORITY — Generic propagators** (affect ALL vulnerability types):
-- Collection operations: `List.add`/`List.get`, `Map.put`/`Map.get`, `Set.add`/`Set.iterator`
-- String operations: `StringBuilder.append`/`toString`, `StringBuffer.append`
-- Wrapper/DTO getters/setters: `Container.getValue`, `Pair.getFirst`
-- Stream/iterator methods: `Iterator.next`, `Stream.collect`
-- **Action**: Create `passThrough` YAML rules (create-yaml-config skill)
+## Tracking
 
-**MEDIUM PRIORITY — Lambda/callback methods**:
-- Example: `ReactiveStream#map(Function)` — taint flows through the function
-- Example: `CompletableFuture#thenApply(Function)` — async propagation
-- **Action**: Create code-based approximation (create-approximation skill)
+Editing an existing finding touches only `verdict` and `notes`. A split also creates a new finding file — give it the full shape, copying `rule_id` from the bundle and moving over the results' `sarif_hashes` and their analyzer report:
 
-**LOW PRIORITY — Vulnerability-specific methods**:
-- These are usually already modeled in built-in rules. Only add if missing.
-- **Action**: Check `external-methods-with-rules.yaml` first; if present, skip.
+```yaml
+finding_name: <new-slug>              # a fresh docker-like name for the split-off vuln
+sarif_hashes: [<moved hash>, ...]     # hashes matching this logical vulnerability
+rule_id: java/security/sqli.yaml:sqli # same rule as the bundle it came from
+verdict: TP                           # pending | TP | FP
+notes: >
+  <analyzer report for these results — moved from the bundle>
+  triage: @RequestParam orderBy is attacker-controlled; reaches ${} in SelectProvider unsanitized → TP
+poc: pending
+poc_script: null
+```
 
-**NEUTRAL**: Irrelevant to taint flow (logging, metrics, sanitizers).
-- **Action**: Skip — default call-to-return passthrough is correct
+## Gotchas
 
-### 4. Batch processing
-
-- Filter `external-methods-without-rules.yaml` to methods on a plausible source→sink path for the current vulnerability class; approximating methods that sit outside that path wastes iteration time.
-- Group the filtered methods by package/library
-- **Start with generic propagators** (collections, strings, wrappers) — they affect all rules
-- Check built-in coverage first (many common libraries already have approximations — cross-check against `external-methods-with-rules.yaml`)
-- Generate comprehensive rules per library
-- Re-run with `--track-external-methods` after each batch; verify the approximated methods actually moved from `without-rules` to `with-rules`, and check for finding regressions
-
-## Decision Priorities
-
-- **FN fixes**: (1) YAML passThrough rule, (2) Code-based approximation (lambdas only), (3) Rule pattern fix
-- **FP fixes**: (1) Rule fix via `pattern-not`/`pattern-sanitizers` (preferred), (2) PassThrough override (non-preferred)
-
-## Stop Condition
-
-Stop iterating when:
-- External methods list stabilizes (no new methods appear)
-- All SARIF findings are classified as TP or resolved FP
-- High-priority vulnerabilities have PoCs
+- Bulk verdicts are the most common triage error — many results under one shared rationale with the traces unread. One trace, one judgment
+- A rule's bundle is not one finding — split distinct vulnerabilities apart, but keep true duplicates (same sink and flow) together as one finding with multiple `sarif_hashes`

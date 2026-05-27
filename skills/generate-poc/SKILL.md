@@ -1,87 +1,85 @@
 ---
 name: generate-poc
-description: Build a proof-of-concept for a confirmed true-positive OpenTaint finding (SQLi, command injection, path traversal, XSS, SSRF, XXE) and document it. Use when a SARIF finding has been confirmed as a TP
+description: Reproduce a true-positive finding against the running application. Use when a finding needs dynamic confirmation
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.1"
+  version: "0.2"
 ---
 
 # Skill: Generate PoC
 
-Generate a proof-of-concept for a confirmed true positive finding
+Try to make the vulnerability actually fire on a running instance via a Python script, and record the outcome — confirmed or failed
 
-## Prerequisites
+## Inputs
 
-- A finding classified as TRUE POSITIVE (analyze-findings skill)
-- Triage input includes: VULN number, rule ID, CWE, severity, source/sink locations, trace steps
+From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-## Procedure
+- Finding `<finding>` — the TP finding file. Default: `.opentaint/tracking/findings/<name>.yaml` (name is required)
+- Project root `<project-root>` — sources to build and run. Default: current directory
+- App endpoint `<base-url>` (optional) — base URL if the app is already running
+- PoC directory `<poc-dir>` — where the PoC script is saved. Default: `.opentaint/pocs`
 
-### 1. Construct PoC by vulnerability type
+## Workflow
 
-Use the source/sink location and trace from the triage to determine the HTTP route, parameter name, and payload shape. If the actual host and port are not known, use `http://<host>:<port>` as a placeholder.
+### 1. Start the app
 
-**SQL Injection**: Input that extracts data or bypasses auth
-```bash
-curl "http://<host>:<port>/api/users?id=1' OR '1'='1"
+Reuse `<base-url>` if given. Otherwise build and start the app the way the project expects (`spring-boot:run`, `java -jar`, `docker compose`, …), wait until it's listening, and note the base URL. The PoC must hit a live instance
+
+### 2. Map the finding to a live request
+
+From the finding's source location find the entry point — the route and method, and the param / header / body field that carries the tainted input — and a payload that drives it to the sink. Common shapes:
+
+- SQL injection — `?id=1' OR '1'='1`
+- command injection — `?cmd=;cat /etc/passwd`
+- path traversal — `?path=../../../etc/passwd`
+- XSS — `?q=<script>alert(1)</script>`
+- SSRF — `?url=http://169.254.169.254/latest/meta-data/`
+- XXE — an XML body with `<!ENTITY xxe SYSTEM "file:///etc/passwd">`
+
+### 3. Write and run the PoC script
+
+Write a self-contained Python script to `<poc-dir>/<finding_name>.py` that does any setup (auth, seed state), sends the request, and asserts the observable evidence — so it's re-runnable and self-checking.
+
+Run it. Confirmation needs observable proof — rows returned, file contents, command output, a time delay, an out-of-band callback, an injection-revealing error and so on
+
+### 4. Record the outcome
+
+- confirmed — the script fired and proved the vuln. Set `poc: confirmed`, record `poc_script`, and in `notes` describe the working sequence (setup → request(s) → observed evidence), not just the final request
+- failed — after several attempts you couldn't confirm the finding, or the app/route couldn't be reached. Set `poc: failed`, save the script, and in `notes` record the variants you tried and why each didn't fire
+
+## Output
+
+- The PoC script at `<poc-dir>/<finding_name>.py`
+- The finding's `poc` set to `confirmed` or `failed`, `poc_script` recorded, evidence/reason in `notes`
+- If you started the app, leave it running and report its `<base-url>` so the next PoC can reuse it instead of starting another instance
+- Report the outcome to the caller; if failed, call out that the finding is unconfirmed. Do not write `.opentaint/vulnerabilities.md` — main assembles that from the confirmed findings
+
+## Tracking
+
+In `<finding>`, set `poc` and `poc_script` and append the result to `notes`:
+
+```yaml
+poc: confirmed                        # confirmed | failed
+poc_script: .opentaint/pocs/brave-hopper.py
+notes: >
+  <existing notes>
+  poc: logged in as a seeded user (POST /login), then GET /api/orders?orderBy=id);SELECT pg_sleep(5)--
+  — the injected ORDER BY delayed the response ~5s while a benign orderBy=id returned instantly → time-based SQLi confirmed
 ```
 
-**Command Injection**: Input that executes arbitrary commands
-```bash
-curl "http://<host>:<port>/api/process?cmd=;cat /etc/passwd"
+Failed instead — narrate the attempts, not a single request:
+
+```yaml
+poc: failed
+poc_script: .opentaint/pocs/brave-hopper.py
+notes: >
+  <existing notes>
+  poc: tried ' OR 1=1--, a UNION SELECT, and time-based pg_sleep on /api/orders and /api/orders/search;
+  every variant returned 400 — orderBy is whitelisted to column names server-side → could not reproduce
 ```
 
-**Path Traversal**: Input that accesses unauthorized files
-```bash
-curl "http://<host>:<port>/api/files?path=../../../etc/passwd"
-```
+## Gotchas
 
-**XSS**: Input that executes JavaScript
-```bash
-curl "http://<host>:<port>/api/search?q=<script>alert(1)</script>"
-```
-
-**SSRF**: Input that makes the server request internal resources
-```bash
-curl "http://<host>:<port>/api/fetch?url=http://169.254.169.254/latest/meta-data/"
-```
-
-**XXE**: XML input that reads files
-```bash
-curl -X POST "http://<host>:<port>/api/parse" \
-  -H "Content-Type: application/xml" \
-  -d '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><root>&xxe;</root>'
-```
-
-For other CWE classes, construct an HTTP request that delivers the tainted source value to the identified sink parameter.
-
-### 2. Document the finding
-
-Use the triage input to fill in the template:
-
-```markdown
-## <VULN-NNN>: <short description> in <ClassName.methodName>
-
-**Severity**: <severity> (<CWE>)
-**Location**: `<sink file path>:<line>`
-**Rule**: `<rule ID>`
-
-### Description
-<one sentence: what tainted data flows from where to what dangerous operation>
-
-### Trace
-1. **Source**: `<source method>` -- `<tainted call>` (line <N>)
-2. **Flow**: <key intermediate steps>
-3. **Sink**: `<sink call>` (line <N>)
-
-### Proof of Concept
-```
-<curl command>
-```
-
-### Remediation
-<one sentence on the correct fix>
-```
-
-Return this markdown block as output to the main agent. The main agent appends it to `.opentaint/vulnerabilities.md`.
+- Reproduce, don't theorize — a script you didn't run, or a 200 with no observable effect, is not a confirmation
+- failed ≠ false positive — couldn't-reproduce isn't proof the code is safe (auth, missing state, wrong payload). Record `failed` and DO NOT flip `verdict` here

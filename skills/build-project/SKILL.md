@@ -1,84 +1,68 @@
 ---
 name: build-project
-description: Build a Java/Kotlin project for opentaint analysis and produce a project.yaml model. Use whenever an opentaint scan needs a project model and `opentaint compile` may need help.
+description: Build a Java/Kotlin project for opentaint analysis and produce a project.yaml model. Use whenever an opentaint scan needs a project model and `opentaint compile` may need help
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.1"
+  version: "0.2"
 ---
 
 # Skill: Build Project
 
-Build a target project and produce a `project.yaml` model for analysis
+Build a target project into an opentaint project model. The model is this skill's only output
 
-## Prerequisites
+## Inputs
 
-- `opentaint` CLI available
-- Java 21+ installed
-- For Gradle/Maven: build tool installed, project builds independently
+From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-## Procedure
+- Project root `<project-root>` — the project to build. Default: current directory
+- Model output directory `<model-out>` — where to write the model. Default: `.opentaint/project`
+- Build constraints (optional) — required Java version, submodules to initialize, `--package` filters for `opentaint project`
+
+## Workflow
 
 ### 1. Determine project type
 
-Examine directory contents:
-- `build.gradle` or `build.gradle.kts` -> Gradle
-- `pom.xml` -> Maven
-- Pre-compiled JARs/WARs -> classpath mode
-- Existing `project.yaml` in a subdirectory -> already compiled
+- `build.gradle` / `build.gradle.kts` → Gradle
+- `pom.xml` → Maven
+- pre-compiled JAR/WAR → classpath mode
+- existing `project.yaml` → already built, reuse it
 
-### 2a. Gradle/Maven projects (autobuilder)
+### 2a. Gradle/Maven — autobuilder
 
 ```bash
-opentaint compile /path/to/project -o .opentaint/project
+opentaint compile <project-root> -o <model-out>
 ```
 
-### 2b. If `opentaint compile` fails — manual build + `opentaint project`
+### 2b. Autobuilder fails — manual build + `opentaint project`
 
-If the autobuilder cannot build the project, build it manually first, then create the project model:
-
-1. **Build the project manually**:
-```bash
-# Gradle
-./gradlew build -x test
-
-# Maven
-mvn package -DskipTests
-```
-
-2. **Create the project model with `opentaint project`**:
-
-> **CRITICAL**: Always specify `--package` to restrict analysis to project code only. Without `--package`, the analyzer will attempt to analyze ALL classes including third-party libraries, and will hang or run for hours.
+Build manually, then create the model from the artifacts. Always pass `--package` to restrict analysis to project code — without it the analyzer walks third-party libraries and hangs
 
 ```bash
+./gradlew build -x test     # Gradle
+mvn package -DskipTests     # Maven
+
 opentaint project \
-  --output .opentaint/project \
-  --source-root /path/to/src \
-  --classpath /path/to/app.jar \
-  --package com.example.app
+  --output <model-out> \
+  --source-root <project-root> \
+  --classpath <app.jar> \
+  --package <com.example.app>
 ```
 
-For multi-module projects, use multiple `--classpath` and `--package` flags:
-
-```bash
-opentaint project \
-  --output .opentaint/project \
-  --source-root /path/to/project \
-  --classpath /path/to/module1/build/libs/module1.jar \
-  --classpath /path/to/module2/build/libs/module2.jar \
-  --package com.example.module1 \
-  --package com.example.module2
-```
+Multi-module: repeat `--classpath` and `--package` per module
 
 ### 3. Verify
 
-Check that `.opentaint/project/project.yaml` exists and is non-empty.
+`<model-out>/project.yaml` exists and is non-empty
 
-## Troubleshooting
+## Output
 
-- **Build tool not found**: Install Gradle/Maven or use a wrapper (`./gradlew`, `./mvnw`)
-- **Java version mismatch**: Set `JAVA_HOME` to the version required by the project
-- **Compilation errors**: Check the autobuilder log, fix build issues, retry
-- **Missing dependencies**: Ensure all submodules are initialized (`git submodule update --init`)
-- **Autobuilder fails**: Build the project manually (see 2b above), then use `opentaint project` with the compiled artifacts
-- **Analysis hangs**: You likely forgot `--package` — the analyzer is processing third-party libraries. Re-run `opentaint project` with `--package` to restrict to project code
+The project model directory containing `project.yaml` (default `.opentaint/project`, or the caller's path). Report that path back
+
+## Gotchas
+
+- Analysis hangs → `--package` was omitted in `opentaint project`; the analyzer is processing third-party libraries. Re-run with `--package`
+- Build tool not found → use the wrapper (`./gradlew`, `./mvnw`) or install the tool
+- Compilation errors → check the autobuilder log, fix the build, retry; if it can't be fixed, fall back to 2b
+- Java version mismatch → set `JAVA_HOME` to the version the project needs (opentaint itself needs Java 21+)
+- Missing dependencies → initialize submodules (`git submodule update --init`)

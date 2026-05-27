@@ -1,51 +1,48 @@
 ---
 name: create-rule
-description: Author OpenTaint YAML pattern rules for a vulnerability class on JVM code. Use when an uncovered vulnerability needs detection, or when an existing rule needs a false-positive or false-negative fix.
+description: Author and verify an OpenTaint detection rule for a vulnerability class on JVM code. Use whenever a rule needs to be created for an uncovered vulnerability, or an existing rule needs a false-positive or false-negative fix
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.1"
+  version: "0.2"
 ---
 
 # Skill: Create Rule
 
-Create pattern rules for detecting specific vulnerability classes
+Create a pattern rule for a vulnerability class, then test it against the prepared test project and fix it until every sample passes
 
-## Prerequisites
+## Inputs
 
-- `opentaint` CLI available
-- Understanding of the target vulnerability (source, sink, sanitizers)
+From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-## Procedure
+- Requirements `<requirements>` — what to detect (source, sink, vuln class); either a rule tracking file or an overall description
+- Compiled test project `<test-compiled>` — the compiled model to verify against. Default: `.opentaint/test-compiled/<name>` (per rule/approximation `<name>`)
+- Rules directory `<rules-dir>` — where rules are written. Default: `.opentaint/rules`
+- Tracking file `<tracking-file>` — the rule file. Default: `.opentaint/tracking/rules/<name>.yaml`
+
+Built-in rules are available at `opentaint dev rules-path`
+
+## Workflow
 
 ### 1. Check existing coverage
 
-`opentaint dev rules-path` prints the absolute path to the built-in rules directory (downloading them on first call). Use it to browse built-in patterns.
+Browse builtin rules at `opentaint dev rules-path` for source/sink library rules to reference. A `refs` to a built-in source/sink is cheaper and more accurate than a new one
 
-```bash
-RULES_DIR=$(opentaint dev rules-path)
-ls $RULES_DIR/java/lib/generic/
-ls $RULES_DIR/java/lib/spring/
-ls $RULES_DIR/java/security/
+### 2. Wire sources and sinks
+
+Prefer referencing built-in source/sink library rules; write a custom one only when no built-in fits. Derive each pattern from the requirements' fully-qualified names and annotations
+
+Reference built-ins:
+
+```yaml
+refs:
+  - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+    as: servlet-source
+  - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+    as: spring-source
 ```
 
-Read existing rules to understand patterns already covered.
-
-### 2. Create rule directory structure
-
-```
-.opentaint/rules/
-  java/
-    lib/
-      my-source.yaml
-      my-sink.yaml
-    security/
-      my-vuln.yaml
-```
-
-### 3. Create library rules
-
-**Source rule** (`.opentaint/rules/java/lib/my-source.yaml`):
+Custom source library rule (`<rules-dir>/java/lib/generic/my-source.yaml`), if no built-in fits:
 
 ```yaml
 rules:
@@ -67,7 +64,7 @@ rules:
                     - pattern: doPost
 ```
 
-**Sink rule** (`.opentaint/rules/java/lib/my-sink.yaml`):
+Custom sink library rule (`<rules-dir>/java/lib/generic/my-sink.yaml`):
 
 ```yaml
 rules:
@@ -86,7 +83,9 @@ rules:
           - focus-metavariable: $UNTRUSTED
 ```
 
-### 4. Create security rule (join mode)
+### 3. Create the security rule (join mode)
+
+Write it at `<rules-dir>/java/security/<name>.yaml` — name the file and `id` after the rule name from the tracking file. Wire the sources and sinks (built-in or custom) via `refs`:
 
 ```yaml
 rules:
@@ -101,55 +100,63 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/my-source.yaml#my-custom-source
+        - rule: java/lib/generic/my-source.yaml#my-custom-source
           as: source
-        - rule: java/lib/my-sink.yaml#my-custom-sink
+        - rule: java/lib/generic/my-sink.yaml#my-custom-sink
           as: sink
       on:
         - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-### 5. Reference built-in library rules
+### 4. Test until success
 
-```yaml
-refs:
-  - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-    as: servlet-source
-  - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-    as: spring-source
-```
-
-### 6. Run analysis with specific rules
-
-The `--rule-id` flag requires the **full rule ID** in the format `<ruleSetRelativePath>.yaml:<id>`. The `ruleSetRelativePath` is the path to the YAML file relative to its ruleset root, without the `.yaml` extension (it is written explicitly in the format).
-
-Library rules referenced via join-mode `refs` are NOT auto-included by `--rule-id` — the filter drops every rule whose full ID is not listed. Either list every library rule explicitly, or omit `--rule-id` entirely to keep all loaded rules active.
+Run the rule tests against the compiled test project; iterate the rule and re-run `test-rules` until every sample passes:
 
 ```bash
-# Full rule ID = "java/security/my-vuln.yaml" (relative path with .yaml) + ":" + "my-vulnerability" (id from YAML)
-opentaint scan --project-model .opentaint/project \
-  -o .opentaint/results/report.sarif \
-  --ruleset builtin --ruleset .opentaint/rules \
-  --rule-id java/security/my-vuln.yaml:my-vulnerability
+opentaint dev test-rules <test-compiled> \
+  -o .opentaint/test-results/<name> \
+  --ruleset <rules-dir>
 ```
 
-To discover full rule IDs, read the rule YAML file:
-- The `id` field in the YAML gives the short ID
-- The file path relative to the ruleset root (with `.yaml` extension) gives the prefix
-- Combine as `<relativePath>.yaml:<id>`, e.g. `java/security/path-traversal.yaml:path-traversal`
+`test-rules` auto-loads the built-in rules, so pass only your custom `<rules-dir>` — a literal `builtin` here would be treated as a path. Read `.opentaint/test-results/<name>/test-result.json`:
+
+- `falseNegative` (positive didn't trigger) → patterns too narrow; broaden `pattern-either`, check metavariable names match across branches and between `refs` and `on`
+- `falsePositive` (negative triggered) → patterns too broad; add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`
+- `skipped` / `disabled` → the rule wasn't exercised; fix the annotation `value`/`id`, or enable the rule
+
+### 5. Refining for a false positive (suppress-FP)
+
+The test project already pins the confirmed TPs as `@PositiveRuleSample` and reproduces the FP as a `@NegativeRuleSample` — refine only the rule. Narrow it (step 4's `falsePositive` handling) until the negative stops triggering while every positive still passes. Do not touch the samples; if one looks wrong, hand it back upstream
+
+## Output
+
+- The rule file(s) under `<rules-dir>`
+- Tracking updated: `rule_id`, `artifact`, `stages.tests_passing` (per Tracking)
+- Report the full rule id, a one-line test summary, and the exact `test-rules` command used
+
+## Tracking
+
+In `<tracking-file>`, once the rule exists and its samples pass:
+
+```yaml
+rule_id: java/security/my-vuln.yaml:my-vulnerability
+artifact: .opentaint/rules/java/security/my-vuln.yaml
+stages:
+  tests_passing: done
+```
 
 ## Constraints
 
 - Library rules MUST have `options.lib: true` and `severity: NOTE`
 - Security rules MUST have `metadata.cwe` and `metadata.short-description`
-- Source/sink metavariable names must match across `refs` and `on` clauses
+- Source/sink metavariable names must match across `refs` and `on` clauses, or the join won't connect
 - The `rule:` path in `refs` is relative to the ruleset root
 - Rule IDs must be globally unique
-- `--rule-id` requires the **full** rule ID (`<path.yaml>:<id>`), not just the short ID
-- `--rule-id` drops every rule whose full ID is not listed, including library rules referenced via `refs`. List all rules you need explicitly, or omit `--rule-id`.
 - For simple structural patterns (no dataflow), omit `mode:` (uses default mode)
+- Custom library rules go under `<rules-dir>/java/lib/generic/` or `<rules-dir>/java/lib/spring/` (for Spring-specific), mirroring the built-in layout — never directly under `java/lib/`
 
-## FP/FN Fixes
 
-- **FP**: Add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`
-- **FN**: Add patterns to `pattern-either`, create new library rules, add new `on` clauses
+## Gotchas
+
+- A wrong argument position in `(..., $UNTRUSTED, ...)` focuses the wrong parameter — point `focus-metavariable` at the tainted one
+- Refine the rule, never the test project — don't edit or weaken samples here; if one is wrong, hand it back upstream
