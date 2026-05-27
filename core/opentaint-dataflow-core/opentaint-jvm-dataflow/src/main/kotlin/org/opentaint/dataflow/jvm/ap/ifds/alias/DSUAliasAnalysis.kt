@@ -23,7 +23,7 @@ class DSUAliasAnalysis(
     val mergeType: MergeType,
     val cancellation: AnalysisCancellation,
 ) {
-    private fun isMustAlias() = mergeType == MergeType.Must
+    private val isMustAlias = mergeType == MergeType.Must
 
     val aliasManager = AAInfoManager()
     val dsuMergeStrategy = DsuMergeStrategy(aliasManager)
@@ -440,7 +440,7 @@ class DSUAliasAnalysis(
         val heapAlias = heapAppender(obj).index()
 
         var resultState = state
-        if (isFieldStore && (isMustAlias() || !state.containsMultipleConcreteOrOuterLocations(instanceInfo))) {
+        if (isMustAlias || (isFieldStore && !state.containsMultipleConcreteOrOuterLocations(instanceInfo))) {
             resultState = resultState.remove(heapAlias)
         }
 
