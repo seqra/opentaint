@@ -119,7 +119,10 @@ rules:
           # propagator stores taint on the MapValue accessor, not on the Map
           # reference itself, so the bare $INPUT pattern misses the case where
           # the caller wraps a tainted string in a Map first. Match the Map
-          # construction explicitly so $INPUT binds to the value.
+          # construction explicitly so $INPUT binds to the value, and pin the
+          # receiver type with a per-provider pattern-inside declaration (the
+          # dangerous-groovy-shell idiom below) instead of repeating each shape
+          # — OpenTaint does not support a typed `metavariable-pattern` on $P.
           - patterns:
               - pattern-either:
                   - pattern: |
@@ -140,11 +143,13 @@ rules:
                       $P.setProperties(java.util.Map.of($K1, $V1, $K2, $INPUT), ...);
                   - pattern: |
                       $P.setProperties(java.util.Map.of($K1, $INPUT, $K2, $V2), ...);
-              - metavariable-pattern:
-                  metavariable: $P
-                  pattern-either:
-                      - pattern: (com.opensymphony.xwork2.ognl.OgnlReflectionProvider $X)
-                      - pattern: (com.opensymphony.xwork2.util.reflection.ReflectionProvider $X)
+              - pattern-either:
+                  - pattern-inside: |
+                      com.opensymphony.xwork2.ognl.OgnlReflectionProvider $P = ...;
+                      ...
+                  - pattern-inside: |
+                      com.opensymphony.xwork2.util.reflection.ReflectionProvider $P = ...;
+                      ...
               - focus-metavariable: $INPUT
 
   - id: dangerous-groovy-shell
