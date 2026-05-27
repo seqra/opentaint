@@ -32,8 +32,6 @@ abstract class CliWithLogger : CliktCommand() {
     private fun configureLogger(logsFile: Path, verbosity: Level) {
         val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as ch.qos.logback.classic.Logger
 
-        (LoggerFactory.getLogger("io.grpc") as ch.qos.logback.classic.Logger).level = Level.INFO
-
         val ple = PatternLayoutEncoder().apply {
             pattern = "%d{HH:mm:ss.SSS} |%.-1level| %replace(%c{0}){'(\\\$Companion)?\\\$logger\\\$1',''} - %msg%n"
             context = rootLogger.loggerContext
