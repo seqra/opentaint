@@ -93,7 +93,7 @@ You are the only writer of `.opentaint/tracking/state.yaml` — it records the c
 On start, and after any compaction, reconstruct position from artifacts before doing anything — never replay a completed phase:
 
 - read `state.yaml` and the `tracking/` tree
-- skip any phase whose artifact exists: `project.yaml` → build; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
+- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every area `done` → discover; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
 - detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; methods in `dropped-external-methods.yaml` not yet in any approximation unit → approximations
 
 ## Tracking layout
@@ -103,6 +103,7 @@ The single source of truth for the tracking schema; each skill writes only its o
 ```
 .opentaint/tracking/
   state.yaml                              # you only — levels + phase status
+  coverage.yaml                           # discover-attack-surface — one entry per attack area walked (deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
   rules/<name>.yaml                       # one per rule
   approximations/<package>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
@@ -128,6 +129,17 @@ phases:                 # pending | in_progress | done
   poc: pending          # dynamic triage
 ```
 
+coverage.yaml — created by discover-attack-surface (deep): the attack-area checklist it walks, one entry per area, so you can see nothing was skipped and which areas spawned rules:
+
+```yaml
+areas:
+  - area: database        # one per attack area
+    status: done          # pending | done
+    rules: [mybatis-sqli] # proposed rule names; [] when built-ins cover it or the area is absent
+    notes: >
+      free-form — what was found and why
+```
+
 findings/<finding_name>.yaml — created by the SARIF→finding script; `verdict`/`notes` by analyze-findings; `poc`/`poc_script` by generate-poc:
 
 ```yaml
@@ -148,8 +160,8 @@ name: mybatis-sqli
 rule_id: null           # filled on creation
 artifact: null          # added once the rule file exists
 finding: null           # finding_name; non-null only for suppress-FP
-requirements: >
-  CWE-89 SQLi via MyBatis ${} ; source @RequestParam orderBy ; sink ${} in SelectProvider
+requirements: >        # short — what built-ins miss, not a full traced flow
+  CWE-89 SQLi via MyBatis ${} ; source: HTTP param (built-in spring source) ; sink: ${} in SelectProvider — no built-in, write one ; lives in OrderMapper
 dependencies: [org.mybatis:mybatis:3.5.13]
 stages:                 # pending | in_progress | done
   description: done

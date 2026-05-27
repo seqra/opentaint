@@ -15,7 +15,8 @@ Build a minimal compiled test project whose annotated samples reproduce the flow
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- What to test `<spec>` — a rule's requirements, or the package's methods to exercise, with enough context to build a realistic flow
+- What to test `<spec>` — a rule's requirements, or the package's methods to exercise
+- Project root `<project-root>` — the real sources the requirements point into. Default: current directory
 - Tracking file `<tracking-file>` — the rule or approximation file this test serves. Default: `.opentaint/tracking/rules/<name>.yaml` or `.opentaint/tracking/approximations/<name>.yaml`
 - Test project `<test-project>` — sources. Default: `.opentaint/test-projects/<name>`
 - Compiled output `<test-compiled>` — the model. Default: `.opentaint/test-compiled/<name>`
@@ -43,7 +44,9 @@ opentaint dev init-approximation-project <test-project> \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 ```
 
-### 2. Write samples
+### 2. Read the real flow, then write samples
+
+The requirements only name the source/sink and its framework. Before writing, find that source and sink in `<project-root>` and read the actual method signatures, annotations, and how the tainted value is built. The samples must mirror that code, not a guess — a sample built on the wrong signature compiles but verifies nothing
 
 Write Java samples under `<test-project>/src/main/java/test/`, each annotated with its expected verdict — `@PositiveRuleSample` (must flag) or `@NegativeRuleSample` (must not). `value` is the rule path relative to the ruleset root (with `.yaml`), `id` the short id from the YAML — not the full `--rule-id` used by `opentaint scan`. One expected verdict per sample. Split the samples across files however groups most logically — don't cram unrelated ones into a single class
 
@@ -80,4 +83,4 @@ Do not touch other stages or fields
 
 - One expected verdict per sample
 - One unit per `<name>` folder — never write into another unit's project, so concurrent agents don't race
-- In doubt about how the real flow or a method behaves, read the source rather than guessing — the sample must mirror the actual code
+- For library-method behavior the requirements don't pin down (does it sanitize? propagate taint?), read the dependency or its docs rather than guessing
