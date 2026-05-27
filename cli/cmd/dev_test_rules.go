@@ -14,11 +14,13 @@ import (
 )
 
 var (
-	testRulesRuleset   []string
-	testRulesOutputDir string
-	testRulesTimeout   time.Duration
-	testRulesMaxMemory string
-	testRulesRuleID    []string
+	testRulesRuleset     []string
+	testRulesOutputDir   string
+	testRulesTimeout     time.Duration
+	testRulesMaxMemory   string
+	testRulesRuleID      []string
+	testRulesDataflow    []string
+	testRulesPassthrough []string
 )
 
 var devTestRulesCmd = &cobra.Command{
@@ -36,27 +38,30 @@ Exit codes:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runTestProject(args[0], testProjectOptions{
-			label:     "Rule tests",
-			tempDir:   "opentaint-test-rules-*",
-			rulesets:  testRulesRuleset,
-			outputDir: testRulesOutputDir,
-			timeout:   testRulesTimeout,
-			maxMemory: testRulesMaxMemory,
-			ruleIDs:   testRulesRuleID,
+			label:             "Rule tests",
+			tempDir:           "opentaint-test-rules-*",
+			rulesets:          testRulesRuleset,
+			outputDir:         testRulesOutputDir,
+			timeout:           testRulesTimeout,
+			maxMemory:         testRulesMaxMemory,
+			ruleIDs:           testRulesRuleID,
+			dataflowApprox:    testRulesDataflow,
+			passthroughApprox: testRulesPassthrough,
 		})
 	},
 }
 
 // testProjectOptions holds the inputs shared by `dev test-rules` and `dev test-approximations`.
 type testProjectOptions struct {
-	label          string
-	tempDir        string
-	rulesets       []string
-	outputDir      string
-	timeout        time.Duration
-	maxMemory      string
-	ruleIDs        []string
-	dataflowApprox []string
+	label             string
+	tempDir           string
+	rulesets          []string
+	outputDir         string
+	timeout           time.Duration
+	maxMemory         string
+	ruleIDs           []string
+	dataflowApprox    []string
+	passthroughApprox []string
 }
 
 func runTestProject(projectModelArg string, opts testProjectOptions) {
@@ -149,6 +154,10 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		}
 		builder.AddDataflowApproximations(compiledPath)
 	}
+	for _, passthrough := range opts.passthroughApprox {
+		absPassthrough := log.AbsPathOrExit(passthrough, "passthrough-approximations")
+		builder.AddPassthroughApproximations(absPassthrough)
+	}
 
 	javaRunner := java.NewJavaRunner().
 		WithSkipVerify(globals.Config.SkipVerify).
@@ -184,4 +193,6 @@ func init() {
 	devTestRulesCmd.Flags().DurationVar(&testRulesTimeout, "timeout", 600*time.Second, "Timeout for analysis")
 	devTestRulesCmd.Flags().StringVar(&testRulesMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
 	devTestRulesCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
+	devTestRulesCmd.Flags().StringArrayVar(&testRulesDataflow, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
+	devTestRulesCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "passThrough approximation YAML file or directory of them (repeatable)")
 }

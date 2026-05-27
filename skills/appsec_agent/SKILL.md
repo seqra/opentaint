@@ -75,7 +75,7 @@ Universal rules — every dispatch, every workflow:
 - open the prompt with the Skill-load line — the subagent has none of this context until it loads its skill
 - pass resolved paths (the `<name>`-keyed `.opentaint/...` paths from Working directory layout), never the placeholder tokens
 - read the named output artifact yourself before continuing — a claim is not an artifact
-- only the scan agent (run-scan) runs `opentaint scan`; no rule, approximation, or triage subagent scans
+- only run-scan scans the main project model; rule/approximation/triage subagents don't — the one exception is a create-rule agent running a diagnostic `--track-external-methods` scan of its own test project (never the main model)
 - only you write `.opentaint/vulnerabilities.md` and `.opentaint/tracking/state.yaml`
 - never swap the project model mid-analysis; every run uses the same model
 - never triage yourself — verdicts come only from analyze-findings subagents

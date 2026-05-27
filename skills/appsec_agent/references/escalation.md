@@ -1,6 +1,6 @@
 # Escalation block
 
-Load this when a create-rule / create-pass-through / create-dataflow agent can't make its samples pass after repeated attempts, or a rule passes its tests yet is wrong on the real scan. Dispatch per the Delegate template in SKILL.md. These skills write no tracking files.
+Load this when a create-rule / create-pass-through / create-dataflow agent can't make its samples pass after repeated attempts, or a rule passes its tests yet is wrong on the real scan. The common cause — a library method on the flow killing taint in the test project — is already caught by create-rule's own `--track-external-methods` check and routed to the approximation loop (references/discover-rules.md); reach here for what survives that: a subtle rule bug, an approximation present but mis-modeled, or an engine issue. Dispatch per the Delegate template in SKILL.md. These skills write no tracking files.
 
 1. debug-rule — Inputs: the `<full-id>` to trace (for an approximation, the rule whose sample routes taint through the modeled method), the `<model-dir>` and `<results-dir>` of the run that showed the problem, `<dropped-file>`, and the approximation dirs if the flow depends on them. Returns a diagnosis: rule fix, missing library model, or engine issue
 2. Route by cause: a rule cause goes back to create-rule (references/discover-rules.md), a model cause back to the relevant create-*-approximation agent (references/approximations.md); an engine cause goes to step 3
