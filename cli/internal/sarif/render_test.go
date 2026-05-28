@@ -198,3 +198,40 @@ func TestPrintAllNestingSnippetsBlankBetweenKeptSteps(t *testing.T) {
 		t.Errorf("expected extra blank lines under nesting+snippets:\nwith:\n%s\nwithout:\n%s", with, without)
 	}
 }
+
+func TestPrintAllFingerprintHeaderHasRuleSubfield(t *testing.T) {
+	// When a finding has a partial fingerprint, the finding's tree header is
+	// "Fingerprint: <abbrev>" and the rule moves into a Rule: subfield.
+	r := makeResult("my-rule", Error, "a.java", 1, map[string]string{
+		DefaultFingerprintKey: "abc123def456ghi",
+	})
+	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: -1})
+	if !strings.Contains(out, "Fingerprint:") {
+		t.Errorf("expected 'Fingerprint:' in header:\n%s", out)
+	}
+	if !strings.Contains(out, "abc123def456") {
+		t.Errorf("expected abbreviated fingerprint in output:\n%s", out)
+	}
+	if !strings.Contains(out, "Rule:") {
+		t.Errorf("expected 'Rule:' subfield when fingerprint header is used:\n%s", out)
+	}
+	if !strings.Contains(out, "my-rule") {
+		t.Errorf("expected rule id in subtree:\n%s", out)
+	}
+}
+
+func TestPrintAllNoFingerprintFallbackToRuleHeader(t *testing.T) {
+	// When a finding has no fingerprint, the header stays the rule id and no
+	// separate Rule: subfield is added (it would just duplicate the header).
+	r := makeResult("my-rule", Error, "a.java", 1, nil)
+	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: -1})
+	if !strings.Contains(out, "my-rule") {
+		t.Errorf("expected rule id as header:\n%s", out)
+	}
+	if strings.Contains(out, "Rule:") {
+		t.Errorf("did not expect 'Rule:' subfield when no fingerprint:\n%s", out)
+	}
+	if strings.Contains(out, "Fingerprint:") {
+		t.Errorf("did not expect 'Fingerprint:' header when absent:\n%s", out)
+	}
+}

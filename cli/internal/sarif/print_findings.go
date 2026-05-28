@@ -68,9 +68,24 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	const msgWrap = 120
 	const flowWrap = 117
 
-	findingNode := out.GroupItem(rule)
-	severityStr := strings.ToUpper(string(lvl))
 	th := out.Theme()
+	// Prefer the partial fingerprint as the finding header — it is the stable,
+	// copy-pasteable identity for triage. When no fingerprint is available
+	// (e.g. SARIF generated without generateFingerprint), fall back to the rule
+	// id as the header and skip the Rule subfield (it would just duplicate it).
+	header := rule
+	fpHeader := false
+	if fp := fingerprintAbbrev(result, opts.FingerprintKey); fp != "" {
+		header = th.FieldKey.Render("Fingerprint:") + " " + fp
+		fpHeader = true
+	}
+	findingNode := out.GroupItem(header)
+
+	if fpHeader {
+		findingNode.Child(out.FieldItem("Rule", rule))
+	}
+
+	severityStr := strings.ToUpper(string(lvl))
 	var coloredSeverity string
 	switch lvl {
 	case Error:
@@ -82,10 +97,6 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	}
 	findingNode.Child(out.FieldItem("Severity", coloredSeverity))
 	findingNode.Child(out.FieldItem("Location", locStr))
-
-	if fp := fingerprintAbbrev(result, opts.FingerprintKey); fp != "" {
-		findingNode.Child(out.FieldItem("Fingerprint", fp))
-	}
 
 	total := len(result.CodeFlows)
 	if total > 1 {
