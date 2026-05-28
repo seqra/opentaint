@@ -165,6 +165,8 @@ func shapeFlow(steps []classifiedStep, maxLevel int) []flowRenderItem {
 			hidden++
 		}
 	}
+	// Defensive: the last step is always kept (i == len(steps)-1), so any pending
+	// hidden run is already flushed before it; this final flush is a no-op today.
 	flush()
 	return items
 }
