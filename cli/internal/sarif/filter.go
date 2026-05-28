@@ -124,6 +124,8 @@ func matchRuleID(r *Result, values []string) bool {
 	full := *r.RuleID
 	leaf := ruleLeaf(full)
 	for _, v := range values {
+		// skip blank values (cobra StringArrayVar can yield them) so an empty
+		// value never matches a result whose rule id is also empty
 		if v == "" {
 			continue
 		}

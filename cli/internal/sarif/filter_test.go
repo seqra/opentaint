@@ -88,6 +88,10 @@ func TestRuleLeaf(t *testing.T) {
 		"rules/java/security:sql-injection-in-spring-app": "sql-injection-in-spring-app", // raw, first ':'
 		"rules.java.sql-injection-in-spring-app":          "sql-injection-in-spring-app", // dotted, last '.'
 		"bare-rule":                                       "bare-rule",                   // neither
+		"a.b:c":                                          "c",                            // both separators; colon wins
+		":leaf":                                          "leaf",                         // leading colon
+		"a.":                                             "",                             // trailing dot -> empty leaf
+		"":                                               "",                             // empty id
 	}
 	for in, want := range cases {
 		if got := ruleLeaf(in); got != want {
@@ -115,6 +119,11 @@ func TestMatchRuleID(t *testing.T) {
 	nilRule := Result{}
 	if matchRuleID(&nilRule, []string{"**"}) {
 		t.Error("expected nil rule id not to match")
+	}
+
+	emptyRule := makeResult("", Error, "a.java", 1, nil)
+	if matchRuleID(&emptyRule, []string{""}) {
+		t.Error("expected empty filter value not to match (guard)")
 	}
 }
 
