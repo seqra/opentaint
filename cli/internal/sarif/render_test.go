@@ -194,7 +194,7 @@ func TestPrintAllNestingSnippetsBlankBetweenKeptSteps(t *testing.T) {
 		MaxNestingLevel:  0, // hides the helper step at level 1; keeps source/call/sink
 	})
 	without := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: 0})
-	if !(strings.Count(with, "\n") > strings.Count(without, "\n")) {
+	if strings.Count(with, "\n") <= strings.Count(without, "\n") {
 		t.Errorf("expected extra blank lines under nesting+snippets:\nwith:\n%s\nwithout:\n%s", with, without)
 	}
 }
