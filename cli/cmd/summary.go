@@ -27,6 +27,9 @@ Arguments:
 		if _, err := sarif.ParseGroupDimension(summaryGroupBy); err != nil {
 			out.Fatalf("%s", err)
 		}
+		if _, err := sarif.ParseCodeFlowSelection(summaryCodeFlow); err != nil {
+			out.Fatalf("%s", err)
+		}
 
 		absSarifPath := log.AbsPathOrExit(args[0], "sarif path")
 		report, err := sarif.LoadReport(absSarifPath)
@@ -48,6 +51,7 @@ var summaryFingerprints []string
 var summaryFingerprintKey string
 var summaryGroupBy string
 var summaryMaxNestingLevel = -1 // -1 = no cap; >= 0 collapses deeper flow steps
+var summaryCodeFlow string
 
 func init() {
 	rootCmd.AddCommand(summaryCmd)
@@ -62,6 +66,7 @@ func init() {
 	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint (default vulnerabilityWithTraceHash/v1)")
 	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Collapse code-flow steps deeper than this call-nesting level (-1 = no cap)")
 	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (default file-path)")
+	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
 }
 
 // currentSummaryBuilder returns a builder pre-populated with the user's current summary flags.
@@ -85,6 +90,7 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	builder.WithPartialFingerprintKey(summaryFingerprintKey)
 	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
 	builder.WithGroupBy(summaryGroupBy)
+	builder.WithCodeFlow(summaryCodeFlow)
 	return builder
 }
 
@@ -104,12 +110,14 @@ func printSarifSummary(report *sarif.Report, absSarifPath string) {
 
 	hasOmittedFlow := false
 	if showFindings {
+		codeFlowSel, _ := sarif.ParseCodeFlowSelection(summaryCodeFlow) // validated in Run
 		opts := sarif.ListingOptions{
 			ShowCodeSnippets: showCodeSnippets,
 			VerboseFlow:      verboseFlow,
 			MaxNestingLevel:  summaryMaxNestingLevel,
 			GroupBy:          dim,
 			FingerprintKey:   summaryFingerprintKey,
+			CodeFlows:        codeFlowSel,
 		}
 		hasOmittedFlow = filtered.PrintAll(out, opts)
 		out.Blank()
