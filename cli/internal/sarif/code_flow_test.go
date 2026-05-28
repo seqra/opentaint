@@ -6,32 +6,34 @@ import (
 )
 
 func TestParseCodeFlowSelection(t *testing.T) {
-	cases := map[string]struct {
+	cases := []struct {
+		in     string
 		want   CodeFlowSelection
 		hasErr bool
 	}{
-		"":     {CodeFlowSelection{}, false},
-		" ":    {CodeFlowSelection{}, false},
-		"all":  {CodeFlowSelection{All: true}, false},
-		"ALL":  {CodeFlowSelection{All: true}, false},
-		"  all  ": {CodeFlowSelection{All: true}, false},
-		"1":    {CodeFlowSelection{Index: 1}, false},
-		"42":   {CodeFlowSelection{Index: 42}, false},
-		"0":    {CodeFlowSelection{}, true},
-		"-1":   {CodeFlowSelection{}, true},
-		"two":  {CodeFlowSelection{}, true},
-		"1.5":  {CodeFlowSelection{}, true},
-		"all,1": {CodeFlowSelection{}, true},
+		{"", CodeFlowSelection{}, false},
+		{" ", CodeFlowSelection{}, false},
+		{"all", CodeFlowSelection{All: true}, false},
+		{"ALL", CodeFlowSelection{All: true}, false},
+		{"  all  ", CodeFlowSelection{All: true}, false},
+		{"1", CodeFlowSelection{Index: 1}, false},
+		{"42", CodeFlowSelection{Index: 42}, false},
+		{"0", CodeFlowSelection{}, true},
+		{"-1", CodeFlowSelection{}, true},
+		{"two", CodeFlowSelection{}, true},
+		{"1.5", CodeFlowSelection{}, true},
+		{"all,1", CodeFlowSelection{}, true},
 	}
-	for in, c := range cases {
-		got, err := ParseCodeFlowSelection(in)
-		if (err != nil) != c.hasErr {
-			t.Errorf("ParseCodeFlowSelection(%q) err = %v, hasErr=%v", in, err, c.hasErr)
-			continue
-		}
-		if !c.hasErr && !reflect.DeepEqual(got, c.want) {
-			t.Errorf("ParseCodeFlowSelection(%q) = %+v, want %+v", in, got, c.want)
-		}
+	for _, c := range cases {
+		t.Run(c.in, func(t *testing.T) {
+			got, err := ParseCodeFlowSelection(c.in)
+			if (err != nil) != c.hasErr {
+				t.Fatalf("err = %v, hasErr=%v", err, c.hasErr)
+			}
+			if !c.hasErr && !reflect.DeepEqual(got, c.want) {
+				t.Errorf("got %+v, want %+v", got, c.want)
+			}
+		})
 	}
 }
 
