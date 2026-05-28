@@ -144,8 +144,7 @@ type flowRenderItem struct {
 
 // shapeFlow selects which steps to display under a max nesting level, always
 // keeping the first (source) and last (sink) step, and emits a placeholder for
-// each contiguous run of hidden deeper steps. Pure "call" annotation steps are
-// stripped from the rendered output (they carry no display content).
+// each contiguous run of hidden deeper steps.
 func shapeFlow(steps []classifiedStep, maxLevel int) []flowRenderItem {
 	levels := deriveNestingLevels(steps)
 	var items []flowRenderItem
@@ -157,9 +156,6 @@ func shapeFlow(steps []classifiedStep, maxLevel int) []flowRenderItem {
 		}
 	}
 	for i := range steps {
-		if hasKind(steps[i], "call") {
-			continue
-		}
 		keep := i == 0 || i == len(steps)-1 || levels[i] <= maxLevel
 		if keep {
 			flush()
