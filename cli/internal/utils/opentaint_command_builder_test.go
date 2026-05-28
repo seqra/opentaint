@@ -338,9 +338,19 @@ func TestSummaryFilterFlagsOmitDefaults(t *testing.T) {
 	cmd := NewSummaryCommand("/r.sarif").
 		WithMaxNestingLevel(-1).
 		WithGroupBy("file-path").
+		WithGroupBy("").
 		WithPath(nil).
 		Build()
 	if cmd != "opentaint summary /r.sarif" {
 		t.Errorf("defaults should be omitted, got %q", cmd)
+	}
+}
+
+func TestSummaryRepeatableFlagMultiValue(t *testing.T) {
+	cmd := NewSummaryCommand("/r.sarif").
+		WithPath([]string{"src/**", "test/**"}).
+		Build()
+	if !contains(cmd, "--path src/**") || !contains(cmd, "--path test/**") {
+		t.Errorf("expected both --path values, got %q", cmd)
 	}
 }
