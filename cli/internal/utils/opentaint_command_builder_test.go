@@ -354,3 +354,20 @@ func TestSummaryRepeatableFlagMultiValue(t *testing.T) {
 		t.Errorf("expected both --path values, got %q", cmd)
 	}
 }
+
+func TestSummaryWithCodeFlow(t *testing.T) {
+	cmd := NewSummaryCommand("/r.sarif").WithCodeFlow("all").Build()
+	if !contains(cmd, "--code-flow all") {
+		t.Errorf("expected --code-flow all in command, got %q", cmd)
+	}
+
+	cmd = NewSummaryCommand("/r.sarif").WithCodeFlow("2").Build()
+	if !contains(cmd, "--code-flow 2") {
+		t.Errorf("expected --code-flow 2 in command, got %q", cmd)
+	}
+
+	cmd = NewSummaryCommand("/r.sarif").WithCodeFlow("").Build()
+	if cmd != "opentaint summary /r.sarif" {
+		t.Errorf("empty --code-flow should be omitted, got %q", cmd)
+	}
+}

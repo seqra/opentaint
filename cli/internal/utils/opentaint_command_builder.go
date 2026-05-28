@@ -217,6 +217,15 @@ func (cb *OpentaintCommandBuilder) WithGroupBy(dimension string) *OpentaintComma
 	return cb
 }
 
+// WithCodeFlow sets the --code-flow flag ("all" or a 1-based integer as
+// a string). Empty values are omitted.
+func (cb *OpentaintCommandBuilder) WithCodeFlow(value string) *OpentaintCommandBuilder {
+	if value != "" {
+		cb.flags["code-flow"] = value
+	}
+	return cb
+}
+
 // CopyFlagsFrom copies all flags (regular, array, and boolean) from the source builder,
 // overwriting any existing flags with the same name. The command and positional args
 // are not copied — only flags. Use this to create a variant of an existing command
