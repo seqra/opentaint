@@ -97,7 +97,9 @@ func printSarifSummary(report *sarif.Report, absSarifPath string) {
 		FingerprintKey: summaryFingerprintKey,
 	})
 
-	// summaryGroupBy is validated in Run, so the error here cannot fire.
+	// summaryGroupBy is either "" (called from scan; ParseGroupDimension("") is valid
+	// and yields the file-path default) or pre-validated in Run (called from summary),
+	// so the error here cannot fire on either call path.
 	dim, _ := sarif.ParseGroupDimension(summaryGroupBy)
 
 	hasOmittedFlow := false
