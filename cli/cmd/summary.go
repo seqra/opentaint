@@ -19,6 +19,15 @@ Arguments:
 `,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		for _, s := range summarySeverities {
+			if err := sarif.ValidateSeverity(s); err != nil {
+				out.Fatalf("%s", err)
+			}
+		}
+		if _, err := sarif.ParseGroupDimension(summaryGroupBy); err != nil {
+			out.Fatalf("%s", err)
+		}
+
 		absSarifPath := log.AbsPathOrExit(args[0], "sarif path")
 		report, err := sarif.LoadReport(absSarifPath)
 		if err != nil {
@@ -32,12 +41,27 @@ var showFindings bool
 var showCodeSnippets bool
 var verboseFlow bool
 
+var summaryPaths []string
+var summarySeverities []string
+var summaryRuleIDs []string
+var summaryFingerprints []string
+var summaryFingerprintKey string
+var summaryGroupBy string
+var summaryMaxNestingLevel = -1 // -1 = no cap; >= 0 collapses deeper flow steps
+
 func init() {
 	rootCmd.AddCommand(summaryCmd)
 
 	summaryCmd.Flags().BoolVar(&showFindings, "show-findings", false, "Show all issues from Sarif file")
 	summaryCmd.Flags().BoolVar(&showCodeSnippets, "show-code-snippets", false, "Show finding related code snippets")
 	summaryCmd.Flags().BoolVar(&verboseFlow, "verbose-flow", false, "Show full code flow steps for findings")
+	summaryCmd.Flags().StringArrayVar(&summaryPaths, "path", nil, "Show only findings whose file path matches this glob (** supported, repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings of this SARIF level: error, warning, note, none (repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings for this rule: full id, leaf name, or glob (repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this value (git-hash style, repeatable)")
+	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint (default vulnerabilityWithTraceHash/v1)")
+	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Collapse code-flow steps deeper than this call-nesting level (-1 = no cap)")
+	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (default file-path)")
 }
 
 // currentSummaryBuilder returns a builder pre-populated with the user's current summary flags.
@@ -54,22 +78,42 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	if verboseFlow {
 		builder.WithVerboseFlow()
 	}
+	builder.WithPath(summaryPaths)
+	builder.WithSeverity(summarySeverities)
+	builder.WithRuleID(summaryRuleIDs)
+	builder.WithPartialFingerprint(summaryFingerprints)
+	builder.WithPartialFingerprintKey(summaryFingerprintKey)
+	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
+	builder.WithGroupBy(summaryGroupBy)
 	return builder
 }
 
 func printSarifSummary(report *sarif.Report, absSarifPath string) {
+	filtered := report.Filter(sarif.Filters{
+		Paths:          summaryPaths,
+		Severities:     summarySeverities,
+		RuleIDs:        summaryRuleIDs,
+		Fingerprints:   summaryFingerprints,
+		FingerprintKey: summaryFingerprintKey,
+	})
+
+	// summaryGroupBy is validated in Run, so the error here cannot fire.
+	dim, _ := sarif.ParseGroupDimension(summaryGroupBy)
+
 	hasOmittedFlow := false
 	if showFindings {
 		opts := sarif.ListingOptions{
 			ShowCodeSnippets: showCodeSnippets,
 			VerboseFlow:      verboseFlow,
-			MaxNestingLevel:  -1,
+			MaxNestingLevel:  summaryMaxNestingLevel,
+			GroupBy:          dim,
+			FingerprintKey:   summaryFingerprintKey,
 		}
-		hasOmittedFlow = report.PrintAll(out, opts)
+		hasOmittedFlow = filtered.PrintAll(out, opts)
 		out.Blank()
 	}
 
-	report.PrintSummary(out, absSarifPath)
+	filtered.PrintSummary(out, absSarifPath)
 
 	if showFindings && hasOmittedFlow && !verboseFlow {
 		out.Suggest(
