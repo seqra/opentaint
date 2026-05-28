@@ -159,9 +159,6 @@ class GoMethodSequentFlowFunction(
                 // Abstract: trigger refinement by adding accessor to exclusion set
                 val refinedFact = currentFact.exclude(rhsAccess.accessor)
                 result.add(makeEdge(initialFact, refinedFact))
-                // Also propagate an abstract fact on the target (the read value is unknown but tainted)
-                val targetFact = currentFact.rebase(toBase)
-                result.add(makeEdge(initialFact, targetFact))
             }
         }
 
