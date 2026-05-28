@@ -16,7 +16,7 @@ type endpointInfo struct {
 	Params []string
 }
 
-func (report *Report) buildFindingTree(out *output.Printer, result *Result, runIdx int, showCodeSnippets bool, verboseFlow bool) (*tree.Tree, bool) {
+func (report *Report) buildFindingTree(out *output.Printer, result *Result, runIdx int, opts ListingOptions) (*tree.Tree, bool) {
 	absProjectPath, err := report.projectPath(runIdx)
 	if err != nil {
 		output.LogInfof("Project path lookup failed: %v", err)
@@ -83,6 +83,10 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	findingNode.Child(out.FieldItem("Severity", coloredSeverity))
 	findingNode.Child(out.FieldItem("Location", locStr))
 
+	if fp := fingerprintAbbrev(result, opts.FingerprintKey); fp != "" {
+		findingNode.Child(out.FieldItem("Fingerprint", fp))
+	}
+
 	if showMessage {
 		findingNode.Child(out.FieldItem("Message", output.WrapText(msg, msgWrap)))
 	}
@@ -106,7 +110,7 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 		output.LogDebugf("No source/sink: %s", err)
 
 		resultPath := extractAbsolutePath(&loc, absProjectPath, "Result")
-		if resultPath != "" && showCodeSnippets {
+		if resultPath != "" && opts.ShowCodeSnippets {
 			snippet := out.Snippet().LoadOrEmpty(resultPath, loc.extractNodeLoc().line)
 			if snippet != "" {
 				findingNode.Child("Code snippet\n" + snippet)
@@ -117,37 +121,29 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	}
 
 	flowTree := out.GroupItem(out.Theme().FieldKey.Render("Code flow:"))
-
-	flowSteps := taintFlow
-	omitted := false
 	shownSnippets := make(map[string]struct{})
-	if !verboseFlow && len(taintFlow) > 2 {
-		flowSteps = []classifiedStep{taintFlow[0], taintFlow[len(taintFlow)-1]}
-		omitted = true
-	}
+	omitted := false
 
-	for i, cs := range flowSteps {
-		mainLine, locationLine := formatFlowStep(cs, absProjectPath)
-		mainLine = output.WrapText(mainLine, flowWrap)
-		stepNode := out.GroupItem(mainLine, locationLine)
-
-		stepLoc := cs.Step.Location
-		locPath := extractAbsolutePath(stepLoc, absProjectPath, "Flow")
-		if locPath != "" && showCodeSnippets {
-			line := stepLoc.extractNodeLoc().line
-			snippetKey := fmt.Sprintf("%s:%d", locPath, line)
-			if _, alreadyShown := shownSnippets[snippetKey]; !alreadyShown {
-				snippet := out.Snippet().LoadOrEmpty(locPath, line)
-				if snippet != "" {
-					stepNode.Child("Code snippet\n" + snippet)
-					shownSnippets[snippetKey] = struct{}{}
-				}
+	if opts.MaxNestingLevel >= 0 {
+		for _, it := range shapeFlow(taintFlow, opts.MaxNestingLevel) {
+			if it.step != nil {
+				report.renderFlowStep(out, flowTree, *it.step, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
+			} else {
+				flowTree.Child(fmt.Sprintf("(%d %s hidden)", it.hidden, pluralize(it.hidden, "step")))
+				omitted = true
 			}
 		}
-
-		flowTree.Child(stepNode)
-		if !verboseFlow && len(flowSteps) == 2 && i == 0 {
-			flowTree.Child("")
+	} else {
+		flowSteps := taintFlow
+		if !opts.VerboseFlow && len(taintFlow) > 2 {
+			flowSteps = []classifiedStep{taintFlow[0], taintFlow[len(taintFlow)-1]}
+			omitted = true
+		}
+		for i, cs := range flowSteps {
+			report.renderFlowStep(out, flowTree, cs, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
+			if !opts.VerboseFlow && len(flowSteps) == 2 && i == 0 {
+				flowTree.Child("")
+			}
 		}
 	}
 
@@ -249,6 +245,47 @@ func findingEndpoints(result *Result) []endpointInfo {
 	}
 
 	return endpoints
+}
+
+// fingerprintAbbrev returns a short, git-style prefix of the result's
+// partialFingerprints value under key, for display in the listing. Returns ""
+// when the key is absent. When key is empty the default key is used.
+func fingerprintAbbrev(result *Result, key string) string {
+	if key == "" {
+		key = DefaultFingerprintKey
+	}
+	val, ok := result.PartialFingerprints[key]
+	if !ok || val == "" {
+		return ""
+	}
+	const n = 12
+	if len(val) > n {
+		return val[:n]
+	}
+	return val
+}
+
+// renderFlowStep adds one thread-flow step (with an optional code snippet) to
+// the flow tree, de-duplicating snippets via shownSnippets.
+func (report *Report) renderFlowStep(out *output.Printer, flowTree *tree.Tree, cs classifiedStep, absProjectPath string, showCodeSnippets bool, shownSnippets map[string]struct{}, flowWrap int) {
+	mainLine, locationLine := formatFlowStep(cs, absProjectPath)
+	mainLine = output.WrapText(mainLine, flowWrap)
+	stepNode := out.GroupItem(mainLine, locationLine)
+
+	stepLoc := cs.Step.Location
+	locPath := extractAbsolutePath(stepLoc, absProjectPath, "Flow")
+	if locPath != "" && showCodeSnippets {
+		line := stepLoc.extractNodeLoc().line
+		snippetKey := fmt.Sprintf("%s:%d", locPath, line)
+		if _, alreadyShown := shownSnippets[snippetKey]; !alreadyShown {
+			snippet := out.Snippet().LoadOrEmpty(locPath, line)
+			if snippet != "" {
+				stepNode.Child("Code snippet\n" + snippet)
+				shownSnippets[snippetKey] = struct{}{}
+			}
+		}
+	}
+	flowTree.Child(stepNode)
 }
 
 func extractAbsolutePath(location *Location, absProjectPath, locationName string) string {

@@ -60,7 +60,12 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 func printSarifSummary(report *sarif.Report, absSarifPath string) {
 	hasOmittedFlow := false
 	if showFindings {
-		hasOmittedFlow = report.PrintAll(out, showCodeSnippets, verboseFlow)
+		opts := sarif.ListingOptions{
+			ShowCodeSnippets: showCodeSnippets,
+			VerboseFlow:      verboseFlow,
+			MaxNestingLevel:  -1,
+		}
+		hasOmittedFlow = report.PrintAll(out, opts)
 		out.Blank()
 	}
 

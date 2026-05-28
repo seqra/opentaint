@@ -268,12 +268,11 @@ func outputItems(out *output.Printer, absSarifReportPath string) []any {
 	return items
 }
 
-func (report *Report) PrintAll(out *output.Printer, showCodeSnippets bool, verboseFlow bool) bool {
+func (report *Report) PrintAll(out *output.Printer, opts ListingOptions) bool {
 	totalFindings := 0
 	for _, run := range report.Runs {
 		totalFindings += len(run.Results)
 	}
-
 	if totalFindings == 0 {
 		return false
 	}
@@ -286,7 +285,8 @@ func (report *Report) PrintAll(out *output.Printer, showCodeSnippets bool, verbo
 		order  int
 	}
 
-	byFile := make(map[string][]findingRef)
+	byGroup := make(map[string][]findingRef)
+	labels := make(map[string]string)
 	order := 0
 
 	for runIdx := range report.Runs {
@@ -294,6 +294,7 @@ func (report *Report) PrintAll(out *output.Printer, showCodeSnippets bool, verbo
 		for resultIdx := range run.Results {
 			order++
 			result := &run.Results[resultIdx]
+
 			file := "<unknown>"
 			line := int64(-1)
 			if len(result.Locations) > 0 {
@@ -304,7 +305,9 @@ func (report *Report) PrintAll(out *output.Printer, showCodeSnippets bool, verbo
 				line = loc.line
 			}
 
-			byFile[file] = append(byFile[file], findingRef{
+			key, label := groupKey(result, opts.GroupBy)
+			labels[key] = label
+			byGroup[key] = append(byGroup[key], findingRef{
 				runIdx: runIdx,
 				result: result,
 				file:   file,
@@ -314,16 +317,19 @@ func (report *Report) PrintAll(out *output.Printer, showCodeSnippets bool, verbo
 		}
 	}
 
-	files := make([]string, 0, len(byFile))
-	for file := range byFile {
-		files = append(files, file)
+	keys := make([]string, 0, len(byGroup))
+	for k := range byGroup {
+		keys = append(keys, k)
 	}
-	sort.Strings(files)
+	sortGroups(keys, opts.GroupBy)
 
 	hasOmitted := false
-	for fileIdx, file := range files {
-		group := byFile[file]
+	for keyIdx, key := range keys {
+		group := byGroup[key]
 		sort.Slice(group, func(i, j int) bool {
+			if group[i].file != group[j].file {
+				return group[i].file < group[j].file
+			}
 			if group[i].line != group[j].line {
 				li := group[i].line
 				lj := group[j].line
@@ -338,21 +344,21 @@ func (report *Report) PrintAll(out *output.Printer, showCodeSnippets bool, verbo
 			return group[i].order < group[j].order
 		})
 
-		fileSection := out.Section(fmt.Sprintf("%s [%d]", file, len(group)))
+		section := out.Section(fmt.Sprintf("%s [%d]", labels[key], len(group)))
 		for findingIdx, finding := range group {
 			if findingIdx > 0 {
-				fileSection.Line()
+				section.Line()
 			}
-			node, omitted := report.buildFindingTree(out, finding.result, finding.runIdx, showCodeSnippets, verboseFlow)
+			node, omitted := report.buildFindingTree(out, finding.result, finding.runIdx, opts)
 			if node != nil {
-				fileSection.Child(node)
+				section.Child(node)
 			}
 			if omitted {
 				hasOmitted = true
 			}
 		}
-		fileSection.Render()
-		if fileIdx < len(files)-1 {
+		section.Render()
+		if keyIdx < len(keys)-1 {
 			out.Blank()
 		}
 	}
