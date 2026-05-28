@@ -53,3 +53,23 @@ func TestPrintAllShowsFingerprint(t *testing.T) {
 		t.Errorf("expected abbreviated fingerprint in listing:\n%s", out)
 	}
 }
+
+func TestPrintAllSeverityGroupSortsByFile(t *testing.T) {
+	// Two same-severity findings in different files: within the ERROR section they
+	// must sort by file path (Alpha before Zeta) regardless of input order.
+	z := makeResult("r-z", Error, "src/z/Zeta.java", 5, nil)
+	a := makeResult("r-a", Error, "src/a/Alpha.java", 9, nil)
+	out := renderListing(t, makeReport(z, a), ListingOptions{GroupBy: groupBySeverity, MaxNestingLevel: -1})
+
+	if !strings.Contains(out, "ERROR [2]") {
+		t.Fatalf("expected an ERROR [2] section:\n%s", out)
+	}
+	ia := strings.Index(out, "Alpha.java")
+	iz := strings.Index(out, "Zeta.java")
+	if ia < 0 || iz < 0 {
+		t.Fatalf("expected both files in output:\n%s", out)
+	}
+	if ia > iz {
+		t.Error("expected Alpha.java (file-sorted) before Zeta.java within the severity group")
+	}
+}
