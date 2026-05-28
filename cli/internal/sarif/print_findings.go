@@ -87,6 +87,11 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 		findingNode.Child(out.FieldItem("Fingerprint", fp))
 	}
 
+	total := len(result.CodeFlows)
+	if total > 1 {
+		findingNode.Child(out.FieldItem("Code flows", total))
+	}
+
 	if showMessage {
 		findingNode.Child(out.FieldItem("Message", output.WrapText(msg, msgWrap)))
 	}
@@ -105,10 +110,8 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 		findingNode.Child("")
 	}
 
-	taintFlow, err := classifyTaintFlowAt(result, 0)
-	if err != nil {
-		output.LogDebugf("No source/sink: %s", err)
-
+	if total == 0 {
+		// No code flows: render a snippet on the result location, matching legacy.
 		resultPath := extractAbsolutePath(&loc, absProjectPath, "Result")
 		if resultPath != "" && opts.ShowCodeSnippets {
 			snippet := out.Snippet().LoadOrEmpty(resultPath, loc.extractNodeLoc().line)
@@ -116,38 +119,52 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 				findingNode.Child("Code snippet\n" + snippet)
 			}
 		}
-
 		return findingNode, false
 	}
 
-	flowTree := out.GroupItem(out.Theme().FieldKey.Render("Code flow:"))
-	shownSnippets := make(map[string]struct{})
+	indices := opts.CodeFlows.selectedIndices(total)
 	omitted := false
 
-	if opts.MaxNestingLevel >= 0 {
-		for _, it := range shapeFlow(taintFlow, opts.MaxNestingLevel) {
-			if it.step != nil {
-				report.renderFlowStep(out, flowTree, *it.step, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
-			} else {
-				flowTree.Child(fmt.Sprintf("(%d %s hidden)", it.hidden, pluralize(it.hidden, "step")))
+	for _, i := range indices {
+		taintFlow, classifyErr := classifyTaintFlowAt(result, i-1)
+		if classifyErr != nil {
+			output.LogDebugf("No source/sink for flow %d: %s", i, classifyErr)
+			continue
+		}
+
+		header := "Code flow:"
+		if total > 1 {
+			header = fmt.Sprintf("Code flow (%d of %d):", i, total)
+		}
+		flowTree := out.GroupItem(out.Theme().FieldKey.Render(header))
+		shownSnippets := make(map[string]struct{})
+
+		if opts.MaxNestingLevel >= 0 {
+			for _, it := range shapeFlow(taintFlow, opts.MaxNestingLevel) {
+				if it.step != nil {
+					report.renderFlowStep(out, flowTree, *it.step, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
+				} else {
+					flowTree.Child(fmt.Sprintf("(%d %s hidden)", it.hidden, pluralize(it.hidden, "step")))
+					omitted = true
+				}
+			}
+		} else {
+			flowSteps := taintFlow
+			if !opts.VerboseFlow && len(taintFlow) > 2 {
+				flowSteps = []classifiedStep{taintFlow[0], taintFlow[len(taintFlow)-1]}
 				omitted = true
 			}
-		}
-	} else {
-		flowSteps := taintFlow
-		if !opts.VerboseFlow && len(taintFlow) > 2 {
-			flowSteps = []classifiedStep{taintFlow[0], taintFlow[len(taintFlow)-1]}
-			omitted = true
-		}
-		for i, cs := range flowSteps {
-			report.renderFlowStep(out, flowTree, cs, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
-			if !opts.VerboseFlow && len(flowSteps) == 2 && i == 0 {
-				flowTree.Child("")
+			for j, cs := range flowSteps {
+				report.renderFlowStep(out, flowTree, cs, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
+				if !opts.VerboseFlow && len(flowSteps) == 2 && j == 0 {
+					flowTree.Child("")
+				}
 			}
 		}
+
+		findingNode.Child(flowTree)
 	}
 
-	findingNode.Child(flowTree)
 	return findingNode, omitted
 }
 

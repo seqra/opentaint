@@ -73,3 +73,67 @@ func TestPrintAllSeverityGroupSortsByFile(t *testing.T) {
 		t.Error("expected Alpha.java (file-sorted) before Zeta.java within the severity group")
 	}
 }
+
+func TestPrintAllMultiFlowShowsCount(t *testing.T) {
+	r := makeMultiFlowResult("r", Error, "a.java", 1, 3)
+	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: -1})
+	if !strings.Contains(out, "Code flows: 3") {
+		t.Errorf("expected 'Code flows: 3' field on multi-flow finding:\n%s", out)
+	}
+	if !strings.Contains(out, "Code flow (1 of 3)") {
+		t.Errorf("expected '(1 of 3)' header by default:\n%s", out)
+	}
+}
+
+func TestPrintAllSingleFlowNoCount(t *testing.T) {
+	r := makeMultiFlowResult("r", Error, "a.java", 1, 1)
+	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: -1})
+	if strings.Contains(out, "Code flows:") {
+		t.Errorf("single-flow finding should not show 'Code flows:' field:\n%s", out)
+	}
+	if strings.Contains(out, "(1 of 1)") {
+		t.Errorf("single-flow finding should not show '(1 of 1)' header:\n%s", out)
+	}
+	if !strings.Contains(out, "Code flow:") {
+		t.Errorf("single-flow finding should keep plain 'Code flow:' header:\n%s", out)
+	}
+}
+
+func TestPrintAllRendersAllCodeFlows(t *testing.T) {
+	r := makeMultiFlowResult("r", Error, "a.java", 1, 2)
+	out := renderListing(t, makeReport(r), ListingOptions{
+		MaxNestingLevel: -1,
+		CodeFlows:       CodeFlowSelection{All: true},
+	})
+	if !strings.Contains(out, "Code flow (1 of 2)") || !strings.Contains(out, "Code flow (2 of 2)") {
+		t.Errorf("--code-flow all should render every flow:\n%s", out)
+	}
+}
+
+func TestPrintAllRendersSpecificCodeFlow(t *testing.T) {
+	r := makeMultiFlowResult("r", Error, "a.java", 1, 3)
+	out := renderListing(t, makeReport(r), ListingOptions{
+		MaxNestingLevel: -1,
+		CodeFlows:       CodeFlowSelection{Index: 2},
+	})
+	if !strings.Contains(out, "Code flow (2 of 3)") {
+		t.Errorf("--code-flow 2 should render the second flow:\n%s", out)
+	}
+	if strings.Contains(out, "Code flow (1 of 3)") || strings.Contains(out, "Code flow (3 of 3)") {
+		t.Errorf("--code-flow 2 should NOT render other flows:\n%s", out)
+	}
+}
+
+func TestPrintAllCodeFlowOutOfRangeSilentlySkips(t *testing.T) {
+	r := makeMultiFlowResult("r", Error, "a.java", 1, 2)
+	out := renderListing(t, makeReport(r), ListingOptions{
+		MaxNestingLevel: -1,
+		CodeFlows:       CodeFlowSelection{Index: 5},
+	})
+	if !strings.Contains(out, "Code flows: 2") {
+		t.Errorf("count field should still appear when index is out of range:\n%s", out)
+	}
+	if strings.Contains(out, "Code flow (") {
+		t.Errorf("no flow section should be rendered when index is out of range:\n%s", out)
+	}
+}

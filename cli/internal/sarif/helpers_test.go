@@ -47,3 +47,20 @@ func makeFlowResult(ruleID string, level Level, relPath string, line int64, step
 	r.CodeFlows = []CodeFlow{{ThreadFlows: []ThreadFlow{{Locations: steps}}}}
 	return r
 }
+
+// makeMultiFlowResult builds a Result with `flowCount` code flows. Each flow
+// carries two steps (source/sink) with distinct execution orders so they
+// classify correctly.
+func makeMultiFlowResult(ruleID string, level Level, relPath string, line int64, flowCount int) Result {
+	r := makeResult(ruleID, level, relPath, line, nil)
+	r.CodeFlows = make([]CodeFlow, flowCount)
+	for fi := range r.CodeFlows {
+		r.CodeFlows[fi] = CodeFlow{ThreadFlows: []ThreadFlow{{
+			Locations: []ThreadFlowLocation{
+				makeStep(int64(fi*10+1), []string{"source"}, "src"),
+				makeStep(int64(fi*10+2), []string{"sink"}, "sink"),
+			},
+		}}}
+	}
+	return r
+}
