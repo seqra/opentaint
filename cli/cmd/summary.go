@@ -110,7 +110,10 @@ func printSarifSummary(report *sarif.Report, absSarifPath string) {
 
 	hasOmittedFlow := false
 	if showFindings {
-		codeFlowSel, _ := sarif.ParseCodeFlowSelection(summaryCodeFlow) // validated in Run
+		// summaryCodeFlow is either "" (called from scan; ParseCodeFlowSelection("") is valid
+		// and yields the first-flow default) or pre-validated in Run (called from summary),
+		// so the error here cannot fire on either call path.
+		codeFlowSel, _ := sarif.ParseCodeFlowSelection(summaryCodeFlow)
 		opts := sarif.ListingOptions{
 			ShowCodeSnippets: showCodeSnippets,
 			VerboseFlow:      verboseFlow,
