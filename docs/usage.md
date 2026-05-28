@@ -48,6 +48,10 @@ opentaint summary results.sarif --group-by severity --show-findings
 
 # Show all code flows for findings with multiple paths
 opentaint summary results.sarif --show-findings --code-flow all
+
+# Re-triage a single finding by its partial fingerprint (the abbrev shown as
+# the finding header in the listing)
+opentaint summary results.sarif --show-findings --partial-fingerprint deadbeefcafe
 ```
 
 ### IDE Integration
@@ -128,7 +132,7 @@ reflects the full set the tool ran.
 | `--path` | Show only findings whose file path matches this glob (`**` supported, repeatable) |
 | `--severity` | Show only findings of this SARIF level: `error`, `warning`, `note`, `none` (repeatable) |
 | `--rule-id` | Show only findings for this rule: full id, leaf name (after `:` or last `.`), or glob over the full id (repeatable) |
-| `--partial-fingerprint` | Show only findings whose partial fingerprint starts with this value, git-hash style (repeatable) |
+| `--partial-fingerprint` | Show only findings whose partial fingerprint starts with this value, git-hash style (repeatable). With `--show-findings`, each finding's header reads `Fingerprint: <abbrev>` — copy that value back into this flag to re-focus on it. |
 | `--partial-fingerprint-key` | partialFingerprints key matched by `--partial-fingerprint` (default `vulnerabilityWithTraceHash/v1`) |
 | `--max-nesting-level` | Collapse code-flow steps deeper than this call-nesting level (`-1` = no cap). Best-effort: depth is derived from step kinds and method names, so flows lacking method info may over-collapse |
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
