@@ -304,3 +304,43 @@ func TestCopyFlagsFromDoesNotMutateSource(t *testing.T) {
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
+
+func TestSummaryFilterFlags(t *testing.T) {
+	cmd := NewSummaryCommand("/r.sarif").
+		WithShowFindings().
+		WithPath([]string{"src/main/**"}).
+		WithSeverity([]string{"error"}).
+		WithRuleID([]string{"sql-injection"}).
+		WithPartialFingerprint([]string{"abc123"}).
+		WithPartialFingerprintKey("vulnerabilitySourceSinkHash/v1").
+		WithMaxNestingLevel(3).
+		WithGroupBy("severity").
+		Build()
+
+	for _, want := range []string{
+		"opentaint summary /r.sarif",
+		"--path src/main/**",
+		"--severity error",
+		"--rule-id sql-injection",
+		"--partial-fingerprint abc123",
+		"--partial-fingerprint-key vulnerabilitySourceSinkHash/v1",
+		"--max-nesting-level 3",
+		"--group-by severity",
+		"--show-findings",
+	} {
+		if !contains(cmd, want) {
+			t.Errorf("command %q should contain %q", cmd, want)
+		}
+	}
+}
+
+func TestSummaryFilterFlagsOmitDefaults(t *testing.T) {
+	cmd := NewSummaryCommand("/r.sarif").
+		WithMaxNestingLevel(-1).
+		WithGroupBy("file-path").
+		WithPath(nil).
+		Build()
+	if cmd != "opentaint summary /r.sarif" {
+		t.Errorf("defaults should be omitted, got %q", cmd)
+	}
+}
