@@ -126,6 +126,7 @@ fun JavaExec.configureAnalyzer(analyzerRunnerClassName: String) {
     classpath = sourceSets.main.get().runtimeClasspath
 
     ensureSeEnvInitialized()
+    ensureGoEnvInitialized()
 
     doFirst {
         val envVars = analyzerEnvironment()
@@ -166,6 +167,7 @@ fun ShadowJar.jarWithDependencies(name: String, mainClass: String) {
 fun analyzerEnvironment(): Map<String, Any> {
     val analyzerEnv = mutableMapOf<String, Any>()
     setupOpentaintSeEnvironment(analyzerEnv)
+    setupOpentaintGoEnvironment(analyzerEnv)
     return analyzerEnv
 }
 
