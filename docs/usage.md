@@ -45,6 +45,9 @@ opentaint summary results.sarif --rule-id sql-injection-in-spring-app --show-fin
 
 # Group the listing by severity
 opentaint summary results.sarif --group-by severity --show-findings
+
+# Show all code flows for findings with multiple paths
+opentaint summary results.sarif --show-findings --code-flow all
 ```
 
 ### IDE Integration
@@ -129,6 +132,7 @@ reflects the full set the tool ran.
 | `--partial-fingerprint-key` | partialFingerprints key matched by `--partial-fingerprint` (default `vulnerabilityWithTraceHash/v1`) |
 | `--max-nesting-level` | Collapse code-flow steps deeper than this call-nesting level (`-1` = no cap). Best-effort: depth is derived from step kinds and method names, so flows lacking method info may over-collapse |
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
+| `--code-flow` | Render code flows: `all`, a 1-based index, or unset (first flow only). On multi-flow findings the listing also shows a `Code flows: <N>` field. |
 
 Filters combine as OR within a dimension and AND across dimensions.
 
