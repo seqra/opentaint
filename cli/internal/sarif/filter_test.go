@@ -82,3 +82,47 @@ func TestValidateSeverity(t *testing.T) {
 		t.Error("expected 'critical' to be invalid")
 	}
 }
+
+func TestRuleLeaf(t *testing.T) {
+	cases := map[string]string{
+		"rules/java/security:sql-injection-in-spring-app": "sql-injection-in-spring-app", // raw, first ':'
+		"rules.java.sql-injection-in-spring-app":          "sql-injection-in-spring-app", // dotted, last '.'
+		"bare-rule":                                       "bare-rule",                   // neither
+	}
+	for in, want := range cases {
+		if got := ruleLeaf(in); got != want {
+			t.Errorf("ruleLeaf(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestMatchRuleID(t *testing.T) {
+	full := "rules/java/security:sql-injection-in-spring-app"
+	r := makeResult(full, Error, "a.java", 1, nil)
+
+	if !matchRuleID(&r, []string{full}) {
+		t.Error("expected full id to match")
+	}
+	if !matchRuleID(&r, []string{"sql-injection-in-spring-app"}) {
+		t.Error("expected leaf to match")
+	}
+	if !matchRuleID(&r, []string{"rules/java/**"}) {
+		t.Error("expected doublestar glob over full id to match")
+	}
+	if matchRuleID(&r, []string{"other-rule"}) {
+		t.Error("expected unrelated value not to match")
+	}
+	nilRule := Result{}
+	if matchRuleID(&nilRule, []string{"**"}) {
+		t.Error("expected nil rule id not to match")
+	}
+}
+
+func TestFilterRuleIDDimension(t *testing.T) {
+	a := makeResult("rules:sql-injection-in-spring-app", Error, "a.java", 1, nil)
+	b := makeResult("rules:xss", Warning, "b.java", 2, nil)
+	got := makeReport(a, b).Filter(Filters{RuleIDs: []string{"sql-injection-in-spring-app"}})
+	if n := len(got.Runs[0].Results); n != 1 {
+		t.Fatalf("expected 1 result, got %d", n)
+	}
+}

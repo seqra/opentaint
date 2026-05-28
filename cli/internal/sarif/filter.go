@@ -60,6 +60,9 @@ func (f Filters) matches(r *Result) bool {
 	if len(f.Severities) > 0 && !matchSeverity(r, f.Severities) {
 		return false
 	}
+	if len(f.RuleIDs) > 0 && !matchRuleID(r, f.RuleIDs) {
+		return false
+	}
 	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.FingerprintKey, f.Fingerprints) {
 		return false
 	}
@@ -93,6 +96,41 @@ func matchSeverity(r *Result, levels []string) bool {
 	actual := strings.ToLower(string(findingLevel(r)))
 	for _, l := range levels {
 		if strings.ToLower(strings.TrimSpace(l)) == actual {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleLeaf returns the leaf rule name: the part after the first ':' for raw
+// "ruleSetName:rule-name" ids, or after the last '.' for semgrep-style dotted
+// ids, mirroring SemgrepRuleUtils. Returns id unchanged when neither is present.
+func ruleLeaf(id string) string {
+	if i := strings.IndexByte(id, ':'); i >= 0 {
+		return id[i+1:]
+	}
+	if i := strings.LastIndexByte(id, '.'); i >= 0 {
+		return id[i+1:]
+	}
+	return id
+}
+
+// matchRuleID reports whether the result's rule-id matches any supplied value as
+// a full-id exact match, a leaf exact match, or a doublestar glob over the full id.
+func matchRuleID(r *Result, values []string) bool {
+	if r.RuleID == nil {
+		return false
+	}
+	full := *r.RuleID
+	leaf := ruleLeaf(full)
+	for _, v := range values {
+		if v == "" {
+			continue
+		}
+		if v == full || v == leaf {
+			return true
+		}
+		if ok, _ := doublestar.Match(v, full); ok {
 			return true
 		}
 	}
