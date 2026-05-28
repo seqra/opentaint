@@ -36,6 +36,15 @@ opentaint summary --show-findings results.sarif
 
 # With full code flow and code snippets
 opentaint summary --show-findings --verbose-flow --show-code-snippets results.sarif
+
+# Only error-level findings in a path, with up to 3 nesting levels of flow
+opentaint summary results.sarif --severity error --path "src/main/**" --max-nesting-level 3 --show-findings
+
+# Focus a single rule by its leaf name
+opentaint summary results.sarif --rule-id sql-injection-in-spring-app --show-findings
+
+# Group the listing by severity
+opentaint summary results.sarif --group-by severity --show-findings
 ```
 
 ### IDE Integration
@@ -103,13 +112,25 @@ opentaint scan --project-model ./my-project-model
 
 ### opentaint summary
 
-View findings from a SARIF report.
+View findings from a SARIF report. By default it prints the Scan Summary; add
+`--show-findings` for the detailed listing. The filter flags below narrow the
+whole summary (both the counts and the listing); `Rules executed` always
+reflects the full set the tool ran.
 
 | Flag | Description |
 |------|-------------|
 | `--show-findings` | Show all findings |
 | `--show-code-snippets` | Show code snippets for each finding |
 | `--verbose-flow` | Show full code flow steps for each finding |
+| `--path` | Show only findings whose file path matches this glob (`**` supported, repeatable) |
+| `--severity` | Show only findings of this SARIF level: `error`, `warning`, `note`, `none` (repeatable) |
+| `--rule-id` | Show only findings for this rule: full id, leaf name (after `:` or last `.`), or glob over the full id (repeatable) |
+| `--partial-fingerprint` | Show only findings whose partial fingerprint starts with this value, git-hash style (repeatable) |
+| `--partial-fingerprint-key` | partialFingerprints key matched by `--partial-fingerprint` (default `vulnerabilityWithTraceHash/v1`) |
+| `--max-nesting-level` | Collapse code-flow steps deeper than this call-nesting level (`-1` = no cap). Best-effort: depth is derived from step kinds and method names, so flows lacking method info may over-collapse |
+| `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
+
+Filters combine as OR within a dimension and AND across dimensions.
 
 ### opentaint project
 
