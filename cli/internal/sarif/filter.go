@@ -77,6 +77,9 @@ func matchPath(r *Result, patterns []string) bool {
 		return false
 	}
 	for _, p := range patterns {
+		if p == "" {
+			continue
+		}
 		if ok, _ := doublestar.Match(p, rel); ok {
 			return true
 		}

@@ -14,6 +14,10 @@ func TestMatchPath(t *testing.T) {
 	if matchPath(&noLoc, []string{"**"}) {
 		t.Error("expected no-location result not to match")
 	}
+	nilPhys := Result{Locations: []Location{{}}}
+	if matchPath(&nilPhys, []string{"**"}) {
+		t.Error("expected result with nil PhysicalLocation not to match")
+	}
 }
 
 func TestMatchSeverity(t *testing.T) {
