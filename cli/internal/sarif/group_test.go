@@ -35,6 +35,17 @@ func TestGroupKey(t *testing.T) {
 	if k, l := groupKey(&r, groupByFilePath); k != "src/A.java" || l != "src/A.java" {
 		t.Errorf("file-path groupKey = %q/%q", k, l)
 	}
+
+	empty := &Result{} // nil RuleID, no Locations, nil Level
+	if k, l := groupKey(empty, groupByRuleID); k != "<unknown>" || l != "<unknown>" {
+		t.Errorf("nil rule-id groupKey = %q/%q, want <unknown>/<unknown>", k, l)
+	}
+	if k, l := groupKey(empty, groupByFilePath); k != "<unknown>" || l != "<unknown>" {
+		t.Errorf("no-location groupKey = %q/%q, want <unknown>/<unknown>", k, l)
+	}
+	if k, l := groupKey(empty, groupBySeverity); k != "note" || l != "NOTE" {
+		t.Errorf("nil-level groupKey = %q/%q, want note/NOTE", k, l)
+	}
 }
 
 func TestSortGroups(t *testing.T) {
@@ -49,5 +60,11 @@ func TestSortGroups(t *testing.T) {
 	sortGroups(files, groupByFilePath)
 	if !reflect.DeepEqual(files, []string{"a.java", "b.java"}) {
 		t.Errorf("file order = %v", files)
+	}
+
+	rules := []string{"z-rule", "a-rule"}
+	sortGroups(rules, groupByRuleID)
+	if !reflect.DeepEqual(rules, []string{"a-rule", "z-rule"}) {
+		t.Errorf("rule-id order = %v", rules)
 	}
 }
