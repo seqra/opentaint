@@ -33,15 +33,21 @@ func formatFlowStep(cs classifiedStep, absProjectPath string) (string, string) {
 	return mainLine, locationLine
 }
 
-// classifyTaintFlow returns ordered taint steps: source → propagation → sink.
-func classifyTaintFlow(result *Result) ([]classifiedStep, error) {
+// classifyTaintFlowAt returns the ordered taint steps (source -> ... -> sink)
+// of the idx-th (0-based) code flow of the given result. It returns an error
+// when the result has no code flows, when idx is out of range, or when the
+// chosen flow has no thread flows or no locations.
+func classifyTaintFlowAt(result *Result, idx int) ([]classifiedStep, error) {
 	if len(result.CodeFlows) == 0 {
 		return nil, fmt.Errorf("result has no codeFlows")
 	}
+	if idx < 0 || idx >= len(result.CodeFlows) {
+		return nil, fmt.Errorf("code flow index %d out of range (total %d)", idx, len(result.CodeFlows))
+	}
 
-	cf := result.CodeFlows[0]
+	cf := result.CodeFlows[idx]
 	if len(cf.ThreadFlows) == 0 {
-		return nil, fmt.Errorf("result has codeFlows but no threadFlows")
+		return nil, fmt.Errorf("code flow %d has no threadFlows", idx)
 	}
 
 	tf := cf.ThreadFlows[0]
@@ -51,14 +57,13 @@ func classifyTaintFlow(result *Result) ([]classifiedStep, error) {
 
 	steps := tf.Locations
 
-	// Sort by execution order
 	sort.Slice(steps, func(i, j int) bool {
 		li := getExecutionOrder(steps[i])
 		lj := getExecutionOrder(steps[j])
 		return li < lj
 	})
 
-	var out []classifiedStep
+	out := make([]classifiedStep, 0, len(steps))
 	for _, step := range steps {
 		out = append(out, classifiedStep{Step: step})
 	}

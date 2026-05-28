@@ -64,3 +64,28 @@ func TestSelectedIndices(t *testing.T) {
 		})
 	}
 }
+
+func TestClassifyTaintFlowAt(t *testing.T) {
+	// A result with two code flows, each carrying a single distinctive step.
+	r := makeResult("r", Error, "a.java", 1, nil)
+	r.CodeFlows = []CodeFlow{
+		{ThreadFlows: []ThreadFlow{{Locations: []ThreadFlowLocation{makeStep(1, []string{"source"}, "alpha")}}}},
+		{ThreadFlows: []ThreadFlow{{Locations: []ThreadFlowLocation{makeStep(1, []string{"source"}, "beta")}}}},
+	}
+
+	got0, err := classifyTaintFlowAt(&r, 0)
+	if err != nil || len(got0) != 1 || stepMethod(got0[0]) != "alpha" {
+		t.Errorf("flow 0 = %+v, err=%v; want method=alpha", got0, err)
+	}
+	got1, err := classifyTaintFlowAt(&r, 1)
+	if err != nil || len(got1) != 1 || stepMethod(got1[0]) != "beta" {
+		t.Errorf("flow 1 = %+v, err=%v; want method=beta", got1, err)
+	}
+	if _, err := classifyTaintFlowAt(&r, 2); err == nil {
+		t.Error("expected out-of-range error for flow 2")
+	}
+	empty := makeResult("r", Error, "a.java", 1, nil)
+	if _, err := classifyTaintFlowAt(&empty, 0); err == nil {
+		t.Error("expected error for result with no code flows")
+	}
+}

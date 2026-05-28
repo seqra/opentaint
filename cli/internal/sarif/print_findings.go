@@ -105,7 +105,7 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 		findingNode.Child("")
 	}
 
-	taintFlow, err := classifyTaintFlow(result)
+	taintFlow, err := classifyTaintFlowAt(result, 0)
 	if err != nil {
 		output.LogDebugf("No source/sink: %s", err)
 

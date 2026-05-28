@@ -19,9 +19,10 @@ const (
 type ListingOptions struct {
 	ShowCodeSnippets bool
 	VerboseFlow      bool
-	MaxNestingLevel  int            // < 0 means "no cap" (legacy flow rendering)
-	GroupBy          groupDimension // default groupByFilePath
-	FingerprintKey   string         // "" = DefaultFingerprintKey
+	MaxNestingLevel  int               // < 0 means "no cap" (legacy flow rendering)
+	GroupBy          groupDimension    // default groupByFilePath
+	FingerprintKey   string            // "" = DefaultFingerprintKey
+	CodeFlows        CodeFlowSelection // zero value = render first flow only
 }
 
 // ParseGroupDimension converts a --group-by flag value into a groupDimension.
