@@ -1,0 +1,127 @@
+package sarif
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
+)
+
+// DefaultFingerprintKey is the partialFingerprints key matched by
+// --partial-fingerprint when --partial-fingerprint-key is not supplied.
+const DefaultFingerprintKey = "vulnerabilityWithTraceHash/v1"
+
+// Filters describes the finding-selection criteria supplied on the summary
+// command. Empty fields mean "do not filter on this dimension".
+type Filters struct {
+	Paths          []string // doublestar globs against the relative file path
+	Severities     []string // SARIF levels: error/warning/note/none
+	RuleIDs        []string // full id, leaf, or doublestar glob over the full id
+	Fingerprints   []string // git-style prefixes of the chosen fingerprint key's value
+	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
+}
+
+// active reports whether any filter dimension is set.
+func (f Filters) active() bool {
+	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 || len(f.Fingerprints) > 0
+}
+
+// Filter returns a shallow copy of the report whose Runs[].Results contain only
+// the findings matching every supplied filter dimension. Tool.Driver.Rules and
+// OriginalURIBaseIDS are preserved so "Rules executed" stays the full set. When
+// no dimension is set, the original report is returned unchanged.
+func (report *Report) Filter(f Filters) *Report {
+	if !f.active() {
+		return report
+	}
+
+	out := *report
+	out.Runs = make([]Run, len(report.Runs))
+	for i := range report.Runs {
+		run := report.Runs[i] // shallow copy; Tool/OriginalURIBaseIDS shared
+		kept := make([]Result, 0, len(run.Results))
+		for j := range run.Results {
+			if f.matches(&run.Results[j]) {
+				kept = append(kept, run.Results[j])
+			}
+		}
+		run.Results = kept
+		out.Runs[i] = run
+	}
+	return &out
+}
+
+// matches reports whether a single result satisfies every supplied filter
+// dimension (AND across dimensions; OR within a dimension).
+func (f Filters) matches(r *Result) bool {
+	if len(f.Paths) > 0 && !matchPath(r, f.Paths) {
+		return false
+	}
+	if len(f.Severities) > 0 && !matchSeverity(r, f.Severities) {
+		return false
+	}
+	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.FingerprintKey, f.Fingerprints) {
+		return false
+	}
+	return true
+}
+
+// matchPath reports whether the result's primary location's relative file path
+// matches any of the doublestar glob patterns.
+func matchPath(r *Result, patterns []string) bool {
+	if len(r.Locations) == 0 {
+		return false
+	}
+	rel := r.Locations[0].extractNodeLoc().relFilePath
+	if rel == "" {
+		return false
+	}
+	for _, p := range patterns {
+		if ok, _ := doublestar.Match(p, rel); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// matchSeverity reports whether the result's level equals any supplied level
+// (case-insensitive). A nil/empty level is treated as "note".
+func matchSeverity(r *Result, levels []string) bool {
+	actual := strings.ToLower(string(findingLevel(r)))
+	for _, l := range levels {
+		if strings.ToLower(strings.TrimSpace(l)) == actual {
+			return true
+		}
+	}
+	return false
+}
+
+// matchFingerprint reports whether the result's partialFingerprints value under
+// key has any supplied value as a prefix (git short-hash style). When key is
+// empty the default key is used.
+func matchFingerprint(r *Result, key string, prefixes []string) bool {
+	if key == "" {
+		key = DefaultFingerprintKey
+	}
+	val, ok := r.PartialFingerprints[key]
+	if !ok || val == "" {
+		return false
+	}
+	for _, p := range prefixes {
+		if p != "" && strings.HasPrefix(val, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// validSeverities is the set of SARIF levels accepted by --severity.
+var validSeverities = map[string]bool{"error": true, "warning": true, "note": true, "none": true}
+
+// ValidateSeverity returns an error if level is not a recognized SARIF level.
+func ValidateSeverity(level string) error {
+	if validSeverities[strings.ToLower(strings.TrimSpace(level))] {
+		return nil
+	}
+	return fmt.Errorf("invalid --severity %q: valid values are error, warning, note, none", level)
+}
