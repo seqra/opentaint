@@ -137,3 +137,64 @@ func TestPrintAllCodeFlowOutOfRangeSilentlySkips(t *testing.T) {
 		t.Errorf("no flow section should be rendered when index is out of range:\n%s", out)
 	}
 }
+
+func TestPrintAllVerboseSnippetsBlankBetweenSteps(t *testing.T) {
+	// Three flow steps under --verbose-flow --show-code-snippets should render
+	// with N-1 blank lines inserted between consecutive steps; without snippets
+	// (just --verbose-flow) the blanks must not appear.
+	r := makeFlowResult("r", Error, "a.java", 1,
+		makeStep(1, []string{"source"}, "m1"),
+		makeStep(2, []string{"taint"}, "m2"),
+		makeStep(3, []string{"sink"}, "m3"),
+	)
+	with := renderListing(t, makeReport(r), ListingOptions{
+		ShowCodeSnippets: true,
+		VerboseFlow:      true,
+		MaxNestingLevel:  -1,
+	})
+	without := renderListing(t, makeReport(r), ListingOptions{
+		VerboseFlow:     true,
+		MaxNestingLevel: -1,
+	})
+	diff := strings.Count(with, "\n") - strings.Count(without, "\n")
+	if diff != 2 {
+		t.Errorf("expected 2 extra blank lines between 3 verbose+snippets steps, got diff=%d\nwith:\n%s\nwithout:\n%s", diff, with, without)
+	}
+}
+
+func TestPrintAllNestingDropsHiddenPlaceholder(t *testing.T) {
+	// Under --max-nesting-level the (N steps hidden) placeholder must NOT be
+	// rendered (the omitted flag is still set internally so the verbose-flow
+	// suggestion still fires).
+	r := makeFlowResult("r", Error, "a.java", 1,
+		makeStep(1, []string{"source"}, "main"),
+		makeStep(2, []string{"call"}, "main"),
+		makeStep(3, []string{"unknown"}, "helper"),
+		makeStep(4, []string{"unknown"}, "helper"),
+		makeStep(5, []string{"sink"}, "main"),
+	)
+	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: 0})
+	if strings.Contains(out, "hidden") {
+		t.Errorf("expected no '(N steps hidden)' placeholder under --max-nesting-level:\n%s", out)
+	}
+}
+
+func TestPrintAllNestingSnippetsBlankBetweenKeptSteps(t *testing.T) {
+	// Under --max-nesting-level with --show-code-snippets, consecutive KEPT
+	// steps should be separated by a blank line (matching the verbose+snippets
+	// behavior in the legacy branch).
+	r := makeFlowResult("r", Error, "a.java", 1,
+		makeStep(1, []string{"source"}, "main"),
+		makeStep(2, []string{"call"}, "main"),
+		makeStep(3, []string{"unknown"}, "helper"),
+		makeStep(4, []string{"sink"}, "main"),
+	)
+	with := renderListing(t, makeReport(r), ListingOptions{
+		ShowCodeSnippets: true,
+		MaxNestingLevel:  0, // hides the helper step at level 1; keeps source/call/sink
+	})
+	without := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: 0})
+	if !(strings.Count(with, "\n") > strings.Count(without, "\n")) {
+		t.Errorf("expected extra blank lines under nesting+snippets:\nwith:\n%s\nwithout:\n%s", with, without)
+	}
+}

@@ -140,13 +140,19 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 		shownSnippets := make(map[string]struct{})
 
 		if opts.MaxNestingLevel >= 0 {
+			firstStep := true
 			for _, it := range shapeFlow(taintFlow, opts.MaxNestingLevel) {
-				if it.step != nil {
-					report.renderFlowStep(out, flowTree, *it.step, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
-				} else {
-					flowTree.Child(fmt.Sprintf("(%d %s hidden)", it.hidden, pluralize(it.hidden, "step")))
+				if it.step == nil {
+					// Hidden runs flip `omitted` (so the "verbose-flow" suggestion
+					// still fires), but no per-gap placeholder is rendered.
 					omitted = true
+					continue
 				}
+				if !firstStep && opts.ShowCodeSnippets {
+					flowTree.Child("")
+				}
+				report.renderFlowStep(out, flowTree, *it.step, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
+				firstStep = false
 			}
 		} else {
 			flowSteps := taintFlow
@@ -157,6 +163,9 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 			for j, cs := range flowSteps {
 				report.renderFlowStep(out, flowTree, cs, absProjectPath, opts.ShowCodeSnippets, shownSnippets, flowWrap)
 				if !opts.VerboseFlow && len(flowSteps) == 2 && j == 0 {
+					flowTree.Child("")
+				}
+				if opts.VerboseFlow && opts.ShowCodeSnippets && j < len(flowSteps)-1 {
 					flowTree.Child("")
 				}
 			}
