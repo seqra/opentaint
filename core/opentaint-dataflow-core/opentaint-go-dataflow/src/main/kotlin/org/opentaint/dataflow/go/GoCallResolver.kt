@@ -2,6 +2,8 @@ package org.opentaint.dataflow.go
 
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.dataflow.util.copy
+import org.opentaint.dataflow.util.forEach
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRNamedType
 import org.opentaint.ir.go.api.GoIRProgram
@@ -14,6 +16,7 @@ import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRType
 import org.opentaint.ir.go.value.GoIRFunctionValue
 import org.opentaint.ir.go.value.GoIRRegister
+import java.util.BitSet
 
 /**
  * Low-level call resolver for Go. Handles DIRECT, INVOKE, and DYNAMIC call modes.
@@ -86,25 +89,45 @@ class GoCallResolver(
         }
     }
 
+    private data class MethodDescription(val name: String, val paramsCount: Int)
+
     private fun buildInterfaceImplementorsMap(): Map<String, List<GoIRNamedType>> = synchronized(cp) {
         val allTypes = cp.allNamedTypes().toList()
         val interfaces = allTypes.filter { it.kind == GoIRNamedTypeKind.INTERFACE }
         val concreteTypes = allTypes.filter { it.kind != GoIRNamedTypeKind.INTERFACE }
 
-        interfaces.associate { iface ->
-            val requiredMethods = collectInterfaceMethodSignatures(iface)
-            val implementors = if (requiredMethods.isEmpty()) {
-                emptyList()
-            } else {
-                concreteTypes.filter { concrete ->
-                    val concreteMethods = concrete.allMethods().toList()
-                    requiredMethods.all { (name, ifaceParamCount) ->
-                        concreteMethods.any { m ->
-                            m.name == name && methodParamCount(m) == ifaceParamCount
-                        }
-                    }
+        val concreteTypesMethodsIndex by lazy {
+            val methodTypeIndex = hashMapOf<MethodDescription, BitSet>()
+            for ((i, type) in concreteTypes.withIndex()) {
+                for (method in type.allMethods()) {
+                    val methodDesc = MethodDescription(method.name, methodParamCount(method))
+                    methodTypeIndex.getOrPut(methodDesc, ::BitSet).set(i)
                 }
             }
+            methodTypeIndex
+        }
+
+        interfaces.associate { iface ->
+            val requiredMethods = collectInterfaceMethodSignatures(iface)
+            if (requiredMethods.isEmpty()) {
+                return@associate iface.fullName to emptyList()
+            }
+
+            val allRelevantConcreteTypeIndices = requiredMethods.map { (name, ifaceParamCount) ->
+                concreteTypesMethodsIndex[MethodDescription(name, ifaceParamCount)]
+                    ?: return@associate iface.fullName to emptyList()
+            }
+
+            val concreteTypeIndices = allRelevantConcreteTypeIndices.first().copy()
+            allRelevantConcreteTypeIndices.forEach {
+                concreteTypeIndices.and(it)
+            }
+
+            val implementors = mutableListOf<GoIRNamedType>()
+            concreteTypeIndices.forEach {
+                implementors.add(concreteTypes[it])
+            }
+
             iface.fullName to implementors
         }
     }
