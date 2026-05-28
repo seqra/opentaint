@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseGroupDimension(t *testing.T) {
-	cases := map[string]groupDimension{
+	cases := map[string]GroupDimension{
 		"":          groupByFilePath,
 		"file-path": groupByFilePath,
 		"severity":  groupBySeverity,

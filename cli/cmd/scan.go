@@ -451,7 +451,9 @@ func scan(cmd *cobra.Command) {
 		suggestions = appendLogSuggestion(suggestions)
 	}
 	if report != nil {
-		printSarifSummary(report, absSarifReportPath)
+		// Scan does not expose summary's filter/group flags, so pass zero values:
+		// no filtering, default group dimension, first-flow code-flow selection.
+		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1})
 		suggestions = append(suggestions, output.Suggestion{
 			Description: "To view findings run",
 			Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),

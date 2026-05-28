@@ -167,11 +167,8 @@ func findingFiles(report *Report) int {
 
 	for _, run := range report.Runs {
 		for _, result := range run.Results {
-			if len(result.Locations) == 0 {
-				continue
-			}
-			loc := result.Locations[0].extractNodeLoc()
-			if loc.relFilePath == "" {
+			loc, ok := primaryNodeLoc(&result)
+			if !ok || loc.relFilePath == "" {
 				continue
 			}
 			files[loc.relFilePath] = struct{}{}
@@ -266,102 +263,4 @@ func outputItems(out *output.Printer, absSarifReportPath string) []any {
 		items = append(items, out.FieldItem("Log", globals.LogPath))
 	}
 	return items
-}
-
-func (report *Report) PrintAll(out *output.Printer, opts ListingOptions) bool {
-	totalFindings := 0
-	for _, run := range report.Runs {
-		totalFindings += len(run.Results)
-	}
-	if totalFindings == 0 {
-		return false
-	}
-
-	type findingRef struct {
-		runIdx int
-		result *Result
-		file   string
-		line   int64
-		order  int
-	}
-
-	byGroup := make(map[string][]findingRef)
-	labels := make(map[string]string)
-	order := 0
-
-	for runIdx := range report.Runs {
-		run := &report.Runs[runIdx]
-		for resultIdx := range run.Results {
-			order++
-			result := &run.Results[resultIdx]
-
-			file := "<unknown>"
-			line := int64(-1)
-			if len(result.Locations) > 0 {
-				loc := result.Locations[0].extractNodeLoc()
-				if loc.relFilePath != "" {
-					file = loc.relFilePath
-				}
-				line = loc.line
-			}
-
-			key, label := groupKey(result, opts.GroupBy)
-			labels[key] = label
-			byGroup[key] = append(byGroup[key], findingRef{
-				runIdx: runIdx,
-				result: result,
-				file:   file,
-				line:   line,
-				order:  order,
-			})
-		}
-	}
-
-	keys := make([]string, 0, len(byGroup))
-	for k := range byGroup {
-		keys = append(keys, k)
-	}
-	sortGroups(keys, opts.GroupBy)
-
-	hasOmitted := false
-	for keyIdx, key := range keys {
-		group := byGroup[key]
-		sort.Slice(group, func(i, j int) bool {
-			if group[i].file != group[j].file {
-				return group[i].file < group[j].file
-			}
-			if group[i].line != group[j].line {
-				li := group[i].line
-				lj := group[j].line
-				if li < 0 {
-					li = 1<<62 - 1
-				}
-				if lj < 0 {
-					lj = 1<<62 - 1
-				}
-				return li < lj
-			}
-			return group[i].order < group[j].order
-		})
-
-		section := out.Section(fmt.Sprintf("%s [%d]", labels[key], len(group)))
-		for findingIdx, finding := range group {
-			if findingIdx > 0 {
-				section.Line()
-			}
-			node, omitted := report.buildFindingTree(out, finding.result, finding.runIdx, opts)
-			if node != nil {
-				section.Child(node)
-			}
-			if omitted {
-				hasOmitted = true
-			}
-		}
-		section.Render()
-		if keyIdx < len(keys)-1 {
-			out.Blank()
-		}
-	}
-
-	return hasOmitted
 }

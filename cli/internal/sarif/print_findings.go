@@ -74,14 +74,12 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	// (e.g. SARIF generated without generateFingerprint), fall back to the rule
 	// id as the header and skip the Rule subfield (it would just duplicate it).
 	header := rule
-	fpHeader := false
 	if fp := fingerprintAbbrev(result, opts.FingerprintKey); fp != "" {
 		header = th.FieldKey.Render("Fingerprint:") + " " + fp
-		fpHeader = true
 	}
 	findingNode := out.GroupItem(header)
 
-	if fpHeader {
+	if header != rule {
 		findingNode.Child(out.FieldItem("Rule", rule))
 	}
 
@@ -143,11 +141,11 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 			continue
 		}
 
-		header := "Code flow:"
+		flowHeader := "Code flow:"
 		if total > 1 {
-			header = fmt.Sprintf("Code flow (%d of %d):", i, total)
+			flowHeader = fmt.Sprintf("Code flow (%d of %d):", i, total)
 		}
-		flowTree := out.GroupItem(out.Theme().FieldKey.Render(header))
+		flowTree := out.GroupItem(out.Theme().FieldKey.Render(flowHeader))
 		shownSnippets := make(map[string]struct{})
 
 		if opts.MaxNestingLevel >= 0 {

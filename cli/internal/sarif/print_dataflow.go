@@ -183,6 +183,16 @@ type nodeLoc struct {
 	line        int64
 }
 
+// primaryNodeLoc returns the extracted nodeLoc of r's first location and ok=true.
+// When r has no locations it returns the zero nodeLoc and ok=false; callers that
+// need a sentinel "line missing" value (e.g. -1) should initialize it themselves.
+func primaryNodeLoc(r *Result) (nodeLoc, bool) {
+	if len(r.Locations) == 0 {
+		return nodeLoc{}, false
+	}
+	return r.Locations[0].extractNodeLoc(), true
+}
+
 func (loc Location) extractNodeLoc() nodeLoc {
 	if loc.PhysicalLocation == nil || loc.PhysicalLocation.ArtifactLocation == nil || loc.PhysicalLocation.ArtifactLocation.URI == nil {
 		output.LogInfo("Location has no PhysicalLocation/ArtifactLocation/URI")

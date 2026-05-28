@@ -24,10 +24,12 @@ Arguments:
 				out.Fatalf("%s", err)
 			}
 		}
-		if _, err := sarif.ParseGroupDimension(summaryGroupBy); err != nil {
+		dim, err := sarif.ParseGroupDimension(summaryGroupBy)
+		if err != nil {
 			out.Fatalf("%s", err)
 		}
-		if _, err := sarif.ParseCodeFlowSelection(summaryCodeFlow); err != nil {
+		codeFlowSel, err := sarif.ParseCodeFlowSelection(summaryCodeFlow)
+		if err != nil {
 			out.Fatalf("%s", err)
 		}
 
@@ -36,7 +38,7 @@ Arguments:
 		if err != nil {
 			out.Fatalf("Failed to load SARIF report: %s", err)
 		}
-		printSarifSummary(report, absSarifPath)
+		printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
 	},
 }
 
@@ -94,34 +96,39 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	return builder
 }
 
-func printSarifSummary(report *sarif.Report, absSarifPath string) {
-	filtered := report.Filter(sarif.Filters{
+// summaryFilters builds the sarif filter set from the user's summary flag globals.
+// Returns the zero Filters value (no filtering) when called from scan, where the
+// flag globals are at their defaults.
+func summaryFilters() sarif.Filters {
+	return sarif.Filters{
 		Paths:          summaryPaths,
 		Severities:     summarySeverities,
 		RuleIDs:        summaryRuleIDs,
 		Fingerprints:   summaryFingerprints,
 		FingerprintKey: summaryFingerprintKey,
-	})
+	}
+}
 
-	// summaryGroupBy is either "" (called from scan; ParseGroupDimension("") is valid
-	// and yields the file-path default) or pre-validated in Run (called from summary),
-	// so the error here cannot fire on either call path.
-	dim, _ := sarif.ParseGroupDimension(summaryGroupBy)
+// summaryListingOptions builds the listing options from the user's flag globals
+// plus the pre-parsed group dimension and code-flow selection. Keeping the
+// parses at the Run call site means we validate-once and never silently re-parse
+// downstream.
+func summaryListingOptions(dim sarif.GroupDimension, codeFlowSel sarif.CodeFlowSelection) sarif.ListingOptions {
+	return sarif.ListingOptions{
+		ShowCodeSnippets: showCodeSnippets,
+		VerboseFlow:      verboseFlow,
+		MaxNestingLevel:  summaryMaxNestingLevel,
+		GroupBy:          dim,
+		FingerprintKey:   summaryFingerprintKey,
+		CodeFlows:        codeFlowSel,
+	}
+}
+
+func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions) {
+	filtered := report.Filter(filters)
 
 	hasOmittedFlow := false
 	if showFindings {
-		// summaryCodeFlow is either "" (called from scan; ParseCodeFlowSelection("") is valid
-		// and yields the first-flow default) or pre-validated in Run (called from summary),
-		// so the error here cannot fire on either call path.
-		codeFlowSel, _ := sarif.ParseCodeFlowSelection(summaryCodeFlow)
-		opts := sarif.ListingOptions{
-			ShowCodeSnippets: showCodeSnippets,
-			VerboseFlow:      verboseFlow,
-			MaxNestingLevel:  summaryMaxNestingLevel,
-			GroupBy:          dim,
-			FingerprintKey:   summaryFingerprintKey,
-			CodeFlows:        codeFlowSel,
-		}
 		hasOmittedFlow = filtered.PrintAll(out, opts)
 		out.Blank()
 	}

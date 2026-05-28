@@ -21,7 +21,9 @@ type Filters struct {
 	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
 }
 
-// active reports whether any filter dimension is set.
+// active reports whether any filter dimension is set. FingerprintKey is
+// intentionally excluded: it only selects which key Fingerprints matches
+// against, so it has no effect without Fingerprints set.
 func (f Filters) active() bool {
 	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 || len(f.Fingerprints) > 0
 }
@@ -72,13 +74,11 @@ func (f Filters) matches(r *Result) bool {
 // matchPath reports whether the result's primary location's relative file path
 // matches any of the doublestar glob patterns.
 func matchPath(r *Result, patterns []string) bool {
-	if len(r.Locations) == 0 {
+	loc, ok := primaryNodeLoc(r)
+	if !ok || loc.relFilePath == "" {
 		return false
 	}
-	rel := r.Locations[0].extractNodeLoc().relFilePath
-	if rel == "" {
-		return false
-	}
+	rel := loc.relFilePath
 	for _, p := range patterns {
 		if p == "" {
 			continue
