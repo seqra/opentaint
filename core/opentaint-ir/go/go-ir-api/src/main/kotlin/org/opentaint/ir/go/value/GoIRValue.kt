@@ -31,7 +31,7 @@ data class GoIRRegister(
     override val name: String,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitRegister(this)
-    override fun toString(): String = name
+    override fun toString(): String = "%${index}:$name"
 }
 
 /** Sealed interface for constant value representations. */
@@ -68,7 +68,7 @@ data class GoIRParameterValue(
     val paramIndex: Int,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitParameter(this)
-    override fun toString(): String = name
+    override fun toString(): String = "arg${paramIndex}:$name"
 }
 
 data class GoIRFreeVarValue(
@@ -77,7 +77,7 @@ data class GoIRFreeVarValue(
     val freeVarIndex: Int,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitFreeVar(this)
-    override fun toString(): String = name
+    override fun toString(): String = "free${freeVarIndex}:$name"
 }
 
 data class GoIRGlobalValue(
@@ -86,7 +86,7 @@ data class GoIRGlobalValue(
     val global: GoIRGlobal,
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitGlobal(this)
-    override fun toString(): String = name
+    override fun toString(): String = "global:$name"
 }
 
 data class GoIRFunctionValue(
