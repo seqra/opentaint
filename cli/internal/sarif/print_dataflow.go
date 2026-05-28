@@ -75,6 +75,104 @@ func getExecutionOrder(step ThreadFlowLocation) int64 {
 	return 0
 }
 
+// stepMethod returns a step's fully-qualified method name (falling back to its
+// plain name), or "" when no logical location is present.
+func stepMethod(cs classifiedStep) string {
+	loc := cs.Step.Location
+	if loc == nil || len(loc.LogicalLocations) == 0 {
+		return ""
+	}
+	ll := loc.LogicalLocations[0]
+	if ll.FullyQualifiedName != nil {
+		return *ll.FullyQualifiedName
+	}
+	if ll.Name != nil {
+		return *ll.Name
+	}
+	return ""
+}
+
+// hasKind reports whether a step's kinds contain the given kind.
+func hasKind(cs classifiedStep, kind string) bool {
+	for _, k := range cs.Step.Kinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// deriveNestingLevels assigns each flow step a call-depth level derived from its
+// kinds plus logical-location method identity. A step whose kinds contain "call"
+// increases the depth of the steps that follow; a return is inferred when a later
+// step's method matches a method already on the frame stack (depth pops back to
+// it). SARIF emitted without logical methods degrades to depth that only rises.
+func deriveNestingLevels(steps []classifiedStep) []int {
+	type frame struct {
+		method string
+		depth  int
+	}
+	levels := make([]int, len(steps))
+	var stack []frame
+	depth := 0
+	for i := range steps {
+		method := stepMethod(steps[i])
+		if method != "" {
+			for j := len(stack) - 1; j >= 0; j-- {
+				if stack[j].method == method {
+					depth = stack[j].depth
+					stack = stack[:j]
+					break
+				}
+			}
+		}
+		levels[i] = depth
+		if hasKind(steps[i], "call") {
+			stack = append(stack, frame{method: method, depth: depth})
+			depth++
+		}
+	}
+	return levels
+}
+
+// flowRenderItem is one entry to render in a code flow: either a kept step
+// (step != nil) or a "(hidden N steps)" placeholder (hidden > 0).
+type flowRenderItem struct {
+	step   *classifiedStep
+	hidden int
+}
+
+// shapeFlow selects which steps to display under a max nesting level, always
+// keeping the first (source) and last (sink) step, and emits a placeholder for
+// each contiguous run of hidden deeper steps. Pure "call" annotation steps are
+// stripped from the rendered output (they carry no display content).
+func shapeFlow(steps []classifiedStep, maxLevel int) []flowRenderItem {
+	levels := deriveNestingLevels(steps)
+	var items []flowRenderItem
+	hidden := 0
+	flush := func() {
+		if hidden > 0 {
+			items = append(items, flowRenderItem{hidden: hidden})
+			hidden = 0
+		}
+	}
+	for i := range steps {
+		if hasKind(steps[i], "call") {
+			continue
+		}
+		keep := i == 0 || i == len(steps)-1 || levels[i] <= maxLevel
+		if keep {
+			flush()
+			s := steps[i]
+			items = append(items, flowRenderItem{step: &s})
+		} else {
+			hidden++
+		}
+	}
+	flush()
+	return items
+}
+
 type nodeLoc struct {
 	relFilePath string
 	fileName    string
