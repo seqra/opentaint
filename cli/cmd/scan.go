@@ -38,6 +38,7 @@ var (
 	DataflowApproximations     []string
 	TrackExternalMethods       bool
 	DebugFactReachabilitySarif bool
+	EntryPointSelector         string
 )
 
 type RulesetType struct {
@@ -143,6 +144,9 @@ func init() {
 
 	scanCmd.Flags().BoolVar(&DebugFactReachabilitySarif, "debug-fact-reachability-sarif", false, "Generate SARIF with fact reachability info (debug; use with a single rule only)")
 	_ = scanCmd.Flags().MarkHidden("debug-fact-reachability-sarif")
+
+	scanCmd.Flags().StringVar(&EntryPointSelector, "entry-point", "", "Run analysis only on the entry point with this Go function full name (debug; '*' for all)")
+	_ = scanCmd.Flags().MarkHidden("entry-point")
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.
@@ -370,6 +374,9 @@ func scan(cmd *cobra.Command) {
 	}
 	if DebugFactReachabilitySarif {
 		nativeBuilder.EnableDebugFactReachabilitySarif()
+	}
+	if EntryPointSelector != "" {
+		nativeBuilder.SetEntryPointSelector(EntryPointSelector)
 	}
 
 	analyzerJarPath, err := ensureAnalyzerAvailable()

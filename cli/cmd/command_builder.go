@@ -62,6 +62,7 @@ type AnalyzerBuilder struct {
 	dataflowApproximations     []string
 	trackExternalMethods       bool
 	debugFactReachabilitySarif bool
+	entryPointSelector         string
 }
 
 func (a *AnalyzerBuilder) SetProject(projectPath string) *AnalyzerBuilder {
@@ -164,6 +165,11 @@ func (a *AnalyzerBuilder) EnableDebugFactReachabilitySarif() *AnalyzerBuilder {
 	return a
 }
 
+func (a *AnalyzerBuilder) SetEntryPointSelector(sel string) *AnalyzerBuilder {
+	a.entryPointSelector = sel
+	return a
+}
+
 func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 	// For native execution, create a temporary logs directory
 	tempLogsDir, err := os.MkdirTemp("", "opentaint-*")
@@ -251,6 +257,10 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 
 	if a.debugFactReachabilitySarif {
 		flags = append(flags, "--debug-fact-reachability-sarif")
+	}
+
+	if a.entryPointSelector != "" {
+		flags = append(flags, "--debug-run-analysis-on-selected-entry-points", a.entryPointSelector)
 	}
 
 	return append(command, flags...)
