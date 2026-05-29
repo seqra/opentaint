@@ -220,7 +220,7 @@ class DSUAliasAnalysis(
             val info = aliasSetFromInfo(CallReturn(stmt, callFrame.ctx))
             state.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
         } else state
-        if (stmt.cantMutateAliasedHeap()) return resultState
+        if (!isMustAlias || stmt.cantMutateAliasedHeap()) return resultState
 
         val argAliases = IntOpenHashSet()
         stmt.args.forEach { arg ->
@@ -282,15 +282,26 @@ class DSUAliasAnalysis(
                     if (id in heapAliasToRemove) return@forEachInt
 
                     val info = aliasManager.getElementUncheck(id)
-                    if (info !is HeapAlias) return@forEachInt
+                    val children = mutableListOf<AAInfo>()
+                    var curInfo = info
 
-                    val instanceRepr = aliasGroupRepr(info.instance)
-                    if (instanceRepr !in invalidAliasRepr && !instanceRepr.aliasInfoIsSimpleOuter()) return@forEachInt
+                    while (curInfo is HeapAlias) {
+                        if (isHeapImmutable(curInfo, IntOpenHashSet())) return@forEachInt
 
-                    if (isHeapImmutable(info, IntOpenHashSet())) return@forEachInt
+                        val parentRepr = aliasGroupRepr(curInfo.instance)
+                        if (parentRepr in invalidAliasRepr || parentRepr.aliasInfoIsSimpleOuter())
+                            break
 
-                    heapAliasToRemove.add(id)
-                    invalidAliasRepr.add(aliasGroupRepr(id))
+                        children.add(curInfo)
+                        curInfo = aliasManager.getElementUncheck(parentRepr)
+                    }
+                    if (curInfo !is HeapAlias) return@forEachInt
+
+                    children.forEach {
+                        val child = it.index()
+                        heapAliasToRemove.add(child)
+                        invalidAliasRepr.add(aliasGroupRepr(child))
+                    }
                 }
             }
         } while (heapAliasToRemove.size + invalidAliasRepr.size > sizeBefore)
@@ -311,7 +322,7 @@ class DSUAliasAnalysis(
             is CallReturn -> true
             is LocalAlias.SimpleLoc -> aInfo.loc.isOuter()
             is LocalAlias.Alloc -> false
-            is HeapAlias -> aInfo.instance.aliasInfoIsSimpleOuter()
+            is HeapAlias -> false
         }
 
     private fun evalSimple(stmt: Stmt.NoCall, callFrame: CallTreeNode, state: State): State = when (stmt) {
