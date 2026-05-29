@@ -4480,6 +4480,10 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: flask.request.form.get
+  copy:
+    - from: this
+      to: result
 - attribute: flask.request.files
   copy:
   - from: this

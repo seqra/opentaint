@@ -203,3 +203,15 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: configparser.ConfigParser.set
+  copy:
+    - from: arg(2)
+      to:
+      - this
+      - .Element
+- function: configparser.ConfigParser.get
+  copy:
+    - from:
+      - this
+      - .Element
+      to: result
