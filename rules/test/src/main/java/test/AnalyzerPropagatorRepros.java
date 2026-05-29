@@ -20,7 +20,7 @@ import org.opentaint.sast.test.util.PositiveRuleSample;
  * helper that has no built-in passThrough model. Without the propagator
  * the analyzer kills the dataflow fact at the helper call and the rule
  * cannot reach its sink; once the passThrough rule is added to
- * {@code core/opentaint-config/config/config/stdlib.yaml}, each sample
+ * {@code core/opentaint-config/java-config/config/java-config/stdlib.yaml}, each sample
  * flips from {@code falseNegative} to {@code success}.
  *
  * Pair each repro with a corresponding entry in stdlib.yaml:

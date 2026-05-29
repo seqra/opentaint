@@ -4,13 +4,13 @@ on:
   push:
     paths:
       - 'rules/**'
-      - 'core/opentaint-config/config/**'
+      - 'core/opentaint-config/java-config/config/**'
       - '.github/workflows/ci-rules.yaml'
     branches: [ "main" ]
   pull_request:
     paths:
       - 'rules/**'
-      - 'core/opentaint-config/config/**'
+      - 'core/opentaint-config/java-config/config/**'
       - '.github/workflows/ci-rules.yaml'
     branches: [ "main" ]
   workflow_dispatch:
@@ -92,12 +92,12 @@ jobs:
         run: |
           # The rule-test runner (--debug-run-rule-tests -> TestProjectAnalyzer)
           # loads taint passThrough rules only from the analyzer jar's bundled
-          # /config resources (loadDefaultConfig -> ConfigLoader); it does NOT read
+          # /java-config resources (loadDefaultConfig -> ConfigLoader); it does NOT read
           # --approximations-config. The released analyzer jar is built from main,
           # so its bundled config lacks the propagators kept in this repo's source
           # tree, which surfaces as false negatives. Overlay the in-repo propagators
-          # (core/opentaint-config/config/config -> jar entries under config/) so the
-          # rule tests run against the source config.
+          # (core/opentaint-config/java-config/config/java-config -> jar entries under
+          # java-config/) so the rule tests run against the source config.
           #
           # Use `zip`, not `jar uf`: the analyzer is a shadow/fat jar with duplicate
           # directory entries (e.g. `org/`). `jar uf` rewrites the whole archive via
@@ -106,7 +106,7 @@ jobs:
           # entries as-is and only replaces/adds the config files.
           apt-get update && apt-get install -y zip
           JAR="$PWD/opentaint-analyzer/opentaint-project-analyzer.jar"
-          ( cd core/opentaint-config/config && zip -r "$JAR" config )
+          ( cd core/opentaint-config/java-config/config && zip -r "$JAR" java-config )
 
       - name: Run OpenTaint analyzer
         env:
