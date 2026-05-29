@@ -23,7 +23,7 @@ class JIRLocalAliasAnalysis(
     data class Params(
         val useAliasAnalysis: Boolean = true,
         val aliasAnalysisInterProcCallDepth: Int = 0,
-        val aliasAnalysisTimeLimit: Duration = 10.seconds,
+        val aliasAnalysisTimeLimit: Duration = Cancellation.getActiveDuration(10.seconds),
     )
 
     private val mayAliasInfo by lazy { computeMay() }
