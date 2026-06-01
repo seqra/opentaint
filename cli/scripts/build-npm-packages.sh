@@ -51,6 +51,11 @@ for entry in "${PLATFORMS[@]}"; do
     tar -xzf "$archive" -C "$pkg_dir"
   fi
 
+  if [ ! -e "$pkg_dir/$_bin" ]; then
+    echo "ERROR: expected binary '$_bin' not found after extracting $archive" >&2
+    exit 1
+  fi
+
   NAME="$pkg_name" VERSION="$VERSION" OS="$npm_os" CPU="$npm_cpu" \
   python3 - "$NPM_SRC/platform.tmpl.json" "$pkg_dir/package.json" <<'PY'
 import json, os, sys
