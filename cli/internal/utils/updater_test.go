@@ -33,6 +33,21 @@ func TestClassifyExePath(t *testing.T) {
 			InstallMethodHomebrew,
 		},
 		{
+			"npm global node_modules",
+			"/usr/local/lib/node_modules/@seqra/opentaint-linux-x64/opentaint",
+			InstallMethodNpm,
+		},
+		{
+			"npm local node_modules",
+			"/home/user/project/node_modules/@seqra/opentaint-darwin-arm64/opentaint",
+			InstallMethodNpm,
+		},
+		{
+			"npm windows node_modules",
+			"C:\\Users\\me\\AppData\\Roaming\\npm\\node_modules\\@seqra\\opentaint-win32-x64\\opentaint.exe",
+			InstallMethodNpm,
+		},
+		{
 			"binary fallback",
 			"/usr/local/bin/opentaint",
 			InstallMethodBinary,
@@ -191,5 +206,15 @@ func TestSelfUpdate(t *testing.T) {
 	}
 	if string(jreData) != string(jreContent) {
 		t.Errorf("jre content = %q, want %q", string(jreData), string(jreContent))
+	}
+}
+
+func TestUpdateHintNpm(t *testing.T) {
+	got := npmUpdateHint("9.9.9")
+	if !strings.Contains(got, "npm install -g @seqra/opentaint@latest") {
+		t.Errorf("npmUpdateHint() = %q, want it to mention the npm upgrade command", got)
+	}
+	if !strings.Contains(got, "9.9.9") {
+		t.Errorf("npmUpdateHint() = %q, want it to mention the version", got)
 	}
 }

@@ -18,6 +18,7 @@ const (
 	InstallMethodUnknown InstallMethod = iota
 	InstallMethodHomebrew
 	InstallMethodBinary
+	InstallMethodNpm
 )
 
 // DetectInstallMethod detects how opentaint was installed based on the executable path.
@@ -34,11 +35,17 @@ func DetectInstallMethod() (InstallMethod, string) {
 	return classifyExePath(exe), exe
 }
 
+func npmUpdateHint(latestVersion string) string {
+	return fmt.Sprintf("A new version is available: v%s. Run \"npm install -g @seqra/opentaint@latest\" to update.", latestVersion)
+}
+
 func UpdateHint(latestVersion string) string {
 	method, _ := DetectInstallMethod()
 	switch method {
 	case InstallMethodHomebrew:
 		return fmt.Sprintf("A new version is available: v%s. Run \"brew upgrade --cask opentaint\" to update.", latestVersion)
+	case InstallMethodNpm:
+		return npmUpdateHint(latestVersion)
 	default:
 		return fmt.Sprintf("A new version is available: v%s. Run \"opentaint update\" to update.", latestVersion)
 	}
@@ -48,6 +55,9 @@ func classifyExePath(exePath string) InstallMethod {
 	lowerPath := strings.ToLower(exePath)
 	if strings.Contains(lowerPath, "/cellar/") || strings.Contains(lowerPath, "/caskroom/") || strings.Contains(lowerPath, "/homebrew/") {
 		return InstallMethodHomebrew
+	}
+	if strings.Contains(lowerPath, "/node_modules/") || strings.Contains(lowerPath, "\\node_modules\\") {
+		return InstallMethodNpm
 	}
 	return InstallMethodBinary
 }
