@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.go.graph
 
+import mu.KLogging
 import org.opentaint.dataflow.go.GoCallResolver
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.ifds.UnitResolver
@@ -38,9 +39,29 @@ class GoApplicationGraph(
         node.location.functionBody.function
 
     override fun methodGraph(method: GoIRFunction): ApplicationGraph.MethodGraph<GoIRFunction, GoIRInst> {
-        check(method.bodyAvailable) { "Function ${method.fullName} body is not available" }
-        val body = method.body ?: error("Function ${method.fullName} has no body")
+        if (!method.bodyAvailable) {
+            logger.error("Function ${method.fullName} body is not available")
+            return GoErrorFunctionGraph(this, method)
+        }
+
+        val body = method.body
+        if (body == null) {
+            logger.error("Function ${method.fullName} has no body")
+            return GoErrorFunctionGraph(this, method)
+        }
+
         return GoFunctionGraph(this, method, body)
+    }
+
+    private class GoErrorFunctionGraph(
+        override val applicationGraph: GoApplicationGraph,
+        override val method: GoIRFunction,
+    ) : ApplicationGraph.MethodGraph<GoIRFunction, GoIRInst> {
+        override fun predecessors(node: GoIRInst): Sequence<GoIRInst> = emptySequence()
+        override fun successors(node: GoIRInst): Sequence<GoIRInst> = emptySequence()
+        override fun entryPoints(): Sequence<GoIRInst> = emptySequence()
+        override fun exitPoints(): Sequence<GoIRInst> = emptySequence()
+        override fun statements(): Sequence<GoIRInst> = emptySequence()
     }
 
     class GoFunctionGraph(
@@ -62,5 +83,9 @@ class GoApplicationGraph(
 
         override fun statements(): Sequence<GoIRInst> =
             body.instructions.asSequence()
+    }
+
+    companion object {
+        private val logger = object : KLogging() {}.logger
     }
 }
