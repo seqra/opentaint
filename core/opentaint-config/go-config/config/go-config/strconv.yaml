@@ -68,3 +68,73 @@ passThrough:
   copy:
   - from: arg(0)
     to: result(2)
+- function:
+    package: strconv
+    name: Atoi
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseInt
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseUint
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseFloat
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseBool
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: Itoa
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatInt
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatUint
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatFloat
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatBool
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
