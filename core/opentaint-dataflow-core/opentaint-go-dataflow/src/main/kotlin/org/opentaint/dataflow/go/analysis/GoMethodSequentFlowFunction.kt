@@ -14,6 +14,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceIn
 import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
+import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access.RefAccess
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.analysis.GoMethodCallResolver.ClosureCreationFlowFunction
 import org.opentaint.dataflow.go.rules.TaintRule
@@ -108,12 +109,17 @@ class GoMethodSequentFlowFunction(
         if (expr is GoIRMakeClosureExpr) {
             return handleMakeClosure(initialFact, currentFact, registerBase, expr)
         }
+
+        if (expr is GoIRNextExpr) {
+            return handleNext(initialFact, currentFact, registerBase, expr)
+        }
+
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)
             ?: return handleNonPropagatingExpr(currentFact, registerBase)
 
         return when (rhsAccess) {
             is Access.Simple -> handleSimpleAssign(initialFact, currentFact, registerBase, rhsAccess.base)
-            is Access.RefAccess -> handleRefAssign(initialFact, currentFact, registerBase, rhsAccess)
+            is RefAccess -> handleNormalRefAssign(initialFact, currentFact, registerBase, rhsAccess)
         }
     }
 
@@ -204,26 +210,31 @@ class GoMethodSequentFlowFunction(
         val iterBase = GoFlowFunctionUtils.accessPathBase(expr.iter, method)
             ?: return handleNonPropagatingExpr(currentFact, registerBase)
 
-        val result = handleSimpleAssign(initialFact, currentFact, registerBase, iterBase).toMutableSet()
-
-        if (currentFact.base == iterBase && currentFact.startsWithAccessor(ElementAccessor)) {
-            val element = currentFact.readAccessor(ElementAccessor)
-            if (element != null) {
-                for (slot in GoFlowFunctionUtils.rangeElementTupleSlots(expr, method)) {
-                    val slotFact = element.rebase(registerBase).prependAccessor(slot)
-                    result.add(makeEdge(initialFact, slotFact))
-                }
+        return handleComplexRefAssign(
+            initialFact, currentFact, registerBase,
+            RefAccess(iterBase, ElementAccessor)
+        ) { elementFact ->
+            GoFlowFunctionUtils.rangeElementTupleSlots(expr, method).map { slot ->
+                elementFact.rebase(registerBase).prependAccessor(slot)
             }
         }
-
-        return result
     }
 
-    private fun handleRefAssign(
+    private fun handleNormalRefAssign(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
         toBase: AccessPathBase,
-        rhsAccess: Access.RefAccess,
+        rhsAccess: RefAccess,
+    ): Set<Sequent> = handleComplexRefAssign(initialFact, currentFact, toBase, rhsAccess) { fact ->
+        listOf(fact.rebase(toBase))
+    }
+
+    private fun handleComplexRefAssign(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        toBase: AccessPathBase,
+        rhsAccess: RefAccess,
+        mkAssignedFacts: (FinalFactAp) -> List<FinalFactAp>,
     ): Set<Sequent> {
         val result = mutableSetOf<Sequent>()
 
@@ -240,7 +251,9 @@ class GoMethodSequentFlowFunction(
                 // Concrete: strip accessor and rebase
                 val readFact = currentFact.readAccessor(rhsAccess.accessor)
                 if (readFact != null) {
-                    result.add(makeEdge(initialFact, readFact.rebase(toBase)))
+                    mkAssignedFacts(readFact).forEach {
+                        result.add(makeEdge(initialFact, it))
+                    }
                 }
             } else if (currentFact.isAbstract()
                 && !currentFact.exclusions.contains(rhsAccess.accessor)
@@ -283,7 +296,7 @@ class GoMethodSequentFlowFunction(
         val result = mutableSetOf<Sequent>()
 
         when (writeTo) {
-            is Access.RefAccess -> {
+            is RefAccess -> {
                 val destBase = writeTo.base
                 val accessor = writeTo.accessor
 
@@ -291,7 +304,8 @@ class GoMethodSequentFlowFunction(
                 if (currentFact.base == destBase) {
                     if (currentFact.startsWithAccessor(accessor)) {
                         if (accessor is ElementAccessor) {
-                            result.add(Sequent.Unchanged) // Weak update for elements
+                            // Weak update for elements
+                            result.add(makeEdge(initialFact, currentFact))
                         }
                         // FieldAccessor: strong update — don't preserve
                     } else if (currentFact.isAbstract()

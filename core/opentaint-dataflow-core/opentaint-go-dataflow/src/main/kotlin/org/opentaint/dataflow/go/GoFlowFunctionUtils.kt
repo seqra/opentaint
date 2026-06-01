@@ -272,6 +272,31 @@ object GoFlowFunctionUtils {
         return FieldAccessor("tuple", "\$$index", elementType.displayName)
     }
 
+    fun rangeElementTupleSlots(expr: GoIRNextExpr, method: GoIRFunction): List<FieldAccessor> {
+        val collectionType = rangedCollectionType(expr, method) ?: return emptyList()
+        return when (val underlying = resolveUnderlyingType(collectionType)) {
+            is GoIRMapType -> listOf(
+                tupleFieldAccessor(1, underlying.key),
+                tupleFieldAccessor(2, underlying.value),
+            )
+            is GoIRSliceType -> listOf(tupleFieldAccessor(2, underlying.elem))
+            is GoIRArrayType -> listOf(tupleFieldAccessor(2, underlying.elem))
+            else -> emptyList()
+        }
+    }
+
+    private fun rangedCollectionType(expr: GoIRNextExpr, method: GoIRFunction): GoIRType? {
+        val iter = expr.iter as? GoIRRegister ?: return null
+        val rangeExpr = (findDefInst(iter, method) as? GoIRAssignInst)?.expr as? GoIRRangeExpr ?: return null
+        return rangeExpr.x.type
+    }
+
+    private fun resolveUnderlyingType(type: GoIRType): GoIRType = when (type) {
+        is GoIRNamedTypeRef -> resolveUnderlyingType(type.namedType.underlying)
+        is GoIRPointerType -> resolveUnderlyingType(type.elem)
+        else -> type
+    }
+
     fun freeVarAccessor(function: GoIRFunction, argSlot: Int): FieldAccessor {
         return FieldAccessor(function.fullName, "freeVar$$argSlot", "")
     }
