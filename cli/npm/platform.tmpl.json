@@ -1,0 +1,11 @@
+{
+  "name": "PLACEHOLDER_NAME",
+  "version": "PLACEHOLDER_VERSION",
+  "description": "Platform-specific binary for opentaint.",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "https://github.com/seqra/opentaint.git" },
+  "homepage": "https://github.com/seqra/opentaint",
+  "os": ["PLACEHOLDER_OS"],
+  "cpu": ["PLACEHOLDER_CPU"],
+  "publishConfig": { "access": "public" }
+}

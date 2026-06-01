@@ -1,0 +1,12 @@
+{
+  "name": "@seqra/opentaint",
+  "version": "PLACEHOLDER_VERSION",
+  "description": "The open source taint analysis engine for the AI era.",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "https://github.com/seqra/opentaint.git" },
+  "homepage": "https://github.com/seqra/opentaint",
+  "bin": { "opentaint": "bin/opentaint.js" },
+  "files": ["bin/"],
+  "optionalDependencies": {},
+  "publishConfig": { "access": "public" }
+}
