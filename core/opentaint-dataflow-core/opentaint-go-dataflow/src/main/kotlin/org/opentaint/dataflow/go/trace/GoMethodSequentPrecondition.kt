@@ -166,6 +166,28 @@ class GoMethodSequentPrecondition(
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method) ?: return
         val addrAccess = GoFlowFunctionUtils.accessForAddr(inst.addr, method) ?: return
 
+        // todo: use alias analysis
+        val chain = GoFlowFunctionUtils.resolveAddrChain(inst.addr, method)
+        if (chain != null && chain.second.size > 1) {
+            // Limitation: multi-level chains are handled as strong updates; a chain whose leaf is an index-addr (&%X[i], ElementAccessor) would skip the weak-update passthrough the single-level path emits. No such chain is exercised today (Pattern 6 chains are all named-field). Revisit if a multi-level index-leaf chain appears.
+            val (rootBase, leafFirst) = chain
+            if (fact.base == rootBase) {
+                // Strip accessors outermost-first: the path is `.n1.n1.n1.v`, so we
+                // peel in reverse of leaf-first order.
+                var cur: InitialFactAp? = fact
+                for (acc in leafFirst.asReversed()) {
+                    val f = cur ?: break
+                    if (!f.startsWithAccessor(acc)) { cur = null; break }
+                    cur = f.readAccessor(acc)
+                }
+                if (cur != null) {
+                    result.addPreFact(fact, cur.rebase(valueBase))
+                }
+            }
+            // Fact on root but not matching the full chain (sibling field) — unchanged.
+            return
+        }
+
         when (addrAccess) {
             is Access.RefAccess -> {
                 val destBase = addrAccess.base
@@ -328,7 +350,7 @@ class GoMethodSequentPrecondition(
             sourceRules += analysisContext.taint.taintConfig.sourceRulesForFieldRead(fieldName)
         }
 
-        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method)
+        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst)
         if (globalName != null) {
             sourceRules += analysisContext.taint.taintConfig.sourceRulesForGlobal(globalName)
         }
@@ -356,6 +378,37 @@ class GoMethodSequentPrecondition(
                 fact, TaintRulePrecondition.Source(rule, sourceActions)
             )
         }
+    }
+
+    // Forward counterpart: GoMethodSequentFlowFunction.handleCommaOkTypeAssert — keep in lockstep (same tuple$0 slot, same commaOk guard).
+    private fun handleCommaOkTypeAssertPrecondition(
+        fact: InitialFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRTypeAssertExpr,
+        result: MutableSet<SequentPrecondition>,
+    ) {
+        // The (value, ok) result is written to `registerBase`. A fact unrelated to
+        // the register passes through unchanged.
+        if (fact.base != registerBase) return
+
+        // The forward direction only taints the value slot (tuple index 0). A
+        // post-fact on the register must therefore live under the $0 accessor and
+        // its precondition is the operand fact (with the slot accessor stripped).
+        // Anything else on the register (e.g. the clean `ok` bool slot) is killed.
+        val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0, expr.assertedType)
+        if (!fact.startsWithAccessor(valueSlot)) {
+            result.addKill(fact)
+            return
+        }
+        val stripped = fact.readAccessor(valueSlot) ?: run {
+            result.addKill(fact)
+            return
+        }
+        val operandBase = GoFlowFunctionUtils.accessPathBase(expr.x, method) ?: run {
+            result.addKill(fact)
+            return
+        }
+        result.addPreFact(fact, stripped.rebase(operandBase))
     }
 
     private fun handleStringConcatPrecondition(
