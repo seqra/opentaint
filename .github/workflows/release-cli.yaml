@@ -259,7 +259,7 @@ jobs:
               return 0
             fi
             # Re-running a release must not fail on an already-published version.
-            if grep -qiE "cannot publish over|previously published|you cannot publish over the previously published versions|EPUBLISHCONFLICT|403" "$log"; then
+            if grep -qiE "cannot publish over|previously published|EPUBLISHCONFLICT" "$log"; then
               echo "Already published (skipping): $dir"
               cat "$log"
               return 0
