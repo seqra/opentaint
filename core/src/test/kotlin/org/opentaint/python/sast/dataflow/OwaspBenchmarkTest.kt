@@ -14,6 +14,7 @@ import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.walk
 import kotlin.io.path.writeText
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 /**
@@ -79,7 +80,26 @@ class OwaspBenchmarkTest : AnalysisTest() {
     }
 
     @Test
-    fun sqlInjection() {
-        assertSinkNotReachable("testcode.BenchmarkTest00283.init\$BenchmarkTest00283_post")
+    fun benchmarkTest00011() {
+        assertSinkNotReachable(getFunctionName("00011"))
+    }
+
+    @Ignore
+    @Test
+    fun benchmarkTest00283() {
+        assertSinkReachable(getFunctionName("00283"))
+    }
+
+    @Ignore
+    @Test
+    fun benchmarkTest00099() {
+        assertSinkReachable(getFunctionName("00099"))
+    }
+
+
+    private fun getFunctionName(id: String): String {
+        require(id.length == 5 && id.all { it.isDigit() }) { "Invalid test id" }
+
+        return "testcode.BenchmarkTest$id.init\$BenchmarkTest${id}_post"
     }
 }

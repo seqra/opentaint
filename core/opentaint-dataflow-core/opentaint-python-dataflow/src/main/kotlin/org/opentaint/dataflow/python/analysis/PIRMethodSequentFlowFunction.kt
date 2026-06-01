@@ -1,8 +1,11 @@
 package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -10,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.python.PIRCallResolver
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
@@ -53,27 +57,34 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> {
-        return when (instruction) {
-            is PIRAssign -> handleAssignZero(instruction, currentFactAp)
-            is PIRLoadAttr -> handleLoadAttrZero(instruction, currentFactAp)
-            is PIRReturn -> handleReturnShared(instruction, currentFactAp) { Sequent.ZeroToFact(it, null) }
-            is PIRStoreAttr -> handleStoreAttrShared(instruction, currentFactAp) { Sequent.ZeroToFact(it, null) }
-            is PIRStoreSubscript -> handleStoreSubscriptShared(instruction, currentFactAp) { Sequent.ZeroToFact(it, null) }
-            else -> setOf(Sequent.Unchanged)
-        }
+    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> = buildSet {
+        propagateFact(
+            currentFactAp = currentFactAp,
+            unchanged = { this += Sequent.Unchanged },
+            propagateFact = { this += Sequent.ZeroToFact(it, null) },
+            propagateFactWithAccessorExclude = { _, _ -> error("Zero fact can't carry an accessor exclusion") },
+            addSideEffectRequirement = { error("Can't refine Zero fact") },
+        )
     }
 
     override fun propagateFactToFact(
         initialFactAp: InitialFactAp,
         currentFactAp: FinalFactAp,
-    ): Set<Sequent> = when (instruction) {
-        is PIRAssign -> handleAssignFact(instruction, initialFactAp, currentFactAp)
-        is PIRLoadAttr -> handleLoadAttrFact(instruction, initialFactAp, currentFactAp)
-        is PIRReturn -> handleReturnShared(instruction, currentFactAp) { Sequent.FactToFact(initialFactAp, it, null) }
-        is PIRStoreAttr -> handleStoreAttrFact(instruction, initialFactAp, currentFactAp)
-        is PIRStoreSubscript -> handleStoreSubscriptFact(instruction, initialFactAp, currentFactAp)
-        else -> setOf(Sequent.Unchanged)
+    ): Set<Sequent> = buildSet {
+        propagateFact(
+            currentFactAp = currentFactAp,
+            unchanged = { this += Sequent.Unchanged },
+            propagateFact = { this += Sequent.FactToFact(initialFactAp, it, null) },
+            propagateFactWithAccessorExclude = { fact, accessor ->
+                // Exclude the accessor on BOTH edge ends so the edge stays well-formed.
+                this += Sequent.FactToFact(initialFactAp.exclude(accessor), fact.exclude(accessor), null)
+            },
+            addSideEffectRequirement = { reader ->
+                this += Sequent.SideEffectRequirement(
+                    reader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty))
+                )
+            },
+        )
     }
 
     override fun propagateNDFactToFact(
@@ -81,139 +92,111 @@ class PIRMethodSequentFlowFunction(
         currentFactAp: FinalFactAp,
     ): Set<Sequent> = setOf(Sequent.Unchanged)
 
+    /**
+     * Shared dispatch over the instruction kind. Results are collected by the caller's
+     * Unit-returning lambdas (mirrors [PIRMethodCallFlowFunction.propagateFact]).
+     */
+    private fun propagateFact(
+        currentFactAp: FinalFactAp,
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+    ) {
+        when (instruction) {
+            is PIRAssign -> handleAssign(
+                assign = instruction,
+                currentFactAp = currentFactAp,
+                unchanged = unchanged,
+                propagateFact = propagateFact,
+                propagateFactWithAccessorExclude = propagateFactWithAccessorExclude,
+            )
+            is PIRLoadAttr -> handleAttrRead(
+                inst = instruction,
+                currentFactAp = currentFactAp,
+                unchanged = unchanged,
+                propagateFact = propagateFact,
+                propagateFactWithAccessorExclude = propagateFactWithAccessorExclude,
+                addSideEffectRequirement = addSideEffectRequirement,
+            )
+            is PIRReturn -> handleReturn(instruction, currentFactAp, unchanged, propagateFact)
+            is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact)
+            is PIRStoreSubscript -> handleStoreSubscript(instruction, currentFactAp, unchanged, propagateFact)
+            else -> unchanged()
+        }
+    }
+
     // ==========================================================================
     // Assignment: target = expr
     // ==========================================================================
 
     /**
-     * ZeroToFact propagation through assignment.
-     * Handles simple copy and field/subscript reads from compound expressions.
-     */
-    private fun handleAssignZero(
-        assign: PIRAssign,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> {
-        val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target)
-            ?: return setOf(Sequent.Unchanged)
-
-        return handleAssignExpr(assign.expr, assignTo, currentFactAp) { Sequent.ZeroToFact(it, null) }
-    }
-
-    /**
-     * FactToFact propagation through assignment.
-     * Handles simple copy, field reads, subscript reads, and strong updates.
-     */
-    private fun handleAssignFact(
-        assign: PIRAssign,
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> {
-        val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target)
-            ?: return setOf(Sequent.Unchanged)
-
-        return handleAssignExpr(assign.expr, assignTo, currentFactAp) {
-            Sequent.FactToFact(initialFactAp, it, null)
-        }
-    }
-
-    /**
-     * Core assignment handling for both ZeroToFact and FactToFact.
-     * Dispatches based on expression type:
+     * Assignment `target = expr`. Dispatches based on expression type:
      * - Simple value (PIRValue): variable-to-variable copy
      * - PIRSubscriptExpr: subscript read (x = obj[i])
+     * - Container/binary/string: taint flows from operands
      * - Other compound: strong update (kill) on target
      */
-    private inline fun handleAssignExpr(
-        expr: PIRExpr,
-        assignTo: AccessPathBase,
+    private fun handleAssign(
+        assign: PIRAssign,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+    ) {
+        val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target) ?: return unchanged()
+        val expr = assign.expr
+
         // Case 1: Simple value copy (x = y)
         if (expr is PIRValue) {
             val assignFrom = PIRFlowFunctionUtils.accessPathBase(expr)
             if (assignFrom != null) {
-                val results = mutableSetOf<Sequent>()
                 if (currentFactAp.base == assignFrom) {
-                    results.add(mkCopy(currentFactAp.rebase(assignTo)))
-                    results.add(Sequent.Unchanged) // keep on source too
+                    propagateFact(currentFactAp.rebase(assignTo))
+                    unchanged() // keep on source too
                 } else if (currentFactAp.base == assignTo) {
                     // Strong update: kill fact on overwritten target
                 } else {
-                    results.add(Sequent.Unchanged)
+                    unchanged()
                 }
-                return results
+                return
             }
             // Constant or unresolvable value — kill if overwriting target, else pass
-            return if (currentFactAp.base == assignTo) emptySet() else setOf(Sequent.Unchanged)
+            if (currentFactAp.base != assignTo) unchanged()
+            return
         }
 
         // Case 2: Subscript read (x = obj[index])
         if (expr is PIRSubscriptExpr) {
-            return handleSubscriptRead(expr, assignTo, currentFactAp, mkCopy)
+            handleSubscriptRead(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            return
         }
 
-        // Case 4: Container literal (dict, list, tuple, set) — taint flows from values to target
+        // Case 3: Container literal (dict, list, tuple, set) — taint flows from values to target
         if (expr is PIRDictExpr || expr is PIRListExpr || expr is PIRTupleExpr || expr is PIRSetExpr) {
-            return handleContainerLiteral(expr, assignTo, currentFactAp, mkCopy)
+            handleContainerLiteral(expr, assignTo, currentFactAp, unchanged, propagateFact)
+            return
         }
 
-        // Case 5: Binary expression — taint flows from either operand (e.g. string concatenation)
+        // Case 4: Binary expression — taint flows from either operand (e.g. string concatenation)
         if (expr is PIRBinaryExpr) {
-            return handleBinExpr(expr, assignTo, currentFactAp, mkCopy)
+            handleBinExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
+            return
         }
 
-        // Case 6: String expression (f-string parts) — taint flows from any part
+        // Case 5: String expression (f-string parts) — taint flows from any part
         if (expr is PIRStringExpr) {
-            return handleStringExpr(expr, assignTo, currentFactAp, mkCopy)
+            handleStringExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
+            return
         }
 
-        // Case 7: Other compound expression — strong update on target, pass through otherwise
-        return if (currentFactAp.base == assignTo) {
-            emptySet()  // Strong update
-        } else {
-            setOf(Sequent.Unchanged)
-        }
+        // Case 6: Other compound expression — strong update on target, pass through otherwise
+        if (currentFactAp.base != assignTo) unchanged()
     }
 
     // ==========================================================================
     // LoadAttr: target = obj.attr (PIRLoadAttr instruction)
     // ==========================================================================
-
-    private fun handleLoadAttrZero(
-        inst: PIRLoadAttr,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> {
-        val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target)
-            ?: return setOf(Sequent.Unchanged)
-        return handleAttrRead(
-            inst,
-            assignTo,
-            currentFactAp,
-            mkCopy = { Sequent.ZeroToFact(it, null) },
-            addSideEffectRequirement = { factReader ->
-                error { "Can't refine Zero fact" }
-            }
-        )
-    }
-
-    private fun handleLoadAttrFact(
-        inst: PIRLoadAttr,
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> {
-        val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target)
-            ?: return setOf(Sequent.Unchanged)
-        return handleAttrRead(
-            inst,
-            assignTo,
-            currentFactAp,
-            mkCopy = { Sequent.FactToFact(initialFactAp, it, null) },
-            addSideEffectRequirement = { factReader ->
-                Sequent.SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
-            }
-        )
-    }
 
     /**
      * Field read: target = obj.attr
@@ -222,78 +205,68 @@ class PIRMethodSequentFlowFunction(
      * read the field accessor to produce target.![taint].* and rebase.
      *
      * If fact is abstract on obj (obj.*) and field is not excluded,
-     * propagate abstract fact with field excluded + materialize the concrete read.
+     * materialize the concrete read and propagate the abstract fact with the field
+     * excluded on both edge ends.
      */
-    private inline fun handleAttrRead(
+    private fun handleAttrRead(
         inst: PIRLoadAttr,
-        assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        crossinline mkCopy: (FinalFactAp) -> Sequent,
-        addSideEffectRequirement: (FinalFactReader) -> Sequent,
-    ): Set<Sequent> {
-        val results = mutableSetOf<Sequent>()
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+    ) {
+        val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target) ?: return unchanged()
 
         val passRulesReader = FinalFactReader(currentFactAp, apManager)
         ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, currentFactAp) { fact, newBase ->
             val mappedFact = fact.rebase(newBase)
             applyLoadAttrPassRules(inst, passRulesReader, mappedFact) {
-                results += mkCopy(it)
+                propagateFact(it)
             }
         }
 
         if (passRulesReader.hasRefinement) {
-            results += addSideEffectRequirement(passRulesReader)
+            addSideEffectRequirement(passRulesReader)
         }
 
-        val objBase = PIRFlowFunctionUtils.accessPathBase(inst.obj)
-            ?: return if (currentFactAp.base == assignTo) emptySet() else setOf(Sequent.Unchanged)
-        val accessor = org.opentaint.dataflow.ap.ifds.FieldAccessor(
+        val objBase = PIRFlowFunctionUtils.accessPathBase(inst.obj) ?: run {
+            if (currentFactAp.base != assignTo) unchanged()
+            return
+        }
+        val accessor = FieldAccessor(
             inst.obj.type.typeName,
             inst.attribute,
             inst.resultType.typeName,
         )
 
-
         if (currentFactAp.base == objBase) {
             if (currentFactAp.startsWithAccessor(accessor)) {
                 // Concrete: strip the field accessor and rebase
-                val readFact = currentFactAp.readAccessor(accessor)?.rebase(assignTo)
-                if (readFact != null) {
-                    results.add(mkCopy(readFact))
-                }
+                currentFactAp.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
                 // Original fact on obj survives (field read is non-destructive)
                 if (assignTo != objBase) {
-                    results.add(Sequent.Unchanged)
+                    unchanged()
                 }
             } else if (currentFactAp.isAbstract() && accessor !in currentFactAp.exclusions) {
                 // Abstract: field might be behind *.
                 // Materialize: remove abstraction and try concrete read
                 val nonAbstract = currentFactAp.removeAbstraction()
                 if (nonAbstract != null && nonAbstract.startsWithAccessor(accessor)) {
-                    val readFact = nonAbstract.readAccessor(accessor)?.rebase(assignTo)
-                    if (readFact != null) {
-                        results.add(mkCopy(readFact))
-                    }
+                    nonAbstract.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
                 }
-                // Propagate abstract fact with field excluded (refinement)
-                val excludedFact = currentFactAp.exclude(accessor)
-                results.add(mkCopy(excludedFact))
-                // Also keep the original abstract fact
-                results.add(Sequent.Unchanged)
+                // Propagate abstract fact with field excluded on both edge ends
+                propagateFactWithAccessorExclude(currentFactAp, accessor)
             } else {
-                results.add(mkCopy(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR)))
-
+                propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR))
                 // Fact on obj but field doesn't match — pass through
-                results.add(Sequent.Unchanged)
+                unchanged()
             }
         } else if (currentFactAp.base == assignTo) {
             // Strong update: kill taint on overwritten target
-            // (return empty set to kill the fact)
         } else {
-            results.add(Sequent.Unchanged)
+            unchanged()
         }
-
-        return if (results.isEmpty()) emptySet() else results
     }
 
     private fun applyLoadAttrPassRules(
@@ -308,7 +281,7 @@ class PIRMethodSequentFlowFunction(
         val typeChecker = FactTypeChecker.Dummy
         val evaluator = TaintPassActionEvaluator(
             apManager, typeChecker, reader,
-            org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
+            DummyPositionTypeResolver
         )
 
         rules.forEach { rule ->
@@ -336,95 +309,82 @@ class PIRMethodSequentFlowFunction(
      *
      * Similar to field read but uses ElementAccessor instead of FieldAccessor.
      */
-    private inline fun handleSubscriptRead(
+    private fun handleSubscriptRead(
         expr: PIRSubscriptExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj)
-            ?: return if (currentFactAp.base == assignTo) emptySet() else setOf(Sequent.Unchanged)
-        val accessor = org.opentaint.dataflow.ap.ifds.ElementAccessor
-
-        val results = mutableSetOf<Sequent>()
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+    ) {
+        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: run {
+            if (currentFactAp.base != assignTo) unchanged()
+            return
+        }
+        val accessor = ElementAccessor
 
         if (currentFactAp.base == objBase) {
             if (currentFactAp.startsWithAccessor(accessor)) {
                 // Concrete: strip element accessor and rebase
-                val readFact = currentFactAp.readAccessor(accessor)?.rebase(assignTo)
-                if (readFact != null) {
-                    results.add(mkCopy(readFact))
-                }
+                currentFactAp.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
                 if (assignTo != objBase) {
-                    results.add(Sequent.Unchanged)
+                    unchanged()
                 }
             } else if (currentFactAp.isAbstract() && accessor !in currentFactAp.exclusions) {
                 // Abstract: element might be behind *
                 val nonAbstract = currentFactAp.removeAbstraction()
                 if (nonAbstract != null && nonAbstract.startsWithAccessor(accessor)) {
-                    val readFact = nonAbstract.readAccessor(accessor)?.rebase(assignTo)
-                    if (readFact != null) {
-                        results.add(mkCopy(readFact))
-                    }
+                    nonAbstract.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
                 }
-                val excludedFact = currentFactAp.exclude(accessor)
-                results.add(mkCopy(excludedFact))
-                results.add(Sequent.Unchanged)
+                // Propagate abstract fact with element excluded on both edge ends
+                propagateFactWithAccessorExclude(currentFactAp, accessor)
             } else {
-                results.add(Sequent.Unchanged)
+                unchanged()
             }
         } else if (currentFactAp.base == assignTo) {
             // Strong update: kill taint on overwritten target
         } else {
-            results.add(Sequent.Unchanged)
+            unchanged()
         }
-
-        return if (results.isEmpty()) emptySet() else results
     }
 
+    // ==========================================================================
+    // Container literal: target = {k: v, ...} / [v, ...] / (v, ...) / {v, ...}
+    // ==========================================================================
+
     /**
-     * Container literal: target = {k: v, ...} / [v, ...] / (v, ...) / {v, ...}
-     *
      * If any value in the container matches the current fact's base, propagate taint
-     * to target with ElementAccessor prepended. When [containerLevelTaint] is enabled,
-     * also propagates taint directly to the target (without ElementAccessor) as an
-     * intentional over-approximation for sink detection on whole-container arguments.
-     * Dict keys are not tracked.
+     * to target with ElementAccessor prepended. Dict keys are not tracked.
      */
-    private inline fun handleContainerLiteral(
+    private fun handleContainerLiteral(
         expr: PIRExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
         val valueExpressions: List<PIRValue> = when (expr) {
             is PIRDictExpr -> expr.values
             is PIRListExpr -> expr.elements
             is PIRTupleExpr -> expr.elements
             is PIRSetExpr -> expr.elements
-            else -> return setOf(Sequent.Unchanged)
+            else -> return unchanged()
         }
-
-        val results = mutableSetOf<Sequent>()
 
         for (valueExpr in valueExpressions) {
             val valueBase = PIRFlowFunctionUtils.accessPathBase(valueExpr) ?: continue
             if (currentFactAp.base == valueBase) {
                 // Element-level taint (precise)
                 val elementFact = currentFactAp.rebase(assignTo)
-                    .prependAccessor(org.opentaint.dataflow.ap.ifds.ElementAccessor)
-                results.add(mkCopy(elementFact))
-                results.add(Sequent.Unchanged)  // value keeps its taint
-                return results
+                    .prependAccessor(ElementAccessor)
+                propagateFact(elementFact)
+                unchanged()  // value keeps its taint
+                return
             }
         }
 
         // No value matched — strong update if overwriting target, else pass through
-        return if (currentFactAp.base == assignTo) {
-            emptySet()
-        } else {
-            setOf(Sequent.Unchanged)
-        }
+        if (currentFactAp.base != assignTo) unchanged()
     }
 
     // ==========================================================================
@@ -432,31 +392,29 @@ class PIRMethodSequentFlowFunction(
     // ==========================================================================
 
     /**
-     * Binary expression: target = left op right
-     *
      * For operations like string concatenation (ADD), if either operand is tainted,
-     * taint flows to the result. This is a broad rule — all binary ops propagate
-     * taint from either operand to result. For string concatenation this is correct;
-     * for arithmetic ops this is conservative but safe.
+     * taint flows to the result. This is a broad rule — conservative but safe.
      */
-    private inline fun handleBinExpr(
+    private fun handleBinExpr(
         expr: PIRBinaryExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
         val leftBase = PIRFlowFunctionUtils.accessPathBase(expr.left)
         val rightBase = PIRFlowFunctionUtils.accessPathBase(expr.right)
 
-        if (leftBase != null && currentFactAp.base == leftBase) {
-            return setOf(mkCopy(currentFactAp.rebase(assignTo)), Sequent.Unchanged)
-        }
-        if (rightBase != null && currentFactAp.base == rightBase) {
-            return setOf(mkCopy(currentFactAp.rebase(assignTo)), Sequent.Unchanged)
+        if ((leftBase != null && currentFactAp.base == leftBase) ||
+            (rightBase != null && currentFactAp.base == rightBase)
+        ) {
+            propagateFact(currentFactAp.rebase(assignTo))
+            unchanged()
+            return
         }
 
         // Strong update on overwritten target
-        return if (currentFactAp.base == assignTo) emptySet() else setOf(Sequent.Unchanged)
+        if (currentFactAp.base != assignTo) unchanged()
     }
 
     // ==========================================================================
@@ -464,48 +422,44 @@ class PIRMethodSequentFlowFunction(
     // ==========================================================================
 
     /**
-     * String expression: target = f"prefix {part1} ... {partN}"
-     *
      * If any string part is tainted, taint flows to the result.
-     * This handles f-strings and other composite string constructions.
      */
-    private inline fun handleStringExpr(
+    private fun handleStringExpr(
         expr: PIRStringExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
         for (part in expr.parts) {
             val partBase = PIRFlowFunctionUtils.accessPathBase(part) ?: continue
             if (currentFactAp.base == partBase) {
-                return setOf(mkCopy(currentFactAp.rebase(assignTo)), Sequent.Unchanged)
+                propagateFact(currentFactAp.rebase(assignTo))
+                unchanged()
+                return
             }
         }
 
         // Strong update on overwritten target
-        return if (currentFactAp.base == assignTo) emptySet() else setOf(Sequent.Unchanged)
+        if (currentFactAp.base != assignTo) unchanged()
     }
 
     // ==========================================================================
     // Return
     // ==========================================================================
 
-    /**
-     * Handles return for both zero-initial and fact-initial edges.
-     * [mkCopy] creates the appropriate result type: ZeroToFact or FactToFact.
-     */
-    private inline fun handleReturnShared(
+    private fun handleReturn(
         ret: PIRReturn,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
-        val results = mutableSetOf<Sequent>(Sequent.Unchanged)
-        val retVal = ret.value ?: return results
-        val retBase = PIRFlowFunctionUtils.accessPathBase(retVal) ?: return results
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
+        unchanged()
+        val retVal = ret.value ?: return
+        val retBase = PIRFlowFunctionUtils.accessPathBase(retVal) ?: return
         if (currentFactAp.base == retBase) {
-            results.add(mkCopy(currentFactAp.rebase(AccessPathBase.Return)))
+            propagateFact(currentFactAp.rebase(AccessPathBase.Return))
         }
-        return results
     }
 
     // ==========================================================================
@@ -513,46 +467,36 @@ class PIRMethodSequentFlowFunction(
     // ==========================================================================
 
     /**
-     * Shared logic for StoreAttr (both ZeroToFact and FactToFact for adding taint).
      * obj.attr = value: if fact is on value, propagate taint to obj.attr.
      * Also applies strong update when the current fact is on obj.attr.
      */
-    private inline fun handleStoreAttrShared(
+    private fun handleStoreAttr(
         store: PIRStoreAttr,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj)
-            ?: return setOf(Sequent.Unchanged)
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
+        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged()
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
 
         if (valueBase != null && currentFactAp.base == valueBase) {
-            val accessor = org.opentaint.dataflow.ap.ifds.FieldAccessor(
+            val accessor = FieldAccessor(
                 store.obj.type.typeName,
                 store.attribute,
                 store.value.type.typeName,
             )
             val newFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
-            return setOf(mkCopy(newFact), Sequent.Unchanged)
+            propagateFact(newFact)
+            unchanged()
+            return
         }
 
         if (currentFactAp.base == objBase && factStartsWithField(currentFactAp, store.attribute)) {
             // Strong update: obj.attr is being overwritten — kill the tainted field fact
-            return emptySet()
+            return
         }
 
-        return setOf(Sequent.Unchanged)
-    }
-
-    /**
-     * FactToFact StoreAttr: delegates to shared handler.
-     */
-    private fun handleStoreAttrFact(
-        store: PIRStoreAttr,
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> = handleStoreAttrShared(store, currentFactAp) {
-        Sequent.FactToFact(initialFactAp, it, null)
+        unchanged()
     }
 
     /**
@@ -561,7 +505,7 @@ class PIRMethodSequentFlowFunction(
      */
     private fun factStartsWithField(factAp: FinalFactAp, fieldName: String): Boolean {
         val startAccessors = factAp.getStartAccessors()
-        return startAccessors.any { it is org.opentaint.dataflow.ap.ifds.FieldAccessor && it.fieldName == fieldName }
+        return startAccessors.any { it is FieldAccessor && it.fieldName == fieldName }
     }
 
     // ==========================================================================
@@ -569,47 +513,33 @@ class PIRMethodSequentFlowFunction(
     // ==========================================================================
 
     /**
-     * Shared logic for StoreSubscript (both ZeroToFact and FactToFact for adding taint).
      * obj[index] = value: if fact is on value, propagate taint to obj's element.
-     * When [containerLevelTaint] is enabled, also propagates to obj itself
-     * (over-approximate: whole container is tainted).
      * Also applies strong update when the current fact is on obj's element.
      */
-    private inline fun handleStoreSubscriptShared(
+    private fun handleStoreSubscript(
         store: PIRStoreSubscript,
         currentFactAp: FinalFactAp,
-        mkCopy: (FinalFactAp) -> Sequent,
-    ): Set<Sequent> {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj)
-            ?: return setOf(Sequent.Unchanged)
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+    ) {
+        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged()
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
 
-        val accessor = org.opentaint.dataflow.ap.ifds.ElementAccessor
+        val accessor = ElementAccessor
 
         if (valueBase != null && currentFactAp.base == valueBase) {
             val results = mutableSetOf<Sequent>()
             val elementFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
-            results.add(mkCopy(elementFact))
-            results.add(Sequent.Unchanged)
-            return results
+            propagateFact(elementFact)
+            unchanged()
+            return
         }
 
         if (currentFactAp.base == objBase && currentFactAp.startsWithAccessor(accessor)) {
             // Strong update: element is being overwritten — kill
-            return emptySet()
+            return
         }
 
-        return setOf(Sequent.Unchanged)
-    }
-
-    /**
-     * FactToFact StoreSubscript: delegates to shared handler.
-     */
-    private fun handleStoreSubscriptFact(
-        store: PIRStoreSubscript,
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> = handleStoreSubscriptShared(store, currentFactAp) {
-        Sequent.FactToFact(initialFactAp, it, null)
+        unchanged()
     }
 }
