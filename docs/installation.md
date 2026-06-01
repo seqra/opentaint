@@ -8,6 +8,29 @@
 brew install --cask seqra/tap/opentaint
 ```
 
+## npm
+
+If you have Node.js installed, you can install opentaint from npm. The package
+bundles the analyzer, rules, and a Java runtime, so no separate Java install is
+required.
+
+Run without installing:
+
+```bash
+npx @seqra/opentaint --version
+```
+
+Install globally:
+
+```bash
+npm install -g @seqra/opentaint
+opentaint --version
+```
+
+The correct binary for your platform (Linux, macOS, or Windows; x64 or arm64)
+is selected automatically. Updates are managed by npm — run
+`npm install -g @seqra/opentaint@latest` to upgrade.
+
 ## Install Scripts
 
 The install scripts accept an optional version argument. Without one, the latest GitHub release is installed.
