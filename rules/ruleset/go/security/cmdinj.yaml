@@ -68,6 +68,7 @@ rules:
           # beego Context.Input methods (c.Ctx.Input.X)
           - pattern: $X.Param($K)
           - pattern: $X.Params()
+          - pattern: $X.Header($K)
           - pattern: $X.URI()
           - pattern: $X.URL()
           - pattern: $X.RequestBody
@@ -81,3 +82,7 @@ rules:
           - pattern: syscall.Exec($NAME, ...)
           - pattern: syscall.ForkExec($NAME, ...)
           - pattern: syscall.StartProcess($NAME, ...)
+          - pattern: $C.CombinedOutput()
+          - pattern: $C.Run()
+          - pattern: $C.Output()
+          - pattern: $C.Start()

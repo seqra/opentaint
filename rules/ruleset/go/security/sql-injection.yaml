@@ -22,6 +22,7 @@ rules:
           - pattern: $R.URL.Path
           - pattern: $R.URL.RawQuery
           - pattern: $R.URL.RawPath
+          - pattern: $R.RequestURI
           - pattern: $R.Header.Get($K)
           - pattern: $R.Header.Values($K)
           - pattern: $R.Form.Get($K)
