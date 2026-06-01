@@ -62,6 +62,11 @@ jobs:
     container: gitlab/gitlab-runner-helper:ubuntu-x86_64-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # TODO: add Automata after its tests get repaired
+        apMode: [ Tree ]
     defaults:
       run:
         working-directory: core
@@ -77,13 +82,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run tests
-        run: ./gradlew check
+      - name: Run tests (apMode=${{ matrix.apMode }})
+        run: ./gradlew check -PapMode=${{ matrix.apMode }}
 
       - name: Upload Gradle reports
         if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-reports-ci-basic
+          name: gradle-reports-ci-basic-${{ matrix.apMode }}
           path: '**/build/reports/'
           retention-days: 1

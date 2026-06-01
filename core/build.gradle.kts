@@ -63,6 +63,9 @@ dependencies {
 tasks.withType<Test> {
     dependsOn(project("samples").tasks.withType<Jar>())
 
+    val apMode = (project.findProperty("apMode") as String?) ?: System.getenv("APMODE")
+    if (apMode != null) systemProperty("opentaint.test.apMode", apMode)
+
     doFirst {
         val resolvedTestSamples = testSamples.resolve()
         val testSamplesJar = resolvedTestSamples.single { it.name == "samples.jar" }

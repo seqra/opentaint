@@ -66,9 +66,61 @@ class AccessPathWithCycles(
         return null
     }
 
-    // todo: rewrite stub implementation
     override fun concat(delta: InitialFactAp.Delta): InitialFactAp {
-        return this
+        delta as AccessPathDelta
+        return when (delta) {
+            AccessPathDelta.Empty -> this
+            is AccessPathDelta.Delta -> AccessPathWithCycles(base, delta.node.concat(access), exclusions)
+        }
+    }
+
+    sealed interface AccessPathDelta : InitialFactAp.Delta {
+        data object Empty : AccessPathDelta {
+            override val isEmpty: Boolean get() = true
+            override fun startsWithAccessor(accessor: Accessor): Boolean = false
+            override fun getStartAccessors(): Set<Accessor> = emptySet()
+            override fun getAllAccessors(): Set<Accessor> = emptySet()
+            override fun readAccessor(accessor: Accessor): InitialFactAp.Delta? = null
+            override fun isAbstract(): Boolean = true
+        }
+
+        data class Delta(val node: AccessNode) : AccessPathDelta {
+            override val isEmpty: Boolean get() = false
+            override fun startsWithAccessor(accessor: Accessor): Boolean = node.accessor == accessor
+            override fun getStartAccessors(): Set<Accessor> = setOf(node.accessor)
+            override fun getAllAccessors(): Set<Accessor> {
+                val result = hashSetOf<Accessor>()
+                var n: AccessNode? = node
+                while (n != null) {
+                    result.add(n.accessor)
+                    for (cycle in n.cycles) result.addAll(cycle)
+                    n = n.next
+                }
+                return result
+            }
+            override fun readAccessor(accessor: Accessor): InitialFactAp.Delta? {
+                if (node.accessor != accessor) return null
+                val next = node.next ?: return Empty
+                return Delta(next)
+            }
+            override fun isAbstract(): Boolean = false
+        }
+
+        override fun concat(other: InitialFactAp.Delta): InitialFactAp.Delta {
+            other as AccessPathDelta
+            return when (this) {
+                Empty -> other
+                is Delta -> when (other) {
+                    Empty -> this
+                    is Delta -> Delta(node.concat(other.node))
+                }
+            }
+        }
+    }
+
+    companion object {
+        /** Retained alias for callers; identical to `AccessPathDelta.Empty`. */
+        val CactusEmptyDelta: AccessPathDelta.Empty get() = AccessPathDelta.Empty
     }
 
     // todo: rewrite stub implementation
@@ -81,6 +133,9 @@ class AccessPathWithCycles(
         factAp as AccessPathWithCycles
         return this == factAp
     }
+
+    override fun toFinalFact(): FinalFactAp =
+        AccessCactus(base, AccessCactus.AccessNode.createAbstractNodeFromAp(access), exclusions)
 
     override fun compatibilityFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactCompatibilityFilter =
         FactTypeChecker.AlwaysCompatibleFilter
@@ -209,6 +264,11 @@ class AccessPathWithCycles(
             node.second.joinToString("") { cycle ->
                 "{${cycle.joinToString("") { it.toSuffix() }}}"
             } + node.first.toSuffix()
+        }
+
+        fun concat(tail: AccessNode?): AccessNode {
+            val n = next
+            return if (n == null) AccessNode(accessor, tail, cycles) else AccessNode(accessor, n.concat(tail), cycles)
         }
 
         class Builder {

@@ -43,7 +43,16 @@ abstract class DefaultNDF2FSetStorage<IAP, FAP> : ApStorage<IAP, FAP> {
             it.replaceExclusions(ExclusionSet.Universe)
         }
 
-        val finalFacts = storage[initialWithExclusion] ?: return
-        finalFacts.collect(dst)
+        val exactStorage = storage[initialWithExclusion]
+        if (exactStorage != null) {
+            exactStorage.collect(dst)
+            return
+        }
+
+        storage.forEach { (storedSet, finalFacts) ->
+            if (initialWithExclusion.all { req -> storedSet.any { it.contains(req) } }) {
+                finalFacts.collect(dst)
+            }
+        }
     }
 }

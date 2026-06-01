@@ -165,6 +165,17 @@ class AccessCactus(
         }
     }
 
+    override fun concat(typeChecker: FactTypeChecker, delta: InitialFactAp.Delta): FinalFactAp? {
+        delta as AccessPathWithCycles.AccessPathDelta
+        return when (delta) {
+            AccessPathWithCycles.AccessPathDelta.Empty -> this
+            is AccessPathWithCycles.AccessPathDelta.Delta -> {
+                val cactusNode = AccessNode.createAbstractNodeFromAp(delta.node)
+                concat(typeChecker, NodeDelta(cactusNode))
+            }
+        }
+    }
+
     override val size: Int
         get() = access.size
 

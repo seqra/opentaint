@@ -6,7 +6,7 @@ import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -85,7 +85,7 @@ class TestAnalysisRunner(
                     if (method.enclosingClass.declaration.location.isRuntime) UnknownUnit else SingletonUnit
 
             } as UnitResolver<CommonMethod>,
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
+            apManager = ApMode.fromTestProperty().createApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
         )

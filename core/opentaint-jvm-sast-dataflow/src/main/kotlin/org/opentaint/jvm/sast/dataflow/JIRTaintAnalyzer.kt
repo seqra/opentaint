@@ -18,11 +18,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
-import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction.TraceSummaryEdge
@@ -95,13 +91,7 @@ class JIRTaintAnalyzer(
         }
     }
 
-    private val apManager by lazy {
-        when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(UnrollStrategy)
-            ApMode.Cactus -> CactusApManager(UnrollStrategy)
-            ApMode.Automata -> AutomataApManager(UnrollStrategy)
-        }
-    }
+    private val apManager by lazy { options.ifdsApMode.createApManager(UnrollStrategy) }
 
     private val analysisParams get() = JIRAnalysisManager.Params(
         aliasAnalysisParams = JIRLocalAliasAnalysis.Params(

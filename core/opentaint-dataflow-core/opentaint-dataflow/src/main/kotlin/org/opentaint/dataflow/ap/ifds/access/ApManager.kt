@@ -61,8 +61,8 @@ interface AnyAccessorUnrollStrategy {
 }
 
 interface InitialFactAbstraction {
-    fun addAbstractedInitialFact(factAp: FinalFactAp, typeChecker: FactTypeChecker): List<Pair<InitialFactAp, FinalFactAp>>
-    fun registerNewInitialFact(factAp: InitialFactAp, typeChecker: FactTypeChecker): List<Pair<InitialFactAp, FinalFactAp>>
+    fun addAbstractedInitialFact(factAp: FinalFactAp, typeChecker: FactTypeChecker): List<Pair<InitialFactAp, InitialFactAp.Delta>>
+    fun registerNewInitialFact(factAp: InitialFactAp, typeChecker: FactTypeChecker): List<Pair<InitialFactAp, InitialFactAp.Delta>>
 }
 
 interface MethodAccessPathSubscription {

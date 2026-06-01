@@ -54,8 +54,18 @@ class MethodEdgesInitialToFinalTreeApSet(
             initial: AccessPath.AccessNode?,
             finalPattern: AccessPath.AccessNode?,
         ) {
-            val storage = sameInitialAccessEdges.find(initial)?.current ?: return
-            storage.allApAtStatement(dst, statement)
+            // Relaxed AccessTree.contains semantics: an abstract pattern covers more specific ones.
+            // Prefer the EXACT match first, then fall back to broader (prefix) patterns.
+            val exactNode = sameInitialAccessEdges.find(initial)
+            if (exactNode != null) {
+                val before = dst.size
+                exactNode.current.allApAtStatement(dst, statement)
+                if (dst.size != before) return
+            }
+
+            sameInitialAccessEdges.forEachPrefixNode(initial) { node ->
+                node.current.allApAtStatement(dst, statement)
+            }
         }
     }
 

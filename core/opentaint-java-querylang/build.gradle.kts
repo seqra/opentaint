@@ -58,6 +58,9 @@ tasks.withType<Test> {
     val testSamplesJar = testSamples.resolve().single()
     environment("TEST_SAMPLES_JAR", testSamplesJar.absolutePath)
 
+    val apMode = (project.findProperty("apMode") as String?) ?: System.getenv("APMODE")
+    if (apMode != null) systemProperty("opentaint.test.apMode", apMode)
+
     jvmArgs = listOf("-Xmx4g")
 }
 

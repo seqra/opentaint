@@ -13,8 +13,8 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.ReversedApNode
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.createNodeFromReversedAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.foldRight
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessPathDelta
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
-import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromReversedAp
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isAlwaysUnrollNext
@@ -30,14 +30,14 @@ class TreeInitialFactAbstraction(
     override fun addAbstractedInitialFact(
         factAp: FinalFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         factAp as AccessTree
 
         // note: we can ignore fact exclusions here
         val facts = initialFacts.getOrPut(factAp.base)
         val addedFact = facts.addInitialFact(factAp.access, interner) ?: return emptyList()
 
-        val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        val abstractFacts = mutableListOf<Pair<InitialFactAp, InitialFactAp.Delta>>()
         addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts, typeChecker)
         return abstractFacts
     }
@@ -45,7 +45,7 @@ class TreeInitialFactAbstraction(
     override fun registerNewInitialFact(
         factAp: InitialFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         factAp as AccessPath
 
         val facts = initialFacts.getOrPut(factAp.base)
@@ -63,7 +63,7 @@ class TreeInitialFactAbstraction(
 
         if (!facts.addAnalyzedInitialFact(factAp.access, excludedAccessors)) return emptyList()
 
-        val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        val abstractFacts = mutableListOf<Pair<InitialFactAp, InitialFactAp.Delta>>()
         addAbstractInitialFact(facts, factAp.base, facts.allAddedFacts(), abstractFacts, typeChecker)
         return abstractFacts
     }
@@ -72,23 +72,33 @@ class TreeInitialFactAbstraction(
         facts: MethodSameBaseInitialFact,
         concreteFactBase: AccessPathBase,
         initialConcreteFact: AccessTreeNode,
-        abstractFacts: MutableList<Pair<InitialFactAp, FinalFactAp>>,
+        abstractFacts: MutableList<Pair<InitialFactAp, InitialFactAp.Delta>>,
         typeChecker: FactTypeChecker
     ) {
         var concreteFactAccess = initialConcreteFact
         while (true) {
             val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
-            abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests) { abstractAccess ->
+            abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests) { initialPath, deltaAccessor ->
                 apManager.cancellation.checkpoint()
 
-                val initialAbstractAccessNode = apManager.createNodeFromReversedAp(abstractAccess)
+                val initialAbstractAccessNode = apManager.createNodeFromReversedAp(initialPath)
                 val initialAbstractAp = AccessPath(apManager, concreteFactBase, initialAbstractAccessNode, Empty)
 
-                val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
-                val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
+                val delta: InitialFactAp.Delta = if (deltaAccessor == null) {
+                    AccessPathDelta.Empty
+                } else {
+                    val deltaNode = AccessPath.AccessNode(apManager, deltaAccessor, next = null)
+                    AccessPathDelta.Delta(deltaNode)
+                }
 
-                facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
-                abstractFacts.add(initialAbstractAp to ap)
+                val recordedAccessNode = if (deltaAccessor == null) {
+                    initialAbstractAccessNode
+                } else {
+                    apManager.createNodeFromReversedAp(ReversedApNode(deltaAccessor, initialPath))
+                }
+                facts.addAnalyzedInitialFact(recordedAccessNode, exclusions = IntOpenHashSet())
+
+                abstractFacts.add(initialAbstractAp to delta)
             }
 
             concreteFactAccess = facts.unrollAnyAccessors(unrollRequests, typeChecker)
@@ -170,7 +180,7 @@ class TreeInitialFactAbstraction(
         initialAnalyzedTrieRoot: AccessPathTrieNode,
         initialAdded: AccessTreeNode,
         unrollRequests: MutableList<AnyAccessorUnrollRequest>,
-        crossinline createAbstractAp: (ReversedApNode?) -> Unit
+        crossinline createAbstractAp: (initialPath: ReversedApNode?, deltaAccessor: AccessorIdx?) -> Unit
     ) {
         val unprocessed = mutableListOf<AbstractionState>()
         unprocessed.add(AbstractionState(initialAnalyzedTrieRoot, initialAdded, currentAp = null))
@@ -180,7 +190,7 @@ class TreeInitialFactAbstraction(
 
             val currentLevelExclusions = state.analyzedTrieRoot.exclusions()
             if (currentLevelExclusions == null) {
-                createAbstractAp(state.currentAp)
+                createAbstractAp(state.currentAp, null)
                 continue
             }
 
@@ -208,14 +218,14 @@ class TreeInitialFactAbstraction(
         addedNode: AccessTreeNode,
         currentAp: ReversedApNode?,
         unprocessed: MutableList<AbstractionState>,
-        crossinline createAbstractAp: (ReversedApNode?) -> Unit
+        crossinline createAbstractAp: (initialPath: ReversedApNode?, deltaAccessor: AccessorIdx?) -> Unit
     ) {
         val node = analyzedTrieRoot.child(accessor)
         if (node != null) {
             val apWithAccessor = ReversedApNode(accessor, currentAp)
             if (accessor.isAlwaysUnrollNext()) {
                 abstractNextAccessPath(addedNode, apWithAccessor) {
-                    createAbstractAp(it)
+                    createAbstractAp(it, null)
                 }
             } else {
                 unprocessed += AbstractionState(node, addedNode, apWithAccessor)
@@ -227,7 +237,7 @@ class TreeInitialFactAbstraction(
 
         // We have no excludes -> continue with the most abstract fact
         if (exclusions == null) {
-            createAbstractAp(currentAp)
+            createAbstractAp(currentAp, null)
             return
         }
 
@@ -240,14 +250,14 @@ class TreeInitialFactAbstraction(
 
         // We have initial fact that exclude {b} and we have no a.b fact yet
         if (!accessor.isAlwaysUnrollNext()) {
-            // Return a.b.* {}
-            createAbstractAp(ReversedApNode(accessor, currentAp))
+            // Return abstract pattern a.* with refinement delta `.b`
+            createAbstractAp(currentAp, accessor)
             return
         }
 
         val apWithAccessor = ReversedApNode(accessor, currentAp)
         abstractNextAccessPath(addedNode, apWithAccessor) {
-            createAbstractAp(it)
+            createAbstractAp(it, null)
         }
     }
 

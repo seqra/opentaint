@@ -8,7 +8,7 @@ sealed interface ExclusionSet {
     fun add(accessor: Accessor): ExclusionSet
     fun union(other: ExclusionSet): ExclusionSet
     fun subtract(accessor: Accessor): ExclusionSet
-
+    operator fun minus(other: ExclusionSet): ExclusionSet
     fun contains(other: ExclusionSet): Boolean
 
     data object Empty : ExclusionSet {
@@ -16,6 +16,7 @@ sealed interface ExclusionSet {
         override fun add(accessor: Accessor): ExclusionSet = Concrete(accessor)
         override fun union(other: ExclusionSet): ExclusionSet = other
         override fun subtract(accessor: Accessor): ExclusionSet = this
+        override fun minus(other: ExclusionSet): ExclusionSet = this
         override fun contains(other: ExclusionSet): Boolean = other is Empty
 
         override fun toString(): String = "{}"
@@ -26,6 +27,11 @@ sealed interface ExclusionSet {
         override fun add(accessor: Accessor): ExclusionSet = this
         override fun union(other: ExclusionSet): ExclusionSet = this
         override fun subtract(accessor: Accessor): ExclusionSet = error("Can't subtract from $this")
+        override fun minus(other: ExclusionSet): ExclusionSet = when (other) {
+            Empty -> this
+            Universe -> Empty
+            is Concrete -> this  // infinity minus a finite set is still infinity
+        }
         override fun contains(other: ExclusionSet): Boolean = true
 
         override fun toString(): String = "*"
@@ -71,6 +77,19 @@ sealed interface ExclusionSet {
                 subtractResult === set -> this
                 subtractResult.isEmpty() -> Empty
                 else -> Concrete(subtractResult, hash - accessor.hashCode())
+            }
+        }
+
+        override fun minus(other: ExclusionSet): ExclusionSet = when (other) {
+            Empty -> this
+            Universe -> Empty
+            is Concrete -> {
+                val diff = set.removeAll(other.set)
+                when {
+                    diff === set -> this
+                    diff.isEmpty() -> Empty
+                    else -> Concrete(diff, diff.hashCode())
+                }
             }
         }
 

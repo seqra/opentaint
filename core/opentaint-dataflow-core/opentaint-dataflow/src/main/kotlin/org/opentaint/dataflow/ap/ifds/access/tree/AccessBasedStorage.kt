@@ -44,6 +44,19 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
         return storage as S
     }
 
+    inline fun forEachPrefixNode(access: AccessPath.AccessNode?, body: (S) -> Unit) {
+        @Suppress("UNCHECKED_CAST")
+        body(this as S)
+        var storage: AccessBasedStorage<S> = this
+        var node = access
+        while (node != null) {
+            val child = storage.findChild(node.accessor) ?: return
+            storage = child
+            body(child)
+            node = node.next
+        }
+    }
+
     fun filterContains(pattern: AccessTree.AccessNode): Sequence<S> {
         val nodes = mutableListOf<S>()
         collectNodesContains(pattern, nodes)
@@ -115,6 +128,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
     private fun getOrCreateChild(accessor: AccessorIdx): S =
         children.getOrCreate(accessor) { createStorage() }
 
-    private fun findChild(accessor: AccessorIdx): S? =
+    @PublishedApi
+    internal fun findChild(accessor: AccessorIdx): S? =
         children.get(accessor)
 }
