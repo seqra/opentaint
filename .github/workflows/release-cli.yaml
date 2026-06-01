@@ -220,6 +220,63 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
       -
+        name: Check npm token availability
+        if: ${{ steps.release_version.outputs.status == 'succeeded' }}
+        id: check_npm
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+      -
+        name: Set up Node for npm publish
+        if: ${{ steps.check_npm.outputs.available == 'true' && steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      -
+        name: Publish to npm
+        if: ${{ steps.check_npm.outputs.available == 'true' && steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
+        working-directory: cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          RELEASE_VERSION="${{ steps.release_version.outputs.RELEASE_VERSION }}"
+
+          bash scripts/build-npm-packages.sh dist "$RELEASE_VERSION"
+
+          publish_pkg() {
+            local dir="$1"
+            local log
+            log="$(mktemp)"
+            if npm publish "$dir" --access public >"$log" 2>&1; then
+              cat "$log"
+              return 0
+            fi
+            # Re-running a release must not fail on an already-published version.
+            if grep -qiE "cannot publish over|previously published|you cannot publish over the previously published versions|EPUBLISHCONFLICT|403" "$log"; then
+              echo "Already published (skipping): $dir"
+              cat "$log"
+              return 0
+            fi
+            echo "npm publish failed for $dir" >&2
+            cat "$log" >&2
+            return 1
+          }
+
+          # Publish platform packages first so the main package's optional
+          # dependencies already exist, then the main package last.
+          for dir in dist-npm/opentaint-*; do
+            [ -d "$dir" ] || continue
+            publish_pkg "$dir"
+          done
+          publish_pkg dist-npm/opentaint
+      -
         name: Update package manager manifests
         if: ${{ steps.check_homebrew.outputs.available == 'true' && steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
         working-directory: cli
