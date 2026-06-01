@@ -101,6 +101,9 @@ class GoMethodSequentFlowFunction(
             return handleStringConcat(initialFact, currentFact, registerBase, expr)
         }
 
+        if (expr is GoIRMakeClosureExpr) {
+            return handleMakeClosure(initialFact, currentFact, registerBase, expr)
+        }
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)
             ?: return handleNonPropagatingExpr(currentFact, registerBase)
 
@@ -161,6 +164,57 @@ class GoMethodSequentFlowFunction(
 
         return result
     }
+
+    // Backward counterpart: GoMethodSequentPrecondition.handleCommaOkTypeAssertPrecondition — keep in lockstep (same tuple$0 slot, same commaOk guard).
+    private fun handleCommaOkTypeAssert(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRTypeAssertExpr,
+    ): Set<Sequent> {
+        val result = mutableSetOf<Sequent>()
+
+        // Kill: the register is overwritten by the assert result.
+        if (currentFact.base != registerBase) {
+            result.add(Sequent.Unchanged)
+        }
+
+        // Gen: if the operand carries a fact, taint the value slot (tuple index 0)
+        // of the (value, ok) result. The `ok` bool slot stays clean.
+        val operandBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
+        if (operandBase != null && currentFact.base == operandBase) {
+            val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0, expr.assertedType)
+            val newFact = currentFact.rebase(registerBase).prependAccessor(valueSlot)
+            result.add(makeEdge(initialFact, newFact))
+        }
+
+        return result
+    }
+
+    private fun handleNext(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRNextExpr,
+    ): Set<Sequent> {
+        val iterBase = GoFlowFunctionUtils.accessPathBase(expr.iter, method)
+            ?: return handleNonPropagatingExpr(currentFact, registerBase)
+
+        val result = handleSimpleAssign(initialFact, currentFact, registerBase, iterBase).toMutableSet()
+
+        if (currentFact.base == iterBase && currentFact.startsWithAccessor(ElementAccessor)) {
+            val element = currentFact.readAccessor(ElementAccessor)
+            if (element != null) {
+                for (slot in GoFlowFunctionUtils.rangeElementTupleSlots(expr, method)) {
+                    val slotFact = element.rebase(registerBase).prependAccessor(slot)
+                    result.add(makeEdge(initialFact, slotFact))
+                }
+            }
+        }
+
+        return result
+    }
+
     private fun handleRefAssign(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,

@@ -129,7 +129,7 @@ object GoFlowFunctionUtils {
             // Index/element access
             is GoIRIndexExpr -> {
                 val base = accessPathBase(expr.x, method) ?: return null
-                Access.RefAccess(base, ElementAccessor)
+                RefAccess(base, ElementAccessor)
             }
 
             is GoIRIndexAddrExpr -> {
@@ -231,6 +231,9 @@ object GoFlowFunctionUtils {
             is GoIRIndexAddrExpr -> {
                 val base = accessPathBase(expr.x, method) ?: return null
                 RefAccess(base, ElementAccessor)
+            }
+            is GoIRFreeVarValueExpr -> {
+                RefAccess(AccessPathBase.This, freeVarAccessor(method, expr.freeVarIndex))
             }
             else -> Simple(AccessPathBase.LocalVar(addr.index))
         }

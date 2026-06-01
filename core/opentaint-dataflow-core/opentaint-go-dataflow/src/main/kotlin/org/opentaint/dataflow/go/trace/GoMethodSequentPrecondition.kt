@@ -91,6 +91,10 @@ class GoMethodSequentPrecondition(
             handleStringConcatPrecondition(fact, registerBase, expr, result)
             return
         }
+        if (expr is GoIRMakeClosureExpr) {
+            handleMakeClosurePrecondition(fact, registerBase, expr, result)
+            return
+        }
 
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)
         if (rhsAccess == null) {
