@@ -265,6 +265,7 @@ class GoMethodSequentFlowFunction(
             ?: return setOf(Sequent.Unchanged)
 
         return complexAccessorWrite(addrAccess, currentFact, initialFact, valueBase) { _, _ ->
+            // todo: use alias analysis
             val chain = GoFlowFunctionUtils.resolveAddrChain(inst.addr, method)
                 ?: return@complexAccessorWrite emptyList()
 
