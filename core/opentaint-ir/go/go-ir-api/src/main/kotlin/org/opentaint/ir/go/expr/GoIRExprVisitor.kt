@@ -28,6 +28,7 @@ interface GoIRExprVisitor<out T> {
     fun visitGlobalValue(expr: GoIRGlobalValueExpr): T
     fun visitFunctionValue(expr: GoIRFunctionValueExpr): T
     fun visitBuiltinValue(expr: GoIRBuiltinValueExpr): T
+    fun visitFreeVarValue(expr: GoIRFreeVarValueExpr): T
 
     /** Default implementation that delegates all methods to a single handler. */
     interface Default<out T> : GoIRExprVisitor<T> {
@@ -60,5 +61,6 @@ interface GoIRExprVisitor<out T> {
         override fun visitGlobalValue(expr: GoIRGlobalValueExpr) = defaultVisit(expr)
         override fun visitFunctionValue(expr: GoIRFunctionValueExpr) = defaultVisit(expr)
         override fun visitBuiltinValue(expr: GoIRBuiltinValueExpr) = defaultVisit(expr)
+        override fun visitFreeVarValue(expr: GoIRFreeVarValueExpr) = defaultVisit(expr)
     }
 }

@@ -68,12 +68,3 @@ data class GoIRParameterValue(
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitParameter(this)
     override fun toString(): String = "arg${paramIndex}:$name"
 }
-
-data class GoIRFreeVarValue(
-    override val type: GoIRType,
-    override val name: String,
-    val freeVarIndex: Int,
-) : GoIRValue {
-    override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitFreeVar(this)
-    override fun toString(): String = "free${freeVarIndex}:$name"
-}

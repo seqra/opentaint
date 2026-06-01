@@ -2,6 +2,7 @@ package org.opentaint.ir.go.test
 
 import org.opentaint.ir.go.api.*
 import org.opentaint.ir.go.cfg.GoIRBasicBlock
+import org.opentaint.ir.go.expr.GoIRFreeVarValueExpr
 import org.opentaint.ir.go.inst.*
 import org.opentaint.ir.go.value.*
 
@@ -582,15 +583,15 @@ object GoIRSanityChecker {
                     }
                 }
 
-                // Check free var indices are in range
-                if (operand is GoIRFreeVarValue) {
-                    val freeVarCount = body.function.freeVars.size
-                    if (operand.freeVarIndex < 0 || operand.freeVarIndex >= freeVarCount) {
-                        errors += SanityViolation(
-                            "operand",
-                            "$fnName: Inst ${inst.index} operand $opIdx references freeVar index ${operand.freeVarIndex} but function has $freeVarCount freeVars"
-                        )
-                    }
+            }
+            if (inst is GoIRAssignInst && inst.expr is GoIRFreeVarValueExpr) {
+                val expr = inst.expr as GoIRFreeVarValueExpr
+                val freeVarCount = body.function.freeVars.size
+                if (expr.freeVarIndex < 0 || expr.freeVarIndex >= freeVarCount) {
+                    errors += SanityViolation(
+                        "operand",
+                        "$fnName: Inst ${inst.index} references freeVar index ${expr.freeVarIndex} but function has $freeVarCount freeVars"
+                    )
                 }
             }
         }

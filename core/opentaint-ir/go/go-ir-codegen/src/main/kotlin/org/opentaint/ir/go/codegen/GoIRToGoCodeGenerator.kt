@@ -803,6 +803,12 @@ class GoIRToGoCodeGenerator {
                     override fun visitBuiltinValue(expr: GoIRBuiltinValueExpr): String {
                         return "$name = ${expr.builtinName}"
                     }
+
+                    override fun visitFreeVarValue(expr: GoIRFreeVarValueExpr): String {
+                        val bindings = closureFreeVarBindings
+                        val rhs = bindings?.get(expr.name) ?: expr.name
+                        return "$name = $rhs"
+                    }
                 })
             }
 
@@ -945,21 +951,13 @@ class GoIRToGoCodeGenerator {
      * Returns the Go expression that references the given SSA value.
      */
     private fun valueRef(value: GoIRValue): String {
-        // When generating closure bodies, substitute free variable references with their bindings
-        val bindings = closureFreeVarBindings
-        if (bindings != null && value is GoIRFreeVarValue) {
-            return bindings[value.name] ?: value.name
-        }
-        // When generating closure bodies, apply register renames to avoid collisions
         val renames = closureRegisterRenames
         val baseName = when (value) {
             is GoIRConstValue -> return constValueStr(value)
             is GoIRParameterValue -> value.name
-            is GoIRFreeVarValue -> value.name
             is GoIRRegister -> value.name
             else -> error("unexpected value type: ${value::class.simpleName}")
         }
-        // Apply closure register rename if active
         if (renames != null) {
             return renames[baseName] ?: baseName
         }

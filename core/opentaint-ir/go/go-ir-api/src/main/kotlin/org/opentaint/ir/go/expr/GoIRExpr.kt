@@ -335,6 +335,16 @@ data class GoIRBuiltinValueExpr(
     override fun toString(): String = "builtin $builtinName"
 }
 
+data class GoIRFreeVarValueExpr(
+    override var type: GoIRType,
+    val freeVarIndex: Int,
+    val name: String,
+) : GoIRExpr {
+    override val operands: List<GoIRValue> get() = emptyList()
+    override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitFreeVarValue(this)
+    override fun toString(): String = "freevar:$freeVarIndex $name"
+}
+
 private val GoIRBinaryOp.symbol: String
     get() = when (this) {
         GoIRBinaryOp.ADD -> "+"
