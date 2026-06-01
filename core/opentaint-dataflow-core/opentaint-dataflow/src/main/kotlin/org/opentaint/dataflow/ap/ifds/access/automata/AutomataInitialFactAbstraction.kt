@@ -31,24 +31,24 @@ class AutomataInitialFactAbstraction(initialStatement: CommonInst) : InitialFact
     override fun addAbstractedInitialFact(
         factAp: FinalFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> =
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> =
         addAbstractedInitialFact(factAp as AccessGraphFinalFactAp, typeChecker)
 
     override fun registerNewInitialFact(
         factAp: InitialFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> =
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> =
         registerNewInitialFact(factAp as AccessGraphInitialFactAp, typeChecker)
 
     private fun addAbstractedInitialFact(
         fact: AccessGraphFinalFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         val basedFacts = addedFacts.getOrCreate(fact.base)
         return basedFacts.addAndAbstract(fact.access, typeChecker).map {
             Pair(
                 AccessGraphInitialFactAp(fact.base, it, ExclusionSet.Empty),
-                AccessGraphFinalFactAp(fact.base, it, ExclusionSet.Empty)
+                AccessGraphInitialFactAp.Delta(it.manager.emptyGraph())
             )
         }
     }
@@ -56,12 +56,12 @@ class AutomataInitialFactAbstraction(initialStatement: CommonInst) : InitialFact
     private fun registerNewInitialFact(
         fact: AccessGraphInitialFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         val addedBasedFacts = addedFacts.getOrCreate(fact.base)
         return addedBasedFacts.registerNew(fact.access, fact.exclusions, typeChecker).map {
             Pair(
                 AccessGraphInitialFactAp(fact.base, it, ExclusionSet.Empty),
-                AccessGraphFinalFactAp(fact.base, it, ExclusionSet.Empty)
+                AccessGraphInitialFactAp.Delta(it.manager.emptyGraph())
             )
         }
     }

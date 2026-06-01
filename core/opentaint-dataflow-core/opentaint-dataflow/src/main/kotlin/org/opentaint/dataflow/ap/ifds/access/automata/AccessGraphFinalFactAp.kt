@@ -101,6 +101,11 @@ data class AccessGraphFinalFactAp(
         return AccessGraphFinalFactAp(base, concatenatedGraph, exclusions)
     }
 
+    override fun concat(typeChecker: FactTypeChecker, delta: InitialFactAp.Delta): FinalFactAp? {
+        delta as AccessGraphInitialFactAp.Delta
+        return concat(typeChecker, Delta(delta.access))
+    }
+
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? =
         access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions) }
 

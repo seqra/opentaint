@@ -149,7 +149,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = ApMode.Tree
+            ifdsApMode = ApMode.fromTestProperty()
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {

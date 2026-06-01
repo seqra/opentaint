@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.ReversedApNode
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.foldRight
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromAccessPath
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
@@ -104,7 +105,32 @@ class AccessTree(
 
         if (base != factAp.base) return false
 
-        return access.contains(factAp.access)
+        val otherAccess = factAp.access
+
+        if (otherAccess == null) {
+            return access.isAbstract
+        }
+
+        var node = access
+        otherAccess.toList().forEachInt { accessor ->
+            if (accessor == FINAL_ACCESSOR_IDX) {
+                if (node.isFinal) return true
+                // Relaxed: abstract pattern also covers the .$ terminator unless excluded.
+                return node.isAbstract && !with(apManager) { exclusions.contains(accessor.accessor) }
+            }
+            val curNode = node.getChild(accessor)
+            if (curNode != null) {
+                node = curNode
+                return@forEachInt
+            }
+
+            // Relaxed contains: an abstract node covers more specific accessors that are
+            // not explicitly excluded — matches the abstraction semantics needed by the
+            // trace resolver's edge lookup.
+            if (!node.isAbstract) return false
+            with(apManager) { return !exclusions.contains(accessor.accessor) }
+        }
+        return node.isAbstract
     }
 
     override fun equalTo(factAp: InitialFactAp): Boolean {
@@ -195,6 +221,17 @@ class AccessTree(
                 val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, d.node)
                     ?: return null
                 return AccessTree(apManager, base, concatenatedAccess, exclusions)
+            }
+        }
+    }
+
+    override fun concat(typeChecker: FactTypeChecker, delta: InitialFactAp.Delta): FinalFactAp? {
+        delta as AccessPath.AccessPathDelta
+        return when (delta) {
+            AccessPath.AccessPathDelta.Empty -> this
+            is AccessPath.AccessPathDelta.Delta -> {
+                val treeNode = apManager.createAbstractNodeFromAccessPath(delta.node)
+                concat(typeChecker, NodeAccessTreeDelta(apManager, treeNode))
             }
         }
     }
@@ -1653,6 +1690,20 @@ class AccessTree(
                 get(key) ?: error("Result for $key was not computed")
 
             private val NodeExpansionRequested = Any()
+
+            @JvmStatic
+            fun TreeApManager.createAbstractNodeFromAccessPath(apNode: AccessPath.AccessNode): AccessNode {
+                // Convert the forward linear AccessPath chain into a ReversedApNode (head = last accessor)
+                // and delegate to createAbstractNodeFromReversedAp, which already handles FinalAccessor
+                // correctly (substituting finalNode rather than failing).
+                var reversed: ReversedApNode? = null
+                var n: AccessPath.AccessNode? = apNode
+                while (n != null) {
+                    reversed = ReversedApNode(n.accessor, reversed)
+                    n = n.next
+                }
+                return createAbstractNodeFromReversedAp(reversed)
+            }
         }
     }
 }

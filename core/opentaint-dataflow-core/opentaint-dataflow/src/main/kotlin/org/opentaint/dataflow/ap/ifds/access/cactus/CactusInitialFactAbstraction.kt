@@ -17,14 +17,14 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
     override fun addAbstractedInitialFact(
         factAp: FinalFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         factAp as AccessCactus
 
         // note: we can ignore fact exclusions here
         val facts = initialFacts.getOrPut(factAp.base)
         val addedFact = facts.addInitialFact(factAp.access) ?: return emptyList()
 
-        val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        val abstractFacts = mutableListOf<Pair<InitialFactAp, InitialFactAp.Delta>>()
         addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts)
         return abstractFacts
     }
@@ -32,13 +32,13 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
     override fun registerNewInitialFact(
         factAp: InitialFactAp,
         typeChecker: FactTypeChecker
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         factAp as AccessPathWithCycles
 
         val facts = initialFacts.getOrPut(factAp.base)
         facts.addAnalyzedInitialFact(factAp.access, factAp.exclusions)
 
-        val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        val abstractFacts = mutableListOf<Pair<InitialFactAp, InitialFactAp.Delta>>()
         addAbstractInitialFact(facts, factAp.base, facts.allAddedFacts(), abstractFacts)
         return abstractFacts
     }
@@ -47,7 +47,7 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
         facts: MethodSameBaseInitialFact,
         concreteFactBase: AccessPathBase,
         concreteFactAccess: AccessCactusNode,
-        abstractFacts: MutableList<Pair<InitialFactAp, FinalFactAp>>
+        abstractFacts: MutableList<Pair<InitialFactAp, InitialFactAp.Delta>>
     ) {
         abstractAccessPath(facts.analyzed, concreteFactAccess,
             AccessPathWithCycles.AccessNode.Builder()
@@ -55,11 +55,8 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
             val initialAbstractAccessNode = builder.build()
             val initialAbstractAp = AccessPathWithCycles(concreteFactBase, initialAbstractAccessNode, abstractExcludes)
 
-            val apAccess = AccessCactusNode.createAbstractNodeFromAp(initialAbstractAccessNode)
-            val ap = AccessCactus(concreteFactBase, apAccess, abstractExcludes)
-
             facts.addAnalyzedInitialFact(initialAbstractAccessNode, abstractExcludes)
-            abstractFacts.add(initialAbstractAp to ap)
+            abstractFacts.add(initialAbstractAp to AccessPathWithCycles.CactusEmptyDelta)
         }
     }
 

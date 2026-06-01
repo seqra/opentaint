@@ -45,6 +45,8 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
     fun contains(factAp: InitialFactAp): Boolean
 
     fun compatibilityFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactCompatibilityFilter
+
+    fun toFinalFact(): FinalFactAp
 }
 
 interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
@@ -62,6 +64,7 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
 
     fun delta(other: InitialFactAp): List<Delta>
     fun concat(typeChecker: FactTypeChecker, delta: Delta): FinalFactAp?
+    fun concat(typeChecker: FactTypeChecker, delta: InitialFactAp.Delta): FinalFactAp?
 
     fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp?
     fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp?

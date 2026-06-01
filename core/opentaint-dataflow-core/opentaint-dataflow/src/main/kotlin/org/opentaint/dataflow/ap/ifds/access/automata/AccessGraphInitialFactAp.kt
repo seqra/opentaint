@@ -98,4 +98,7 @@ data class AccessGraphInitialFactAp(
 
     override fun compatibilityFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactCompatibilityFilter =
         access.manager.createCompatibilityFilter(access, typeChecker)
+
+    override fun toFinalFact(): FinalFactAp =
+        AccessGraphFinalFactAp(base, access, exclusions)
 }

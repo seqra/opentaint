@@ -96,7 +96,7 @@ abstract class InitialFactAbstractionTest {
                 appendLine("produced=${producedFactsToString(produced)}")
             }
             assertTrue(
-                produced.any { (initial, final) -> initial == expected && final.equalTo(expected) },
+                produced.any { (initial, delta) -> initial.concat(delta) == expected },
                 message,
             )
         }
@@ -515,15 +515,17 @@ abstract class InitialFactAbstractionTest {
         return fact
     }
 
-    private fun producedFactsToString(produced: List<Pair<InitialFactAp, FinalFactAp>>): String =
+    private fun producedFactsToString(produced: List<Pair<InitialFactAp, InitialFactAp.Delta>>): String =
         if (produced.isEmpty()) {
             "[]"
         } else {
-            produced.joinToString(prefix = "[", postfix = "]") { (initial, _) -> "$initial" }
+            produced.joinToString(prefix = "[", postfix = "]") { (initial, delta) ->
+                if (delta.isEmpty) "$initial" else "$initial + $delta"
+            }
         }
 
-    private fun abstractionIsEmpty(produced: List<Pair<InitialFactAp, FinalFactAp>>): Boolean =
-        produced.isEmpty() || (produced.size == 1 && produced.single().first.size == 0)
+    private fun abstractionIsEmpty(produced: List<Pair<InitialFactAp, InitialFactAp.Delta>>): Boolean =
+        produced.isEmpty() || (produced.size == 1 && produced.single().let { (i, d) -> i.size == 0 && d.isEmpty })
 
 
     private fun newAbstraction() = apManager.initialFactAbstraction(dummyInst)

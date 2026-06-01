@@ -183,6 +183,10 @@ class NormalMethodAnalyzer(
     private var unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
     private var enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
 
+    private data class PendingTransfer(val edge: FactToFact, val excludedAccessor: Accessor)
+
+    private val pendingTransfers: MutableMap<InitialFactAp, ArrayList<PendingTransfer>> = HashMap()
+
     override val containsUnprocessedEdges: Boolean
         get() = !unprocessedEdges.isEmpty
 
@@ -256,16 +260,28 @@ class NormalMethodAnalyzer(
     override fun addInitialFact(factAp: FinalFactAp) {
         val flowFunction = analysisManager.getMethodStartFlowFunction(apManager, analysisContext)
         val startFacts = flowFunction.propagateFact(factAp)
+
         startFacts.forEach { startFact ->
-            initialFacts.addAbstractedInitialFact(startFact.fact, analysisManager.factTypeChecker).forEach { (initialFact, finalFact) ->
-                addInitialEdge(initialFact, finalFact)
+            initialFacts.addAbstractedInitialFact(startFact.fact, analysisManager.factTypeChecker).forEach { (initialFact, delta) ->
+                if (delta.isEmpty) {
+                    addInitialEdge(initialFact, initialFact.toFinalFact())
+                } else {
+                    val refinedInitial = initialFact.concat(delta).replaceExclusions(ExclusionSet.Empty)
+                    addInitialEdge(refinedInitial, refinedInitial.toFinalFact())
+                }
             }
         }
     }
 
     override fun triggerSideEffectRequirement(sideEffectRequirement: InitialFactAp) {
-        val curFact = sideEffectRequirement.replaceExclusions(ExclusionSet.Empty)
-        addSideEffectRequirement(curFact, sideEffectRequirement)
+        val curInitialFact = sideEffectRequirement.replaceExclusions(ExclusionSet.Empty)
+        val syntheticEdge = FactToFact(
+            methodEntryPoint,
+            curInitialFact,
+            methodEntryPoint.statement,
+            curInitialFact.toFinalFact(),
+        )
+        addSideEffectRequirement(syntheticEdge, sideEffectRequirement)
     }
 
     override fun tabulationAlgorithmStep() {
@@ -470,7 +486,7 @@ class NormalMethodAnalyzer(
             is MethodCallFlowFunction.CallToStartFFact -> {
                 val callerEdge = FactToFact(methodEntryPoint, fact.initialFactAp, edge.statement, fact.callerFactAp)
 
-                handleInputFactChange(edge.initialFactAp, callerEdge.initialFactAp)
+                handleInputFactChange(edge, callerEdge.initialFactAp)
 
                 val handler = MethodCallHandler.FactToFactHandler(callerEdge, fact.startFactBase)
                 val failureHandler = MethodCallResolutionFailureHandler.FactToFactHandler(callerEdge, fact.startFactBase)
@@ -608,16 +624,56 @@ class NormalMethodAnalyzer(
         }
     }
 
-    private fun handleInputFactChange(originalInputFactAp: InitialFactAp, newInputFactAp: InitialFactAp) {
-        if (originalInputFactAp == newInputFactAp) return
-        initialFacts.registerNewInitialFact(newInputFactAp, analysisManager.factTypeChecker).forEach { (initialFact, finalFact) ->
-            addInitialEdge(initialFact, finalFact)
+    private fun addSubFor(initialFact: InitialFactAp, edge: FactToFact, excludedAccessor: Accessor) {
+        pendingTransfers.getOrPut(initialFact) { ArrayList() }.add(PendingTransfer(edge, excludedAccessor))
+    }
+
+    private fun fireSubsFor(initialFact: InitialFactAp, delta: InitialFactAp.Delta) {
+        val list = pendingTransfers[initialFact] ?: return
+        val refinedInitial = initialFact.concat(delta).replaceExclusions(ExclusionSet.Empty)
+        val survivors = ArrayList<PendingTransfer>()
+        for (sub in list) {
+            if (!delta.startsWithAccessor(sub.excludedAccessor)) {
+                survivors.add(sub)
+                continue
+            }
+            val refinedFinal = sub.edge.factAp.concat(analysisManager.factTypeChecker, delta)
+                ?.replaceExclusions(ExclusionSet.Empty)
+                ?: continue
+
+            val newEdge = FactToFact(methodEntryPoint, refinedInitial, sub.edge.statement, refinedFinal)
+            addSequentialEdge(newEdge)
+        }
+        if (survivors.isEmpty()) {
+            pendingTransfers.remove(initialFact)
+        } else {
+            pendingTransfers[initialFact] = survivors
+        }
+    }
+
+    private fun handleInputFactChange(currentEdge: FactToFact, newInputFactAp: InitialFactAp) {
+        if (currentEdge.initialFactAp == newInputFactAp) return
+
+        val matches = initialFacts.registerNewInitialFact(newInputFactAp, analysisManager.factTypeChecker)
+
+        val keyInitialFact = currentEdge.initialFactAp.replaceExclusions(ExclusionSet.Empty)
+        val newlyExcluded = newInputFactAp.exclusions - currentEdge.initialFactAp.exclusions
+        if (newlyExcluded is ExclusionSet.Concrete) {
+            for (accessor in newlyExcluded.set) {
+                addSubFor(keyInitialFact, currentEdge, accessor)
+            }
+        }
+
+        for ((initialFact, delta) in matches) {
+            val refinedInitial = initialFact.concat(delta).replaceExclusions(ExclusionSet.Empty)
+            addInitialEdge(refinedInitial, refinedInitial.toFinalFact())
+            if (!delta.isEmpty) fireSubsFor(initialFact, delta)
         }
     }
 
     private fun handleStatementEdge(edgeBeforeStatement: Edge, edgeAfterStatement: Edge) {
         if (edgeBeforeStatement is FactToFact && edgeAfterStatement is FactToFact) {
-            handleInputFactChange(edgeBeforeStatement.initialFactAp, edgeAfterStatement.initialFactAp)
+            handleInputFactChange(edgeBeforeStatement, edgeAfterStatement.initialFactAp)
         }
 
         val edgePostProcessor = analysisManager.getEdgePostProcessor(
@@ -911,14 +967,8 @@ class NormalMethodAnalyzer(
     }
 
     private fun addSideEffectRequirement(currentEdge: FactToFact, sideEffectRequirement: InitialFactAp) {
-        addSideEffectRequirement(currentEdge.initialFactAp, sideEffectRequirement)
-    }
-
-    private fun addSideEffectRequirement(curInitialFactAp: InitialFactAp, sideEffectRequirement: InitialFactAp) {
-        handleInputFactChange(curInitialFactAp, sideEffectRequirement)
-
+        handleInputFactChange(currentEdge, sideEffectRequirement)
         pendingSideEffectRequirements.add(sideEffectRequirement)
-
         if (!analyzerEnqueued) {
             flushPendingSideEffectRequirements()
         }
@@ -930,7 +980,7 @@ class NormalMethodAnalyzer(
         kind: SideEffectKind,
     ) {
         if (currentEdge is FactToFact) {
-            handleInputFactChange(currentEdge.initialFactAp, initialFactAp)
+            handleInputFactChange(currentEdge, initialFactAp)
         }
 
         addSideEffectSummary(SideEffectSummary.FactSideEffectSummary(initialFactAp, kind))

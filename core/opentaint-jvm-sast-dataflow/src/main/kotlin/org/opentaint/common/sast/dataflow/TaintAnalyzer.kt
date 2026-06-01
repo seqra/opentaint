@@ -19,11 +19,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
-import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
@@ -79,13 +75,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
     }
 
-    private val apManager by lazy {
-        when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(unrollStrategy)
-            ApMode.Cactus -> CactusApManager(unrollStrategy)
-            ApMode.Automata -> AutomataApManager(unrollStrategy)
-        }
-    }
+    private val apManager by lazy { options.ifdsApMode.createApManager(unrollStrategy) }
 
     open fun summarySerializationContext(): SummarySerializationContext = DummySerializationContext
 
