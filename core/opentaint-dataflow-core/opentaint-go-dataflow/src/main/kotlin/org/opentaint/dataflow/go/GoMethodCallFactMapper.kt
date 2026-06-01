@@ -12,10 +12,9 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRCallMode
-import org.opentaint.ir.go.value.GoIRFunctionValue
-import org.opentaint.ir.go.value.GoIRRegister
 import org.opentaint.ir.go.value.GoIRValue
 
 object GoMethodCallFactMapper : MethodCallFactMapper {
@@ -45,27 +44,32 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         val callExpr = buildGoCallExpr(goInst, callInfo)
         val explicitArgs = callExpr.explicitArgs
 
-        return when (factAp.base) {
+        return when (val base = factAp.base) {
             is AccessPathBase.Return -> {
                 val resultRegister = GoFlowFunctionUtils.extractResultRegister(goInst)
                     ?: return emptyList()
                 listOf(factAp.rebase(AccessPathBase.LocalVar(resultRegister.index)))
             }
             is AccessPathBase.Argument -> {
-                val idx = (factAp.base as AccessPathBase.Argument).idx
-                if (idx >= 0 && idx < explicitArgs.size) {
-                    val argBase = GoFlowFunctionUtils.accessPathBase(explicitArgs[idx], method)
-                        ?: return emptyList()
-                    listOf(factAp.rebase(argBase))
-                } else {
-                    mapFreeVarArgToBinding(callExpr, method, factAp, idx, rebase)
-                }
+                val argBase = explicitArgs.getOrNull(base.idx)
+                    ?.let { GoFlowFunctionUtils.accessPathBase(it, method) }
+                    ?: return emptyList()
+
+                listOf(factAp.rebase(argBase))
             }
             is AccessPathBase.This -> {
-                val receiver = callExpr.effectiveReceiver ?: return emptyList()
-                val recvBase = GoFlowFunctionUtils.accessPathBase(receiver, method)
-                    ?: return emptyList()
-                listOf(factAp.rebase(recvBase))
+                val mappedFacts = mutableListOf<F>()
+                callExpr.effectiveReceiver?.let { receiver ->
+                    GoFlowFunctionUtils.accessPathBase(receiver, method)?.let { recvBase ->
+                        mappedFacts += factAp.rebase(recvBase)
+                    }
+                }
+
+                callExpr.handleDynamicCall(method) { dynamicTarget ->
+                    mappedFacts += factAp.rebase(dynamicTarget)
+                }
+
+                mappedFacts
             }
             is AccessPathBase.ClassStatic -> listOf(factAp)
             is AccessPathBase.Constant -> listOf(factAp)
@@ -80,7 +84,7 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
      */
     private fun buildGoCallExpr(goInst: GoIRInst, callInfo: GoIRCallInfo): GoCallExpr {
         val enclosingMethod = goInst.location.functionBody.function
-        val callee = (callInfo.function as? GoIRFunctionValue)?.function
+        val callee = (callInfo.target as? GoIRCallTarget.Function)?.function
         return GoCallExpr(callInfo, callee, enclosingMethod)
     }
 
@@ -135,58 +139,11 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
             onMappedFact(factAp, AccessPathBase.ClassStatic)
         }
 
-        mapClosureBindingsToStart(goCallExpr, method, factAp, onMappedFact)
-    }
-
-    // ── Closure binding helpers ──────────────────────────────────────
-
-    private fun <F: FactAp> mapClosureBindingsToStart(
-        goCallExpr: GoCallExpr,
-        method: GoIRFunction,
-        factAp: F,
-        onMapped: (F, AccessPathBase) -> Unit,
-    ) {
-        val callInfo = goCallExpr.callInfo
-        if (callInfo.mode != GoIRCallMode.DYNAMIC) return
-        val enclosingMethod = goCallExpr.enclosingMethod
-
-        val funcValue = callInfo.function as? GoIRRegister ?: return
-        val closureExpr = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, enclosingMethod) ?: return
-
-        // For methods the receiver is `params[0]` and is materialised as
-        // `AccessPathBase.This` (not an Argument), so free vars are indexed
-        // starting from the count of *non-receiver* params.
-        val paramCount = GoFlowFunctionUtils.nonReceiverParamCount(closureExpr.fn)
-        for ((i, binding) in closureExpr.bindings.withIndex()) {
-            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method)
-            if (bindingBase != null && factAp.base == bindingBase) {
-                val freeVarBase = AccessPathBase.Argument(paramCount + i)
-                onMapped(factAp, freeVarBase)
+        goCallExpr.handleDynamicCall(method) { dynamicTarget ->
+            if (factAp.base == dynamicTarget) {
+                onMappedFact(factAp, AccessPathBase.This)
             }
         }
-    }
-
-    // ── Free-var exit-to-return mapping ──────────────────────────────
-
-    private fun <F: FactAp> mapFreeVarArgToBinding(
-        callExpr: GoCallExpr,
-        method: GoIRFunction,
-        factAp: F,
-        argIdx: Int,
-        rebase: F.(AccessPathBase) -> F,
-    ): List<F> {
-        val callInfo = callExpr.callInfo
-        if (callInfo.mode != GoIRCallMode.DYNAMIC) return emptyList()
-        val funcValue = callInfo.function as? GoIRRegister ?: return emptyList()
-        val closureExpr = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, method) ?: return emptyList()
-
-        val freeVarIdx = argIdx - callExpr.explicitArgs.size
-        if (freeVarIdx < 0 || freeVarIdx >= closureExpr.bindings.size) return emptyList()
-
-        val bindingBase = GoFlowFunctionUtils.accessPathBase(closureExpr.bindings[freeVarIdx], method)
-            ?: return emptyList()
-
-        return listOf(factAp.rebase(bindingBase))
     }
 
     override fun factIsRelevantToMethodCall(
@@ -196,7 +153,6 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         factAp: FactAp,
     ): Boolean {
         val goCallExpr = callExpr as GoCallExpr
-        val callInfo = goCallExpr.callInfo
         val method = (callStatement as GoIRInst).location.functionBody.function
 
         for (arg in goCallExpr.explicitArgs) {
@@ -217,18 +173,8 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
 
         if (factAp.base is AccessPathBase.ClassStatic) return true
 
-        // Check closure bindings for DYNAMIC calls
-        if (callInfo.mode == GoIRCallMode.DYNAMIC) {
-            val funcValue = callInfo.function as? GoIRRegister
-            if (funcValue != null) {
-                val closureExpr = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, goCallExpr.enclosingMethod)
-                if (closureExpr != null) {
-                    for (binding in closureExpr.bindings) {
-                        val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method)
-                        if (bindingBase != null && bindingBase == factAp.base) return true
-                    }
-                }
-            }
+        goCallExpr.handleDynamicCall(method) { dynamicTarget ->
+            if (dynamicTarget == factAp.base) return true
         }
 
         return false
@@ -236,5 +182,14 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
 
     override fun isValidMethodExitFact(factAp: FactAp): Boolean {
         return factAp.base !is AccessPathBase.LocalVar
+    }
+
+    inline fun GoCallExpr.handleDynamicCall(enclosingFunction: GoIRFunction?, body: (AccessPathBase) -> Unit) {
+        if (callInfo.mode != GoIRCallMode.DYNAMIC) return
+        val dynamicCallTarget = callInfo.target as? GoIRCallTarget.Dynamic ?: return
+        val targetValue = GoFlowFunctionUtils.accessPathBase(dynamicCallTarget.value, enclosingFunction)
+        if (targetValue != null) {
+            body(targetValue)
+        }
     }
 }

@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -19,10 +20,11 @@ import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
-import org.opentaint.ir.go.expr.GoIRIndexAddrExpr
-import org.opentaint.ir.go.expr.GoIRIndexExpr
-import org.opentaint.ir.go.expr.GoIRUnOpExpr
+import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
+import org.opentaint.ir.go.expr.GoIRNextExpr
+import org.opentaint.ir.go.expr.GoIRTypeAssertExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRGlobalStore
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRMapUpdate
 import org.opentaint.ir.go.inst.GoIRPhi
@@ -30,10 +32,6 @@ import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.type.GoIRBinaryOp
-import org.opentaint.ir.go.type.GoIRUnaryOp
-import org.opentaint.ir.go.value.GoIRGlobalValue
-import org.opentaint.ir.go.value.GoIRRegister
-import org.opentaint.ir.go.value.GoIRValue
 import org.opentaint.util.onSome
 
 class GoMethodSequentFlowFunction(
@@ -80,6 +78,7 @@ class GoMethodSequentFlowFunction(
         return when (currentInst) {
             is GoIRAssignInst -> handleAssign(initialFact, currentFact, currentInst)
             is GoIRStore -> handleStore(initialFact, currentFact, currentInst)
+            is GoIRGlobalStore -> handleGlobalStore(initialFact, currentFact, currentInst)
             is GoIRReturn -> handleReturn(initialFact, currentFact, currentInst)
             is GoIRPhi -> handlePhi(initialFact, currentFact, currentInst)
             is GoIRMapUpdate -> handleMapUpdate(initialFact, currentFact, currentInst)
@@ -139,6 +138,29 @@ class GoMethodSequentFlowFunction(
         return result
     }
 
+    private fun handleMakeClosure(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRMakeClosureExpr,
+    ): Set<Sequent> {
+        val result = mutableSetOf<Sequent>()
+
+        if (currentFact.base != registerBase) {
+            result.add(Sequent.Unchanged)
+        }
+
+        for ((i, binding) in expr.bindings.withIndex()) {
+            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method) ?: continue
+            if (currentFact.base == bindingBase) {
+                val freeVarFact = currentFact.rebase(registerBase)
+                    .prependAccessor(GoFlowFunctionUtils.freeVarAccessor(expr.fn, i))
+                result.add(makeEdge(initialFact, freeVarFact))
+            }
+        }
+
+        return result
+    }
     private fun handleRefAssign(
         initialFact: InitialFactAp?,
         currentFact: FinalFactAp,
@@ -184,12 +206,27 @@ class GoMethodSequentFlowFunction(
         val addrAccess = GoFlowFunctionUtils.accessForAddr(inst.addr, method)
             ?: return setOf(Sequent.Unchanged)
 
+        return complexAccessorWrite(addrAccess, currentFact, initialFact, valueBase) { _, _ ->
+            val chain = GoFlowFunctionUtils.resolveAddrChain(inst.addr, method)
+                ?: return@complexAccessorWrite emptyList()
+
+            listOf(chain)
+        }
+    }
+
+    private fun complexAccessorWrite(
+        writeTo: Access,
+        currentFact: FinalFactAp,
+        initialFact: InitialFactAp?,
+        valueBase: AccessPathBase,
+        writeToMemoryAliases: (AccessPathBase, Accessor) -> List<Pair<AccessPathBase, List<Accessor>>>
+    ): MutableSet<Sequent> {
         val result = mutableSetOf<Sequent>()
 
-        when (addrAccess) {
+        when (writeTo) {
             is Access.RefAccess -> {
-                val destBase = addrAccess.base
-                val accessor = addrAccess.accessor
+                val destBase = writeTo.base
+                val accessor = writeTo.accessor
 
                 // Kill/preserve
                 if (currentFact.base == destBase) {
@@ -210,15 +247,21 @@ class GoMethodSequentFlowFunction(
                     result.add(Sequent.Unchanged)
                 }
 
-                // Gen: if value is tainted, write taint into dest.accessor
                 if (currentFact.base == valueBase) {
                     val newFact = currentFact.rebase(destBase).prependAccessor(accessor)
                     result.add(makeEdge(initialFact, newFact))
+
+                    writeToMemoryAliases(destBase, accessor).forEach { (rootBase, accessors) ->
+                        val newAliasedFact = accessors.fold(currentFact.rebase(rootBase)) { f, acc ->
+                            f.prependAccessor(acc)
+                        }
+                        result.add(makeEdge(initialFact, newAliasedFact))
+                    }
                 }
             }
 
             is Access.Simple -> {
-                val destBase = addrAccess.base
+                val destBase = writeTo.base
 
                 if (currentFact.base == destBase) {
                     // Pointer store: overwritten
@@ -234,6 +277,19 @@ class GoMethodSequentFlowFunction(
         }
 
         return result
+    }
+
+    private fun handleGlobalStore(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        inst: GoIRGlobalStore,
+    ): Set<Sequent> {
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+            ?: return setOf(Sequent.Unchanged)
+
+        val globalAccess = GoFlowFunctionUtils.accessForGlobal(inst.global)
+
+        return complexAccessorWrite(globalAccess, currentFact, initialFact, valueBase) { _, _ -> emptyList() }
     }
 
     private fun handleReturn(
@@ -378,7 +434,7 @@ class GoMethodSequentFlowFunction(
             sourceRules += context.taint.taintConfig.sourceRulesForFieldRead(fieldName)
         }
 
-        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method)
+        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst)
         if (globalName != null) {
             sourceRules += context.taint.taintConfig.sourceRulesForGlobal(globalName)
         }
@@ -411,70 +467,6 @@ class GoMethodSequentFlowFunction(
                 }
             }
         }
-    }
-
-    /**
-     * Inspect an assignment's RHS for a "global read".
-     *
-     * Three SSA shapes lower to a tainted destination register:
-     *
-     *  1. `q := slice[i]` over a global-loaded slice, IR-as-IndexExpr:
-     *       `GoIRIndexExpr(x = register-loaded-from-global)`
-     *  2. `q := os.Args[1]` — the dominant CLI-input shape — which Go SSA splits
-     *     into three steps:
-     *       `t0 = *os.Args`            (GoIRUnOpExpr DEREF)
-     *       `t1 = &t0[i]`              (GoIRIndexAddrExpr)
-     *       `q  = *t1`                 (GoIRUnOpExpr DEREF)
-     *     We fire on the outer DEREF, chasing one def-step through the
-     *     `IndexAddrExpr` back to the global.
-     *  3. `q := *globalVar` — a bare slice-as-a-whole load. Rare in practice but
-     *     covered for symmetry; lets a sink rule that consumes the slice value
-     *     itself (e.g. `Sink_Slice(os.Args)`) work without a separate path.
-     *
-     * Returns the global's `fullName` so the caller can look up
-     * `sourceRulesForCall("<fullName>[]")`.
-     */
-    private fun detectGlobalReadName(inst: GoIRAssignInst): String? {
-        val expr = inst.expr
-        // Direct indexing via IndexExpr — `q := slice[i]` over a global-loaded slice.
-        if (expr is GoIRIndexExpr) {
-            return globalBehindValue(expr.x)
-        }
-        // Indirect indexing via &slice[i] + deref (`q := os.Args[1]` SSA shape):
-        //   t0 = *os.Args
-        //   t1 = &t0[i]   (GoIRIndexAddrExpr)
-        //   q  = *t1      (GoIRUnOpExpr DEREF — our destination)
-        // Detect the third instruction by chasing the deref through the index-addr.
-        if (expr is GoIRUnOpExpr && expr.op == GoIRUnaryOp.DEREF) {
-            val src = expr.x as? GoIRRegister
-            if (src != null) {
-                val srcDef = (GoFlowFunctionUtils.findDefInst(src, method) as? GoIRAssignInst)?.expr
-                if (srcDef is GoIRIndexAddrExpr) {
-                    val behind = globalBehindValue(srcDef.x)
-                    if (behind != null) return behind
-                }
-            }
-        }
-        // Bare expressions whose only operand is the global itself
-        // (`q := *os.Args` → the very first deref of the slice variable).
-        val ops = expr.operands
-        if (ops.size != 1) return null
-        return (ops[0] as? GoIRGlobalValue)?.global?.fullName
-    }
-
-    /**
-     * Resolve a value to the package-level global it was loaded from. Either the
-     * value is itself the global, or it is a register whose defining instruction
-     * is a single-operand expression (typically a `*globalVar` DEREF) over the
-     * global. Returns null if neither shape matches.
-     */
-    private fun globalBehindValue(value: GoIRValue): String? {
-        if (value is GoIRGlobalValue) return value.global.fullName
-        if (value !is GoIRRegister) return null
-        val defInst = GoFlowFunctionUtils.findDefInst(value, method) as? GoIRAssignInst ?: return null
-        val defOps = defInst.expr.operands
-        if (defOps.size != 1) return null
-        return (defOps[0] as? GoIRGlobalValue)?.global?.fullName
     }
 
     private fun makeEdge(initialFact: InitialFactAp?, newFact: FinalFactAp): Sequent {

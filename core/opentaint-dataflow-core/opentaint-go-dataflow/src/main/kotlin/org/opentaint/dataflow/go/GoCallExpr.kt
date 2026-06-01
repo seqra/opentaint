@@ -5,8 +5,8 @@ import org.opentaint.ir.api.common.cfg.CommonInstanceCallExpr
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.type.GoIRCallMode
-import org.opentaint.ir.go.value.GoIRBuiltinValue
 import org.opentaint.ir.go.value.GoIRValue
 
 open class GoCallExpr(
@@ -37,8 +37,8 @@ open class GoCallExpr(
     val calleeName: String?
         get() {
             resolvedCallee?.fullName?.let { return it }
-            val func = callInfo.function
-            if (func is GoIRBuiltinValue) return func.name
+            val target = callInfo.target
+            if (target is GoIRCallTarget.Builtin) return target.name
             if (callInfo.mode == GoIRCallMode.INVOKE) {
                 val recvType = callInfo.receiver?.type?.displayName ?: return null
                 val methodName = callInfo.methodName ?: return null

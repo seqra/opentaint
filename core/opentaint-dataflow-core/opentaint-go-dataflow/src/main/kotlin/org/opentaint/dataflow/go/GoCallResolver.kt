@@ -8,13 +8,13 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRNamedType
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.cfg.GoIRCallInfo
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRCallMode
 import org.opentaint.ir.go.type.GoIRInterfaceType
 import org.opentaint.ir.go.type.GoIRNamedTypeKind
 import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRType
-import org.opentaint.ir.go.value.GoIRFunctionValue
 import org.opentaint.ir.go.value.GoIRRegister
 import java.util.BitSet
 
@@ -45,25 +45,25 @@ class GoCallResolver(
     }
 
     private fun resolveDirect(call: GoIRCallInfo): List<GoIRFunction>? {
-        val funcValue = call.function as? GoIRFunctionValue ?: return null
-        return listOf(funcValue.function)
+        val target = call.target as? GoIRCallTarget.Function ?: return null
+        return listOf(target.function)
     }
 
     private fun resolveDynamic(call: GoIRCallInfo, location: GoIRInst): List<GoIRFunction>? {
-        // Trace the called function value back to its defining instruction.
-        // If it was produced by MakeClosureExpr, resolve to the closure's function.
-        val funcValue = call.function
-        if (funcValue is GoIRFunctionValue) {
-            return listOf(funcValue.function)
-        }
-        if (funcValue is GoIRRegister) {
-            val method = location.location.functionBody.function
-            val closure = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, method)
-            if (closure != null) {
+        val target = call.target ?: return null
+        when (target) {
+            is GoIRCallTarget.Function -> return listOf(target.function)
+            is GoIRCallTarget.Dynamic -> {
+                val method = location.location.functionBody.function
+                val funcValue = target.value as? GoIRRegister ?: return null
+
+                val closure = GoFlowFunctionUtils.findMakeClosureExpr(funcValue, method)
+                    ?: return null
+
                 return listOf(closure.fn)
             }
+            is GoIRCallTarget.Builtin -> return null
         }
-        return null
     }
 
     private fun resolveInvoke(call: GoIRCallInfo): List<GoIRFunction>? {

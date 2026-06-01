@@ -20,7 +20,11 @@ import org.opentaint.dataflow.taint.InitialFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
+import org.opentaint.ir.go.expr.GoIRNextExpr
+import org.opentaint.ir.go.expr.GoIRTypeAssertExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRGlobalStore
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRMapUpdate
 import org.opentaint.ir.go.inst.GoIRPhi
@@ -52,6 +56,7 @@ class GoMethodSequentPrecondition(
                 handleAssign(inst, fact, result)
             }
             is GoIRStore -> handleStore(inst, fact, result)
+            is GoIRGlobalStore -> handleGlobalStore(inst, fact, result)
             is GoIRReturn -> handleReturn(inst, fact, result)
             is GoIRPhi -> handlePhi(inst, fact, result)
             is GoIRMapUpdate -> handleMapUpdate(inst, fact, result)
@@ -99,6 +104,22 @@ class GoMethodSequentPrecondition(
         }
     }
 
+    private fun handleMakeClosurePrecondition(
+        fact: InitialFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRMakeClosureExpr,
+        result: MutableSet<SequentPrecondition>,
+    ) {
+        if (fact.base != registerBase) return
+
+        for ((i, binding) in expr.bindings.withIndex()) {
+            val accessor = GoFlowFunctionUtils.freeVarAccessor(expr.fn, i)
+            if (!fact.startsWithAccessor(accessor)) continue
+            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method) ?: continue
+            val stripped = fact.readAccessor(accessor) ?: continue
+            result.addPreFact(fact, stripped.rebase(bindingBase))
+        }
+    }
     private fun handleSimpleAssignPrecondition(
         fact: InitialFactAp,
         toBase: AccessPathBase,
@@ -186,6 +207,31 @@ class GoMethodSequentPrecondition(
                 result.addPreFact(fact, fact.rebase(valueBase))
             }
         }
+    }
+
+    private fun handleGlobalStore(
+        inst: GoIRGlobalStore,
+        fact: InitialFactAp,
+        result: MutableSet<SequentPrecondition>
+    ) {
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method) ?: return
+        val globalAccess = GoFlowFunctionUtils.accessForGlobal(inst.global)
+
+        val destBase = globalAccess.base
+        val accessor = globalAccess.accessor
+
+        if (fact.base != destBase) return // unchanged
+
+        if (!fact.startsWithAccessor(accessor)) {
+            // The store wrote to `accessor`, but the fact is at a different accessor
+            // of the same base — pass through.
+            return
+        }
+
+        val stripped = fact.readAccessor(accessor) ?: return
+        val genFact = stripped.rebase(valueBase)
+
+        result.addPreFact(fact, genFact)
     }
 
     private fun handleReturn(inst: GoIRReturn, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {

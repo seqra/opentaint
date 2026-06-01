@@ -8,11 +8,11 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRInstRef
 import org.opentaint.ir.go.inst.GoIRPanic
 import org.opentaint.ir.go.type.GoIRCallMode
-import org.opentaint.ir.go.value.GoIRFunctionValue
 
 open class GoLanguageManager(val cp: GoIRProgram) : LanguageManager {
     override fun getInstIndex(inst: CommonInst): Int =
@@ -39,7 +39,7 @@ open class GoLanguageManager(val cp: GoIRProgram) : LanguageManager {
         val enclosingMethod = goInst.location.functionBody.function
 
         val callee = when (callInfo.mode) {
-            GoIRCallMode.DIRECT -> (callInfo.function as? GoIRFunctionValue)?.function
+            GoIRCallMode.DIRECT -> (callInfo.target as? GoIRCallTarget.Function)?.function
             else -> null
         }
 
