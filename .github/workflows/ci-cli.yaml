@@ -420,3 +420,56 @@ jobs:
         uses: ./.github/actions/cli/verify-installed-binary
         with:
           binary-path: ${{ steps.install-windows.outputs.OPENTAINT_BINARY_PATH }}
+
+  test-install-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: cli/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Launcher unit tests
+        working-directory: cli
+        run: node --test npm/launcher.test.js
+      - name: Build-script smoke test
+        working-directory: cli
+        run: bash scripts/build-npm-packages.test.sh
+      - name: Build binary and minimal full archive
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -ldflags "-X github.com/seqra/opentaint/internal/version.Version=0.0.0-citest" -o opentaint .
+          tar -czf dist/opentaint-full_linux_amd64.tar.gz opentaint
+      - name: Assemble npm packages
+        working-directory: cli
+        run: bash scripts/build-npm-packages.sh dist 0.0.0-citest
+      - name: Pack and install from local tarballs
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tgz" "$RUNNER_TEMP/scratch"
+          for dir in dist-npm/opentaint-* dist-npm/opentaint; do
+            [ -d "$dir" ] || continue
+            tgz="$(npm pack "$dir" --pack-destination "$RUNNER_TEMP/tgz" | tail -n1)"
+            echo "packed $tgz"
+          done
+          cd "$RUNNER_TEMP/scratch"
+          npm init -y >/dev/null
+          # Install the main package plus the linux-x64 platform package from
+          # local tarballs. Other platform optionalDependencies are absent from
+          # the registry at this version and fail softly (optional).
+          npm install --no-audit --no-fund \
+            "$RUNNER_TEMP"/tgz/seqra-opentaint-0.0.0-citest.tgz \
+            "$RUNNER_TEMP"/tgz/seqra-opentaint-linux-x64-0.0.0-citest.tgz
+      - name: Verify launcher runs the bundled binary
+        working-directory: ${{ runner.temp }}/scratch
+        run: |
+          set -euo pipefail
+          out="$(./node_modules/.bin/opentaint --version)"
+          echo "opentaint --version -> $out"
+          echo "$out" | grep -q "0.0.0-citest"

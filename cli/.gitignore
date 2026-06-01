@@ -2,7 +2,9 @@
 bin/
 !npm/bin/
 dist/
+dist-npm/
 lib/
+opentaint
 
 # Operating system files
 **/.DS_Store
