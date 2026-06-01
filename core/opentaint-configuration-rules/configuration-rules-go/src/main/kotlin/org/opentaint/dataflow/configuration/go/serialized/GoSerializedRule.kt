@@ -13,6 +13,13 @@ data class GoSerializedGlobalSource(
     override val info: ItemInfo?,
 ) : GoSerializedItem
 
+data class GoSerializedFieldSource(
+    val field: GoNameMatcher,
+    val condition: GoSerializedCondition?,
+    val taint: List<GoSerializedAssignAction>,
+    override val info: ItemInfo?,
+) : GoSerializedItem
+
 sealed interface GoSerializedRule : GoSerializedItem {
     val function: GoNameMatcher
 
