@@ -7,6 +7,7 @@ import org.opentaint.ir.go.api.GoIRPackage
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.cfg.GoIRBasicBlock
 import org.opentaint.ir.go.cfg.GoIRCallInfo
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.expr.*
 import org.opentaint.ir.go.inst.*
 import org.opentaint.ir.go.type.*
@@ -111,27 +112,32 @@ class GoIRToGoCodeGenerator {
                     is GoIRCall -> scanCallForImport(inst.call, userPkg)
                     is GoIRGo -> scanCallForImport(inst.call, userPkg)
                     is GoIRDefer -> scanCallForImport(inst.call, userPkg)
-                    else -> {}
-                }
-                // Also scan for global references from other packages
-                for (operand in inst.operands) {
-                    if (operand is GoIRGlobalValue) {
-                        val gPkg = operand.global.pkg
-                        if (gPkg != userPkg && !gPkg.importPath.startsWith("internal/") &&
-                            !gPkg.importPath.startsWith("test/") && gPkg.importPath.isNotEmpty()
-                        ) {
-                            imports.add(gPkg.importPath)
-                        }
+                    is GoIRAssignInst -> when (val e = inst.expr) {
+                        is GoIRGlobalValueExpr -> maybeAddImport(e.global.pkg, userPkg)
+                        is GoIRFunctionValueExpr -> e.function.pkg?.let { maybeAddImport(it, userPkg) }
+                        else -> {}
                     }
+                    is GoIRGlobalStore -> maybeAddImport(inst.global.pkg, userPkg)
+                    else -> {}
                 }
             }
         }
     }
 
+    private fun maybeAddImport(pkg: GoIRPackage, userPkg: GoIRPackage) {
+        if (pkg != userPkg &&
+            !pkg.importPath.startsWith("internal/") &&
+            !pkg.importPath.startsWith("test/") &&
+            pkg.importPath.isNotEmpty()
+        ) {
+            imports.add(pkg.importPath)
+        }
+    }
+
     private fun scanCallForImport(call: GoIRCallInfo, userPkg: GoIRPackage) {
-        val fn = call.function
-        if (fn is GoIRFunctionValue) {
-            val fnPkg = fn.function.pkg
+        val tgt = call.target
+        if (tgt is GoIRCallTarget.Function) {
+            val fnPkg = tgt.function.pkg
             if (fnPkg != null && fnPkg != userPkg && !fnPkg.importPath.startsWith("internal/") &&
                 !fnPkg.importPath.startsWith("test/") && fnPkg.importPath.isNotEmpty()
             ) {
@@ -785,6 +791,18 @@ class GoIRToGoCodeGenerator {
                     override fun visitExtract(expr: GoIRExtractExpr): String? {
                         return null
                     }
+
+                    override fun visitGlobalValue(expr: GoIRGlobalValueExpr): String {
+                        return "$name = ${expr.global.fullName}"
+                    }
+
+                    override fun visitFunctionValue(expr: GoIRFunctionValueExpr): String {
+                        return "$name = ${functionRefByFn(expr.function)}"
+                    }
+
+                    override fun visitBuiltinValue(expr: GoIRBuiltinValueExpr): String {
+                        return "$name = ${expr.builtinName}"
+                    }
                 })
             }
 
@@ -835,6 +853,10 @@ class GoIRToGoCodeGenerator {
                 return "*${valueRef(inst.addr)} = ${valueRef(inst.value)}"
             }
 
+            override fun visitGlobalStore(inst: GoIRGlobalStore): String {
+                return "${inst.global.fullName} = ${valueRef(inst.value)}"
+            }
+
             override fun visitMapUpdate(inst: GoIRMapUpdate): String {
                 return "${valueRef(inst.map)}[${valueRef(inst.key)}] = ${valueRef(inst.value)}"
             }
@@ -874,19 +896,14 @@ class GoIRToGoCodeGenerator {
     }
 
     private fun generateCallStr(call: GoIRCallInfo): String {
-        // Check if this is a variadic call where we need to spread the last arg
-        val isVariadic = when {
-            call.function is GoIRFunctionValue ->
-                (call.function as GoIRFunctionValue).function.signature.isVariadic
-            // Builtin append is always variadic
-            call.function is GoIRBuiltinValue && (call.function as GoIRBuiltinValue).name == "append" ->
-                true
-            else -> false
+        val isVariadic = when (val tgt = call.target) {
+            is GoIRCallTarget.Function -> tgt.function.signature.isVariadic
+            is GoIRCallTarget.Builtin -> tgt.name == "append"
+            is GoIRCallTarget.Dynamic, null -> false
         }
 
         val argStrs = call.args.mapIndexed { i, arg ->
             if (isVariadic && i == call.args.lastIndex) {
-                // Last arg to a variadic function — spread it if it's a slice
                 val argType = arg.type
                 if (argType is GoIRSliceType) {
                     "${valueRef(arg)}..."
@@ -900,19 +917,28 @@ class GoIRToGoCodeGenerator {
         val args = argStrs.joinToString(", ")
 
         return when (call.mode) {
-            GoIRCallMode.DIRECT -> {
-                val fn = call.function!!
-                "${valueRef(fn)}($args)"
-            }
-            GoIRCallMode.DYNAMIC -> {
-                val fn = call.function!!
-                "${valueRef(fn)}($args)"
+            GoIRCallMode.DIRECT, GoIRCallMode.DYNAMIC -> {
+                "${targetRef(call.target!!)}($args)"
             }
             GoIRCallMode.INVOKE -> {
                 val recv = call.receiver!!
                 "${valueRef(recv)}.${call.methodName}($args)"
             }
         }
+    }
+
+    private fun targetRef(target: GoIRCallTarget): String = when (target) {
+        is GoIRCallTarget.Function -> functionRefByFn(target.function)
+        is GoIRCallTarget.Builtin -> target.name
+        is GoIRCallTarget.Dynamic -> valueRef(target.value)
+    }
+
+    private fun functionRefByFn(fn: GoIRFunction): String {
+        val pkg = fn.pkg
+        if (pkg != null && pkg.name != "main" && !pkg.importPath.startsWith("test/")) {
+            return "${pkg.name}.${fn.name}"
+        }
+        return fn.name
     }
 
     /**
@@ -930,11 +956,8 @@ class GoIRToGoCodeGenerator {
             is GoIRConstValue -> return constValueStr(value)
             is GoIRParameterValue -> value.name
             is GoIRFreeVarValue -> value.name
-            is GoIRGlobalValue -> return value.name
-            is GoIRFunctionValue -> return functionRef(value)
-            is GoIRBuiltinValue -> return value.name
             is GoIRRegister -> value.name
-            else -> value.name
+            else -> error("unexpected value type: ${value::class.simpleName}")
         }
         // Apply closure register rename if active
         if (renames != null) {
@@ -953,16 +976,6 @@ class GoIRToGoCodeGenerator {
         is GoIRConstantValue.StringConst -> "\"${escapeGoString(cv.value)}\""
         is GoIRConstantValue.BoolConst -> cv.value.toString()
         is GoIRConstantValue.NilConst -> "nil"
-    }
-
-    private fun functionRef(value: GoIRFunctionValue): String {
-        val fn = value.function
-        val pkg = fn.pkg
-        // If it's from a different package, use qualified name
-        if (pkg != null && pkg.name != "main" && !pkg.importPath.startsWith("test/")) {
-            return "${pkg.name}.${fn.name}"
-        }
-        return fn.name
     }
 
     private fun escapeGoString(s: String): String {

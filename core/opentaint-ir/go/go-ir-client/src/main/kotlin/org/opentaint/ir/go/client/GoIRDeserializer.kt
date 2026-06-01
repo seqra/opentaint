@@ -6,15 +6,19 @@ import org.opentaint.ir.go.api.GoIRParameter
 import org.opentaint.ir.go.api.GoIRPosition
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.cfg.GoIRCallInfo
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.cfg.GoIRSelectState
 import org.opentaint.ir.go.expr.GoIRAllocExpr
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRBuiltinValueExpr
 import org.opentaint.ir.go.expr.GoIRChangeInterfaceExpr
 import org.opentaint.ir.go.expr.GoIRChangeTypeExpr
 import org.opentaint.ir.go.expr.GoIRConvertExpr
 import org.opentaint.ir.go.expr.GoIRExpr
 import org.opentaint.ir.go.expr.GoIRExtractExpr
 import org.opentaint.ir.go.expr.GoIRFieldAddrExpr
+import org.opentaint.ir.go.expr.GoIRFunctionValueExpr
+import org.opentaint.ir.go.expr.GoIRGlobalValueExpr
 import org.opentaint.ir.go.expr.GoIRFieldExpr
 import org.opentaint.ir.go.expr.GoIRIndexAddrExpr
 import org.opentaint.ir.go.expr.GoIRIndexExpr
@@ -44,6 +48,7 @@ import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRCall
 import org.opentaint.ir.go.inst.GoIRDebugRef
 import org.opentaint.ir.go.inst.GoIRDefer
+import org.opentaint.ir.go.inst.GoIRGlobalStore
 import org.opentaint.ir.go.inst.GoIRGo
 import org.opentaint.ir.go.inst.GoIRIf
 import org.opentaint.ir.go.inst.GoIRInst
@@ -96,12 +101,9 @@ import org.opentaint.ir.go.type.GoIRType
 import org.opentaint.ir.go.type.GoIRTypeParamType
 import org.opentaint.ir.go.type.GoIRUnaryOp
 import org.opentaint.ir.go.type.GoIRUnsafePointerType
-import org.opentaint.ir.go.value.GoIRBuiltinValue
 import org.opentaint.ir.go.value.GoIRConstValue
 import org.opentaint.ir.go.value.GoIRConstantValue
 import org.opentaint.ir.go.value.GoIRFreeVarValue
-import org.opentaint.ir.go.value.GoIRFunctionValue
-import org.opentaint.ir.go.value.GoIRGlobalValue
 import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
 import org.opentaint.ir.go.value.GoIRValue
@@ -371,7 +373,22 @@ class GoIRDeserializer {
     private fun deserializeFunctionBody(fb: ProtoFunctionBody) {
         val fn = functionsById[fb.functionId] ?: return
 
-        // First pass: create blocks (without instructions, to break circular refs)
+        val protoToNew = mutableMapOf<Int, Int>()
+        val blockStartProtoToNew = mutableMapOf<Int, Int>()
+        run {
+            var nextIndex = 0
+            for (pb in fb.blocksList) {
+                if (pb.instructionsList.isNotEmpty()) {
+                    blockStartProtoToNew[pb.instructionsList[0].index] = nextIndex
+                }
+                for (pi in pb.instructionsList) {
+                    nextIndex += countSyntheticLoads(pi)
+                    protoToNew[pi.index] = nextIndex
+                    nextIndex++
+                }
+            }
+        }
+
         val blocks = mutableListOf<GoIRBasicBlockImpl>()
         for (pb in fb.blocksList) {
             blocks.add(GoIRBasicBlockImpl(
@@ -380,43 +397,39 @@ class GoIRDeserializer {
             ))
         }
 
-        // Create body early — GoIRBodyImpl.instructions is lazy, so it reads blocks later
         val recoverBlock = if (fb.recoverBlockIndex >= 0) blocks[fb.recoverBlockIndex] else null
         val body = GoIRBodyImpl(fn, blocks, recoverBlock)
 
-        // Build value map for this function's body using a two-pass approach.
-        // We use a LazyValueMap that provides placeholders for forward references.
         val lazyValueMap = ValueMap()
-
         fb.blocksList.forEach { block ->
             block.instructionsList.forEach { pi ->
                 if (pi.valueId < 0) return@forEach
-
-                val reg = GoIRRegister(resolveType(pi.typeId), pi.index, pi.name)
+                val newIdx = protoToNew[pi.index]
+                    ?: error("No protoToNew entry for proto index ${pi.index} in ${fn.fullName}")
+                val reg = GoIRRegister(resolveType(pi.typeId), newIdx, pi.name)
                 lazyValueMap.register(pi.valueId, reg)
             }
         }
 
+        val ctx = InstContext(body, blockIdx = 0, fn = fn, valueMap = lazyValueMap,
+                              instructions = mutableListOf(), protoToNew = protoToNew,
+                              blockStartProtoToNew = blockStartProtoToNew)
         for ((blockIdx, pb) in fb.blocksList.withIndex()) {
             val block = blocks[blockIdx]
-            val instructions = mutableListOf<GoIRInst>()
-
+            ctx.blockIdx = blockIdx
+            ctx.instructions = mutableListOf()
             for (pi in pb.instructionsList) {
-                val loc = GoInstLocation(body, pi.index, blockIdx, positionFromProto(pi.position))
-                val inst = deserializeInstruction(pi, loc, fn, lazyValueMap)
-                instructions.add(inst)
+                val inst = ctx.deserializeInstruction(pi)
+                ctx.instructions.add(inst)
             }
+            block.setInstructions(ctx.instructions)
 
-            block.setInstructions(instructions)
-
-            // Set CFG edges (block indices)
             block.predIndices = pb.predIndicesList.toList()
             block.succIndices = pb.succIndicesList.toList()
             block.idomIndex = pb.idomIndex
             block.domineeIndices = pb.domineeIndicesList.toList()
         }
 
-        // Third pass: resolve block edges
         for (block in blocks) {
             block.resolvePredecessors(blocks)
             block.resolveSuccessors(blocks)
@@ -427,16 +440,23 @@ class GoIRDeserializer {
         fn.setBody(body)
     }
 
-    private fun deserializeInstruction(
+    private fun InstContext.deserializeInstruction(
         pi: ProtoInstruction,
-        loc: GoInstLocation,
-        fn: GoIRFunctionImpl,
-        valueMap: ValueMap,
     ): GoIRInst {
-        fun ref(vr: ProtoValueRef): GoIRValue = valueRefFromProto(vr, fn, valueMap)
+        fun ref(vr: ProtoValueRef): GoIRValue = valueRefFromProto(vr, this)
         fun type(id: Int): GoIRType = resolveType(id)
+        fun translate(protoIdx: Int): GoIRInstRef = GoIRInstRef(
+            protoToNew[protoIdx]
+                ?: error("No protoToNew entry for inst ref $protoIdx in ${fn.fullName}")
+        )
+        fun translateBranch(protoIdx: Int): GoIRInstRef = GoIRInstRef(
+            blockStartProtoToNew[protoIdx]
+                ?: error("No block-start mapping for branch target $protoIdx in ${fn.fullName}")
+        )
 
-        // Helper to create a register + assign instruction for expression-based instructions
+        val newIdx = protoToNew[pi.index]
+            ?: error("No protoToNew entry for proto index ${pi.index} in ${fn.fullName}")
+        val loc = GoInstLocation(body, newIdx, blockIdx, positionFromProto(pi.position))
         val exprType = type(pi.typeId)
         fun assign(expr: GoIRExpr): GoIRAssignInst {
             val reg = valueMap[pi.valueId]
@@ -446,7 +466,6 @@ class GoIRDeserializer {
         }
 
         return when (pi.instCase) {
-            // ─── Expression-based (wrapped in GoIRAssignInst) ───
             ProtoInstruction.InstCase.ALLOC -> assign(
                 GoIRAllocExpr(exprType, type(pi.alloc.allocTypeId), pi.alloc.heap, pi.alloc.comment.ifEmpty { null })
             )
@@ -537,8 +556,6 @@ class GoIRDeserializer {
             ProtoInstruction.InstCase.EXTRACT -> assign(
                 GoIRExtractExpr(exprType, ref(pi.extract.tuple), pi.extract.extractIndex)
             )
-
-            // ─── Phi (separate instruction, not an expression) ───
             ProtoInstruction.InstCase.PHI -> {
                 val reg = valueMap[pi.valueId]
                 registerTypeIds.add(reg to pi.typeId)
@@ -550,27 +567,23 @@ class GoIRDeserializer {
                     check(edge.hasValue()) {
                         "Missing phi edge value in function ${fn.fullName} at instruction ${pi.index}, edge $edgeIndex"
                     }
-                    val predInstRef = GoIRInstRef(edge.predInstRef)
+                    val predInstRef = translate(edge.predInstRef)
                     check(edges.putIfAbsent(predInstRef, ref(edge.value)) == null) {
                         "Duplicate phi edge pred_inst_ref ${predInstRef.index} in function ${fn.fullName} at instruction ${pi.index}"
                     }
                 }
                 GoIRPhi(loc, reg, edges, pi.phi.comment.ifEmpty { null })
             }
-
-            // ─── Call (separate instruction, not an expression) ───
             ProtoInstruction.InstCase.CALL -> {
                 val reg = valueMap[pi.valueId]
                 registerTypeIds.add(reg to pi.typeId)
-                GoIRCall(loc, reg, callInfoFromProto(pi.call.call, fn, valueMap))
+                GoIRCall(loc, reg, callInfoFromProto(pi.call.call, this))
             }
-
-            // ─── Terminators ───
             ProtoInstruction.InstCase.JUMP -> {
                 check(pi.jump.hasTarget()) {
                     "Missing jump target in function ${fn.fullName} at instruction ${pi.index}"
                 }
-                GoIRJump(loc, GoIRInstRef(pi.jump.target))
+                GoIRJump(loc, translateBranch(pi.jump.target))
             }
             ProtoInstruction.InstCase.IF_INST -> {
                 check(pi.ifInst.hasTrueBranch()) {
@@ -582,19 +595,29 @@ class GoIRDeserializer {
                 GoIRIf(
                     loc,
                     ref(pi.ifInst.cond),
-                    GoIRInstRef(pi.ifInst.trueBranch),
-                    GoIRInstRef(pi.ifInst.falseBranch),
+                    translateBranch(pi.ifInst.trueBranch),
+                    translateBranch(pi.ifInst.falseBranch),
                 )
             }
             ProtoInstruction.InstCase.RETURN_INST -> GoIRReturn(
                 loc, pi.returnInst.resultsList.map { ref(it) }
             )
             ProtoInstruction.InstCase.PANIC_INST -> GoIRPanic(loc, ref(pi.panicInst.x))
-
-            // ─── Effect-only ───
-            ProtoInstruction.InstCase.STORE -> GoIRStore(
-                loc, ref(pi.store.addr), ref(pi.store.`val`)
-            )
+            ProtoInstruction.InstCase.STORE -> {
+                val addr = pi.store.addr
+                when (addr.refCase) {
+                    ProtoValueRef.RefCase.GLOBAL_ID -> GoIRGlobalStore(
+                        loc,
+                        resolveGlobalOrStub(addr.globalId, type(addr.typeId)),
+                        ref(pi.store.`val`),
+                    )
+                    ProtoValueRef.RefCase.FUNCTION_ID,
+                    ProtoValueRef.RefCase.BUILTIN_NAME -> throw IllegalStateException(
+                        "Store with addr=${addr.refCase} is not valid Go SSA in ${fn.fullName} at inst ${pi.index}"
+                    )
+                    else -> GoIRStore(loc, ref(addr), ref(pi.store.`val`))
+                }
+            }
             ProtoInstruction.InstCase.MAP_UPDATE -> GoIRMapUpdate(
                 loc, ref(pi.mapUpdate.map), ref(pi.mapUpdate.key), ref(pi.mapUpdate.value)
             )
@@ -602,93 +625,48 @@ class GoIRDeserializer {
                 loc, ref(pi.send.chan), ref(pi.send.x)
             )
             ProtoInstruction.InstCase.GO_INST -> GoIRGo(
-                loc, callInfoFromProto(pi.goInst.call, fn, valueMap)
+                loc, callInfoFromProto(pi.goInst.call, this)
             )
             ProtoInstruction.InstCase.DEFER_INST -> GoIRDefer(
-                loc, callInfoFromProto(pi.deferInst.call, fn, valueMap)
+                loc, callInfoFromProto(pi.deferInst.call, this)
             )
             ProtoInstruction.InstCase.RUN_DEFERS -> GoIRRunDefers(loc)
             ProtoInstruction.InstCase.DEBUG_REF -> GoIRDebugRef(
                 loc, ref(pi.debugRef.x), pi.debugRef.isAddr
             )
             else -> throw IllegalStateException("Unknown instruction type: ${pi.instCase}")
+        }.also {
+            check(nextIndex == newIdx) {
+                "Synth load count mismatch at ${fn.fullName} pi.index=${pi.index}: " +
+                "expected nextIndex=$newIdx after refs, got ${nextIndex}. " +
+                "countSyntheticLoads disagrees with valueRefFromProto."
+            }
+            nextIndex = newIdx + 1
         }
     }
 
     // ─── Value references ───────────────────────────────────────────
 
-    private fun valueRefFromProto(
-        vr: ProtoValueRef,
-        fn: GoIRFunctionImpl,
-        valueMap: ValueMap,
-    ): GoIRValue {
+    private fun valueRefFromProto(vr: ProtoValueRef, ctx: InstContext): GoIRValue {
         val type = resolveType(vr.typeId)
         return when (vr.refCase) {
             ProtoValueRef.RefCase.INST_VALUE_ID ->
-                valueMap[vr.instValueId]
+                ctx.valueMap[vr.instValueId]
             ProtoValueRef.RefCase.PARAM_INDEX ->
-                GoIRParameterValue(type, fn.params[vr.paramIndex].name, vr.paramIndex)
+                GoIRParameterValue(type, ctx.fn.params[vr.paramIndex].name, vr.paramIndex)
             ProtoValueRef.RefCase.FREE_VAR_INDEX ->
-                GoIRFreeVarValue(type, fn.freeVars[vr.freeVarIndex].name, vr.freeVarIndex)
+                GoIRFreeVarValue(type, ctx.fn.freeVars[vr.freeVarIndex].name, vr.freeVarIndex)
             ProtoValueRef.RefCase.CONST_VAL ->
                 GoIRConstValue(type, constToName(vr.constVal), constValueFromProto(vr.constVal))
-            ProtoValueRef.RefCase.GLOBAL_ID -> {
-                val global = globalsById[vr.globalId]
-                if (global != null) {
-                    GoIRGlobalValue(type, global.fullName, global)
-                } else {
-                    // External global (e.g. from stdlib) not serialized — create stub
-                    val stubPkg = getOrCreateStubPackage()
-                    val stubGlobal = GoIRGlobalImpl(
-                        name = "ext_global_${vr.globalId}",
-                        fullName = "ext_global_${vr.globalId}",
-                        type = type,
-                        pkg = stubPkg,
-                        isExported = true,
-                        position = null,
-                    )
-                    globalsById[vr.globalId] = stubGlobal
-                    GoIRGlobalValue(type, stubGlobal.fullName, stubGlobal)
-                }
-            }
-            ProtoValueRef.RefCase.FUNCTION_ID -> {
-                val func = functionsById[vr.functionId]
-                if (func != null) {
-                    GoIRFunctionValue(type, func.fullName, func)
-                } else {
-                    // External function (e.g. from stdlib) not serialized — create stub
-                    val stubName = "ext_fn_${vr.functionId}"
-                    val funcType = (type as? GoIRFuncType)
-                        ?: GoIRFuncType(emptyList(), emptyList(), false, null)
-                    val stubFunc = GoIRFunctionImpl(
-                        name = stubName,
-                        fullName = stubName,
-                        pkg = null,
-                        signature = funcType,
-                        params = emptyList(),
-                        freeVars = emptyList(),
-                        position = null,
-                        isMethod = false,
-                        isPointerReceiver = false,
-                        isExported = true,
-                        isSynthetic = true,
-                        syntheticKind = "external-stub",
-                    )
-                    functionsById[vr.functionId] = stubFunc
-                    GoIRFunctionValue(type, stubFunc.fullName, stubFunc)
-                }
-            }
-            ProtoValueRef.RefCase.BUILTIN_NAME ->
-                GoIRBuiltinValue(type, vr.builtinName)
+            ProtoValueRef.RefCase.GLOBAL_ID -> synthLoadGlobal(vr.globalId, vr.typeId, ctx)
+            ProtoValueRef.RefCase.FUNCTION_ID -> synthLoadFunction(vr.functionId, vr.typeId, ctx)
+            ProtoValueRef.RefCase.BUILTIN_NAME -> synthLoadBuiltin(vr.builtinName, vr.typeId, ctx)
             else -> throw IllegalStateException("Unknown value ref type: ${vr.refCase}")
         }
     }
 
-    private fun callInfoFromProto(
-        ci: ProtoCallInfo,
-        fn: GoIRFunctionImpl,
-        valueMap: ValueMap,
-    ): GoIRCallInfo {
+    private fun callInfoFromProto(ci: ProtoCallInfo, ctx: InstContext): GoIRCallInfo {
+        val target: GoIRCallTarget? = if (ci.hasFunction()) callTargetFromProto(ci.function, ctx) else null
         return GoIRCallInfo(
             mode = when (ci.mode) {
                 ProtoCallMode.CALL_DIRECT -> GoIRCallMode.DIRECT
@@ -696,12 +674,184 @@ class GoIRDeserializer {
                 ProtoCallMode.CALL_INVOKE -> GoIRCallMode.INVOKE
                 else -> GoIRCallMode.DIRECT
             },
-            function = if (ci.hasFunction()) valueRefFromProto(ci.function, fn, valueMap) else null,
-            receiver = if (ci.hasReceiver()) valueRefFromProto(ci.receiver, fn, valueMap) else null,
+            target = target,
+            receiver = if (ci.hasReceiver()) valueRefFromProto(ci.receiver, ctx) else null,
             methodName = ci.methodName.ifEmpty { null },
-            args = ci.argsList.map { valueRefFromProto(it, fn, valueMap) },
+            args = ci.argsList.map { valueRefFromProto(it, ctx) },
             resultType = resolveType(ci.resultTypeId),
         )
+    }
+
+    private fun callTargetFromProto(vr: ProtoValueRef, ctx: InstContext): GoIRCallTarget {
+        val type = resolveType(vr.typeId)
+        return when (vr.refCase) {
+            ProtoValueRef.RefCase.FUNCTION_ID ->
+                GoIRCallTarget.Function(resolveFunctionOrStub(vr.functionId, type))
+            ProtoValueRef.RefCase.BUILTIN_NAME ->
+                GoIRCallTarget.Builtin(vr.builtinName, type)
+            ProtoValueRef.RefCase.GLOBAL_ID ->
+                GoIRCallTarget.Dynamic(synthLoadGlobal(vr.globalId, vr.typeId, ctx))
+            else ->
+                GoIRCallTarget.Dynamic(valueRefFromProto(vr, ctx))
+        }
+    }
+
+    private fun createStubFunction(functionId: Int, type: GoIRType): GoIRFunctionImpl {
+        val stubName = "ext_fn_$functionId"
+        val funcType = (type as? GoIRFuncType)
+            ?: GoIRFuncType(emptyList(), emptyList(), false, null)
+        val stubFunc = GoIRFunctionImpl(
+            name = stubName,
+            fullName = stubName,
+            pkg = null,
+            signature = funcType,
+            params = emptyList(),
+            freeVars = emptyList(),
+            position = null,
+            isMethod = false,
+            isPointerReceiver = false,
+            isExported = true,
+            isSynthetic = true,
+            syntheticKind = "external-stub",
+        )
+        functionsById[functionId] = stubFunc
+        return stubFunc
+    }
+
+    private fun resolveGlobalOrStub(globalId: Int, type: GoIRType): GoIRGlobalImpl {
+        globalsById[globalId]?.let { return it }
+        val stubPkg = getOrCreateStubPackage()
+        val stubGlobal = GoIRGlobalImpl(
+            name = "ext_global_$globalId",
+            fullName = "ext_global_$globalId",
+            type = type,
+            pkg = stubPkg,
+            isExported = true,
+            position = null,
+        )
+        globalsById[globalId] = stubGlobal
+        return stubGlobal
+    }
+
+    private fun resolveFunctionOrStub(functionId: Int, type: GoIRType): GoIRFunctionImpl {
+        functionsById[functionId]?.let { return it }
+        return createStubFunction(functionId, type)
+    }
+
+    private fun synthLoadGlobal(globalId: Int, typeId: Int, ctx: InstContext): GoIRRegister {
+        val type = resolveType(typeId)
+        val global = resolveGlobalOrStub(globalId, type)
+        val idx = ctx.take()
+        val reg = GoIRRegister(type, idx, "_g$idx")
+        registerTypeIds.add(reg to typeId)
+        val expr = GoIRGlobalValueExpr(type, global)
+        exprTypeIds.add(expr to typeId)
+        val loc = GoInstLocation(ctx.body, idx, ctx.blockIdx, null)
+        ctx.instructions.add(GoIRAssignInst(loc, reg, expr))
+        return reg
+    }
+
+    private fun synthLoadFunction(functionId: Int, typeId: Int, ctx: InstContext): GoIRRegister {
+        val type = resolveType(typeId)
+        val func = resolveFunctionOrStub(functionId, type)
+        val idx = ctx.take()
+        val reg = GoIRRegister(type, idx, "_f$idx")
+        registerTypeIds.add(reg to typeId)
+        val expr = GoIRFunctionValueExpr(type, func)
+        exprTypeIds.add(expr to typeId)
+        val loc = GoInstLocation(ctx.body, idx, ctx.blockIdx, null)
+        ctx.instructions.add(GoIRAssignInst(loc, reg, expr))
+        return reg
+    }
+
+    private fun synthLoadBuiltin(name: String, typeId: Int, ctx: InstContext): GoIRRegister {
+        val type = resolveType(typeId)
+        val idx = ctx.take()
+        val reg = GoIRRegister(type, idx, "_b$idx")
+        registerTypeIds.add(reg to typeId)
+        val expr = GoIRBuiltinValueExpr(type, name)
+        exprTypeIds.add(expr to typeId)
+        val loc = GoInstLocation(ctx.body, idx, ctx.blockIdx, null)
+        ctx.instructions.add(GoIRAssignInst(loc, reg, expr))
+        return reg
+    }
+
+    private fun isSyntheticLoadRef(vr: ProtoValueRef): Boolean = when (vr.refCase) {
+        ProtoValueRef.RefCase.GLOBAL_ID,
+        ProtoValueRef.RefCase.FUNCTION_ID,
+        ProtoValueRef.RefCase.BUILTIN_NAME -> true
+        else -> false
+    }
+
+    private fun countSyntheticLoads(pi: ProtoInstruction): Int {
+        var count = 0
+        fun check(vr: ProtoValueRef) {
+            if (isSyntheticLoadRef(vr)) count++
+        }
+        fun checkCall(ci: ProtoCallInfo) {
+            if (ci.hasFunction()) {
+                when (ci.function.refCase) {
+                    ProtoValueRef.RefCase.GLOBAL_ID -> count++
+                    ProtoValueRef.RefCase.FUNCTION_ID,
+                    ProtoValueRef.RefCase.BUILTIN_NAME -> {}
+                    else -> check(ci.function)
+                }
+            }
+            if (ci.hasReceiver()) check(ci.receiver)
+            ci.argsList.forEach { check(it) }
+        }
+        when (pi.instCase) {
+            ProtoInstruction.InstCase.ALLOC -> {}
+            ProtoInstruction.InstCase.BIN_OP -> { check(pi.binOp.x); check(pi.binOp.y) }
+            ProtoInstruction.InstCase.UN_OP -> check(pi.unOp.x)
+            ProtoInstruction.InstCase.CHANGE_TYPE -> check(pi.changeType.x)
+            ProtoInstruction.InstCase.CONVERT -> check(pi.convert.x)
+            ProtoInstruction.InstCase.MULTI_CONVERT -> check(pi.multiConvert.x)
+            ProtoInstruction.InstCase.CHANGE_INTERFACE -> check(pi.changeInterface.x)
+            ProtoInstruction.InstCase.SLICE_TO_ARRAY_POINTER -> check(pi.sliceToArrayPointer.x)
+            ProtoInstruction.InstCase.MAKE_INTERFACE -> check(pi.makeInterface.x)
+            ProtoInstruction.InstCase.MAKE_CLOSURE -> pi.makeClosure.bindingsList.forEach { check(it) }
+            ProtoInstruction.InstCase.MAKE_MAP -> if (pi.makeMap.hasReserve) check(pi.makeMap.reserve)
+            ProtoInstruction.InstCase.MAKE_CHAN -> check(pi.makeChan.size)
+            ProtoInstruction.InstCase.MAKE_SLICE -> { check(pi.makeSlice.len); check(pi.makeSlice.cap) }
+            ProtoInstruction.InstCase.FIELD_ADDR -> check(pi.fieldAddr.x)
+            ProtoInstruction.InstCase.FIELD -> check(pi.field.x)
+            ProtoInstruction.InstCase.INDEX_ADDR -> { check(pi.indexAddr.x); check(pi.indexAddr.index) }
+            ProtoInstruction.InstCase.INDEX_INST -> { check(pi.indexInst.x); check(pi.indexInst.index) }
+            ProtoInstruction.InstCase.SLICE_INST -> {
+                check(pi.sliceInst.x)
+                if (pi.sliceInst.hasLow) check(pi.sliceInst.low)
+                if (pi.sliceInst.hasHigh) check(pi.sliceInst.high)
+                if (pi.sliceInst.hasMax) check(pi.sliceInst.max)
+            }
+            ProtoInstruction.InstCase.LOOKUP -> { check(pi.lookup.x); check(pi.lookup.index) }
+            ProtoInstruction.InstCase.TYPE_ASSERT -> check(pi.typeAssert.x)
+            ProtoInstruction.InstCase.RANGE_INST -> check(pi.rangeInst.x)
+            ProtoInstruction.InstCase.NEXT -> check(pi.next.iter)
+            ProtoInstruction.InstCase.SELECT_INST -> pi.selectInst.statesList.forEach { st ->
+                check(st.chan); if (st.hasSend) check(st.send)
+            }
+            ProtoInstruction.InstCase.EXTRACT -> check(pi.extract.tuple)
+            ProtoInstruction.InstCase.PHI -> pi.phi.edgesList.forEach { check(it.value) }
+            ProtoInstruction.InstCase.CALL -> checkCall(pi.call.call)
+            ProtoInstruction.InstCase.GO_INST -> checkCall(pi.goInst.call)
+            ProtoInstruction.InstCase.DEFER_INST -> checkCall(pi.deferInst.call)
+            ProtoInstruction.InstCase.JUMP -> {}
+            ProtoInstruction.InstCase.IF_INST -> check(pi.ifInst.cond)
+            ProtoInstruction.InstCase.RETURN_INST -> pi.returnInst.resultsList.forEach { check(it) }
+            ProtoInstruction.InstCase.PANIC_INST -> check(pi.panicInst.x)
+            ProtoInstruction.InstCase.STORE -> {
+                val addr = pi.store.addr
+                if (!isSyntheticLoadRef(addr)) check(addr)
+                check(pi.store.`val`)
+            }
+            ProtoInstruction.InstCase.MAP_UPDATE -> { check(pi.mapUpdate.map); check(pi.mapUpdate.key); check(pi.mapUpdate.value) }
+            ProtoInstruction.InstCase.SEND -> { check(pi.send.chan); check(pi.send.x) }
+            ProtoInstruction.InstCase.RUN_DEFERS -> {}
+            ProtoInstruction.InstCase.DEBUG_REF -> check(pi.debugRef.x)
+            else -> {}
+        }
+        return count
     }
 
     // ─── Reference resolution ───────────────────────────────────────
@@ -835,6 +985,9 @@ class GoIRDeserializer {
             is GoIRNextExpr -> type = newType
             is GoIRSelectExpr -> type = newType
             is GoIRExtractExpr -> type = newType
+            is GoIRGlobalValueExpr -> type = newType
+            is GoIRFunctionValueExpr -> type = newType
+            is GoIRBuiltinValueExpr -> type = newType
         }
     }
 
@@ -982,4 +1135,17 @@ class ValueMap {
     operator fun get(id: Int): GoIRRegister {
         return registers[id] ?: error("Register for value $id not registered")
     }
+}
+
+private class InstContext(
+    val body: GoIRBodyImpl,
+    var blockIdx: Int,
+    val fn: GoIRFunctionImpl,
+    val valueMap: ValueMap,
+    var instructions: MutableList<GoIRInst>,
+    val protoToNew: Map<Int, Int>,
+    val blockStartProtoToNew: Map<Int, Int>,
+) {
+    var nextIndex: Int = 0
+    fun take(): Int = nextIndex++
 }
