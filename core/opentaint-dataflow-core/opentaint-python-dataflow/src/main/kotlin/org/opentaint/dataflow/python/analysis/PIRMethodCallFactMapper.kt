@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -37,7 +38,9 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         checker: FactTypeChecker,
     ): List<FinalFactAp> {
         pIRDowncast<PIRCall>(callStatement)
-        return listOfNotNull(mapMethodExitToReturnFlowFact(callStatement, factAp, FinalFactAp::rebase))
+        return listOfNotNull(
+            mapMethodExitToReturnFlowFact(callStatement, factAp, FinalFactAp::rebase, FinalFactAp::prependAccessor)
+        )
     }
 
     override fun mapMethodExitToReturnFlowFact(
@@ -45,7 +48,9 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         factAp: InitialFactAp,
     ): List<InitialFactAp> {
         pIRDowncast<PIRCall>(callStatement)
-        return listOfNotNull(mapMethodExitToReturnFlowFact(callStatement, factAp, InitialFactAp::rebase))
+        return listOfNotNull(
+            mapMethodExitToReturnFlowFact(callStatement, factAp, InitialFactAp::rebase, InitialFactAp::prependAccessor)
+        )
     }
 
     override fun mapMethodCallToStartFlowFact(
@@ -96,6 +101,7 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         call: PIRCall,
         factAp: F,
         rebase: F.(AccessPathBase) -> F,
+        prepend: F.(Accessor) -> F,
     ): F? {
         return when (val base = factAp.base) {
             is AccessPathBase.Argument -> {
@@ -109,9 +115,11 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
                 factAp.rebase(targetBase)
             }
             is AccessPathBase.This -> {
-                val callee = call.callee
-                val calleeBase = valueToBase(callee) ?: return null
-                factAp.rebase(calleeBase)
+                // Inverse of the enter strip: re-prepend $PIR_SELF onto the callee temp
+                // ($t0), encoding "the receiver of $t0". Intra-procedural alias analysis
+                // resolves $t0.$PIR_SELF back to the concrete receiver.
+                val calleeBase = valueToBase(call.callee) ?: return null
+                factAp.prepend(SELF_ACCESSOR).rebase(calleeBase)
             }
             is AccessPathBase.LocalVar -> null // Cannot escape
             is AccessPathBase.ClassStatic -> factAp
@@ -183,37 +191,48 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         factAp.base !is AccessPathBase.LocalVar
 
     /**
-     * Translates a caller-frame [base] into the callee's frame when
+     * Translates an offset-free [base] into the callee's frame when
      * entering [callee] at [callSite]. For implicit-parameter callees
      * (instance methods, classmethods), maps `Argument(i)` to
-     * `Argument(i + offset)`. Other bases are returned unchanged.
+     * `Argument(i + offset)` and the receiver marker `This` to the
+     * implicit first parameter `Argument(0)`. Other bases are returned
+     * unchanged.
      *
      * Returns null when the shifted Argument would exceed the callee's
      * formal parameter count (avoids AccessPathBaseStorage crashes on
-     * extra positional args).
+     * extra positional args), or when a `This` receiver reaches a callee
+     * with no implicit parameter (static/module function).
      *
      * Only invoked from [PIRMethodCallResolver].
      */
     fun offsetEnter(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
-        if (base !is AccessPathBase.Argument) return base
         val offset = PIRFlowFunctionUtils.implicitParamOffset(callee)
-        val newIdx = base.idx + offset
-        if (newIdx >= callee.parameters.size) return null
-        return AccessPathBase.Argument(newIdx)
+        return when (base) {
+            // Offset-free receiver marker → the implicit first parameter (self/cls).
+            // Dropped for callees with no implicit parameter (static/module functions).
+            is AccessPathBase.This -> if (offset > 0) AccessPathBase.Argument(0) else null
+            is AccessPathBase.Argument -> {
+                val newIdx = base.idx + offset
+                if (newIdx >= callee.parameters.size) null else AccessPathBase.Argument(newIdx)
+            }
+            else -> base
+        }
     }
 
     /**
      * Inverse of [offsetEnter]: translates a callee-frame [base] back to
-     * the caller's frame when returning from [callee] at [callSite]. Maps
-     * `Argument(i)` to `Argument(i - offset)`. Returns null when the
-     * shifted Argument would underflow (e.g. the implicit receiver slot,
-     * which never escapes back to caller args).
+     * the offset-free frame when returning from [callee] at [callSite].
+     * Maps the implicit first parameter `Argument(0)` to the receiver
+     * marker `This`, and other `Argument(i)` to `Argument(i - offset)`.
+     * Returns null when the shifted Argument would underflow.
      *
      * Only invoked from [PIRMethodCallSummaryHandler].
      */
     fun offsetExit(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
         if (base !is AccessPathBase.Argument) return base
         val offset = PIRFlowFunctionUtils.implicitParamOffset(callee)
+        // The implicit first parameter (self/cls) maps back to the offset-free receiver marker.
+        if (offset > 0 && base.idx == 0) return AccessPathBase.This
         val newIdx = base.idx - offset
         if (newIdx < 0) return null
         return AccessPathBase.Argument(newIdx)

@@ -18,18 +18,16 @@ class PIRMethodCallSummaryHandler(
     /**
      * Translates a callee-frame exit fact into the caller's frame.
      *
-     * The fact mapper produces offset-free output (callee `Argument(i)`
-     * mapped positionally to `call.args[i]`). This handler applies
-     * [PIRMethodCallFactMapper.offsetExit] to re-introduce the
-     * `self`/`cls` offset before delivering the caller-frame fact.
+     * Mirror of the enter pipeline (mapper produces offset-free output,
+     * then [PIRMethodCallResolver] applies [PIRMethodCallFactMapper.offsetEnter]):
+     * [PIRMethodCallFactMapper.offsetExit] first maps the real callee frame back
+     * to the offset-free frame (`Argument(0)` → `This`, `Argument(i)` →
+     * `Argument(i - offset)`), then the offset-blind mapper rebases onto the
+     * caller's call-site values.
      */
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> {
         val callee = callResolver.resolveCall(callInst).firstOrNull() ?: return emptyList()
-        return factMapper
-            .mapMethodExitToReturnFlowFact(callInst, fact, factTypeChecker)
-            .mapNotNull { exitFact ->
-                val newBase = factMapper.offsetExit(callInst, callee, exitFact.base) ?: return@mapNotNull null
-                exitFact.rebase(newBase)
-            }
+        val offsetFreeBase = factMapper.offsetExit(callInst, callee, fact.base) ?: return emptyList()
+        return factMapper.mapMethodExitToReturnFlowFact(callInst, fact.rebase(offsetFreeBase), factTypeChecker)
     }
 }
