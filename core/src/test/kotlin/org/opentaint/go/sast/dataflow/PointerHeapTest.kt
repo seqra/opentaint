@@ -32,4 +32,8 @@ class PointerHeapTest : AnalysisTest() {
     // Map of pointers
     @Test fun mapOfPtr001T() = assertReachable("test.mapOfPtr001T")
     @Test fun mapOfPtr002F() = assertNotReachable("test.mapOfPtr002F")
+
+    // ── Pattern 8: new(T) pointer chain — PASSES today (engine forward dataflow handles deref-write + alias + deref-read)
+    @Test fun ptrNewWriteAliasRead001T() = assertReachable("test.ptrNewWriteAliasRead001T")
+    @Test fun ptrNewWriteAliasRead002F() = assertNotReachable("test.ptrNewWriteAliasRead002F")
 }

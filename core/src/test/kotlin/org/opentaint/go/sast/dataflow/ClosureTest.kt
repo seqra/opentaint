@@ -20,15 +20,14 @@ class ClosureTest : AnalysisTest() {
     @Test fun closureModify002F() = assertNotReachable("test.closureModify002F")
 
     // Closure returned from function — closure created in callee, then called in outer scope
-    @Disabled("Closure returned from callee: MakeClosureExpr not visible at dynamic call site")
     @Test fun closureReturn001T() = assertReachable("test.closureReturn001T")
     @Test fun closureReturn002F() = assertNotReachable("test.closureReturn002F")
 
     // Higher-order functions — function parameter called dynamically
-    @Disabled("DYNAMIC call on function parameter: cannot resolve without interprocedural value tracking")
+    @Disabled("Function VALUE passed as parameter: identity fact on a Constant(func) base is abstracted to [*].{} across the call boundary, so the dynamic call inside the callee cannot read the concrete body. Closure-return shape (identity riding a value access path) is fixed; this Constant-base shape remains open.")
     @Test fun higherOrder001T() = assertReachable("test.higherOrder001T")
     @Test fun higherOrder002F() = assertNotReachable("test.higherOrder002F")
-    @Disabled("DYNAMIC call on function parameter: cannot resolve without interprocedural value tracking")
+    @Disabled("Function VALUE passed as parameter: identity fact on a Constant(func) base is abstracted to [*].{} across the call boundary, so the dynamic call inside the callee cannot read the concrete body. Closure-return shape (identity riding a value access path) is fixed; this Constant-base shape remains open.")
     @Test fun higherOrder003T() = assertReachable("test.higherOrder003T")
     @Test fun higherOrder004F() = assertNotReachable("test.higherOrder004F")
 }

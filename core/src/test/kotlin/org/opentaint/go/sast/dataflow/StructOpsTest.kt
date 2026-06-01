@@ -1,6 +1,5 @@
 package org.opentaint.go.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 
@@ -21,7 +20,6 @@ class StructOpsTest : AnalysisTest() {
     @Test fun structReturn002F() = assertNotReachable("test.structReturn002F")
 
     // Nested struct modification — multi-level field chain through interprocedural calls
-    @Disabled("Nested struct field: multi-level accessor chain through interproc not tracked")
     @Test fun nestedStructMod001T() = assertReachable("test.nestedStructMod001T")
     @Test fun nestedStructMod002F() = assertNotReachable("test.nestedStructMod002F")
     @Test fun nestedStructMod003F() = assertNotReachable("test.nestedStructMod003F")
@@ -33,4 +31,8 @@ class StructOpsTest : AnalysisTest() {
     // Struct with method
     @Test fun structMethod001T() = assertReachable("test.structMethod001T")
     @Test fun structMethod002F() = assertNotReachable("test.structMethod002F")
+
+    // ── Pattern 6: deep NAMED-field chain (4 levels)
+    @Test fun nestedNamedDeep001T() = assertReachable("test.nestedNamedDeep001T")
+    @Test fun nestedNamedDeep002F() = assertNotReachable("test.nestedNamedDeep002F")
 }

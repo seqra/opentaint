@@ -2,6 +2,8 @@ package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassThrough
+import org.opentaint.go.config.GoConfigLoader
 import kotlin.test.Test
 
 /**
@@ -18,6 +20,9 @@ import kotlin.test.Test
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CallShapesTest : AnalysisTest() {
+
+    override val commonPassRules: List<PassThrough> =
+        GoConfigLoader.getConfig()?.passThrough ?: emptyList()
 
     // 1. DIRECT non-method
     @Test fun directNonMethod001T() = assertReachable("test.directNonMethod001T")
@@ -52,9 +57,7 @@ class CallShapesTest : AnalysisTest() {
     @Test fun embeddedPromoted002F() = assertNotReachable("test.embeddedPromoted002F")
 
     // 9. Builtin (append)
-    @Disabled("call-shape: builtin append — engine doesn't propagate element taint from append(slice, src) into the resulting slice")
     @Test fun builtin001T() = assertReachable("test.builtin001T")
-    @Disabled("call-shape: builtin append — negative-control paired with builtin001T (engine doesn't propagate element taint from append(slice, src))")
     @Test fun builtin002F() = assertNotReachable("test.builtin002F")
 
     // 10. Unresolved DYNAMIC (function from map lookup)

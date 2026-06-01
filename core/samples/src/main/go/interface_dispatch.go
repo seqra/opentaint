@@ -81,3 +81,45 @@ func interfaceViaFunc002F() {
 func processViaInterface(p IDProcessor, data string) string {
 	return p.Process(data)
 }
+
+// ── Cluster C: multi-implementor interface laundering (benchmark MultipleInterfaceClass shape) ──
+
+type IDMultiIface interface {
+	Call1(s string) string
+	Call2(s string) string
+}
+
+// IDMultiNeg.Call2 returns its arg (taint flows); Call1 sanitizes.
+type IDMultiNeg struct{}
+
+func (IDMultiNeg) Call1(s string) string { return "safe" }
+func (IDMultiNeg) Call2(s string) string { return s }
+
+// IDMultiPos.Call1 returns its arg; Call2 sanitizes.
+type IDMultiPos struct{}
+
+func (IDMultiPos) Call1(s string) string { return s }
+func (IDMultiPos) Call2(s string) string { return "safe" }
+
+// concrete-receiver call on a struct whose Call2 returns the arg
+func interfaceLaunderingConcrete001T() {
+	data := util.Source()
+	m := IDMultiNeg{}
+	out := m.Call2(data)
+	util.Sink(out)
+}
+
+// interface-variable call with two implementors; the bound impl's Call1 returns the arg
+func interfaceLaunderingIface001T() {
+	data := util.Source()
+	var m IDMultiIface = IDMultiPos{}
+	out := m.Call1(data)
+	util.Sink(out)
+}
+
+func interfaceLaundering002F() {
+	data := util.Source()
+	m := IDMultiNeg{}
+	out := m.Call1(data) // Call1 on Neg returns "safe"
+	util.Sink(out)
+}

@@ -13,11 +13,9 @@ class MapOpsTest : AnalysisTest() {
     @Test fun mapStruct002F() = assertNotReachable("test.mapStruct002F")
 
     // Map range iteration: GoIRRangeExpr → GoIRNextExpr → GoIRExtractExpr
-    @Disabled("Map range iteration taint propagation not yet implemented")
     @Test fun mapIter001T() = assertReachable("test.mapIter001T")
     @Test fun mapIter002F() = assertNotReachable("test.mapIter002F")
 
-    @Disabled("Map key taint through range iteration not yet implemented")
     @Test fun mapKeyTaint001T() = assertReachable("test.mapKeyTaint001T")
 
     @Test fun mapDelete001T() = assertReachable("test.mapDelete001T")

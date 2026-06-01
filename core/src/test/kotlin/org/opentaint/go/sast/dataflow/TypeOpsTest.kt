@@ -52,12 +52,25 @@ class TypeOpsTest : AnalysisTest() {
     @Test fun typeAssert001T() = assertSinkReachable(anySource, stdSink, "test.typeAssert001T")
     @Test fun typeAssert002F() = assertSinkNotReachable(anySource, stdSink, "test.typeAssert002F")
 
-    // Type assertion with comma-ok (tuple extraction) — abstract refinement doesn't propagate target fact for non-call tuples
-    @Disabled("CommaOk type assertion tuple extraction: abstract refinement path incomplete")
+    // Type assertion with comma-ok (tuple extraction)
     @Test fun typeAssertOk001T() = assertSinkReachable(anySource, stdSink, "test.typeAssertOk001T")
     @Test fun typeAssertOk002F() = assertSinkNotReachable(anySource, stdSink, "test.typeAssertOk002F")
 
     // Rune conversion
     @Test fun runeConv001T() = assertSinkReachable(intSource, stdSink, "test.runeConv001T")
     @Test fun runeConv002F() = assertSinkNotReachable(intSource, stdSink, "test.runeConv002F")
+
+    // ── Pattern 4: type-assert on chained expression — all variants PASS today
+    @Test fun typeAssertOnMapElem001T() = assertReachable("test.typeAssertOnMapElem001T")
+    @Test fun typeAssertOnMapElem002F() = assertNotReachable("test.typeAssertOnMapElem002F")
+
+    @Test fun typeAssertOnFieldRead001T() = assertReachable("test.typeAssertOnFieldRead001T")
+    @Test fun typeAssertOnFieldRead002F() = assertNotReachable("test.typeAssertOnFieldRead002F")
+
+    @Test fun typeAssertOnCallResult001T() = assertReachable("test.typeAssertOnCallResult001T")
+    @Test fun typeAssertOnCallResult002F() = assertNotReachable("test.typeAssertOnCallResult002F")
+
+    // ── Pattern 5: type-switch with case binding + outer-var reassign
+    @Test fun typeSwitchBinding001T() = assertReachable("test.typeSwitchBinding001T")
+    @Test fun typeSwitchBinding002F() = assertNotReachable("test.typeSwitchBinding002F")
 }

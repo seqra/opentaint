@@ -118,3 +118,23 @@ func higherOrder004F() {
 	result := applyFunc(dropValue, data)
 	util.Sink(result)
 }
+
+// ── Cluster C: factory returns a closure capturing tainted free var ──
+
+func makeCapturingPrefixer(prefix string) func(string) string {
+	return func(value string) string { return prefix + value }
+}
+
+func closureCaptureReturn001T() {
+	data := util.Source()
+	addPrefix := makeCapturingPrefixer(data)
+	out := addPrefix("_suffix")
+	util.Sink(out)
+}
+
+func closureCaptureReturn002F() {
+	_ = util.Source()
+	addPrefix := makeCapturingPrefixer("safe")
+	out := addPrefix("_suffix")
+	util.Sink(out)
+}

@@ -88,3 +88,38 @@ func ptrDeref002F() {
 	result := *p
 	util.Sink(result)
 }
+
+// ── Pattern 8: new(T) pointer chain with deref-write + alias + deref-read
+//
+// Empirical engine status: PASS.
+// assertReachable("test.ptrNewWriteAliasRead001T") succeeds.
+//
+// Per-instruction facts from `printFactsAt`:
+//   L96  [0:1]  new string  // p1                       facts: var(0)![taint].$
+//   L100 [0:4]  *p1 (out := *p1)                        facts: var(2)![taint].$
+//   L101 [0:5]  util.Sink(out)                          facts: var(4)![taint].$
+//   L-1  [0:6]  return                                  facts: var(4)![taint].$
+//
+// The simple forward dataflow at the pointer-assignment + deref-read steps
+// already propagates the fact rooted at the heap object through to `out`.
+// No alias analysis needed. Sink fires.
+
+func ptrNewWriteAliasRead001T() {
+	data := util.Source()
+	p1 := new(string)
+	p2 := new(string)
+	*p2 = data
+	p1 = p2
+	out := *p1
+	util.Sink(out)
+}
+
+func ptrNewWriteAliasRead002F() {
+	_ = util.Source()
+	p1 := new(string)
+	p2 := new(string)
+	*p2 = "safe"
+	p1 = p2
+	out := *p1
+	util.Sink(out)
+}
