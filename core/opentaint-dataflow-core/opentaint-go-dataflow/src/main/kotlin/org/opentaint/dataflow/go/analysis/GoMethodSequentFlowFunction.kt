@@ -14,6 +14,7 @@ import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
+import org.opentaint.dataflow.go.analysis.GoMethodCallResolver.ClosureCreationFlowFunction
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
@@ -46,6 +47,13 @@ class GoMethodSequentFlowFunction(
     override fun propagateZeroToZero(): Set<Sequent> {
         val zeroSequents = mutableSetOf<Sequent>(Sequent.ZeroToZero)
         applyGlobalReadSourceRules(zeroSequents)
+
+        ClosureCreationFlowFunction.handle(currentInst) { base, accessors ->
+            val startFact = apManager.createFinalAp(base, ExclusionSet.Universe)
+            val fact = accessors.foldRight(startFact) { a, f -> f.prependAccessor(a) }
+            zeroSequents += Sequent.ZeroToFact(fact, traceInfoOrNull())
+        }
+
         return zeroSequents
     }
 
