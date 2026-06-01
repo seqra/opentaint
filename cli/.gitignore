@@ -4,7 +4,7 @@ bin/
 dist/
 dist-npm/
 lib/
-opentaint
+/opentaint
 
 # Operating system files
 **/.DS_Store
