@@ -286,11 +286,8 @@ func findingEndpoints(result *Result) []endpointInfo {
 // partialFingerprints value under key, for display in the listing. Returns ""
 // when the key is absent. When key is empty the default key is used.
 func fingerprintAbbrev(result *Result, key string) string {
-	if key == "" {
-		key = DefaultFingerprintKey
-	}
-	val, ok := result.PartialFingerprints[key]
-	if !ok || val == "" {
+	val := fingerprintValue(result, key)
+	if val == "" {
 		return ""
 	}
 	const n = 12

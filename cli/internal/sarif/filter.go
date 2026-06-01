@@ -139,15 +139,22 @@ func matchRuleID(r *Result, values []string) bool {
 	return false
 }
 
+// fingerprintValue returns the result's partialFingerprints value under key, or
+// "" when the key is absent or its value is empty. When key is empty the default
+// key is used.
+func fingerprintValue(r *Result, key string) string {
+	if key == "" {
+		key = DefaultFingerprintKey
+	}
+	return r.PartialFingerprints[key]
+}
+
 // matchFingerprint reports whether the result's partialFingerprints value under
 // key has any supplied value as a prefix (git short-hash style). When key is
 // empty the default key is used.
 func matchFingerprint(r *Result, key string, prefixes []string) bool {
-	if key == "" {
-		key = DefaultFingerprintKey
-	}
-	val, ok := r.PartialFingerprints[key]
-	if !ok || val == "" {
+	val := fingerprintValue(r, key)
+	if val == "" {
 		return false
 	}
 	for _, p := range prefixes {
