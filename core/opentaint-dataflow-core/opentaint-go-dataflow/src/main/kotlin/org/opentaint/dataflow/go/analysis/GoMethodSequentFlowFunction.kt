@@ -101,6 +101,10 @@ class GoMethodSequentFlowFunction(
             return handleStringConcat(initialFact, currentFact, registerBase, expr)
         }
 
+        if (expr is GoIRTypeAssertExpr && expr.commaOk) {
+            return handleCommaOkTypeAssert(initialFact, currentFact, registerBase, expr)
+        }
+
         if (expr is GoIRMakeClosureExpr) {
             return handleMakeClosure(initialFact, currentFact, registerBase, expr)
         }
@@ -409,8 +413,14 @@ class GoMethodSequentFlowFunction(
             ?: return setOf(Sequent.Unchanged)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
             ?: return setOf(Sequent.Unchanged)
+        val keyBase = GoFlowFunctionUtils.accessPathBase(inst.key, method)
 
         if (currentFact.base == valueBase) {
+            val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
+            result.add(makeEdge(initialFact, newFact))
+        }
+
+        if (keyBase != null && currentFact.base == keyBase) {
             val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
             result.add(makeEdge(initialFact, newFact))
         }

@@ -91,6 +91,12 @@ class GoMethodSequentPrecondition(
             handleStringConcatPrecondition(fact, registerBase, expr, result)
             return
         }
+
+        if (expr is GoIRTypeAssertExpr && expr.commaOk) {
+            handleCommaOkTypeAssertPrecondition(fact, registerBase, expr, result)
+            return
+        }
+
         if (expr is GoIRMakeClosureExpr) {
             handleMakeClosurePrecondition(fact, registerBase, expr, result)
             return
