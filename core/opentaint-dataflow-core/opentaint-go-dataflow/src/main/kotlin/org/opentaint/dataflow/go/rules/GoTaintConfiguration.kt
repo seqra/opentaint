@@ -1,10 +1,12 @@
 package org.opentaint.dataflow.go.rules
 
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedFieldSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedPassAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
@@ -19,6 +21,10 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     private val globalSourceSimple = hashMapOf<String, MutableList<GoSerializedGlobalSource>>()
     private val globalSourcePatterns = mutableListOf<GoSerializedGlobalSource>()
     private val globalSourceMemo = hashMapOf<String, List<TaintRule.GlobalReadSource>>()
+
+    private val fieldSourceSimple = hashMapOf<String, MutableList<GoSerializedFieldSource>>()
+    private val fieldSourcePatterns = mutableListOf<GoSerializedFieldSource>()
+    private val fieldSourceMemo = hashMapOf<String, List<TaintRule.FieldReadSource>>()
 
     private val sourceSimple = hashMapOf<String, MutableList<GoSerializedRule.Source>>()
     private val sourcePatterns = mutableListOf<GoSerializedRule.Source>()
@@ -41,6 +47,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     @Synchronized
     fun loadConfig(config: GoSerializedTaintConfig) {
         config.globalSource.forEach { addRule(it) }
+        config.fieldSource.forEach { addRule(it) }
         config.source.forEach { addRule(it) }
         config.sink.forEach { addRule(it) }
         config.passThrough.forEach { addRule(it) }
@@ -48,6 +55,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
         // Invalidate memo: any subsequent lookup must re-resolve.
         globalSourceMemo.clear()
+        fieldSourceMemo.clear()
         sourceMemo.clear()
         sinkMemo.clear()
         passMemo.clear()
@@ -56,6 +64,9 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     override fun sourceRulesForGlobal(globalName: String): List<TaintRule.GlobalReadSource> =
         sourceForGlobal(globalName)
+
+    override fun sourceRulesForFieldRead(fieldName: String): List<TaintRule.FieldReadSource> =
+        sourceForFieldRead(fieldName)
 
     override fun sourceRulesForCall(
         signature: GoFunctionSignature, allRelevant: Boolean,
@@ -75,6 +86,13 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         when (val gv = rule.global) {
             is GoNameMatcher.Simple -> globalSourceSimple.getOrPut(gv.name, ::mutableListOf).add(rule)
             is GoNameMatcher.Pattern -> globalSourcePatterns.add(rule)
+        }
+    }
+
+    private fun addRule(rule: GoSerializedFieldSource) {
+        when (val fv = rule.field) {
+            is GoNameMatcher.Simple -> fieldSourceSimple.getOrPut(fv.name, ::mutableListOf).add(rule)
+            is GoNameMatcher.Pattern -> fieldSourcePatterns.add(rule)
         }
     }
 
@@ -109,6 +127,12 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     @Synchronized
     fun sourceForGlobal(name: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
         candidates(name, globalSourceSimple, globalSourcePatterns, { global })
+            .mapNotNull { specialize(it, name) }
+    }
+
+    @Synchronized
+    fun sourceForFieldRead(name: String): List<TaintRule.FieldReadSource> = fieldSourceMemo.getOrPut(name) {
+        candidates(name, fieldSourceSimple, fieldSourcePatterns, { field })
             .mapNotNull { specialize(it, name) }
     }
 
@@ -151,71 +175,34 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         return direct + patternMatches
     }
 
-    private fun specialize(rule: GoSerializedGlobalSource, name: String): TaintRule.GlobalReadSource? {
-        // Globals have no callee signature. Synthesise one whose only purpose is
-        // to drive position resolution; only Result-typed positions are
-        // meaningful for a global-read source (the LHV of the read).
-        validateNoCallSitePositions(rule, name)
+    private fun specialize(rule: GoSerializedGlobalSource, name: String) =
+        specializeFieldSourceRule(name, rule.condition, rule.taint) { name, condition, actions ->
+            TaintRule.GlobalReadSource(name, condition, actions, rule.info)
+        }
 
-        val fakeSig = GoFunctionSignature(name = name, receiverType = null, paramTypes = emptyList(), resultType = "any")
-        val condition = rule.condition.resolveToRuleCondition(fakeSig)
+    private fun specialize(rule: GoSerializedFieldSource, name: String)  =
+        specializeFieldSourceRule(name, rule.condition, rule.taint) { name, condition, actions ->
+            TaintRule.FieldReadSource(name, condition, actions, rule.info)
+        }
+
+    private inline fun <T> specializeFieldSourceRule(
+        name: String,
+        condition: GoSerializedCondition?,
+        taint: List<GoSerializedAssignAction>,
+        buildRule: (String, CommonCondition<GoRuleCondition>, List<GoAssignMark>) -> T
+    ): T? {
+        condition?.let { validateConditionForFieldSource(it) }
+        taint.forEach { validateAssignActionForFieldSource(it) }
+
+        val fakeSig =
+            GoFunctionSignature(name = name, receiverType = null, paramTypes = emptyList(), resultType = "any")
+        val condition = condition.resolveToRuleCondition(fakeSig)
         if (condition.isFalse()) return null
 
-        val actions = rule.taint.flatMap { t ->
+        val actions = taint.flatMap { t ->
             t.pos.resolve(fakeSig).map { GoAssignMark(t.kind, it) }
         }
-        return TaintRule.GlobalReadSource(name, condition, actions, rule.info)
-    }
-
-    private fun validateNoCallSitePositions(rule: GoSerializedGlobalSource, name: String) {
-        rule.condition?.let { validateConditionForGlobal(it, name) }
-        for (action in rule.taint) {
-            validateAssignActionForGlobal(action, name)
-        }
-    }
-
-    private fun validateConditionForGlobal(condition: GoSerializedCondition, name: String) {
-        when (condition) {
-            GoSerializedCondition.True -> Unit
-            is GoSerializedCondition.And -> condition.allOf.forEach { validateConditionForGlobal(it, name) }
-            is GoSerializedCondition.Or -> condition.anyOf.forEach { validateConditionForGlobal(it, name) }
-            is GoSerializedCondition.Not -> validateConditionForGlobal(condition.not, name)
-
-            is GoSerializedCondition.ContainsMark -> validatePositionWithModifiersForGlobal(condition.pos, name, "condition")
-
-            is GoSerializedCondition.ConstantCmp -> validatePositionBaseForGlobal(condition.pos, name, "condition")
-            is GoSerializedCondition.ConstantMatches -> validatePositionBaseForGlobal(condition.pos, name, "condition")
-            is GoSerializedCondition.IsNull -> validatePositionBaseForGlobal(condition.pos, name, "condition")
-            is GoSerializedCondition.IsConstant -> validatePositionBaseForGlobal(condition.pos, name, "condition")
-            is GoSerializedCondition.IsType -> validatePositionBaseForGlobal(condition.pos, name, "condition")
-
-            is GoSerializedCondition.NumberOfArgs ->
-                error("Global-source rule for $name has condition referencing NumberOfArgs; globals have no arguments")
-        }
-    }
-
-    private fun validateAssignActionForGlobal(action: GoSerializedAssignAction, name: String) {
-        // Modifiers (ArrayElement, Field) are fine on a legal base (e.g. Result + [*]);
-        // only the base must be a Result-shaped position.
-        validatePositionBaseForGlobal(action.pos.base, name, "taint action")
-    }
-
-    private fun validatePositionWithModifiersForGlobal(pos: PositionBaseWithModifiers, name: String, role: String) {
-        validatePositionBaseForGlobal(pos.base, name, role)
-    }
-
-    private fun validatePositionBaseForGlobal(pos: PositionBase, name: String, role: String) {
-        when (pos) {
-            is PositionBase.Argument ->
-                error("Global-source rule for $name targets Argument(${pos.idx ?: "*"}) in $role, but globals have no arguments")
-            is PositionBase.AnyArgument ->
-                error("Global-source rule for $name targets AnyArgument(${pos.classifier}) in $role, but globals have no arguments")
-            PositionBase.This ->
-                error("Global-source rule for $name has $role referencing This; globals have no receiver")
-            is PositionBase.ClassStatic ->
-                error("Global-source rule for $name has $role referencing ClassStatic(${pos.className}); ClassStatic is not supported for Go globals")
-            PositionBase.Result -> Unit // legal: LHV of the read
-        }
+        return buildRule(name, condition, actions)
     }
 
     private fun specialize(rule: GoSerializedRule.Source, signature: GoFunctionSignature): TaintRule.Source? {
@@ -278,4 +265,35 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     private fun defaultMeta(function: String): CommonTaintConfigurationSinkMeta =
         TaintRule.Sink.DefaultMeta("Taint sink: $function")
+
+    private fun validateConditionForFieldSource(condition: GoSerializedCondition) {
+        when (condition) {
+            GoSerializedCondition.True -> Unit
+            is GoSerializedCondition.And -> condition.allOf.forEach { validateConditionForFieldSource(it) }
+            is GoSerializedCondition.Or -> condition.anyOf.forEach { validateConditionForFieldSource(it) }
+            is GoSerializedCondition.Not -> validateConditionForFieldSource(condition.not)
+
+            is GoSerializedCondition.ContainsMark -> validatePositionWithModifiersForFieldSource(condition.pos)
+
+            is GoSerializedCondition.ConstantCmp -> validatePositionBaseForFieldSource(condition.pos)
+            is GoSerializedCondition.ConstantMatches -> validatePositionBaseForFieldSource(condition.pos)
+            is GoSerializedCondition.IsNull -> validatePositionBaseForFieldSource(condition.pos)
+            is GoSerializedCondition.IsConstant -> validatePositionBaseForFieldSource(condition.pos)
+            is GoSerializedCondition.IsType -> validatePositionBaseForFieldSource(condition.pos)
+
+            is GoSerializedCondition.NumberOfArgs -> error("Unsupported condition for field source: $condition")
+        }
+    }
+
+    private fun validateAssignActionForFieldSource(action: GoSerializedAssignAction) {
+        validatePositionWithModifiersForFieldSource(action.pos)
+    }
+
+    private fun validatePositionWithModifiersForFieldSource(pos: PositionBaseWithModifiers) {
+        validatePositionBaseForFieldSource(pos.base)
+    }
+
+    private fun validatePositionBaseForFieldSource(pos: PositionBase) {
+        check(pos is PositionBase.Result) { "Unsupported field-source position: $pos" }
+    }
 }
