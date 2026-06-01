@@ -46,7 +46,7 @@ class GoMethodSequentFlowFunction(
 
     override fun propagateZeroToZero(): Set<Sequent> {
         val zeroSequents = mutableSetOf<Sequent>(Sequent.ZeroToZero)
-        applyGlobalReadSourceRules(zeroSequents)
+        applyGlobalOrFieldReadSourceRules(zeroSequents)
 
         ClosureCreationFlowFunction.handle(currentInst) { base, accessors ->
             val startFact = apManager.createFinalAp(base, ExclusionSet.Universe)
@@ -367,11 +367,21 @@ class GoMethodSequentFlowFunction(
         }
     }
 
-    private fun applyGlobalReadSourceRules(out: MutableSet<Sequent>) {
+    private fun applyGlobalOrFieldReadSourceRules(out: MutableSet<Sequent>) {
         val inst = currentInst as? GoIRAssignInst ?: return
-        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method) ?: return
 
-        val sourceRules = context.taint.taintConfig.sourceRulesForGlobal(globalName) // todo: []
+        val sourceRules = mutableListOf<TaintRule.GoSourceRule>()
+
+        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst, method)
+        if (fieldName != null) {
+            sourceRules += context.taint.taintConfig.sourceRulesForFieldRead(fieldName)
+        }
+
+        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method)
+        if (globalName != null) {
+            sourceRules += context.taint.taintConfig.sourceRulesForGlobal(globalName)
+        }
+
         if (sourceRules.isEmpty()) return
 
         val lhv = AccessPathBase.LocalVar(inst.register.index)
@@ -380,7 +390,7 @@ class GoMethodSequentFlowFunction(
 
         for (rule in sourceRules) {
             if (!rule.condition.isTrue()) {
-                TODO("Global source with complex condition")
+                TODO("Field/global source with complex condition")
             }
 
             for (action in rule.actionsAfter) {
@@ -392,7 +402,7 @@ class GoMethodSequentFlowFunction(
 
                     evaluatedFacts.mapTo(out) {
                         if (it.base !is AccessPathBase.Return) {
-                            TODO("Field source with non-result assign")
+                            TODO("Field/global source with non-result assign")
                         }
 
                         Sequent.ZeroToFact(it.rebase(lhv), trace)
