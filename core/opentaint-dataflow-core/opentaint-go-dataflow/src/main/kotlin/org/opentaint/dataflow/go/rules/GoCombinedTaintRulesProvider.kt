@@ -22,6 +22,11 @@ class GoCombinedTaintRulesProvider(
             base.sourceRulesForGlobal(globalName),
             combined.sourceRulesForGlobal(globalName))
 
+    override fun sourceRulesForFieldRead(fieldName: String) =
+        combine(options.source,
+            base.sourceRulesForFieldRead(fieldName),
+            combined.sourceRulesForFieldRead(fieldName))
+
     override fun sourceRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =
         combine(options.source,
             base.sourceRulesForCall(signature, allRelevant),

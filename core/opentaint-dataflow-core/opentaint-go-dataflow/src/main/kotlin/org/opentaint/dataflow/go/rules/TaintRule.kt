@@ -20,6 +20,13 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
         override val info: ItemInfo?,
     ) : TaintRule, CommonTaintConfigurationSource, CommonTaintAssignAction
 
+    data class FieldReadSource(
+        val field: String,
+        val condition: CommonCondition<GoRuleCondition>,
+        val actionsAfter: List<GoAssignMark>,
+        override val info: ItemInfo?,
+    ) : TaintRule, CommonTaintConfigurationSource, CommonTaintAssignAction
+
     data class Source(
         val function: String,
         val condition: CommonCondition<GoRuleCondition>,
