@@ -1,5 +1,6 @@
 # Build outputs and binaries
 bin/
+!npm/bin/
 dist/
 lib/
 
