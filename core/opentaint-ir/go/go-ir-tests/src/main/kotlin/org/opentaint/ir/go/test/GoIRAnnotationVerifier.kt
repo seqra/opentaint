@@ -237,7 +237,7 @@ object GoIRAnnotationVerifier {
             }
 
             if (targetName != null) {
-                val actualTarget = callInfo.function?.name ?: callInfo.methodName ?: "<unknown>"
+                val actualTarget = callInfo.target?.displayName ?: callInfo.methodName ?: "<unknown>"
                 if (!actualTarget.contains(targetName)) {
                     failures.add(
                         VerificationFailure(

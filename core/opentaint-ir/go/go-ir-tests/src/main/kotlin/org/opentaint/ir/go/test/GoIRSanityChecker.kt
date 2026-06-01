@@ -527,7 +527,7 @@ object GoIRSanityChecker {
      * Verify operand validity:
      * - Operand values should have non-null types
      * - GoIRRegister operands should reference registers defined in this function
-     * - GoIRFunctionValue should reference a valid function
+     * - GoIRCallTarget.Function should reference a valid function
      */
     private fun checkOperandValidity(
         body: GoIRBody,
