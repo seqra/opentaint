@@ -15,6 +15,7 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.analysis.GoMethodCallResolver.ClosureCreationFlowFunction
+import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr

@@ -15,6 +15,7 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
+import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.InitialFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
@@ -47,7 +48,7 @@ class GoMethodSequentPrecondition(
     private fun addPreconditions(fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
         when (val inst = currentInst) {
             is GoIRAssignInst -> {
-                result.unconditionalGlobalSourcesPrecondition(inst, fact)
+                result.unconditionalGlobalOrFieldReadSourceRulePrecondition(inst, fact)
                 handleAssign(inst, fact, result)
             }
             is GoIRStore -> handleStore(inst, fact, result)
@@ -257,15 +258,25 @@ class GoMethodSequentPrecondition(
         }
     }
 
-    private fun MutableSet<SequentPrecondition>.unconditionalGlobalSourcesPrecondition(
+    private fun MutableSet<SequentPrecondition>.unconditionalGlobalOrFieldReadSourceRulePrecondition(
         inst: GoIRAssignInst,
         fact: InitialFactAp,
     ) {
-        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method) ?: return
         val lhv = AccessPathBase.LocalVar(inst.register.index)
         if (fact.base != lhv) return
 
-        val sourceRules = analysisContext.taint.taintConfig.sourceRulesForGlobal(globalName)
+        val sourceRules = mutableListOf<TaintRule.GoSourceRule>()
+
+        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst, method)
+        if (fieldName != null) {
+            sourceRules += analysisContext.taint.taintConfig.sourceRulesForFieldRead(fieldName)
+        }
+
+        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst, method)
+        if (globalName != null) {
+            sourceRules += analysisContext.taint.taintConfig.sourceRulesForGlobal(globalName)
+        }
+
         if (sourceRules.isEmpty()) return
 
         val entryFactReader = InitialFactReader(fact.rebase(AccessPathBase.Return), apManager)
@@ -273,7 +284,7 @@ class GoMethodSequentPrecondition(
 
         for (rule in sourceRules) {
             if (!rule.condition.isTrue()) {
-                TODO("Global source with complex condition")
+                TODO("Field/global source with complex condition")
             }
             val assignedMarks = rule.actionsAfter.maybeFlatMap { action ->
                 sourcePreconditionEvaluator.evaluate(
