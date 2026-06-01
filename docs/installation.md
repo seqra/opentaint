@@ -134,7 +134,7 @@ If you see *"opentaint" cannot be opened because the developer cannot be verifie
 opentaint update
 ```
 
-For package manager installations, `opentaint update` will show the appropriate command (e.g., `brew upgrade --cask opentaint`).
+For package manager installations, `opentaint update` will show the appropriate command (e.g., `brew upgrade --cask opentaint` for Homebrew, or `npm install -g @seqra/opentaint@latest` for npm).
 
 ## Cleaning Up
 
