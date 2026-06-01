@@ -14,6 +14,7 @@ interface GoIRInstVisitor<out T> {
 
     // Effect-only
     fun visitStore(inst: GoIRStore): T
+    fun visitGlobalStore(inst: GoIRGlobalStore): T
     fun visitMapUpdate(inst: GoIRMapUpdate): T
     fun visitSend(inst: GoIRSend): T
     fun visitGo(inst: GoIRGo): T
@@ -33,6 +34,7 @@ interface GoIRInstVisitor<out T> {
         override fun visitReturn(inst: GoIRReturn) = defaultVisit(inst)
         override fun visitPanic(inst: GoIRPanic) = defaultVisit(inst)
         override fun visitStore(inst: GoIRStore) = defaultVisit(inst)
+        override fun visitGlobalStore(inst: GoIRGlobalStore) = defaultVisit(inst)
         override fun visitMapUpdate(inst: GoIRMapUpdate) = defaultVisit(inst)
         override fun visitSend(inst: GoIRSend) = defaultVisit(inst)
         override fun visitGo(inst: GoIRGo) = defaultVisit(inst)

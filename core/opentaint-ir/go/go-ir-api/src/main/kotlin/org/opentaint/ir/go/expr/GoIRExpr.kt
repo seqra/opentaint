@@ -2,6 +2,7 @@ package org.opentaint.ir.go.expr
 
 import org.opentaint.ir.api.common.cfg.CommonExpr
 import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.api.GoIRGlobal
 import org.opentaint.ir.go.cfg.GoIRSelectState
 import org.opentaint.ir.go.type.GoIRBinaryOp
 import org.opentaint.ir.go.type.GoIRType
@@ -303,6 +304,35 @@ data class GoIRExtractExpr(
     override val operands: List<GoIRValue> get() = listOf(tuple)
     override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitExtract(this)
     override fun toString(): String = "extract $tuple #$extractIndex"
+}
+
+// ─── Entity value loads ─────────────────────────────────────────────
+
+data class GoIRGlobalValueExpr(
+    override var type: GoIRType,
+    val global: GoIRGlobal,
+) : GoIRExpr {
+    override val operands: List<GoIRValue> get() = emptyList()
+    override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitGlobalValue(this)
+    override fun toString(): String = "global ${global.fullName}"
+}
+
+data class GoIRFunctionValueExpr(
+    override var type: GoIRType,
+    val function: GoIRFunction,
+) : GoIRExpr {
+    override val operands: List<GoIRValue> get() = emptyList()
+    override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitFunctionValue(this)
+    override fun toString(): String = "func ${function.fullName}"
+}
+
+data class GoIRBuiltinValueExpr(
+    override var type: GoIRType,
+    val builtinName: String,
+) : GoIRExpr {
+    override val operands: List<GoIRValue> get() = emptyList()
+    override fun <T> accept(visitor: GoIRExprVisitor<T>): T = visitor.visitBuiltinValue(this)
+    override fun toString(): String = "builtin $builtinName"
 }
 
 private val GoIRBinaryOp.symbol: String

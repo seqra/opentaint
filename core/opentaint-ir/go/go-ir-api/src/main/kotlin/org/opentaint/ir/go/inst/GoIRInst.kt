@@ -4,6 +4,7 @@ import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.go.api.GoIRBody
+import org.opentaint.ir.go.api.GoIRGlobal
 import org.opentaint.ir.go.api.GoIRPosition
 import org.opentaint.ir.go.cfg.GoIRBasicBlock
 import org.opentaint.ir.go.cfg.GoIRCallInfo
@@ -173,6 +174,18 @@ data class GoIRStore(
     override fun hashCode(): Int = location.hashCode()
 }
 
+data class GoIRGlobalStore(
+    override val location: GoInstLocation,
+    val global: GoIRGlobal,
+    val value: GoIRValue,
+) : GoIRInst {
+    override val operands: List<GoIRValue> get() = listOf(value)
+    override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitGlobalStore(this)
+    override fun toString(): String = "global ${global.fullName} = $value"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
+}
+
 data class GoIRMapUpdate(
     override val location: GoInstLocation,
     val map: GoIRValue,
@@ -246,7 +259,7 @@ private fun GoIRCallInfo.render(): String {
     val argsStr = args.joinToString(", ")
     return when {
         receiver != null && methodName != null -> "$receiver.$methodName($argsStr)"
-        function != null -> "$function($argsStr)"
+        target != null -> "${target.displayName}($argsStr)"
         else -> "call($argsStr)"
     }
 }

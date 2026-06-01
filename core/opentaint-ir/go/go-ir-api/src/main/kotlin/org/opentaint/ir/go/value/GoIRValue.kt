@@ -1,8 +1,6 @@
 package org.opentaint.ir.go.value
 
 import org.opentaint.ir.api.common.cfg.CommonValue
-import org.opentaint.ir.go.api.GoIRFunction
-import org.opentaint.ir.go.api.GoIRGlobal
 import org.opentaint.ir.go.type.GoIRType
 
 /**
@@ -78,30 +76,4 @@ data class GoIRFreeVarValue(
 ) : GoIRValue {
     override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitFreeVar(this)
     override fun toString(): String = "free${freeVarIndex}:$name"
-}
-
-data class GoIRGlobalValue(
-    override val type: GoIRType,
-    override val name: String,
-    val global: GoIRGlobal,
-) : GoIRValue {
-    override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitGlobal(this)
-    override fun toString(): String = "global:$name"
-}
-
-data class GoIRFunctionValue(
-    override val type: GoIRType,
-    override val name: String,
-    val function: GoIRFunction,
-) : GoIRValue {
-    override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitFunction(this)
-    override fun toString(): String = name
-}
-
-data class GoIRBuiltinValue(
-    override val type: GoIRType,
-    override val name: String,
-) : GoIRValue {
-    override fun <T> acceptValue(visitor: GoIRValueVisitor<T>): T = visitor.visitBuiltin(this)
-    override fun toString(): String = name
 }
