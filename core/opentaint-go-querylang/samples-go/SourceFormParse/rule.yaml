@@ -1,0 +1,11 @@
+rules:
+  - id: source-form-parse
+    languages: [go]
+    severity: WARNING
+    message: "Taint from r.Form reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "$R.Form.Get($K)"
+      - pattern: "$R.Form"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

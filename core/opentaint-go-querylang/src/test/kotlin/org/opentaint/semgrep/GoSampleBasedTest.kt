@@ -99,6 +99,31 @@ class GoSampleBasedTest {
     @Disabled // todo: Fix IsType matching
     @Test fun typeBasedSink() = runSample("TypeBasedSink")
 
+    // ─── Cluster A: source-shape false-negative reproductions ────────────────
+
+    @Test fun sourceUrlRawQuery() = runSample("SourceUrlRawQuery")
+
+    @Test fun sourceRequestUri() = runSample("SourceRequestUri")
+
+    @Test fun sourceHeaderMapIndex() = runSample("SourceHeaderMapIndex")
+
+    @Test fun sourceFormParse() = runSample("SourceFormParse")
+
+    @Test fun xssHeaderQueryUnescape() = runSample("XssHeaderQueryUnescape", useDefaultConfig = true)
+
+    @Test fun xssBeegoOutputBody() = runSample("XssBeegoOutputBody", useDefaultConfig = true)
+
+    @Test fun sqlBeegoHeaderQueryUnescape() = runSample("SqlBeegoHeaderQueryUnescape", useDefaultConfig = true)
+
+    @Test fun cmdInjEnvSink() = runSample("CmdInjEnvSink", useDefaultConfig = true)
+
+    // Not actually an FN: Ctx.Input.Query source is matched and reported. Left enabled.
+    @Test fun sourceBeegoCtxInput() = runSample("SourceBeegoCtxInput")
+
+    @Test fun sourceBeegoCtxInputHeader() = runSample("SourceBeegoCtxInputHeader")
+
+    @Test fun sourceBeegoInputParamsRange() = runSample("SourceBeegoInputParamsRange")
+
     // ─── Ports of example.* Java sample tests ───────────────────────────────
 
     @Test fun javaRule() = runSample("JavaRule")

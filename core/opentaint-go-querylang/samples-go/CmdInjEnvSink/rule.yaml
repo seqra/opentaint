@@ -1,0 +1,15 @@
+rules:
+  - id: go-command-injection-env-sink
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input reaches OS command execution via Cmd receiver (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern-either:
+          - pattern: $C.CombinedOutput()
+          - pattern: $C.Run()
+          - pattern: $C.Output()
+          - pattern: $C.Start()

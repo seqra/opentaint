@@ -20,4 +20,15 @@ class GoConfigLoaderTest {
         assertTrue("strings.Replace" in names, "expected strings.Replace propagator, saw ${names.take(5)}")
         assertTrue("bufio.NewReader" in names, "expected bufio.NewReader propagator")
     }
+
+    @Test
+    fun containerListPushBackRuleSurvivesLoading() {
+        val config = assertNotNull(GoConfigLoader.getConfig())
+        val pushBack = config.passThrough.filter {
+            (it.function as? GoNameMatcher.Simple)?.name?.contains("container/list.List") == true &&
+            (it.function as? GoNameMatcher.Simple)?.name?.contains("PushBack") == true
+        }
+        assertTrue(pushBack.isNotEmpty(), "container/list PushBack rule dropped during loading")
+        assertTrue(pushBack.all { it.copy.isNotEmpty() }, "PushBack copy actions were dropped")
+    }
 }
