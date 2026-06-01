@@ -24,6 +24,7 @@ class GoApplicationGraph(
         // Scan all functions for call instructions that resolve to this method.
         // O(n) across all instructions — acceptable for MVP.
         return cp.allFunctions().asSequence()
+            .filter { it.bodyAvailable }
             .mapNotNull { it.body }
             .flatMap { body ->
                 body.instructions.asSequence().filter { inst ->
@@ -37,6 +38,7 @@ class GoApplicationGraph(
         node.location.functionBody.function
 
     override fun methodGraph(method: GoIRFunction): ApplicationGraph.MethodGraph<GoIRFunction, GoIRInst> {
+        check(method.bodyAvailable) { "Function ${method.fullName} body is not available" }
         val body = method.body ?: error("Function ${method.fullName} has no body")
         return GoFunctionGraph(this, method, body)
     }
