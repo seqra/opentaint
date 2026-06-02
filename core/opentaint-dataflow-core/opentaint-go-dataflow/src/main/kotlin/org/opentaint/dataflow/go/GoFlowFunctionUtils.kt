@@ -1,6 +1,5 @@
 package org.opentaint.dataflow.go
 
-import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
@@ -48,6 +47,7 @@ import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRCall
 import org.opentaint.ir.go.inst.GoIRDefInst
 import org.opentaint.ir.go.inst.GoIRDefer
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRGo
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRArrayType
@@ -80,23 +80,19 @@ object GoFlowFunctionUtils {
     fun accessPathBase(
         value: GoIRValue,
         method: GoIRFunction?
-    ): AccessPathBase? {
-        return when (value) {
-            is GoIRParameterValue -> {
-                if (method != null && method.isMethod && value.paramIndex == 0) {
-                    AccessPathBase.This
-                } else {
-                    val shift = if (method != null && method.isMethod) 1 else 0
-                    AccessPathBase.Argument(value.paramIndex - shift)
-                }
-            }
-            is GoIRRegister -> AccessPathBase.LocalVar(value.index)
-            is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
-            else -> {
-                logger.error("Unsupported value type: ${value.javaClass.canonicalName}")
-                null
+    ): AccessPathBase = when (value) {
+        is GoIRParameterValue -> {
+            if (method != null && method.isMethod && value.paramIndex == 0) {
+                AccessPathBase.This
+            } else {
+                val shift = if (method != null && method.isMethod) 1 else 0
+                AccessPathBase.Argument(value.paramIndex - shift)
             }
         }
+
+        is GoIRRegister -> AccessPathBase.LocalVar(value.index)
+        is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
+        else -> error("Unexpected value: $value")
     }
 
     fun accessForGlobal(global: GoIRGlobal) = RefAccess(
@@ -113,12 +109,12 @@ object GoFlowFunctionUtils {
         return when (expr) {
             // Field access
             is GoIRFieldExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
+                val base = accessPathBase(expr.x, method)
                 RefAccess(base, fieldAccessor(expr))
             }
 
             is GoIRFieldAddrExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
+                val base = accessPathBase(expr.x, method)
                 RefAccess(base, fieldAccessorFromAddr(expr))
             }
 
@@ -128,17 +124,17 @@ object GoFlowFunctionUtils {
 
             // Index/element access
             is GoIRIndexExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
+                val base = accessPathBase(expr.x, method)
                 RefAccess(base, ElementAccessor)
             }
 
             is GoIRIndexAddrExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
+                val base = accessPathBase(expr.x, method)
                 RefAccess(base, ElementAccessor)
             }
 
             is GoIRLookupExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
+                val base = accessPathBase(expr.x, method)
                 RefAccess(base, ElementAccessor)
             }
 
@@ -156,7 +152,7 @@ object GoFlowFunctionUtils {
                 GoIRUnaryOp.DEREF -> singleOperandAccess(expr.x, method)
                 GoIRUnaryOp.ARROW -> {
                     // Channel receive: <-ch reads element from channel
-                    val base = accessPathBase(expr.x, method) ?: return null
+                    val base = accessPathBase(expr.x, method)
                     RefAccess(base, ElementAccessor)
                 }
                 else -> null // NOT, NEG, XOR — kills taint
@@ -171,8 +167,8 @@ object GoFlowFunctionUtils {
 
             // Tuple extract (multi-return): index-sensitive
             is GoIRExtractExpr -> {
-                val base = accessPathBase(expr.tuple, method) ?: return null
-                RefAccess(base, tupleFieldAccessor(expr.extractIndex, expr.type))
+                val base = accessPathBase(expr.tuple, method)
+                RefAccess(base, tupleFieldAccessor(expr.extractIndex))
             }
 
             // Binary op: string concat preserves taint, arithmetic doesn't
@@ -206,88 +202,28 @@ object GoFlowFunctionUtils {
         }
     }
 
-    private fun singleOperandAccess(value: GoIRValue, method: GoIRFunction): Access? {
-        val base = accessPathBase(value, method) ?: return null
+    private fun singleOperandAccess(value: GoIRValue, method: GoIRFunction): Access {
+        val base = accessPathBase(value, method)
         return Simple(base)
     }
 
-    /**
-     * Resolves the access for a store destination address.
-     * If the address was produced by FieldAddrExpr or IndexAddrExpr,
-     * returns a RefAccess with the appropriate accessor.
-     */
-    fun accessForAddr(addr: GoIRValue, method: GoIRFunction): Access? {
-        if (addr !is GoIRRegister) {
-            return singleOperandAccess(addr, method)
-        }
-        val defInst = findDefInst(addr, method)
-            ?: return Simple(AccessPathBase.LocalVar(addr.index))
-
-        return when (val expr = (defInst as? GoIRAssignInst)?.expr) {
-            is GoIRFieldAddrExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
-                RefAccess(base, fieldAccessorFromAddr(expr))
-            }
-            is GoIRIndexAddrExpr -> {
-                val base = accessPathBase(expr.x, method) ?: return null
-                RefAccess(base, ElementAccessor)
-            }
-            is GoIRFreeVarValueExpr -> {
-                RefAccess(AccessPathBase.This, freeVarAccessor(method, expr.freeVarIndex))
-            }
-            else -> Simple(AccessPathBase.LocalVar(addr.index))
-        }
-    }
-
-    /**
-     * Walks a store-destination address back through nested address-of-field /
-     * address-of-element producers to its root base, returning the root and the
-     * accessor chain in LEAF-FIRST order (deepest field first).
-     *
-     * `*%5 = data` where %5 = &%4.v, %4 = &%3.n1, %3 = &%2.n1, %2 = &%1.n1
-     * resolves to (LocalVar(1), [.v, .n1, .n1, .n1]).
-     *
-     * Returns null if `addr` is not a register-rooted field/element chain
-     * (callers fall back to the single-level accessForAddr handling).
-     */
-    fun resolveAddrChain(addr: GoIRValue, method: GoIRFunction): Pair<AccessPathBase, List<Accessor>>? {
-        if (addr !is GoIRRegister) return null
-        val accessors = mutableListOf<Accessor>()
-        var cur: GoIRValue = addr
-        while (cur is GoIRRegister) {
-            val expr = (findDefInst(cur, method) as? GoIRAssignInst)?.expr
-            when (expr) {
-                is GoIRFieldAddrExpr -> { accessors.add(fieldAccessorFromAddr(expr)); cur = expr.x }
-                is GoIRIndexAddrExpr -> { accessors.add(ElementAccessor); cur = expr.x }
-                else -> return AccessPathBase.LocalVar(cur.index) to accessors
-            }
-        }
-        val base = accessPathBase(cur, method) ?: return null
-        return base to accessors
-    }
-
-    // ── Field accessor helpers ───────────────────────────────────────
-
-    fun tupleFieldAccessor(index: Int, elementType: GoIRType): FieldAccessor {
-        return FieldAccessor("tuple", "\$$index", elementType.displayName)
+    fun tupleFieldAccessor(index: Int): FieldAccessor {
+        return createFieldAccessor("tuple", "\$$index")
     }
 
     fun rangeElementTupleSlots(expr: GoIRNextExpr, method: GoIRFunction): List<FieldAccessor> {
         val collectionType = rangedCollectionType(expr, method) ?: return emptyList()
-        return when (val underlying = resolveUnderlyingType(collectionType)) {
-            is GoIRMapType -> listOf(
-                tupleFieldAccessor(1, underlying.key),
-                tupleFieldAccessor(2, underlying.value),
-            )
-            is GoIRSliceType -> listOf(tupleFieldAccessor(2, underlying.elem))
-            is GoIRArrayType -> listOf(tupleFieldAccessor(2, underlying.elem))
+        return when (resolveUnderlyingType(collectionType)) {
+            is GoIRMapType -> listOf(tupleFieldAccessor(1), tupleFieldAccessor(2))
+            is GoIRSliceType -> listOf(tupleFieldAccessor(2))
+            is GoIRArrayType -> listOf(tupleFieldAccessor(2))
             else -> emptyList()
         }
     }
 
     private fun rangedCollectionType(expr: GoIRNextExpr, method: GoIRFunction): GoIRType? {
         val iter = expr.iter as? GoIRRegister ?: return null
-        val rangeExpr = (findDefInst(iter, method) as? GoIRAssignInst)?.expr as? GoIRRangeExpr ?: return null
+        val rangeExpr = (findDefInstUnsafe(iter, method) as? GoIRAssignInst)?.expr as? GoIRRangeExpr ?: return null
         return rangeExpr.x.type
     }
 
@@ -298,17 +234,22 @@ object GoFlowFunctionUtils {
     }
 
     fun freeVarAccessor(function: GoIRFunction, argSlot: Int): FieldAccessor {
-        return FieldAccessor(function.fullName, "freeVar$$argSlot", "")
+        return createFieldAccessor(function.fullName, "freeVar$$argSlot")
     }
 
     fun fieldAccessor(expr: GoIRFieldExpr): FieldAccessor {
         val structTypeName = resolveStructTypeName(expr.x.type)
-        return FieldAccessor(structTypeName, expr.fieldName, expr.type.displayName)
+        return createFieldAccessor(structTypeName, expr.fieldName)
     }
 
     fun fieldAccessorFromAddr(expr: GoIRFieldAddrExpr): FieldAccessor {
         val structTypeName = resolveStructTypeName(expr.x.type)
-        return FieldAccessor(structTypeName, expr.fieldName, expr.type.displayName)
+        return createFieldAccessor(structTypeName, expr.fieldName)
+    }
+
+    fun fieldAccessorFromStore(inst: GoIRFieldStore): FieldAccessor {
+        val structTypeName = resolveStructTypeName(inst.base.type)
+        return createFieldAccessor(structTypeName, inst.fieldName)
     }
 
     private fun resolveStructTypeName(type: GoIRType): String {
@@ -322,7 +263,7 @@ object GoFlowFunctionUtils {
 
     // ── Defining instruction lookup ──────────────────────────────────
 
-    private fun findDefInst(register: GoIRRegister, method: GoIRFunction): GoIRDefInst? {
+    private fun findDefInstUnsafe(register: GoIRRegister, method: GoIRFunction): GoIRDefInst? {
         val body = method.body ?: return null
         val instAtIdx = body.instructions.getOrNull(register.index) as? GoIRDefInst
         if (instAtIdx != null && instAtIdx.register == register) return instAtIdx
@@ -336,7 +277,7 @@ object GoFlowFunctionUtils {
      * Traces a register back to a MakeClosureExpr, if it was defined by one.
      */
     fun findMakeClosureExpr(register: GoIRRegister, method: GoIRFunction): GoIRMakeClosureExpr? {
-        val defInst = findDefInst(register, method) ?: return null
+        val defInst = findDefInstUnsafe(register, method) ?: return null
         return (defInst as? GoIRAssignInst)?.expr as? GoIRMakeClosureExpr
     }
 
@@ -378,7 +319,7 @@ object GoFlowFunctionUtils {
 
     fun PositionAccessor.resolvePosAccess(): Accessor = when (this) {
         is PositionAccessor.ElementAccessor -> ElementAccessor
-        is PositionAccessor.FieldAccessor -> FieldAccessor(className, fieldName, fieldType)
+        is PositionAccessor.FieldAccessor -> createFieldAccessor(className, fieldName)
     }
 
     fun detectGlobalReadName(inst: GoIRAssignInst): String? {
@@ -387,17 +328,13 @@ object GoFlowFunctionUtils {
         return expr.global.fullName
     }
 
-    fun detectFieldReadName(inst: GoIRAssignInst, method: GoIRFunction): String? {
+    fun detectFieldReadName(inst: GoIRAssignInst): String? {
         val expr = inst.expr
         if (expr is GoIRFieldExpr) return expr.fieldName
-        if (expr is GoIRUnOpExpr && expr.op == GoIRUnaryOp.DEREF) {
-            val src = expr.x as? GoIRRegister ?: return null
-            val srcDef = (findDefInst(src, method) as? GoIRAssignInst)?.expr
-            if (srcDef is GoIRFieldAddrExpr) return srcDef.fieldName
-            if (srcDef is GoIRFieldExpr) return srcDef.fieldName
-        }
+        if (expr is GoIRFieldAddrExpr) return expr.fieldName
         return null
     }
 
-    private val logger = object : KLogging() {}.logger
+    fun createFieldAccessor(struct: String, fieldName: String): FieldAccessor =
+        FieldAccessor(struct, fieldName, "?")
 }
