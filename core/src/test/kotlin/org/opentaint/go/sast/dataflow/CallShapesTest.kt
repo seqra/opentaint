@@ -1,6 +1,5 @@
 package org.opentaint.go.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassThrough
 import org.opentaint.go.config.GoConfigLoader
@@ -61,9 +60,7 @@ class CallShapesTest : AnalysisTest() {
     @Test fun builtin002F() = assertNotReachable("test.builtin002F")
 
     // 10. Unresolved DYNAMIC (function from map lookup)
-//    @Disabled("call-shape: unresolved DYNAMIC — engine doesn't resolve a function value loaded from a map[string]func to the underlying callee, so tainted argument doesn't reach the sink")
     @Test fun unresolvedDynamic001T() = assertReachable("test.unresolvedDynamic001T")
-//    @Disabled("call-shape: unresolved DYNAMIC — negative-control paired with unresolvedDynamic001T (engine doesn't trace function values from map lookups to MakeClosure)")
     @Test fun unresolvedDynamic002F() = assertNotReachable("test.unresolvedDynamic002F")
 
     // 11. Generic monomorphised

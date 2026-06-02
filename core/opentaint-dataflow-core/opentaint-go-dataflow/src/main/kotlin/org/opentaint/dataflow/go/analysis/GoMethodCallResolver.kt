@@ -22,6 +22,7 @@ import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.expr.GoIRFunctionValueExpr
 import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
 import org.opentaint.ir.go.ext.findFunctionByFullName
 import org.opentaint.ir.go.inst.GoIRAssignInst
@@ -73,11 +74,17 @@ class GoMethodCallResolver(
 
     data object ClosureCreationFlowFunction{
         fun handle(inst: GoIRInst, body: (AccessPathBase, List<Accessor>) -> Unit) {
-            val assign = inst as? GoIRAssignInst ?: return
-            val closure = assign.expr as? GoIRMakeClosureExpr ?: return
+            val expr = (inst as? GoIRAssignInst)?.expr ?: return
 
-            val base = AccessPathBase.LocalVar(inst.register.index)
-            body(base, listOf(TypeInfoGroupAccessor, TypeInfoAccessor(closure.fn.fullName)))
+            if (expr is GoIRMakeClosureExpr) {
+                val base = AccessPathBase.LocalVar(inst.register.index)
+                body(base, listOf(TypeInfoGroupAccessor, TypeInfoAccessor(expr.fn.fullName)))
+            }
+
+            if (expr is GoIRFunctionValueExpr) {
+                val base = AccessPathBase.LocalVar(inst.register.index)
+                body(base, listOf(TypeInfoGroupAccessor, TypeInfoAccessor(expr.function.fullName)))
+            }
         }
     }
 
