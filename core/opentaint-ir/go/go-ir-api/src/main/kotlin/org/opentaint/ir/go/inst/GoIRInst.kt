@@ -162,14 +162,52 @@ data class GoIRPanic(
 
 // ─── Effect-only instructions ───────────────────────────────────────
 
+sealed interface GoIRStoreInst : GoIRInst {
+    val addr: GoIRValue
+    val value: GoIRValue
+    fun toGenericStore(): GoIRStore
+}
+
 data class GoIRStore(
     override val location: GoInstLocation,
-    val addr: GoIRValue,
-    val value: GoIRValue,
-) : GoIRInst {
+    override val addr: GoIRValue,
+    override val value: GoIRValue,
+) : GoIRStoreInst {
     override val operands: List<GoIRValue> get() = listOf(addr, value)
+    override fun toGenericStore(): GoIRStore = this
     override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitStore(this)
     override fun toString(): String = "*$addr = $value"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
+}
+
+data class GoIRFieldStore(
+    override val location: GoInstLocation,
+    override val addr: GoIRValue,
+    val base: GoIRValue,
+    val fieldIndex: Int,
+    val fieldName: String,
+    override val value: GoIRValue,
+) : GoIRStoreInst {
+    override val operands: List<GoIRValue> get() = listOf(addr, base, value)
+    override fun toGenericStore(): GoIRStore = GoIRStore(location, addr, value)
+    override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitFieldStore(this)
+    override fun toString(): String = "$base.$fieldName = $value"
+    override fun equals(other: Any?): Boolean = equalsByLocation(other)
+    override fun hashCode(): Int = location.hashCode()
+}
+
+data class GoIRIndexStore(
+    override val location: GoInstLocation,
+    override val addr: GoIRValue,
+    val base: GoIRValue,
+    val index: GoIRValue,
+    override val value: GoIRValue,
+) : GoIRStoreInst {
+    override val operands: List<GoIRValue> get() = listOf(addr, base, index, value)
+    override fun toGenericStore(): GoIRStore = GoIRStore(location, addr, value)
+    override fun <T> accept(visitor: GoIRInstVisitor<T>): T = visitor.visitIndexStore(this)
+    override fun toString(): String = "$base[$index] = $value"
     override fun equals(other: Any?): Boolean = equalsByLocation(other)
     override fun hashCode(): Int = location.hashCode()
 }

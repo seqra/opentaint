@@ -49,9 +49,11 @@ import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRCall
 import org.opentaint.ir.go.inst.GoIRDebugRef
 import org.opentaint.ir.go.inst.GoIRDefer
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRGlobalStore
 import org.opentaint.ir.go.inst.GoIRGo
 import org.opentaint.ir.go.inst.GoIRIf
+import org.opentaint.ir.go.inst.GoIRIndexStore
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRInstRef
 import org.opentaint.ir.go.inst.GoIRJump
@@ -460,7 +462,46 @@ class GoIRDeserializer {
             block.resolveDominees(blocks)
         }
 
+        specializeStores(blocks)
         fn.setBody(body)
+    }
+
+    /**
+     * Recover field/index structure for pointer stores. Each store's address register is, in SSA,
+     * defined exactly once; if that definition is a FieldAddr or IndexAddr expression we replace the
+     * generic [GoIRStore] with a [GoIRFieldStore] / [GoIRIndexStore] that records the base and
+     * field/index. Reads block instructions directly (never body.instructions, which is lazy and
+     * would otherwise cache the pre-specialization list). Direct definitions only — addresses derived
+     * through conversions etc. stay generic.
+     */
+    private fun specializeStores(blocks: List<GoIRBasicBlockImpl>) {
+        val defByRegister = HashMap<GoIRRegister, GoIRExpr>()
+        for (block in blocks) {
+            for (inst in block.instructions) {
+                if (inst is GoIRAssignInst) {
+                    defByRegister[inst.register] = inst.expr
+                }
+            }
+        }
+        for (block in blocks) {
+            var changed = false
+            val newInstructions = block.instructions.map { inst ->
+                if (inst !is GoIRStore) return@map inst
+                val addr = inst.addr as? GoIRRegister ?: return@map inst
+                when (val def = defByRegister[addr]) {
+                    is GoIRFieldAddrExpr -> {
+                        changed = true
+                        GoIRFieldStore(inst.location, inst.addr, def.x, def.fieldIndex, def.fieldName, inst.value)
+                    }
+                    is GoIRIndexAddrExpr -> {
+                        changed = true
+                        GoIRIndexStore(inst.location, inst.addr, def.x, def.indexValue, inst.value)
+                    }
+                    else -> inst
+                }
+            }
+            if (changed) block.setInstructions(newInstructions)
+        }
     }
 
     private fun InstContext.deserializeInstruction(

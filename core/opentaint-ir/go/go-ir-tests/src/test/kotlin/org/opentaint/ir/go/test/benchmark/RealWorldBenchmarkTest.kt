@@ -7,6 +7,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.test.*
+import org.opentaint.ir.go.inst.GoIRFieldStore
+import org.opentaint.ir.go.inst.GoIRGlobalStore
+import org.opentaint.ir.go.inst.GoIRIndexStore
+import org.opentaint.ir.go.inst.GoIRStore
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
@@ -47,6 +51,10 @@ class RealWorldBenchmarkTest {
             var totalInstructions = 0
             var totalBlocks = 0
             var functionCount = 0
+            var genericStores = 0
+            var fieldStores = 0
+            var indexStores = 0
+            var globalStores = 0
             lateinit var sanityResult: SanityResult
             val walkMs = measureTimeMillis {
                 val fns = prog.allFunctions()
@@ -57,6 +65,15 @@ class RealWorldBenchmarkTest {
                     if (b != null) {
                         totalInstructions += b.instructionCount
                         totalBlocks += b.blocks.size
+                        for (inst in b.instructions) {
+                            when (inst) {
+                                is GoIRFieldStore -> fieldStores++
+                                is GoIRIndexStore -> indexStores++
+                                is GoIRStore -> genericStores++
+                                is GoIRGlobalStore -> globalStores++
+                                else -> {}
+                            }
+                        }
                     }
                 }
                 sanityResult = GoIRSanityChecker.check(prog, deep = false)
@@ -73,6 +90,12 @@ class RealWorldBenchmarkTest {
             println("  Functions:     $functionCount")
             println("  Instructions:  $totalInstructions")
             println("  Blocks:        $totalBlocks")
+            val pointerStores = genericStores + fieldStores + indexStores
+            val specializedStores = fieldStores + indexStores
+            val rate = if (pointerStores == 0) 0.0 else specializedStores.toDouble() / pointerStores
+            println("  Ptr stores:    $pointerStores (field=$fieldStores, index=$indexStores, generic=$genericStores)")
+            println("  Global stores: $globalStores")
+            println("  Specialized:   ${"%.1f".format(rate * 100)}% ($specializedStores/$pointerStores)")
             if (sanityResult.errors.isNotEmpty()) {
                 println("  ERRORS:        ${sanityResult.errors.size}")
                 sanityResult.errors.take(10).forEach { println("    - [${it.category}] ${it.message}") }

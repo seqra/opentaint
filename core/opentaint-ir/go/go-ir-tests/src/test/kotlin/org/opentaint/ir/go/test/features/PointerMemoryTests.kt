@@ -91,7 +91,7 @@ class PointerMemoryTests {
         assertThat(allocs).isNotEmpty()
         val fieldAddrs = fn.findExpressions<GoIRFieldAddrExpr>()
         assertThat(fieldAddrs).isNotEmpty()
-        val stores = fn.findInstructions<GoIRStore>()
+        val stores = fn.findInstructions<GoIRFieldStore>()
         assertThat(stores).isNotEmpty()
 
         GoIRSanityChecker.check(prog).assertNoErrors()

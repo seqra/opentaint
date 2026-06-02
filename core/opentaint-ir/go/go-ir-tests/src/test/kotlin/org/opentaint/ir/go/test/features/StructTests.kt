@@ -8,7 +8,7 @@ import org.opentaint.ir.go.ext.findExpressions
 import org.opentaint.ir.go.ext.findInstructions
 import org.opentaint.ir.go.ext.findNamedTypeByName
 import org.opentaint.ir.go.expr.*
-import org.opentaint.ir.go.inst.GoIRStore
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.test.GoIRSanityChecker
 import org.opentaint.ir.go.test.GoIRTestBuilder
 import org.opentaint.ir.go.test.GoIRTestExtension
@@ -94,7 +94,7 @@ class StructTests {
         assertThat(allocs).isNotEmpty()
 
         // Should have stores for field values
-        val stores = fn.findInstructions<GoIRStore>()
+        val stores = fn.findInstructions<GoIRFieldStore>()
         assertThat(stores).isNotEmpty()
 
         GoIRSanityChecker.check(prog).assertNoErrors()
