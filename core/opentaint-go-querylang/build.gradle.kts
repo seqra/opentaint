@@ -3,6 +3,7 @@ import OpentaintIrDependency.opentaint_ir_core_go
 import OpentaintUtilDependency.opentaintUtilJvm
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
+import org.opentaint.common.resolveIncludedProjectTask
 
 plugins {
     id("kotlin-conventions")
