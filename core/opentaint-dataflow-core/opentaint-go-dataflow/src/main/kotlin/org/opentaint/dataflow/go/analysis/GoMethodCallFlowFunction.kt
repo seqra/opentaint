@@ -130,7 +130,22 @@ class GoMethodCallFlowFunction(
         taintUtils.applySourceRules(
             sourceRules, initialFacts,
             conditionRewriter = GoRuleConditionRewriter(callExpr, statement, returnValue),
-            factReader, exclusion, createFinalFact, createEdge, createNDEdge,
+            factReader, exclusion,
+            createFinalFact = { srcF, trace ->
+                srcF.forEachSourceFactWithAliases {
+                    createFinalFact(it, trace)
+                }
+            },
+            createEdge = { initial, srcF, trace ->
+                srcF.forEachSourceFactWithAliases {
+                    createEdge(initial, it, trace)
+                }
+            },
+            createNDEdge = { initial, srcF, trace ->
+                srcF.forEachSourceFactWithAliases {
+                    createNDEdge(initial, it, trace)
+                }
+            },
         )
     }
 
@@ -189,7 +204,9 @@ class GoMethodCallFlowFunction(
                         val mappedFact = fact.mapExitToReturnFact() ?: continue
 
                         val trace = TraceInfo.Rule(evp.rule, evp.action)
-                        addCallToReturn(passFactReader, mappedFact, trace)
+                        mappedFact.forEachFactWithAliases(factAp) {
+                            addCallToReturn(passFactReader, it, trace)
+                        }
                     }
                 }
             }
@@ -225,6 +242,21 @@ class GoMethodCallFlowFunction(
             this,
         ) { fact, startBase ->
             body(fact, startBase)
+        }
+    }
+
+    private inline fun FinalFactAp.forEachSourceFactWithAliases(crossinline body: (FinalFactAp) -> Unit) =
+        forEachFactWithAliases(originalFact = null, body)
+
+    private inline fun FinalFactAp.forEachFactWithAliases(originalFact: FinalFactAp?,  crossinline body: (FinalFactAp) -> Unit) {
+        body(this)
+
+        if (originalFact != null && originalFact == this) {
+            return
+        }
+
+        context.aliasAnalysis.forEachAliasAtStatement(statement, this) { aliased ->
+            body(aliased)
         }
     }
 }

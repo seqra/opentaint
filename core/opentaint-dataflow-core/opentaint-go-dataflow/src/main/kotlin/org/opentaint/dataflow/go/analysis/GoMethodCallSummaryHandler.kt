@@ -1,10 +1,14 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.Edge
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoLanguageManager
@@ -56,4 +60,40 @@ class GoMethodCallSummaryHandler(
                 resultFact,
             )
         }
+
+    override fun handleSummary(
+        currentFactAp: FinalFactAp,
+        summaryEffect: SummaryEdgeApplication,
+        summaryEdge: SummaryEdge,
+        createSideEffectRequirement: (refinement: ExclusionSet) -> Sequent?,
+        handleSummaryEdge: (initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp) -> Sequent
+    ): Set<Sequent> {
+        val result = hashSetOf<Sequent>()
+
+        result += super.handleSummary(
+            currentFactAp,
+            summaryEffect,
+            summaryEdge,
+            createSideEffectRequirement,
+        ) { initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp ->
+            if (initialFactRefinement != null) {
+                createSideEffectRequirement(initialFactRefinement)?.also { result.add(it) }
+            }
+
+            if (summaryEdge.hasMemoryEffect()) {
+                context.aliasAnalysis.forEachAliasAtStatement(statement, summaryFactAp) { aliased ->
+                    result += handleSummaryEdge(initialFactRefinement, aliased)
+                }
+            }
+
+            handleSummaryEdge(initialFactRefinement, summaryFactAp)
+        }
+
+        return result
+    }
+
+    private fun SummaryEdge.hasMemoryEffect(): Boolean {
+        if (this !is SummaryEdge.F2F) return true
+        return !final.equalTo(initial)
+    }
 }
