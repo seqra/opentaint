@@ -24,6 +24,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoLanguageManager
 import org.opentaint.dataflow.go.GoMethodCallFactMapper
+import org.opentaint.dataflow.go.analysis.alias.GoLocalAliasAnalysis
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
@@ -36,6 +37,7 @@ import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
+import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.util.analysis.ApplicationGraph
@@ -63,7 +65,9 @@ class GoAnalysisManager(
             taintConfig,
             externalMethodTracker,
         )
-        return GoMethodAnalysisContext(methodEntryPoint, taintCtx)
+
+        val aliasAnalysis = GoLocalAliasAnalysis(methodEntryPoint.method as GoIRFunction)
+        return GoMethodAnalysisContext(methodEntryPoint, taintCtx, aliasAnalysis)
     }
 
     override fun getMethodInstGraph(

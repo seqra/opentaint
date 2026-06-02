@@ -11,7 +11,7 @@ class GoroutineTest : AnalysisTest() {
     @Test fun channel001T() = assertReachable("test.channel001T")
     @Test fun channel002F() = assertNotReachable("test.channel002F")
 
-    @Disabled("Goroutine closure: go func(){...}() with captured channel — DYNAMIC resolution of go target")
+//    @Disabled("Goroutine closure: go func(){...}() with captured channel — DYNAMIC resolution of go target")
     @Test fun goroutineChan001T() = assertReachable("test.goroutineChan001T")
     @Test fun goroutineChan002F() = assertNotReachable("test.goroutineChan002F")
 

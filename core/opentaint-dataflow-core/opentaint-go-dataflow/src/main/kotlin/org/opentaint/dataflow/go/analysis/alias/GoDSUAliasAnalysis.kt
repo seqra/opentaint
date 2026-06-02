@@ -44,13 +44,16 @@ import org.opentaint.ir.go.expr.GoIRSliceExpr
 import org.opentaint.ir.go.expr.GoIRUnOpExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRCall
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRGlobalStore
+import org.opentaint.ir.go.inst.GoIRIndexStore
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRMapUpdate
 import org.opentaint.ir.go.inst.GoIRPhi
 import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
+import org.opentaint.ir.go.inst.GoIRStoreInst
 import org.opentaint.ir.go.type.GoIRUnaryOp
 import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
@@ -130,7 +133,11 @@ class GoDSUAliasAnalysis(
         val ctx = gas.ctx
         return when (inst) {
             is GoIRAssignInst -> evalAssign(inst, state, gas)
-            is GoIRStore -> evalStore(inst, state, ctx)
+            is GoIRStoreInst -> when (inst) {
+                is GoIRFieldStore -> evalFieldStore(inst, state, ctx)
+                is GoIRIndexStore -> evalIndexStore(inst, state, ctx)
+                is GoIRStore -> evalStore(inst, state, ctx)
+            }
             is GoIRGlobalStore -> evalGlobalStore(inst, state, ctx)
             is GoIRMapUpdate -> evalContainerStore(inst.map, inst.value, state, ctx)
             is GoIRSend -> evalContainerStore(inst.chan, inst.x, state, ctx)
@@ -220,6 +227,16 @@ class GoDSUAliasAnalysis(
     ): AliasSet {
         if (instance == null) return unknown(instIdx, ctx)
         return aliasSetFromInfo(HeapAlias(state.heapObj(instance.aliasInfo()), accessor))
+    }
+
+    private fun evalFieldStore(inst: GoIRFieldStore, state: State, ctx: ContextInfo): State {
+        // todo: simplify impl
+        return evalStore(inst.toGenericStore(), state, ctx)
+    }
+
+    private fun evalIndexStore(inst: GoIRIndexStore, state: State, ctx: ContextInfo): State {
+        // todo: simplify impl
+        return evalStore(inst.toGenericStore(), state, ctx)
     }
 
     private fun evalStore(inst: GoIRStore, state: State, ctx: ContextInfo): State {

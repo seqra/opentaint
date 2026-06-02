@@ -24,10 +24,10 @@ class ClosureTest : AnalysisTest() {
     @Test fun closureReturn002F() = assertNotReachable("test.closureReturn002F")
 
     // Higher-order functions — function parameter called dynamically
-    @Disabled("Function VALUE passed as parameter: identity fact on a Constant(func) base is abstracted to [*].{} across the call boundary, so the dynamic call inside the callee cannot read the concrete body. Closure-return shape (identity riding a value access path) is fixed; this Constant-base shape remains open.")
+//    @Disabled("Function VALUE passed as parameter: identity fact on a Constant(func) base is abstracted to [*].{} across the call boundary, so the dynamic call inside the callee cannot read the concrete body. Closure-return shape (identity riding a value access path) is fixed; this Constant-base shape remains open.")
     @Test fun higherOrder001T() = assertReachable("test.higherOrder001T")
     @Test fun higherOrder002F() = assertNotReachable("test.higherOrder002F")
-    @Disabled("Function VALUE passed as parameter: identity fact on a Constant(func) base is abstracted to [*].{} across the call boundary, so the dynamic call inside the callee cannot read the concrete body. Closure-return shape (identity riding a value access path) is fixed; this Constant-base shape remains open.")
+//    @Disabled("Function VALUE passed as parameter: identity fact on a Constant(func) base is abstracted to [*].{} across the call boundary, so the dynamic call inside the callee cannot read the concrete body. Closure-return shape (identity riding a value access path) is fixed; this Constant-base shape remains open.")
     @Test fun higherOrder003T() = assertReachable("test.higherOrder003T")
     @Test fun higherOrder004F() = assertNotReachable("test.higherOrder004F")
 }

@@ -13,7 +13,7 @@ class ClosurePatternTest : AnalysisTest() {
     @Test fun closureTwoVars001T() = assertReachable("test.closureTwoVars001T")
     @Test fun closureTwoVars002F() = assertNotReachable("test.closureTwoVars002F")
 
-    @Disabled("Nested closure returned from outer: MakeClosureExpr not visible at call site")
+//    @Disabled("Nested closure returned from outer: MakeClosureExpr not visible at call site")
     @Test fun closureNested001T() = assertReachable("test.closureNested001T")
     @Test fun closureNested002F() = assertNotReachable("test.closureNested002F")
 

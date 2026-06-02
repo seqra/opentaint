@@ -8,7 +8,7 @@ import kotlin.test.Test
 class MapOpsTest : AnalysisTest() {
 
     // Map literal with struct values: needs field-sensitive map element composition
-    @Disabled("Map literal struct field composition not yet implemented")
+//    @Disabled("Map literal struct field composition not yet implemented")
     @Test fun mapStruct001T() = assertReachable("test.mapStruct001T")
     @Test fun mapStruct002F() = assertNotReachable("test.mapStruct002F")
 
@@ -21,7 +21,7 @@ class MapOpsTest : AnalysisTest() {
     @Test fun mapDelete001T() = assertReachable("test.mapDelete001T")
 
     // Map comma-ok lookup produces tuple via GoIRExtractExpr
-    @Disabled("CommaOk map lookup: abstract refinement path incomplete for element+tuple chain")
+//    @Disabled("CommaOk map lookup: abstract refinement path incomplete for element+tuple chain")
     @Test fun mapCommaOk001T() = assertReachable("test.mapCommaOk001T")
     @Test fun mapCommaOk002F() = assertNotReachable("test.mapCommaOk002F")
 }
