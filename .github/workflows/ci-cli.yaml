@@ -452,6 +452,10 @@ jobs:
         working-directory: cli
         run: |
           set -euo pipefail
+          # npm pack names a scoped tarball "<scope>-<name>-<version>.tgz".
+          # The npm scope/name mirror the GitHub owner/repo for this project.
+          owner="${{ github.repository_owner }}"
+          repo="${{ github.event.repository.name }}"
           mkdir -p "$RUNNER_TEMP/tgz" "$RUNNER_TEMP/scratch"
           for dir in dist-npm/opentaint-* dist-npm/opentaint; do
             [ -d "$dir" ] || continue
@@ -466,8 +470,8 @@ jobs:
           # local tarballs. Other platform optionalDependencies are absent from
           # the registry at this version and fail softly (optional).
           npm install --no-audit --no-fund \
-            "$RUNNER_TEMP"/tgz/seqra-opentaint-0.0.0-citest.tgz \
-            "$RUNNER_TEMP"/tgz/seqra-opentaint-linux-x64-0.0.0-citest.tgz
+            "$RUNNER_TEMP/tgz/${owner}-${repo}-0.0.0-citest.tgz" \
+            "$RUNNER_TEMP/tgz/${owner}-${repo}-linux-x64-0.0.0-citest.tgz"
       - name: Verify launcher runs the bundled binary
         working-directory: ${{ runner.temp }}/scratch
         run: |
