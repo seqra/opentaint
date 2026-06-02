@@ -82,6 +82,7 @@ class GoLocalAliasAnalysis(
             val heapAccessor = when (accessor) {
                 is GoAliasAccessor.Array -> GoArrayAlias
                 is GoAliasAccessor.Field -> GoFieldAlias(accessor)
+                is GoAliasAccessor.Global -> return null // todo: globals
             }
             val info = HeapAlias(instance, heapAccessor)
             manager.find(info) ?: return null
@@ -235,7 +236,7 @@ class GoLocalAliasAnalysis(
             is GoLocalAlias.SimpleLoc -> when (val loc = info.loc) {
                 is GoRefValue.Local -> AliasApInfoNoRef(AccessPathBase.LocalVar(loc.idx), emptyList())
                 is GoRefValue.Arg -> AliasApInfoNoRef(AccessPathBase.Argument(loc.idx), emptyList())
-                is GoRefValue.Global -> null // todo: globals
+                is GoRefValue.Global -> AliasApInfoNoRef(AccessPathBase.ClassStatic, listOf(GoAliasAccessor.Global(loc.name)))
                 is GoRefValue.FreeVarBase -> AliasApInfoNoRef(AccessPathBase.This, emptyList())
             }
             is GoLocalAlias.Alloc -> AliasAllocInfoNoRef(info.inst)

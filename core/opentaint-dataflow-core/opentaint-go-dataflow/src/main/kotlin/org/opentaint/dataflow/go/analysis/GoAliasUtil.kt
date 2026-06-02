@@ -2,6 +2,7 @@ package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -54,4 +55,5 @@ private fun Accessor.goAliasAccessor(): GoAliasAccessor.NoRef? = when (this) {
 private fun GoAliasAccessor.NoRef.apAccessor(): Accessor = when (this) {
     is GoAliasAccessor.Array -> ElementAccessor
     is GoAliasAccessor.Field -> GoFlowFunctionUtils.createFieldAccessor(className, fieldName)
+    is GoAliasAccessor.Global -> ClassStaticAccessor(name)
 }
