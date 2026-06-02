@@ -1,6 +1,5 @@
 package org.opentaint.go.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 
@@ -25,7 +24,6 @@ class CombinationTest : AnalysisTest() {
     @Test fun combNestedFunc001T() = assertReachable("test.combNestedFunc001T")
     @Test fun combNestedFunc002F() = assertNotReachable("test.combNestedFunc002F")
 
-//    @Disabled("Closure returned from callee: MakeClosureExpr not visible at dynamic call site")
     @Test fun combDeepChain001T() = assertReachable("test.combDeepChain001T")
     @Test fun combDeepChain002F() = assertNotReachable("test.combDeepChain002F")
 

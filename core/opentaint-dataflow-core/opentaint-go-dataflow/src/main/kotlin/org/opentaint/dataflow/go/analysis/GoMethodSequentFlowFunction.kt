@@ -271,6 +271,10 @@ class GoMethodSequentFlowFunction(
                 // Abstract: trigger refinement by adding accessor to exclusion set
                 val refinedFact = currentFact.exclude(rhsAccess.accessor)
                 result.add(makeEdge(initialFact, refinedFact))
+
+                initialFact?.let {
+                    result.add(Sequent.SideEffectRequirement(initialFact.exclude(rhsAccess.accessor)))
+                }
             }
         }
 
