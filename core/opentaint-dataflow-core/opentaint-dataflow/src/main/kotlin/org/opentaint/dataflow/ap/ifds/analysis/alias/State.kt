@@ -9,6 +9,7 @@ import org.opentaint.dataflow.util.mapIntTo
 
 interface ImmutableState {
     fun mutableCopy(): State
+    fun unsafeState(): State
 }
 
 class State private constructor(
@@ -33,6 +34,7 @@ class State private constructor(
 
     fun asImmutable(): ImmutableState = this
 
+    override fun unsafeState(): State = this
     override fun mutableCopy(): State = State(manager, aliasGroups.mutableCopy())
 
     fun removeUnsafe(infos: IntOpenHashSet): State {

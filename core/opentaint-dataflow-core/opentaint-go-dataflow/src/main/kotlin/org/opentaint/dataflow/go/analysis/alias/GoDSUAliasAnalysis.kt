@@ -74,9 +74,10 @@ class GoDSUAliasAnalysis(
 
     data class ConnectedAliases(val aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>)
 
-    data class AnalysisResult(
-        val statesBeforeStmt: List<ConnectedAliases>,
-        val statesAfterStmt: List<ConnectedAliases>,
+    class AnalysisResult(
+        val manager: AAInfoManager,
+        val statesBeforeStmt: Array<ImmutableState?>,
+        val statesAfterStmt: Array<ImmutableState?>,
     )
 
     class GraphAnalysisState(size: Int, val ctx: ContextInfo, val function: GoIRFunction) {
@@ -91,14 +92,14 @@ class GoDSUAliasAnalysis(
     private val calleeArgMap = HashMap<ContextInfo, List<GoRefValue?>>()
     private val calleeClosure = HashMap<ContextInfo, GoRefValue?>()
 
-    fun analyze(collapseRefs: Boolean = false): AnalysisResult {
+    fun analyze(): AnalysisResult {
         val rootGraph = GoCompactGraphBuilder.build(rootFunction)
-            ?: return AnalysisResult(emptyList(), emptyList())
+            ?: return AnalysisResult(aliasManager, emptyArray(), emptyArray())
         graphCache[rootFunction] = rootGraph
         val initial = State.empty(aliasManager, dsuMergeStrategy)
         val gas = GraphAnalysisState(rootGraph.statements.size, ContextInfo.rootContext, rootFunction)
         val (before, after) = analyze(rootGraph, initial, gas)
-        return AnalysisResult(getConnectedAliases(before, collapseRefs), getConnectedAliases(after, collapseRefs))
+        return AnalysisResult(aliasManager, before, after)
     }
 
     private fun analyze(
@@ -443,38 +444,6 @@ class GoDSUAliasAnalysis(
         }
         is HeapAlias -> false
         else -> false
-    }
-
-    private fun getConnectedAliases(
-        states: Array<ImmutableState?>,
-        collapseRefs: Boolean
-    ): List<ConnectedAliases> = List(states.size) { idx ->
-        var state = states[idx]?.mutableCopy()
-            ?: return@List ConnectedAliases(Int2ObjectOpenHashMap())
-
-        if (collapseRefs) {
-            state.allElements().forEachInt { element ->
-                val elementRef = HeapAlias(state.aliasGroupId(element), GoRefAlias)
-                val elementRefId = aliasManager.getOrAdd(elementRef)
-                state = state.mergeWith(element, elementRefId)
-            }
-        }
-
-        val groupsElements = Int2ObjectOpenHashMap<IntOpenHashSet>()
-        state.allElements().forEachInt { element ->
-            val groupId = state.aliasGroupId(element)
-            val group = groupsElements.get(groupId) ?: IntOpenHashSet().also { groupsElements.put(groupId, it) }
-            group.add(element)
-        }
-        val groups = Int2ObjectOpenHashMap<List<AAInfo>>()
-        val keys = groupsElements.keys.toIntArray()
-        for (key in keys) {
-            val els = groupsElements.get(key)
-            val list = mutableListOf<AAInfo>()
-            els.forEachInt { list += aliasManager.getElementUncheck(it) }
-            groups.put(key, list)
-        }
-        ConnectedAliases(groups)
     }
 
     private fun graphOf(fn: GoIRFunction): GoInstGraph? = graphCache.getOrPut(fn) { GoCompactGraphBuilder.build(fn) }

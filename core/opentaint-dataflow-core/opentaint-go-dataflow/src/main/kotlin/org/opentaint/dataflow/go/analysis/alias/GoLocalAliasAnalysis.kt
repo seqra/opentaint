@@ -1,16 +1,24 @@
 package org.opentaint.dataflow.go.analysis.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
+import org.opentaint.dataflow.ap.ifds.analysis.alias.State
+import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
+import org.opentaint.dataflow.go.analysis.alias.GoDSUAliasAnalysis.AnalysisResult
 import org.opentaint.dataflow.go.analysis.alias.GoDSUAliasAnalysis.ConnectedAliases
+import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.inst.GoIRInst
+import kotlin.collections.plus
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -36,26 +44,34 @@ class GoLocalAliasAnalysis(
         private val logger = object : KLogging() {}.logger
     }
 
-    class FunctionAliasInfo(
-        val aliasBeforeStatement: Array<Int2ObjectOpenHashMap<List<GoAliasInfoNoRef>>>?,
-        val aliasAfterStatement: Array<Int2ObjectOpenHashMap<List<GoAliasInfoNoRef>>>?,
-        val unboundBeforeStatement: Array<List<List<GoAliasInfoNoRef>>>?,
-    )
-
-    private val result: FunctionAliasInfo by lazy {
+    private val result: AnalysisResult by lazy {
         computeAliases()
     }
 
     fun findAlias(base: AccessPathBase, stmt: GoIRInst): List<GoAliasInfoNoRef>? {
         if (base !is AccessPathBase.LocalVar) return null
 
-        val aliasBefore = result.aliasBeforeStatement ?: return null
+        val stateBefore = result.statesBeforeStmt
         val stmtIdx = stmt.location.index
-        val stmtAlias = aliasBefore.getOrNull(stmtIdx) ?: return null
-        return stmtAlias.getOrDefault(base.idx, null)
+        val stmtAlias = stateBefore.getOrNull(stmtIdx) ?: return null
+
+        return stmtAlias.unsafeState().findLocalAlias(result.manager, base.idx)
     }
 
-    private fun computeAliases(): FunctionAliasInfo = withAnalysisCancellation(
+    private fun State.findLocalAlias(manager: AAInfoManager, localIdx: Int): List<GoAliasInfoNoRef>? {
+        val localInfo = GoLocalAlias.SimpleLoc(GoRefValue.Local(localIdx, ContextInfo.rootContext))
+        val localInfoIdx = manager.find(localInfo) ?: return null
+
+        val result = mutableListOf<GoAliasInfoNoRef>()
+        forEachAliasInSet(localInfoIdx) { aliasIdx ->
+            if (aliasIdx != localInfoIdx) {
+                result += convert(aliasIdx, manager, depth = 0)
+            }
+        }
+        return result
+    }
+
+    private fun computeAliases(): AnalysisResult = withAnalysisCancellation(
         params.aliasAnalysisTimeLimit, parentCancellation = null,
         body = { cancellation ->
             computeAliases(cancellation)
@@ -64,47 +80,40 @@ class GoLocalAliasAnalysis(
             logger.error {
                 "Alias analysis for $function exceed ${params.aliasAnalysisTimeLimit}"
             }
-            FunctionAliasInfo(null, null, null)
+            AnalysisResult(AAInfoManager(), emptyArray(), emptyArray())
         }
     )
 
-    private fun computeAliases(cancellation: AnalysisCancellation): FunctionAliasInfo {
+    private fun computeAliases(cancellation: AnalysisCancellation): AnalysisResult {
         val analyzer = GoDSUAliasAnalysis(function, params.interProcCallDepth, cancellation)
-        val daa = analyzer.analyze(collapseRefs = true)
-
-        val size = daa.statesBeforeStmt.size
-        val aliasBeforeStatement = Array(size) { Int2ObjectOpenHashMap<List<GoAliasInfoNoRef>>() }
-        val aliasAfterStatement = Array(size) { Int2ObjectOpenHashMap<List<GoAliasInfoNoRef>>() }
-
-        val unboundAliasBeforeStatement = Array(size) { mutableListOf<List<GoAliasInfoNoRef>>() }
-        val unboundAliasAfterStatement = Array(size) { mutableListOf<List<GoAliasInfoNoRef>>() }
-
-        for (i in 0 until size) {
-            resolveLocalVar(
-                daa.statesBeforeStmt[i],
-                aliasBeforeStatement[i], unboundAliasBeforeStatement[i],
-                cancellation
-            )
-
-            resolveLocalVar(
-                daa.statesAfterStmt[i],
-                aliasAfterStatement[i], unboundAliasAfterStatement[i],
-                cancellation
-            )
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        return FunctionAliasInfo(
-            aliasBeforeStatement,
-            aliasAfterStatement,
-            unboundAliasBeforeStatement as Array<List<List<GoAliasInfoNoRef>>>
-        )
+        val daa = analyzer.analyze()
+        return daa.collapseRefs()
     }
+
+    private fun AnalysisResult.collapseRefs(): AnalysisResult =
+        AnalysisResult(
+            manager,
+            Array(statesBeforeStmt.size) { statesBeforeStmt[it]?.collapseRefs(manager) },
+            Array(statesAfterStmt.size) { statesAfterStmt[it]?.collapseRefs(manager) }
+        )
+
+    private fun ImmutableState.collapseRefs(manager: AAInfoManager): ImmutableState {
+        var state = this.mutableCopy()
+        state.allElements().forEachInt { element ->
+            val elementRef = HeapAlias(state.aliasGroupId(element), GoRefAlias)
+            val elementRefId = manager.getOrAdd(elementRef)
+            state = state.mergeWith(element, elementRefId)
+        }
+        return state
+    }
+
+    private fun State.mergeWith(info: Int, other: Int): State =
+        mergeAliasSets(IntOpenHashSet(intArrayOf(info, other)))
 
     fun computeAliasWithRef(base: AccessPathBase, inst: GoIRInst): List<AliasApInfo> {
         val self = listOf(AliasApInfo(base, emptyList()))
         val idx = inst.location.index
-        val analysisResult = aliasAnalysisWithRef()
+        val analysisResult = aliasAnalysisWithRef().oldAnalysisResult()
         val connected = analysisResult.statesBeforeStmt.getOrNull(idx) ?: return self
         for (entry in connected.aliasGroups.values) {
             val converted = entry.flatMap { convert(it, connected.aliasGroups, 0) }.distinct()
@@ -115,7 +124,7 @@ class GoLocalAliasAnalysis(
         return self
     }
 
-    private fun aliasAnalysisWithRef(): GoDSUAliasAnalysis.AnalysisResult {
+    private fun aliasAnalysisWithRef(): AnalysisResult {
         val noCancellation = AnalysisCancellation(Duration.INFINITE, parentCancellation = null)
         return GoDSUAliasAnalysis(function, params.interProcCallDepth, noCancellation).analyze()
     }
@@ -147,6 +156,42 @@ class GoLocalAliasAnalysis(
         }
     }
 
+    private fun State.convert(infoIdx: Int, manager: AAInfoManager, depth: Int): List<GoAliasInfoNoRef> =
+        convert(manager.getElementUncheck(infoIdx), manager, depth)
+
+    private fun State.convert(info: AAInfo, manager: AAInfoManager, depth: Int): List<GoAliasInfoNoRef> {
+        if (info !is HeapAlias) {
+            val base = convertBase(info)
+            return listOfNotNull(base)
+        }
+
+        if (info.heapAccessor is GoRefAlias) {
+            return emptyList()
+        }
+
+        if (depth > HEAP_CHAIN_LIMIT) {
+            return emptyList()
+        }
+
+        val instances = mutableListOf<GoAliasInfoNoRef>()
+        forEachAliasInSet(info.instance) {
+            instances += convert(it, manager, depth + 1)
+        }
+
+        val accessor = when (val a = info.heapAccessor) {
+            is GoArrayAlias -> GoAliasAccessor.Array
+            is GoFieldAlias -> a.field
+            else -> error("Impossible")
+        }
+
+        return instances.mapNotNull {
+            when (it) {
+                is AliasAllocInfoNoRef -> return@mapNotNull null
+                is AliasApInfoNoRef -> AliasApInfoNoRef(it.base, it.accessors + accessor)
+            }
+        }
+    }
+
     private fun convertBase(info: AAInfo): GoAliasInfoNoRef? {
         if (info.ctx != ContextInfo.rootContext) return null
         return when (info) {
@@ -161,35 +206,6 @@ class GoLocalAliasAnalysis(
             is GoUnknown -> null
             is HeapAlias -> error("unreachable")
             else -> null
-        }
-    }
-
-    private fun resolveLocalVar(
-        daa: ConnectedAliases,
-        result: Int2ObjectOpenHashMap<List<GoAliasInfoNoRef>>,
-        unboundAliases: MutableList<List<GoAliasInfoNoRef>>,
-        cancellation: AnalysisCancellation,
-    ) {
-        daa.aliasGroups.forEach { (_, group) ->
-            val converted = group
-                .flatMap { it.convertToAliasInfo(daa.aliasGroups, depth = 0, cancellation) }
-                .distinct()
-
-            // size == 1 means only local was converted to AliasInfo; not really meaningful
-            if (converted.size <= 1) return@forEach
-
-            val locals = converted.filterIsInstance<AliasApInfoNoRef>()
-                .filter { it.accessors.isEmpty() }
-                .mapNotNull { it.base as? AccessPathBase.LocalVar }
-
-            if (locals.isEmpty()) {
-                unboundAliases += converted
-                return@forEach
-            }
-
-            locals.forEach { local ->
-                result[local.idx] = converted
-            }
         }
     }
 
@@ -227,5 +243,38 @@ class GoLocalAliasAnalysis(
                 is AliasApInfoNoRef -> AliasApInfoNoRef(it.base, it.accessors + accessor)
             }
         }
+    }
+
+    data class OldAnalysisResult(
+        val statesBeforeStmt: List<ConnectedAliases>,
+        val statesAfterStmt: List<ConnectedAliases>,
+    )
+
+    private fun AnalysisResult.oldAnalysisResult() = OldAnalysisResult(
+        getConnectedAliases(statesBeforeStmt),
+        getConnectedAliases(statesAfterStmt)
+    )
+
+    private fun AnalysisResult.getConnectedAliases(
+        states: Array<ImmutableState?>
+    ): List<ConnectedAliases> = List(states.size) { idx ->
+        val state = states[idx]?.mutableCopy()
+            ?: return@List ConnectedAliases(Int2ObjectOpenHashMap())
+
+        val groupsElements = Int2ObjectOpenHashMap<IntOpenHashSet>()
+        state.allElements().forEachInt { element ->
+            val groupId = state.aliasGroupId(element)
+            val group = groupsElements.get(groupId) ?: IntOpenHashSet().also { groupsElements.put(groupId, it) }
+            group.add(element)
+        }
+        val groups = Int2ObjectOpenHashMap<List<AAInfo>>()
+        val keys = groupsElements.keys.toIntArray()
+        for (key in keys) {
+            val els = groupsElements.get(key)
+            val list = mutableListOf<AAInfo>()
+            els.forEachInt { list += manager.getElementUncheck(it) }
+            groups.put(key, list)
+        }
+        ConnectedAliases(groups)
     }
 }
