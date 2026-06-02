@@ -60,7 +60,7 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
             is AccessPathBase.This -> {
                 val mappedFacts = mutableListOf<F>()
                 callExpr.effectiveReceiver?.let { receiver ->
-                    GoFlowFunctionUtils.accessPathBase(receiver, method)?.let { recvBase ->
+                    GoFlowFunctionUtils.accessPathBase(receiver, method).let { recvBase ->
                         mappedFacts += factAp.rebase(recvBase)
                     }
                 }
@@ -123,14 +123,14 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         val receiver = goCallExpr.effectiveReceiver
         if (receiver != null) {
             val receiverBase = GoFlowFunctionUtils.accessPathBase(receiver, method)
-            if (receiverBase != null && factAp.base == receiverBase) {
+            if (factAp.base == receiverBase) {
                 onMappedFact(factAp, AccessPathBase.This)
             }
         }
 
         for ((i, arg) in goCallExpr.explicitArgs.withIndex()) {
             val argBase = GoFlowFunctionUtils.accessPathBase(arg, method)
-            if (argBase != null && factAp.base == argBase) {
+            if (factAp.base == argBase) {
                 onMappedFact(factAp, AccessPathBase.Argument(i))
             }
         }
@@ -157,18 +157,18 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
 
         for (arg in goCallExpr.explicitArgs) {
             val argBase = GoFlowFunctionUtils.accessPathBase(arg, method)
-            if (argBase != null && argBase == factAp.base) return true
+            if (argBase == factAp.base) return true
         }
 
         val recv = goCallExpr.effectiveReceiver
         if (recv != null) {
             val recvBase = GoFlowFunctionUtils.accessPathBase(recv, method)
-            if (recvBase != null && recvBase == factAp.base) return true
+            if (recvBase == factAp.base) return true
         }
 
         if (returnValue != null) {
             val retBase = GoFlowFunctionUtils.accessPathBase(returnValue as GoIRValue, method)
-            if (retBase != null && retBase == factAp.base) return true
+            if (retBase == factAp.base) return true
         }
 
         if (factAp.base is AccessPathBase.ClassStatic) return true
@@ -188,8 +188,6 @@ object GoMethodCallFactMapper : MethodCallFactMapper {
         if (callInfo.mode != GoIRCallMode.DYNAMIC) return
         val dynamicCallTarget = callInfo.target as? GoIRCallTarget.Dynamic ?: return
         val targetValue = GoFlowFunctionUtils.accessPathBase(dynamicCallTarget.value, enclosingFunction)
-        if (targetValue != null) {
-            body(targetValue)
-        }
+        body(targetValue)
     }
 }
