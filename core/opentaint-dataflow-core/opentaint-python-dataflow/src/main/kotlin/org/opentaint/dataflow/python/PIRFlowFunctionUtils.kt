@@ -54,12 +54,20 @@ object PIRFlowFunctionUtils {
 
     private fun PositionAccessor.resolve(): Accessor = when (this) {
         PositionAccessor.ElementAccessor -> ElementAccessor
-        is PositionAccessor.FieldAccessor -> FieldAccessor("", name, "")
+        is PositionAccessor.FieldAccessor -> mkFieldAccessor(name)
     }
+
+    /**
+     * Single source of truth for Python attribute accessors. Python attribute
+     * matching is name-only — the mypy-derived className/fieldType slots are left
+     * empty, so store-created facts and load reads align by name and aren't subject
+     * to the store/load type asymmetry of exact [FieldAccessor] equality.
+     */
+    fun mkFieldAccessor(fieldName: String): FieldAccessor = FieldAccessor("", fieldName, "")
 
     object DummyPositionTypeResolver : PositionTypeResolver {
         override fun resolve(position: PositionAccess): CommonType? = null
     }
 
-    val SELF_ACCESSOR = FieldAccessor("", "\$PIR_SELF", "")
+    val SELF_ACCESSOR = mkFieldAccessor("\$PIR_SELF")
 }

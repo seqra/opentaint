@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.FinalFactReader
@@ -234,11 +235,7 @@ class PIRMethodSequentFlowFunction(
             if (currentFactAp.base != assignTo) unchanged()
             return
         }
-        val accessor = FieldAccessor(
-            inst.obj.type.typeName,
-            inst.attribute,
-            inst.resultType.typeName,
-        )
+        val accessor = mkFieldAccessor(inst.attribute)
 
         if (currentFactAp.base == objBase) {
             if (currentFactAp.startsWithAccessor(accessor)) {
@@ -480,11 +477,7 @@ class PIRMethodSequentFlowFunction(
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
 
         if (valueBase != null && currentFactAp.base == valueBase) {
-            val accessor = FieldAccessor(
-                store.obj.type.typeName,
-                store.attribute,
-                store.value.type.typeName,
-            )
+            val accessor = mkFieldAccessor(store.attribute)
             val newFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
             propagateFact(newFact)
             unchanged()
