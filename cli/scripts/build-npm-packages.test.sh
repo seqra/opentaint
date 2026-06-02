@@ -51,10 +51,6 @@ node -e "const p=require('$MP/package.json');
   if(p.bin.opentaint!=='bin/opentaint.js')process.exit(35);" \
   || fail "main package.json metadata wrong"
 
-# Regression: the assembled package directories must be packable with npm.
-# npm parses a bare "a/b" argument as a GitHub owner/repo shorthand, so the
-# release/install-test workflows must hand npm a "./"-prefixed (or absolute)
-# path. Pack each assembled package here and assert a tarball is produced.
 if command -v npm >/dev/null 2>&1; then
   TGZ="$WORK/tgz"
   mkdir -p "$TGZ"

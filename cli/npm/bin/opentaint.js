@@ -7,13 +7,6 @@ const { spawnSync } = require('node:child_process');
 
 const SCOPE = '@seqra';
 
-// Node's process.platform / process.arch tokens (linux|darwin|win32, x64|arm64)
-// are exactly the suffixes used for the per-platform packages, so the package
-// name is derived directly rather than looked up. This set is purely an
-// allowlist of the platforms we publish binaries for — it exists so an
-// unsupported host gets a clear error instead of a failed resolve of a
-// package that was never published. Keep it in sync with the platform matrix
-// in cli/scripts/build-npm-packages.sh.
 const SUPPORTED_PLATFORMS = new Set([
   'linux x64',
   'linux arm64',

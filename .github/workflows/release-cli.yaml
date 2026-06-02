@@ -235,11 +235,6 @@ jobs:
           set -euo pipefail
           RELEASE_VERSION="${{ steps.release_version.outputs.RELEASE_VERSION }}"
 
-          # Trusted publishing (OIDC) mints a short-lived credential via the
-          # id-token permission and attaches provenance automatically; no
-          # NPM_TOKEN is used. It requires npm >= 11.5.1 (newer than the npm
-          # bundled with Node 22), so upgrade the CLI first.
-          #
           # PREREQUISITE: each published package must have a trusted publisher
           # configured on npmjs.com (owner: seqra, repo: opentaint, workflow:
           # release-cli.yaml, no environment) BEFORE this step runs, or npm
@@ -257,13 +252,10 @@ jobs:
             local dir="$1"
             local log
             log="$(mktemp)"
-            # Pass a "./"-prefixed path: npm parses a bare "a/b" argument as a
-            # GitHub owner/repo shorthand, not a local directory.
             if npm publish "./$dir" --access public >"$log" 2>&1; then
               cat "$log"
               return 0
             fi
-            # Re-running a release must not fail on an already-published version.
             if grep -qiE "cannot publish over|previously published|EPUBLISHCONFLICT" "$log"; then
               echo "Already published (skipping): $dir"
               cat "$log"
@@ -274,8 +266,6 @@ jobs:
             return 1
           }
 
-          # Publish platform packages first so the main package's optional
-          # dependencies already exist, then the main package last.
           for dir in dist-npm/opentaint-*; do
             [ -d "$dir" ] || continue
             publish_pkg "$dir"
