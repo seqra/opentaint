@@ -254,7 +254,9 @@ jobs:
             local dir="$1"
             local log
             log="$(mktemp)"
-            if npm publish "$dir" --access public >"$log" 2>&1; then
+            # Pass a "./"-prefixed path: npm parses a bare "a/b" argument as a
+            # GitHub owner/repo shorthand, not a local directory.
+            if npm publish "./$dir" --access public >"$log" 2>&1; then
               cat "$log"
               return 0
             fi

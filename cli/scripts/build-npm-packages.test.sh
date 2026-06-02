@@ -55,4 +55,21 @@ node -e "const p=require('$MP/package.json');
   if(p.bin.opentaint!=='bin/opentaint.js')process.exit(35);" \
   || fail "main package.json metadata wrong"
 
+# Regression: the assembled package directories must be packable with npm.
+# npm parses a bare "a/b" argument as a GitHub owner/repo shorthand, so the
+# release/install-test workflows must hand npm a "./"-prefixed (or absolute)
+# path. Pack each assembled package here and assert a tarball is produced.
+if command -v npm >/dev/null 2>&1; then
+  TGZ="$WORK/tgz"
+  mkdir -p "$TGZ"
+  for dir in "$OUT"/opentaint-* "$OUT"/opentaint; do
+    [ -d "$dir" ] || continue
+    npm pack "$dir" --pack-destination "$TGZ" >/dev/null 2>&1 \
+      || fail "npm pack failed for $dir (bare path parsed as a git spec?)"
+  done
+  [ -n "$(ls -A "$TGZ")" ] || fail "no tarballs produced by npm pack"
+else
+  echo "NOTE: npm not found, skipping pack regression check" >&2
+fi
+
 echo "PASS: build-npm-packages smoke test"

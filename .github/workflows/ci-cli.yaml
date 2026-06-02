@@ -455,7 +455,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/tgz" "$RUNNER_TEMP/scratch"
           for dir in dist-npm/opentaint-* dist-npm/opentaint; do
             [ -d "$dir" ] || continue
-            tgz="$(npm pack "$dir" --pack-destination "$RUNNER_TEMP/tgz" | tail -n1)"
+            # Pass a "./"-prefixed path: npm parses a bare "a/b" argument as a
+            # GitHub owner/repo shorthand, not a local directory.
+            tgz="$(npm pack "./$dir" --pack-destination "$RUNNER_TEMP/tgz" | tail -n1)"
             echo "packed $tgz"
           done
           cd "$RUNNER_TEMP/scratch"
