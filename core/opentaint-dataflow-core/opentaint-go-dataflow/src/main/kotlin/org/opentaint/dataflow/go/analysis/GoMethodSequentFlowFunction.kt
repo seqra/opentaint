@@ -25,13 +25,16 @@ import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
 import org.opentaint.ir.go.expr.GoIRNextExpr
 import org.opentaint.ir.go.expr.GoIRTypeAssertExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRGlobalStore
+import org.opentaint.ir.go.inst.GoIRIndexStore
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRMapUpdate
 import org.opentaint.ir.go.inst.GoIRPhi
 import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
+import org.opentaint.ir.go.inst.GoIRStoreInst
 import org.opentaint.ir.go.type.GoIRBinaryOp
 import org.opentaint.util.onSome
 
@@ -78,7 +81,11 @@ class GoMethodSequentFlowFunction(
     private fun propagate(initialFact: InitialFactAp?, currentFact: FinalFactAp): Set<Sequent> {
         return when (currentInst) {
             is GoIRAssignInst -> handleAssign(initialFact, currentFact, currentInst)
-            is GoIRStore -> handleStore(initialFact, currentFact, currentInst)
+            is GoIRStoreInst -> when (currentInst) {
+                is GoIRStore -> handleStore(initialFact, currentFact, currentInst)
+                is GoIRFieldStore -> handleFieldStore(initialFact, currentFact, currentInst)
+                is GoIRIndexStore -> handleIndexStore(initialFact, currentFact, currentInst)
+            }
             is GoIRGlobalStore -> handleGlobalStore(initialFact, currentFact, currentInst)
             is GoIRReturn -> handleReturn(initialFact, currentFact, currentInst)
             is GoIRPhi -> handlePhi(initialFact, currentFact, currentInst)
@@ -164,7 +171,7 @@ class GoMethodSequentFlowFunction(
         }
 
         for ((i, binding) in expr.bindings.withIndex()) {
-            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method) ?: continue
+            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method)
             if (currentFact.base == bindingBase) {
                 val freeVarFact = currentFact.rebase(registerBase)
                     .prependAccessor(GoFlowFunctionUtils.freeVarAccessor(expr.fn, i))
@@ -192,8 +199,8 @@ class GoMethodSequentFlowFunction(
         // Gen: if the operand carries a fact, taint the value slot (tuple index 0)
         // of the (value, ok) result. The `ok` bool slot stays clean.
         val operandBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
-        if (operandBase != null && currentFact.base == operandBase) {
-            val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0, expr.assertedType)
+        if (currentFact.base == operandBase) {
+            val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0)
             val newFact = currentFact.rebase(registerBase).prependAccessor(valueSlot)
             result.add(makeEdge(initialFact, newFact))
         }
@@ -208,7 +215,6 @@ class GoMethodSequentFlowFunction(
         expr: GoIRNextExpr,
     ): Set<Sequent> {
         val iterBase = GoFlowFunctionUtils.accessPathBase(expr.iter, method)
-            ?: return handleNonPropagatingExpr(currentFact, registerBase)
 
         return handleComplexRefAssign(
             initialFact, currentFact, registerBase,
@@ -273,16 +279,39 @@ class GoMethodSequentFlowFunction(
         inst: GoIRStore,
     ): Set<Sequent> {
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
-            ?: return setOf(Sequent.Unchanged)
-        val addrAccess = GoFlowFunctionUtils.accessForAddr(inst.addr, method)
-            ?: return setOf(Sequent.Unchanged)
+        val dstBase = GoFlowFunctionUtils.accessPathBase(inst.addr, method)
 
-        return complexAccessorWrite(addrAccess, currentFact, initialFact, valueBase) { _, _ ->
-            // todo: use alias analysis
-            val chain = GoFlowFunctionUtils.resolveAddrChain(inst.addr, method)
-                ?: return@complexAccessorWrite emptyList()
+        // todo: resolve ref aliases here
+        return handleSimpleAssign(initialFact, currentFact, dstBase, valueBase)
+    }
 
-            listOf(chain)
+    private fun handleFieldStore(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        inst: GoIRFieldStore,
+    ): Set<Sequent> {
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+        val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
+
+        val access = RefAccess(instance, GoFlowFunctionUtils.fieldAccessorFromStore(inst))
+        return complexAccessorWrite(access, currentFact, initialFact, valueBase) { _, _ ->
+            // todo: apply aliases
+            emptyList()
+        }
+    }
+
+    private fun handleIndexStore(
+        initialFact: InitialFactAp?,
+        currentFact: FinalFactAp,
+        inst: GoIRIndexStore,
+    ): Set<Sequent> {
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+        val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
+
+        val access = RefAccess(instance, ElementAccessor)
+        return complexAccessorWrite(access, currentFact, initialFact, valueBase) { _, _ ->
+            // todo: apply aliases
+            emptyList()
         }
     }
 
@@ -358,8 +387,6 @@ class GoMethodSequentFlowFunction(
         inst: GoIRGlobalStore,
     ): Set<Sequent> {
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
-            ?: return setOf(Sequent.Unchanged)
-
         val globalAccess = GoFlowFunctionUtils.accessForGlobal(inst.global)
 
         return complexAccessorWrite(globalAccess, currentFact, initialFact, valueBase) { _, _ -> emptyList() }
@@ -373,16 +400,16 @@ class GoMethodSequentFlowFunction(
         val result = mutableSetOf<Sequent>(Sequent.Unchanged)
 
         if (inst.results.size == 1) {
-            val retBase = GoFlowFunctionUtils.accessPathBase(inst.results[0], method) ?: return result
+            val retBase = GoFlowFunctionUtils.accessPathBase(inst.results[0], method)
             if (currentFact.base == retBase) {
                 val exitFact = currentFact.rebase(AccessPathBase.Return)
                 result.add(makeEdge(initialFact, exitFact))
             }
         } else {
             for ((i, retVal) in inst.results.withIndex()) {
-                val retBase = GoFlowFunctionUtils.accessPathBase(retVal, method) ?: continue
+                val retBase = GoFlowFunctionUtils.accessPathBase(retVal, method)
                 if (currentFact.base == retBase) {
-                    val tupleAccessor = GoFlowFunctionUtils.tupleFieldAccessor(i, retVal.type)
+                    val tupleAccessor = GoFlowFunctionUtils.tupleFieldAccessor(i)
                     val exitFact = currentFact.rebase(AccessPathBase.Return).prependAccessor(tupleAccessor)
                     result.add(makeEdge(initialFact, exitFact))
                 }
@@ -407,7 +434,7 @@ class GoMethodSequentFlowFunction(
         }
 
         for (edge in inst.edges.values) {
-            val edgeBase = GoFlowFunctionUtils.accessPathBase(edge, method) ?: continue
+            val edgeBase = GoFlowFunctionUtils.accessPathBase(edge, method)
             if (currentFact.base == edgeBase) {
                 val newFact = currentFact.rebase(registerBase)
                 result.add(makeEdge(initialFact, newFact))
@@ -425,9 +452,7 @@ class GoMethodSequentFlowFunction(
     ): Set<Sequent> {
         val result = mutableSetOf<Sequent>(Sequent.Unchanged)
         val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method)
-            ?: return setOf(Sequent.Unchanged)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
-            ?: return setOf(Sequent.Unchanged)
         val keyBase = GoFlowFunctionUtils.accessPathBase(inst.key, method)
 
         if (currentFact.base == valueBase) {
@@ -435,7 +460,7 @@ class GoMethodSequentFlowFunction(
             result.add(makeEdge(initialFact, newFact))
         }
 
-        if (keyBase != null && currentFact.base == keyBase) {
+        if (currentFact.base == keyBase) {
             val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
             result.add(makeEdge(initialFact, newFact))
         }
@@ -450,9 +475,7 @@ class GoMethodSequentFlowFunction(
     ): Set<Sequent> {
         val result = mutableSetOf<Sequent>(Sequent.Unchanged)
         val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method)
-            ?: return setOf(Sequent.Unchanged)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method)
-            ?: return setOf(Sequent.Unchanged)
 
         // ch <- x  ==>  ch.element = x (weak update)
         if (currentFact.base == valueBase) {
@@ -482,10 +505,10 @@ class GoMethodSequentFlowFunction(
         val leftBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
         val rightBase = GoFlowFunctionUtils.accessPathBase(expr.y, method)
 
-        if (leftBase != null && currentFact.base == leftBase) {
+        if (currentFact.base == leftBase) {
             result.add(makeEdge(initialFact, currentFact.rebase(registerBase)))
         }
-        if (rightBase != null && currentFact.base == rightBase) {
+        if (currentFact.base == rightBase) {
             result.add(makeEdge(initialFact, currentFact.rebase(registerBase)))
         }
 
@@ -508,7 +531,7 @@ class GoMethodSequentFlowFunction(
 
         val sourceRules = mutableListOf<TaintRule.GoSourceRule>()
 
-        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst, method)
+        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst)
         if (fieldName != null) {
             sourceRules += context.taint.taintConfig.sourceRulesForFieldRead(fieldName)
         }
