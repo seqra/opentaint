@@ -11,7 +11,6 @@ trap 'rm -rf "$WORK"' EXIT
 DIST="$WORK/dist"
 mkdir -p "$DIST"
 
-# Fake linux + windows "full" archives containing a stub binary.
 printf '#!/bin/sh\necho stub\n' > "$WORK/opentaint"
 chmod +x "$WORK/opentaint"
 tar -czf "$DIST/opentaint-full_linux_amd64.tar.gz" -C "$WORK" opentaint
@@ -25,7 +24,6 @@ OPENTAINT_NPM_OUT_DIR="$OUT" bash "$SCRIPT_DIR/build-npm-packages.sh" "$DIST" "$
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
-# Linux platform package
 LP="$OUT/opentaint-linux-x64"
 [ -x "$LP/opentaint" ] || fail "linux binary missing or not executable"
 node -e "const p=require('$LP/package.json');
@@ -35,7 +33,6 @@ node -e "const p=require('$LP/package.json');
   if(JSON.stringify(p.cpu)!=='[\"x64\"]')process.exit(14);" \
   || fail "linux package.json metadata wrong"
 
-# Windows platform package
 WP="$OUT/opentaint-win32-x64"
 [ -f "$WP/opentaint.exe" ] || fail "windows binary missing"
 node -e "const p=require('$WP/package.json');
@@ -43,7 +40,6 @@ node -e "const p=require('$WP/package.json');
   if(JSON.stringify(p.cpu)!=='[\"x64\"]')process.exit(22);" \
   || fail "windows package.json metadata wrong"
 
-# Main package
 MP="$OUT/opentaint"
 [ -f "$MP/bin/opentaint.js" ] || fail "launcher missing from main package"
 node -e "const p=require('$MP/package.json');

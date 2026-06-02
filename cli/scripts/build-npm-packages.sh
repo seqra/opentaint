@@ -29,7 +29,6 @@ PLATFORMS=(
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-# Collect "name=version" pairs for the main package's optionalDependencies.
 DEPS=()
 
 for entry in "${PLATFORMS[@]}"; do
@@ -68,7 +67,6 @@ if [ "${#DEPS[@]}" -eq 0 ]; then
   exit 1
 fi
 
-# Assemble the main package.
 main_dir="$OUT_DIR/opentaint"
 mkdir -p "$main_dir/bin"
 cp "$NPM_SRC/bin/opentaint.js" "$main_dir/bin/opentaint.js"
