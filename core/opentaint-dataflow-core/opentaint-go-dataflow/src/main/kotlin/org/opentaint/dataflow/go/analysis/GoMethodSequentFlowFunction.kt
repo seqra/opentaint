@@ -139,6 +139,10 @@ class GoMethodSequentFlowFunction(
         fromBase: AccessPathBase,
         additionFactsOnAssign: (FinalFactAp) -> List<FinalFactAp> = { emptyList() }
     ) {
+        if (currentFact.base != toBase) {
+            unchanged()
+        }
+
         if (fromBase == toBase) {
             unchanged()
             return
