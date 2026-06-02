@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
@@ -45,10 +46,11 @@ class GoLocalAliasAnalysis(
         )
     }
 
-    fun findAlias(base: AccessPathBase, inst: GoIRInst): List<AliasApInfo> {
+    fun computeAliasWithRef(base: AccessPathBase, inst: GoIRInst): List<AliasApInfo> {
         val self = listOf(AliasApInfo(base, emptyList()))
         val idx = inst.location.index
-        val connected = result.statesBeforeStmt?.getOrNull(idx) ?: return self
+        val analysisResult = aliasAnalysisWithRef()
+        val connected = analysisResult.statesBeforeStmt?.getOrNull(idx) ?: return self
         for (entry in connected.aliasGroups.values) {
             val converted = entry.flatMap { convert(it, connected.aliasGroups, 0) }.distinct()
             if (converted.any { it is AliasApInfo && it.accessors.isEmpty() && it.base == base }) {
@@ -56,6 +58,11 @@ class GoLocalAliasAnalysis(
             }
         }
         return self
+    }
+
+    private fun aliasAnalysisWithRef(): GoDSUAliasAnalysis.AnalysisResult {
+        val noCancellation = AnalysisCancellation(Duration.INFINITE, parentCancellation = null)
+        return GoDSUAliasAnalysis(function, params.interProcCallDepth, noCancellation).analyze()
     }
 
     private fun convert(info: AAInfo, groups: Int2ObjectOpenHashMap<List<AAInfo>>, depth: Int): List<GoAliasInfo> {

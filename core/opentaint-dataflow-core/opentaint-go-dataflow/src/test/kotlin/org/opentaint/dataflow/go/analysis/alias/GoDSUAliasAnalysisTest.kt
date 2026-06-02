@@ -30,13 +30,13 @@ class GoDSUAliasAnalysisTest {
 
     private fun GoIRProgram.func(name: String) = allFunctions().first { it.name == name }
 
-    private fun sinkArgAliases(program: GoIRProgram, funcName: String, depth: Int = 0): List<org.opentaint.dataflow.go.analysis.alias.AliasApInfo> {
+    private fun sinkArgAliases(program: GoIRProgram, funcName: String, depth: Int = 0): List<AliasApInfo> {
         val fn = program.func(funcName)
         val aa = GoLocalAliasAnalysis(fn, GoLocalAliasAnalysis.Params(interProcCallDepth = depth))
         val sink = fn.body!!.instructions.filterIsInstance<GoIRCall>()
             .first { (it.call.target as? GoIRCallTarget.Function)?.function?.name == "aliasSink" }
         val arg = sink.call.args.first() as GoIRRegister
-        return aa.findAlias(AccessPathBase.LocalVar(arg.index), sink)
+        return aa.computeAliasWithRef(AccessPathBase.LocalVar(arg.index), sink)
     }
 
     @Test

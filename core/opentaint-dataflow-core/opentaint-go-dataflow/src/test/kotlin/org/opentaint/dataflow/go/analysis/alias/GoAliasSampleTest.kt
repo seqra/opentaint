@@ -73,7 +73,7 @@ class GoAliasSampleTest {
                 is GoIRParameterValue -> AccessPathBase.Argument(arg.paramIndex)
                 else -> fail("${fn.name}: sink #$i first arg is not a register or parameter")
             }
-            val aliases = aa.findAlias(queryBase, sink)
+            val aliases = aa.computeAliasWithRef(queryBase, sink)
             for (p in exp.paths) {
                 val present = aliases.any { matches(it, p) }
                 if (p.negated) {
