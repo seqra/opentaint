@@ -5,18 +5,6 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassT
 import org.opentaint.go.config.GoConfigLoader
 import kotlin.test.Test
 
-/**
- * Tests for the 11 IR call shapes the Go SAST engine handles.
- * Focused on call resolution + argument propagation — fixtures keep
- * downstream taint propagation trivial so a failure points at the
- * call edge, not at field/closure/element semantics.
- *
- * Shapes that the engine doesn't yet support get @Disabled with a
- * message naming the gap. The point of this class is to map the
- * gaps, not to pretend they aren't there.
- *
- * See go-sast-issue-02-findings.md §3 for the audit table.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CallShapesTest : AnalysisTest() {
 

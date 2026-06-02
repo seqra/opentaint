@@ -1,6 +1,5 @@
 package org.opentaint.go.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 
@@ -30,7 +29,6 @@ class CollectionTest : AnalysisTest() {
     @Test fun arrayPassToFunc001T() = assertReachable("test.arrayPassToFunc001T")
 
     // Slice of structs — element+field accessor chain composition
-//    @Disabled("Slice-of-structs: element+field accessor chain not tracked through abstract refinement")
     @Test fun sliceOfStructs001T() = assertReachable("test.sliceOfStructs001T")
     @Test fun sliceOfStructs002F() = assertNotReachable("test.sliceOfStructs002F")
 }
