@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -59,169 +60,140 @@ class GoMethodSequentFlowFunction(
         return zeroSequents
     }
 
-    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> {
-        return propagate(null, currentFactAp)
+    private interface PropagationContext {
+        fun unchanged()
+        fun propagateFact(fact: FinalFactAp, trace: TraceInfo)
+        fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo)
+        fun sideEffect(effect: Sequent.SideEffect)
     }
 
-    override fun propagateFactToFact(
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> {
-        return propagate(initialFactAp, currentFactAp)
-    }
+    override fun propagateZeroToFact(currentFactAp: FinalFactAp) =
+        Z2FPropagationContext(currentFactAp).apply { propagate(currentFactAp) }.result
 
-    override fun propagateNDFactToFact(
-        initialFacts: Set<InitialFactAp>,
-        currentFactAp: FinalFactAp,
-    ): Set<Sequent> {
-        return setOf(Sequent.Unchanged)
-    }
+    override fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp) =
+        F2FPropagationContext(initialFactAp).apply { propagate(currentFactAp) }.result
 
-    private fun propagate(initialFact: InitialFactAp?, currentFact: FinalFactAp): Set<Sequent> {
-        return when (currentInst) {
-            is GoIRAssignInst -> handleAssign(initialFact, currentFact, currentInst)
+
+    override fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp) =
+        NDF2FPropagationContext(initialFacts, currentFactAp).apply { propagate(currentFactAp) }.result
+
+    private fun PropagationContext.propagate(currentFact: FinalFactAp) {
+        when (currentInst) {
+            is GoIRAssignInst -> handleAssign(currentFact, currentInst)
             is GoIRStoreInst -> when (currentInst) {
-                is GoIRStore -> handleStore(initialFact, currentFact, currentInst)
-                is GoIRFieldStore -> handleFieldStore(initialFact, currentFact, currentInst)
-                is GoIRIndexStore -> handleIndexStore(initialFact, currentFact, currentInst)
+                is GoIRStore -> handleStore(currentFact, currentInst)
+                is GoIRFieldStore -> handleFieldStore(currentFact, currentInst)
+                is GoIRIndexStore -> handleIndexStore(currentFact, currentInst)
             }
-            is GoIRGlobalStore -> handleGlobalStore(initialFact, currentFact, currentInst)
-            is GoIRReturn -> handleReturn(initialFact, currentFact, currentInst)
-            is GoIRPhi -> handlePhi(initialFact, currentFact, currentInst)
-            is GoIRMapUpdate -> handleMapUpdate(initialFact, currentFact, currentInst)
-            is GoIRSend -> handleSend(initialFact, currentFact, currentInst)
-            else              -> setOf(Sequent.Unchanged)
+
+            is GoIRGlobalStore -> handleGlobalStore(currentFact, currentInst)
+            is GoIRReturn -> handleReturn(currentFact, currentInst)
+            is GoIRPhi -> handlePhi(currentFact, currentInst)
+            is GoIRMapUpdate -> handleMapUpdate(currentFact, currentInst)
+            is GoIRSend -> handleSend(currentFact, currentInst)
+            else -> unchanged()
         }
     }
 
-    private fun handleAssign(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleAssign(
         currentFact: FinalFactAp,
         inst: GoIRAssignInst,
-    ): Set<Sequent> {
+    ) {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
         val expr = inst.expr
+
+        if (currentFact.base != registerBase) {
+            unchanged()
+        }
 
         if (expr is GoIRBinOpExpr && expr.op == GoIRBinaryOp.ADD
             && GoFlowFunctionUtils.isStringType(expr.type)
         ) {
-            return handleStringConcat(initialFact, currentFact, registerBase, expr)
+            return handleStringConcat(currentFact, registerBase, expr)
         }
 
         if (expr is GoIRTypeAssertExpr && expr.commaOk) {
-            return handleCommaOkTypeAssert(initialFact, currentFact, registerBase, expr)
+            return handleCommaOkTypeAssert(currentFact, registerBase, expr)
         }
 
         if (expr is GoIRMakeClosureExpr) {
-            return handleMakeClosure(initialFact, currentFact, registerBase, expr)
+            return handleMakeClosure(currentFact, registerBase, expr)
         }
 
         if (expr is GoIRNextExpr) {
-            return handleNext(initialFact, currentFact, registerBase, expr)
+            return handleNext(currentFact, registerBase, expr)
         }
 
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)
-            ?: return handleNonPropagatingExpr(currentFact, registerBase)
+            ?: return
 
         return when (rhsAccess) {
-            is Access.Simple -> handleSimpleAssign(initialFact, currentFact, registerBase, rhsAccess.base)
-            is RefAccess -> handleNormalRefAssign(initialFact, currentFact, registerBase, rhsAccess)
+            is Access.Simple -> handleSimpleAssign(currentFact, registerBase, rhsAccess.base)
+            is RefAccess -> handleNormalRefAssign(currentFact, registerBase, rhsAccess)
         }
     }
 
-    private fun handleSimpleAssign(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleSimpleAssign(
         currentFact: FinalFactAp,
         toBase: AccessPathBase,
         fromBase: AccessPathBase,
         additionFactsOnAssign: (FinalFactAp) -> List<FinalFactAp> = { emptyList() }
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>()
-
-        // Kill: if fact is about the destination, the assignment overwrites it
-        if (currentFact.base == toBase) {
-            if (fromBase == toBase) {
-                result.add(Sequent.Unchanged)
-                return result
-            }
-            // Don't add Unchanged — fact is killed
-        } else {
-            result.add(Sequent.Unchanged)
+    ) {
+        if (fromBase == toBase) {
+            unchanged()
+            return
         }
 
         // Gen: if fact is about the source, generate taint on destination
         if (currentFact.base == fromBase) {
             val newFact = currentFact.rebase(toBase)
-            result.add(makeEdge(initialFact, newFact))
+            propagateFact(newFact, TraceInfo.Flow)
 
             additionFactsOnAssign(newFact).forEach {
-                result.add(makeEdge(initialFact, it))
+                propagateFact(it, TraceInfo.Flow)
             }
         }
-
-        return result
     }
 
-    private fun handleMakeClosure(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleMakeClosure(
         currentFact: FinalFactAp,
         registerBase: AccessPathBase,
         expr: GoIRMakeClosureExpr,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>()
-
-        if (currentFact.base != registerBase) {
-            result.add(Sequent.Unchanged)
-        }
-
+    ) {
         for ((i, binding) in expr.bindings.withIndex()) {
             val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method)
             if (currentFact.base == bindingBase) {
                 val freeVarFact = currentFact.rebase(registerBase)
                     .prependAccessor(GoFlowFunctionUtils.freeVarAccessor(expr.fn, i))
-                result.add(makeEdge(initialFact, freeVarFact))
+                propagateFact(freeVarFact, TraceInfo.Flow)
             }
         }
-
-        return result
     }
 
-    // Backward counterpart: GoMethodSequentPrecondition.handleCommaOkTypeAssertPrecondition — keep in lockstep (same tuple$0 slot, same commaOk guard).
-    private fun handleCommaOkTypeAssert(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleCommaOkTypeAssert(
         currentFact: FinalFactAp,
         registerBase: AccessPathBase,
         expr: GoIRTypeAssertExpr,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>()
-
-        // Kill: the register is overwritten by the assert result.
-        if (currentFact.base != registerBase) {
-            result.add(Sequent.Unchanged)
-        }
-
+    ) {
         // Gen: if the operand carries a fact, taint the value slot (tuple index 0)
         // of the (value, ok) result. The `ok` bool slot stays clean.
         val operandBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
         if (currentFact.base == operandBase) {
             val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0)
             val newFact = currentFact.rebase(registerBase).prependAccessor(valueSlot)
-            result.add(makeEdge(initialFact, newFact))
+            propagateFact(newFact, TraceInfo.Flow)
         }
-
-        return result
     }
 
-    private fun handleNext(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleNext(
         currentFact: FinalFactAp,
         registerBase: AccessPathBase,
         expr: GoIRNextExpr,
-    ): Set<Sequent> {
+    ) {
         val iterBase = GoFlowFunctionUtils.accessPathBase(expr.iter, method)
 
         return handleComplexRefAssign(
-            initialFact, currentFact, registerBase,
+            currentFact, registerBase,
             RefAccess(iterBase, ElementAccessor)
         ) { elementFact ->
             GoFlowFunctionUtils.rangeElementTupleSlots(expr, method).map { slot ->
@@ -230,66 +202,50 @@ class GoMethodSequentFlowFunction(
         }
     }
 
-    private fun handleNormalRefAssign(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleNormalRefAssign(
         currentFact: FinalFactAp,
         toBase: AccessPathBase,
         rhsAccess: RefAccess,
-    ): Set<Sequent> = handleComplexRefAssign(initialFact, currentFact, toBase, rhsAccess) { fact ->
+    ) = handleComplexRefAssign(currentFact, toBase, rhsAccess) { fact ->
         listOf(fact.rebase(toBase))
     }
 
-    private fun handleComplexRefAssign(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleComplexRefAssign(
         currentFact: FinalFactAp,
         toBase: AccessPathBase,
         rhsAccess: RefAccess,
         mkAssignedFacts: (FinalFactAp) -> List<FinalFactAp>,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>()
+    ) {
+        if (currentFact.base != rhsAccess.base) return
 
-        // Kill: assignment to register overwrites previous value
-        if (currentFact.base == toBase) {
-            // Don't add Unchanged — register gets new value
-        } else {
-            result.add(Sequent.Unchanged)
+        if (currentFact.isAbstract() && !currentFact.exclusions.contains(rhsAccess.accessor)) {
+            propagateFactWithAccessorExclude(currentFact, rhsAccess.accessor, TraceInfo.Flow)
+
+            val nonAbstractFact = currentFact.removeAbstraction()
+            if (nonAbstractFact != null) {
+                handleComplexRefAssign(nonAbstractFact, toBase, rhsAccess, mkAssignedFacts)
+            }
+            return
         }
 
-        // Gen: if fact is about the source object AND the accessor matches
-        if (currentFact.base == rhsAccess.base) {
-            if (currentFact.startsWithAccessor(rhsAccess.accessor)) {
-                // Concrete: strip accessor and rebase
-                val readFact = currentFact.readAccessor(rhsAccess.accessor)
-                if (readFact != null) {
-                    mkAssignedFacts(readFact).forEach {
-                        result.add(makeEdge(initialFact, it))
-                    }
-                }
-            } else if (currentFact.isAbstract()
-                && !currentFact.exclusions.contains(rhsAccess.accessor)
-            ) {
-                // Abstract: trigger refinement by adding accessor to exclusion set
-                val refinedFact = currentFact.exclude(rhsAccess.accessor)
-                result.add(makeEdge(initialFact, refinedFact))
+        if (!currentFact.startsWithAccessor(rhsAccess.accessor)) return
 
-                initialFact?.let {
-                    result.add(Sequent.SideEffectRequirement(initialFact.exclude(rhsAccess.accessor)))
-                }
+        val readFact = currentFact.readAccessor(rhsAccess.accessor)
+        if (readFact != null) {
+            mkAssignedFacts(readFact).forEach {
+                propagateFact(it, TraceInfo.Flow)
             }
         }
-
-        return result
     }
 
-    private fun handleStore(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleStore(
         currentFact: FinalFactAp,
         inst: GoIRStore,
-    ): Set<Sequent> {
+    ) {
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val dstBase = GoFlowFunctionUtils.accessPathBase(inst.addr, method)
 
-        return handleSimpleAssign(initialFact, currentFact, dstBase, valueBase) { fact ->
+        return handleSimpleAssign(currentFact, dstBase, valueBase) { fact ->
             val aliased = mutableListOf<FinalFactAp>()
             context.aliasAnalysis.forEachAliasAtStatement(currentInst, fact) {
                 aliased += it
@@ -298,234 +254,178 @@ class GoMethodSequentFlowFunction(
         }
     }
 
-    private fun handleFieldStore(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleFieldStore(
         currentFact: FinalFactAp,
         inst: GoIRFieldStore,
-    ): Set<Sequent> {
+    ) {
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
 
         val access = RefAccess(instance, GoFlowFunctionUtils.fieldAccessorFromStore(inst))
-        return complexAccessorWrite(access, currentFact, initialFact, valueBase)
+        return complexAccessorWrite(access, currentFact, valueBase)
     }
 
-    private fun handleIndexStore(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleIndexStore(
         currentFact: FinalFactAp,
         inst: GoIRIndexStore,
-    ): Set<Sequent> {
+    ) {
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
 
         val access = RefAccess(instance, ElementAccessor)
-        return complexAccessorWrite(access, currentFact, initialFact, valueBase)
+        return complexAccessorWrite(access, currentFact, valueBase)
     }
 
-    private fun complexAccessorWrite(
-        writeTo: Access,
+    private fun PropagationContext.complexAccessorWrite(
+        writeTo: RefAccess,
         currentFact: FinalFactAp,
-        initialFact: InitialFactAp?,
         valueBase: AccessPathBase
-    ): MutableSet<Sequent> {
-        val result = mutableSetOf<Sequent>()
+    ) {
+        val destBase = writeTo.base
+        val accessor = writeTo.accessor
 
-        when (writeTo) {
-            is RefAccess -> {
-                val destBase = writeTo.base
-                val accessor = writeTo.accessor
+        if (currentFact.base == valueBase) {
+            unchanged()
 
-                // Kill/preserve
-                if (currentFact.base == destBase) {
-                    if (currentFact.startsWithAccessor(accessor)) {
-                        if (accessor is ElementAccessor) {
-                            // Weak update for elements
-                            result.add(makeEdge(initialFact, currentFact))
-                        }
-                        // FieldAccessor: strong update — don't preserve
-                    } else if (currentFact.isAbstract()
-                        && !currentFact.exclusions.contains(accessor)
-                    ) {
-                        val refinedFact = currentFact.exclude(accessor)
-                        result.add(makeEdge(initialFact, refinedFact))
-                    } else {
-                        result.add(Sequent.Unchanged)
-                    }
-                } else {
-                    result.add(Sequent.Unchanged)
-                }
+            val newFact = currentFact.rebase(destBase).prependAccessor(accessor)
+            propagateFact(newFact, TraceInfo.Flow)
 
-                if (currentFact.base == valueBase) {
-                    val newFact = currentFact.rebase(destBase).prependAccessor(accessor)
-                    result.add(makeEdge(initialFact, newFact))
-
-                    context.aliasAnalysis.forEachAliasAtStatement(currentInst, newFact) { aliased ->
-                        result.add(makeEdge(initialFact, aliased))
-                    }
-                }
+            context.aliasAnalysis.forEachAliasAtStatement(currentInst, newFact) { aliased ->
+                propagateFact(aliased, TraceInfo.Flow)
             }
 
-            is Access.Simple -> {
-                val destBase = writeTo.base
-
-                if (currentFact.base == destBase) {
-                    // Pointer store: overwritten
-                } else {
-                    result.add(Sequent.Unchanged)
-                }
-
-                if (currentFact.base == valueBase) {
-                    val newFact = currentFact.rebase(destBase)
-                    result.add(makeEdge(initialFact, newFact))
-                }
-            }
+            check(destBase != valueBase) { "todo: write to same location" }
+            return
         }
 
-        return result
+        if (currentFact.base != destBase) {
+            unchanged()
+            return
+        }
+
+        if (accessor is ElementAccessor) {
+            // Weak update for elements
+            propagateFact(currentFact, TraceInfo.Flow)
+            return
+        }
+
+        if (currentFact.isAbstract() && !currentFact.exclusions.contains(accessor)) {
+            propagateFactWithAccessorExclude(currentFact, accessor, TraceInfo.Flow)
+
+            val nonAbstractFact = currentFact.removeAbstraction()
+            if (nonAbstractFact != null) {
+                complexAccessorWrite(writeTo, nonAbstractFact, valueBase)
+            }
+            return
+        }
+
+        if (!currentFact.startsWithAccessor(accessor)) {
+            propagateFact(currentFact, TraceInfo.Flow)
+            return
+        }
+
+        val cleaned = currentFact.clearAccessor(accessor)
+        if (cleaned != null) {
+            propagateFact(cleaned, TraceInfo.Flow)
+        }
     }
 
-    private fun handleGlobalStore(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleGlobalStore(
         currentFact: FinalFactAp,
         inst: GoIRGlobalStore,
-    ): Set<Sequent> {
+    ) {
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val globalAccess = GoFlowFunctionUtils.accessForGlobal(inst.global)
 
-        return complexAccessorWrite(globalAccess, currentFact, initialFact, valueBase)
+        return complexAccessorWrite(globalAccess, currentFact, valueBase)
     }
 
-    private fun handleReturn(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleReturn(
         currentFact: FinalFactAp,
         inst: GoIRReturn,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>(Sequent.Unchanged)
+    ) {
+        unchanged()
 
-        if (inst.results.size == 1) {
-            val retBase = GoFlowFunctionUtils.accessPathBase(inst.results[0], method)
+        for ((i, retVal) in inst.results.withIndex()) {
+            val retBase = GoFlowFunctionUtils.accessPathBase(retVal, method)
             if (currentFact.base == retBase) {
-                val exitFact = currentFact.rebase(AccessPathBase.Return)
-                result.add(makeEdge(initialFact, exitFact))
-            }
-        } else {
-            for ((i, retVal) in inst.results.withIndex()) {
-                val retBase = GoFlowFunctionUtils.accessPathBase(retVal, method)
-                if (currentFact.base == retBase) {
+                val exitFact = if (inst.results.size == 1) {
+                    currentFact.rebase(AccessPathBase.Return)
+                } else {
                     val tupleAccessor = GoFlowFunctionUtils.tupleFieldAccessor(i)
-                    val exitFact = currentFact.rebase(AccessPathBase.Return).prependAccessor(tupleAccessor)
-                    result.add(makeEdge(initialFact, exitFact))
+                    currentFact.rebase(AccessPathBase.Return).prependAccessor(tupleAccessor)
                 }
+
+                propagateFact(exitFact, TraceInfo.Flow)
             }
         }
-
-        return result
     }
 
-    private fun handlePhi(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handlePhi(
         currentFact: FinalFactAp,
         inst: GoIRPhi,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>()
+    ) {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
-
-        if (currentFact.base == registerBase) {
-            // Don't add Unchanged — overwritten by phi
-        } else {
-            result.add(Sequent.Unchanged)
+        if (currentFact.base != registerBase) {
+            unchanged()
         }
 
         for (edge in inst.edges.values) {
             val edgeBase = GoFlowFunctionUtils.accessPathBase(edge, method)
             if (currentFact.base == edgeBase) {
                 val newFact = currentFact.rebase(registerBase)
-                result.add(makeEdge(initialFact, newFact))
-                break
+                propagateFact(newFact, TraceInfo.Flow)
             }
         }
-
-        return result
     }
 
-    private fun handleMapUpdate(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleMapUpdate(
         currentFact: FinalFactAp,
         inst: GoIRMapUpdate,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>(Sequent.Unchanged)
+    ) {
+        unchanged()
+
         val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val keyBase = GoFlowFunctionUtils.accessPathBase(inst.key, method)
 
         if (currentFact.base == valueBase) {
             val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
-            result.add(makeEdge(initialFact, newFact))
+            propagateFact(newFact, TraceInfo.Flow)
         }
 
         if (currentFact.base == keyBase) {
             val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
-            result.add(makeEdge(initialFact, newFact))
+            propagateFact(newFact, TraceInfo.Flow)
         }
-
-        return result
     }
 
-    private fun handleSend(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleSend(
         currentFact: FinalFactAp,
         inst: GoIRSend,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>(Sequent.Unchanged)
+    ) {
+        unchanged()
+
         val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method)
 
         // ch <- x  ==>  ch.element = x (weak update)
         if (currentFact.base == valueBase) {
             val newFact = currentFact.rebase(chanBase).prependAccessor(ElementAccessor)
-            result.add(makeEdge(initialFact, newFact))
+            propagateFact(newFact, TraceInfo.Flow)
         }
-
-        return result
     }
 
-    // ── String Concat ────────────────────────────────────────────────
-
-    private fun handleStringConcat(
-        initialFact: InitialFactAp?,
+    private fun PropagationContext.handleStringConcat(
         currentFact: FinalFactAp,
         registerBase: AccessPathBase,
         expr: GoIRBinOpExpr,
-    ): Set<Sequent> {
-        val result = mutableSetOf<Sequent>()
-
-        if (currentFact.base == registerBase) {
-            // Don't add unchanged — overwritten
-        } else {
-            result.add(Sequent.Unchanged)
-        }
-
+    ) {
         val leftBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
         val rightBase = GoFlowFunctionUtils.accessPathBase(expr.y, method)
 
-        if (currentFact.base == leftBase) {
-            result.add(makeEdge(initialFact, currentFact.rebase(registerBase)))
-        }
-        if (currentFact.base == rightBase) {
-            result.add(makeEdge(initialFact, currentFact.rebase(registerBase)))
-        }
-
-        return result
-    }
-
-    private fun handleNonPropagatingExpr(
-        currentFact: FinalFactAp,
-        registerBase: AccessPathBase,
-    ): Set<Sequent> {
-        return if (currentFact.base == registerBase) {
-            emptySet() // register overwritten with clean value
-        } else {
-            setOf(Sequent.Unchanged)
+        if (currentFact.base == leftBase || currentFact.base == rightBase) {
+            propagateFact(currentFact.rebase(registerBase), TraceInfo.Flow)
         }
     }
 
@@ -574,19 +474,56 @@ class GoMethodSequentFlowFunction(
         }
     }
 
-    private fun makeEdge(initialFact: InitialFactAp?, newFact: FinalFactAp): Sequent {
-        val traceInfo = traceInfoOrNull()
-        return if (initialFact != null) {
-            val syncedInitial = if (initialFact.exclusions != newFact.exclusions) {
-                initialFact.replaceExclusions(newFact.exclusions)
-            } else {
-                initialFact
-            }
-            Sequent.FactToFact(syncedInitial, newFact, traceInfo)
-        } else {
-            Sequent.ZeroToFact(newFact, traceInfo)
+    private fun traceInfoOrNull(): TraceInfo? = if (generateTrace) TraceInfo.Flow else null
+
+    private abstract class DefaultPropagationContext : PropagationContext {
+        val result = hashSetOf<Sequent>()
+
+        override fun unchanged() {
+            result.add(Sequent.Unchanged)
+        }
+
+        override fun sideEffect(effect: Sequent.SideEffect) {
+            result.add(effect)
         }
     }
 
-    private fun traceInfoOrNull(): TraceInfo? = if (generateTrace) TraceInfo.Flow else null
+    private class Z2FPropagationContext(private val currentFactAp: FinalFactAp) : DefaultPropagationContext() {
+        override fun propagateFact(fact: FinalFactAp, trace: TraceInfo) {
+            result.add(Sequent.ZeroToFact(fact, trace))
+        }
+
+        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+            error("Zero to Fact edge can't be refined: $currentFactAp")
+        }
+    }
+
+    private class F2FPropagationContext(
+        private val initialFactAp: InitialFactAp
+    ) : DefaultPropagationContext() {
+        override fun propagateFact(fact: FinalFactAp, trace: TraceInfo) {
+            result.add(Sequent.FactToFact(initialFactAp, fact, trace))
+        }
+
+        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+            val refinedInitial = initialFactAp.exclude(accessor)
+            val refinedFact = fact.exclude(accessor)
+            result.add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
+
+            result.add(Sequent.SideEffectRequirement(refinedInitial))
+        }
+    }
+
+    private class NDF2FPropagationContext(
+        private val initialFacts: Set<InitialFactAp>,
+        private val currentFactAp: FinalFactAp
+    ) : DefaultPropagationContext() {
+        override fun propagateFact(fact: FinalFactAp, trace: TraceInfo) {
+            result.add(Sequent.NDFactToFact(initialFacts, fact, trace))
+        }
+
+        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+            error("NDF2F edge can't be refined: $currentFactAp")
+        }
+    }
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo.Flow
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
@@ -65,7 +66,7 @@ class GoSequentExactTest {
             val onOther = FactSpec(unrelated, emptyList())
 
             assertEquals(
-                setOf(Sequent.Unchanged, Sequent.FactToFact(onSrc.initial(), onDst.final(), null)),
+                setOf(Sequent.Unchanged, Sequent.FactToFact(onSrc.initial(), onDst.final(), Flow)),
                 ff.propagateFactToFact(onSrc.initial(), onSrc.final()),
                 "fact on source survives and propagates to destination",
             )
@@ -81,13 +82,8 @@ class GoSequentExactTest {
             )
 
             assertEquals(
-                setOf(Sequent.Unchanged, Sequent.ZeroToFact(onDst.final(), null)),
+                setOf(Sequent.Unchanged, Sequent.ZeroToFact(onDst.final(), Flow)),
                 ff.propagateZeroToFact(onSrc.final()),
-            )
-
-            assertEquals(
-                setOf<Sequent>(Sequent.Unchanged),
-                ff.propagateNDFactToFact(setOf(onSrc.initial()), onSrc.final()),
             )
 
             assertTrue(Sequent.ZeroToZero in ff.propagateZeroToZero())
@@ -119,7 +115,7 @@ class GoSequentExactTest {
             val onDst = FactSpec(dst, emptyList())
 
             assertEquals(
-                setOf(Sequent.Unchanged, Sequent.FactToFact(onField.initial(), onDst.final(), null)),
+                setOf(Sequent.Unchanged, Sequent.FactToFact(onField.initial(), onDst.final(), Flow)),
                 ff.propagateFactToFact(onField.initial(), onField.final()),
                 "reading base.field into the register strips the field accessor",
             )
