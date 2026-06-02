@@ -56,20 +56,9 @@ for entry in "${PLATFORMS[@]}"; do
     exit 1
   fi
 
-  NAME="$pkg_name" VERSION="$VERSION" OS="$npm_os" CPU="$npm_cpu" \
-  python3 - "$NPM_SRC/platform.tmpl.json" "$pkg_dir/package.json" <<'PY'
-import json, os, sys
-tmpl, out = sys.argv[1], sys.argv[2]
-with open(tmpl) as f:
-    pkg = json.load(f)
-pkg["name"] = os.environ["NAME"]
-pkg["version"] = os.environ["VERSION"]
-pkg["os"] = [os.environ["OS"]]
-pkg["cpu"] = [os.environ["CPU"]]
-with open(out, "w") as f:
-    json.dump(pkg, f, indent=2)
-    f.write("\n")
-PY
+  python3 "$SCRIPT_DIR/render-package-json.py" \
+    --template "$NPM_SRC/platform.tmpl.json" --out "$pkg_dir/package.json" \
+    --name "$pkg_name" --version "$VERSION" --os "$npm_os" --cpu "$npm_cpu"
 
   DEPS+=("${pkg_name}=${VERSION}")
 done
@@ -85,22 +74,14 @@ mkdir -p "$main_dir/bin"
 cp "$NPM_SRC/bin/opentaint.js" "$main_dir/bin/opentaint.js"
 chmod +x "$main_dir/bin/opentaint.js"
 
-VERSION="$VERSION" DEPS="${DEPS[*]}" \
-python3 - "$NPM_SRC/package.tmpl.json" "$main_dir/package.json" <<'PY'
-import json, os, sys
-tmpl, out = sys.argv[1], sys.argv[2]
-with open(tmpl) as f:
-    pkg = json.load(f)
-pkg["version"] = os.environ["VERSION"]
-deps = {}
-for pair in os.environ["DEPS"].split():
-    name, ver = pair.rsplit("=", 1)
-    deps[name] = ver
-pkg["optionalDependencies"] = deps
-with open(out, "w") as f:
-    json.dump(pkg, f, indent=2)
-    f.write("\n")
-PY
+dep_args=()
+for dep in "${DEPS[@]}"; do
+  dep_args+=(--optional-dep "$dep")
+done
+
+python3 "$SCRIPT_DIR/render-package-json.py" \
+  --template "$NPM_SRC/package.tmpl.json" --out "$main_dir/package.json" \
+  --version "$VERSION" "${dep_args[@]}"
 
 echo "npm packages assembled in $OUT_DIR"
 ls -1 "$OUT_DIR"

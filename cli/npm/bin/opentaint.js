@@ -5,17 +5,29 @@ const path = require('node:path');
 const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 
-const PLATFORM_PACKAGES = {
-  'linux x64': '@seqra/opentaint-linux-x64',
-  'linux arm64': '@seqra/opentaint-linux-arm64',
-  'darwin x64': '@seqra/opentaint-darwin-x64',
-  'darwin arm64': '@seqra/opentaint-darwin-arm64',
-  'win32 x64': '@seqra/opentaint-win32-x64',
-  'win32 arm64': '@seqra/opentaint-win32-arm64',
-};
+const SCOPE = '@seqra';
+
+// Node's process.platform / process.arch tokens (linux|darwin|win32, x64|arm64)
+// are exactly the suffixes used for the per-platform packages, so the package
+// name is derived directly rather than looked up. This set is purely an
+// allowlist of the platforms we publish binaries for — it exists so an
+// unsupported host gets a clear error instead of a failed resolve of a
+// package that was never published. Keep it in sync with the platform matrix
+// in cli/scripts/build-npm-packages.sh.
+const SUPPORTED_PLATFORMS = new Set([
+  'linux x64',
+  'linux arm64',
+  'darwin x64',
+  'darwin arm64',
+  'win32 x64',
+  'win32 arm64',
+]);
 
 function platformPackage(platform, arch) {
-  return PLATFORM_PACKAGES[`${platform} ${arch}`];
+  if (!SUPPORTED_PLATFORMS.has(`${platform} ${arch}`)) {
+    return undefined;
+  }
+  return `${SCOPE}/opentaint-${platform}-${arch}`;
 }
 
 function resolveBinary(platform, arch, resolve) {
@@ -24,7 +36,7 @@ function resolveBinary(platform, arch, resolve) {
   if (!pkg) {
     throw new Error(
       `opentaint does not ship a prebuilt binary for ${platform}/${arch}. ` +
-      `Supported platforms: ${Object.values(PLATFORM_PACKAGES).join(', ')}.`
+      `Supported platforms: ${Array.from(SUPPORTED_PLATFORMS).map((p) => p.replace(' ', '/')).join(', ')}.`
     );
   }
   const binName = platform === 'win32' ? 'opentaint.exe' : 'opentaint';
@@ -75,7 +87,7 @@ function run(argv, opts) {
   return 1;
 }
 
-module.exports = { PLATFORM_PACKAGES, platformPackage, resolveBinary, signalExitCode, run };
+module.exports = { SCOPE, SUPPORTED_PLATFORMS, platformPackage, resolveBinary, signalExitCode, run };
 
 if (require.main === module) {
   process.exit(run(process.argv.slice(2)));
