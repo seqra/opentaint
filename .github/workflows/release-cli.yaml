@@ -239,6 +239,15 @@ jobs:
           # id-token permission and attaches provenance automatically; no
           # NPM_TOKEN is used. It requires npm >= 11.5.1 (newer than the npm
           # bundled with Node 22), so upgrade the CLI first.
+          #
+          # PREREQUISITE: each published package must have a trusted publisher
+          # configured on npmjs.com (owner: seqra, repo: opentaint, workflow:
+          # release-cli.yaml, no environment) BEFORE this step runs, or npm
+          # rejects the publish. That covers @seqra/opentaint and every
+          # @seqra/opentaint-<platform> package below; add a config for any new
+          # platform package too. New package names must exist on npm before a
+          # trusted publisher can be attached (first publish is a manual,
+          # token-based bootstrap).
           npm install -g npm@latest
           npm --version
 
