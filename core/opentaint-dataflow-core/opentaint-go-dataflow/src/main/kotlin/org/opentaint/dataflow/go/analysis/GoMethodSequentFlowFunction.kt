@@ -189,6 +189,19 @@ class GoMethodSequentFlowFunction(
         }
     }
 
+    private fun PropagationContext.handleStringConcat(
+        currentFact: FinalFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRBinOpExpr,
+    ) {
+        val leftBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
+        val rightBase = GoFlowFunctionUtils.accessPathBase(expr.y, method)
+
+        if (currentFact.base == leftBase || currentFact.base == rightBase) {
+            propagateFact(currentFact.rebase(registerBase), TraceInfo.Flow)
+        }
+    }
+
     private fun PropagationContext.handleNext(
         currentFact: FinalFactAp,
         registerBase: AccessPathBase,
@@ -387,50 +400,24 @@ class GoMethodSequentFlowFunction(
         currentFact: FinalFactAp,
         inst: GoIRMapUpdate,
     ) {
-        unchanged()
-
         val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val keyBase = GoFlowFunctionUtils.accessPathBase(inst.key, method)
 
-        if (currentFact.base == valueBase) {
-            val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
-            propagateFact(newFact, TraceInfo.Flow)
-        }
-
-        if (currentFact.base == keyBase) {
-            val newFact = currentFact.rebase(mapBase).prependAccessor(ElementAccessor)
-            propagateFact(newFact, TraceInfo.Flow)
-        }
+        val mapAccess = RefAccess(mapBase, ElementAccessor)
+        complexAccessorWrite(mapAccess, currentFact, valueBase)
+        complexAccessorWrite(mapAccess, currentFact, keyBase)
     }
 
     private fun PropagationContext.handleSend(
         currentFact: FinalFactAp,
         inst: GoIRSend,
     ) {
-        unchanged()
-
         val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method)
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method)
 
-        // ch <- x  ==>  ch.element = x (weak update)
-        if (currentFact.base == valueBase) {
-            val newFact = currentFact.rebase(chanBase).prependAccessor(ElementAccessor)
-            propagateFact(newFact, TraceInfo.Flow)
-        }
-    }
-
-    private fun PropagationContext.handleStringConcat(
-        currentFact: FinalFactAp,
-        registerBase: AccessPathBase,
-        expr: GoIRBinOpExpr,
-    ) {
-        val leftBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
-        val rightBase = GoFlowFunctionUtils.accessPathBase(expr.y, method)
-
-        if (currentFact.base == leftBase || currentFact.base == rightBase) {
-            propagateFact(currentFact.rebase(registerBase), TraceInfo.Flow)
-        }
+        val chanAccess = RefAccess(chanBase, ElementAccessor)
+        complexAccessorWrite(chanAccess, currentFact, valueBase)
     }
 
     private fun applyGlobalOrFieldReadSourceRules(out: MutableSet<Sequent>) {
