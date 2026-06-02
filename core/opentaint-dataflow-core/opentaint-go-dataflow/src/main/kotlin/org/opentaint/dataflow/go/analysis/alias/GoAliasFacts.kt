@@ -33,6 +33,11 @@ sealed interface GoRefValue : Comparable<GoRefValue> {
         override val valueKind: Int get() = 2
         override fun compareValue(other: GoRefValue): Int = name.compareTo((other as Global).name)
     }
+
+    data object FreeVarBase : GoRefValue {
+        override val valueKind: Int get() = 3
+        override fun compareValue(other: GoRefValue): Int = 0
+    }
 }
 
 data class GoUnknown(val inst: Int, override val ctx: ContextInfo) : AAInfo {

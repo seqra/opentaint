@@ -153,7 +153,8 @@ class GoLocalAliasAnalysis(
             is GoLocalAlias.SimpleLoc -> when (val loc = info.loc) {
                 is GoRefValue.Local -> AliasApInfoNoRef(AccessPathBase.LocalVar(loc.idx), emptyList())
                 is GoRefValue.Arg -> AliasApInfoNoRef(AccessPathBase.Argument(loc.idx), emptyList())
-                is GoRefValue.Global -> AliasApInfoNoRef(AccessPathBase.ClassStatic, emptyList())
+                is GoRefValue.Global -> null // todo: globals
+                is GoRefValue.FreeVarBase -> AliasApInfoNoRef(AccessPathBase.This, emptyList())
             }
             is GoLocalAlias.Alloc -> AliasAllocInfoNoRef(info.inst)
             is GoReturnValue -> null

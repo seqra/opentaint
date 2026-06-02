@@ -19,7 +19,6 @@ import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.cfg.GoIRCallInfo
 import org.opentaint.ir.go.cfg.GoIRCallTarget
-import org.opentaint.ir.go.type.GoIRCallMode
 import org.opentaint.ir.go.expr.GoIRAllocExpr
 import org.opentaint.ir.go.expr.GoIRChangeInterfaceExpr
 import org.opentaint.ir.go.expr.GoIRChangeTypeExpr
@@ -54,6 +53,7 @@ import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.inst.GoIRStoreInst
+import org.opentaint.ir.go.type.GoIRCallMode
 import org.opentaint.ir.go.type.GoIRUnaryOp
 import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
@@ -197,7 +197,7 @@ class GoDSUAliasAnalysis(
             is GoIRGlobalValueExpr -> aliasSetFromInfo(GoLocalAlias.SimpleLoc(GoRefValue.Global(expr.global.fullName)))
 
             is GoIRFreeVarValueExpr -> {
-                val closure = calleeClosure[ctx] ?: return unknown(instIdx, ctx)
+                val closure = freeVarValue(ctx)
                 aliasSetFromInfo(HeapAlias(state.heapObj(closure.aliasInfo()), GoFieldAlias(freeVarField(gas.function, expr.freeVarIndex), false)))
             }
 
@@ -485,6 +485,13 @@ class GoDSUAliasAnalysis(
             if (ctx == ContextInfo.rootContext) GoRefValue.Arg(value.paramIndex)
             else calleeArgMap[ctx]?.getOrNull(value.paramIndex)
         else -> null
+    }
+
+    private fun freeVarValue(ctx: ContextInfo): GoRefValue {
+        calleeClosure[ctx]?.let { return it }
+        if (ctx == ContextInfo.rootContext) return GoRefValue.FreeVarBase
+
+        error("Unbound free var in non-root context")
     }
 
     private fun registerLocal(register: GoIRRegister, ctx: ContextInfo): GoRefValue.Local =
