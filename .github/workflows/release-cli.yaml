@@ -35,6 +35,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write
     steps:
       -
         name: Install GitHub CLI
@@ -220,33 +221,26 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
       -
-        name: Check npm token availability
-        if: ${{ steps.release_version.outputs.status == 'succeeded' }}
-        id: check_npm
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -n "$NPM_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-      -
         name: Set up Node for npm publish
-        if: ${{ steps.check_npm.outputs.available == 'true' && steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
+        if: ${{ steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       -
         name: Publish to npm
-        if: ${{ steps.check_npm.outputs.available == 'true' && steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
+        if: ${{ steps.release_version.outputs.status == 'succeeded' && (steps.semantic_release.outputs.new_release_channel == '' || steps.manual_release.outputs.new-version != '') }}
         working-directory: cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           RELEASE_VERSION="${{ steps.release_version.outputs.RELEASE_VERSION }}"
+
+          # Trusted publishing (OIDC) mints a short-lived credential via the
+          # id-token permission and attaches provenance automatically; no
+          # NPM_TOKEN is used. It requires npm >= 11.5.1 (newer than the npm
+          # bundled with Node 22), so upgrade the CLI first.
+          npm install -g npm@latest
+          npm --version
 
           bash scripts/build-npm-packages.sh dist "$RELEASE_VERSION"
 
