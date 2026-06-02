@@ -61,6 +61,17 @@ class GoMethodCallSummaryHandler(
             )
         }
 
+    override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
+        super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->
+            if (seq !is Sequent.ZeroToFact) return@flatMapTo listOf(seq)
+
+            val result = mutableListOf(seq)
+            applyCallAliases(seq.factAp) { aliased ->
+                result += Sequent.ZeroToFact(aliased, seq.traceInfo)
+            }
+            result
+        }
+
     override fun handleSummary(
         currentFactAp: FinalFactAp,
         summaryEffect: SummaryEdgeApplication,
@@ -81,7 +92,7 @@ class GoMethodCallSummaryHandler(
             }
 
             if (summaryEdge.hasMemoryEffect()) {
-                context.aliasAnalysis.forEachAliasAtStatement(statement, summaryFactAp) { aliased ->
+                applyCallAliases(summaryFactAp) { aliased ->
                     result += handleSummaryEdge(initialFactRefinement, aliased)
                 }
             }
@@ -90,6 +101,19 @@ class GoMethodCallSummaryHandler(
         }
 
         return result
+    }
+
+    private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
+        context.aliasAnalysis.forEachAliasAtStatement(statement, fact) {
+            body(it)
+        }
+
+        val freeVars = fact.getStartAccessors().filter { GoFlowFunctionUtils.isFreeVarAccessor(it) }
+        freeVars.forEach { freeVarAccessor ->
+            context.aliasAnalysis.forEachHeapAliasAtStatement(statement, fact, freeVarAccessor) {
+                body(it)
+            }
+        }
     }
 
     private fun SummaryEdge.hasMemoryEffect(): Boolean {

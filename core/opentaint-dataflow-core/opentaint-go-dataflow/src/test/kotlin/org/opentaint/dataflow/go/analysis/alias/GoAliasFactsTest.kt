@@ -20,7 +20,7 @@ class GoAliasFactsTest {
 
     @Test
     fun `accessor kinds are distinct`() {
-        val field = GoFieldAlias(GoAliasAccessor.Field("C", "f", "T"), isImmutable = false)
+        val field = GoFieldAlias(GoAliasAccessor.Field("C", "f"))
         assertEquals(0, field.accessorKind)
         assertEquals(1, GoArrayAlias.accessorKind)
         assertEquals(2, GoRefAlias.accessorKind)
@@ -31,16 +31,5 @@ class GoAliasFactsTest {
         val a = GoLocalAlias.SimpleLoc(GoRefValue.Local(1, ContextInfo.rootContext))
         val b = GoLocalAlias.SimpleLoc(GoRefValue.Local(2, ContextInfo.rootContext))
         assertTrue(a.compareTo(b) < 0)
-    }
-
-    @Test
-    fun `field alias orders by immutability then field`() {
-        val mutableF = GoFieldAlias(GoAliasAccessor.Field("C", "a", "T"), isImmutable = false)
-        val immutableF = GoFieldAlias(GoAliasAccessor.Field("C", "a", "T"), isImmutable = true)
-        assertTrue(mutableF.compareTo(immutableF) < 0)
-        val fa = GoFieldAlias(GoAliasAccessor.Field("C", "a", "T"), isImmutable = false)
-        val fb = GoFieldAlias(GoAliasAccessor.Field("C", "b", "T"), isImmutable = false)
-        assertTrue(fa.compareTo(fb) < 0)
-        assertEquals(0, fa.compareTo(GoFieldAlias(GoAliasAccessor.Field("C", "a", "T"), isImmutable = false)))
     }
 }

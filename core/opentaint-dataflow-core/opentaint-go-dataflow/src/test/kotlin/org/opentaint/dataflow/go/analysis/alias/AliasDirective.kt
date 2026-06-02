@@ -21,7 +21,7 @@ object AliasDirective {
                 rest.startsWith("@") -> { accessors.add(GoAliasAccessor.Ref); rest = rest.substring(1) }
                 rest.startsWith(".") -> {
                     val m = Regex("^\\.([A-Za-z0-9_]+)").find(rest) ?: error("Bad field accessor: $rest")
-                    accessors.add(GoAliasAccessor.Field("", m.groupValues[1], ""))
+                    accessors.add(GoAliasAccessor.Field("", m.groupValues[1]))
                     rest = rest.substring(m.value.length)
                 }
                 else -> error("Bad accessor in path: $raw at $rest")

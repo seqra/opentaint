@@ -233,9 +233,16 @@ object GoFlowFunctionUtils {
         else -> type
     }
 
-    fun freeVarAccessor(function: GoIRFunction, argSlot: Int): FieldAccessor {
-        return createFieldAccessor(function.fullName, "freeVar$$argSlot")
-    }
+    const val FREE_VAR_ACCESSOR_PREFIX = "freeVar$"
+
+    fun freeVarAccessor(function: GoIRFunction, argSlot: Int): FieldAccessor =
+        createFieldAccessor(function.fullName, "$FREE_VAR_ACCESSOR_PREFIX$argSlot")
+
+    fun isFreeVarAccessor(accessor: Accessor): Boolean =
+        accessor is FieldAccessor && isFreeVarAccessor(accessor)
+
+    fun isFreeVarAccessor(accessor: FieldAccessor): Boolean =
+        accessor.fieldName.startsWith(FREE_VAR_ACCESSOR_PREFIX)
 
     fun fieldAccessor(expr: GoIRFieldExpr): FieldAccessor {
         val structTypeName = resolveStructTypeName(expr.x.type)

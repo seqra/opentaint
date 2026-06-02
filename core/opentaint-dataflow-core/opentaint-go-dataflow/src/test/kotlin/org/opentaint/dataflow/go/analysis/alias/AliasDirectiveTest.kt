@@ -9,7 +9,7 @@ class AliasDirectiveTest {
     fun `parses paths with accessors`() {
         val d = AliasDirective.parsePath("arg0.value")
         assertEquals(AccessPathBase.Argument(0), d.base)
-        assertEquals(listOf(GoAliasAccessor.Field("", "value", "")), d.accessors)
+        assertEquals(listOf(GoAliasAccessor.Field("", "value")), d.accessors)
         assertEquals(false, d.negated)
     }
 
@@ -23,7 +23,7 @@ class AliasDirectiveTest {
     @Test
     fun `parses chained accessors`() {
         val d = AliasDirective.parsePath("arg0.box.value")
-        assertEquals(listOf(GoAliasAccessor.Field("", "box", ""), GoAliasAccessor.Field("", "value", "")), d.accessors)
+        assertEquals(listOf(GoAliasAccessor.Field("", "box"), GoAliasAccessor.Field("", "value")), d.accessors)
     }
 
     @Test

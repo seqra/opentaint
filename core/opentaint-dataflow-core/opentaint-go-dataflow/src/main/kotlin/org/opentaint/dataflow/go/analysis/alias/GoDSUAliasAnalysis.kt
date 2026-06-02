@@ -155,7 +155,7 @@ class GoDSUAliasAnalysis(
         return when (val expr = inst.expr) {
             is GoIRMakeClosureExpr -> evalMakeClosure(inst, expr, state, gas)
             is GoIRFieldAddrExpr ->
-                evalAddrLink(lhs, refValueOf(expr.x, ctx), GoFieldAlias(structFieldAccessor(expr.x, expr.fieldName), false), state)
+                evalAddrLink(lhs, refValueOf(expr.x, ctx), GoFieldAlias(structFieldAccessor(expr.x, expr.fieldName)), state)
             is GoIRIndexAddrExpr ->
                 evalAddrLink(lhs, refValueOf(expr.x, ctx), GoArrayAlias, state)
             else -> state.removeOldAndMergeWith(lhs.aliasInfo().index(), evalExpr(expr, inst, state, gas))
@@ -183,7 +183,7 @@ class GoDSUAliasAnalysis(
                 aliasSetFromInfo(GoLocalAlias.Alloc(instIdx, ctx))
 
             is GoIRFieldExpr ->
-                heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoFieldAlias(structFieldAccessor(expr.x, expr.fieldName), false))
+                heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoFieldAlias(structFieldAccessor(expr.x, expr.fieldName)))
 
             is GoIRIndexExpr -> heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoArrayAlias)
             is GoIRLookupExpr -> heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoArrayAlias)
@@ -199,7 +199,7 @@ class GoDSUAliasAnalysis(
 
             is GoIRFreeVarValueExpr -> {
                 val closure = freeVarValue(ctx)
-                aliasSetFromInfo(HeapAlias(state.heapObj(closure.aliasInfo()), GoFieldAlias(freeVarField(gas.function, expr.freeVarIndex), false)))
+                aliasSetFromInfo(HeapAlias(state.heapObj(closure.aliasInfo()), GoFieldAlias(freeVarField(gas.function, expr.freeVarIndex))))
             }
 
             is GoIRExtractExpr -> copyOf(expr.tuple, state, instIdx, ctx)
@@ -305,7 +305,7 @@ class GoDSUAliasAnalysis(
         var result = state.removeOldAndMergeWith(closure.aliasInfo().index(), aliasSetFromInfo(alloc))
         for ((i, binding) in expr.bindings.withIndex()) {
             val b = refValueOf(binding, ctx) ?: continue
-            val heapAlias = HeapAlias(result.heapObj(closure.aliasInfo()), GoFieldAlias(freeVarField(expr.fn, i), false)).index()
+            val heapAlias = HeapAlias(result.heapObj(closure.aliasInfo()), GoFieldAlias(freeVarField(expr.fn, i))).index()
             result = result.mergeWith(heapAlias, b.aliasInfo().index())
         }
         return result
@@ -475,11 +475,11 @@ class GoDSUAliasAnalysis(
     private fun unknown(instIdx: Int, ctx: ContextInfo): AliasSet = aliasSetFromInfo(GoUnknown(instIdx, ctx))
 
     private fun structFieldAccessor(structVal: GoIRValue, fieldName: String): GoAliasAccessor.Field =
-        GoAliasAccessor.Field(structVal.type.typeName.removePrefix("*"), fieldName, "")
+        GoAliasAccessor.Field(structVal.type.typeName.removePrefix("*"), fieldName)
 
     private fun freeVarField(fn: GoIRFunction, slot: Int): GoAliasAccessor.Field {
         val accessor = GoFlowFunctionUtils.freeVarAccessor(fn, slot)
-        return GoAliasAccessor.Field(accessor.className, accessor.fieldName, accessor.fieldType)
+        return GoAliasAccessor.Field(accessor.className, accessor.fieldName)
     }
 
     private fun State.heapObj(instance: AAInfo): Int = aliasGroupId(instance.index())

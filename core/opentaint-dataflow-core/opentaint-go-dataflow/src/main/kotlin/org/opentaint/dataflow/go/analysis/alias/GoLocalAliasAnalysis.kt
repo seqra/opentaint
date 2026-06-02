@@ -58,13 +58,50 @@ class GoLocalAliasAnalysis(
         return stmtAlias.unsafeState().findLocalAlias(result.manager, base.idx)
     }
 
-    private fun State.findLocalAlias(manager: AAInfoManager, localIdx: Int): List<GoAliasInfoNoRef>? {
+    fun findHeapAlias(
+        base: AccessPathBase,
+        accessors: List<GoAliasAccessor.NoRef>,
+        stmt: GoIRInst
+    ): List<GoAliasInfoNoRef>? {
+        if (base !is AccessPathBase.LocalVar) return null
+
+        val stateBefore = result.statesBeforeStmt
+        val stmtIdx = stmt.location.index
+        val stmtAlias = stateBefore.getOrNull(stmtIdx) ?: return null
+
+        return stmtAlias.unsafeState().findHeapAlias(result.manager, base.idx, accessors)
+    }
+
+    private fun State.findHeapAlias(manager: AAInfoManager, localIdx: Int, accessors: List<GoAliasAccessor.NoRef>): List<GoAliasInfoNoRef>? {
         val localInfo = GoLocalAlias.SimpleLoc(GoRefValue.Local(localIdx, ContextInfo.rootContext))
         val localInfoIdx = manager.find(localInfo) ?: return null
 
+        val heapInfoIdx = accessors.fold(localInfoIdx) { prev, accessor ->
+            val instance = aliasGroupId(prev)
+
+            val heapAccessor = when (accessor) {
+                is GoAliasAccessor.Array -> GoArrayAlias
+                is GoAliasAccessor.Field -> GoFieldAlias(accessor)
+            }
+            val info = HeapAlias(instance, heapAccessor)
+            manager.find(info) ?: return null
+        }
+        return convertAllAliases(heapInfoIdx, manager)
+    }
+
+    private fun State.findLocalAlias(manager: AAInfoManager, localIdx: Int): List<GoAliasInfoNoRef>? {
+        val localInfo = GoLocalAlias.SimpleLoc(GoRefValue.Local(localIdx, ContextInfo.rootContext))
+        val localInfoIdx = manager.find(localInfo) ?: return null
+        return convertAllAliases(localInfoIdx, manager)
+    }
+
+    private fun State.convertAllAliases(
+        infoIdx: Int,
+        manager: AAInfoManager
+    ): MutableList<GoAliasInfoNoRef> {
         val result = mutableListOf<GoAliasInfoNoRef>()
-        forEachAliasInSet(localInfoIdx) { aliasIdx ->
-            if (aliasIdx != localInfoIdx) {
+        forEachAliasInSet(infoIdx) { aliasIdx ->
+            if (aliasIdx != infoIdx) {
                 result += convert(aliasIdx, manager, depth = 0)
             }
         }

@@ -66,15 +66,15 @@ sealed interface GoLocalAlias : AAInfo {
 
 sealed interface GoAliasAccessor {
     sealed interface NoRef: GoAliasAccessor
-    data class Field(val className: String, val fieldName: String, val fieldType: String) : NoRef
+    data class Field(val className: String, val fieldName: String) : NoRef
     data object Array : NoRef
     data object Ref : GoAliasAccessor
 }
 
 data class GoFieldAlias(
     val field: GoAliasAccessor.Field,
-    override val isImmutable: Boolean,
 ) : AAHeapAccessor {
+    override val isImmutable: Boolean get() = false
     override val accessorKind: Int get() = 0
     override fun compareAccessor(accessor: AAHeapAccessor): Int {
         accessor as GoFieldAlias
@@ -82,9 +82,7 @@ data class GoFieldAlias(
         if (c != 0) return c
         val c2 = field.fieldName.compareTo(accessor.field.fieldName)
         if (c2 != 0) return c2
-        val c3 = field.className.compareTo(accessor.field.className)
-        if (c3 != 0) return c3
-        return field.fieldType.compareTo(accessor.field.fieldType)
+        return field.className.compareTo(accessor.field.className)
     }
 }
 
