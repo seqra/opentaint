@@ -60,8 +60,9 @@ sealed interface GoLocalAlias : AAInfo {
 }
 
 sealed interface GoAliasAccessor {
-    data class Field(val className: String, val fieldName: String, val fieldType: String) : GoAliasAccessor
-    data object Array : GoAliasAccessor
+    sealed interface NoRef: GoAliasAccessor
+    data class Field(val className: String, val fieldName: String, val fieldType: String) : NoRef
+    data object Array : NoRef
     data object Ref : GoAliasAccessor
 }
 

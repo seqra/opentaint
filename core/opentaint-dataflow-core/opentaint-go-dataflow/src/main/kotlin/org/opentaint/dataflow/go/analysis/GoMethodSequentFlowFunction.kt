@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -135,6 +134,7 @@ class GoMethodSequentFlowFunction(
         currentFact: FinalFactAp,
         toBase: AccessPathBase,
         fromBase: AccessPathBase,
+        additionFactsOnAssign: (FinalFactAp) -> List<FinalFactAp> = { emptyList() }
     ): Set<Sequent> {
         val result = mutableSetOf<Sequent>()
 
@@ -153,6 +153,10 @@ class GoMethodSequentFlowFunction(
         if (currentFact.base == fromBase) {
             val newFact = currentFact.rebase(toBase)
             result.add(makeEdge(initialFact, newFact))
+
+            additionFactsOnAssign(newFact).forEach {
+                result.add(makeEdge(initialFact, it))
+            }
         }
 
         return result
@@ -281,8 +285,13 @@ class GoMethodSequentFlowFunction(
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val dstBase = GoFlowFunctionUtils.accessPathBase(inst.addr, method)
 
-        // todo: resolve ref aliases here
-        return handleSimpleAssign(initialFact, currentFact, dstBase, valueBase)
+        return handleSimpleAssign(initialFact, currentFact, dstBase, valueBase) { fact ->
+            val aliased = mutableListOf<FinalFactAp>()
+            context.aliasAnalysis.forEachAliasAtStatement(currentInst, fact) {
+                aliased += it
+            }
+            aliased
+        }
     }
 
     private fun handleFieldStore(
@@ -294,10 +303,7 @@ class GoMethodSequentFlowFunction(
         val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
 
         val access = RefAccess(instance, GoFlowFunctionUtils.fieldAccessorFromStore(inst))
-        return complexAccessorWrite(access, currentFact, initialFact, valueBase) { _, _ ->
-            // todo: apply aliases
-            emptyList()
-        }
+        return complexAccessorWrite(access, currentFact, initialFact, valueBase)
     }
 
     private fun handleIndexStore(
@@ -309,18 +315,14 @@ class GoMethodSequentFlowFunction(
         val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
 
         val access = RefAccess(instance, ElementAccessor)
-        return complexAccessorWrite(access, currentFact, initialFact, valueBase) { _, _ ->
-            // todo: apply aliases
-            emptyList()
-        }
+        return complexAccessorWrite(access, currentFact, initialFact, valueBase)
     }
 
     private fun complexAccessorWrite(
         writeTo: Access,
         currentFact: FinalFactAp,
         initialFact: InitialFactAp?,
-        valueBase: AccessPathBase,
-        writeToMemoryAliases: (AccessPathBase, Accessor) -> List<Pair<AccessPathBase, List<Accessor>>>
+        valueBase: AccessPathBase
     ): MutableSet<Sequent> {
         val result = mutableSetOf<Sequent>()
 
@@ -353,11 +355,8 @@ class GoMethodSequentFlowFunction(
                     val newFact = currentFact.rebase(destBase).prependAccessor(accessor)
                     result.add(makeEdge(initialFact, newFact))
 
-                    writeToMemoryAliases(destBase, accessor).forEach { (rootBase, accessors) ->
-                        val newAliasedFact = accessors.fold(currentFact.rebase(rootBase)) { f, acc ->
-                            f.prependAccessor(acc)
-                        }
-                        result.add(makeEdge(initialFact, newAliasedFact))
+                    context.aliasAnalysis.forEachAliasAtStatement(currentInst, newFact) { aliased ->
+                        result.add(makeEdge(initialFact, aliased))
                     }
                 }
             }
@@ -389,7 +388,7 @@ class GoMethodSequentFlowFunction(
         val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val globalAccess = GoFlowFunctionUtils.accessForGlobal(inst.global)
 
-        return complexAccessorWrite(globalAccess, currentFact, initialFact, valueBase) { _, _ -> emptyList() }
+        return complexAccessorWrite(globalAccess, currentFact, initialFact, valueBase)
     }
 
     private fun handleReturn(
