@@ -6,6 +6,9 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignActi
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers.WithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier.ArrayElement
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -21,7 +24,7 @@ class GlobalSourceTraceTest : AnalysisTest() {
     private val osArgsGlobalSource = GoSerializedGlobalSource(
         global = GoNameMatcher.Simple("os.Args"),
         condition = null,
-        taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
+        taint = listOf(GoSerializedAssignAction("taint", WithModifiers(Result, listOf(ArrayElement)))),
         info = null,
     )
 

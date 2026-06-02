@@ -11,7 +11,8 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers.WithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier.ArrayElement
 import org.opentaint.go.config.GoConfigLoader
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -26,13 +27,7 @@ class PatternHeaderGetTaintTest : AnalysisTest() {
         function = GoNameMatcher.Simple("test.sourceHeader"),
         condition = null,
         taint = listOf(
-            GoSerializedAssignAction(
-                "taint",
-                PositionBaseWithModifiers.WithModifiers(
-                    Result,
-                    listOf(PositionModifier.ArrayElement, PositionModifier.ArrayElement),
-                ),
-            ),
+            GoSerializedAssignAction("taint", WithModifiers(Result, listOf(ArrayElement, ArrayElement))),
         ),
         info = null,
     )
