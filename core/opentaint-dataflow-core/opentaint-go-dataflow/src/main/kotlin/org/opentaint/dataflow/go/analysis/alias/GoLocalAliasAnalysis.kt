@@ -1,12 +1,16 @@
 package org.opentaint.dataflow.go.analysis.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.inst.GoIRInst
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 sealed interface GoAliasInfo
 data class AliasApInfo(val base: AccessPathBase, val accessors: List<GoAliasAccessor>) : GoAliasInfo
@@ -16,20 +20,35 @@ class GoLocalAliasAnalysis(
     private val function: GoIRFunction,
     private val params: Params = Params(),
 ) {
-    data class Params(val interProcCallDepth: Int = 0)
+    data class Params(
+        val interProcCallDepth: Int = 0,
+        val aliasAnalysisTimeLimit: Duration = 10.seconds,
+    )
 
     companion object {
         private const val HEAP_CHAIN_LIMIT = 5
+        private val logger = object : KLogging() {}.logger
     }
 
     private val result: GoDSUAliasAnalysis.AnalysisResult by lazy {
-        GoDSUAliasAnalysis(function, params.interProcCallDepth).analyze()
+        withAnalysisCancellation(
+            params.aliasAnalysisTimeLimit, parentCancellation = null,
+            body = { cancellation ->
+                GoDSUAliasAnalysis(function, params.interProcCallDepth, cancellation).analyze()
+            },
+            onAnalysisCancelled = {
+                logger.error {
+                    "Alias analysis for $function exceed ${params.aliasAnalysisTimeLimit}"
+                }
+                GoDSUAliasAnalysis.AnalysisResult(null, null)
+            }
+        )
     }
 
     fun findAlias(base: AccessPathBase, inst: GoIRInst): List<AliasApInfo> {
         val self = listOf(AliasApInfo(base, emptyList()))
         val idx = inst.location.index
-        val connected = result.statesBeforeStmt.getOrNull(idx) ?: return self
+        val connected = result.statesBeforeStmt?.getOrNull(idx) ?: return self
         for (entry in connected.aliasGroups.values) {
             val converted = entry.flatMap { convert(it, connected.aliasGroups, 0) }.distinct()
             if (converted.any { it is AliasApInfo && it.accessors.isEmpty() && it.base == base }) {

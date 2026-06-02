@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAHeapAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
@@ -58,6 +59,7 @@ import org.opentaint.ir.go.value.GoIRValue
 class GoDSUAliasAnalysis(
     private val rootFunction: GoIRFunction,
     private val interProcCallDepth: Int,
+    val cancellation: AnalysisCancellation
 ) {
     val aliasManager = AAInfoManager()
     val dsuMergeStrategy = DsuMergeStrategy(aliasManager)
@@ -70,8 +72,8 @@ class GoDSUAliasAnalysis(
     data class ConnectedAliases(val aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>)
 
     data class AnalysisResult(
-        val statesBeforeStmt: List<ConnectedAliases>,
-        val statesAfterStmt: List<ConnectedAliases>,
+        val statesBeforeStmt: List<ConnectedAliases>?,
+        val statesAfterStmt: List<ConnectedAliases>?,
     )
 
     class GraphAnalysisState(size: Int, val ctx: ContextInfo, val function: GoIRFunction) {
@@ -110,6 +112,8 @@ class GoDSUAliasAnalysis(
             initialState = initialState,
             merge = { _, states -> State.merge(aliasManager, dsuMergeStrategy, states.values.filterNotNull()) },
             eval = { idx, st ->
+                cancellation.checkpoint()
+
                 before[idx] = st
                 step(jig.statements[idx], st, gas)
             },
