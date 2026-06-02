@@ -2,8 +2,8 @@
 
 ## Samples
 
-- `@PositiveRuleSample` — reproduce the vulnerability from the requirements: tainted input from the real source flowing through the real hops into the dangerous sink, mirroring the actual signatures and annotations
-- `@NegativeRuleSample` — a flow the rule must not flag: the safe (sanitized or parameterized) version of the same operation, or a confirmed false positive you're narrowing the rule against. Keep it realistic, not stripped to constants
+- `@PositiveRuleSample` — a minimal flow that must flag: a known (built-in) source's value passed straight into the new sink, or the new source's value into a known (built-in) sink — real signatures, no extra hops. One per new source and per new sink; `value`/`id` point at the join rule
+- `@NegativeRuleSample` — the safe (sanitized or parameterized) variant of the same, which must not flag; or a confirmed false positive you're narrowing the rule against. Keep it realistic, not stripped to constants
 
 ```java
 package test;

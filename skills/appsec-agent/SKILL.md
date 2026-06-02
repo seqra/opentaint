@@ -100,7 +100,7 @@ You are the only writer of `.opentaint/tracking/state.yaml` — it records the c
 On start, and after any compaction, reconstruct position from artifacts before doing anything — never replay a completed phase:
 
 - read `state.yaml` and the `tracking/` tree
-- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every entry `done` and `lib-pieces.yaml` with every entry resolved → discover; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
+- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every entry `done` plus the `tracking/rules` join requirements → discover; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
 - detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; methods in `dropped-external-methods.yaml` not yet in any approximation unit → approximations
 
 ## Tracking layout
@@ -111,9 +111,9 @@ The single source of truth for the tracking schema; each skill writes only its o
 .opentaint/tracking/
   state.yaml                              # you only — levels + phase status
   coverage.yaml                           # triage-dependencies seeds, discover-attack-surface fills — one entry per dependency package weighed (deep)
-  lib-pieces.yaml                         # discover-attack-surface parks unpaired sources/sinks; assemble-lib-rules resolves them (deep)
+  surface.yaml                            # discover-attack-surface — the sources/sinks each package introduces (deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
-  rules/<name>.yaml                       # one per rule (join requirement — from discover-attack-surface or assemble-lib-rules)
+  rules/<name>.yaml                       # one per vuln-class join (requirement by assemble-lib-rules; written + tested next phase)
   approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
   approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
   approximations/skipped.yaml             # methods the engine asks for but that carry no taint
@@ -148,14 +148,20 @@ packages:
       free-form — what was found and why
 ```
 
-lib-pieces.yaml — discover-attack-surface appends a source or sink it couldn't pair; assemble-lib-rules pairs each into a join and resolves its `disposition` (deep):
+surface.yaml — discover-attack-surface appends the sources/sinks each package introduces; assemble-lib-rules groups them into join requirements (deep). `builtin: null` ⇒ a new pattern to write next phase; sources are general, sinks carry a `vuln_class`:
 
 ```yaml
-sources:                  # likewise a `sinks:` list
-  - role: Apache HttpClient response body — server-controlled data
-    package: org.apache.hc.client5.http
-    dependency: org.apache.httpcomponents.client5:httpclient5:5.3
-    disposition: pending  # pending | <join-name> | dropped: <reason>
+sources:
+  - package: org.springframework.web.reactive.function.server
+    idea: ServerRequest body/params — untrusted request data
+    builtin: null
+    dependency: org.springframework:spring-webflux:6.1.0
+sinks:
+  - package: org.springframework.web.reactive.function.client
+    vuln_class: ssrf
+    idea: WebClient.get().uri($UNTRUSTED)
+    builtin: null
+    dependency: org.springframework:spring-webflux:6.1.0
 ```
 
 findings/<finding_name>.yaml — created by the SARIF→finding script; `verdict`/`notes` by analyze-findings; `poc`/`poc_script` by generate-poc:
@@ -171,16 +177,21 @@ poc: pending            # pending | confirmed | failed
 poc_script: null        # path under .opentaint/pocs/ once generate-poc writes one
 ```
 
-rules/<name>.yaml — created by discover-attack-surface or assemble-lib-rules (`description`); `test_project` by create-test-project; `tests_passing` + `rule_id` + `artifact` by create-rule:
+rules/<name>.yaml — one per vuln-class join (`<name>` = the class); `description` + `sources`/`sinks` by assemble-lib-rules; `test_project` by create-test-project; `tests_passing` + `rule_id` + `artifact` by create-rule:
 
 ```yaml
-name: mybatis-sqli
+name: ssrf              # the vuln class; becomes the join rule's file and id
 rule_id: null           # filled on creation
 artifact: null          # added once the rule file exists
 finding: null           # finding_name; non-null only for suppress-FP
-requirements: >        # short — what built-ins miss, not a full traced flow
-  CWE-89 SQLi via MyBatis ${} ; source: HTTP param (built-in spring source) ; sink: ${} in SelectProvider — no built-in, write one ; lives in OrderMapper
-dependencies: [org.mybatis:mybatis:3.5.13]
+requirements: >        # short — the class and what the join wires
+  CWE-918 SSRF — join every untrusted-data source to the SSRF sink group
+sources:                # ref a built-in, or a new one to write
+  - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+  - new: ServerRequest body/params — org.springframework.web.reactive.function.server
+sinks:
+  - new: WebClient.get().uri($UNTRUSTED) — org.springframework.web.reactive.function.client; in DefaultAttachmentService
+dependencies: [org.springframework:spring-webflux:6.1.0]
 stages:                 # pending | in_progress | done
   description: done
   test_project: pending

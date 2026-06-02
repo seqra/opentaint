@@ -44,9 +44,9 @@ opentaint test approximation init <test-project> \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 ```
 
-### 2. Read the real flow, then write samples
+### 2. Read the real signatures, then write samples
 
-The requirements only name the source/sink and its framework. Before writing, find that source and sink in `<project-root>` and read the actual method signatures, annotations, and how the tainted value is built. The samples must mirror that code, not a guess — a sample built on the wrong signature compiles but verifies nothing
+The requirements name sources and sinks. For each new source and new sink, find it in `<project-root>` and read its real method signature and annotations — the pattern matches on those, so a sample built on the wrong signature compiles but verifies nothing. The flow itself is minimal, not the app's real path: to exercise a new sink, pass a known (built-in) source's value straight into it; to exercise a new source, pass its value straight into a known (built-in) sink
 
 Write Java samples under `<test-project>/src/main/java/test/`, each annotated with its expected verdict — `@PositiveRuleSample` (must flag) or `@NegativeRuleSample` (must not). `value` is the rule path relative to the ruleset root (with `.yaml`), `id` the short id from the YAML — not the full `--rule-id` used by `opentaint scan`. One expected verdict per sample. Split the samples across files however groups most logically — don't cram unrelated ones into a single class
 

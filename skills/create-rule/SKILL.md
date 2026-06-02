@@ -11,6 +11,8 @@ metadata:
 
 Create a pattern rule for a vulnerability class, then test it against the prepared test project and fix it until every sample passes
 
+Two roles: a **source pass** writes the source lib rules the requirements name (a source isn't testable alone — the joins that ref it verify it later, so author and stop); a **sink pass**, per vuln class, writes that class's sink lib rules and the one join that refs every source, then tests
+
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
@@ -86,14 +88,14 @@ rules:
 
 ### 3. Create the security rule (join mode)
 
-Write it at `<rules-dir>/java/security/<name>.yaml` — name the file and `id` after the rule name from the tracking file. Wire the sources and sinks (built-in or custom) via `refs`:
+One join per vuln class — write it at `<rules-dir>/java/security/<name>.yaml`, naming the file and `id` after the class (the requirement's `name`). Ref every source (built-in + the new per-package ones) and the class's sink group, and wire each source to the sink in `on:`, like the built-in `java/security/ssrf.yaml`:
 
 ```yaml
 rules:
-  - id: my-vulnerability
+  - id: sql-injection
     severity: ERROR
     message: >-
-      Untrusted data flows to dangerous operation
+      Untrusted data flows to a dangerous operation
     metadata:
       cwe: CWE-89
       short-description: SQL Injection via untrusted input
@@ -101,13 +103,18 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/my-source.yaml#my-custom-source
-          as: source
-        - rule: java/lib/generic/my-sink.yaml#my-custom-sink
+        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+          as: servlet-source
+        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+          as: spring-source
+        - rule: java/lib/<pkg>/my-new-sink.yaml#my-new-sink
           as: sink
       on:
-        - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'servlet-source.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
+
+Wire only combinations with a new end — a built-in source → built-in sink pair is already covered by the built-in join, so repeating it here double-reports
 
 ### 4. Test until success
 
