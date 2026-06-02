@@ -21,9 +21,12 @@ import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRExpr
+import org.opentaint.ir.go.expr.GoIRLookupExpr
 import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
 import org.opentaint.ir.go.expr.GoIRNextExpr
 import org.opentaint.ir.go.expr.GoIRTypeAssertExpr
+import org.opentaint.ir.go.expr.GoIRUnOpExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRGlobalStore
@@ -100,20 +103,38 @@ class GoMethodSequentFlowFunction(
         inst: GoIRAssignInst,
     ) {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
-        val expr = inst.expr
-
         if (currentFact.base != registerBase) {
             unchanged()
+        }
+
+        handleAssignedExpr(inst.expr, currentFact, registerBase, checkCommaOk = true)
+    }
+
+    private fun PropagationContext.handleAssignedExpr(
+        expr: GoIRExpr,
+        currentFact: FinalFactAp,
+        registerBase: AccessPathBase.LocalVar,
+        checkCommaOk: Boolean,
+    ) {
+        if (checkCommaOk) {
+            val commaOk = when (expr) {
+                is GoIRLookupExpr -> expr.commaOk
+                is GoIRTypeAssertExpr -> expr.commaOk
+                is GoIRUnOpExpr -> expr.commaOk
+                else -> false
+            }
+
+            if (commaOk) {
+                CommaOkPropagationContext(registerBase, this)
+                    .handleAssignedExpr(expr, currentFact, registerBase, checkCommaOk = false)
+                return
+            }
         }
 
         if (expr is GoIRBinOpExpr && expr.op == GoIRBinaryOp.ADD
             && GoFlowFunctionUtils.isStringType(expr.type)
         ) {
             return handleStringConcat(currentFact, registerBase, expr)
-        }
-
-        if (expr is GoIRTypeAssertExpr && expr.commaOk) {
-            return handleCommaOkTypeAssert(currentFact, registerBase, expr)
         }
 
         if (expr is GoIRMakeClosureExpr) {
@@ -171,21 +192,6 @@ class GoMethodSequentFlowFunction(
                     .prependAccessor(GoFlowFunctionUtils.freeVarAccessor(expr.fn, i))
                 propagateFact(freeVarFact, TraceInfo.Flow)
             }
-        }
-    }
-
-    private fun PropagationContext.handleCommaOkTypeAssert(
-        currentFact: FinalFactAp,
-        registerBase: AccessPathBase,
-        expr: GoIRTypeAssertExpr,
-    ) {
-        // Gen: if the operand carries a fact, taint the value slot (tuple index 0)
-        // of the (value, ok) result. The `ok` bool slot stays clean.
-        val operandBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
-        if (currentFact.base == operandBase) {
-            val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0)
-            val newFact = currentFact.rebase(registerBase).prependAccessor(valueSlot)
-            propagateFact(newFact, TraceInfo.Flow)
         }
     }
 
@@ -515,6 +521,26 @@ class GoMethodSequentFlowFunction(
 
         override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
             error("NDF2F edge can't be refined: $currentFactAp")
+        }
+    }
+
+    private class CommaOkPropagationContext(
+        val resultRegister: AccessPathBase,
+        val base: PropagationContext
+    ) : PropagationContext by base {
+        private val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0)
+
+        private fun FinalFactAp.applyCommaOk(): FinalFactAp {
+            if (base != resultRegister) return this
+            return prependAccessor(valueSlot)
+        }
+
+        override fun propagateFact(fact: FinalFactAp, trace: TraceInfo) {
+            base.propagateFact(fact.applyCommaOk(), trace)
+        }
+
+        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+            base.propagateFactWithAccessorExclude(fact.applyCommaOk(), accessor, trace)
         }
     }
 }

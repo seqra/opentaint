@@ -53,7 +53,6 @@ import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRArrayType
 import org.opentaint.ir.go.type.GoIRBasicType
 import org.opentaint.ir.go.type.GoIRBasicTypeKind
-import org.opentaint.ir.go.type.GoIRBinaryOp
 import org.opentaint.ir.go.type.GoIRMapType
 import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRPointerType
@@ -161,41 +160,20 @@ object GoFlowFunctionUtils {
             // Slice (sub-view preserves taint)
             is GoIRSliceExpr -> singleOperandAccess(expr.x, method)
 
-            // Range iteration
             is GoIRRangeExpr -> singleOperandAccess(expr.x, method)
-            is GoIRNextExpr -> singleOperandAccess(expr.iter, method)
 
-            // Tuple extract (multi-return): index-sensitive
             is GoIRExtractExpr -> {
                 val base = accessPathBase(expr.tuple, method)
                 RefAccess(base, tupleFieldAccessor(expr.extractIndex))
             }
 
-            // Binary op: string concat preserves taint, arithmetic doesn't
-            is GoIRBinOpExpr -> {
-                if (expr.op == GoIRBinaryOp.ADD && isStringType(expr.type)) {
-                    singleOperandAccess(expr.x, method)
-                } else {
-                    null
-                }
-            }
-
-            // Allocations: no taint source
+            is GoIRNextExpr -> error("Already handled")
+            is GoIRMakeClosureExpr -> error("Already handled")
+            is GoIRBinOpExpr -> null
             is GoIRAllocExpr -> null
             is GoIRMakeSliceExpr -> null
             is GoIRMakeMapExpr -> null
             is GoIRMakeChanExpr -> null
-
-            // Closure: taint if any binding is tainted
-            is GoIRMakeClosureExpr -> {
-                if (expr.bindings.isNotEmpty()) {
-                    singleOperandAccess(expr.bindings.first(), method)
-                } else {
-                    null
-                }
-            }
-
-            // Select: complex, treat as opaque
             is GoIRSelectExpr -> null
             is GoIRBuiltinValueExpr -> null
             is GoIRFunctionValueExpr -> null
