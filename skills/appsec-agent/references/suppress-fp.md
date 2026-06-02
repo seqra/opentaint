@@ -1,7 +1,5 @@
 # Suppress-FP block
 
-Load this when the workflow has suppress-FP on, after triage. It fixes confirmed false positives on rules you own or can override, so a rule edit can't silently drop a real finding. Dispatch per the Delegate template in SKILL.md.
-
 For each confirmed FP on an own/overridable rule, one at a time:
 
 1. create-test-project — pin the confirmed TPs as `@PositiveRuleSample` and add the FP as `@NegativeRuleSample`, recompile. Inputs: the FP and TP traces as `<spec>`, the rule's `<tracking-file>`, test-project / test-compiled `.opentaint/test-{projects,compiled}/<name>`

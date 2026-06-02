@@ -21,13 +21,13 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Tracking file `<tracking-file>` — the rule file. Default: `.opentaint/tracking/rules/<name>.yaml`
 - Approximation directories `<config-dir>` / `<approx-dir>` (optional) — apply on a re-dispatch when the test project needs a library model that's now built. Default: none
 
-Built-in rules are available at `opentaint dev rules-path`
+Built-in rules are available at `opentaint health --rules`
 
 ## Workflow
 
 ### 1. Check existing coverage
 
-Browse builtin rules at `opentaint dev rules-path` for source/sink library rules to reference. A `refs` to a built-in source/sink is cheaper and more accurate than a new one
+Browse builtin rules at `opentaint health --rules` for source/sink library rules to reference. A `refs` to a built-in source/sink is cheaper and more accurate than a new one
 
 ### 2. Wire sources and sinks
 
@@ -111,15 +111,15 @@ rules:
 
 ### 4. Test until success
 
-Run the rule tests against the compiled test project; iterate the rule and re-run `test-rules` until every sample passes:
+Run the rule tests against the compiled test project; iterate the rule and re-run `test rule run` until every sample passes:
 
 ```bash
-opentaint dev test-rules <test-compiled> \
+opentaint test rule run <test-compiled> \
   -o .opentaint/test-results/<name> \
   --ruleset <rules-dir>
 ```
 
-`test-rules` auto-loads the built-in rules, so pass only your custom `<rules-dir>` — a literal `builtin` here would be treated as a path. When the caller passed `<config-dir>` / `<approx-dir>`, append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` — without them a library method the test flow relies on drops taint and the positive can't pass. Read `.opentaint/test-results/<name>/test-result.json`:
+`test rule run` auto-loads the built-in rules, so pass only your custom `<rules-dir>` — a literal `builtin` here would be treated as a path. When the caller passed `<config-dir>` / `<approx-dir>`, append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` — without them a library method the test flow relies on drops taint and the positive can't pass. Read `.opentaint/test-results/<name>/test-result.json`:
 
 - `falseNegative` (positive didn't trigger) → patterns too narrow; broaden `pattern-either`, check metavariable names match across branches and between `refs` and `on`
 - `falsePositive` (negative triggered) → patterns too broad; add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`
@@ -143,13 +143,13 @@ Read `dropped-external-methods.yaml` next to it; either way leave `tests_passing
 
 ### 6. Refining for a false positive (suppress-FP)
 
-The test project already pins the confirmed TPs as `@PositiveRuleSample` and reproduces the FP as a `@NegativeRuleSample` — refine only the rule. Narrow it (step 4's `falsePositive` handling) until the negative stops triggering while every positive still passes. Do not touch the samples; if one looks wrong, hand it back upstream
+The test project already pins the confirmed TPs as `@PositiveRuleSample` and reproduces the FP as a `@NegativeRuleSample` — refine only the rule. Narrow it (step 4's `falsePositive` handling) until the negative stops triggering while every positive still passes
 
 ## Output
 
 - The rule file(s) under `<rules-dir>`
 - Tracking updated: `rule_id`, `artifact`, `stages.tests_passing` (per Tracking)
-- Report the full rule id, a one-line test summary, and the exact `test-rules` command used
+- Report the full rule id, a one-line test summary, and the exact `test rule run` command used
 - If blocked (step 5): leave `tests_passing: pending` and report the cause instead
 
 ## Tracking
@@ -179,3 +179,4 @@ stages:
 - A wrong argument position in `(..., $UNTRUSTED, ...)` focuses the wrong parameter — point `focus-metavariable` at the tainted one
 - Refine the rule, never the test project — don't edit or weaken samples here; if one is wrong, hand it back upstream
 - A positive that won't pass because a library method drops taint is not a rule bug — don't broaden the rule to force it; surface it for approximation (step 5)
+- Don't unpack or grep the analyzer JAR for built-in rules — its internals aren't a stable API; read the YAMLs from `opentaint health --rules`

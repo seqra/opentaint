@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Create PassThrough Approximation
 
-Write passThrough propagation rules for external library methods. There's no test project — the main scan applies the config and verifies it; if a modeled method is still dropped or the config errors, you're re-invoked to fix it
+Write passThrough propagation rules for external library methods
 
 ## Inputs
 
@@ -17,84 +17,101 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 - Methods to model `<methods>` — the target method(s) and what each propagates, from the tracking file's `methods` (all `type: passthrough`)
 - Tracking file `<tracking-file>` — the passThrough approximation unit. Default: `.opentaint/tracking/approximations/<name>.yaml`
-- Config output `<config-file>` — where to write the passThrough approximation. Default: `.opentaint/config/<name>.yaml`
+- Config output `<config-file>` — where to write the passThrough approximation. Default: `.opentaint/pass-through/<name>.yaml`
 
 ## Workflow
 
 ### 1. Write the passThrough config
 
-Write `passThrough:` rules into `<config-file>`
+Write `passThrough:` copies into `<config-file>`. When an object carries taint between calls — a setter stores it and a getter returns it later, or a builder holds it — route through a virtual slot, an access path `[<base>, .<DeclaringClass>#<slot>#java.lang.Object]`:
+- the slot name is nominal — the engine never resolves it, so it need not be a real field
+- type it `java.lang.Object` — a concrete type can fail the read-out type-check and drop the taint
+- the writer and reader must name the identical `Class#slot#java.lang.Object` triple, or the taint drops
 
-Simple getter (taint on `this` to `result`):
+Getter / setter pair — the writer stores into the slot, the getter reads the same slot back to `result`:
 ```yaml
 passThrough:
-  - function: com.example.lib.DataWrapper#getValue
-    copy:
-      - from: this
-        to: result
+- function: org.springframework.http.HttpEntity#setBody
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.http.HttpEntity#Body#java.lang.Object
+- function: org.springframework.http.HttpEntity#getBody
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpEntity#Body#java.lang.Object
+    to: result
 ```
 
-Argument to result:
+Several writers sharing one slot — any of them taints the object, the reader pulls it back:
 ```yaml
 passThrough:
-  - function: com.example.lib.Converter#convert
-    copy:
-      - from: arg(0)
-        to: result
+- function: org.apache.tools.ant.types.FileSet#setDir
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.tools.ant.types.FileSet#path#java.lang.Object
+- function: org.apache.tools.ant.types.FileSet#setFile
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.tools.ant.types.FileSet#path#java.lang.Object
 ```
 
-Builder pattern:
+Cross-type builder — when a builder method consumes an argument and returns a *different* type, carry the taint along both the chained receiver (for further calls on `this`) and the returned object, slot included. Four copies: arg → returned-value slot, arg → builder slot, whole builder → returned value, builder slot → returned-value slot:
 ```yaml
 passThrough:
-  - function: com.example.lib.Builder#withName
-    copy:
-      - from: arg(0)
-        to: this
-      - from: arg(0)
-        to: result
-      - from: this
-        to: result
+- function: org.springframework.ldap.query.LdapQueryBuilder#filter
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.LdapQuery#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.LdapQuery#filter#java.lang.Object
 ```
 
-Container via a synthetic field — when a container takes the taint in one call and hands it back in another, write into a field that doesn't really exist, then read from it:
+Conditional propagation — gate a rule with a `condition` (the copy still routes through a slot):
 ```yaml
 passThrough:
-  - function: org.springframework.http.ResponseEntity$BodyBuilder#body
-    copy:
-      - from: arg(0)
-        to:
-          - result
-          - .org.springframework.http.HttpEntity#Body#java.lang.Object
-  - function: org.springframework.http.HttpEntity#getBody
-    copy:
-      - from:
-          - this
-          - .org.springframework.http.HttpEntity#Body#java.lang.Object
-        to: result
-```
-The naive model — copy the data onto `this`, then on read copy `this` to `result` — fails on types: `this` is the container type, not the data type (e.g. `String`), so the engine can't hang the taint on it. Routing through a field typed `java.lang.Object` (here `#Body#java.lang.Object`) sidesteps the mismatch. A synthetic per-object slot `.<rule-storage>` does the same job without naming a field — store on the taking call, read on the returning one (see Reference)
-
-Conditional propagation:
-```yaml
-passThrough:
-  - function: com.example.lib.Parser#parse
-    condition:
-      typeIs:
-        position: arg(0)
-        type: java.lang.String
-    copy:
-      - from: arg(0)
-        to: result
+- function: com.example.lib.Parser#parse
+  condition:
+    typeIs: java.lang.String
+    pos: arg(0)
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .com.example.lib.Parser#parsed#java.lang.Object
 ```
 
 ### 2. Verification is the scan
 
-There's no test project for passThrough. The main scan applies `<config-file>` (run-scan's `--passthrough-approximations`, which takes a file or a directory) and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
+There's no test project for passThrough. The main scan applies `<config-file>` and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
 
 - a method you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check package, class, name, `overrides`), or the `from`/`to` doesn't land on the tainted position
-- a config load / parse error → fix the YAML
+- the flow still doesn't surface though the method is no longer dropped → most often a broken channel: the writer and reader name different `Class#slot#java.lang.Object` triples, or the slot isn't typed `java.lang.Object`
+- a config load / parse error → fix the YAML (an unknown `condition` key, a bad position, or a 2-part field modifier all fail to load)
 
-Never invoke the analyzer JAR directly — always go through the CLI
+Never invoke or grep the analyzer JAR — its internals aren't a stable API; for built-in rules use `opentaint health --rules`, for everything else the CLI
+
+### 3. When the config won't converge
+
+After ~2 fix re-invocations without a clearer cause — matcher fields and `from`/`to` checked, writer/reader slots confirmed identical, the modeled method no longer in `dropped-external-methods.yaml`, but the scan still doesn't surface the flow — don't keep guessing. Report non-convergence to the caller; the orchestrator escalates to debug-rule for a fact-reachability trace of where taint dies
 
 ## Output
 
@@ -107,7 +124,7 @@ Never invoke the analyzer JAR directly — always go through the CLI
 In `<tracking-file>`, once the config is written:
 
 ```yaml
-artifact: .opentaint/config/<name>.yaml
+artifact: .opentaint/pass-through/<name>.yaml
 stages:
   written: done
 ```
@@ -116,25 +133,28 @@ Do not touch other stages or fields
 
 ## Reference
 
-Position values
-- `this`, `result`, `arg(0)`, `arg(1)`, ..., `arg(*)`
-- Position modifiers (YAML list): `.[*]` (array element), `.ClassName#fieldName#fieldType` (field), `.<rule-storage>` (synthetic per-object state, an alternative to a named field)
+Position bases
+- `this`, `result`, `arg(0)`, `arg(1)`, …
+- `any(<classifier>)` — a single argument bound consistently across every position in the rule; `class(<FQN>)` — a static field. Rare — prefer an explicit `arg(N)`
+
+Access-path modifiers (list form `[<base>, <modifier>]`)
+- `.<DeclaringClass>#<slot>#<fieldType>` — a field or virtual slot; type it `java.lang.Object`. The slot name is arbitrary (a descriptive name, or the conventional `<rule-storage>` for a generic carrier)
+- `.[*]` — array / collection element
 
 Function matching
 - Simple: `package.Class#method`
-- Complex: `{package, class, name}`, each with an optional `pattern:` regex — for one hard-to-name function, not for matching many at once (see Gotchas)
+- Complex: `{package, class, name}` — for one hard-to-name function, not for matching many at once (see Gotchas)
 
 Overrides
 - `overrides: true` (default): applies to the class and all subclasses
 - `overrides: false`: exact class only
 
-Conditions
-- `typeIs`, `annotatedWith`, `isConstant`, `isNull`, `constantMatches`, `tainted`, `numberOfArgs`, `methodAnnotated`, `classAnnotated`, `methodNameMatches`, `classNameMatches`, `isStaticField`, `anyOf`, `allOf`, `not`
+Conditions (the only keys that load from YAML)
+- `typeIs`, `annotatedWith`, `isConstant`, `isNull`, `constantMatches`, `constantEq`, `constantGt`, `constantLt`, `tainted`, `anyOf`, `allOf`, `not`
 
 ## Gotchas
 
-- passThrough expresses only from→to copies — DB round-trips, lambdas, and async belong in create-dataflow-approximation
-- The approximation merges with built-ins at the rule level — a provided rule overrides a built-in only if it matches one; don't redefine a method already in `approximated-external-methods.yaml`
+- The approximation merges with built-ins at the rule level — a provided rule overrides a built-in only if it matches one. Don't redefine a method already in `approximated-external-methods.yaml` unless debug-rule shows the built-in isn't propagating taint here, then override deliberately
 - A wrong argument position copies the wrong value — point `from`/`to` at the tainted one
 - In doubt about how a method moves taint — which argument or field reaches the result — read the library's source rather than guessing
-- Model one function per rule — don't use a regex/wildcard `pattern:` matcher (e.g. `name: get.*`, `class: .*`) to cover many functions at once; it over-models, copying taint through methods you never vetted and manufacturing false positives. Write an explicit `function:` per method
+- Model one function per rule — don't use a regex/wildcard `pattern:` matcher (e.g. `name: get.*`, `class: .*`) or `arg(*)` to cover many functions at once; it over-models, copying taint through methods you never vetted and manufacturing false positives. Write an explicit `function:` per method

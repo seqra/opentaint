@@ -15,8 +15,8 @@ var (
 	testApproxDataflow  []string
 )
 
-var devTestApproximationsCmd = &cobra.Command{
-	Use:   "test-approximations <project-model>",
+var testApproximationRunCmd = &cobra.Command{
+	Use:   "run <project-model>",
 	Short: "Run rule tests against annotated test samples with approximations applied",
 	Long: `Run rule tests against annotated test samples with the given approximations applied.
 
@@ -53,10 +53,10 @@ Exit codes:
 }
 
 func init() {
-	devCmd.AddCommand(devTestApproximationsCmd)
+	testApproximationCmd.AddCommand(testApproximationRunCmd)
 
-	devTestApproximationsCmd.Flags().StringVarP(&testApproxOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
-	devTestApproximationsCmd.Flags().DurationVar(&testApproxTimeout, "timeout", 600*time.Second, "Timeout for analysis")
-	devTestApproximationsCmd.Flags().StringVar(&testApproxMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
-	devTestApproximationsCmd.Flags().StringArrayVar(&testApproxDataflow, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
+	testApproximationRunCmd.Flags().StringVarP(&testApproxOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
+	testApproximationRunCmd.Flags().DurationVar(&testApproxTimeout, "timeout", 600*time.Second, "Timeout for analysis")
+	testApproximationRunCmd.Flags().StringVar(&testApproxMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
+	testApproximationRunCmd.Flags().StringArrayVar(&testApproxDataflow, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
 }

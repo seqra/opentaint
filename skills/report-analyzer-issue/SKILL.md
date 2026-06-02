@@ -35,7 +35,7 @@ File a report only for an engine issue debug-rule already confirmed. The diagnos
 
 Write `<issue-file>` — this file is the deliverable; never return the diagnosis as chat text only. Assemble from the inputs:
 
-- Test project — `<test-project>` path, the test command (`test-rules` / `test-approximations`), and the failing `test-result.json` snippet (e.g. a `@PositiveRuleSample` stuck at `falseNegative`)
+- Test project — `<test-project>` path, the test command (`test rule run` / `test approximation run`), and the failing `test-result.json` snippet (e.g. a `@PositiveRuleSample` stuck at `falseNegative`)
 - Rule / approximation — the `<artifact>`: a rule's full id and ruleset, or the approximation's target method(s)
 - Observed vs expected — e.g. expected a finding at `Sink.java:42`; observed none
 - Where the dataflow dies — `file:line` and the instruction, quoted up to the last reachable fact

@@ -26,6 +26,10 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 Reuse `<base-url>` if given. Otherwise build and start the app the way the project expects (`spring-boot:run`, `java -jar`, `docker compose`, …), wait until it's listening, and note the base URL. The PoC must hit a live instance
 
+Bind to `127.0.0.1` (`--server.address=127.0.0.1`, `docker run -p 127.0.0.1:8080:8080`, a compose override on the port mapping) — never `0.0.0.0` or a public interface: a live exploit must not be reachable off-host. A specific non-local IP is fine when the test genuinely needs one, but never the public wildcard
+
+Once it's listening, record it in the registry (see § Tracking) so the orchestrator can reap it later
+
 ### 2. Map the finding to a live request
 
 From the finding's source location find the entry point — the route and method, and the param / header / body field that carries the tainted input — and a payload that drives it to the sink. Common shapes:
@@ -52,10 +56,19 @@ Run it. Confirmation needs observable proof — rows returned, file contents, co
 
 - The PoC script at `<poc-dir>/<finding_name>.py`
 - The finding's `poc` set to `confirmed` or `failed`, `poc_script` recorded, evidence/reason in `notes`
-- If you started the app, leave it running and report its `<base-url>` so the next PoC can reuse it instead of starting another instance
+- If you started the app, register it in `.opentaint/tracking/poc-servers.yaml` and leave it running so the next PoC can reuse it; report the `<base-url>`. You do not stop it — the orchestrator tears down every registered instance at the end of the PoC phase
 - Report the outcome to the caller; if failed, call out that the finding is unconfirmed. Do not write `.opentaint/vulnerabilities.md` — main assembles that from the confirmed findings
 
 ## Tracking
+
+If you started an instance, append it to `.opentaint/tracking/poc-servers.yaml` (PoCs run one at a time, so the append never races) — the orchestrator reads this to tear instances down (`kind` + `ref` give it the stop command):
+
+```yaml
+servers:
+  - kind: process                     # process | container | compose
+    port: 8080
+    ref: "12345"                      # pid | container id/name | compose file path
+```
 
 In `<finding>`, set `poc` and `poc_script` and append the result to `notes`:
 
@@ -83,3 +96,5 @@ notes: >
 
 - Reproduce, don't theorize — a script you didn't run, or a 200 with no observable effect, is not a confirmation
 - failed ≠ false positive — couldn't-reproduce isn't proof the code is safe (auth, missing state, wrong payload). Record `failed` and DO NOT flip `verdict` here
+- Don't bind a started instance to `0.0.0.0` or a public interface — a running exploit must stay off-host (localhost, or a specific IP the test needs)
+- Don't stop instances you started or skip registering them — the orchestrator owns teardown and can only reap what's in `poc-servers.yaml`

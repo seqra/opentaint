@@ -39,7 +39,7 @@ Verdict each logical finding from its flow:
 - TP — the source is attacker-controlled, the sink is genuinely dangerous with that input, and nothing sanitizes it in between
 - FP — a sanitizer/validator neutralizes it, the source isn't actually attacker-controlled (config, constant, server-set), the sink is safe for this input (parameterized, escaped), or the path is infeasible. Record which one, so the suppress-FP stage knows what to narrow
 
-Set `verdict` and append the reasoning to `notes`, below the analyzer report already seeded there. Leave `poc` for generate-poc
+Set `verdict` and append the reasoning to `notes`, below the analyzer report already seeded there
 
 ## Output
 

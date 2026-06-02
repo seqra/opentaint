@@ -1,12 +1,10 @@
 # Dataflow approximation test project
 
-This shape is for code-based (dataflow) approximations only — passThrough approximations are written directly and verified by the scan, with no test project
-
 ## How it tests
 
-`opentaint dev test-approximations` applies one fixed source → sink rule automatically — you do not author or pass a rule. That rule matches a fixed pair, `test.Taint.source()` and `test.Taint.sink(...)`, provided by the `Taint` helper scaffolded into the project. Your samples route taint from `Taint.source()` through the method being approximated into `Taint.sink(...)`. Granularity is per sample (`className#methodName`), so the one fixed rule covers every sample — a broken approximation only flips its own sample
+`opentaint test approximation run` applies one fixed source → sink rule automatically — you do not author or pass a rule. That rule matches a fixed pair, `test.Taint.source()` and `test.Taint.sink(...)`, provided by the `Taint` helper scaffolded into the project. Your samples route taint from `Taint.source()` through the method being approximated into `Taint.sink(...)`. Granularity is per sample (`className#methodName`), so the one fixed rule covers every sample — a broken approximation only flips its own sample
 
-`opentaint dev init-approximation-project <dir>` scaffolds the Gradle build, `Taint.java`, and the `approximation-rule.yaml` reference — you add only the samples (under `src/main/java/test/`). The approximation itself is NOT part of this project: it lives in its own unit folder `.opentaint/approximations/src/<name>` and is applied to this compiled model at test time via `--dataflow-approximations` (see create-dataflow-approximation). Do not create an `approximations/` directory inside the test project
+`opentaint test approximation init <dir>` scaffolds the Gradle build, `Taint.java`, and the `approximation-rule.yaml` reference — you add only the samples (under `src/main/java/test/`)
 
 ## Positive sample
 
@@ -49,6 +47,5 @@ A negative that fires (`falsePositive` in `test-result.json`) means the model is
 
 ## Notes
 
-- `value`/`id` always reference the fixed rule: `approximation-rule.yaml` / `approximation-rule`. test-approximations applies its own bundled copy, so the project's `approximation-rule.yaml` is only a reference — what matters is that samples call `test.Taint.source()` / `test.Taint.sink(...)`
+- `value`/`id` always reference the fixed rule: `approximation-rule.yaml` / `approximation-rule`. `test approximation run` applies its own bundled copy, so the project's `approximation-rule.yaml` is only a reference — what matters is that samples call `test.Taint.source()` / `test.Taint.sink(...)`
 - the sample's receiver type fixes the dropped method's fully-qualified name, and the approximation must `@Approximate` that exact class — so mirror the real call's receiver type. An interface-typed receiver (`Map<String,String> m`, e.g. a method parameter) drops `java.util.Map#computeIfAbsent`; a concrete `Map<String,String> cache = new HashMap<>()` drops `java.util.HashMap#computeIfAbsent`. The `new HashMap<>()` form above is just one case — match whichever the real flow uses
-- the approximation under test is NOT in this project — it lives in the separate unit folder `.opentaint/approximations/src/<name>`, compiled by the CLI (not Gradle) and applied with `--dataflow-approximations <that dir>` — see create-dataflow-approximation

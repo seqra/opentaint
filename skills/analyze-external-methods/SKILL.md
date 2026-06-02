@@ -30,7 +30,7 @@ Every method in `<dropped-file>` is a taint-killing path — model all of them. 
 - passthrough — taint moves by a simple from→to copy: a getter, arg→result, builder, container field, collection `add`/`get`, `StringBuilder.append`, `Stream.collect`
 - dataflow — taint flows through a lambda/callback/functional interface or an async chain
 
-Group by package AND kind — one tracking file per (package, kind): `<package>-passthrough.yaml` for the simple copies, `<package>-dataflow.yaml` for the lambda/callback/async ones. The two kinds are built by different skills with different stages, so they're separate units; kind is the only split (no finer sub-groups). Each unit is one agent's work
+Group by package AND kind — one tracking file per (package, kind): `<package-kebab>-passthrough.yaml` for the simple copies, `<package-kebab>-dataflow.yaml` for the lambda/callback/async ones. `<package-kebab>` is the dotted Java package with `.` replaced by `-` (e.g. `reactor.core.publisher` → `reactor-core-publisher`) so it's filesystem-friendly; the YAML `package:` field keeps the real dotted name. Kind is the only split (no finer sub-groups). Each unit is one agent's work
 
 ### 2. Flag methods to skip
 
@@ -47,7 +47,7 @@ The one exception: a few methods the engine asks about don't carry taint — log
 Create one file per (package, kind); fill only the discovery-stage fields. The two kinds differ — passThrough is written and verified by the scan, dataflow is built and tested on a test project:
 
 ```yaml
-# <package>-passthrough.yaml — simple copies, no test project
+# <package-kebab>-passthrough.yaml — simple copies, no test project
 package: com.foo
 stages:
   description: done
@@ -60,7 +60,7 @@ methods:
 ```
 
 ```yaml
-# <package>-dataflow.yaml — lambda/callback/async, tested on a test project
+# <package-kebab>-dataflow.yaml — lambda/callback/async, tested on a test project
 package: com.foo
 dependencies:                 # exact GAV the test project needs, from the build files
   - com.foo:foo-core:1.2.3
@@ -85,5 +85,5 @@ methods:
 ## Gotchas
 
 - Model every method in `<dropped-file>` — each is a real taint-killing path; don't second-guess the list. The only exceptions are the obvious non-taint methods you move to `skipped.yaml`
-- Approximate only external library methods — never an application-internal class. An internal method that drops taint is a rule or engine matter, not an approximation target; if one shows up as a candidate, drop it
-- One file = one (package, kind) = one agent: passThrough and dataflow go in separate files — different skills, different stages; never put a method in two, or two agents collide
+- Approximate only external library methods — never an application-internal class. If one shows up as a candidate, drop it
+- One file = one (package, kind) = one agent: passThrough and dataflow go in separate files; never put a method in two, or two agents collide

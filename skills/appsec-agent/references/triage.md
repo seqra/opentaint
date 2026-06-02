@@ -1,6 +1,6 @@
 # Triage
 
-The triage step, run in every workflow. It generates the finding files and classifies each TP/FP. On a dynamic run, continue to references/poc.md afterward; on static, triage is the last step. The scan must be stable first. Dispatch per the Delegate template in SKILL.md.
+The scan must be stable first.
 
 ## Generate finding files
 

@@ -23,8 +23,8 @@ var (
 	testRulesPassthrough []string
 )
 
-var devTestRulesCmd = &cobra.Command{
-	Use:   "test-rules <project-model>",
+var testRuleRunCmd = &cobra.Command{
+	Use:   "run <project-model>",
 	Short: "Run rule tests against annotated test samples",
 	Long: `Run rule tests against annotated test samples in the given project model.
 
@@ -51,7 +51,7 @@ Exit codes:
 	},
 }
 
-// testProjectOptions holds the inputs shared by `dev test-rules` and `dev test-approximations`.
+// testProjectOptions holds the inputs shared by `test rule run` and `test approximation run`.
 type testProjectOptions struct {
 	label             string
 	tempDir           string
@@ -186,13 +186,13 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 }
 
 func init() {
-	devCmd.AddCommand(devTestRulesCmd)
+	testRuleCmd.AddCommand(testRuleRunCmd)
 
-	devTestRulesCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Additional ruleset path (repeatable)")
-	devTestRulesCmd.Flags().StringVarP(&testRulesOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
-	devTestRulesCmd.Flags().DurationVar(&testRulesTimeout, "timeout", 600*time.Second, "Timeout for analysis")
-	devTestRulesCmd.Flags().StringVar(&testRulesMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
-	devTestRulesCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
-	devTestRulesCmd.Flags().StringArrayVar(&testRulesDataflow, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
-	devTestRulesCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "passThrough approximation YAML file or directory of them (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Additional ruleset path (repeatable)")
+	testRuleRunCmd.Flags().StringVarP(&testRulesOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
+	testRuleRunCmd.Flags().DurationVar(&testRulesTimeout, "timeout", 600*time.Second, "Timeout for analysis")
+	testRuleRunCmd.Flags().StringVar(&testRulesMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesDataflow, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "passThrough approximation YAML file or directory of them (repeatable)")
 }

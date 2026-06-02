@@ -13,10 +13,6 @@ import (
 // samples reference in @PositiveRuleSample/@NegativeRuleSample.
 const FixedRuleFileName = "approximation-rule.yaml"
 
-// ApproximationsSrcDir is the source root, relative to the project, where the agent writes the
-// approximation under test and which is passed to test-approximations as --dataflow-approximations.
-const ApproximationsSrcDir = "approximations/src"
-
 //go:embed example/approximation-rule.yaml
 var fixedRule []byte
 
@@ -34,8 +30,8 @@ func WriteFixedRule(dir string) (string, error) {
 }
 
 // Scaffold writes the fixed rule (for reference — test-approximations applies its own bundled copy)
-// and the Taint source/sink helper, and creates the approximations source dir for the agent to write
-// the approximation under test into. Samples and the approximation itself are the agent's to write.
+// and the Taint source/sink helper. Samples are the agent's to write; the approximation under test
+// lives in its own unit folder (.opentaint/approximations/<name>), never inside this test project.
 func Scaffold(projectDir string) error {
 	files := map[string][]byte{
 		filepath.Join(projectDir, FixedRuleFileName):                           fixedRule,
@@ -48,10 +44,6 @@ func Scaffold(projectDir string) error {
 		if err := os.WriteFile(path, content, 0o644); err != nil {
 			return fmt.Errorf("write %s: %w", filepath.Base(path), err)
 		}
-	}
-	approxDir := filepath.Join(projectDir, filepath.FromSlash(ApproximationsSrcDir), "approx")
-	if err := os.MkdirAll(approxDir, 0o755); err != nil {
-		return fmt.Errorf("create %s: %w", approxDir, err)
 	}
 	return nil
 }

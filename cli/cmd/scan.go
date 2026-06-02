@@ -8,6 +8,7 @@ import (
 
 	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/load_trace"
+	"github.com/seqra/opentaint/internal/rules"
 	"github.com/seqra/opentaint/internal/sarif"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/seqra/opentaint/internal/version"
@@ -39,6 +40,7 @@ var (
 	TrackExternalMethods                  bool
 	DebugFactReachabilitySarif            bool
 	DebugRunAnalysisOnSelectedEntryPoints string
+	expandRuleRefs                        bool
 )
 
 type RulesetType struct {
@@ -117,7 +119,7 @@ func init() {
 }
 
 // addRuleIDFlag registers the --rule-id flag. Split out from addScanFlags so
-// that `dev debug-fact-reachability` can omit it (it takes the rule ID
+// that `test rule reachability` can omit it (it takes the rule ID
 // positionally and supports only one rule at a time).
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&RuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
@@ -365,6 +367,13 @@ func scan(cmd *cobra.Command) {
 	}
 	if maxMemory != "" {
 		nativeBuilder.SetMaxMemory(maxMemory)
+	}
+	if expandRuleRefs && len(RuleID) > 0 {
+		var roots []string
+		for _, r := range absRuleSetPaths {
+			roots = append(roots, r.Path)
+		}
+		RuleID = rules.ExpandRuleIDs(RuleID, roots)
 	}
 	for _, ruleID := range RuleID {
 		nativeBuilder.AddRuleID(ruleID)

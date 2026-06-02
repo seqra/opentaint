@@ -1,5 +1,5 @@
 ---
-name: appsec_agent
+name: appsec-agent
 description: Run an end-to-end application-security analysis on a JVM project with OpenTaint — build, scan, model missing library methods, triage, and confirm vulnerabilities. Use when the user asks to find vulnerabilities, run SAST, or scan a Java/Kotlin app for security issues
 license: Apache-2.0
 metadata:
@@ -17,7 +17,13 @@ Keep every artifact under one `.opentaint/` directory at the project root — mo
 
 ## Setup
 
-Run `opentaint dev rules-path` once to learn the built-in rules directory; built-ins always load, custom rules go under `.opentaint/rules`.
+Before anything else, confirm `opentaint` is on PATH (`command -v opentaint` / `opentaint --version`). If it's missing, don't proceed silently — tell the user and ask to install it, offering the command for their platform; run an install only on explicit confirmation:
+
+- macOS, or any platform with Homebrew — `brew install --cask seqra/tap/opentaint`
+- Linux without Homebrew — `curl -fsSL https://opentaint.org/install.sh | bash`
+- Windows (PowerShell) — `irm https://opentaint.org/install.ps1 | iex`
+
+After installing, run `opentaint health` to confirm the autobuilder/analyzer/rules/runtime resolve.
 
 ## Choose a workflow
 
@@ -82,8 +88,9 @@ Universal rules — every dispatch, every workflow:
 
 Orchestration practices:
 
-- one unit, one subagent — rules, approximation units, and finding files are independent (unique `<name>` paths), so dispatch them as a parallel fan-out, no races
+- Units fan out in parallel — independent `<name>` paths, no races
 - the sole sequential exception is PoC (shared app state and ports); see references/poc.md
+- Steps within a unit are sequential via the artifact on disk — dispatch step N only after step N−1's named artifact exists; never bundle steps into one dispatch
 - write `state.yaml` at each fan-out join — a phase flips to `done` only once every unit's artifact exists on disk
 
 ## State and resumption
@@ -93,7 +100,7 @@ You are the only writer of `.opentaint/tracking/state.yaml` — it records the c
 On start, and after any compaction, reconstruct position from artifacts before doing anything — never replay a completed phase:
 
 - read `state.yaml` and the `tracking/` tree
-- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every area `done` → discover; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
+- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every entry `done` and `lib-pieces.yaml` with every entry resolved → discover; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
 - detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; methods in `dropped-external-methods.yaml` not yet in any approximation unit → approximations
 
 ## Tracking layout
@@ -103,12 +110,14 @@ The single source of truth for the tracking schema; each skill writes only its o
 ```
 .opentaint/tracking/
   state.yaml                              # you only — levels + phase status
-  coverage.yaml                           # discover-attack-surface — one entry per attack area walked (deep)
+  coverage.yaml                           # triage-dependencies seeds, discover-attack-surface fills — one entry per dependency package weighed (deep)
+  lib-pieces.yaml                         # discover-attack-surface parks unpaired sources/sinks; assemble-lib-rules resolves them (deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
-  rules/<name>.yaml                       # one per rule
-  approximations/<package>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
-  approximations/<package>-dataflow.yaml      # lambda/callback/async; tested on a test project
+  rules/<name>.yaml                       # one per rule (join requirement — from discover-attack-surface or assemble-lib-rules)
+  approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
+  approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
   approximations/skipped.yaml             # methods the engine asks for but that carry no taint
+  poc-servers.yaml                        # generate-poc — instances it started; you reap them at end of PoC phase
 ```
 
 state.yaml:
@@ -129,15 +138,24 @@ phases:                 # pending | in_progress | done
   poc: pending          # dynamic triage
 ```
 
-coverage.yaml — created by discover-attack-surface (deep): the attack-area checklist it walks, one entry per area, so you can see nothing was skipped and which areas spawned rules:
+coverage.yaml — seeded by triage-dependencies and filled by discover-attack-surface (deep): one entry per dependency package weighed, so you can see which libraries were drilled and which were dismissed. A `pending` entry is a flagged library awaiting its depth pass; the rule names live in `rules/<name>.yaml`, not here:
 
 ```yaml
-areas:
-  - area: database        # one per attack area
-    status: done          # pending | done
-    rules: [mybatis-sqli] # proposed rule names; [] when built-ins cover it or the area is absent
+packages:
+  - package: org.springframework.web.reactive.function
+    status: done          # pending (flagged, awaiting depth) | done (drilled or dismissed)
     notes: >
       free-form — what was found and why
+```
+
+lib-pieces.yaml — discover-attack-surface appends a source or sink it couldn't pair; assemble-lib-rules pairs each into a join and resolves its `disposition` (deep):
+
+```yaml
+sources:                  # likewise a `sinks:` list
+  - role: Apache HttpClient response body — server-controlled data
+    package: org.apache.hc.client5.http
+    dependency: org.apache.httpcomponents.client5:httpclient5:5.3
+    disposition: pending  # pending | <join-name> | dropped: <reason>
 ```
 
 findings/<finding_name>.yaml — created by the SARIF→finding script; `verdict`/`notes` by analyze-findings; `poc`/`poc_script` by generate-poc:
@@ -153,7 +171,7 @@ poc: pending            # pending | confirmed | failed
 poc_script: null        # path under .opentaint/pocs/ once generate-poc writes one
 ```
 
-rules/<name>.yaml — created by discover-attack-surface (`description`); `test_project` by create-test-project; `tests_passing` + `rule_id` + `artifact` by create-rule:
+rules/<name>.yaml — created by discover-attack-surface or assemble-lib-rules (`description`); `test_project` by create-test-project; `tests_passing` + `rule_id` + `artifact` by create-rule:
 
 ```yaml
 name: mybatis-sqli
@@ -171,7 +189,7 @@ notes: >
   free-form
 ```
 
-approximations/<package>-<kind>.yaml — created by analyze-external-methods (`description` + `methods`); the stages differ by kind:
+approximations/<package-kebab>-<kind>.yaml — created by analyze-external-methods (`description` + `methods`); `<package-kebab>` = the dotted package with `.` -> `-` (the YAML `package:` field keeps the real dotted name). The stages differ by kind:
 
 ```yaml
 package: com.foo
@@ -201,8 +219,8 @@ methods:                # engine asks to approximate these, but they carry no ta
 <project-root>/.opentaint/
   project/                      # built project model (project.yaml)
   rules/java/{lib/generic,lib/spring,security}/   # custom rules
-  config/<name>.yaml            # passThrough approximation configs
-  approximations/src/<name>/    # code-based (dataflow) approximation sources
+  pass-through/<name>.yaml      # passThrough approximation configs
+  approximations/<name>/        # code-based (dataflow) approximation sources, per unit
   test-projects/<name>/         # per-unit test project sources
   test-compiled/<name>/         # per-unit compiled test model
   test-results/<name>/          # per-unit test outputs

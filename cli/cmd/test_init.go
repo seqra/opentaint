@@ -16,8 +16,8 @@ import (
 var initRuleProjectDeps []string
 var initApproxProjectDeps []string
 
-var devInitRuleProjectCmd = &cobra.Command{
-	Use:   "init-rule-project <output-dir>",
+var testRuleInitCmd = &cobra.Command{
+	Use:   "init <output-dir>",
 	Short: "Bootstrap a rule test project with build.gradle.kts and test utility JAR",
 	Long: `Creates a minimal Gradle project structure for testing OpenTaint rules.
 
@@ -35,8 +35,8 @@ Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 	},
 }
 
-var devInitApproximationProjectCmd = &cobra.Command{
-	Use:   "init-approximation-project <output-dir>",
+var testApproximationInitCmd = &cobra.Command{
+	Use:   "init <output-dir>",
 	Short: "Bootstrap a dataflow approximation test project with the fixed Taint source/sink and rule",
 	Long: `Creates a minimal Gradle project structure for testing OpenTaint dataflow approximations.
 
@@ -46,7 +46,9 @@ The project includes:
   - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample annotations)
   - approximation-rule.yaml, the fixed source->sink rule the samples are checked against
   - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
-  - approximations/src/ directory for the approximation under test
+
+The approximation under test is NOT part of this project: it lives in its own unit folder
+(.opentaint/approximations/<name>) and is applied at test time via --dataflow-approximations.
 
 Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 	Args: cobra.ExactArgs(1),
@@ -60,17 +62,17 @@ Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 }
 
 func init() {
-	devCmd.AddCommand(devInitRuleProjectCmd)
-	devInitRuleProjectCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
+	testRuleCmd.AddCommand(testRuleInitCmd)
+	testRuleInitCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
 		"Maven dependency coordinates to add (e.g., 'javax.servlet:javax.servlet-api:4.0.1')")
 
-	devCmd.AddCommand(devInitApproximationProjectCmd)
-	devInitApproximationProjectCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
+	testApproximationCmd.AddCommand(testApproximationInitCmd)
+	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
 		"Maven dependency coordinates to add (e.g., 'javax.servlet:javax.servlet-api:4.0.1')")
 }
 
 // bootstrapTestProject creates the shared Gradle layout (dirs, test-util JAR, build files)
-// used by both init-rule-project and init-approximation-project.
+// used by both `test rule init` and `test approximation init`.
 func bootstrapTestProject(outputDir, projectName string, dependencies []string) {
 	dirs := []string{
 		filepath.Join(outputDir, "libs"),

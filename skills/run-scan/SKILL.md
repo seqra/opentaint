@@ -19,8 +19,8 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Ruleset `<rules-dir>` — Default: `builtin` plus `.opentaint/rules` if present
 - Rule IDs `<full-id>` (optional) — full IDs to restrict the scan to, omit to run all loaded rules
 - SARIF output `<report.sarif>` — Default: `.opentaint/results/report.sarif`
-- PassThrough config `<config-dir>` (optional) — a passThrough YAML file or a directory of them. Default: `.opentaint/config`
-- Dataflow approximations directory `<approx-dir>` (optional) — Default: `.opentaint/approximations/src`
+- PassThrough config `<config-dir>` (optional) — a passThrough YAML file or a directory of them. Default: `.opentaint/pass-through`
+- Dataflow approximations directory `<approx-dir>` (optional) — Default: `.opentaint/approximations`
 
 ## Workflow
 
@@ -36,7 +36,7 @@ opentaint scan --project-model <model-dir> \
 Append optional flags as needed:
 
 - `--rule-id <full-id>` — restrict to specific rules (repeatable); omit to run all loaded rules
-- `--passthrough-approximations <config-dir>` — apply passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one in the built-in set; repeatable; replaces the old `--approximations-config`)
+- `--passthrough-approximations <config-dir>` — apply passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable)
 - `--dataflow-approximations <approx-dir>` — apply code-based approximations (Java sources, auto-compiled; or pre-compiled `.class` dirs, passed through as-is)
 
 ## Output
@@ -46,16 +46,6 @@ Three files, all next to the SARIF report:
 1. `<report.sarif>` — findings with code-flow traces
 2. `dropped-external-methods.yaml` — methods where dataflow facts were killed (no approximation model) → candidates to approximate; possible source of false negatives
 3. `approximated-external-methods.yaml` — methods already modeled
-
-## Finding files
-
-`scripts/sarif-to-findings.py` turns a SARIF report into one finding tracking file per rule under `.opentaint/tracking/findings/`, bundling each rule's result hashes:
-
-```bash
-python3 scripts/sarif-to-findings.py <report.sarif> -o .opentaint/tracking/findings
-```
-
-Run it on the SARIF you intend to triage. It's idempotent — a re-run adds only result hashes not already present, resets a touched finding's `verdict` to `pending`, and preserves existing verdicts, notes, PoCs, and any triage splits. Grouping is by rule id only; analyze-findings splits a rule's bundle into distinct logical findings
 
 ## Key Flags
 
@@ -71,7 +61,5 @@ Run it on the SARIF you intend to triage. It's idempotent — a re-run adds only
 
 ## Gotchas
 
-- `--rule-id` drops every rule whose full ID is not listed, including library rules referenced via join-mode `refs`. List every rule you need
-- `--passthrough-approximations` merges with the built-in passThrough set at the rule level — a provided rule overrides a built-in only if it matches one in the built-in set, otherwise built-ins stay active
 - Paths fall back to the `.opentaint/` layout when the caller omits them; the caller can override any of them
 - Duplicate approximation targeting the same class as a built-in errors out
