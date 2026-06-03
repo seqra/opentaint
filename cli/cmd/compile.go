@@ -71,9 +71,9 @@ Arguments:
 		if globals.Config.Output.Debug {
 			sb.Line()
 		}
-		sb.Field("Project", absProjectRoot).
-			Field("Output project model", absOutputProjectModelPath).
-			Field("Autobuilder", utils.ArtifactDisplayVersion(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath)).
+		sb.FieldNode("Project", absProjectRoot).
+			FieldNode("Output project model", absOutputProjectModelPath).
+			FieldNode("Autobuilder", utils.ArtifactDisplayVersion(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath)).
 			Render()
 
 		if DryRunCompile {

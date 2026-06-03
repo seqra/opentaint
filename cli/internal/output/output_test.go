@@ -107,6 +107,37 @@ func TestSectionWithGroup(t *testing.T) {
 	}
 }
 
+func TestSectionFieldNodeRendersValueAsLeaf(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+
+	p.Section("Paths").
+		FieldNode("Project", "/home/me/projects/hertzbeat").
+		Render()
+
+	got := buf.String()
+	if !strings.Contains(got, "Project:") {
+		t.Errorf("expected 'Project:' parent node, got %q", got)
+	}
+	if !strings.Contains(got, "/home/me/projects/hertzbeat") {
+		t.Errorf("expected path value in output, got %q", got)
+	}
+	keyLine := -1
+	valLine := -1
+	for i, line := range strings.Split(got, "\n") {
+		if strings.Contains(line, "Project:") {
+			keyLine = i
+		}
+		if strings.Contains(line, "/home/me/projects/hertzbeat") {
+			valLine = i
+		}
+	}
+	if keyLine == -1 || valLine == -1 || valLine != keyLine+1 {
+		t.Errorf("expected path on the line directly below 'Project:', got key=%d val=%d in %q", keyLine, valLine, got)
+	}
+}
+
 func TestSectionMirroredToLogWriter(t *testing.T) {
 	var buf bytes.Buffer
 	var logBuf bytes.Buffer

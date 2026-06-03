@@ -548,24 +548,24 @@ func printScanInfo(cmd *cobra.Command, cfg scanConfig, absSemgrepRuleLoadTracePa
 	sb := out.Section(cfg.mode.String())
 	addConfigFields(cmd, sb)
 	if globals.Config.Output.Debug {
-		sb.Field("Rule load trace", absSemgrepRuleLoadTracePath)
+		sb.FieldNode("Rule load trace", absSemgrepRuleLoadTracePath)
 		sb.Line()
 	}
 	if cfg.needsCompilation {
-		sb.Field("Project", absUserProjectRoot)
+		sb.FieldNode("Project", absUserProjectRoot)
 		if cfg.projectCachePath != "" {
-			sb.Field("Project model", cfg.absProjectModel)
+			sb.FieldNode("Project model", cfg.absProjectModel)
 		}
-		sb.Field("Autobuilder", utils.ArtifactDisplayVersion(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
+		sb.FieldNode("Autobuilder", utils.ArtifactDisplayVersion(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
 	} else {
-		sb.Field("Project model", cfg.absProjectModel)
+		sb.FieldNode("Project model", cfg.absProjectModel)
 	}
-	sb.Field("Analyzer", analyzerVersion)
+	sb.FieldNode("Analyzer", analyzerVersion)
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.Field("Bundled ruleset", utils.ArtifactDisplayVersion(globals.ArtifactByKind("rules"), ""))
+			sb.FieldNode("Bundled ruleset", utils.ArtifactDisplayVersion(globals.ArtifactByKind("rules"), ""))
 		} else {
-			sb.Field("User ruleset", r.Path)
+			sb.FieldNode("User ruleset", r.Path)
 		}
 	}
 	sb.Render()
