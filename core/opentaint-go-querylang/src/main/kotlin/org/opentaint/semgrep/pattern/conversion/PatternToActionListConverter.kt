@@ -270,7 +270,6 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
                 t,
             )
         }
-        is ParenExpr -> decomposeReceiver(recv.inner)
 
         // todo: wtf?????
         // Chained method-call receivers (e.g. `$R.URL.Query().Get($K)`). Treat

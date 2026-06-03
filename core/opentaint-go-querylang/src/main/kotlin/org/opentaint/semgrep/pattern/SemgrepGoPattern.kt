@@ -152,10 +152,6 @@ data class UnaryExpr(val op: String, val operand: SemgrepGoPattern) : SemgrepGoP
     override val children: List<SemgrepGoPattern> get() = listOf(operand)
 }
 
-data class ParenExpr(val inner: SemgrepGoPattern) : SemgrepGoPattern {
-    override val children: List<SemgrepGoPattern> get() = listOf(inner)
-}
-
 data class StarExpr(val operand: SemgrepGoPattern) : SemgrepGoPattern {
     override val children: List<SemgrepGoPattern> get() = listOf(operand)
 }

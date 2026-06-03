@@ -7,7 +7,6 @@ import org.antlr.v4.runtime.ConsoleErrorListener
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.RecognitionException
 import org.antlr.v4.runtime.Recognizer
-import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternParser
 import org.opentaint.semgrep.pattern.go.antlr.GoLexer
@@ -672,7 +671,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
         if (ctx.METAVAR_IDENT() != null && ctx.type_() != null) {
             return TypedMetavar(ctx.METAVAR_IDENT().text, parseType(ctx.type_()))
         }
-        ctx.expression()?.let { return ParenExpr(parseExpression(it)) }
+        ctx.expression()?.let { return parseExpression(it) }
         throw UnsupportedGoElement(ctx)
     }
 
