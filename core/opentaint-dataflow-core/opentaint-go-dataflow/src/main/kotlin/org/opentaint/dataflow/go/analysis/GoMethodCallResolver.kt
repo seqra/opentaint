@@ -72,7 +72,7 @@ class GoMethodCallResolver(
         }
     }
 
-    data object ClosureCreationFlowFunction{
+    data object ClosureCreationFlowFunction {
         fun handle(inst: GoIRInst, body: (AccessPathBase, List<Accessor>) -> Unit) {
             val expr = (inst as? GoIRAssignInst)?.expr ?: return
 
