@@ -22,6 +22,12 @@ fun GoLocalAliasAnalysis.forEachAliasAtStatement(statement: GoIRInst, fact: Fina
     aliases.forEachRelevantAlias { alias -> applyAlias(fact, alias, body) }
 }
 
+fun GoLocalAliasAnalysis.forEachAliasAtStatement(statement: GoIRInst, fact: InitialFactAp, body: (InitialFactAp) -> Unit) {
+    val base = fact.base as? AccessPathBase.LocalVar ?: return
+    val aliases = findAlias(base, statement) ?: return
+    aliases.forEachRelevantAlias { alias -> applyAlias(fact, alias, body) }
+}
+
 fun GoLocalAliasAnalysis.forEachHeapAliasAtStatement(
     statement: GoIRInst,
     fact: FinalFactAp,
@@ -34,23 +40,6 @@ fun GoLocalAliasAnalysis.forEachHeapAliasAtStatement(
 
     val aliases = findHeapAlias(base, listOf(goAliasAccessor), statement) ?: return
     aliases.forEachRelevantAlias { alias -> applyAlias(child, alias, body) }
-}
-
-fun GoLocalAliasAnalysis.forEachHeapAliasPreimageAtStatement(
-    statement: GoIRInst,
-    targetBase: AccessPathBase,
-    accessor: Accessor,
-    fact: InitialFactAp,
-    body: (InitialFactAp) -> Unit
-) {
-    val goAliasAccessor = accessor.goAliasAccessor() ?: return
-    val aliases = findHeapAlias(targetBase, listOf(goAliasAccessor), statement) ?: return
-
-    aliases.forEachRelevantAlias { alias ->
-        applyAlias(fact, targetBase, alias) {
-            body(it.prependAccessor(accessor))
-        }
-    }
 }
 
 fun GoLocalAliasAnalysis.forEachPossibleAliasAtStatement(
@@ -70,7 +59,7 @@ private fun GoLocalAliasAnalysis.forEachAliasAtStatementAmongBases(
 ) {
     bases.forEach { base ->
         val aliases = findAlias(base, statement) ?: return@forEach
-        aliases.forEachRelevantAlias { alias -> applyAlias(fact, base, alias, body) }
+        aliases.forEachRelevantAlias { alias -> unapplyAlias(fact, base, alias, body) }
     }
 }
 
@@ -98,7 +87,16 @@ private fun applyAlias(fact: FinalFactAp, alias: AliasApInfoNoRef, body: (FinalF
     body(result)
 }
 
-private fun applyAlias(
+private fun applyAlias(fact: InitialFactAp, alias: AliasApInfoNoRef, body: (InitialFactAp) -> Unit) {
+    val result = alias.accessors.foldRight(fact.rebase(alias.base)) { accessor, f ->
+        val apAccessor = accessor.apAccessor()
+        f.prependAccessor(apAccessor)
+    }
+
+    body(result)
+}
+
+private fun unapplyAlias(
     fact: InitialFactAp,
     newBase: AccessPathBase,
     alias: AliasApInfoNoRef,

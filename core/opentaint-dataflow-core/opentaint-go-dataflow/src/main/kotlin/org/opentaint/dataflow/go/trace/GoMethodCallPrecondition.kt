@@ -19,6 +19,8 @@ import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
+import org.opentaint.dataflow.go.analysis.forEachAliasAtStatement
+import org.opentaint.dataflow.go.analysis.forEachPossibleAliasAtStatement
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.rules.accept
@@ -51,10 +53,25 @@ class GoMethodCallPrecondition(
         GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
     override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
-        val preconditionFacts = preconditionForFact(fact)
-            ?: return listOf(CallPrecondition.Unchanged)
+        val result = mutableListOf<CallPrecondition>()
 
-        return listOf(PreconditionFactsForInitialFact(fact, preconditionFacts))
+        result += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
+            ?: CallPrecondition.Unchanged
+
+        analysisContext.aliasAnalysis.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
+            preconditionForFact(aliasedFact)?.let {
+                result += PreconditionFactsForInitialFact(aliasedFact, it)
+            }
+        }
+
+        // todo: do we need to explore all accessors?
+        analysisContext.aliasAnalysis.forEachAliasAtStatement(statement, fact) { aliasedFact ->
+            preconditionForFact(aliasedFact)?.let {
+                result += PreconditionFactsForInitialFact(aliasedFact, it)
+            }
+        }
+
+        return result
     }
 
     override fun factPreconditionResolutionFailure(
@@ -75,16 +92,14 @@ class GoMethodCallPrecondition(
     }
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
-        if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) {
-            return null
-        }
+        if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) return null
 
         val preconditions = mutableListOf<CallPreconditionFact>()
 
         val ret = returnValue
         if (ret != null) {
             val returnValueBase = GoFlowFunctionUtils.accessPathBase(ret, callExpr.enclosingMethod)
-            if (returnValueBase != null && returnValueBase == fact.base) {
+            if (returnValueBase == fact.base) {
                 preconditions.preconditionForFact(fact, AccessPathBase.Return)
             }
         }
