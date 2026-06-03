@@ -76,21 +76,22 @@ private fun YamlNode.toPassThroughRules(): List<GoSerializedRule.PassThrough> {
     // where `$recvType` is the call-site displayName — includes a leading `*`
     // for pointer receivers and omits it for value receivers. Emit both forms
     // so the rule fires regardless of how the call site spells the receiver.
-    val names = if (function.receiver) {
+    val pkgNames = if (function.receiver) {
         val typeName = function.type ?: return emptyList()
         listOf(
-            "(${function.`package`}.${typeName}).${function.name}",
-            "(*${function.`package`}.${typeName}).${function.name}",
+            "(${function.`package`}.${typeName})",
+            "(*${function.`package`}.${typeName})",
         )
     } else if (function.`package` == BUILTIN_PACKAGE) {
-        listOf(function.name)
+        listOf("")
     } else {
-        listOf("${function.`package`}.${function.name}")
+        listOf(function.`package`)
     }
 
-    return names.map { name ->
+    return pkgNames.map { pkgName ->
         GoSerializedRule.PassThrough(
-            function = GoNameMatcher.Simple(name),
+            pkg = GoNameMatcher.Simple(pkgName),
+            function = GoNameMatcher.Simple(function.name),
             copy = actions,
         )
     }

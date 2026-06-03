@@ -26,7 +26,7 @@ data object GoTaintStrategy :
     override fun generateTaintRules(
         ctx: TaintRuleGenerationCtx<GoSerializedItem, *, *, *>,
         ruleCtx: RuleConversionCtx,
-        sinkDiscardMode: LanguageStrategy.SinkDiscardMode
+        sinkDiscardMode: SinkDiscardMode
     ): List<GoSerializedItem> {
         val rules = ctx.goCtx().emitGoTaintRules(ruleCtx)
         if (sinkDiscardMode == SinkDiscardMode.NONE) return rules

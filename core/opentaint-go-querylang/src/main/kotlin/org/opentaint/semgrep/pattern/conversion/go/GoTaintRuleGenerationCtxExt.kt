@@ -16,16 +16,21 @@ fun UserRuleFromSemgrepInfo.toGo() =
     GoUserRuleFromSemgrepInfo(ruleId, relevantTaintMarks)
 
 internal data class GoRuleConditionData(
-    val function: GoNameMatcher,
+    val function: GoFunctionNameMatcher,
     val condition: GoSerializedCondition,
 )
 
+data class GoFunctionNameMatcher(
+    val pkgMatcher: GoNameMatcher,
+    val nameMatcher: GoNameMatcher,
+)
+
 internal class GoRuleConditionBuilder {
-    var function: GoNameMatcher? = null
+    var function: GoFunctionNameMatcher? = null
     val conditions = hashSetOf<GoSerializedCondition>()
 
     fun build(): GoRuleConditionData = GoRuleConditionData(
-        function = function ?: goAnyFunction(),
+        function = function ?: GoFunctionNameMatcher(goAnyNameMatcher(), goAnyNameMatcher()),
         condition = GoSerializedCondition.and(conditions.toList()),
     )
 }

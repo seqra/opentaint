@@ -28,7 +28,8 @@ class GoTaintRuleEmitterTest {
     fun `source taints the result of a named function`() {
         val rule = rule(
             GoSerializedRule.Source(
-                function = GoNameMatcher.Simple("util.Source"),
+                pkg = GoNameMatcher.Simple("util"),
+                function = GoNameMatcher.Simple("Source"),
                 condition = null,
                 taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
                 info = null,
@@ -47,7 +48,8 @@ class GoTaintRuleEmitterTest {
     fun `source with no taint action emits no actions`() {
         val rule = rule(
             GoSerializedRule.Source(
-                function = GoNameMatcher.Simple("util.Source"),
+                pkg = GoNameMatcher.Simple("util"),
+                function = GoNameMatcher.Simple("Source"),
                 condition = null,
                 taint = emptyList(),
                 info = null,
@@ -62,7 +64,8 @@ class GoTaintRuleEmitterTest {
     fun `sink with explicit id is preserved`() {
         val rule = rule(
             GoSerializedRule.Sink(
-                function = GoNameMatcher.Simple("util.Sink"),
+                pkg = GoNameMatcher.Simple("util"),
+                function = GoNameMatcher.Simple("Sink"),
                 condition = GoSerializedCondition.ContainsMark("taint", baseOnly(PositionBase.Argument(0))),
                 id = "explicit-id",
                 info = null,
@@ -79,7 +82,8 @@ class GoTaintRuleEmitterTest {
     fun `pass-through copy action is resolved`() {
         val rule = rule(
             GoSerializedRule.PassThrough(
-                function = GoNameMatcher.Simple("util.Wrap"),
+                pkg = GoNameMatcher.Simple("util"),
+                function = GoNameMatcher.Simple("Wrap"),
                 copy = listOf(
                     GoSerializedPassAction(
                         from = baseOnly(PositionBase.Argument(0)),
@@ -99,7 +103,8 @@ class GoTaintRuleEmitterTest {
     fun `pattern-matcher rules resolve on callee-name lookup`() {
         val rule = rule(
             GoSerializedRule.Source(
-                function = GoNameMatcher.Pattern("util\\..*"),
+                pkg = GoNameMatcher.Simple("util"),
+                function = GoNameMatcher.Pattern(".*"),
                 condition = null,
                 taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
                 info = null
@@ -119,7 +124,8 @@ class GoTaintRuleEmitterTest {
     fun `cleaner rule is resolved`() {
         val rule = rule(
             GoSerializedRule.Cleaner(
-                function = GoNameMatcher.Simple("util.Clean"),
+                pkg = GoNameMatcher.Simple("util"),
+                function = GoNameMatcher.Simple("Clean"),
                 cleans = listOf(GoSerializedCleanAction("taint", baseOnly(PositionBase.Argument(0)))),
                 info = null,
             ),

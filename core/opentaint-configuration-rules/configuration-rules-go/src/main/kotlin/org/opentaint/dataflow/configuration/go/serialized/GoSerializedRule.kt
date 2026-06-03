@@ -21,9 +21,11 @@ data class GoSerializedFieldSource(
 ) : GoSerializedItem
 
 sealed interface GoSerializedRule : GoSerializedItem {
+    val pkg: GoNameMatcher
     val function: GoNameMatcher
 
     data class Source(
+        override val pkg: GoNameMatcher,
         override val function: GoNameMatcher,
         val condition: GoSerializedCondition?,
         val taint: List<GoSerializedAssignAction>,
@@ -31,6 +33,7 @@ sealed interface GoSerializedRule : GoSerializedItem {
     ) : GoSerializedRule
 
     data class Sink(
+        override val pkg: GoNameMatcher,
         override val function: GoNameMatcher,
         val condition: GoSerializedCondition?,
         val trackFactsReachAnalysisEnd: List<GoSerializedAssignAction>? = null,
@@ -40,12 +43,14 @@ sealed interface GoSerializedRule : GoSerializedItem {
     ) : GoSerializedRule
 
     data class PassThrough(
+        override val pkg: GoNameMatcher,
         override val function: GoNameMatcher,
         val copy: List<GoSerializedPassAction>,
         override val info: ItemInfo? = null,
     ) : GoSerializedRule
 
     data class Cleaner(
+        override val pkg: GoNameMatcher,
         override val function: GoNameMatcher,
         val condition: GoSerializedCondition? = null,
         val cleans: List<GoSerializedCleanAction>,

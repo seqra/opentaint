@@ -160,7 +160,8 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         sig: GoFunctionSignature,
         simpleByName: Map<String, List<R>>,
         patternRules: List<R>,
-    ): List<R> = candidates(sig.name, simpleByName, patternRules) { function }
+    ): List<R> = candidates(sig.name.substringAfterLast('.'), simpleByName, patternRules) { function }
+        .filter { it.pkg.matches(sig.name.substringBeforeLast('.', "")) }
 
     private fun <R> candidates(
         name: String,

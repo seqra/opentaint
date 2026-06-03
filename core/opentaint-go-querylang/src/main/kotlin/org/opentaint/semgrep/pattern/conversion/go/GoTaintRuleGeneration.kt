@@ -83,7 +83,8 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                     fn.handleMethodCall(
                         call = {
                             rules += GoSerializedRule.Source(
-                                function = fn,
+                                pkg = fn.pkgMatcher,
+                                function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
                                 taint = actions,
                                 info = info,
@@ -129,7 +130,8 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                         call = {
                             val afterSinkActions = buildGoStateAssignActions(ruleEdge.stateTo, condition)
                             rules += GoSerializedRule.Sink(
-                                function = condition.ruleCondition.function,
+                                pkg = fn.pkgMatcher,
+                                function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
                                 trackFactsReachAnalysisEnd = afterSinkActions.takeIf { it.isNotEmpty() },
                                 id = ctx.ruleId,
@@ -168,7 +170,8 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                     fn.handleMethodCall(
                         call = {
                             rules += GoSerializedRule.Cleaner(
-                                function = condition.ruleCondition.function,
+                                pkg = fn.pkgMatcher,
+                                function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
                                 cleans = actions,
                                 info = info,
@@ -189,19 +192,19 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
     return rules
 }
 
-private inline fun GoNameMatcher.handleMethodCall(
+private inline fun GoFunctionNameMatcher.handleMethodCall(
     call: () -> Unit,
     global: (GoNameMatcher) -> Unit,
     field: (GoNameMatcher) -> Unit,
 ) {
-    if (this is GoNameMatcher.Simple) {
-        val globalField = GoLanguageStrategy.globalReadFieldOrNull(name)
+    if (nameMatcher is GoNameMatcher.Simple) {
+        val globalField = GoLanguageStrategy.globalReadFieldOrNull(nameMatcher.name)
         if (globalField != null) {
             global(GoNameMatcher.Simple(globalField))
             return
         }
 
-        val fieldName = GoLanguageStrategy.fieldReadFieldNull(name)
+        val fieldName = GoLanguageStrategy.fieldReadFieldNull(nameMatcher.name)
         if (fieldName != null) {
             field(GoNameMatcher.Simple(fieldName))
             return
@@ -378,97 +381,34 @@ private fun evaluateGoFormulaSignature(
     return signature to builders
 }
 
-/**
- * Build a [org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher] from a method-name pattern and an optional positive /
- * any-count negative class constraints. Implements the full cross-product matrix:
- *
- * ```
- * namePattern    | +cls | -classes | matcher
- * ---------------+------+----------+--------------------------------------------------
- * AnyName        | none | none     | null   (matches anything)
- * AnyName        | cls  | none     | Pattern("(.[SLASH])?<cls>\\..*")
- * AnyName        | none | [N…]     | Pattern("^(?!.*N1\\.)…(?!.*Nk\\.).*\\..*$")
- * AnyName        | cls  | [N…]     | Pattern("^(?!.*N1\\.)…(.[SLASH])?<cls>\\..*$")
- * Concrete(name) | none | none     | Pattern("(.*\\.)?<name>")
- * Concrete(name) | cls  | none     | Pattern("(.[SLASH])?<cls>\\.<name>")
- * Concrete(name) | none | [N…]     | Pattern("^(?!.*N1\\.)….*<name>$")
- * Concrete(name) | cls  | [N…]     | Pattern("^(?!.*N1\\.)…(.[SLASH])?<cls>\\.<name>$")
- * Regex(r)       | none | none     | Pattern("(.*\\.)?<r>")    — r raw
- * Regex(r)       | cls  | none     | Pattern("(.[SLASH])?<cls>\\.<r>")    — r raw
- * Regex(r)       | none | [N…]     | Pattern("^(?!.*N1\\.)….*<r>$")
- * Regex(r)       | cls  | [N…]     | Pattern("^(?!.*N1\\.)…(.[SLASH])?<cls>\\.<r>$")
- * ```
- *
- * `[SLASH]` here denotes a literal `/` followed by `?`-optional group; written
- * that way in the table because a literal `*` `/` would close the kdoc block.
- *
- * The optional path prefix in front of `<cls>` is the G10 fix: Go's IR encodes
- * nested import paths in the callee name (e.g. `net/http.Get`,
- * `io/ioutil.ReadFile`), while a semgrep pattern uses only the last path segment
- * (`http`, `ioutil`). The optional `<anything>/` prefix lets one matcher accept
- * both forms — top-level packages (`os.Getenv`) and nested ones
- * (`net/http.Get`, `foo/bar/http.Get`).
- *
- * Negative-class lookaheads also include a `.*` so the import-path prefix
- * doesn't slip an exclusion past the start anchor.
- */
 private fun buildGoFunctionMatcher(
     namePattern: GoMethodNamePattern,
     positiveClass: String?,
     negativeClasses: List<String>,
-): GoNameMatcher? {
+): GoFunctionNameMatcher? {
     if (negativeClasses.isEmpty()) {
         return buildGoFunctionMatcherPositive(namePattern, positiveClass)
     }
 
-    // We have at least one negative-class constraint; emit a Pattern with negative
-    // lookaheads anchored at start, followed by the positive / wildcard tail.
-    // Each lookahead uses `.*` to scan past any import-path prefix.
-    val lookaheads = negativeClasses.joinToString("") { "(?!.*${Regex.escape(it)}\\.)" }
-    val tail = when (namePattern) {
-        GoMethodNamePattern.AnyName -> {
-            if (positiveClass != null) "(.*/)?${Regex.escape(positiveClass)}\\..*"
-            else ".*\\..*"
-        }
-        is GoMethodNamePattern.Concrete -> {
-            val n = Regex.escape(namePattern.name)
-            if (positiveClass != null) "(.*/)?${Regex.escape(positiveClass)}\\.$n"
-            else ".*$n"
-        }
-        is GoMethodNamePattern.Regex -> {
-            // namePattern.regex is already a regex — pass through unescaped.
-            if (positiveClass != null) "(.*/)?${Regex.escape(positiveClass)}\\.${namePattern.regex}"
-            else ".*${namePattern.regex}"
-        }
-    }
-    return GoNameMatcher.Pattern("^$lookaheads$tail$")
+    TODO("Negative pkg patterns")
 }
 
 private fun buildGoFunctionMatcherPositive(
     namePattern: GoMethodNamePattern,
     positiveClass: String?,
-): GoNameMatcher? = when (namePattern) {
-    GoMethodNamePattern.AnyName -> when (positiveClass) {
-        null -> null  // matches anything
-        // `(.*/)?` lets a class alias (e.g. `http`) match both top-level
-        // (`http.Foo`) and nested-import forms (`net/http.Foo`). G10.
-        else -> GoNameMatcher.Pattern("(.*/)?${Regex.escape(positiveClass)}\\..*")
+): GoFunctionNameMatcher? {
+    val functionNameMatcher = when (namePattern) {
+        is GoMethodNamePattern.AnyName -> null
+        is GoMethodNamePattern.Concrete -> GoNameMatcher.Simple(namePattern.name)
+        is GoMethodNamePattern.Regex -> GoNameMatcher.Pattern(namePattern.regex)
     }
-    is GoMethodNamePattern.Concrete -> {
-        val name = namePattern.name
-        when (positiveClass) {
-            null -> GoNameMatcher.Pattern("(.*\\.)?${Regex.escape(name)}")
-            // G10: emit a regex with optional import-path prefix so
-            // `http.Get` matches both `http.Get` and `net/http.Get`.
-            else -> GoNameMatcher.Pattern(
-                "(.*/)?${Regex.escape(positiveClass)}\\.${Regex.escape(name)}"
-            )
-        }
+
+    if (positiveClass == null) {
+        return functionNameMatcher?.let { GoFunctionNameMatcher(goAnyNameMatcher(), it) }
     }
-    is GoMethodNamePattern.Regex -> when (positiveClass) {
-        null -> GoNameMatcher.Pattern("(.*\\.)?${namePattern.regex}")
-        else -> GoNameMatcher.Pattern("(.*/)?${Regex.escape(positiveClass)}\\.${namePattern.regex}")
-    }
+
+    val pkgMatcher = GoNameMatcher.Simple(positiveClass)
+    return GoFunctionNameMatcher(pkgMatcher, functionNameMatcher ?: goAnyNameMatcher())
 }
 
 private fun evaluateGoFormulaSignatureMethodName(
