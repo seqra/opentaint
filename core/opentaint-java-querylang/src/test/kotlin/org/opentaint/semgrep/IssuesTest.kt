@@ -18,6 +18,7 @@ import issues.issue96
 import issues.issue97
 import issues.issueChain
 import issues.issueChainSplitBuilder
+import issues.issue98_deep
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
@@ -112,6 +113,10 @@ class IssuesTest : SampleBasedTest() {
 
     @Test
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
+
+    @Test
+    @Disabled // todo: implement alias calculation for field chains
+    fun `issue 98 deep`() = runTest<issue98_deep>()
 
     @AfterAll
     fun close() {
