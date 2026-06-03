@@ -226,7 +226,14 @@ func scan(cmd *cobra.Command) {
 
 	sarifReportName := filepath.Base(absSarifReportPath)
 
-	localVersion := globals.Config.Analyzer.Version
+	analyzerDisplayPath := globals.Config.Analyzer.JarPath
+	if analyzerDisplayPath == "" {
+		// Error intentionally ignored: this path is for display only. On failure
+		// analyzerDisplayPath stays empty and DisplayVersion shows "custom ()",
+		// which is still better than a misleading pinned version.
+		analyzerDisplayPath, _ = utils.GetAnalyzerJarPath(globals.Config.Analyzer.Version)
+	}
+	localVersion := utils.DisplayVersion(globals.Config.Analyzer.Version, globals.Config.Analyzer.JarPath, analyzerDisplayPath)
 	localSemanticVersion := version.GetVersion()
 
 	var sourceRoot string
