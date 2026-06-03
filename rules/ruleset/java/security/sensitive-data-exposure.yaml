@@ -296,7 +296,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: file-disclosure-request-dispatcher-sink
           as: sink
@@ -384,7 +384,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: spring-file-disclosure-model-and-view-sink
           as: sink

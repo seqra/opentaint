@@ -23,15 +23,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java-unsafe-object-mapper-sink
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: java-unsafe-object-mapper-sink
     options:
@@ -102,15 +99,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/unsafe-deserialization-sinks.yaml#jackson-unsafe-deserialization
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$JSON'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$JSON'
+        - 'untrusted-data.$UNTRUSTED -> sink.$JSON'
 
   - id: server-dangerous-object-deserialization
     severity: ERROR
@@ -164,15 +158,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/unsafe-deserialization-sinks.yaml#yaml-unsafe-deserialization-sink
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$YAML'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$YAML'
+        - 'untrusted-data.$UNTRUSTED -> sink.$YAML'
 
   - id: insecure-resteasy-deserialization
     severity: WARNING

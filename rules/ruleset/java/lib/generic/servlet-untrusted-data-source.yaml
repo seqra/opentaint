@@ -2,6 +2,8 @@ rules:
   - id: java-servlet-untrusted-data-source
     options:
       lib: true
+    tags:
+      - untrusted-data-source
     severity: NOTE
     message: Untrusted data flows from here
     metadata:

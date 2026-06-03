@@ -119,7 +119,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: java/lib/generic/servlet-unvalidated-redirect-sinks.yaml#java-servlet-unvalidated-redirect-sinks
           as: sink
@@ -241,7 +241,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: java/lib/spring/unvalidated-redirect-sinks.yaml#spring-unvalidated-redirect-sinks
           as: sink

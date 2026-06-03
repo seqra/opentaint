@@ -51,15 +51,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/code-injection-sinks.yaml#dangerous-groovy-shell
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: ognl-injection
     severity: ERROR
@@ -114,15 +111,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/code-injection-sinks.yaml#ognl-injection-sinks
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$INPUT'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$INPUT'
+        - 'untrusted-data.$UNTRUSTED -> sink.$INPUT'
 
   - id: script-engine-injection
     severity: ERROR
@@ -186,15 +180,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/code-injection-sinks.yaml#dangerous-script-engine-eval
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: ssti
     severity: ERROR
@@ -257,15 +248,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/template-injection-sinks.yaml#java-ssti-sinks
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
 
   - id: el-injection-in-servlet-app
@@ -365,7 +353,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: java/lib/generic/command-injection-sinks.yaml#java-expression-language-sinks
           as: sink
@@ -474,7 +462,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: java/lib/spring/spel-injection-sinks.yaml#spel-injection-sinks
           as: sink

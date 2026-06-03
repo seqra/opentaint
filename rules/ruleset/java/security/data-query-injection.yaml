@@ -59,15 +59,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/data-query-injection-sinks.yaml#java-xpath-injection-sinks
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: mongodb-injection
     severity: ERROR
@@ -121,12 +118,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/data-query-injection-sinks.yaml#java-mongodb-nosql-injection
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$INPUT'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$INPUT'
+        - 'untrusted-data.$UNTRUSTED -> sink.$INPUT'

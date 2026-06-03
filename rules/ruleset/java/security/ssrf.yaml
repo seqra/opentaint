@@ -70,15 +70,12 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: untrusted-data
         - rule: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: java-servlet-parameter-pollution
     severity: ERROR
@@ -161,7 +158,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: untrusted-data-source
           as: untrusted-data
         - rule: java/lib/generic/ssrf-sinks.yaml#java-http-parameter-pollution-sinks
           as: sink
