@@ -455,7 +455,7 @@ class MayAliasSampleTest : BasicTestUtils() {
         val sink = method.findSinkCall("sinkOneValue")
         val apAliases = aa.sinkArgApAliases(sink)
 
-        assertFalse { apAliases.any { it.isPlainBase(Argument(0)) } }
+        assertTrue { apAliases.any { it.isPlainBase(Argument(0)) } }
     }
 
     @Test
@@ -486,7 +486,7 @@ class MayAliasSampleTest : BasicTestUtils() {
         val apAliases = aa.sinkArgApAliases(sink)
 
         assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
-        assertFalse {
+        assertTrue {
             apAliases.any {
                 it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
             }
@@ -574,7 +574,7 @@ class MayAliasSampleTest : BasicTestUtils() {
         val apAliases = aa.sinkArgApAliases(sink)
 
         assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
-        assertFalse { apAliases.any { it.accessors.isNotEmpty() } }
+        assertTrue { apAliases.any { it.base == Argument(0) && it.accessors.isNotEmpty() } }
     }
 
     @Test

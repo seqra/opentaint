@@ -10,8 +10,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
-import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 
 class JIRMethodCallSummaryHandler(

@@ -287,12 +287,12 @@ class DSUAliasAnalysis(
 
                     while (curInfo is HeapAlias) {
                         if (isHeapImmutable(curInfo, IntOpenHashSet())) return@forEachInt
+                        children.add(curInfo)
 
                         val parentRepr = aliasGroupRepr(curInfo.instance)
                         if (parentRepr in invalidAliasRepr || parentRepr.aliasInfoIsSimpleOuter())
                             break
 
-                        children.add(curInfo)
                         curInfo = aliasManager.getElementUncheck(parentRepr)
                     }
                     if (curInfo !is HeapAlias) return@forEachInt
