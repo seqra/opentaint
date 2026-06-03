@@ -55,26 +55,45 @@ object GoConfigLoader {
         val rootMap = root as? YamlMap ?: return emptyList()
         val passNode = rootMap.field("passThrough") as? YamlList ?: return emptyList()
 
-        return passNode.items.mapNotNull { it.toPassThroughRule() }
+        return passNode.items.flatMap { it.toPassThroughRules() }
     }
 }
 
 private fun YamlMap.field(name: String): YamlNode? =
     entries.entries.firstOrNull { it.key.content == name }?.value
 
-private fun YamlNode.toPassThroughRule(): GoSerializedRule.PassThrough? {
-    val map = this as? YamlMap ?: return null
-    val function = (map.field("function") as? YamlMap)?.toGoFunction() ?: return null
-    if (function.receiver) return null // v1: skip receiver-method rules
+private const val BUILTIN_PACKAGE = "<builtin>"
 
-    val copyList = map.field("copy") as? YamlList ?: return null
+private fun YamlNode.toPassThroughRules(): List<GoSerializedRule.PassThrough> {
+    val map = this as? YamlMap ?: return emptyList()
+    val function = (map.field("function") as? YamlMap)?.toGoFunction() ?: return emptyList()
+
+    val copyList = map.field("copy") as? YamlList ?: return emptyList()
     val actions = copyList.items.mapNotNull { it.toPassAction() }
-    if (actions.isEmpty()) return null
+    if (actions.isEmpty()) return emptyList()
 
-    return GoSerializedRule.PassThrough(
-        function = GoNameMatcher.Simple("${function.`package`}.${function.name}"),
-        copy = actions,
-    )
+    // For receiver methods the engine's qualified name is `($recvType).$method`,
+    // where `$recvType` is the call-site displayName — includes a leading `*`
+    // for pointer receivers and omits it for value receivers. Emit both forms
+    // so the rule fires regardless of how the call site spells the receiver.
+    val names = if (function.receiver) {
+        val typeName = function.type ?: return emptyList()
+        listOf(
+            "(${function.`package`}.${typeName}).${function.name}",
+            "(*${function.`package`}.${typeName}).${function.name}",
+        )
+    } else if (function.`package` == BUILTIN_PACKAGE) {
+        listOf(function.name)
+    } else {
+        listOf("${function.`package`}.${function.name}")
+    }
+
+    return names.map { name ->
+        GoSerializedRule.PassThrough(
+            function = GoNameMatcher.Simple(name),
+            copy = actions,
+        )
+    }
 }
 
 private data class GoConfigFunction(
