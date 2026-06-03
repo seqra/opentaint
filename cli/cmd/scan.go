@@ -568,7 +568,7 @@ func printScanInfo(cmd *cobra.Command, cfg scanConfig, absSemgrepRuleLoadTracePa
 	}
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.Field("Bundled ruleset", globals.Config.Rules.Version)
+			sb.Field("Bundled ruleset", utils.DisplayVersion(globals.Config.Rules.Version, "", r.Path))
 		} else {
 			sb.Field("User ruleset", r.Path)
 		}
