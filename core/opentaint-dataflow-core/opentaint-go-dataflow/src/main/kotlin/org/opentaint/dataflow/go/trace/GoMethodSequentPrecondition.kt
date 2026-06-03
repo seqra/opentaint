@@ -15,16 +15,22 @@ import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
+import org.opentaint.dataflow.go.analysis.forEachPossibleAliasAtStatement
 import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.InitialFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
+import org.opentaint.ir.go.expr.GoIRExpr
+import org.opentaint.ir.go.expr.GoIRLookupExpr
 import org.opentaint.ir.go.expr.GoIRMakeClosureExpr
 import org.opentaint.ir.go.expr.GoIRNextExpr
 import org.opentaint.ir.go.expr.GoIRTypeAssertExpr
+import org.opentaint.ir.go.expr.GoIRUnOpExpr
 import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRGlobalStore
+import org.opentaint.ir.go.inst.GoIRIndexStore
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.inst.GoIRMapUpdate
 import org.opentaint.ir.go.inst.GoIRPhi
@@ -44,303 +50,268 @@ class GoMethodSequentPrecondition(
 
     override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
         val result = hashSetOf<SequentPrecondition>()
-        addPreconditions(fact, result)
-        if (result.isEmpty()) result += SequentPrecondition.Unchanged
+        result.computeFactPrecondition(fact)
         return result
     }
 
-    private fun addPreconditions(fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
-        when (val inst = currentInst) {
-            is GoIRAssignInst -> {
-                result.unconditionalGlobalOrFieldReadSourceRulePrecondition(inst, fact)
-                handleAssign(inst, fact, result)
-            }
-            is GoIRStore -> handleStore(inst, fact, result)
-            is GoIRGlobalStore -> handleGlobalStore(inst, fact, result)
-            is GoIRReturn -> handleReturn(inst, fact, result)
-            is GoIRPhi -> handlePhi(inst, fact, result)
-            is GoIRMapUpdate -> handleMapUpdate(inst, fact, result)
-            is GoIRSend -> handleSend(inst, fact, result)
-            else -> Unit
+    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(fact: InitialFactAp) {
+        this += computePrecondition(fact).ifEmpty { setOf(SequentPrecondition.Unchanged) }
+
+        analysisContext.aliasAnalysis.forEachPossibleAliasAtStatement(currentInst, fact) { aliasedFact ->
+            this += computePrecondition(aliasedFact)
         }
     }
 
-    private fun MutableSet<SequentPrecondition>.addUnchanged() {
-        this += SequentPrecondition.Unchanged
+    private fun computePrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
+        val result = hashSetOf<SequentPrecondition>()
+        preconditionForFact(fact)?.let {
+            result += PreconditionFactsForInitialFact(fact, it)
+        }
+        result.unconditionalGlobalOrFieldReadSourceRulePrecondition(fact)
+        return result
     }
 
-    private fun MutableSet<SequentPrecondition>.addPreFact(target: InitialFactAp, pre: InitialFactAp) {
-        this += PreconditionFactsForInitialFact(target, listOf(pre))
-    }
+    private fun preconditionForFact(fact: InitialFactAp): List<InitialFactAp>? =
+        when (val inst = currentInst) {
+            is GoIRAssignInst -> assignPrecondition(inst, fact)
+            is GoIRStore -> ptrStorePrecondition(inst, fact)
+            is GoIRFieldStore -> fieldStorePrecondition(inst, fact)
+            is GoIRIndexStore -> indexStorePrecondition(inst, fact)
+            is GoIRGlobalStore -> globalStorePrecondition(inst, fact)
+            is GoIRReturn -> returnPrecondition(inst, fact)
+            is GoIRPhi -> phiPrecondition(inst, fact)
+            is GoIRMapUpdate -> mapUpdatePrecondition(inst, fact)
+            is GoIRSend -> sendPrecondition(inst, fact)
+            else -> null
+        }
 
-    private fun MutableSet<SequentPrecondition>.addPreFacts(target: InitialFactAp, pres: List<InitialFactAp>) {
-        this += PreconditionFactsForInitialFact(target, pres)
-    }
-
-    private fun MutableSet<SequentPrecondition>.addKill(target: InitialFactAp) {
-        this += PreconditionFactsForInitialFact(target, emptyList())
-    }
-
-    private fun handleAssign(inst: GoIRAssignInst, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
+    private fun assignPrecondition(inst: GoIRAssignInst, fact: InitialFactAp): List<InitialFactAp>? {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
         val expr = inst.expr
 
-        if (expr is GoIRBinOpExpr && expr.op == GoIRBinaryOp.ADD
-            && GoFlowFunctionUtils.isStringType(expr.type)
-        ) {
-            handleStringConcatPrecondition(fact, registerBase, expr, result)
-            return
+        if (expr.isCommaOk()) {
+            return commaOkPrecondition(expr, registerBase, fact)
         }
 
-        if (expr is GoIRTypeAssertExpr && expr.commaOk) {
-            handleCommaOkTypeAssertPrecondition(fact, registerBase, expr, result)
-            return
+        if (expr is GoIRBinOpExpr && expr.op == GoIRBinaryOp.ADD && GoFlowFunctionUtils.isStringType(expr.type)) {
+            return stringConcatPrecondition(fact, registerBase, expr)
         }
 
         if (expr is GoIRMakeClosureExpr) {
-            handleMakeClosurePrecondition(fact, registerBase, expr, result)
-            return
+            return makeClosurePrecondition(fact, registerBase, expr)
         }
 
         if (expr is GoIRNextExpr) {
-            handleNextPrecondition(fact, registerBase, expr, result)
-            return
+            return nextPrecondition(fact, registerBase, expr)
         }
 
+        return assignedExprPrecondition(expr, registerBase, fact)
+    }
+
+    private fun GoIRExpr.isCommaOk(): Boolean = when (this) {
+        is GoIRLookupExpr -> commaOk
+        is GoIRTypeAssertExpr -> commaOk
+        is GoIRUnOpExpr -> commaOk
+        else -> false
+    }
+
+    private fun assignedExprPrecondition(
+        expr: GoIRExpr,
+        registerBase: AccessPathBase,
+        fact: InitialFactAp,
+    ): List<InitialFactAp>? {
         val rhsAccess = GoFlowFunctionUtils.exprToAccess(expr, method)
-        if (rhsAccess == null) {
-            handleNonPropagatingPrecondition(fact, registerBase, result)
-            return
-        }
+            ?: return if (fact.base == registerBase) emptyList() else null
 
-        when (rhsAccess) {
-            is Access.Simple -> handleSimpleAssignPrecondition(fact, registerBase, rhsAccess.base, result)
-            is Access.RefAccess -> handleRefAssignPrecondition(fact, registerBase, rhsAccess, result)
+        return when (rhsAccess) {
+            is Access.Simple -> simpleAssignPrecondition(registerBase, rhsAccess.base, fact)
+            is Access.RefAccess -> refReadPrecondition(registerBase, rhsAccess, fact)
         }
     }
 
-    private fun handleMakeClosurePrecondition(
+    private fun simpleAssignPrecondition(
+        toBase: AccessPathBase,
+        fromBase: AccessPathBase,
+        fact: InitialFactAp,
+    ): List<InitialFactAp>? {
+        if (fact.base != toBase) return null
+        if (fromBase == toBase) return null
+        return listOf(fact.rebase(fromBase))
+    }
+
+    private fun refReadPrecondition(
+        toBase: AccessPathBase,
+        rhsAccess: Access.RefAccess,
+        fact: InitialFactAp,
+    ): List<InitialFactAp>? {
+        if (fact.base != toBase) return null
+        return listOf(fact.prependAccessor(rhsAccess.accessor).rebase(rhsAccess.base))
+    }
+
+    private fun commaOkPrecondition(
+        expr: GoIRExpr,
+        registerBase: AccessPathBase,
+        fact: InitialFactAp,
+    ): List<InitialFactAp>? {
+        if (fact.base != registerBase) {
+            return assignedExprPrecondition(expr, registerBase, fact)
+        }
+
+        val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0)
+        if (!fact.startsWithAccessor(valueSlot)) {
+            return emptyList()
+        }
+
+        val stripped = fact.readAccessor(valueSlot) ?: return emptyList()
+        return assignedExprPrecondition(expr, registerBase, stripped)
+    }
+
+    private fun stringConcatPrecondition(
+        fact: InitialFactAp,
+        registerBase: AccessPathBase,
+        expr: GoIRBinOpExpr,
+    ): List<InitialFactAp>? {
+        if (fact.base != registerBase) return null
+
+        val leftBase = GoFlowFunctionUtils.accessPathBase(expr.x, method)
+        val rightBase = GoFlowFunctionUtils.accessPathBase(expr.y, method)
+        return listOf(fact.rebase(leftBase), fact.rebase(rightBase))
+    }
+
+    private fun makeClosurePrecondition(
         fact: InitialFactAp,
         registerBase: AccessPathBase,
         expr: GoIRMakeClosureExpr,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        if (fact.base != registerBase) return
+    ): List<InitialFactAp>? {
+        if (fact.base != registerBase) return null
 
+        val pres = mutableListOf<InitialFactAp>()
         for ((i, binding) in expr.bindings.withIndex()) {
             val accessor = GoFlowFunctionUtils.freeVarAccessor(expr.fn, i)
             if (!fact.startsWithAccessor(accessor)) continue
-            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method) ?: continue
             val stripped = fact.readAccessor(accessor) ?: continue
-            result.addPreFact(fact, stripped.rebase(bindingBase))
+            val bindingBase = GoFlowFunctionUtils.accessPathBase(binding, method)
+            pres += stripped.rebase(bindingBase)
         }
+        return pres
     }
 
-    private fun handleNextPrecondition(
+    private fun nextPrecondition(
         fact: InitialFactAp,
         registerBase: AccessPathBase,
         expr: GoIRNextExpr,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        if (fact.base != registerBase) return
+    ): List<InitialFactAp>? {
+        if (fact.base != registerBase) return null
 
-        val iterBase = GoFlowFunctionUtils.accessPathBase(expr.iter, method) ?: return
-
+        val iterBase = GoFlowFunctionUtils.accessPathBase(expr.iter, method)
+        val pres = mutableListOf<InitialFactAp>()
         for (slot in GoFlowFunctionUtils.rangeElementTupleSlots(expr, method)) {
             if (!fact.startsWithAccessor(slot)) continue
             val stripped = fact.readAccessor(slot) ?: continue
-            result.addPreFact(fact, stripped.prependAccessor(ElementAccessor).rebase(iterBase))
+            pres += stripped.prependAccessor(ElementAccessor).rebase(iterBase)
         }
+        return pres
     }
 
-    private fun handleSimpleAssignPrecondition(
-        fact: InitialFactAp,
-        toBase: AccessPathBase,
-        fromBase: AccessPathBase,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        if (fact.base == toBase) {
-            // Fact lives on the destination after assignment.
-            if (fromBase == toBase) return // unchanged
-            result.addPreFact(fact, fact.rebase(fromBase))
-            return
-        }
-        // Fact is unrelated to the destination — unchanged.
+    private fun ptrStorePrecondition(inst: GoIRStore, fact: InitialFactAp): List<InitialFactAp>? {
+        val dstBase = GoFlowFunctionUtils.accessPathBase(inst.addr, method)
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+        return simpleAssignPrecondition(dstBase, valueBase, fact)
     }
 
-    private fun handleRefAssignPrecondition(
-        fact: InitialFactAp,
-        toBase: AccessPathBase,
-        rhsAccess: Access.RefAccess,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        if (fact.base != toBase) {
-            // unchanged
-            return
-        }
-
-        val newFact = fact.prependAccessor(rhsAccess.accessor).rebase(rhsAccess.base)
-        result.addPreFact(fact, newFact)
+    private fun fieldStorePrecondition(inst: GoIRFieldStore, fact: InitialFactAp): List<InitialFactAp>? {
+        val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+        val accessor = GoFlowFunctionUtils.fieldAccessorFromStore(inst)
+        return accessorWritePrecondition(instance, accessor, listOf(valueBase), fact)
     }
 
-    // ── Store ────────────────────────────────────────────────────────
-
-    private fun handleStore(inst: GoIRStore, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
-        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method) ?: return
-        val addrAccess = GoFlowFunctionUtils.accessForAddr(inst.addr, method) ?: return
-
-        // todo: use alias analysis
-        val chain = GoFlowFunctionUtils.resolveAddrChain(inst.addr, method)
-        if (chain != null && chain.second.size > 1) {
-            // Limitation: multi-level chains are handled as strong updates; a chain whose leaf is an index-addr (&%X[i], ElementAccessor) would skip the weak-update passthrough the single-level path emits. No such chain is exercised today (Pattern 6 chains are all named-field). Revisit if a multi-level index-leaf chain appears.
-            val (rootBase, leafFirst) = chain
-            if (fact.base == rootBase) {
-                // Strip accessors outermost-first: the path is `.n1.n1.n1.v`, so we
-                // peel in reverse of leaf-first order.
-                var cur: InitialFactAp? = fact
-                for (acc in leafFirst.asReversed()) {
-                    val f = cur ?: break
-                    if (!f.startsWithAccessor(acc)) { cur = null; break }
-                    cur = f.readAccessor(acc)
-                }
-                if (cur != null) {
-                    result.addPreFact(fact, cur.rebase(valueBase))
-                }
-            }
-            // Fact on root but not matching the full chain (sibling field) — unchanged.
-            return
-        }
-
-        when (addrAccess) {
-            is Access.RefAccess -> {
-                val destBase = addrAccess.base
-                val accessor = addrAccess.accessor
-
-                if (fact.base != destBase) return // unchanged
-
-                if (!fact.startsWithAccessor(accessor)) {
-                    // The store wrote to `accessor`, but the fact is at a different accessor
-                    // of the same base — pass through.
-                    return
-                }
-
-                val stripped = fact.readAccessor(accessor) ?: return
-                val genFact = stripped.rebase(valueBase)
-
-                if (accessor is ElementAccessor) {
-                    result.addPreFacts(fact, listOf(genFact, fact))
-                } else {
-                    // Strong update: fact under `accessor` must come from the stored value.
-                    result.addPreFact(fact, genFact)
-                }
-            }
-
-            is Access.Simple -> {
-                val destBase = addrAccess.base
-                if (fact.base != destBase) return // unchanged
-                result.addPreFact(fact, fact.rebase(valueBase))
-            }
-        }
+    private fun indexStorePrecondition(inst: GoIRIndexStore, fact: InitialFactAp): List<InitialFactAp>? {
+        val instance = GoFlowFunctionUtils.accessPathBase(inst.base, method)
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+        return accessorWritePrecondition(instance, ElementAccessor, listOf(valueBase), fact)
     }
 
-    private fun handleGlobalStore(
-        inst: GoIRGlobalStore,
-        fact: InitialFactAp,
-        result: MutableSet<SequentPrecondition>
-    ) {
-        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method) ?: return
+    private fun globalStorePrecondition(inst: GoIRGlobalStore, fact: InitialFactAp): List<InitialFactAp>? {
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
         val globalAccess = GoFlowFunctionUtils.accessForGlobal(inst.global)
-
-        val destBase = globalAccess.base
-        val accessor = globalAccess.accessor
-
-        if (fact.base != destBase) return // unchanged
-
-        if (!fact.startsWithAccessor(accessor)) {
-            // The store wrote to `accessor`, but the fact is at a different accessor
-            // of the same base — pass through.
-            return
-        }
-
-        val stripped = fact.readAccessor(accessor) ?: return
-        val genFact = stripped.rebase(valueBase)
-
-        result.addPreFact(fact, genFact)
+        return accessorWritePrecondition(globalAccess.base, globalAccess.accessor, listOf(valueBase), fact)
     }
 
-    private fun handleReturn(inst: GoIRReturn, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
-        if (fact.base !is AccessPathBase.Return) return
+    private fun mapUpdatePrecondition(inst: GoIRMapUpdate, fact: InitialFactAp): List<InitialFactAp>? {
+        val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method)
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method)
+        val keyBase = GoFlowFunctionUtils.accessPathBase(inst.key, method)
+        val sources = if (keyBase == valueBase) listOf(valueBase) else listOf(valueBase, keyBase)
+        return accessorWritePrecondition(mapBase, ElementAccessor, sources, fact)
+    }
+
+    private fun sendPrecondition(inst: GoIRSend, fact: InitialFactAp): List<InitialFactAp>? {
+        val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method)
+        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method)
+        return accessorWritePrecondition(chanBase, ElementAccessor, listOf(valueBase), fact)
+    }
+
+    private fun accessorWritePrecondition(
+        destBase: AccessPathBase,
+        accessor: Accessor,
+        valueBases: List<AccessPathBase>,
+        fact: InitialFactAp,
+    ): List<InitialFactAp>? {
+        if (fact.base != destBase) return null
+        if (!fact.startsWithAccessor(accessor)) return null
+
+        val factAtAccessor = fact.readAccessor(accessor) ?: return null
+
+        val pres = mutableListOf<InitialFactAp>()
+        valueBases.mapTo(pres) { factAtAccessor.rebase(it) }
+
+        fact.clearAccessor(accessor)?.let { pres += it }
+
+        if (accessor is ElementAccessor) {
+            pres += factAtAccessor.prependAccessor(ElementAccessor)
+        }
+
+        return pres
+    }
+
+    private fun returnPrecondition(inst: GoIRReturn, fact: InitialFactAp): List<InitialFactAp>? {
+        if (fact.base !is AccessPathBase.Return) return null
 
         if (inst.results.size == 1) {
-            val retBase = GoFlowFunctionUtils.accessPathBase(inst.results[0], method) ?: return
-            result.addPreFact(fact, fact.rebase(retBase))
-            return
+            val retBase = GoFlowFunctionUtils.accessPathBase(inst.results[0], method)
+            return listOf(fact.rebase(retBase))
         }
 
         val pres = mutableListOf<InitialFactAp>()
         for ((i, retVal) in inst.results.withIndex()) {
-            val retBase = GoFlowFunctionUtils.accessPathBase(retVal, method) ?: continue
-            val tupleAccessor: Accessor = GoFlowFunctionUtils.tupleFieldAccessor(i, retVal.type)
+            val tupleAccessor = GoFlowFunctionUtils.tupleFieldAccessor(i)
             if (!fact.startsWithAccessor(tupleAccessor)) continue
             val stripped = fact.readAccessor(tupleAccessor) ?: continue
-            pres += stripped.rebase(retBase)
+            pres += stripped.rebase(GoFlowFunctionUtils.accessPathBase(retVal, method))
         }
-        if (pres.isNotEmpty()) result.addPreFacts(fact, pres)
+        return pres
     }
 
-    private fun handlePhi(inst: GoIRPhi, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
+    private fun phiPrecondition(inst: GoIRPhi, fact: InitialFactAp): List<InitialFactAp>? {
         val registerBase = AccessPathBase.LocalVar(inst.register.index)
-        if (fact.base != registerBase) return
+        if (fact.base != registerBase) return null
 
-        val pres = mutableListOf<InitialFactAp>()
-        for (edge in inst.edges.values) {
-            val edgeBase = GoFlowFunctionUtils.accessPathBase(edge, method) ?: continue
-            pres += fact.rebase(edgeBase)
+        return inst.edges.values.map { edge ->
+            fact.rebase(GoFlowFunctionUtils.accessPathBase(edge, method))
         }
-        if (pres.isNotEmpty()) result.addPreFacts(fact, pres)
-    }
-
-    private fun handleMapUpdate(inst: GoIRMapUpdate, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
-        val mapBase = GoFlowFunctionUtils.accessPathBase(inst.map, method) ?: return
-        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.value, method) ?: return
-        val keyBase = GoFlowFunctionUtils.accessPathBase(inst.key, method)
-
-        if (fact.base != mapBase) return
-        if (!fact.startsWithAccessor(ElementAccessor)) return
-
-        val stripped = fact.readAccessor(ElementAccessor) ?: return
-
-        val sourceBases = buildList {
-            add(valueBase)
-            if (keyBase != null && keyBase != valueBase) add(keyBase)
-        }
-        val genFacts = sourceBases.map { stripped.rebase(it) }
-        result.addPreFacts(fact, genFacts + fact)
-    }
-
-    private fun handleSend(inst: GoIRSend, fact: InitialFactAp, result: MutableSet<SequentPrecondition>) {
-        val chanBase = GoFlowFunctionUtils.accessPathBase(inst.chan, method) ?: return
-        val valueBase = GoFlowFunctionUtils.accessPathBase(inst.x, method) ?: return
-
-        if (fact.base != chanBase) return
-        if (!fact.startsWithAccessor(ElementAccessor)) return
-
-        val stripped = fact.readAccessor(ElementAccessor) ?: return
-
-        val genFact = stripped.rebase(valueBase)
-        result.addPreFacts(fact, listOf(genFact, fact))
     }
 
     private fun MutableSet<SequentPrecondition>.unconditionalGlobalOrFieldReadSourceRulePrecondition(
-        inst: GoIRAssignInst,
         fact: InitialFactAp,
     ) {
+        val inst = currentInst as? GoIRAssignInst ?: return
         val lhv = AccessPathBase.LocalVar(inst.register.index)
         if (fact.base != lhv) return
 
         val sourceRules = mutableListOf<TaintRule.GoSourceRule>()
 
-        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst, method)
+        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst)
         if (fieldName != null) {
             sourceRules += analysisContext.taint.taintConfig.sourceRulesForFieldRead(fieldName)
         }
@@ -372,62 +343,6 @@ class GoMethodSequentPrecondition(
             this += MethodSequentPrecondition.SequentSource(
                 fact, TaintRulePrecondition.Source(rule, sourceActions)
             )
-        }
-    }
-
-    // Forward counterpart: GoMethodSequentFlowFunction.handleCommaOkTypeAssert — keep in lockstep (same tuple$0 slot, same commaOk guard).
-    private fun handleCommaOkTypeAssertPrecondition(
-        fact: InitialFactAp,
-        registerBase: AccessPathBase,
-        expr: GoIRTypeAssertExpr,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        // The (value, ok) result is written to `registerBase`. A fact unrelated to
-        // the register passes through unchanged.
-        if (fact.base != registerBase) return
-
-        // The forward direction only taints the value slot (tuple index 0). A
-        // post-fact on the register must therefore live under the $0 accessor and
-        // its precondition is the operand fact (with the slot accessor stripped).
-        // Anything else on the register (e.g. the clean `ok` bool slot) is killed.
-        val valueSlot = GoFlowFunctionUtils.tupleFieldAccessor(0, expr.assertedType)
-        if (!fact.startsWithAccessor(valueSlot)) {
-            result.addKill(fact)
-            return
-        }
-        val stripped = fact.readAccessor(valueSlot) ?: run {
-            result.addKill(fact)
-            return
-        }
-        val operandBase = GoFlowFunctionUtils.accessPathBase(expr.x, method) ?: run {
-            result.addKill(fact)
-            return
-        }
-        result.addPreFact(fact, stripped.rebase(operandBase))
-    }
-
-    private fun handleStringConcatPrecondition(
-        fact: InitialFactAp,
-        registerBase: AccessPathBase,
-        expr: GoIRBinOpExpr,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        if (fact.base != registerBase) return
-
-        val pres = mutableListOf<InitialFactAp>()
-        GoFlowFunctionUtils.accessPathBase(expr.x, method)?.let { pres += fact.rebase(it) }
-        GoFlowFunctionUtils.accessPathBase(expr.y, method)?.let { pres += fact.rebase(it) }
-        if (pres.isNotEmpty()) result.addPreFacts(fact, pres)
-    }
-
-    private fun handleNonPropagatingPrecondition(
-        fact: InitialFactAp,
-        registerBase: AccessPathBase,
-        result: MutableSet<SequentPrecondition>,
-    ) {
-        if (fact.base == registerBase) {
-            // Register overwritten with clean value — fact cannot have any precondition here.
-            result.addKill(fact)
         }
     }
 }
