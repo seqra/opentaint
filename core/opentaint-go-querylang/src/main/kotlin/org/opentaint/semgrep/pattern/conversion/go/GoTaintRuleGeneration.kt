@@ -4,6 +4,7 @@ import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedFieldSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
@@ -95,6 +96,14 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 taint = actions,
                                 info = info,
                             )
+                        },
+                        field = { fieldName ->
+                            rules += GoSerializedFieldSource(
+                                field = fieldName,
+                                condition = condition.ruleCondition.condition,
+                                taint = actions,
+                                info = info,
+                            )
                         }
                     )
 
@@ -130,6 +139,9 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                         },
                         global = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global sinks are not supported yet"))
+                        },
+                        field = { _ ->
+                            ctx.trace.error(FailedToCreateTaintRules("Field-read sinks are not supported yet"))
                         }
                     )
                 }
@@ -164,6 +176,9 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                         },
                         global = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global cleaners are not supported yet"))
+                        },
+                        field = { _ ->
+                            ctx.trace.error(FailedToCreateTaintRules("Field-read cleaners are not supported yet"))
                         }
                     )
                 }
@@ -174,14 +189,25 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
     return rules
 }
 
-private inline fun GoNameMatcher.handleMethodCall(call: () -> Unit, global: (GoNameMatcher) -> Unit) {
+private inline fun GoNameMatcher.handleMethodCall(
+    call: () -> Unit,
+    global: (GoNameMatcher) -> Unit,
+    field: (GoNameMatcher) -> Unit,
+) {
     if (this is GoNameMatcher.Simple) {
         val globalField = GoLanguageStrategy.globalReadFieldOrNull(name)
         if (globalField != null) {
             global(GoNameMatcher.Simple(globalField))
             return
         }
+
+        val fieldName = GoLanguageStrategy.fieldReadFieldNull(name)
+        if (fieldName != null) {
+            field(GoNameMatcher.Simple(fieldName))
+            return
+        }
     }
+
     call()
 }
 
