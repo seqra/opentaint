@@ -1,9 +1,8 @@
 package org.opentaint.dataflow.go.analysis
 
-import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
+import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.taint.MethodSideEffectHandlerWithAnyAccessorRequestHandling
 
-/**
- * No-op side-effect handler for Go MVP.
- * All methods use default implementations that return emptySet().
- */
-class GoMethodSideEffectHandler : MethodSideEffectSummaryHandler
+class GoMethodSideEffectHandler(
+    override val runner: AnalysisRunner
+) : MethodSideEffectHandlerWithAnyAccessorRequestHandling

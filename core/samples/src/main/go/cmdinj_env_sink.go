@@ -14,6 +14,10 @@ func cmdInjEnvSink001T() {
 	r := exec.Command(args[0], args[1:]...)
 	r.Env = append(r.Env, argsEnv...)
 
+	wrappedOutput(r)
+}
+
+func wrappedOutput(r *exec.Cmd) {
 	output, err := r.CombinedOutput()
 	if err != nil {
 		return
@@ -28,9 +32,5 @@ func cmdInjEnvSink002F() {
 	r := exec.Command(args[0], args[1:]...)
 	r.Env = append(r.Env, argsEnv...)
 
-	output, err := r.CombinedOutput()
-	if err != nil {
-		return
-	}
-	_ = output
+	wrappedOutput(r)
 }

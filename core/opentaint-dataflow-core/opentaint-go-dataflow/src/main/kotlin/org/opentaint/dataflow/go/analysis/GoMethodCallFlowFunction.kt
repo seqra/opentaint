@@ -17,12 +17,13 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFa
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFunctionSignature
-import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.accept
+import org.opentaint.dataflow.go.signature
+import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.PositionTypeResolver
@@ -90,7 +91,7 @@ class GoMethodCallFlowFunction(
 
         val factReader = FinalFactReader(factAp, apManager)
 
-        applySinkRules(factReader)
+        applySinkRules(factReader, initialFacts, addUnchecked)
 
         applySourceRules(
             initialFacts, factReader, exclusion,
@@ -151,13 +152,21 @@ class GoMethodCallFlowFunction(
 
     private fun applySinkRules(
         factReader: FinalFactReader,
+        initialFacts: Set<InitialFactAp>,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
         val signature = callSignature ?: return
         val sinkRules = rulesProvider.sinkRulesForCall(signature)
         if (sinkRules.isEmpty()) return
 
+        val markAfterAnyAccessorResolver = createMarkAfterAccessorResolver(
+            context.methodEntryPoint, initialFacts
+        ) { i, k ->
+            addUnchecked(MethodCallFlowFunction.FactSideEffect(i, k))
+        }
+
         val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
-        taintUtils.applySinkRules(sinkRules, GoRuleConditionRewriter(callExpr, statement, returnValue), factReader, markAfterAnyFieldResolver = null)
+        taintUtils.applySinkRules(sinkRules, GoRuleConditionRewriter(callExpr, statement, returnValue), factReader, markAfterAnyAccessorResolver)
     }
 
     override fun propagateUnresolvedCallFact(
