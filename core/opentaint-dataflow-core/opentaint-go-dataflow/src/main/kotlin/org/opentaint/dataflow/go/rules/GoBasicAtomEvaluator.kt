@@ -17,6 +17,10 @@ class GoBasicAtomEvaluator(
         error("ContainsMark must be handled by the rewriter, not the evaluator")
     }
 
+    override fun visit(c: GoRuleCondition.ContainsMarkOnAnyAccessor): Boolean {
+        error("ContainsMarkOnAnyAccessor must be handled by the rewriter, not the evaluator")
+    }
+
     override fun visit(c: GoRuleCondition.IsConstant): Boolean {
         val value = resolveValue(c.position) ?: return false
         return value is GoIRConstValue

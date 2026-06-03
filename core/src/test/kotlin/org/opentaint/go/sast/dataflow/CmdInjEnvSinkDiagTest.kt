@@ -29,7 +29,7 @@ class CmdInjEnvSinkDiagTest : AnalysisTest() {
 
     private val combinedOutputSink = Sink(
         function = GoNameMatcher.Pattern("\\(\\*(.*/)?exec\\.Cmd\\)\\.CombinedOutput"),
-        condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(This)),
+        condition = GoSerializedCondition.ContainsMarkOnAnyAccessor("taint", PositionBaseWithModifiers.BaseOnly(This)),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "cmdinj-test",
         meta = GoSinkMetaData("Taint sink: CombinedOutput"),

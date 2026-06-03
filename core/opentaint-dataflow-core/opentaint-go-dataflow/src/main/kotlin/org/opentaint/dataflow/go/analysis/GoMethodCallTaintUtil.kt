@@ -83,22 +83,6 @@ class GoMethodCallTaintUtil(
         return readers
     }
 
-    /**
-     * Modifier-permissive sink-condition matching for Go: when a tainted value is
-     * passed as a variadic-`interface{}` arg, the Go SSA wraps it in a slice
-     * element, so the fact at the sink looks like `arg(N).[*]![mark].$` even
-     * though the sink rule asks for `ContainsMark(arg(N))`. Without help the
-     * literal-`Argument(N)` lookup misses the modifier-bearing fact.
-     *
-     * Mirrors `JIRMethodCallTaintUtil.arrayElementConditionReaders` — for each
-     * Argument-based fact reader that actually contains an element-accessor
-     * sub-fact, register an additional [FinalFactReaderWithPrefix] that exposes
-     * the sub-fact "as if" it lived at `arg(N)` directly. The original reader
-     * stays in the list, so non-variadic sinks keep working unchanged. The fix
-     * is one-sided (sink only) — pass-through and source paths use their own
-     * position-resolved evaluators where the modifier-permissive shape is
-     * already covered by the bundled go-config's dual-form rules.
-     */
     override fun patchSinkConditionFactReader(factReaders: List<FinalFactReader>): List<FactReader> {
         val elementWrappedReaders = factReaders.mapNotNull { reader ->
             val base = reader.factAp.base as? AccessPathBase.Argument ?: return@mapNotNull null

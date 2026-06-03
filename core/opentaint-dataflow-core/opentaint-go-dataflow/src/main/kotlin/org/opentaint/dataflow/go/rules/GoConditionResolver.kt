@@ -28,6 +28,10 @@ private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature): C
         GoRuleCondition.ContainsMark(it, tainted)
     }
 
+    is GoSerializedCondition.ContainsMarkOnAnyAccessor -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
+        GoRuleCondition.ContainsMarkOnAnyAccessor(it, tainted)
+    }
+
     is GoSerializedCondition.ConstantCmp -> {
         val typedValue = value.toTypedConstantValue()
         pos.resolveAny(signature, PositionBase::resolve) {

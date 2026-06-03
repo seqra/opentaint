@@ -7,6 +7,10 @@ sealed interface GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
 
+    data class ContainsMarkOnAnyAccessor(val position: Position, val mark: String) : GoRuleCondition {
+        override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
+    }
+
     data class IsConstant(val position: Position.Simple) : GoRuleCondition {
         override fun <R> accept(visitor: GoConditionVisitor<R>): R = visitor.visit(this)
     }
@@ -38,6 +42,7 @@ sealed interface GoRuleCondition {
 
 interface GoConditionVisitor<out R> {
     fun visit(c: GoRuleCondition.ContainsMark): R
+    fun visit(c: GoRuleCondition.ContainsMarkOnAnyAccessor): R
     fun visit(c: GoRuleCondition.IsConstant): R
     fun visit(c: GoRuleCondition.IsNull): R
     fun visit(c: GoRuleCondition.ConstantEq): R

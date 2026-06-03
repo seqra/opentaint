@@ -8,6 +8,7 @@ import org.opentaint.dataflow.taint.RuleConditionRewriter.Companion.falseExpr
 import org.opentaint.dataflow.taint.RuleConditionRewriter.Companion.trueExpr
 import org.opentaint.dataflow.taint.RuleConditionRewriter.ExprOrConstant
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr.ContainsMarkLiteral
+import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr.ContainsMarkOnAnyAccessorLiteral
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.value.GoIRValue
 
@@ -30,6 +31,12 @@ class GoRuleConditionRewriter(
         if (atom is GoRuleCondition.ContainsMark) {
             val pos = atom.position.resolvePosAccess()
             val literal = ContainsMarkLiteral(pos, TaintMarkAccessor(atom.mark), negated = false)
+            return ExprOrConstant(literal)
+        }
+
+        if (atom is GoRuleCondition.ContainsMarkOnAnyAccessor) {
+            val pos = atom.position.resolvePosAccess()
+            val literal = ContainsMarkOnAnyAccessorLiteral(pos, TaintMarkAccessor(atom.mark), negated = false)
             return ExprOrConstant(literal)
         }
 

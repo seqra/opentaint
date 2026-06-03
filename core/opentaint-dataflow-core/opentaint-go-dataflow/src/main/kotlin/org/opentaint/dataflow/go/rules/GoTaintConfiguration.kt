@@ -274,6 +274,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
             is GoSerializedCondition.Not -> validateConditionForFieldSource(condition.not)
 
             is GoSerializedCondition.ContainsMark -> validatePositionWithModifiersForFieldSource(condition.pos)
+            is GoSerializedCondition.ContainsMarkOnAnyAccessor -> validatePositionWithModifiersForFieldSource(condition.pos)
 
             is GoSerializedCondition.ConstantCmp -> validatePositionBaseForFieldSource(condition.pos)
             is GoSerializedCondition.ConstantMatches -> validatePositionBaseForFieldSource(condition.pos)
