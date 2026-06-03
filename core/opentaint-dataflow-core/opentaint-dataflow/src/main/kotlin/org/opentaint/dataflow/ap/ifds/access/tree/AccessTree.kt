@@ -1084,47 +1084,50 @@ class AccessTree(
             foldToAny: Boolean,
             onOtherNode: (AccessorIdx, AccessNode) -> Unit,
             merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode,
-        ) = mergeAccessors(accessors, accessorNodes, otherFields, otherNodesE, foldToAny, onOtherNode, merge)
-
-        private inline fun mergeAccessors(
-            accessors: IntArray?,
-            nodes: Array<AccessNode>?,
-            otherAccessorsE: IntArray?,
-            otherNodesE: Array<AccessNode>?,
-            foldToAny: Boolean,
-            onOtherNode: (AccessorIdx, AccessNode) -> Unit,
-            merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode,
         ): Pair<IntArray, Array<AccessNode>>? {
-            if (otherAccessorsE == null) return null
+            if (otherFields == null) return null
             val otherNodesBeforeAny = otherNodesE!!
 
             if (accessors == null) {
-                for (i in otherAccessorsE.indices) {
-                    onOtherNode(otherAccessorsE[i], otherNodesBeforeAny[i])
+                for (i in otherFields.indices) {
+                    onOtherNode(otherFields[i], otherNodesBeforeAny[i])
                 }
 
-                return otherAccessorsE to otherNodesBeforeAny
+                return otherFields to otherNodesBeforeAny
             }
 
+            // trimming exessive nodes that are covered by Any in another tree
             val thisAccessorsBeforeAny = accessors
-            val thisNodesBeforeAny = nodes!!
+            val thisNodesBeforeAny = accessorNodes!!
 
             var thisAnyIdx: Int = -1
             if (foldToAny)
                 thisAnyIdx = accessors.indexOf(ANY_ACCESSOR_IDX)
             val (otherAccessors, otherNodes) =
                 if (thisAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(nodes[thisAnyIdx]).getNonMatchingNode(otherAccessorsE, otherNodesBeforeAny)
-                else otherAccessorsE to otherNodesBeforeAny
+                    AccessTreeAnySuffixMatcher(accessorNodes[thisAnyIdx]).getNonMatchingNode(otherFields, otherNodesBeforeAny)
+                else otherFields to otherNodesBeforeAny
 
             var otherAnyIdx: Int = -1
             if (foldToAny)
-                otherAnyIdx = otherAccessorsE.indexOf(ANY_ACCESSOR_IDX)
+                otherAnyIdx = otherFields.indexOf(ANY_ACCESSOR_IDX)
             val (thisAccessors, thisNodes) =
                 if (otherAnyIdx >= 0)
                     AccessTreeAnySuffixMatcher(otherNodesBeforeAny[otherAnyIdx]).getNonMatchingNode(thisAccessorsBeforeAny, thisNodesBeforeAny)
                 else thisAccessorsBeforeAny to thisNodesBeforeAny
 
+            // merging the rest
+            return mergeAccessorsRaw(thisAccessors, thisNodes, otherAccessors, otherNodes, onOtherNode, merge)
+        }
+
+        private inline fun mergeAccessorsRaw(
+            thisAccessors: IntArray,
+            thisNodes: Array<AccessNode>,
+            otherAccessors: IntArray,
+            otherNodes: Array<AccessNode>,
+            onOtherNode: (AccessorIdx, AccessNode) -> Unit,
+            merge: (AccessorIdx, AccessNode, AccessNode) -> AccessNode,
+        ): Pair<IntArray, Array<AccessNode>>? {
             var modified = false
             var accessorsModified = false
 
