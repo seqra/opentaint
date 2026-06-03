@@ -59,7 +59,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/command-injection-sinks.yaml#command-injection-sinks
+        - tag: command-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

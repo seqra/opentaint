@@ -2,6 +2,8 @@ rules:
   - id: spring-xss-html-response-sink
     options:
       lib: true
+    tags:
+      - spring-xss-sink
     severity: NOTE
     message: Return of unvalidated user input from a Spring handler vulnerable to XSS
     metadata:

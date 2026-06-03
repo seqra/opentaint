@@ -2,6 +2,8 @@ rules:
   - id: spel-injection-sinks
     options:
       lib: true
+    tags:
+      - spel-injection-sink
     severity: NOTE
     message: Dangerous SpEL expression evaluation
     metadata:

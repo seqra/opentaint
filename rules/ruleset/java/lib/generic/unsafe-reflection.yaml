@@ -2,6 +2,8 @@ rules:
   - id: java-unsafe-reflection-sinks
     options:
       lib: true
+    tags:
+      - unsafe-reflection-sink
     severity: NOTE
     message: Using reflection on user-manipulated name
     languages:

@@ -2,6 +2,8 @@ rules:
   - id: java-logging-sinks
     options:
       lib: true
+    tags:
+      - log-injection-sink
     severity: NOTE
     message: Logging the data
     metadata:
@@ -33,6 +35,8 @@ rules:
   - id: seam-log-injection-sinks
     options:
       lib: true
+    tags:
+      - seam-log-injection-sink
     severity: NOTE
     message: Potential injection into Seam logging expression language
     metadata:

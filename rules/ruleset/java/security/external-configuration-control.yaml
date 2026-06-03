@@ -121,7 +121,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/security/external-configuration-control.yaml#bean-injection-sink
+        - tag: bean-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -129,6 +129,8 @@ rules:
   - id: bean-injection-sink
     options:
       lib: true
+    tags:
+      - bean-injection-sink
     severity: NOTE
     mode: taint
     metadata:
@@ -206,7 +208,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/security/external-configuration-control.yaml#java-sql-catalog-sink
+        - tag: sql-catalog-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -214,6 +216,8 @@ rules:
   - id: java-sql-catalog-sink
     options:
       lib: true
+    tags:
+      - sql-catalog-sink
     severity: NOTE
     message: Setting SQL connection catalog with user-manipulated data
     metadata:
@@ -284,7 +288,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/unsafe-reflection.yaml#java-unsafe-reflection-sinks
+        - tag: unsafe-reflection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

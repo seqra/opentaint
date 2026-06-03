@@ -56,7 +56,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/ldap-injection-sinks.yaml#java-ldap-injection-sinks
+        - tag: ldap-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$QUERY'

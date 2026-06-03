@@ -56,7 +56,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/logging-sinks.yaml#java-logging-sinks
+        - tag: log-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$DATA'
@@ -178,7 +178,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/logging-sinks.yaml#seam-log-injection-sinks
+        - tag: seam-log-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$DATA'

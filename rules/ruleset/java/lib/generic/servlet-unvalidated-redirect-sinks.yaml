@@ -2,6 +2,8 @@ rules:
   - id: java-servlet-unvalidated-redirect-sinks
     options:
       lib: true
+    tags:
+      - servlet-unvalidated-redirect-sink
     severity: NOTE
     message: Potential redirect to an untrusted URL
     metadata:

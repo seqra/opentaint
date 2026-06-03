@@ -71,7 +71,7 @@ rules:
           as: untrusted-data
         - tag: untrusted-path-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/path-traversal-sinks.yaml#java-path-traversal-sinks
+        - tag: path-traversal-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$FILE'

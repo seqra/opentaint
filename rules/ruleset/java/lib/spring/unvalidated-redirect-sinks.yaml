@@ -2,6 +2,8 @@ rules:
   - id: spring-unvalidated-redirect-sinks
     options:
       lib: true
+    tags:
+      - spring-unvalidated-redirect-sink
     severity: NOTE
     message: Potential redirect to an untrusted URL
     metadata:

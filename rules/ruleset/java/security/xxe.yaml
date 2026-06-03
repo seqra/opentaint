@@ -68,7 +68,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/xxe-sinks.yaml#java-xxe-sinks
+        - tag: xxe-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

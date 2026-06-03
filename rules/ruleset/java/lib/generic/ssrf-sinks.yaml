@@ -2,6 +2,7 @@ rules:
   - id: java-ssrf-sink
     options:
       lib: true
+    tags: [ssrf-sink]
     severity: NOTE
     message: Requesting URL obtained from untrusted data without
     metadata:
@@ -29,6 +30,7 @@ rules:
   - id: java-http-parameter-pollution-sinks
     options:
       lib: true
+    tags: [http-parameter-pollution-sink]
     severity: NOTE
     message: Unvalidated user input has been included into a URL
     metadata:

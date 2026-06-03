@@ -61,7 +61,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/data-query-injection-sinks.yaml#java-xpath-injection-sinks
+        - tag: xpath-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -120,7 +120,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/data-query-injection-sinks.yaml#java-mongodb-nosql-injection
+        - tag: mongodb-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$INPUT'

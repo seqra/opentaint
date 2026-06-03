@@ -2,6 +2,8 @@ rules:
   - id: java-xpath-injection-sinks
     options:
       lib: true
+    tags:
+      - xpath-injection-sink
     severity: NOTE
     message: XPath query contains user-manipulated data
     metadata:
@@ -21,6 +23,8 @@ rules:
   - id: java-mongodb-nosql-injection
     options:
       lib: true
+    tags:
+      - mongodb-injection-sink
     severity: NOTE
     message: >-
       User-controled data passed into a NoSQL query using the 'where' evaluation operator.

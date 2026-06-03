@@ -2,6 +2,8 @@ rules:
   - id: command-injection-sinks
     options:
       lib: true
+    tags:
+      - command-injection-sink
     severity: NOTE
     message: Executing OS command with user-controlled data
     metadata:
@@ -46,6 +48,8 @@ rules:
   - id: java-expression-language-sinks
     options:
       lib: true
+    tags:
+      - el-injection-sink
     severity: NOTE
     message: Java EL evaluation directly with user-supplied input
     metadata:

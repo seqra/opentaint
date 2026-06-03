@@ -2,6 +2,8 @@ rules:
   - id: java-ssti-sinks
     options:
       lib: true
+    tags:
+      - template-injection-sink
     severity: NOTE
     message: Unvalidated user data flows into template engine
     metadata:

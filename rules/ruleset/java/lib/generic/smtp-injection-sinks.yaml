@@ -2,6 +2,8 @@ rules:
   - id: java-smtp-crlf-injection-sinks
     options:
       lib: true
+    tags:
+      - smtp-injection-sink
     severity: NOTE
     message: Unvalidated user-manipulated data reaches sensitive MimeMessage parts
     metadata:

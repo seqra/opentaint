@@ -2,6 +2,8 @@ rules:
   - id: jackson-unsafe-deserialization
     options:
       lib: true
+    tags:
+      - jackson-deserialization-sink
     severity: NOTE
     message: Jackson deserialization of JSON to Java objects with default typing, this can lead to RCE
     metadata:
@@ -59,6 +61,8 @@ rules:
   - id: yaml-unsafe-deserialization-sink
     options:
       lib: true
+    tags:
+      - snakeyaml-deserialization-sink
     severity: NOTE
     message: Parsing of untrusted data with org.yaml.snakeyaml.Yaml() constructed with no arguments
     metadata:

@@ -255,6 +255,29 @@ rules:
                 ...
               }
 
+  - id: file-disclosure-request-dispatcher-sink
+    options:
+      lib: true
+    tags:
+      - file-disclosure-sink
+    message: Request dispatcher called with untrusted path
+    severity: NOTE
+    languages:
+      - java
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern-not-inside: |
+              $VAL = $MAP.getOrDefault(..., "...");
+              ...
+          - pattern-inside: |
+              $REQ = $HTTP.getRequestDispatcher($UNTRUSTED);
+              ...
+          - focus-metavariable: $UNTRUSTED
+          - pattern-either:
+              - pattern: $REQ.include(...)
+              - pattern: $REQ.forward(...)
+
   - id: file-disclosure-request-dispatcher
     severity: ERROR
     message: >-
@@ -298,29 +321,36 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: file-disclosure-request-dispatcher-sink
+        - tag: file-disclosure-sink
           as: sink
       on:
       - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-      rules:
-      - id: file-disclosure-request-dispatcher-sink
-        message: Request dispatcher called with untrusted path
-        severity: NOTE
-        languages:
-          - java
-        mode: taint
-        pattern-sinks:
-        - patterns:
-          - pattern-not-inside: |
-              $VAL = $MAP.getOrDefault(..., "...");
+
+  - id: spring-file-disclosure-model-and-view-sink
+    options:
+      lib: true
+    tags:
+      - jsp-file-disclosure-sink
+    message: ModelAndView called with untrusted path
+    severity: NOTE
+    languages:
+      - java
+    patterns:
+      - pattern-either:
+          - pattern: |
+              new org.springframework.web.servlet.ModelAndView($UNTRUSTED, ...);
+          - pattern: |
+              $MVC = new org.springframework.web.servlet.ModelAndView();
               ...
-          - pattern-inside: |
-              $REQ = $HTTP.getRequestDispatcher($UNTRUSTED);
+              $MVC.setViewName($UNTRUSTED);
+          - pattern: new org.apache.struts.action.ActionForward($UNTRUSTED)
+          - pattern: new org.apache.struts.action.ActionForward($UNTRUSTED, $SND)
+          - pattern: new org.apache.struts.action.ActionForward($FST, $UNTRUSTED, $TRD)
+          - pattern: new org.apache.struts.action.ActionForward($FST, $SND, $UNTRUSTED)
+          - pattern: |
+              $ACTION = new org.apache.struts.action.ActionForward();
               ...
-          - focus-metavariable: $UNTRUSTED
-          - pattern-either:
-            - pattern: $REQ.include(...)
-            - pattern: $REQ.forward(...)
+              $ACTION.setPath($UNTRUSTED)
 
   - id: jsp-file-disclosure
     severity: ERROR
@@ -386,32 +416,10 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: spring-file-disclosure-model-and-view-sink
+        - tag: jsp-file-disclosure-sink
           as: sink
       on:
       - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-      rules:
-        - id: spring-file-disclosure-model-and-view-sink
-          message: ModelAndView called with untrusted path
-          severity: NOTE
-          languages:
-            - java
-          patterns:
-            - pattern-either:
-                - pattern: |
-                    new org.springframework.web.servlet.ModelAndView($UNTRUSTED, ...);
-                - pattern: |
-                    $MVC = new org.springframework.web.servlet.ModelAndView();
-                    ...
-                    $MVC.setViewName($UNTRUSTED);
-                - pattern: new org.apache.struts.action.ActionForward($UNTRUSTED)
-                - pattern: new org.apache.struts.action.ActionForward($UNTRUSTED, $SND)
-                - pattern: new org.apache.struts.action.ActionForward($FST, $UNTRUSTED, $TRD)
-                - pattern: new org.apache.struts.action.ActionForward($FST, $SND, $UNTRUSTED)
-                - pattern: |
-                    $ACTION = new org.apache.struts.action.ActionForward();
-                    ...
-                    $ACTION.setPath($UNTRUSTED)
 
   - id: stacktrace-printing-in-error-message
     severity: WARNING

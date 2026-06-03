@@ -64,7 +64,7 @@ rules:
       refs:
         - tag: untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/spring/jdbc-sqli-sinks.yaml#spring-sqli-sink
+        - tag: sqli-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

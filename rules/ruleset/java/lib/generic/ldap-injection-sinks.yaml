@@ -2,6 +2,8 @@ rules:
   - id: java-ldap-injection-sinks
     options:
       lib: true
+    tags:
+      - ldap-injection-sink
     severity: NOTE
     message: Call of LDAP injection-sensitive function with untrusted data.
     metadata:

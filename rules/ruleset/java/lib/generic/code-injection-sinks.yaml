@@ -2,6 +2,8 @@ rules:
   - id: ognl-injection-sinks
     options:
       lib: true
+    tags:
+      - ognl-injection-sink
     severity: NOTE
     message: Untrusted input reaches OGNL expression
     metadata:
@@ -54,6 +56,8 @@ rules:
   - id: dangerous-groovy-shell
     options:
       lib: true
+    tags:
+      - groovy-injection-sink
     severity: NOTE
     message: Groovy shell run of externally-manipulated script
     metadata:
@@ -84,6 +88,8 @@ rules:
   - id: dangerous-script-engine-eval
     options:
       lib: true
+    tags:
+      - script-engine-injection-sink
     severity: NOTE
     message: Risky code evaluation with user-controled value
     metadata:
