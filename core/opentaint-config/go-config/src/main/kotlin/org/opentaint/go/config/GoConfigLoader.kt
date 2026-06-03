@@ -118,43 +118,76 @@ private fun YamlNode.toPassAction(): GoSerializedPassAction? {
     return GoSerializedPassAction(from = from, to = to)
 }
 
-private fun YamlNode.toPositionBaseWithModifiers(): PositionBaseWithModifiers? = when (this) {
-    is YamlScalar -> parseGoPositionScalar(content)?.let { PositionBaseWithModifiers.BaseOnly(it) }
-    is YamlList -> {
-        val strings = items.mapNotNull { (it as? YamlScalar)?.content }
-        if (strings.size != items.size || strings.isEmpty()) {
-            null
-        } else {
-            val base = parseGoPositionScalar(strings.first())
-            val mods = strings.drop(1).mapNotNull { parseGoPositionModifier(it) }
-            if (base == null || mods.size != strings.size - 1) null
-            else PositionBaseWithModifiers.WithModifiers(base, mods)
+private fun YamlNode.toPositionBaseWithModifiers(): PositionBaseWithModifiers? {
+    return when (this) {
+        is YamlScalar -> {
+            val (base, tupleSlot) = resolveResultPositionBase(content)
+            createPosition(base, listOfNotNull(tupleSlot))
         }
+
+        is YamlList -> {
+            val strings = items.mapNotNull { (it as? YamlScalar)?.content }
+            if (strings.size != items.size || strings.isEmpty()) {
+                return null
+            }
+
+            val (base, tupleSlot) = resolveResultPositionBase(strings.first())
+            val parsed = strings.drop(1).flatMap { parseGoPositionModifier(it) }
+            val mods = listOfNotNull(tupleSlot) + parsed
+            createPosition(base, mods)
+        }
+
+        else -> null
     }
-    else -> null
 }
 
-// The bundled go-config writes ArrayElement as `.[*]` (with a leading dot) but
-// the shared deserializer accepts only `[*]`. Normalise the Go-flavoured form
-// here so the bundled passthrough rules for `fmt.Sprintf`, `strings.Join`, …
-// actually load. AnyField is similarly tolerant.
-private fun parseGoPositionModifier(str: String): PositionModifier? {
-    val normalised = when (str) {
-        ".[*]" -> "[*]"
-        else -> str
+private fun createPosition(base: PositionBase, modifiers: List<PositionModifier>): PositionBaseWithModifiers {
+    if (modifiers.isEmpty()) {
+        return PositionBaseWithModifiers.BaseOnly(base)
     }
-    return runCatching { PositionModifier.deserialize(normalised) }.getOrNull()
+    return PositionBaseWithModifiers.WithModifiers(base, modifiers)
 }
 
-private fun parseGoPositionScalar(str: String): PositionBase? {
-    // Multi-return slots like `result(0)` are not yet modelled by the Go engine.
-    if (str.startsWith("result(")) return null
-    // `this` belongs to receiver-method rules which we skip at the rule level.
-    if (str == "this") return null
-    return runCatching { PositionBase.deserialize(str) }.getOrNull()
+private val fieldPattern = Regex("""\.([^#]+)#([^#]+)""")
+
+// Pseudo-field "members" that are container element selectors rather than real
+// struct fields; all collapse to the engine's single element accessor.
+private val elementMembers = setOf("<element>", "<value>", "<key>")
+
+private fun parseGoPositionModifier(str: String): List<PositionModifier> {
+    val fieldParts = fieldPattern.matchEntire(str)
+        ?: return listOf(PositionModifier.deserialize(str))
+
+    val (_, member) = fieldParts.destructured
+    if (member == "<deref>") {
+        // `<pointer>#<deref>` is the identity accessor: the deref carries the
+        // whole-value fact, so there is no accessor to apply. Drop it without
+        // failing the position.
+        return emptyList()
+    }
+    if (member in elementMembers) {
+        // Element selectors collapse to the engine's single element accessor;
+        // the type/class component is intentionally ignored for element selectors.
+        return listOf(PositionModifier.ArrayElement)
+    }
+
+    val fieldWithType= "$str#?"
+    return listOf(PositionModifier.deserialize(fieldWithType))
 }
 
-fun loadGoSerializedTaintConfig(stream: java.io.InputStream): GoSerializedTaintConfig {
+private val resultSlotPattern = Regex("""result\(([0-9]+)\)""")
+
+private fun resolveResultPositionBase(str: String): Pair<PositionBase, PositionModifier.Field?> {
+    val match = resultSlotPattern.matchEntire(str)
+    if (match != null) {
+        val slot = match.groupValues[1].toInt()
+        return PositionBase.Result to PositionModifier.Field("tuple", "\$$slot", "?")
+    }
+    val normalised = if (str == "result(*)") "result" else str
+    return PositionBase.deserialize(normalised) to null
+}
+
+fun loadGoSerializedTaintConfig(stream: InputStream): GoSerializedTaintConfig {
     val passThrough = GoConfigLoader.parsePassThroughRules(stream)
     return GoSerializedTaintConfig(passThrough = passThrough)
 }

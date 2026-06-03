@@ -56,7 +56,7 @@ passThrough:
   - from: this
     to:
     - result
-    - .[*]
+    - '[*]'
 - function:
     package: github.com/gogf/gf/database/gdb
     type: Result
@@ -66,7 +66,7 @@ passThrough:
   - from: this
     to:
     - result
-    - .[*]
+    - '[*]'
 - function:
     package: github.com/gogf/gf/database/gdb
     type: Result

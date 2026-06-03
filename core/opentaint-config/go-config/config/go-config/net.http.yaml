@@ -83,8 +83,8 @@ passThrough:
     to: result
   - from:
     - this
-    - .[*]
-    - .[*]
+    - '[*]'
+    - '[*]'
     to: result
 - function:
     package: net/http

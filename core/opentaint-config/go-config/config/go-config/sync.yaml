@@ -9,7 +9,7 @@ passThrough:
     to:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
 - function:
     package: sync
     type: Map
@@ -19,7 +19,7 @@ passThrough:
   - from:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
     to: result(0)
 - function:
     package: sync
@@ -30,18 +30,18 @@ passThrough:
   - from:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
     to: result(0)
   - from: arg(0)
     to:
     - this
     - .<map>#<key>
-    - .[*]
+    - '[*]'
   - from: arg(1)
     to:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
   - from: arg(1)
     to: result(0)
 - function:
@@ -54,12 +54,12 @@ passThrough:
     to:
     - this
     - .<map>#<key>
-    - .[*]
+    - '[*]'
   - from: arg(1)
     to:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
 - function:
     package: sync
     type: Map
@@ -69,13 +69,13 @@ passThrough:
   - from:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
     to: result(0)
   - from: arg(1)
     to:
     - this
     - .<map>#<value>
-    - .[*]
+    - '[*]'
 - function:
     package: sync
     type: Pool

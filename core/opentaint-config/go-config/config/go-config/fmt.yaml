@@ -53,7 +53,7 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .[*]
+    - '[*]'
     to: result
 - function:
     package: fmt
@@ -76,7 +76,7 @@ passThrough:
   copy:
   - from:
     - arg(2)
-    - .[*]
+    - '[*]'
     to: result
 - function:
     package: fmt
@@ -92,7 +92,7 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .[*]
+    - '[*]'
     to: result
 - function:
     package: fmt
@@ -101,7 +101,7 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .[*]
+    - '[*]'
     to: result
 - function:
     package: fmt
@@ -117,7 +117,7 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .[*]
+    - '[*]'
     to: result
 - function:
     package: fmt
@@ -126,7 +126,7 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .[*]
+    - '[*]'
     to: result
 - function:
     package: fmt
