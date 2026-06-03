@@ -63,6 +63,12 @@ class JIRLocalAliasAnalysis(
         return getAccessPathBaseAliases(aliasBefore, idx, base)
     }
 
+    fun findMustAliasAfterStatement(base: AccessPathBase, statement: CommonInst): List<AliasInfo>? {
+        val aliasBefore = mustAliasInfo.aliasAfterStatement ?: return null
+        val idx = languageManager.getInstIndex(statement)
+        return getAccessPathBaseAliases(aliasBefore, idx, base)
+    }
+
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
         val aliasBefore = mayAliasInfo.aliasBeforeStatement ?: return null
         val idx = languageManager.getInstIndex(statement)

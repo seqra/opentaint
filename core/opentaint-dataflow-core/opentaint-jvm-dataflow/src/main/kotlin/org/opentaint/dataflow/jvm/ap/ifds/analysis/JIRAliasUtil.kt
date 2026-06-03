@@ -55,6 +55,18 @@ fun JIRLocalAliasAnalysis.forEachAliasAfterCallStatement(statement: JIRInst, fac
         .forEach { alias -> applyAlias(fact, alias, body) }
 }
 
+fun JIRLocalAliasAnalysis.forEachMustAliasAfterCallStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
+    val base = fact.base
+    val aliasesBefore = findMustAlias(base, statement) ?: return
+    val aliasesAfter = findMustAliasAfterStatement(base, statement)?.toSet() ?: return
+    val aliasesPersistedThroughCall = aliasesBefore.filter { it in aliasesAfter }
+
+    aliasesPersistedThroughCall
+        .filterIsInstance<AliasApInfo>()
+        .filterNot { alias -> alias.base is AccessPathBase.Constant }
+        .forEach { alias -> applyAlias(fact, alias, body) }
+}
+
 private fun applyAlias(fact: FinalFactAp, alias: AliasApInfo, body: (FinalFactAp) -> Unit) {
     val result = alias.accessors.foldRight(fact.rebase(alias.base)) { accessor, f ->
         val apAccessor = accessor.apAccessor()
