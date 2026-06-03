@@ -190,9 +190,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             is Metavar -> methodName = SignatureName.MetaVar(fn.name)
             is SelectorExpr -> {
                 methodName = signatureName(fn.sel)
-                // A package-qualified call `pkg.Func(...)` arrives here too: the parser models the
-                // receiver `pkg` as Identifier(ConcreteName), which decomposeReceiver maps to
-                // (obj = True, enclosingClassName = Named(pkg)).
+                // A package-qualified call `pkg.Func(...)` arrives here too
                 val (recvActions, recvObj, recvType) = decomposeReceiver(fn.obj)
                 actions += recvActions
                 obj = recvObj
@@ -261,6 +259,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             is ConcreteName -> Triple(emptyList(), ParamCondition.True, goNamed(n.name))
             is MetavarName -> Triple(emptyList(), IsMetavar(MetavarAtom.create(n.name)), null)
         }
+
         is Metavar -> Triple(emptyList(), IsMetavar(MetavarAtom.create(recv.name)), null)
         is TypedMetavar -> {
             val t = transformType(recv.type)
@@ -271,40 +270,10 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             )
         }
 
-        // todo: wtf?????
-        // Chained method-call receivers (e.g. `$R.URL.Query().Get($K)`). Treat
-        // the inner call the same as a field-access prefix — flatten it away and
-        // emit the source/sink rule only on the OUTERMOST call. The previous
-        // strategy of linearising chains into a (source-on-inner, pass-through-on-outer)
-        // pair did fire the source mark, but the artificial mark feeding the
-        // pass-through is lost across closure-capture boundaries (the engine
-        // has no lambda/anonymous-function tracker on the Go side, unlike Java's
-        // `JIRLambdaTracker`). Collapsing to a single rule on the outer call
-        // means the propagation happens directly on the source mark, which the
-        // engine already carries through local-var assignment and into the
-        // closure body without help. This mirrors the [SelectorExpr] branch
-        // below and is intentionally permissive: an unrelated `something().Get(k)`
-        // call would also fire, just like a `$R.FormValue($K)` rule already
-        // matches any `.FormValue` call regardless of receiver type.
-        is CallExpr -> Triple(emptyList(), ParamCondition.True, null)
-
-        // todo: wtf?
-        // Chained field-access receivers (e.g. `$R.URL.Query().Get($K)`, `$R.Header.Get($K)`).
-        // Go's IR represents `$R.URL` as a direct memory access — there is no implicit
-        // getter method we can hook a source rule on, and the engine's per-callee lookup
-        // only fires on method calls. The pragmatic strategy (mirroring how Java's
-        // PatternToActionListConverter collapses chains via intermediate metavar bindings,
-        // adapted for Go's no-getter semantics): drop the field-access prefix entirely
-        // and emit the source/sink rule on the OUTERMOST method call only. The receiver
-        // metavar `$R` and the intermediate field name are lost — the rule fires on any
-        // `.Get($K)` (or analogous) call site. This is intentionally permissive: it
-        // matches real-world `r.URL.Query().Get(k)` and `r.Header.Get(k)` while
-        // accepting that an unrelated `someMap.Get(k)` would also fire. The same
-        // permissiveness already applies to single-call patterns like `$R.FormValue($K)`,
-        // which match any `.FormValue` method regardless of receiver type.
-        is SelectorExpr -> Triple(emptyList(), ParamCondition.True, null)
-
-        else -> transformationFailed("MethodInvocation_obj: ${recv::class.simpleName}")
+        else -> {
+            val (actions, cond) = transformPatternIntoParamConditionWithActions(recv)
+            Triple(actions, cond, null)
+        }
     }
 
     private fun flattenArgs(args: CallArgs): List<SemgrepGoPattern?> {
