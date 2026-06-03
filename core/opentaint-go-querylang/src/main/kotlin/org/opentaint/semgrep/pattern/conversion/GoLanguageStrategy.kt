@@ -33,12 +33,21 @@ class GoLanguageStrategy : LanguageStrategy<SemgrepGoPattern, GoSerializedItem> 
 
     companion object {
         const val GLOBAL_READ_AUX_FN_PREFIX = "$$<global>$$"
+        const val FIELD_READ_AUX_FN_PREFIX = "$$<fieldread>$$"
+        const val FIELD_READ_AUX_CLASS = "$$<fieldread-recv>$$"
 
         fun globalReadAuxFnName(name: String) = "$GLOBAL_READ_AUX_FN_PREFIX$name"
 
         fun globalReadFieldOrNull(name: String): String? {
             if (!name.startsWith(GLOBAL_READ_AUX_FN_PREFIX)) return null
             return name.substring(GLOBAL_READ_AUX_FN_PREFIX.length)
+        }
+
+        fun fieldReadAuxFnName(field: String): String = "$FIELD_READ_AUX_FN_PREFIX$field"
+
+        fun fieldReadFieldNull(name: String): String? {
+            if (!name.startsWith(FIELD_READ_AUX_FN_PREFIX)) return null
+            return name.substring(FIELD_READ_AUX_FN_PREFIX.length)
         }
     }
 }
