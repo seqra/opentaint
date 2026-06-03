@@ -199,6 +199,9 @@ class ExampleTest : SampleBasedTest() {
     fun `test join with taint and matching left`() = runTest<example.JoinWithTaintAndMatchingLeft>()
 
     @Test
+    fun `test join tag union`() = runTest<example.JoinTagUnion>()
+
+    @Test
     fun `test object mapper pattern-not full`() = runTest<example.ObjectMapperPatternNotFull>()
 
     @Test
