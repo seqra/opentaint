@@ -1,5 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion
 
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedFieldSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
@@ -11,6 +12,7 @@ fun TaintRuleFromSemgrep<GoSerializedItem>.toGoSerializedTaintConfig(): GoSerial
     val items = taintRules.flatMap { it.rules }
     return GoSerializedTaintConfig(
         globalSource = items.filterIsInstance<GoSerializedGlobalSource>(),
+        fieldSource = items.filterIsInstance<GoSerializedFieldSource>(),
         source = items.filterIsInstance<GoSerializedRule.Source>(),
         sink = items.filterIsInstance<GoSerializedRule.Sink>(),
         passThrough = items.filterIsInstance<GoSerializedRule.PassThrough>(),
