@@ -101,7 +101,7 @@ class JIRMethodCallFlowFunction(
         var fixedFactAp: FinalFactAp? = null
 
         aliasedFacts.forEach { (fact, _) ->
-            if (factIsRelevantToMethodCall(returnValue, callExpr, fact))
+            if (factIsRelevantToMethodCall(statement, returnValue, callExpr, fact))
                 fixedFactAp = fact
         }
 
