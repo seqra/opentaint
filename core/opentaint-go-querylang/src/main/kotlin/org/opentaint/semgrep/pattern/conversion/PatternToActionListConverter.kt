@@ -19,7 +19,6 @@ import org.opentaint.semgrep.pattern.FuncDecl
 import org.opentaint.semgrep.pattern.FuncType
 import org.opentaint.semgrep.pattern.GoStmt
 import org.opentaint.semgrep.pattern.Identifier
-import org.opentaint.semgrep.pattern.IndexExpr
 import org.opentaint.semgrep.pattern.IntLiteral
 import org.opentaint.semgrep.pattern.KeyedElem
 import org.opentaint.semgrep.pattern.MapType
@@ -33,7 +32,6 @@ import org.opentaint.semgrep.pattern.NamedParam
 import org.opentaint.semgrep.pattern.NamedType
 import org.opentaint.semgrep.pattern.NilLiteral
 import org.opentaint.semgrep.pattern.NoArgs
-import org.opentaint.semgrep.pattern.ParenExpr
 import org.opentaint.semgrep.pattern.PointerType
 import org.opentaint.semgrep.pattern.QualifiedType
 import org.opentaint.semgrep.pattern.ReturnStmt
@@ -50,6 +48,7 @@ import org.opentaint.semgrep.pattern.TypeOnlyPattern
 import org.opentaint.semgrep.pattern.TypedMetavar
 import org.opentaint.semgrep.pattern.UnaryExpr
 import org.opentaint.semgrep.pattern.VarDecl
+import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy.Companion.FIELD_READ_AUX_CLASS
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodExit
@@ -109,7 +108,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         }
         is CompositeLit -> transformObjectCreation(pattern)
         is UnaryExpr ->
-            if (pattern.op == "&" && pattern.operand is CompositeLit) transformObjectCreation(pattern.operand as CompositeLit)
+            if (pattern.op == "&" && pattern.operand is CompositeLit) transformObjectCreation(pattern.operand)
             else transformationFailed("UnaryExpr_${pattern.op}")
         is FuncDecl -> transformFuncDecl(pattern.name, pattern.signature, pattern.body, receiverType = null)
         is MethodDecl -> {
@@ -117,14 +116,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             transformFuncDecl(pattern.name, pattern.signature, pattern.body, receiverType = recvType)
         }
 
-        // Global-read source: `os.Args[$IDX]` and `os.Args` (bare selector) cover the
-        // common CLI-source pattern. The Go pattern grammar is ambiguous on whether a
-        // qualified name like `os.Args` (optionally indexed) is a type-instantiation
-        // or an expression — the parser commits to TypeOnlyPattern(QualifiedType) for
-        // both `os.Args` and `os.Args[$IDX]` (generic-type-args syntax). We recognise
-        // that shape here and lower it to a synthetic MethodCall.
-        is IndexExpr -> transformGlobalReadOrFail(pattern.obj)
-        is SelectorExpr -> transformGlobalReadOrFail(pattern)
+        is SelectorExpr -> transformFieldReadOrFail(pattern)
         is TypeOnlyPattern -> transformGlobalReadFromType(pattern.type)
 
         is BlockStmt -> transformSequence(pattern.stmts)
@@ -206,33 +198,60 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         return SemgrepPatternActionList(actions, hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
     }
 
-    /**
-     * Lower a `pkg.Field` selector — top-level or inside `pkg.Field[IDX]` — into a
-     * synthetic MethodCall.
-     */
-    private fun transformGlobalReadOrFail(sel: SemgrepGoPattern): SemgrepPatternActionList {
-        if (sel !is SelectorExpr) transformationFailed("IndexExpr_obj_not_selector")
-        val pkg = sel.obj as? Identifier ?: transformationFailed("IndexExpr_recv_not_identifier")
-        val pkgName = (pkg.name as? ConcreteName)?.name
-            ?: transformationFailed("IndexExpr_pkg_not_concrete")
+    private fun transformFieldReadOrFail(sel: SelectorExpr): SemgrepPatternActionList {
         val fieldName = (sel.sel as? ConcreteName)?.name
-            ?: transformationFailed("IndexExpr_field_not_concrete")
-        return mkGlobalReadActionList(pkgName, fieldName)
+            ?: transformationFailed("SelectorExpr_field_not_concrete")
+
+        val pkg = sel.obj as? Identifier
+        val pkgName = (pkg?.name as? ConcreteName)?.name
+        if (pkgName != null) {
+            return mkGlobalReadActionList(pkgName, fieldName)
+        }
+
+        val (recvActions, recvObj, recvType) = decomposeReceiver(sel.obj)
+
+        if (recvType != null) {
+            transformationFailed("SelectorExpr_obj_with_type_constraint")
+        }
+
+        return mkFieldReadActionList(fieldName, recvActions, recvObj ?: ParamCondition.True)
     }
 
-    /**
-     * Lower a TypeOnlyPattern that the parser produced for `pkg.Field` or
-     * `pkg.Field[IDX]` (Go's pattern grammar prefers the type-args reading) into a
-     * synthetic global-read MethodCall — see [transformGlobalReadOrFail] for the
-     * sentinel-naming rationale.
-     */
+    private fun isMetavarRooted(expr: SemgrepGoPattern): Boolean = when (expr) {
+        is Metavar -> true
+        is Identifier -> expr.name is MetavarName
+        is SelectorExpr -> isMetavarRooted(expr.obj)
+        else -> false
+    }
+
+    private fun mkFieldReadActionList(
+        fieldName: String,
+        actions: List<SemgrepPatternAction>,
+        obj: ParamCondition
+    ): SemgrepPatternActionList {
+        val methodName = SignatureName.Concrete(GoLanguageStrategy.fieldReadAuxFnName(fieldName))
+        return SemgrepPatternActionList(
+            actions + MethodCall(
+                methodName = methodName,
+                result = null,
+                params = ParamConstraint.Concrete(emptyList()),
+                obj = obj,
+                enclosingClassName = goNamed(FIELD_READ_AUX_CLASS),
+            ),
+            hasEllipsisInTheBeginning = false,
+            hasEllipsisInTheEnd = false,
+        )
+    }
+
     private fun transformGlobalReadFromType(type: TypeName): SemgrepPatternActionList {
         val qt = type as? QualifiedType ?: transformationFailed("TypeOnly_not_qualified")
-        val pkgName = (qt.pkg as? ConcreteName)?.name
-            ?: transformationFailed("TypeOnly_pkg_not_concrete")
         val fieldName = (qt.name as? ConcreteName)?.name
             ?: transformationFailed("TypeOnly_field_not_concrete")
-        return mkGlobalReadActionList(pkgName, fieldName)
+
+        return when (val pkg = qt.pkg) {
+            is ConcreteName -> mkGlobalReadActionList(pkg.name, fieldName)
+            is MetavarName -> mkFieldReadActionList(fieldName, emptyList(), IsMetavar(MetavarAtom.create(pkg.name)))
+        }
     }
 
     private fun mkGlobalReadActionList(pkgName: String, fieldName: String): SemgrepPatternActionList {
@@ -376,7 +395,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             target is TypedMetavar -> {
                 conditions += ParamCondition.TypeIs(transformType(target.type)); target.name
             }
-            target is Identifier && target.name is MetavarName -> (target.name as MetavarName).name
+            target is Identifier && target.name is MetavarName -> target.name.name
             else -> transformationFailed("Assignment_target_not_metavar")
         }
         conditions += IsMetavar(MetavarAtom.create(name))
