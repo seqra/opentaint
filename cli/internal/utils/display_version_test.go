@@ -1,6 +1,10 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/seqra/opentaint/internal/globals"
+)
 
 func TestDisplayVersion(t *testing.T) {
 	tests := []struct {
@@ -41,11 +45,25 @@ func TestDisplayVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := DisplayVersion(tt.version, tt.overridePath, tt.resolvedPath)
+			got := displayVersion(tt.version, tt.overridePath, tt.resolvedPath)
 			if got != tt.want {
-				t.Errorf("DisplayVersion(%q, %q, %q) = %q, want %q",
+				t.Errorf("displayVersion(%q, %q, %q) = %q, want %q",
 					tt.version, tt.overridePath, tt.resolvedPath, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestArtifactDisplayVersion(t *testing.T) {
+	analyzer := globals.ArtifactByKind("analyzer")
+
+	override := analyzer.WithVersion("analyzer/2026.05.27.68ab20a")
+	if got := ArtifactDisplayVersion(override, "/home/dev/analyzer.jar"); got != "custom (/home/dev/analyzer.jar)" {
+		t.Errorf("override case: got %q, want %q", got, "custom (/home/dev/analyzer.jar)")
+	}
+
+	pinned := analyzer.WithVersion("analyzer/2026.05.27.68ab20a")
+	if got := ArtifactDisplayVersion(pinned, ""); got != "analyzer/2026.05.27.68ab20a" {
+		t.Errorf("pinned case: got %q, want %q", got, "analyzer/2026.05.27.68ab20a")
 	}
 }

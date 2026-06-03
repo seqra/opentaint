@@ -226,7 +226,7 @@ func scan(cmd *cobra.Command) {
 
 	sarifReportName := filepath.Base(absSarifReportPath)
 
-	localVersion := analyzerDisplayVersion(globals.Config.Analyzer.Version, globals.Config.Analyzer.JarPath)
+	localVersion := utils.ArtifactDisplayVersion(globals.ArtifactByKind("analyzer"), globals.Config.Analyzer.JarPath)
 	localSemanticVersion := version.GetVersion()
 
 	var sourceRoot string
@@ -561,7 +561,7 @@ func printScanInfo(cmd *cobra.Command, cfg scanConfig, absSemgrepRuleLoadTracePa
 	}
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.Field("Bundled ruleset", utils.DisplayVersion(globals.Config.Rules.Version, "", r.Path))
+			sb.Field("Bundled ruleset", utils.ArtifactDisplayVersion(globals.ArtifactByKind("rules"), ""))
 		} else {
 			sb.Field("User ruleset", r.Path)
 		}
@@ -581,22 +581,6 @@ func setupSemgrepRuleLoadTrace() string {
 
 	// Rule load trace path is now displayed in the tree format
 	return absSemgrepRuleLoadTracePath
-}
-
-// analyzerDisplayVersion returns the version label to report for the analyzer.
-// An explicit jar-path override (jarPath) or an unpinned build yields
-// "custom (<path>)"; otherwise the version string is returned. resolvedPath is
-// used only as the fallback path for an unpinned build, and GetAnalyzerJarPath
-// resolves it without downloading.
-func analyzerDisplayVersion(version, jarPath string) string {
-	resolvedPath := jarPath
-	if resolvedPath == "" {
-		// Error intentionally ignored: this path is for display only. On
-		// failure resolvedPath stays empty and DisplayVersion falls back to
-		// the version pin (if set) or "custom ()".
-		resolvedPath, _ = utils.GetAnalyzerJarPath(version)
-	}
-	return utils.DisplayVersion(version, jarPath, resolvedPath)
 }
 
 func ensureAnalyzerAvailable() (string, error) {
