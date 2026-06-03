@@ -32,7 +32,7 @@ import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
+import org.opentaint.semgrep.pattern.conversion.loadGoTaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
@@ -122,7 +122,7 @@ class GoMassiveSampleTest {
         // sessions exhaust JVM and server heap, so close per sample.
         try {
             val config = try {
-                loadConfig(yamlFile)
+                loadConfig(yamlFile, program)
             } catch (e: Throwable) {
                 perSampleNotes += "[$name] rule load failed: ${e.message}"
                 fail("[$name] rule load failed: ${e.message}")
@@ -170,7 +170,7 @@ class GoMassiveSampleTest {
         }
     }
 
-    private fun loadConfig(yamlFile: File): GoTaintConfiguration {
+    private fun loadConfig(yamlFile: File, program: GoIRProgram): GoTaintConfiguration {
         val yaml = yamlFile.readText()
         val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path(yamlFile.name), Path("."), SemgrepLoadTrace())
@@ -179,7 +179,7 @@ class GoMassiveSampleTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return typed.toGoTaintConfiguration()
+        return GoTaintConfiguration(program).loadGoTaintConfiguration(typed)
     }
 
     private data class AnalysisResult(

@@ -11,6 +11,7 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
 import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.semgrep.pattern.FailedToCreateTaintRules
 import org.opentaint.semgrep.pattern.IgnoredMetavarConstraint
@@ -98,11 +99,11 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = info,
                             )
                         },
-                        field = { fieldName ->
+                        field = { fieldName, fieldChain ->
                             rules += GoSerializedFieldSource(
                                 field = fieldName,
                                 condition = condition.ruleCondition.condition,
-                                taint = actions,
+                                taint = actions.assignOnFieldChain(fieldChain),
                                 info = info,
                             )
                         }
@@ -142,7 +143,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                         global = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global sinks are not supported yet"))
                         },
-                        field = { _ ->
+                        field = { _, _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Field-read sinks are not supported yet"))
                         }
                     )
@@ -180,7 +181,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                         global = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global cleaners are not supported yet"))
                         },
-                        field = { _ ->
+                        field = { _, _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Field-read cleaners are not supported yet"))
                         }
                     )
@@ -192,10 +193,24 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
     return rules
 }
 
+private fun List<GoSerializedAssignAction>.assignOnFieldChain(fields: List<String>): List<GoSerializedAssignAction> {
+    if (fields.isEmpty()) return this
+    return map { it.copy(pos = it.pos.assignOnFieldChain(fields)) }
+}
+
+private fun PositionBaseWithModifiers.assignOnFieldChain(fields: List<String>): PositionBaseWithModifiers {
+    val modifiers = when (this) {
+        is PositionBaseWithModifiers.BaseOnly -> emptyList()
+        is PositionBaseWithModifiers.WithModifiers -> modifiers
+    }
+    val newModifiers = modifiers + fields.map { PositionModifier.Field("", it, "") }
+    return PositionBaseWithModifiers.WithModifiers(base, newModifiers)
+}
+
 private inline fun GoFunctionNameMatcher.handleMethodCall(
     call: () -> Unit,
     global: (GoNameMatcher) -> Unit,
-    field: (GoNameMatcher) -> Unit,
+    field: (GoNameMatcher, List<String>) -> Unit,
 ) {
     if (nameMatcher is GoNameMatcher.Simple) {
         val globalField = GoLanguageStrategy.globalReadFieldOrNull(nameMatcher.name)
@@ -204,9 +219,10 @@ private inline fun GoFunctionNameMatcher.handleMethodCall(
             return
         }
 
-        val fieldName = GoLanguageStrategy.fieldReadFieldNull(nameMatcher.name)
+        val fieldName = GoLanguageStrategy.fieldReadFieldOrNull(nameMatcher.name)
         if (fieldName != null) {
-            field(GoNameMatcher.Simple(fieldName))
+            val fieldChain = GoLanguageStrategy.splitFieldNames(fieldName)
+            field(GoNameMatcher.Simple(fieldChain.first()), fieldChain.drop(1))
             return
         }
     }

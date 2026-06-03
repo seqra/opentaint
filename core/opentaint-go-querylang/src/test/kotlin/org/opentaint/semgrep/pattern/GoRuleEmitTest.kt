@@ -1,10 +1,10 @@
 package org.opentaint.semgrep.pattern
 
-import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.loadGoTaintConfiguration
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -19,7 +19,7 @@ class GoRuleEmitTest {
 
         @Suppress("UNCHECKED_CAST")
         val firstRule = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return firstRule.toGoTaintConfiguration()
+        return GoTaintConfiguration(null).loadGoTaintConfiguration(firstRule)
     }
 
     @Test fun sourceSinkEmitsExpectedConfig() {

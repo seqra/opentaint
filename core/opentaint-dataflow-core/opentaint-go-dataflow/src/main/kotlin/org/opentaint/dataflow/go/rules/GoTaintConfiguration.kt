@@ -15,9 +15,12 @@ import org.opentaint.dataflow.configuration.isFalse
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.go.GoFunctionSignature
+import org.opentaint.ir.go.api.GoIRProgram
 import java.util.concurrent.atomic.AtomicInteger
 
-class GoTaintConfiguration : GoTaintRulesProvider {
+class GoTaintConfiguration(
+    val project: GoIRProgram?
+) : GoTaintRulesProvider {
     private val globalSourceSimple = hashMapOf<String, MutableList<GoSerializedGlobalSource>>()
     private val globalSourcePatterns = mutableListOf<GoSerializedGlobalSource>()
     private val globalSourceMemo = hashMapOf<String, List<TaintRule.GlobalReadSource>>()
@@ -62,11 +65,11 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         cleanerMemo.clear()
     }
 
-    override fun sourceRulesForGlobal(globalName: String): List<TaintRule.GlobalReadSource> =
-        sourceForGlobal(globalName)
+    override fun sourceRulesForGlobal(globalName: String, fieldType: String): List<TaintRule.GlobalReadSource> =
+        sourceForGlobal(globalName, fieldType)
 
-    override fun sourceRulesForFieldRead(fieldName: String): List<TaintRule.FieldReadSource> =
-        sourceForFieldRead(fieldName)
+    override fun sourceRulesForFieldRead(fieldName: String, fieldType: String): List<TaintRule.FieldReadSource> =
+        sourceForFieldRead(fieldName, fieldType)
 
     override fun sourceRulesForCall(
         signature: GoFunctionSignature, allRelevant: Boolean,
@@ -125,15 +128,15 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     }
 
     @Synchronized
-    fun sourceForGlobal(name: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
+    fun sourceForGlobal(name: String, fieldType: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
         candidates(name, globalSourceSimple, globalSourcePatterns, { global })
-            .mapNotNull { specialize(it, name) }
+            .mapNotNull { specialize(it, name, fieldType) }
     }
 
     @Synchronized
-    fun sourceForFieldRead(name: String): List<TaintRule.FieldReadSource> = fieldSourceMemo.getOrPut(name) {
+    fun sourceForFieldRead(name: String, fieldType: String): List<TaintRule.FieldReadSource> = fieldSourceMemo.getOrPut(name) {
         candidates(name, fieldSourceSimple, fieldSourcePatterns, { field })
-            .mapNotNull { specialize(it, name) }
+            .mapNotNull { specialize(it, name, fieldType) }
     }
 
     @Synchronized
@@ -176,18 +179,19 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         return direct + patternMatches
     }
 
-    private fun specialize(rule: GoSerializedGlobalSource, name: String) =
-        specializeFieldSourceRule(name, rule.condition, rule.taint) { name, condition, actions ->
+    private fun specialize(rule: GoSerializedGlobalSource, name: String, fieldType: String) =
+        specializeFieldSourceRule(name, fieldType, rule.condition, rule.taint) { name, condition, actions ->
             TaintRule.GlobalReadSource(name, condition, actions, rule.info)
         }
 
-    private fun specialize(rule: GoSerializedFieldSource, name: String)  =
-        specializeFieldSourceRule(name, rule.condition, rule.taint) { name, condition, actions ->
+    private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: String)  =
+        specializeFieldSourceRule(name, fieldType, rule.condition, rule.taint) { name, condition, actions ->
             TaintRule.FieldReadSource(name, condition, actions, rule.info)
         }
 
     private inline fun <T> specializeFieldSourceRule(
         name: String,
+        type: String,
         condition: GoSerializedCondition?,
         taint: List<GoSerializedAssignAction>,
         buildRule: (String, CommonCondition<GoRuleCondition>, List<GoAssignMark>) -> T
@@ -195,35 +199,36 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         condition?.let { validateConditionForFieldSource(it) }
         taint.forEach { validateAssignActionForFieldSource(it) }
 
-        val fakeSig =
-            GoFunctionSignature(name = name, receiverType = null, paramTypes = emptyList(), resultType = "any")
-        val condition = condition.resolveToRuleCondition(fakeSig)
+        val fakeSig = GoFunctionSignature(
+            name = name, receiverType = null, paramTypes = emptyList(), resultType = type
+        )
+        val condition = condition.resolveToRuleCondition(fakeSig, project)
         if (condition.isFalse()) return null
 
         val actions = taint.flatMap { t ->
-            t.pos.resolve(fakeSig).map { GoAssignMark(t.kind, it) }
+            t.pos.resolve(fakeSig, project).map { GoAssignMark(t.kind, it) }
         }
         return buildRule(name, condition, actions)
     }
 
     private fun specialize(rule: GoSerializedRule.Source, signature: GoFunctionSignature): TaintRule.Source? {
-        val condition = rule.condition.resolveToRuleCondition(signature)
+        val condition = rule.condition.resolveToRuleCondition(signature, project)
         if (condition.isFalse()) return null
 
         val actions = rule.taint.flatMap { t ->
-            t.pos.resolve(signature).map { GoAssignMark(t.kind, it) }
+            t.pos.resolve(signature, project).map { GoAssignMark(t.kind, it) }
         }
         return TaintRule.Source(signature.name, condition, actions, rule.info)
     }
 
     private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRule.Sink? {
-        val condition = rule.condition.resolveToRuleCondition(signature)
+        val condition = rule.condition.resolveToRuleCondition(signature, project)
         if (condition.isFalse()) return null
 
         val trackFacts = rule.trackFactsReachAnalysisEnd
             .orEmpty()
             .flatMap { a ->
-                a.pos.resolve(signature).map { GoAssignMark(a.kind, it) }
+                a.pos.resolve(signature, project).map { GoAssignMark(a.kind, it) }
             }
 
         val id = rule.id ?: generateRuleId(rule)
@@ -238,7 +243,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     }
 
     private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRule.Cleaner? {
-        val condition = rule.condition.resolveToRuleCondition(signature)
+        val condition = rule.condition.resolveToRuleCondition(signature, project)
         if (condition.isFalse()) return null
 
         val actions = rule.cleans.flatMap { it.toTaintAction(signature) }
@@ -246,15 +251,15 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     }
 
     private fun GoSerializedPassAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =
-        from.resolve(signature).flatMap { f ->
-            to.resolve(signature).map { t ->
+        from.resolve(signature, project).flatMap { f ->
+            to.resolve(signature, project).map { t ->
                 val kind = taintKind
                 if (kind == null) CopyData(f, t) else CopyTaintMark(kind, f, t)
             }
         }
 
     private fun GoSerializedCleanAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =
-        pos.resolve(signature).map {
+        pos.resolve(signature, project).map {
             val kind = taintKind
             if (kind == null) RemoveAllMarks(it) else RemoveMark(kind, it)
         }
@@ -269,7 +274,8 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     private fun validateConditionForFieldSource(condition: GoSerializedCondition) {
         when (condition) {
-            GoSerializedCondition.True -> Unit
+            is GoSerializedCondition.True -> Unit
+            is GoSerializedCondition.NumberOfArgs -> Unit
             is GoSerializedCondition.And -> condition.allOf.forEach { validateConditionForFieldSource(it) }
             is GoSerializedCondition.Or -> condition.anyOf.forEach { validateConditionForFieldSource(it) }
             is GoSerializedCondition.Not -> validateConditionForFieldSource(condition.not)
@@ -282,8 +288,6 @@ class GoTaintConfiguration : GoTaintRulesProvider {
             is GoSerializedCondition.IsNull -> validatePositionBaseForFieldSource(condition.pos)
             is GoSerializedCondition.IsConstant -> validatePositionBaseForFieldSource(condition.pos)
             is GoSerializedCondition.IsType -> validatePositionBaseForFieldSource(condition.pos)
-
-            is GoSerializedCondition.NumberOfArgs -> error("Unsupported condition for field source: $condition")
         }
     }
 

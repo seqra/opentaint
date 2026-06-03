@@ -17,15 +17,18 @@ class GoCombinedTaintRulesProvider(
         val globalSource: CombinationMode = CombinationMode.OVERRIDE,
     )
 
-    override fun sourceRulesForGlobal(globalName: String) =
+    override fun sourceRulesForGlobal(globalName: String, fieldType: String) =
         combine(options.globalSource,
-            base.sourceRulesForGlobal(globalName),
-            combined.sourceRulesForGlobal(globalName))
+            base.sourceRulesForGlobal(globalName, fieldType),
+            combined.sourceRulesForGlobal(globalName, fieldType)
+        )
 
-    override fun sourceRulesForFieldRead(fieldName: String) =
-        combine(options.source,
-            base.sourceRulesForFieldRead(fieldName),
-            combined.sourceRulesForFieldRead(fieldName))
+    override fun sourceRulesForFieldRead(fieldName: String, fieldType: String) =
+        combine(
+            options.source,
+            base.sourceRulesForFieldRead(fieldName, fieldType),
+            combined.sourceRulesForFieldRead(fieldName, fieldType)
+        )
 
     override fun sourceRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =
         combine(options.source,

@@ -4,20 +4,16 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
-import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.Access.RefAccess
-import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.analysis.GoMethodCallResolver.ClosureCreationFlowFunction
-import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.expr.GoIRBinOpExpr
@@ -39,7 +35,6 @@ import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.inst.GoIRStoreInst
 import org.opentaint.ir.go.type.GoIRBinaryOp
-import org.opentaint.util.onSome
 
 class GoMethodSequentFlowFunction(
     private val apManager: ApManager,
@@ -427,47 +422,15 @@ class GoMethodSequentFlowFunction(
     }
 
     private fun applyGlobalOrFieldReadSourceRules(out: MutableSet<Sequent>) {
-        val inst = currentInst as? GoIRAssignInst ?: return
-
-        val sourceRules = mutableListOf<TaintRule.GoSourceRule>()
-
-        val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst)
-        if (fieldName != null) {
-            sourceRules += context.taint.taintConfig.sourceRulesForFieldRead(fieldName)
-        }
-
-        val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst)
-        if (globalName != null) {
-            sourceRules += context.taint.taintConfig.sourceRulesForGlobal(globalName)
-        }
-
-        if (sourceRules.isEmpty()) return
-
-        val lhv = AccessPathBase.LocalVar(inst.register.index)
-
-        val sourceEvaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
-
-        for (rule in sourceRules) {
-            if (!rule.condition.isTrue()) {
-                TODO("Field/global source with complex condition")
+        applyGlobalOrFieldReadSourceRules(
+            currentInst, context,
+            mkSourceEvaluator = { TaintSourceActionEvaluator(apManager, ExclusionSet.Universe) }
+        ) { rule, action, lhv, fact ->
+            val trace = TraceInfo.Rule(rule, action)
+            if (fact.base !is AccessPathBase.Return) {
+                TODO("Field/global source with non-result assign")
             }
-
-            for (action in rule.actionsAfter) {
-                val pos = action.pos.resolvePosAccess()
-                val mark = TaintMarkAccessor(action.mark)
-
-                sourceEvaluator.evaluate(rule, action, pos, mark).onSome { evaluatedFacts ->
-                    val trace = TraceInfo.Rule(rule, action)
-
-                    evaluatedFacts.mapTo(out) {
-                        if (it.base !is AccessPathBase.Return) {
-                            TODO("Field/global source with non-result assign")
-                        }
-
-                        Sequent.ZeroToFact(it.rebase(lhv), trace)
-                    }
-                }
-            }
+            out += Sequent.ZeroToFact(fact.rebase(lhv), trace)
         }
     }
 

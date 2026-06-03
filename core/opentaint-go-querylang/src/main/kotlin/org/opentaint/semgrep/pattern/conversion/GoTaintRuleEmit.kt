@@ -20,5 +20,5 @@ fun TaintRuleFromSemgrep<GoSerializedItem>.toGoSerializedTaintConfig(): GoSerial
     )
 }
 
-fun TaintRuleFromSemgrep<GoSerializedItem>.toGoTaintConfiguration(): GoTaintConfiguration =
-    GoTaintConfiguration().also { it.loadConfig(toGoSerializedTaintConfig()) }
+fun GoTaintConfiguration.loadGoTaintConfiguration(semgrep: TaintRuleFromSemgrep<GoSerializedItem>): GoTaintConfiguration =
+    this.also { it.loadConfig(semgrep.toGoSerializedTaintConfig()) }

@@ -214,7 +214,29 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             transformationFailed("SelectorExpr_obj_with_type_constraint")
         }
 
-        return mkFieldReadActionList(fieldName, recvActions, recvObj ?: ParamCondition.True)
+        if (recvActions.isEmpty()) {
+            return mkFieldReadActionList(fieldName, recvObj ?: ParamCondition.True)
+        }
+
+        if (recvActions.size == 1) {
+            val lastAction = recvActions.last()
+            if (lastAction is MethodCall) {
+                val concreteMethodName = lastAction.methodName as? SignatureName.Concrete
+                val prevFieldName = concreteMethodName?.let { GoLanguageStrategy.fieldReadFieldOrNull(it.name) }
+                if (prevFieldName != null) {
+                    val fieldChain = GoLanguageStrategy.joinFieldNames(prevFieldName, fieldName)
+                    val chainMethodName = SignatureName.Concrete(GoLanguageStrategy.fieldReadAuxFnName(fieldChain))
+                    val modifiedAction = lastAction.copy(methodName = chainMethodName)
+                    return SemgrepPatternActionList(
+                        listOf(modifiedAction),
+                        hasEllipsisInTheBeginning = false,
+                        hasEllipsisInTheEnd = false
+                    )
+                }
+            }
+        }
+
+        transformationFailed("SelectorExpr_obj_with_complex_action")
     }
 
     private fun isMetavarRooted(expr: SemgrepGoPattern): Boolean = when (expr) {
@@ -226,17 +248,18 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
 
     private fun mkFieldReadActionList(
         fieldName: String,
-        actions: List<SemgrepPatternAction>,
         obj: ParamCondition
     ): SemgrepPatternActionList {
         val methodName = SignatureName.Concrete(GoLanguageStrategy.fieldReadAuxFnName(fieldName))
         return SemgrepPatternActionList(
-            actions + MethodCall(
-                methodName = methodName,
-                result = null,
-                params = ParamConstraint.Concrete(emptyList()),
-                obj = obj,
-                enclosingClassName = goNamed(FIELD_READ_AUX_CLASS),
+            listOf(
+                MethodCall(
+                    methodName = methodName,
+                    result = null,
+                    params = ParamConstraint.Concrete(emptyList()),
+                    obj = obj,
+                    enclosingClassName = goNamed(FIELD_READ_AUX_CLASS),
+                )
             ),
             hasEllipsisInTheBeginning = false,
             hasEllipsisInTheEnd = false,
@@ -250,7 +273,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
 
         return when (val pkg = qt.pkg) {
             is ConcreteName -> mkGlobalReadActionList(pkg.name, fieldName)
-            is MetavarName -> mkFieldReadActionList(fieldName, emptyList(), IsMetavar(MetavarAtom.create(pkg.name)))
+            is MetavarName -> mkFieldReadActionList(fieldName, IsMetavar(MetavarAtom.create(pkg.name)))
         }
     }
 

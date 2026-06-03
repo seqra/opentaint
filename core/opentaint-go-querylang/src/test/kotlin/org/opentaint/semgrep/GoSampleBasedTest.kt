@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
@@ -16,6 +17,7 @@ import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.go.config.GoConfigLoader
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
@@ -27,9 +29,7 @@ import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
-import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
-import org.opentaint.go.config.GoConfigLoader
+import org.opentaint.semgrep.pattern.conversion.loadGoTaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
@@ -255,7 +255,7 @@ class GoSampleBasedTest {
         val yamlFile = sampleDir.toFile().listFiles { f -> f.extension == "yaml" }
             ?.singleOrNull()
             ?: fail("Expected exactly one *.yaml rule under $sampleDir")
-        val config = loadConfig(yamlFile)
+        val config = loadConfig(yamlFile, program)
         if (useDefaultConfig) {
             val defaultConfig = GoConfigLoader.getConfig()
                 ?: fail("Bundled go-config not found on classpath")
@@ -291,7 +291,7 @@ class GoSampleBasedTest {
         }
     }
 
-    private fun loadConfig(yamlFile: File): GoTaintConfiguration {
+    private fun loadConfig(yamlFile: File, program: GoIRProgram): GoTaintConfiguration {
         val yaml = yamlFile.readText()
         val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path(yamlFile.name), Path("."), SemgrepLoadTrace())
@@ -301,7 +301,7 @@ class GoSampleBasedTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return typed.toGoTaintConfiguration()
+        return GoTaintConfiguration(program).loadGoTaintConfiguration(typed)
     }
 
     private fun runAnalysis(

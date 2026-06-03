@@ -35,6 +35,7 @@ class GoLanguageStrategy : LanguageStrategy<SemgrepGoPattern, GoSerializedItem> 
         const val GLOBAL_READ_AUX_FN_PREFIX = "$$<global>$$"
         const val FIELD_READ_AUX_FN_PREFIX = "$$<fieldread>$$"
         const val FIELD_READ_AUX_CLASS = "$$<fieldread-recv>$$"
+        const val FIELD_NAME_SEPARATOR = "$$<dot>$$"
 
         fun globalReadAuxFnName(name: String) = "$GLOBAL_READ_AUX_FN_PREFIX$name"
 
@@ -45,9 +46,13 @@ class GoLanguageStrategy : LanguageStrategy<SemgrepGoPattern, GoSerializedItem> 
 
         fun fieldReadAuxFnName(field: String): String = "$FIELD_READ_AUX_FN_PREFIX$field"
 
-        fun fieldReadFieldNull(name: String): String? {
+        fun fieldReadFieldOrNull(name: String): String? {
             if (!name.startsWith(FIELD_READ_AUX_FN_PREFIX)) return null
             return name.substring(FIELD_READ_AUX_FN_PREFIX.length)
         }
+
+        fun joinFieldNames(prev: String, next: String) = "$prev$FIELD_NAME_SEPARATOR$next"
+
+        fun splitFieldNames(joinedName: String): List<String> = joinedName.split(FIELD_NAME_SEPARATOR)
     }
 }
