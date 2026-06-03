@@ -57,6 +57,7 @@ class SemgrepRuleLoader(
     )
 
     private val registeredRules = hashMapOf<String, RegisteredRule>()
+    private val tagIndex = hashMapOf<String, MutableList<String>>()
 
     fun registerRuleSet(
         ruleSetText: String,
@@ -89,6 +90,15 @@ class SemgrepRuleLoader(
         semgrepFileTrace.info("Register ${supportedRules.size} rules")
     }
 
+    private fun buildTagIndex() {
+        tagIndex.clear()
+        for (registered in registeredRules.values) {
+            for (tag in registered.rule.tags) {
+                tagIndex.getOrPut(tag, ::mutableListOf).add(registered.ruleId)
+            }
+        }
+    }
+
     private fun registerRule(rule: RegisteredRule) {
         if (rule.ruleId in registeredRules) {
             rule.ruleTrace.stepTrace(Step.LOAD_RULESET)
@@ -112,6 +122,8 @@ class SemgrepRuleLoader(
 
         registeredRules.values.toList()
             .forEach { parseRule(it, forceLibraryMode = false) }
+
+        buildTagIndex()
 
         resolveRuleOverrides()
 
@@ -325,15 +337,13 @@ class SemgrepRuleLoader(
     private fun loadJoinRule(rule: JoinRule<*>): Pair<TaintRuleFromSemgrep<*>, RuleMetadata>? {
         val trace = rule.info.ruleTrace
 
-        val taintAutomata = buildJoinRule(rule, trace.stepTrace(Step.BUILD))
+        val subJoins = buildJoinRule(rule, trace.stepTrace(Step.BUILD))
             ?: return null
 
         val a2trTrace = trace.stepTrace(Step.AUTOMATA_TO_TAINT_RULE)
         val strategy = strategyFor(rule.info) ?: return null
-        val typeOps = strategy.typeOps
         return runCatching {
-            val ctx = RuleConversionCtx(rule.info.ruleId, rule.modeModifier(), rule.info.sinkMeta, a2trTrace, typeOps)
-            val rules = convertJoinRuleWithStrategy(strategy, ctx, taintAutomata)
+            val rules = convertJoinRuleWithStrategy(strategy, rule, subJoins, a2trTrace)
                 ?: return null
             rules to rule.info.metadata
         }.onFailure { ex ->
@@ -344,11 +354,30 @@ class SemgrepRuleLoader(
         }
     }
 
+    /**
+     * Converts each single-sink [TaintAutomataJoinRule] produced by [buildJoinRule] and merges the
+     * results into one rule. When a join fans into several sinks each sink is renamed apart (its key is
+     * appended to the rule id) so the generated marks of one sink cannot collide with another's; the
+     * merged rule is still published under the original rule id.
+     */
     private fun <P : Any, R> convertJoinRuleWithStrategy(
         strategy: LanguageStrategy<P, R>,
-        ctx: RuleConversionCtx,
-        taintAutomata: TaintAutomataJoinRule,
-    ): TaintRuleFromSemgrep<R>? = ctx.convertTaintAutomataJoinToTaintRules(strategy.taintRuleStrategy, taintAutomata)
+        rule: JoinRule<*>,
+        subJoins: List<Pair<String, TaintAutomataJoinRule>>,
+        trace: SemgrepRuleLoadStepTrace,
+    ): TaintRuleFromSemgrep<R>? {
+        val typeOps = strategy.typeOps
+        val renameSinks = subJoins.size > 1
+        val groups = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup<R>>()
+        for ((sinkKey, subRule) in subJoins) {
+            val ruleId = if (renameSinks) "${rule.info.ruleId}#$sinkKey" else rule.info.ruleId
+            val ctx = RuleConversionCtx(ruleId, rule.modeModifier(), rule.info.sinkMeta, trace, typeOps)
+            val converted = ctx.convertTaintAutomataJoinToTaintRules(strategy.taintRuleStrategy, subRule)
+                ?: return null
+            groups += converted.taintRules
+        }
+        return TaintRuleFromSemgrep(rule.info.ruleId, groups)
+    }
 
     private fun resolveBuiltRuleWrtOverrides(
         ruleId: String,
@@ -379,15 +408,22 @@ class SemgrepRuleLoader(
         return builtRule
     }
 
-    private fun buildJoinRule(rule: JoinRule<*>, trace: SemgrepRuleLoadStepTrace): TaintAutomataJoinRule? {
-        val items = hashMapOf<String, TaintAutomataJoinRuleItem>()
+    private fun buildJoinRule(
+        rule: JoinRule<*>,
+        trace: SemgrepRuleLoadStepTrace
+    ): List<Pair<String, TaintAutomataJoinRule>>? {
+        val items = hashMapOf<String, MutableList<TaintAutomataJoinRuleItem>>()
         val itemRenames = hashMapOf<String, List<Pair<MetavarAtom, MetavarAtom>>>()
 
         val strategy = strategyFor(rule.info) ?: return null
 
         for (ref in rule.refs) {
-            val refId = resolveRefRuleId(ref.rule, rule.info.pathInfo.ruleRelativePath)
-            val itemAutomata = resolveBuiltRuleWrtOverrides(refId, trace, hashSetOf())
+            if (ref.`as` in items) {
+                trace.error(JoinRefDuplicateAlias(ref.`as`))
+                return null
+            }
+
+            val refIds = resolveRefTargets(ref, rule.info.pathInfo.ruleRelativePath, trace)
                 ?: return null
 
             val renames = ref.renames.map {
@@ -396,7 +432,16 @@ class SemgrepRuleLoader(
                 Pair(from, to)
             }
 
-            items[ref.`as`] = TaintAutomataJoinRuleItem(itemAutomata.info.ruleId, itemAutomata.rule)
+            val aliasItems = items.getOrPut(ref.`as`, ::mutableListOf)
+            for (refId in refIds) {
+                if (parsedRules[refId] is JoinRule<*>) {
+                    trace.error(JoinRefToUnsupportedRuleKind(refId))
+                    return null
+                }
+                val itemAutomata = resolveBuiltRuleWrtOverrides(refId, trace, hashSetOf())
+                    ?: return null
+                aliasItems += TaintAutomataJoinRuleItem(itemAutomata.info.ruleId, itemAutomata.rule)
+            }
             itemRenames[ref.`as`] = renames
         }
 
@@ -417,7 +462,102 @@ class SemgrepRuleLoader(
             return null
         }
 
-        return TaintAutomataJoinRule(items, operations)
+        return expandToSingleSinkJoins(items, operations, trace)
+    }
+
+    /**
+     * Lowers a (possibly tag-expanded, possibly multi-sink) alias-level join onto the single-sink join
+     * form the conversion engine accepts. A source alias that resolves to several rules contributes one
+     * item per rule; every distinct sink becomes its own [TaintAutomataJoinRule] wiring that sink's
+     * source union into it. The returned pairs carry a per-sink key used to rename the sinks apart during
+     * conversion. Chained aliases (an alias used as both a source and a sink) and aliases referenced with
+     * conflicting metavariables are rejected here, because per-sink splitting would otherwise hide them.
+     */
+    private fun expandToSingleSinkJoins(
+        items: Map<String, List<TaintAutomataJoinRuleItem>>,
+        operations: List<TaintAutomataJoinOperation>,
+        trace: SemgrepRuleLoadStepTrace
+    ): List<Pair<String, TaintAutomataJoinRule>>? {
+        val sourceAliases = operations.mapTo(linkedSetOf()) { it.lhs.itemId }
+        val sinkAliases = operations.mapTo(linkedSetOf()) { it.rhs.itemId }
+        if (sourceAliases.intersect(sinkAliases).isNotEmpty()) {
+            trace.error(JoinRuleWithChainedOperations())
+            return null
+        }
+
+        val sourceVar = hashMapOf<String, MetavarAtom>()
+        val sinkVar = hashMapOf<String, MetavarAtom>()
+        for (op in operations) {
+            val prevSource = sourceVar.put(op.lhs.itemId, op.lhs.metaVar)
+            if (prevSource != null && prevSource != op.lhs.metaVar) {
+                trace.error(JoinAliasMetavarConflict(op.lhs.itemId))
+                return null
+            }
+            val prevSink = sinkVar.put(op.rhs.itemId, op.rhs.metaVar)
+            if (prevSink != null && prevSink != op.rhs.metaVar) {
+                trace.error(JoinAliasMetavarConflict(op.rhs.itemId))
+                return null
+            }
+        }
+
+        // Keep a single-rule alias' item id equal to the alias so common joins convert exactly as before;
+        // only tag-expanded aliases (more than one rule) get an index suffix.
+        fun itemId(alias: String, index: Int, count: Int): String =
+            if (count == 1) alias else "$alias#$index"
+
+        val subJoins = mutableListOf<Pair<String, TaintAutomataJoinRule>>()
+        for (sinkAlias in sinkAliases) {
+            val opsForSink = operations.filter { it.rhs.itemId == sinkAlias }
+            val sinkItems = items.getValue(sinkAlias)
+
+            sinkItems.forEachIndexed { sinkIdx, sinkItem ->
+                val sinkItemId = itemId(sinkAlias, sinkIdx, sinkItems.size)
+                val sinkRef = TaintAutomataJoinMetaVarRef(sinkItemId, sinkVar.getValue(sinkAlias))
+                val subItems = linkedMapOf(sinkItemId to sinkItem)
+                val subOps = linkedSetOf<TaintAutomataJoinOperation>()
+
+                for (op in opsForSink) {
+                    val sourceItems = items.getValue(op.lhs.itemId)
+                    sourceItems.forEachIndexed { sourceIdx, sourceItem ->
+                        val sourceItemId = itemId(op.lhs.itemId, sourceIdx, sourceItems.size)
+                        subItems[sourceItemId] = sourceItem
+                        subOps += TaintAutomataJoinOperation(
+                            op.op,
+                            TaintAutomataJoinMetaVarRef(sourceItemId, op.lhs.metaVar),
+                            sinkRef
+                        )
+                    }
+                }
+
+                subJoins += sinkItemId to TaintAutomataJoinRule(subItems, subOps.toList())
+            }
+        }
+
+        return subJoins
+    }
+
+    private fun resolveRefTargets(
+        ref: SemgrepYamlJoinRuleRef,
+        ruleRelativePath: Path,
+        trace: SemgrepRuleLoadStepTrace
+    ): List<String>? {
+        val hasRule = ref.rule != null
+        val hasTag = ref.tag != null
+        if (hasRule == hasTag) {
+            trace.error(if (hasRule) JoinRefAmbiguousTarget() else JoinRefMissingTarget())
+            return null
+        }
+
+        if (hasRule) {
+            return listOf(resolveRefRuleId(ref.rule!!, ruleRelativePath))
+        }
+
+        val matched = tagIndex[ref.tag]
+        if (matched.isNullOrEmpty()) {
+            trace.error(EmptyTagExpansion(ref.tag!!))
+            return null
+        }
+        return matched.distinct().sorted()
     }
 
     private fun LanguageStrategy<*, *>.parseJoinMetaVarWithRenames(

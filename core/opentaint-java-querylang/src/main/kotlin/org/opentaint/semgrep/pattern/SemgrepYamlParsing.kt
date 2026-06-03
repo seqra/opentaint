@@ -26,6 +26,7 @@ data class SemgrepYamlRuleSet(
 @Serializable
 data class SemgrepYamlRule(
     val id: String,
+    val tags: List<String> = emptyList(),
     val languages: List<String>? = null,
     val pattern: String? = null,
     val mode: String? = null,
@@ -56,7 +57,8 @@ data class SemgrepYamlJoinRule(
 
 @Serializable
 data class SemgrepYamlJoinRuleRef(
-    val rule: String,
+    val rule: String? = null,
+    val tag: String? = null,
     @SerialName("as")
     val `as`: String,
     val renames: List<SemgrepYamlJoinRuleRefRenames> = emptyList()

@@ -1,0 +1,51 @@
+rules:
+  - id: tag-source-a
+    options: { lib: true }
+    tags: [demo-untrusted]
+    severity: NOTE
+    message: source a
+    languages: [java]
+    patterns:
+      - pattern: $V = srcA()
+
+  - id: tag-source-b
+    options: { lib: true }
+    tags: [demo-untrusted]
+    severity: NOTE
+    message: source b
+    languages: [java]
+    patterns:
+      - pattern: $V = srcB()
+
+  - id: tag-sink-x
+    options: { lib: true }
+    severity: NOTE
+    message: sink x
+    languages: [java]
+    patterns:
+      - pattern: sinkX($V)
+
+  - id: tag-sink-y
+    options: { lib: true }
+    severity: NOTE
+    message: sink y
+    languages: [java]
+    patterns:
+      - pattern: sinkY($V)
+
+  - id: join-tag-union
+    severity: ERROR
+    message: Tag union across two sources into two sinks
+    languages: [java]
+    mode: join
+    join:
+      refs:
+        - tag: demo-untrusted
+          as: untrusted
+        - rule: tag-sink-x
+          as: sinkx
+        - rule: tag-sink-y
+          as: sinky
+      on:
+        - 'untrusted.$V -> sinkx.$V'
+        - 'untrusted.$V -> sinky.$V'
