@@ -13,7 +13,6 @@ import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
-import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
@@ -21,6 +20,7 @@ import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlow
 import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
 import org.opentaint.dataflow.go.analysis.forEachAliasAtStatement
 import org.opentaint.dataflow.go.analysis.forEachPossibleAliasAtStatement
+import org.opentaint.dataflow.go.analysis.resolvePosAccess
 import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.rules.accept
@@ -143,7 +143,7 @@ class GoMethodCallPrecondition(
                 rule.actionsAfter,
                 ruleCondition = { condition },
                 sourcePreconditionEvaluator = sourcePreconditionEvaluator,
-                evalAction = { r, a -> evaluate(r, a, a.pos.resolvePosAccess(), TaintMarkAccessor(a.mark)) },
+                evalAction = { r, a -> evaluate(r, a, a.resolvePosAccess(), TaintMarkAccessor(a.mark)) },
                 conditionRewriter = GoRuleConditionRewriter(callExpr, statement, returnValue),
             )
         }

@@ -18,8 +18,14 @@ internal fun GoNameMatcher.matchAnything(): Boolean =
 internal fun GeneratedMark.mkGoContainsMark(pos: PositionBaseWithModifiers): GoSerializedCondition.ContainsMark =
     GoSerializedCondition.ContainsMark(taintMarkStr(), pos)
 
+internal fun GeneratedMark.mkGoContainsMarkOnAnyAccessor(pos: PositionBaseWithModifiers): GoSerializedCondition =
+    GoSerializedCondition.ContainsMarkOnAnyAccessor(taintMarkStr(), pos)
+
 internal fun GeneratedMark.mkGoAssignMark(pos: PositionBaseWithModifiers): GoSerializedAssignAction =
-    GoSerializedAssignAction(taintMarkStr(), pos)
+    GoSerializedAssignAction.Direct(taintMarkStr(), pos)
+
+internal fun GeneratedMark.mkGoAssignMarkOnAnyAccessor(pos: PositionBaseWithModifiers): GoSerializedAssignAction =
+    GoSerializedAssignAction.AnyAccessor(taintMarkStr(), pos)
 
 internal fun GeneratedMark.mkGoCleanMark(pos: PositionBaseWithModifiers): GoSerializedCleanAction =
     GoSerializedCleanAction(taintMarkStr(), pos)

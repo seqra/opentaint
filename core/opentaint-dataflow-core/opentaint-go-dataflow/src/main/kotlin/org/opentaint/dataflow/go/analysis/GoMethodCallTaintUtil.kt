@@ -12,10 +12,9 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.go.GoCallExpr
-import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
-import org.opentaint.dataflow.go.rules.GoAssignMark
+import org.opentaint.dataflow.go.rules.GoAssignAction
 import org.opentaint.dataflow.go.rules.GoRuleCondition
 import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.taint.FactReader
@@ -158,12 +157,12 @@ class GoMethodCallTaintUtil(
 
     private inline fun applySourceAction(
         rule: CommonTaintConfigurationItem,
-        actions: List<GoAssignMark>,
+        actions: List<GoAssignAction>,
         sourceEvaluator: TaintSourceActionEvaluator,
         createFinalFact: (FinalFactAp) -> Unit,
     ) {
         for (action in actions) {
-            val position = action.pos.resolvePosAccess()
+            val position = action.resolvePosAccess()
             sourceEvaluator.evaluate(rule, action, position, TaintMarkAccessor(action.mark)).onSome { facts ->
                 facts.forEach { f ->
                     f.mapExitToReturnFact()?.let { createFinalFact(it) }

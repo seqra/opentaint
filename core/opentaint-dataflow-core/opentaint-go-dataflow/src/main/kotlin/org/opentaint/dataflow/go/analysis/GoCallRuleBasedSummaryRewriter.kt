@@ -49,7 +49,7 @@ class GoCallRuleBasedSummaryRewriter(
             val simplifiedCondition = conditionRewriter.rewrite(sourceRule.condition)
             if (simplifiedCondition.isFalse) continue
 
-            val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.pos }
+            val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.rawPosition() }
             result += UserRuleDefinedAction(sourceRule, positions, ruleInfo.relevantTaintMarks)
         }
 

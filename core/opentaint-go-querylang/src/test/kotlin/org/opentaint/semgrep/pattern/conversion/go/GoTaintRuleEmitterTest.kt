@@ -32,7 +32,7 @@ class GoTaintRuleEmitterTest {
                 pkg = GoNameMatcher.Simple("util"),
                 function = GoNameMatcher.Simple("Source"),
                 condition = null,
-                taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
+                taint = listOf(GoSerializedAssignAction.Direct("taint", baseOnly(PositionBase.Result))),
                 info = null,
             ),
         )
@@ -42,7 +42,7 @@ class GoTaintRuleEmitterTest {
         val src = cfg.sourceForFunction("util.Source".signature(0), allRelevant = false).single()
         assertEquals("util.Source", src.function)
         assertEquals("taint", src.actionsAfter.single().mark)
-        assertEquals(Position.Result, src.actionsAfter.single().pos)
+        assertEquals(Position.Result, src.actionsAfter.single().rawPosition())
     }
 
     @Test
@@ -107,7 +107,7 @@ class GoTaintRuleEmitterTest {
                 pkg = GoNameMatcher.Simple("util"),
                 function = GoNameMatcher.Pattern(".*"),
                 condition = null,
-                taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
+                taint = listOf(GoSerializedAssignAction.Direct("taint", baseOnly(PositionBase.Result))),
                 info = null
             ),
         )

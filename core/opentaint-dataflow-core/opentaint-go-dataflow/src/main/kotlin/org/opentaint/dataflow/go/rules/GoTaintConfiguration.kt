@@ -199,7 +199,7 @@ class GoTaintConfiguration(
         type: String,
         condition: GoSerializedCondition?,
         taint: List<GoSerializedAssignAction>,
-        buildRule: (String, CommonCondition<GoRuleCondition>, List<GoAssignMark>) -> T
+        buildRule: (String, CommonCondition<GoRuleCondition>, List<GoAssignAction>) -> T
     ): T? {
         condition?.let { validateConditionForFieldSource(it) }
         taint.forEach { validateAssignActionForFieldSource(it) }
@@ -210,9 +210,7 @@ class GoTaintConfiguration(
         val condition = condition.resolveToRuleCondition(fakeSig, project)
         if (condition.isFalse()) return null
 
-        val actions = taint.flatMap { t ->
-            t.pos.resolve(fakeSig, project).map { GoAssignMark(t.kind, it) }
-        }
+        val actions = taint.specialize(fakeSig)
         return buildRule(name, condition, actions)
     }
 
@@ -220,9 +218,7 @@ class GoTaintConfiguration(
         val condition = rule.condition.resolveToRuleCondition(signature, project)
         if (condition.isFalse()) return null
 
-        val actions = rule.taint.flatMap { t ->
-            t.pos.resolve(signature, project).map { GoAssignMark(t.kind, it) }
-        }
+        val actions = rule.taint.specialize(signature)
         return TaintRule.Source(signature.name, condition, actions, rule.info)
     }
 
@@ -232,14 +228,27 @@ class GoTaintConfiguration(
 
         val trackFacts = rule.trackFactsReachAnalysisEnd
             .orEmpty()
-            .flatMap { a ->
-                a.pos.resolve(signature, project).map { GoAssignMark(a.kind, it) }
-            }
+            .specialize(signature)
 
         val id = rule.id ?: generateRuleId(rule)
         val meta = rule.meta ?: defaultMeta(signature.name)
 
         return TaintRule.Sink(signature.name, condition, trackFacts, id, meta, rule.info)
+    }
+
+    private fun List<GoSerializedAssignAction>.specialize(signature: GoFunctionSignature) = flatMap { t ->
+        when (t) {
+            is GoSerializedAssignAction.Direct -> t.pos.resolve(signature, project)
+                .map { GoAssignAction.Direct(t.kind, it) }
+
+            is GoSerializedAssignAction.AnyAccessor -> t.pos.resolve(signature, project)
+                .flatMap {
+                    listOf(
+                        GoAssignAction.AnyAccessor(t.kind, it),
+                        GoAssignAction.Direct(t.kind, it), // todo: remove this hack after fact fix
+                    )
+                }
+        }
     }
 
     private fun specialize(rule: GoSerializedRule.PassThrough, signature: GoFunctionSignature): TaintRule.PassThrough? {
@@ -297,7 +306,11 @@ class GoTaintConfiguration(
     }
 
     private fun validateAssignActionForFieldSource(action: GoSerializedAssignAction) {
-        validatePositionWithModifiersForFieldSource(action.pos)
+        val pos = when (action) {
+            is GoSerializedAssignAction.AnyAccessor -> action.pos
+            is GoSerializedAssignAction.Direct -> action.pos
+        }
+        validatePositionWithModifiersForFieldSource(pos)
     }
 
     private fun validatePositionWithModifiersForFieldSource(pos: PositionBaseWithModifiers) {

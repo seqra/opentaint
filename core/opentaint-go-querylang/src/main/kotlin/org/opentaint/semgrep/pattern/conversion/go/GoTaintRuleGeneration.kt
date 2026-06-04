@@ -196,7 +196,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
 
 private fun List<GoSerializedAssignAction>.assignOnFieldChain(fields: List<String>): List<GoSerializedAssignAction> {
     if (fields.isEmpty()) return this
-    return map { it.copy(pos = it.pos.assignOnFieldChain(fields)) }
+    return map { it.changePos(it.rawPosition().assignOnFieldChain(fields)) }
 }
 
 private fun PositionBaseWithModifiers.assignOnFieldChain(fields: List<String>): PositionBaseWithModifiers {

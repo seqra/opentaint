@@ -1,13 +1,16 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
+import org.opentaint.dataflow.go.rules.GoAssignAction
 import org.opentaint.dataflow.go.rules.TaintRule
+import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.SourceActionEvaluator
 import org.opentaint.ir.go.inst.GoIRAssignInst
 import org.opentaint.ir.go.inst.GoIRInst
@@ -44,7 +47,7 @@ inline fun <T> applyGlobalOrFieldReadSourceRules(
         }
 
         for (action in rule.actionsAfter) {
-            val pos = action.pos.resolvePosAccess()
+            val pos = action.resolvePosAccess()
             val mark = TaintMarkAccessor(action.mark)
 
             sourceEvaluator.evaluate(rule, action, pos, mark).onSome { evaluatedFacts ->
@@ -54,4 +57,9 @@ inline fun <T> applyGlobalOrFieldReadSourceRules(
             }
         }
     }
+}
+
+fun GoAssignAction.resolvePosAccess(): PositionAccess = when (this) {
+    is GoAssignAction.Direct -> pos.resolvePosAccess()
+    is GoAssignAction.AnyAccessor -> PositionAccess.Complex(pos.resolvePosAccess(), AnyAccessor)
 }

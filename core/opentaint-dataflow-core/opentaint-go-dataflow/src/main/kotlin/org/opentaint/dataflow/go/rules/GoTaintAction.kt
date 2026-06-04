@@ -25,4 +25,15 @@ data class RemoveAllMarks(
     val pos: Position,
 ) : GoTaintAction
 
-data class GoAssignMark(val mark: String, val pos: Position): GoTaintAction, CommonTaintAssignAction
+sealed interface GoAssignAction : GoTaintAction, CommonTaintAssignAction {
+    val mark: String
+    fun rawPosition(): Position
+
+    data class Direct(override val mark: String, val pos: Position) : GoAssignAction {
+        override fun rawPosition(): Position = pos
+    }
+
+    data class AnyAccessor(override val mark: String, val pos: Position) : GoAssignAction {
+        override fun rawPosition(): Position = pos
+    }
+}

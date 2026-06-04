@@ -14,34 +14,34 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
 
     sealed interface GoSourceRule : TaintRule, CommonTaintConfigurationSource {
         val condition: CommonCondition<GoRuleCondition>
-        val actionsAfter: List<GoAssignMark>
+        val actionsAfter: List<GoAssignAction>
     }
 
     data class GlobalReadSource(
         val global: String,
         override val condition: CommonCondition<GoRuleCondition>,
-        override val actionsAfter: List<GoAssignMark>,
+        override val actionsAfter: List<GoAssignAction>,
         override val info: ItemInfo?,
     ) : GoSourceRule
 
     data class FieldReadSource(
         val field: String,
         override val condition: CommonCondition<GoRuleCondition>,
-        override val actionsAfter: List<GoAssignMark>,
+        override val actionsAfter: List<GoAssignAction>,
         override val info: ItemInfo?,
     ) : GoSourceRule
 
     data class Source(
         val function: String,
         override val condition: CommonCondition<GoRuleCondition>,
-        override val actionsAfter: List<GoAssignMark>,
+        override val actionsAfter: List<GoAssignAction>,
         override val info: ItemInfo?,
     ) : GoSourceRule
 
     data class Sink(
         val function: String,
         val condition: CommonCondition<GoRuleCondition>,
-        val trackFactsReachAnalysisEnd: List<GoAssignMark>,
+        val trackFactsReachAnalysisEnd: List<GoAssignAction>,
         override val id: String,
         override val meta: CommonTaintConfigurationSinkMeta,
         override val info: ItemInfo?,
