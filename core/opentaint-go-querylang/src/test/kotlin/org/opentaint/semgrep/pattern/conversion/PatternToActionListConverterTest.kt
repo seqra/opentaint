@@ -28,7 +28,7 @@ class PatternToActionListConverterTest {
     }
 
     private fun convert(src: String): Pair<SemgrepPatternActionList?, Map<String, Int>> {
-        val c = PatternToActionListConverter()
+        val c = GoPatternToActionListConverter()
         return c.createActionList(parse(src), noopTrace) to c.failedTransformations
     }
 

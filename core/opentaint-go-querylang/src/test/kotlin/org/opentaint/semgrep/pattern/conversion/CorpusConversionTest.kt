@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class CorpusConversionTest {
     private val parser = SemgrepGoPatternParser()
-    private val converter = PatternToActionListConverter()
+    private val converter = GoPatternToActionListConverter()
     private val noopTrace = SemgrepRuleLoadStepTrace(Step.BUILD_PARSE_SEMGREP_RULE)
 
     private fun loadPatterns(): List<String> {
