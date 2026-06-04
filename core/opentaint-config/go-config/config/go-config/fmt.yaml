@@ -135,12 +135,20 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
 - function:
     package: fmt
     name: Appendf
     receiver: false
   copy:
   - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
     to: result
 - function:
     package: fmt
@@ -149,12 +157,20 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
 - function:
     package: fmt
     name: Sprint
     receiver: false
   copy:
   - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
     to: result
 - function:
     package: fmt
@@ -163,12 +179,20 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
 - function:
     package: fmt
     name: Sprintln
     receiver: false
   copy:
   - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
     to: result
 - function:
     package: fmt
@@ -177,6 +201,10 @@ passThrough:
   copy:
   - from: arg(*)
     to: arg(0)
+  - from:
+      - arg(*)
+      - '[*]'
+    to: arg(0)
 - function:
     package: fmt
     name: Fprintf
@@ -184,12 +212,20 @@ passThrough:
   copy:
   - from: arg(*)
     to: arg(0)
+  - from:
+      - arg(*)
+      - '[*]'
+    to: arg(0)
 - function:
     package: fmt
     name: Fprintln
     receiver: false
   copy:
   - from: arg(*)
+    to: arg(0)
+  - from:
+      - arg(*)
+      - '[*]'
     to: arg(0)
 - function:
     package: fmt
@@ -220,6 +256,10 @@ passThrough:
     receiver: false
   copy:
   - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
     to: result
 - function:
     package: fmt
