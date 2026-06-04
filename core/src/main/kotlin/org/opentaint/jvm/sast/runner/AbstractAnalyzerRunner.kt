@@ -8,7 +8,7 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.access.ApMode
-import org.opentaint.jvm.sast.dataflow.DebugOptions
+import org.opentaint.common.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
 import org.opentaint.jvm.sast.project.ProjectKind
 import org.opentaint.jvm.sast.util.file

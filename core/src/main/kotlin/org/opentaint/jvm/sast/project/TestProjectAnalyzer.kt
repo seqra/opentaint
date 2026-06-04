@@ -5,7 +5,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import mu.KLogging
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
@@ -13,16 +15,15 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.project.rules.analysisConfig
 import org.opentaint.jvm.sast.project.rules.loadSemgrepRules
-import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.jvm.sast.project.rules.semgrepRulesWithDefaultConfig
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.SarifGenerator
 import org.opentaint.jvm.sast.util.locationChecker
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.project.JavaProject
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.outputStream
@@ -189,7 +190,7 @@ class TestProjectAnalyzer(
     private fun ProjectAnalysisContext.analyzeTestSample(
         rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         sample: TestSample
-    ): Pair<List<VulnerabilityWithTrace>, JIRTaintAnalyzer.Status> {
+    ): Pair<List<VulnerabilityWithTrace>, TaintAnalyzer.Status> {
         val loadedConfig = rules.semgrepRulesWithDefaultConfig(cp)
         val config = analysisConfig(loadedConfig)
 

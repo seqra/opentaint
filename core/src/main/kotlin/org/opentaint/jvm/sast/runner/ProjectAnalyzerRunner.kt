@@ -10,7 +10,7 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
-import org.opentaint.jvm.sast.dataflow.DebugOptions
+import org.opentaint.common.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.go.sast.project.GoProjectAnalyzer

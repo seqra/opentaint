@@ -4,6 +4,7 @@ import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import com.charleskorn.kaml.encodeToStream
 import mu.KLogging
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
@@ -117,7 +118,7 @@ class ProjectAnalyzer(
     }
 
     private data class AnalysisResult(
-        val status: JIRTaintAnalyzer.Status,
+        val status: TaintAnalyzer.Status,
         val traces: List<VulnerabilityWithTrace>,
         val seVerifiedTraces: List<VulnerabilityWithTrace>? = null,
         val debugStatementsWithFact: Map<CommonInst, Set<FinalFactAp>>? = null
