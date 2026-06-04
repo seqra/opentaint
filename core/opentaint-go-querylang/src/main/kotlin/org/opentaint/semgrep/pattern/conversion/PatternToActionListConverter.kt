@@ -19,6 +19,7 @@ import org.opentaint.semgrep.pattern.FuncDecl
 import org.opentaint.semgrep.pattern.FuncType
 import org.opentaint.semgrep.pattern.GoStmt
 import org.opentaint.semgrep.pattern.Identifier
+import org.opentaint.semgrep.pattern.IndexExpr
 import org.opentaint.semgrep.pattern.IntLiteral
 import org.opentaint.semgrep.pattern.KeyedElem
 import org.opentaint.semgrep.pattern.MapType
@@ -49,6 +50,7 @@ import org.opentaint.semgrep.pattern.TypedMetavar
 import org.opentaint.semgrep.pattern.UnaryExpr
 import org.opentaint.semgrep.pattern.VarDecl
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy.Companion.FIELD_READ_AUX_CLASS
+import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy.Companion.INDEX_AUX_FIELD_NAME
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ConstructorCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodCall
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.MethodExit
@@ -116,6 +118,7 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             transformFuncDecl(pattern.name, pattern.signature, pattern.body, receiverType = recvType)
         }
 
+        is IndexExpr -> transformIndexRead(pattern)
         is SelectorExpr -> transformFieldReadOrFail(pattern)
         is TypeOnlyPattern -> transformGlobalReadFromType(pattern.type)
 
@@ -198,6 +201,18 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         return SemgrepPatternActionList(actions, hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
     }
 
+    private fun transformIndexRead(expr: IndexExpr): SemgrepPatternActionList {
+        val (recvActions, _, recvType) = decomposeReceiver(expr.obj)
+
+        if (recvType != null) {
+            transformationFailed("IndexExpr_obj_with_type_constraint")
+        }
+
+        tryJoinFieldChain(recvActions, INDEX_AUX_FIELD_NAME)?.let { return it }
+
+        transformationFailed("IndexExpr_obj_with_complex_action")
+    }
+
     private fun transformFieldReadOrFail(sel: SelectorExpr): SemgrepPatternActionList {
         val fieldName = (sel.sel as? ConcreteName)?.name
             ?: transformationFailed("SelectorExpr_field_not_concrete")
@@ -218,32 +233,30 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             return mkFieldReadActionList(fieldName, recvObj ?: ParamCondition.True)
         }
 
-        if (recvActions.size == 1) {
-            val lastAction = recvActions.last()
-            if (lastAction is MethodCall) {
-                val concreteMethodName = lastAction.methodName as? SignatureName.Concrete
-                val prevFieldName = concreteMethodName?.let { GoLanguageStrategy.fieldReadFieldOrNull(it.name) }
-                if (prevFieldName != null) {
-                    val fieldChain = GoLanguageStrategy.joinFieldNames(prevFieldName, fieldName)
-                    val chainMethodName = SignatureName.Concrete(GoLanguageStrategy.fieldReadAuxFnName(fieldChain))
-                    val modifiedAction = lastAction.copy(methodName = chainMethodName)
-                    return SemgrepPatternActionList(
-                        listOf(modifiedAction),
-                        hasEllipsisInTheBeginning = false,
-                        hasEllipsisInTheEnd = false
-                    )
-                }
-            }
-        }
+        tryJoinFieldChain(recvActions, fieldName)?.let { return it }
 
         transformationFailed("SelectorExpr_obj_with_complex_action")
     }
 
-    private fun isMetavarRooted(expr: SemgrepGoPattern): Boolean = when (expr) {
-        is Metavar -> true
-        is Identifier -> expr.name is MetavarName
-        is SelectorExpr -> isMetavarRooted(expr.obj)
-        else -> false
+    private fun tryJoinFieldChain(recvActions: List<SemgrepPatternAction>, fieldName: String): SemgrepPatternActionList? {
+        if (recvActions.size != 1) return null
+
+        val lastAction = recvActions.last()
+        if (lastAction !is MethodCall) return null
+
+        val concreteMethodName = lastAction.methodName as? SignatureName.Concrete
+        val prevFieldName = concreteMethodName?.let { GoLanguageStrategy.fieldReadFieldOrNull(it.name) }
+        if (prevFieldName != null) {
+            val fieldChain = GoLanguageStrategy.joinFieldNames(prevFieldName, fieldName)
+            val chainMethodName = SignatureName.Concrete(GoLanguageStrategy.fieldReadAuxFnName(fieldChain))
+            val modifiedAction = lastAction.copy(methodName = chainMethodName)
+            return SemgrepPatternActionList(
+                listOf(modifiedAction),
+                hasEllipsisInTheBeginning = false,
+                hasEllipsisInTheEnd = false
+            )
+        }
+        return null
     }
 
     private fun mkFieldReadActionList(
@@ -368,11 +381,23 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         transformPatternIntoParamCondition(pattern)?.let { return emptyList<SemgrepPatternAction>() to it }
         val actionList = transformPatternToActionList(pattern)
         if (actionList.actions.isEmpty()) return emptyList<SemgrepPatternAction>() to null
-        val result = actionList.actions.toMutableList()
-        val last = result.removeLast()
-        val metavar = provideArtificialMetavar()
-        result += last.setResultCondition(IsMetavar(metavar))
+        val (result, metavar) = actionList.actions.ensureLastActionMetaVar()
         return result to IsMetavar(metavar)
+    }
+
+    private fun List<SemgrepPatternAction>.ensureLastActionMetaVar(): Pair<List<SemgrepPatternAction>, MetavarAtom> {
+        val lastAction = last()
+        val lastResult = lastAction.result
+        if (lastResult != null) {
+            if (lastResult is IsMetavar) return this to lastResult.metavar
+            error("Last action result is complex")
+        }
+
+        val result = toMutableList()
+        val metavar = provideArtificialMetavar()
+        val newLastAction = lastAction.setResultCondition(IsMetavar(metavar))
+        result[result.lastIndex] = newLastAction
+        return result to metavar
     }
 
     private fun transformPatternIntoParamCondition(pattern: SemgrepGoPattern): ParamCondition? = when (pattern) {

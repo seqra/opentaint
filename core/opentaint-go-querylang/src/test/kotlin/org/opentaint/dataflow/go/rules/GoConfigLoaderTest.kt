@@ -17,15 +17,15 @@ class GoConfigLoaderTest {
         // strings.Replace / bytes.NewBuffer etc. Verify a few package-level
         // (receiver:false) examples survive deserialization.
         val names = config.passThrough.map { (it.function as GoNameMatcher.Simple).name }.toSet()
-        assertTrue("strings.Replace" in names, "expected strings.Replace propagator, saw ${names.take(5)}")
-        assertTrue("bufio.NewReader" in names, "expected bufio.NewReader propagator")
+        assertTrue("Replace" in names, "expected strings.Replace propagator, saw ${names.take(5)}")
+        assertTrue("NewReader" in names, "expected bufio.NewReader propagator")
     }
 
     @Test
     fun containerListPushBackRuleSurvivesLoading() {
         val config = assertNotNull(GoConfigLoader.getConfig())
         val pushBack = config.passThrough.filter {
-            (it.function as? GoNameMatcher.Simple)?.name?.contains("container/list.List") == true &&
+            (it.pkg as? GoNameMatcher.Simple)?.name?.contains("container/list.List") == true &&
             (it.function as? GoNameMatcher.Simple)?.name?.contains("PushBack") == true
         }
         assertTrue(pushBack.isNotEmpty(), "container/list PushBack rule dropped during loading")

@@ -7,5 +7,6 @@ rules:
     pattern-sources:
       - pattern: "$R.Header"
       - pattern: "$R.Header.Get($K)"
+      - pattern: "$R.Header[$KEY][$IDX]"
     pattern-sinks:
       - pattern: "util.Sink($X)"

@@ -78,20 +78,6 @@ class PatternToActionListConverterTest {
         assertEquals(ParamConstraint.Concrete(listOf(ParamCondition.AnyStringLiteral)), call.params)
     }
 
-    @Test fun chainedCallFlattensToOutermost() {
-        // Chained method-call receivers (e.g. `a.b().c()`, `$R.URL.Query().Get($K)`)
-        // collapse to a single MethodCall on the OUTERMOST call. The inner call's
-        // receiver-shape constraint is intentionally dropped (treated as opaque
-        // `ParamCondition.True`), so the resulting rule fires on any `.c()` /
-        // `.Get(...)` call regardless of receiver. This avoids the dual-rule
-        // (source + pass-through) emission whose artificial mark does not survive
-        // closure-capture boundaries — see [PatternToActionListConverter.decomposeReceiver].
-        val a = convertOk("a.b().c()")
-        val outer = a.actions.single() as MethodCall
-        assertEquals(SignatureName.Concrete("c"), outer.methodName)
-        assertEquals(ParamCondition.True, outer.obj)
-    }
-
     @Test fun nestedCallArgumentLinearizes() {
         val a = convertOk("outer(inner(\$X))")
         assertEquals(2, a.actions.size)

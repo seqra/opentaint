@@ -7,5 +7,6 @@ rules:
     pattern-sources:
       - pattern: "$R.Form.Get($K)"
       - pattern: "$R.Form"
+      - pattern: "$R.Form[$KEY][$IDX]"
     pattern-sinks:
       - pattern: "util.Sink($X)"

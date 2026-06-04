@@ -36,6 +36,7 @@ class GoLanguageStrategy : LanguageStrategy<SemgrepGoPattern, GoSerializedItem> 
         const val FIELD_READ_AUX_FN_PREFIX = "$$<fieldread>$$"
         const val FIELD_READ_AUX_CLASS = "$$<fieldread-recv>$$"
         const val FIELD_NAME_SEPARATOR = "$$<dot>$$"
+        const val INDEX_AUX_FIELD_NAME = "$$[*]$$"
 
         fun globalReadAuxFnName(name: String) = "$GLOBAL_READ_AUX_FN_PREFIX$name"
 

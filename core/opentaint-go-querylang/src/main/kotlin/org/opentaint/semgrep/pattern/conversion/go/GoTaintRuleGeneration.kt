@@ -203,7 +203,12 @@ private fun PositionBaseWithModifiers.assignOnFieldChain(fields: List<String>): 
         is PositionBaseWithModifiers.BaseOnly -> emptyList()
         is PositionBaseWithModifiers.WithModifiers -> modifiers
     }
-    val newModifiers = modifiers + fields.map { PositionModifier.Field("", it, "") }
+    val newModifiers = modifiers + fields.map {
+        when (it) {
+            GoLanguageStrategy.INDEX_AUX_FIELD_NAME -> PositionModifier.ArrayElement
+            else -> PositionModifier.Field("", it, "")
+        }
+    }
     return PositionBaseWithModifiers.WithModifiers(base, newModifiers)
 }
 
