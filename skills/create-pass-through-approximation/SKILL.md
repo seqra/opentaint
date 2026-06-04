@@ -99,6 +99,32 @@ passThrough:
     - .com.example.lib.Parser#parsed#java.lang.Object
 ```
 
+Full config — every function in one top-level `passThrough:` list (quote `[*]` — unquoted it parses as a YAML alias):
+```yaml
+passThrough:
+- function: org.springframework.beans.MutablePropertyValues#add
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.springframework.beans.PropertyValue#Value#java.lang.Object
+- function: org.springframework.beans.PropertyValue#getValue
+  overrides: false
+  copy:
+  - from:
+    - this
+    - .org.springframework.beans.PropertyValue#Value#java.lang.Object
+    to: result
+- function: org.springframework.beans.PropertyValues#getPropertyValues
+  copy:
+  - from:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
+    to:
+    - result
+    - '[*]'
+```
+
 ### 2. Verification is the scan
 
 There's no test project for passThrough. The main scan applies `<config-file>` and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
@@ -135,11 +161,11 @@ Do not touch other stages or fields
 
 Position bases
 - `this`, `result`, `arg(0)`, `arg(1)`, …
-- `any(<classifier>)` — a single argument bound consistently across every position in the rule; `class(<FQN>)` — a static field. Rare — prefer an explicit `arg(N)`
+- `any(<classifier>)` — expands to every argument matching the classifier (a cartesian product across positions, bound consistently), not a single argument. Rare — prefer an explicit `arg(N)`
 
 Access-path modifiers (list form `[<base>, <modifier>]`)
 - `.<DeclaringClass>#<slot>#<fieldType>` — a field or virtual slot; type it `java.lang.Object`. The slot name is arbitrary (a descriptive name, or the conventional `<rule-storage>` for a generic carrier)
-- `.[*]` — array / collection element
+- `[*]` — array element (no leading dot). For `java.util` collections this does *not* carry element taint; route it through the conventional `.java.lang.Iterable#Element#java.lang.Object` slot instead (as the built-in `List`/`Collection` models do)
 
 Function matching
 - Simple: `package.Class#method`
@@ -150,7 +176,10 @@ Overrides
 - `overrides: false`: exact class only
 
 Conditions (the only keys that load from YAML)
-- `typeIs`, `annotatedWith`, `isConstant`, `isNull`, `constantMatches`, `constantEq`, `constantGt`, `constantLt`, `tainted`, `anyOf`, `allOf`, `not`
+- take a `pos: <position>`: `typeIs`, `annotatedWith`, `constantMatches`, `constantEq`, `tainted`
+- take the position directly, no `pos:` field: `isConstant`, `isNull` — adding `pos:` fails to load
+- nest other conditions: `anyOf`, `allOf`, `not`
+- `constantGt` / `constantLt` load but crash the scan when actually evaluated against a constant (their string-typed bound fails an engine type-check) — avoid until fixed
 
 ## Gotchas
 

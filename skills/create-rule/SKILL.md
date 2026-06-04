@@ -9,18 +9,19 @@ metadata:
 
 # Skill: Create Rule
 
-Create a pattern rule for a vulnerability class, then test it against the prepared test project and fix it until every sample passes
+Per package, author the new source/sink lib rules the requirements name, wire each to the generic `Taint` marker in a test join, and verify against the package's marker test projects until every sample passes
 
-Two roles: a **source pass** writes the source lib rules the requirements name (a source isn't testable alone — the joins that ref it verify it later, so author and stop); a **sink pass**, per vuln class, writes that class's sink lib rules and the one join that refs every source, then tests
+Two roles: the **main** one authors a package's lib rules (above); a **fix** narrows or broadens a created rule the main scan later flags. The cross-package security joins are written by assemble-lib-rules, not here
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Requirements `<requirements>` — what to detect (source, sink, vuln class); either a rule tracking file or an overall description
-- Compiled test project `<test-compiled>` — the compiled model to verify against. Default: `.opentaint/test-compiled/<name>` (per rule/approximation `<name>`)
-- Rules directory `<rules-dir>` — where rules are written. Default: `.opentaint/rules`
-- Tracking file `<tracking-file>` — the rule file. Default: `.opentaint/tracking/rules/<name>.yaml`
+- Requirements `<requirements>` — the per-package lib unit naming the new sources/sinks (a tracking file), or for a fix the rule to change
+- Compiled test projects `<test-compiled>` — the marker models to verify against. Default: `.opentaint/test-compiled/<name>/sinks` and `.opentaint/test-compiled/<name>/sources` (`<name>` = the package-kebab)
+- Test project `<test-project>` — the sources tree; the test joins go in each side's `<test-project>/<side>/test-rules` (only `test rule run` loads them, never the main scan). Default: `.opentaint/test-projects/<name>`
+- Rules directory `<rules-dir>` — where the lib rules are written. Default: `.opentaint/rules`
+- Tracking file `<tracking-file>` — the lib unit file. Default: `.opentaint/tracking/rules/lib/<name>.yaml`
 - Approximation directories `<config-dir>` / `<approx-dir>` (optional) — apply on a re-dispatch when the test project needs a library model that's now built. Default: none
 
 Built-in rules are available at `opentaint health --rules`
@@ -86,47 +87,47 @@ rules:
           - focus-metavariable: $UNTRUSTED
 ```
 
-### 3. Create the security rule (join mode)
+### 3. Write the test joins (against the generic marker)
 
-One join per vuln class — write it at `<rules-dir>/java/security/<name>.yaml`, naming the file and `id` after the class (the requirement's `name`). Ref every source (built-in + the new per-package ones) and the class's sink group, and wire each source to the sink in `on:`, like the built-in `java/security/ssrf.yaml`:
+A lib rule emits nothing alone — to exercise it you need a join. Write one test join per sub-project into its `test-rules/java/security/`, wiring your new lib rules to the generic `Taint` marker. These live only in the test project (never `<rules-dir>`), so the main scan never loads them. Name each `<name>-sinks` / `<name>-sources` so the samples' `value`/`id` resolve:
+
+- `sinks/` → `<name>-sinks`: ref the generic source + every new sink lib rule, wiring `src.$UNTRUSTED -> <sink>.$UNTRUSTED` for each
+- `sources/` → `<name>-sources`: ref every new source lib rule + the generic sink, wiring `<source>.$UNTRUSTED -> sink.$VALUE` for each
 
 ```yaml
+# .opentaint/test-projects/<name>/sinks/test-rules/java/security/<name>-sinks.yaml
 rules:
-  - id: sql-injection
+  - id: <name>-sinks
     severity: ERROR
-    message: >-
-      Untrusted data flows to a dangerous operation
+    message: Tainted value reaches a sink under test
     metadata:
-      cwe: CWE-89
-      short-description: SQL Injection via untrusted input
+      cwe: CWE-000
+      short-description: test join for the package's sinks
     languages: [java]
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-source
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
-          as: spring-source
-        - rule: java/lib/<pkg>/my-new-sink.yaml#my-new-sink
+        - rule: java/lib/test/generic-source.yaml#generic-taint-source
+          as: src
+        - rule: java/lib/<area>/my-new-sink.yaml#my-new-sink
           as: sink
       on:
-        - 'servlet-source.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-source.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-Wire only combinations with a new end — a built-in source → built-in sink pair is already covered by the built-in join, so repeating it here double-reports
+The marker rules resolve from the sub-project's `test-rules` root, your lib rules from `<rules-dir>` — pass both to `test rule run`. Metavariable names must match across `refs` and `on`
 
 ### 4. Test until success
 
-Run the rule tests against the compiled test project; iterate the rule and re-run `test rule run` until every sample passes:
+Run the tests against each compiled sub-project, loading your lib rules (`<rules-dir>`) and the test joins + markers (`<test-project>/<side>/test-rules`); iterate until every sample passes:
 
 ```bash
-opentaint test rule run <test-compiled> \
-  -o .opentaint/test-results/<name> \
-  --ruleset <rules-dir>
+opentaint test rule run <test-compiled>/sinks \
+  -o .opentaint/test-results/<name>/sinks \
+  --ruleset <rules-dir> --ruleset <test-project>/sinks/test-rules
 ```
 
-`test rule run` auto-loads the built-in rules, so pass only your custom `<rules-dir>` — a literal `builtin` here would be treated as a path. When the caller passed `<config-dir>` / `<approx-dir>`, append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` — without them a library method the test flow relies on drops taint and the positive can't pass. Read `.opentaint/test-results/<name>/test-result.json`:
+`test rule run` auto-loads the built-in rules, so pass only your custom rulesets — a literal `builtin` here would be treated as a path. When the caller passed `<config-dir>` / `<approx-dir>`, append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` — without them a library method the test flow relies on drops taint and the positive can't pass. Read `.opentaint/test-results/<name>/sinks/test-result.json`:
 
 - `falseNegative` (positive didn't trigger) → patterns too narrow; broaden `pattern-either`, check metavariable names match across branches and between `refs` and `on`
 - `falsePositive` (negative triggered) → patterns too broad; add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`
@@ -134,12 +135,12 @@ opentaint test rule run <test-compiled> \
 
 ### 5. When a positive won't pass after a couple of fixes
 
-A `@PositiveRuleSample` that won't trigger after ~2 fix attempts may have a cause no rule edit can fix — a library method on its flow killing taint. Before escalating, scan your own test model with `--track-external-methods`:
+A `@PositiveRuleSample` that won't trigger after ~2 fix attempts may have a cause no rule edit can fix — a library method on its flow killing taint. Before escalating, scan that sub-project's model with `--track-external-methods` (add the marker `test-rules` so the join resolves):
 
 ```bash
-opentaint scan --project-model <test-compiled> \
-  -o .opentaint/test-results/<name>/diag.sarif \
-  --ruleset builtin --ruleset <rules-dir> \
+opentaint scan --project-model <test-compiled>/sinks \
+  -o .opentaint/test-results/<name>/sinks/diag.sarif \
+  --ruleset builtin --ruleset <rules-dir> --ruleset <test-project>/sinks/test-rules \
   --track-external-methods
 ```
 
@@ -148,24 +149,19 @@ Read `dropped-external-methods.yaml` next to it; either way leave `tests_passing
 - a dropped method on the failing sample's source→sink path → that's the cause, not the rule: report which methods need a model, to be approximated before you're re-dispatched
 - nothing dropped and no clear rule cause → report non-convergence for escalation, rather than editing blindly
 
-### 6. Refining for a false positive (suppress-FP)
-
-The test project already pins the confirmed TPs as `@PositiveRuleSample` and reproduces the FP as a `@NegativeRuleSample` — refine only the rule. Narrow it (step 4's `falsePositive` handling) until the negative stops triggering while every positive still passes
-
 ## Output
 
-- The rule file(s) under `<rules-dir>`
-- Tracking updated: `rule_id`, `artifact`, `stages.tests_passing` (per Tracking)
-- Report the full rule id, a one-line test summary, and the exact `test rule run` command used
+- The new lib rule file(s) under `<rules-dir>`, and the test join(s) under each test project's `test-rules/`
+- Tracking updated: the lib rules' `rule_id`s/`artifact`, `stages.tests_passing` (per Tracking)
+- Report the lib rule ids, a one-line test summary per sub-project, and the exact `test rule run` command used
 - If blocked (step 5): leave `tests_passing: pending` and report the cause instead
 
 ## Tracking
 
-In `<tracking-file>`, once the rule exists and its samples pass:
+In `<tracking-file>`, once the lib rules exist and every sub-project's samples pass:
 
 ```yaml
-rule_id: java/security/my-vuln.yaml:my-vulnerability
-artifact: .opentaint/rules/java/security/my-vuln.yaml
+artifact: .opentaint/rules/java/lib/generic/my-sink.yaml
 stages:
   tests_passing: done
 ```
@@ -173,12 +169,12 @@ stages:
 ## Constraints
 
 - Library rules MUST have `options.lib: true` and `severity: NOTE`
-- Security rules MUST have `metadata.cwe` and `metadata.short-description`
+- Security rules (the joins) MUST have `metadata.cwe` and `metadata.short-description`
 - Source/sink metavariable names must match across `refs` and `on` clauses, or the join won't connect
-- The `rule:` path in `refs` is relative to the ruleset root
+- The `rule:` path in `refs` is relative to the ruleset root — a marker ref resolves under the test project's `test-rules`, a lib ref under `<rules-dir>`
 - Rule IDs must be globally unique
 - For simple structural patterns (no dataflow), omit `mode:` (uses default mode)
-- Custom library rules go under `<rules-dir>/java/lib/generic/` or `<rules-dir>/java/lib/spring/` (for Spring-specific), mirroring the built-in layout — never directly under `java/lib/`
+- Custom library rules go under `<rules-dir>/java/lib/generic/` or `<rules-dir>/java/lib/spring/` (for Spring-specific), mirroring the built-in layout — never directly under `java/lib/`; the test joins go in the test project's `test-rules/java/security/`, never `<rules-dir>`
 
 
 ## Gotchas

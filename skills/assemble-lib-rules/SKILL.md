@@ -1,6 +1,6 @@
 ---
 name: assemble-lib-rules
-description: Group the discovered sources and sinks into per-vuln-class join rule requirements. Use after the discover-attack-surface fan-out, to describe the rules the next phase will write
+description: Write the per-vuln-class security join rules that merge the created source/sink lib rules with the built-ins. Use after the per-package lib rules are created and tested, to wire them into project-level joins
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,70 +9,92 @@ metadata:
 
 # Skill: Assemble Lib Rules
 
-The per-package passes catalogue sources and sinks but never pair them. With the whole surface inventory in front of you, describe the join rules the next phase will build — one per vuln class, each wiring every source to that class's sinks, mirroring the built-in security rules
+The per-package passes author source and sink lib rules but never pair them across packages. With every created lib rule and the whole built-in set in front of you, write the security joins — one per vuln class, each merging the created rules with the built-ins, mirroring the built-in security rules. These are verified by the main scan, not a test project
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Surface inventory `<surface>` — the discovered sources/sinks. Default: `.opentaint/tracking/surface.yaml`
-- Tracking directory `<tracking-dir>` — where the join requirements are written. Default: `.opentaint/tracking`
+- Lib units `<lib-units>` — the per-package lib tracking files (`rules/lib/<package-kebab>.yaml`) with the created source/sink `rule_id`s and their vuln classes. Default: `.opentaint/tracking/rules/lib/`
+- Rules directory `<rules-dir>` — where the security joins are written. Default: `.opentaint/rules`
+- Tracking directory `<tracking-dir>` — where the join records are written. Default: `.opentaint/tracking`
 
 Built-in rules are available at `opentaint health --rules`
 
 ## Workflow
 
-### 1. Read the surface and the built-ins
+### 1. Read the created lib rules and the built-ins
 
-Read `<surface>` and the built-in rules (`opentaint health --rules`). Note which built-in source/sink lib rules already exist, to ref
+Read every per-package lib unit in `<lib-units>` (the source/sink `rule_id`s create-rule wrote, sinks carrying their `vuln_class`) and the built-in source/sink lib rules (`opentaint health --rules`). Collect every source rule (built-in + created) and every sink rule grouped by vuln class
 
-### 2. Group sinks by vuln class
+### 2. Write one security join per vuln class
 
-The sinks in `<surface>` carry a `vuln_class`; group them. A class needs a join requirement if it has a **new** sink, or if there's any **new** source (a new source must be wired to every class's sink group). Skip a class only when it has no new sink and there's no new source — the built-in join already covers it
+For each vuln class that has a **created** (new) sink or for which there is any **created** source, write `<rules-dir>/java/security/<class>.yaml` (file and `id` = the class), `mode: join`, refing the relevant sources and sinks and wiring **only new-end combinations** in `on:`:
 
-### 3. Describe one join requirement per class
+- built-in sources + created sources → that class's **new** sinks
+- created sources → that class's **built-in** sinks
+- skip built-in source → built-in sink — the built-in join already covers it, so repeating it double-reports
 
-For each class, write one `<tracking-dir>/rules/<name>.yaml` (`<name>` = the vuln class), naming:
+```yaml
+rules:
+  - id: ssrf
+    severity: ERROR
+    message: Untrusted data reaches an SSRF sink
+    metadata:
+      cwe: CWE-918
+      short-description: SSRF via untrusted input
+    languages: [java]
+    mode: join
+    join:
+      refs:
+        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+          as: servlet-source          # built-in source
+        - rule: java/lib/spring/webflux-request-source.yaml#webflux-request-source
+          as: webflux-source          # created source
+        - rule: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
+          as: new-sink                # created (new) sink
+        - rule: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+          as: builtin-sink            # built-in sink
+      on:
+        - 'servlet-source.$UNTRUSTED -> new-sink.$UNTRUSTED'      # built-in source → new sink
+        - 'webflux-source.$UNTRUSTED -> new-sink.$UNTRUSTED'      # created source → new sink
+        - 'webflux-source.$UNTRUSTED -> builtin-sink.$UNTRUSTED'  # created source → built-in sink
+```
 
-- every source (built-in refs + the new ones from `<surface>`) — a join aggregates them all, like the built-ins
-- that class's sink group (built-in refs + new)
-- every library the rule crosses under `dependencies`
+(no `servlet-source -> builtin-sink` line — the built-in join already covers that pair)
 
-A join wires only combinations with a **new** end (new source → any sink, any source → new sink); a built-in source → built-in sink pair is already covered by the built-in join, so leaving it out keeps the join from double-reporting
+### 3. Stop — the main scan verifies
+
+These joins carry no test project — the main scan applies them. Write them and stop; if the scan shows a join didn't load or fire, the orchestrator re-dispatches create-rule to fix it
 
 ## Output
 
-- One `<tracking-dir>/rules/<name>.yaml` per vuln-class join, with `stages.description: done`, its `sources`/`sinks`, and `dependencies`
-- A brief summary to the caller: one line per join (class, source/sink count, which ends are new). The files hold the detail — don't paste it back
+- One `<rules-dir>/java/security/<class>.yaml` per vuln-class join, refing the created + built-in lib rules
+- One `<tracking-dir>/rules/join/<class>.yaml` per join, with `stages.written: done`
+- A brief summary to the caller: one line per join (class, source/sink count, which ends are new)
 
 ## Tracking
 
-`<tracking-dir>/rules/<name>.yaml` — the join requirement the next phase builds and tests:
+`<tracking-dir>/rules/join/<class>.yaml` — the security join, verified by the main scan:
 
 ```yaml
-name: ssrf                    # = the vuln class; becomes the join rule's file and id
-rule_id: null                 # filled later
-artifact: null
-finding: null
-requirements: >
-  CWE-918 SSRF — join every untrusted-data source to the SSRF sink group
-sources:                      # ref a built-in, or a new one to write
+name: ssrf                    # the vuln class; the join rule's file and id
+rule_id: java/security/ssrf.yaml:ssrf
+artifact: .opentaint/rules/java/security/ssrf.yaml
+sources:                      # built-in + created
   - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-  - new: ServerRequest body/params — org.springframework.web.reactive.function.server
-sinks:
-  - new: WebClient.get().uri($UNTRUSTED) — org.springframework.web.reactive.function.client; in DefaultAttachmentService / ProxyFilter
-dependencies:
-  - org.springframework:spring-webflux:6.1.0
+  - ref: java/lib/spring/webflux-request-source.yaml#webflux-request-source
+sinks:                        # created + built-in
+  - new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
+  - builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
 stages:
-  description: done
-  test_project: pending
-  tests_passing: pending
+  written: done
+  verified: pending           # done once the main scan confirms it
 notes: >
   free-form
 ```
 
 ## Gotchas
 
-- Describe, don't write — emit requirements only; rules are written and tested in the next phase
-- One join per vuln class, aggregating every source — don't write a separate join per source or per package
-- Ref a built-in source or sink rather than re-declaring it
+- One join per vuln class, aggregating every relevant source — don't write a separate join per source or per package
+- Ref the existing lib rules (built-in + created); never re-declare a source or sink

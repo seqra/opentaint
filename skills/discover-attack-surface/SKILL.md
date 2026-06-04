@@ -9,43 +9,45 @@ metadata:
 
 # Skill: Discover Attack Surface
 
-Take one library the triage flagged and record the untrusted-data sources and dangerous sinks it introduces
+Take one library the triage flagged, settle what the built-in rules already cover, and write the package's rule plan — the untrusted-data sources and dangerous sinks it introduces — for the next phase to build
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
 - Package `<package>` — the flagged library to drill (a `pending` entry in `coverage.yaml`)
-- Project root `<project-root>` — the project sources. Default: current directory
+- Dependency jars `<deps-dir>` — the project's resolved dependency jars, one per library. Default: `.opentaint/project/dependencies`
 - Project model `<model-dir>` — the built model. Default: `.opentaint/project`
-- Tracking directory `<tracking-dir>` — where the coverage record and surface inventory live. Default: `.opentaint/tracking`
-- Surface inventory `<surface>` — the running list of discovered sources/sinks. Default: `.opentaint/tracking/surface.yaml`
+- Tracking directory `<tracking-dir>` — where the coverage record and the per-package lib units live. Default: `.opentaint/tracking`
 
 ## Workflow
 
-Requires a built project model — without it you can miss entry points the analyzer actually sees
+### 1. Settle built-in coverage first
 
-### 1. Find how the project uses the package
+Before enumerating anything, see what the built-ins already match for this package — read the lib rules (`opentaint health --rules`) plus `.opentaint/rules`. Decide one of:
 
-Search through `<project-root>` sources for `<package>`'s imports and call sites. List the distinct methods of it the app calls — these, not the library's whole API, are the surface that matters
+- **full** — the built-ins already match the package's relevant sources/sinks → write no lib unit, flip the `coverage.yaml` entry to `done` with a `builtin_coverage: full` note, and stop. Don't drill further
+- **partial** — built-ins match some but miss methods/overloads/classes → plan only the missing ones (`coverage: expand`, ref the built-in for the rest)
+- **none** — plan the package's surface from scratch
 
-### 2. Identify sources and sinks
+### 2. Enumerate sources and sinks from the package jar
 
-Among the used methods, pick out the **sources** — methods returning attacker-controlled data (HTTP/RPC request data, message-broker payloads, second-order rows read back) — and the **sinks** — dangerous operations (query construction, command/file/path ops, deserialization, template/EL evaluation, LDAP/JNDI, reflection). Catalogue each end on its own; don't trace a flow between them — the analyzer pairs them at scan time
+Find the package's jar in `<deps-dir>` (match the artifact from the dependency GAV; `unzip -l <jar> | grep <package-as-path>` confirms it owns the package) and read its compiled API with `javap` / `unzip` — capture as many real sources and sinks as the package exposes, not just the ones the app happens to call today. Never read the analyzer jar — only dependency jars
 
-For each, check whether a built-in rule already matches it (`opentaint health --rules` + `.opentaint/rules`); a built-in match records its ref instead of a new idea. Tag each sink with its vuln class (`ssrf`, `sqli`, `path-traversal`, …); sources aren't class-tagged
+- **sources** — methods returning attacker-controlled data (HTTP/RPC request data, message-broker payloads, second-order rows read back); general, not class-tagged
+- **sinks** — dangerous operations (query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection); tag each with its vuln class (`ssrf`, `sqli`, `path-traversal`, …)
 
-Verify each is real before recording it: a source is genuinely attacker-controlled (a request param, header, body, or message payload is; an app constant or server config is not), a sink genuinely dangerous with tainted input (string-built SQL is; a parameterized query is not)
+Verify each is real before recording: a source genuinely attacker-controlled, a sink genuinely dangerous with tainted input. Don't trace a flow between them — the analyzer pairs them at scan time
 
-### 3. Record into the surface inventory
+### 3. Write the package's rule plan
 
-Append each source and sink to `<surface>` (schema below) — for a new one, a short idea of the pattern and where it lives; for a covered one, the built-in ref. Then flip the package's `coverage.yaml` entry to `status: done` with a one-line `notes`. Write it the moment you finish so the walk resumes cleanly
+Write `<tracking-dir>/rules/lib/<package-kebab>.yaml` — its new sources, its sinks grouped by `vuln_class`, the dependency GAV, `stages.description: done`, and each `coverage: new` or `expand`. Then flip the package's `coverage.yaml` entry to `status: done`. `<package-kebab>` is the dotted package with `.` → `-`; the `package:` field keeps the real dotted name
 
 ## Output
 
-- Sources and sinks the package introduces appended to `<surface>`
+- A `<tracking-dir>/rules/lib/<package-kebab>.yaml` rule plan (or, for `full` coverage, none — just the coverage note)
 - The package's `coverage.yaml` entry set `status: done` with a one-line `notes`
-- A brief summary to the caller: the sources and sinks found (one line each, new vs built-in-covered). The inventory holds the detail — don't paste it back
+- A brief summary to the caller: the sources and sinks planned (one line each, marked `new` / `expand`). The unit holds the detail — don't paste it back
 
 ## Tracking
 
@@ -54,23 +56,33 @@ Append each source and sink to `<surface>` (schema below) — for a new one, a s
 ```yaml
   - package: org.springframework.web.reactive.function.client
     status: done
-    notes: WebClient request methods — SSRF sink not covered by built-ins; no new source
+    notes: WebClient request methods — SSRF sink; built-ins cover get(), expand with post()/put(); no new source
 ```
 
-`<tracking-dir>/surface.yaml` — append what the package introduces (`builtin: null` ⇒ new, to be written next phase):
+`<tracking-dir>/rules/lib/<package-kebab>.yaml` — the rule plan; fill only the discovery-stage fields (create-test-project and create-rule fill the rest):
 
 ```yaml
-sources:                       # general untrusted-data sources
-  - package: org.springframework.web.reactive.function.server
-    idea: ServerRequest body/params/headers — untrusted request data; in RouterFunctions
+package: org.springframework.web.reactive.function.client
+dependencies:
+  - org.springframework:spring-webflux:6.1.0
+builtin_coverage: partial      # partial | none
+sources:                       # general, not class-tagged
+  - idea: ServerRequest body/params/headers — untrusted request data
+    coverage: new              # new | expand
     builtin: null
-    dependency: org.springframework:spring-webflux:6.1.0
-sinks:                         # tagged by vuln class
-  - package: org.springframework.web.reactive.function.client
-    vuln_class: ssrf
-    idea: WebClient.get().uri($UNTRUSTED); in DefaultAttachmentService / ProxyFilter
-    builtin: null
-    dependency: org.springframework:spring-webflux:6.1.0
+    rule_id: null
+sinks:                         # grouped by vuln class
+  - vuln_class: ssrf
+    idea: WebClient.get/post/put().uri($UNTRUSTED)
+    coverage: expand
+    builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+    rule_id: null
+stages:
+  description: done
+  test_project: pending
+  tests_passing: pending
+notes: >
+  free-form
 ```
 
 ## Engine notes
@@ -80,6 +92,5 @@ sinks:                         # tagged by vuln class
 
 ## Gotchas
 
-- Describe, don't write — record source/sink ideas only; rules are written and tested in the next phase
-- Don't re-declare a built-in source or sink — record its ref instead
-- Don't grep dependency jars to find usage — read the app's own sources in `<project-root>`
+- Plan, don't write — record source/sink ideas only; the lib rules are written and tested in the next phase
+- Don't re-declare a source or sink a built-in already matches — `coverage: expand` with only the missing methods, or fold it into `full` coverage

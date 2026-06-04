@@ -26,6 +26,8 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 Reuse `<base-url>` if given. Otherwise build and start the app the way the project expects (`spring-boot:run`, `java -jar`, `docker compose`, …), wait until it's listening, and note the base URL. The PoC must hit a live instance
 
+When the app needs backing services (DB, broker, cache, …), bring them all up with one `docker compose` on a shared network rather than starting each by hand, and register it as a single `compose` entry
+
 Bind to `127.0.0.1` (`--server.address=127.0.0.1`, `docker run -p 127.0.0.1:8080:8080`, a compose override on the port mapping) — never `0.0.0.0` or a public interface: a live exploit must not be reachable off-host. A specific non-local IP is fine when the test genuinely needs one, but never the public wildcard
 
 Once it's listening, record it in the registry (see § Tracking) so the orchestrator can reap it later

@@ -2,41 +2,42 @@
 
 ## Samples
 
-- `@PositiveRuleSample` — a minimal flow that must flag: a known (built-in) source's value passed straight into the new sink, or the new source's value into a known (built-in) sink — real signatures, no extra hops. One per new source and per new sink; `value`/`id` point at the join rule
-- `@NegativeRuleSample` — the safe (sanitized or parameterized) variant of the same, which must not flag; or a confirmed false positive you're narrowing the rule against. Keep it realistic, not stripped to constants
+The fixed counterpart is always the generic `Taint` marker (scaffolded by `test rule init`), never a real source/sink — so types fit cast-free and the sample only exercises the rule under test.
+
+- `@PositiveRuleSample` — a minimal flow that must flag, with real sink/source signatures and no extra hops:
+  - **sink** under test → `<Type> t = test.Taint.source(); pkg.theSink(t);` — declare the local as the sink argument's type; the generic `source()` infers it, no cast
+  - **source** under test → `var v = pkg.theSource(); test.Taint.sink(v);` — `sink` takes `Object`, so any type fits
+  One positive per new sink (in `sinks/`) and per new source (in `sources/`); `value`/`id` point at that sub-project's test join (`<name>-sinks` / `<name>-sources`, `<name>` = the package-kebab)
+- `@NegativeRuleSample` — the safe (sanitized or parameterized) variant of the same, which must not flag. Keep it realistic, not stripped to constants
 
 ```java
 package test;
 
 import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.opentaint.sast.test.util.NegativeRuleSample;
-import javax.servlet.http.HttpServletRequest;
 import java.sql.Connection;
 import java.sql.Statement;
 
-public class MyVulnTest {
+// sinks/ sub-project — a SQL sink fed by the generic marker source
+public class SqlSinkTest {
     private Connection db;
 
-    @PositiveRuleSample(value = "java/security/my-vuln.yaml", id = "my-vulnerability")
-    public void vulnerable(HttpServletRequest req) throws Exception {
-        String input = req.getParameter("id");
+    @PositiveRuleSample(value = "java/security/jdbc-sinks.yaml", id = "jdbc-sinks")
+    public void vulnerable() throws Exception {
+        String input = test.Taint.source();          // generic marker: infers String, no cast
         Statement stmt = db.createStatement();
         stmt.executeQuery("SELECT * FROM users WHERE id = " + input);
     }
 
-    @NegativeRuleSample(value = "java/security/my-vuln.yaml", id = "my-vulnerability")
-    public void safe(HttpServletRequest req) throws Exception {
-        String input = req.getParameter("id");
+    @NegativeRuleSample(value = "java/security/jdbc-sinks.yaml", id = "jdbc-sinks")
+    public void safe() throws Exception {
+        String input = test.Taint.source();
         var pstmt = db.prepareStatement("SELECT * FROM users WHERE id = ?");
         pstmt.setString(1, input);
         pstmt.executeQuery();
     }
 }
 ```
-
-## Suppress-FP
-
-When narrowing a rule after triage confirms a false positive, add that FP as a `@NegativeRuleSample` and pin every confirmed true positive as a `@PositiveRuleSample`, so the rule edit can't silently drop a real finding. Then recompile
 
 ## Spring-entry flows
 

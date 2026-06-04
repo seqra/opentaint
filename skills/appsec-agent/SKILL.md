@@ -27,39 +27,26 @@ After installing, run `opentaint health` to confirm the autobuilder/analyzer/rul
 
 ## Choose a workflow
 
-Begin by asking the user which workflow to run — a single AskUserQuestion offering the presets only, each option's description giving its composition:
+Begin by asking the user two things — two separate AskUserQuestion calls, scan level then triage level. Record the chosen `scan_level` and `triage_level` in `state.yaml`:
 
-- fast — scan: lite, triage: static
-- default — scan: normal, triage: static, suppress-FP: optional
-- ultra — scan: deep, triage: dynamic, suppress-FP: on
-- reproduce-vulnerability — anchored on a vulnerability the user asserts exists; deep scan + dynamic triage
+1. Scan level — `lite` · `normal` · `deep`
+   - lite — build + scan with existing rules
+   - normal — + approximation iteration
+   - deep — + discover-attack-surface + new rules (fixed first)
+2. Triage level — `static` · `dynamic`
+   - static — classify findings from the model, no running app
+   - dynamic — + a PoC per confirmed TP. This launches a few test services on the user's current machine (local instances and ports); they're torn down at the end of the run. Make that clear in the option
 
-The tool adds an Other choice; if the user takes it, ask for any custom steps — a custom combination of scan level (lite/normal/deep), triage level (static/dynamic), and suppress-FP (on/off). Record the resolved levels in `state.yaml`.
-
-Levels, once chosen:
-
-- scan — lite (build + scan with existing rules) · normal (+ approximation iteration) · deep (+ discover-attack-surface + new rules, fixed first)
-- triage — static (classify from the model) · dynamic (+ a PoC per confirmed TP)
-- suppress-FP — a post-triage stage that fixes confirmed false positives on rules you own
-
-The run is one fixed pipeline; the levels decide which steps execute. Walk it top to bottom — when you reach a step your levels include, load its reference and do it; skip the bracketed steps your levels omit. Don't load a step's reference until you reach it.
+The run is one fixed pipeline; the two levels decide which steps execute. Walk it top to bottom — when you reach a step your levels include, load its reference and do it; skip the bracketed steps your levels omit. Don't load a step's reference until you reach it.
 
 ```
-build                                    → references/build.md           every level
-[deep] discover + new rules              → references/discover-rules.md  deep
-scan                                     → references/scan.md            every level
-[normal/deep] approximation iteration    → references/approximations.md  normal, deep
-triage (generate findings + classify)    → references/triage.md          every level
-[suppress-FP]                            → references/suppress-fp.md     when suppress-FP is on
-[dynamic] PoC + assemble vulnerabilities → references/poc.md             dynamic
+build                                    → references/build.md           every run
+[deep] discover + new rules              → references/discover-rules.md  deep scan
+scan                                     → references/scan.md            every run
+[normal/deep] approximation iteration    → references/approximations.md  normal, deep scan
+triage (generate findings + classify)    → references/triage.md          every run
+[dynamic] PoC + assemble vulnerabilities → references/poc.md             dynamic triage
 ```
-
-Which steps each preset runs:
-
-- fast — build, scan, triage
-- default — build, scan, approximations, triage, [suppress-FP]
-- ultra — build, discover-rules, scan, approximations, triage, suppress-FP, poc
-- reproduce-vulnerability — references/reproduce-vulnerability.md walks the same steps anchored on the asserted vuln
 
 From inside any step, when a rule or approximation won't behave, load references/escalation.md. Only the approximation iteration loops (it re-scans internally); new rules are fixed before it.
 
@@ -93,6 +80,16 @@ Orchestration practices:
 - Steps within a unit are sequential via the artifact on disk — dispatch step N only after step N−1's named artifact exists; never bundle steps into one dispatch
 - write `state.yaml` at each fan-out join — a phase flips to `done` only once every unit's artifact exists on disk
 
+## Resource limits
+
+A fan-out unit that compiles or scans (approximation creation, rule test-projects, discovery) each spawns a heavy `opentaint` JVM, so unbounded parallelism OOMs the machine. At run start, compute a concurrency cap and never dispatch more than that many such subagents at once:
+
+- cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
+- free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
+- cap = `min(cores, floor(free_GB / 4))`, floored at 1 — budget ~4 GB per concurrent JVM
+
+It's machine state, not run state — recompute on resume, don't track it. Light subagents that only read/write tracking (analyze-external-methods, analyze-findings, assemble-lib-rules) aren't bound by the cap; PoC is already sequential.
+
 ## State and resumption
 
 You are the only writer of `.opentaint/tracking/state.yaml` — it records the chosen levels and every phase's status, written after each fan-out join.
@@ -100,7 +97,7 @@ You are the only writer of `.opentaint/tracking/state.yaml` — it records the c
 On start, and after any compaction, reconstruct position from artifacts before doing anything — never replay a completed phase:
 
 - read `state.yaml` and the `tracking/` tree
-- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every entry `done` plus the `tracking/rules` join requirements → discover; `report.sarif` → scan; a rule's `artifact` + `tests_passing: done` → that rule; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
+- skip any phase whose artifact exists: `project.yaml` → build; `coverage.yaml` with every entry `done` → discover; a lib unit's `tests_passing: done` → that package's lib rules, and a `rules/join/<class>.yaml` per vuln class → joins assembled; `report.sarif` → scan; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
 - detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; methods in `dropped-external-methods.yaml` not yet in any approximation unit → approximations
 
 ## Tracking layout
@@ -110,10 +107,10 @@ The single source of truth for the tracking schema; each skill writes only its o
 ```
 .opentaint/tracking/
   state.yaml                              # you only — levels + phase status
-  coverage.yaml                           # triage-dependencies seeds, discover-attack-surface fills — one entry per dependency package weighed (deep)
-  surface.yaml                            # discover-attack-surface — the sources/sinks each package introduces (deep)
+  coverage.yaml                           # triage-dependencies seeds, discover-attack-surface flips — one entry per dependency package weighed (deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
-  rules/<name>.yaml                       # one per vuln-class join (requirement by assemble-lib-rules; written + tested next phase)
+  rules/lib/<package-kebab>.yaml          # per-package rule plan — new source/sink lib rules (discover plans; create-* build + test vs the marker) (deep)
+  rules/join/<class>.yaml                 # per-vuln-class security join (assemble-lib-rules writes; main scan verifies) (deep)
   approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
   approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
   approximations/skipped.yaml             # methods the engine asks for but that carry no taint
@@ -123,10 +120,8 @@ The single source of truth for the tracking schema; each skill writes only its o
 state.yaml:
 
 ```yaml
-mode: ultra             # fast | default | ultra | reproduce-vulnerability | custom
 scan_level: deep        # lite | normal | deep
 triage_level: dynamic   # static | dynamic
-suppress_fp: true
 phases:                 # pending | in_progress | done
   build: done
   discover: done        # deep only
@@ -134,11 +129,10 @@ phases:                 # pending | in_progress | done
   scan: done
   approximations: in_progress  # normal/deep; iterative, rescans within
   triage: pending
-  suppress_fp: pending  # after triage
   poc: pending          # dynamic triage
 ```
 
-coverage.yaml — seeded by triage-dependencies and filled by discover-attack-surface (deep): one entry per dependency package weighed, so you can see which libraries were drilled and which were dismissed. A `pending` entry is a flagged library awaiting its depth pass; the rule names live in `rules/<name>.yaml`, not here:
+coverage.yaml — seeded by triage-dependencies and flipped by discover-attack-surface (deep): one entry per dependency package weighed, so you can see which libraries were drilled and which were dismissed. A `pending` entry is a flagged library awaiting its depth pass; the rule plan lives in `rules/lib/<package-kebab>.yaml`, not here:
 
 ```yaml
 packages:
@@ -146,22 +140,6 @@ packages:
     status: done          # pending (flagged, awaiting depth) | done (drilled or dismissed)
     notes: >
       free-form — what was found and why
-```
-
-surface.yaml — discover-attack-surface appends the sources/sinks each package introduces; assemble-lib-rules groups them into join requirements (deep). `builtin: null` ⇒ a new pattern to write next phase; sources are general, sinks carry a `vuln_class`:
-
-```yaml
-sources:
-  - package: org.springframework.web.reactive.function.server
-    idea: ServerRequest body/params — untrusted request data
-    builtin: null
-    dependency: org.springframework:spring-webflux:6.1.0
-sinks:
-  - package: org.springframework.web.reactive.function.client
-    vuln_class: ssrf
-    idea: WebClient.get().uri($UNTRUSTED)
-    builtin: null
-    dependency: org.springframework:spring-webflux:6.1.0
 ```
 
 findings/<finding_name>.yaml — created by the SARIF→finding script; `verdict`/`notes` by analyze-findings; `poc`/`poc_script` by generate-poc:
@@ -177,25 +155,47 @@ poc: pending            # pending | confirmed | failed
 poc_script: null        # path under .opentaint/pocs/ once generate-poc writes one
 ```
 
-rules/<name>.yaml — one per vuln-class join (`<name>` = the class); `description` + `sources`/`sinks` by assemble-lib-rules; `test_project` by create-test-project; `tests_passing` + `rule_id` + `artifact` by create-rule:
+rules/lib/<package-kebab>.yaml — per-package rule plan; `description` fields + `sources`/`sinks` by discover-attack-surface, `test_project` by create-test-project, `tests_passing` + `rule_id`s + `artifact` by create-rule. `coverage: new` ⇒ write a pattern, `expand` ⇒ ref the built-in plus the missing methods:
 
 ```yaml
-name: ssrf              # the vuln class; becomes the join rule's file and id
-rule_id: null           # filled on creation
-artifact: null          # added once the rule file exists
-finding: null           # finding_name; non-null only for suppress-FP
-requirements: >        # short — the class and what the join wires
-  CWE-918 SSRF — join every untrusted-data source to the SSRF sink group
-sources:                # ref a built-in, or a new one to write
-  - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-  - new: ServerRequest body/params — org.springframework.web.reactive.function.server
-sinks:
-  - new: WebClient.get().uri($UNTRUSTED) — org.springframework.web.reactive.function.client; in DefaultAttachmentService
+package: org.springframework.web.reactive.function.client
 dependencies: [org.springframework:spring-webflux:6.1.0]
+builtin_coverage: partial   # partial | none
+artifact: null              # create-rule
+sources:
+  - idea: ServerRequest body/params — untrusted request data
+    coverage: new           # new | expand
+    builtin: null
+    rule_id: null
+sinks:
+  - vuln_class: ssrf
+    idea: WebClient.post/put().uri($UNTRUSTED)
+    coverage: expand
+    builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+    rule_id: null
 stages:                 # pending | in_progress | done
   description: done
   test_project: pending
   tests_passing: pending
+notes: >
+  free-form
+```
+
+rules/join/<class>.yaml — one per vuln-class security join, written by assemble-lib-rules after the lib rules exist and verified by the main scan:
+
+```yaml
+name: ssrf              # the vuln class; the join rule's file and id
+rule_id: java/security/ssrf.yaml:ssrf
+artifact: .opentaint/rules/java/security/ssrf.yaml
+sources:                # built-in + created
+  - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+  - ref: java/lib/spring/webflux-request-source.yaml#webflux-request-source
+sinks:                  # created + built-in
+  - new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
+  - builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+stages:                 # pending | in_progress | done
+  written: done
+  verified: pending     # done once the main scan confirms it
 notes: >
   free-form
 ```
@@ -232,8 +232,8 @@ methods:                # engine asks to approximate these, but they carry no ta
   rules/java/{lib/generic,lib/spring,security}/   # custom rules
   pass-through/<name>.yaml      # passThrough approximation configs
   approximations/<name>/        # code-based (dataflow) approximation sources, per unit
-  test-projects/<name>/         # per-unit test project sources
-  test-compiled/<name>/         # per-unit compiled test model
+  test-projects/<name>/         # per-unit test project sources; a rule unit holds sinks/ and sources/ sub-projects, each with a test-rules/ (the generic markers + that side's test join — test-only, never loaded by the main scan)
+  test-compiled/<name>/         # per-unit compiled test model (a rule unit: sinks/ and sources/ models)
   test-results/<name>/          # per-unit test outputs
   results/
     report.sarif

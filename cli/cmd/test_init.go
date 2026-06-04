@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/seqra/opentaint/internal/testapprox"
+	"github.com/seqra/opentaint/internal/testrule"
 	"github.com/seqra/opentaint/internal/testutil"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/spf13/cobra"
@@ -15,23 +16,45 @@ import (
 
 var initRuleProjectDeps []string
 var initApproxProjectDeps []string
+var initRuleSinksOnly bool
+var initRuleSourcesOnly bool
 
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Bootstrap a rule test project with build.gradle.kts and test utility JAR",
-	Long: `Creates a minimal Gradle project structure for testing OpenTaint rules.
+	Short: "Bootstrap rule test projects (sinks and/or sources) with the generic Taint marker",
+	Long: `Creates the rule test projects under <output-dir>: a 'sinks' project (a package's sink
+lib rules tested against the generic Taint source) and a 'sources' project (a package's source
+lib rules tested against the generic Taint sink). Pass --sinks-only or --sources-only for a
+package that has only one side.
 
-The project includes:
-  - build.gradle.kts with compile-only dependencies
-  - settings.gradle.kts
-  - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample annotations)
-  - src/main/java/test/ directory for test sample sources
+Each project includes:
+  - build.gradle.kts with compile-only dependencies, settings.gradle.kts
+  - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample)
+  - src/main/java/test/ with Taint.java (the generic source()/sink()) for test sample sources
+  - test-rules/java/lib/test/generic-{source,sink}.yaml — the marker lib rules an agent refs
+    from a test join; these and the test join live only here, never in .opentaint/rules, so
+    they never reach the main project scan
 
 Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		bootstrapTestProject(args[0], "opentaint-rule-test", initRuleProjectDeps)
-		fmt.Printf("Rule test project initialized at %s\n", args[0])
+		if initRuleSinksOnly && initRuleSourcesOnly {
+			out.Fatalf("--sinks-only and --sources-only are mutually exclusive")
+		}
+		kinds := []string{"sinks", "sources"}
+		if initRuleSinksOnly {
+			kinds = []string{"sinks"}
+		} else if initRuleSourcesOnly {
+			kinds = []string{"sources"}
+		}
+		for _, kind := range kinds {
+			dir := filepath.Join(args[0], kind)
+			bootstrapTestProject(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps)
+			if err := testrule.Scaffold(dir); err != nil {
+				out.Fatalf("Failed to scaffold rule test project: %s", err)
+			}
+			fmt.Printf("Rule test project (%s) initialized at %s\n", kind, dir)
+		}
 	},
 }
 
@@ -65,6 +88,10 @@ func init() {
 	testRuleCmd.AddCommand(testRuleInitCmd)
 	testRuleInitCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
 		"Maven dependency coordinates to add (e.g., 'javax.servlet:javax.servlet-api:4.0.1')")
+	testRuleInitCmd.Flags().BoolVar(&initRuleSinksOnly, "sinks-only", false,
+		"Scaffold only the sinks test project (a package with no sources)")
+	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
+		"Scaffold only the sources test project (a package with no sinks)")
 
 	testApproximationCmd.AddCommand(testApproximationInitCmd)
 	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
