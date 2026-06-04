@@ -14,6 +14,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
 import org.opentaint.dataflow.ap.ifds.analysis.alias.IntDisjointSets
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
+import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.util.forEachIntEntry
 import org.opentaint.ir.api.python.PIRAssign
@@ -54,6 +55,9 @@ class PIRDSUAliasAnalysis(
 ) {
     private val aliasManager = AAInfoManager()
     private val dsuMergeStrategy = DsuMergeStrategy(aliasManager)
+
+    /** Reserved name-only heap field recording a bound method's receiver: `t.$PIR_SELF ~ obj`. */
+    private val selfField = AliasAccessor.Field("\$PIR_SELF")
 
     private class DsuMergeStrategy(private val manager: AAInfoManager) : IntDisjointSets.RankStrategy {
         override fun compare(a: Int, b: Int): Int =
@@ -152,10 +156,12 @@ class PIRDSUAliasAnalysis(
     ): State? {
         val stateBefore = state.asImmutable()
         val callerLValue = inst.target?.let { callFrame.instEvalCtx.createLocal(it.index) }
+        val calleeRef = callFrame.instEvalCtx.refValue(inst.callee)
         val statesAfterCall = mutableListOf<ImmutableState>()
 
-        for ((_, resolvedMethod) in methods) {
-            analyze(resolvedMethod.graph, stateBefore, resolvedMethod.state)
+        for ((method, resolvedMethod) in methods) {
+            val calleeInitial = bindReceiver(stateBefore, calleeRef, method, resolvedMethod)
+            analyze(resolvedMethod.graph, calleeInitial, resolvedMethod.state)
             statesAfterCall += resolvedMethod.state.mapCallFinalStates(
                 resolvedMethod.graph, callerLValue, callFrame.ctx.level
             )
@@ -164,6 +170,25 @@ class PIRDSUAliasAnalysis(
         if (statesAfterCall.isEmpty()) return null
         if (statesAfterCall.size == 1) return statesAfterCall.first().mutableCopy()
         return State.merge(aliasManager, dsuMergeStrategy, statesAfterCall)
+    }
+
+    /**
+     * Binds an instance method's implicit `self` (callee `Argument(0)`, the unbound
+     * slot `Local(-1, nestedCtx)`) to the call's receiver — the group of
+     * `call.callee.$PIR_SELF`, recorded at the attribute load (see [handleLoadAttr]).
+     * Module/static callees (offset 0) take no receiver and are left unchanged.
+     */
+    private fun bindReceiver(
+        stateBefore: ImmutableState,
+        calleeRef: RefValue?,
+        method: PIRFunction,
+        resolvedMethod: ResolvedCallMethod,
+    ): ImmutableState {
+        if (PIRFlowFunctionUtils.implicitParamOffset(method) != 1 || calleeRef == null) return stateBefore
+        val selfSlot = RefValue.Local(-1, resolvedMethod.state.call.ctx)
+        val state = stateBefore.mutableCopy()
+        val receiverHeap = createFieldAlias(state.heapObj(calleeRef.aliasInfo()), selfField)
+        return state.mergeWith(selfSlot.aliasInfo().index(), receiverHeap.index()).asImmutable()
     }
 
     // ── simple assignment / rhs expression ───────────────────────────────────
@@ -212,7 +237,17 @@ class PIRDSUAliasAnalysis(
         } else {
             aliasSetFromInfo(Unknown(inst.location.index, callFrame.ctx))
         }
-        return state.removeOldAndMergeWith(lValue.aliasInfo().index(), rhs)
+        var result = state.removeOldAndMergeWith(lValue.aliasInfo().index(), rhs)
+
+        // Record the bound-method receiver: `t = obj.f` ⇒ `t.$PIR_SELF ~ obj`. An
+        // inlined call through `t` binds the callee's `self` to this group (see
+        // [bindReceiver]), mirroring the engine's $PIR_SELF receiver encoding.
+        if (obj != null) {
+            result = evalHeapStore(isFieldStore = true, lValue, aliasSetFromInfo(obj.aliasInfo()), result) {
+                createFieldAlias(it, selfField)
+            }
+        }
+        return result
     }
 
     private fun evalHeapStore(

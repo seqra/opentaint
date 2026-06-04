@@ -71,21 +71,20 @@ class CallTreeNode(val ctx: ContextInfo, val instEvalCtx: InstEvalContext) {
 
 /**
  * Evaluates a callee's body in [ctx], substituting its parameter references with
- * the caller-frame actuals. The implicit receiver (`self`/`cls`, when
- * [offset] == 1) binds to [receiver]; positional parameter `i` binds to
- * `args[i - offset]`. Unbound parameters (missing positional / keyword / star
- * args) become fresh context-local slots that alias nothing.
+ * the caller-frame actuals: positional parameter `i` binds to `args[i - offset]`.
+ * The implicit receiver (`self`/`cls`, when [offset] == 1) has no positional
+ * actual, so it falls through to the unbound slot `Local(-1, ctx)` and is bound
+ * to the call's receiver separately by `PIRDSUAliasAnalysis.bindReceiver` (via
+ * `call.callee.$PIR_SELF`). Other unbound parameters (missing positional /
+ * keyword / star args) likewise become fresh context-local slots that alias nothing.
  */
 class NestedCallInstEvalCtx(
-    private val receiver: RefValue?,
     private val args: List<RefValue?>,
     private val ctx: ContextInfo,
     private val offset: Int,
 ) : InstEvalContext {
-    override fun createArg(idx: Int): RefValue {
-        val bound = if (offset == 1 && idx == 0) receiver else args.getOrNull(idx - offset)
-        return bound ?: RefValue.Local(-(idx + 1), ctx)
-    }
+    override fun createArg(idx: Int): RefValue =
+        args.getOrNull(idx - offset) ?: RefValue.Local(-(idx + 1), ctx)
 
     override fun createLocal(idx: Int): RefValue.Local = RefValue.Local(idx, ctx)
 }
@@ -98,9 +97,8 @@ private fun resolveCallNoCache(
 ): Map<PIRFunction, ResolvedCallMethod>? {
     val methods = callResolver.resolveMethodCall(call, callerCtx.level) ?: return null
 
-    // Caller-frame actuals bound to the callee's parameters when inlining.
-    val receiver = PIRFlowFunctionUtils.findMethodCallReceiver(call, call.location.method)
-        ?.let { callerCtxEval.refValue(it) }
+    // Caller-frame positional actuals bound to the callee's parameters when inlining.
+    // The receiver (self/cls) is bound separately via call.callee.$PIR_SELF.
     val args = call.args.map { arg ->
         if (arg.kind == PIRCallArgKind.POSITIONAL) callerCtxEval.refValue(arg.value) else null
     }
@@ -109,7 +107,7 @@ private fun resolveCallNoCache(
         val graph = callResolver.buildMethodGraph(method) ?: return@mapIndexedNotNull null
         val nestedCtx = ContextInfo(callerCtx.context + mkContextId(call, idx))
         val offset = PIRFlowFunctionUtils.implicitParamOffset(method)
-        val instEvalCtx = NestedCallInstEvalCtx(receiver, args, nestedCtx, offset)
+        val instEvalCtx = NestedCallInstEvalCtx(args, nestedCtx, offset)
         val analysisState = GraphAnalysisState(graph.statements.size, CallTreeNode(nestedCtx, instEvalCtx))
         method to ResolvedCallMethod(graph, analysisState)
     }.toMap()

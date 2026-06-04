@@ -52,27 +52,4 @@ object PIRFlowFunctionUtils {
         // Instance method or classmethod — skip first parameter (self/cls)
         return 1
     }
-
-    /**
-     * Finds the receiver object of a method call.
-     *
-     * In PIR, `data.upper()` is lowered to:
-     *   PIRLoadAttr(target=$t0, obj=data, attribute="upper")
-     *   PIRCall(target=$t1, callee=$t0, args=[], resolvedCallee="builtins.str.upper")
-     *
-     * This method finds the PIRLoadAttr that defines `call.callee` and extracts
-     * the `obj`. Returns the receiver PIRValue, or null if the call isn't a
-     * method call or the definition can't be found.
-     */
-    fun findMethodCallReceiver(call: PIRCall, method: PIRFunction): PIRValue? {
-        val callee = call.callee
-        if (callee !is PIRLocalVar) return null
-
-        for (inst in method.instList) {
-            if (inst is PIRLoadAttr && inst.target.index == callee.index) {
-                return inst.obj
-            }
-        }
-        return null
-    }
 }
