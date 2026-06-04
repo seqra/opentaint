@@ -12,7 +12,7 @@ class GoLanguageStrategy : LanguageStrategy<SemgrepGoPattern, GoSerializedItem> 
     override val language = "go"
     override val parser = SemgrepGoPatternParser()
     override val rewriter = GoRuleRewriter()
-    override val converter = PatternToActionListConverter()
+    override val converter = GoPatternToActionListConverter()
     override val typeOps = GoTypeOps
     override val taintRuleStrategy = GoTaintStrategy
 
@@ -35,6 +35,7 @@ class GoLanguageStrategy : LanguageStrategy<SemgrepGoPattern, GoSerializedItem> 
         const val GLOBAL_READ_AUX_FN_PREFIX = "$$<global>$$"
         const val FIELD_READ_AUX_FN_PREFIX = "$$<fieldread>$$"
         const val FIELD_READ_AUX_CLASS = "$$<fieldread-recv>$$"
+        const val FIELD_AUX_MODIFIER = "$$<field-modifier>$$"
         const val FIELD_NAME_SEPARATOR = "$$<dot>$$"
         const val INDEX_AUX_FIELD_NAME = "$$[*]$$"
 

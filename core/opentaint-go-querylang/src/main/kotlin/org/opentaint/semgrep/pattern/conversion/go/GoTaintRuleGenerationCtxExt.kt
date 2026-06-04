@@ -4,6 +4,7 @@ import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
 import org.opentaint.dataflow.configuration.go.serialized.GoUserDefinedRuleInfo
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.semgrep.pattern.UserRuleFromSemgrepInfo
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 
@@ -43,4 +44,8 @@ internal data class GoEvaluatedEdgeCondition(
 internal data class GoRegisterVarPosition(
     val varName: MetavarAtom,
     val positions: MutableSet<PositionBaseWithModifiers>,
+)
+
+data class FieldModifierCtx(
+    val resultModifiers: List<PositionModifier>?
 )

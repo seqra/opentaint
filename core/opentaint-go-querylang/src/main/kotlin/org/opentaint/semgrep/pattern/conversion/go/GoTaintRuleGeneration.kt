@@ -43,6 +43,7 @@ import org.opentaint.semgrep.pattern.conversion.taint.MetaVarConstraintOrPlaceHo
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeCondition
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeEffect
+import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.MethodPredicate
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.State
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleEdge
 import org.opentaint.semgrep.pattern.conversion.taint.isGeneratedAnyValueGenerator
@@ -91,20 +92,20 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = info,
                             )
                         },
-                        global = { globalField, fieldChain ->
+                        global = { globalField ->
                             rules += GoSerializedGlobalSource(
                                 pkg = fn.pkgMatcher,
                                 global = globalField,
                                 condition = condition.ruleCondition.condition,
-                                taint = actions.assignOnFieldChain(fieldChain),
+                                taint = actions,
                                 info = info,
                             )
                         },
-                        field = { fieldName, fieldChain ->
+                        field = { fieldName ->
                             rules += GoSerializedFieldSource(
                                 field = fieldName,
                                 condition = condition.ruleCondition.condition,
-                                taint = actions.assignOnFieldChain(fieldChain),
+                                taint = actions,
                                 info = info,
                             )
                         }
@@ -141,10 +142,10 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = null,
                             )
                         },
-                        global = { _, _ ->
+                        global = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global sinks are not supported yet"))
                         },
-                        field = { _, _ ->
+                        field = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Field-read sinks are not supported yet"))
                         }
                     )
@@ -179,10 +180,10 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = info,
                             )
                         },
-                        global = { _, _ ->
+                        global = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global cleaners are not supported yet"))
                         },
-                        field = { _, _ ->
+                        field = { _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Field-read cleaners are not supported yet"))
                         }
                     )
@@ -194,42 +195,21 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
     return rules
 }
 
-private fun List<GoSerializedAssignAction>.assignOnFieldChain(fields: List<String>): List<GoSerializedAssignAction> {
-    if (fields.isEmpty()) return this
-    return map { it.changePos(it.rawPosition().assignOnFieldChain(fields)) }
-}
-
-private fun PositionBaseWithModifiers.assignOnFieldChain(fields: List<String>): PositionBaseWithModifiers {
-    val modifiers = when (this) {
-        is PositionBaseWithModifiers.BaseOnly -> emptyList()
-        is PositionBaseWithModifiers.WithModifiers -> modifiers
-    }
-    val newModifiers = modifiers + fields.map {
-        when (it) {
-            GoLanguageStrategy.INDEX_AUX_FIELD_NAME -> PositionModifier.ArrayElement
-            else -> PositionModifier.Field("", it, "")
-        }
-    }
-    return PositionBaseWithModifiers.WithModifiers(base, newModifiers)
-}
-
 private inline fun GoFunctionNameMatcher.handleMethodCall(
     call: () -> Unit,
-    global: (GoNameMatcher, List<String>) -> Unit,
-    field: (GoNameMatcher, List<String>) -> Unit,
+    global: (GoNameMatcher) -> Unit,
+    field: (GoNameMatcher) -> Unit,
 ) {
     if (nameMatcher is GoNameMatcher.Simple) {
         val globalField = GoLanguageStrategy.globalReadFieldOrNull(nameMatcher.name)
         if (globalField != null) {
-            val fieldChain = GoLanguageStrategy.splitFieldNames(globalField)
-            global(GoNameMatcher.Simple(fieldChain.first()), fieldChain.drop(1))
+            global(GoNameMatcher.Simple(globalField))
             return
         }
 
         val fieldName = GoLanguageStrategy.fieldReadFieldOrNull(nameMatcher.name)
         if (fieldName != null) {
-            val fieldChain = GoLanguageStrategy.splitFieldNames(fieldName)
-            field(GoNameMatcher.Simple(fieldChain.first()), fieldChain.drop(1))
+            field(GoNameMatcher.Simple(fieldName))
             return
         }
     }
@@ -295,6 +275,21 @@ private fun GoTaintRuleGenerationCtx.evaluateGoMethodConditionAndEffect(
     condition: EdgeCondition,
     effect: EdgeEffect,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
+): List<GoEvaluatedEdgeCondition>{
+    val resultFieldChains = mutableListOf<String>()
+    val normalizedCondition = condition.dropFieldResultModifier(resultFieldChains)
+    val normalizedEffect = effect.dropFieldResultModifier(resultFieldChains)
+    val fieldCtx = createFieldCtx(resultFieldChains)
+    return evaluateGoMethodConditionAndEffect(fieldCtx, edgeKind, edgeState, normalizedCondition, normalizedEffect, semgrepRuleTrace)
+}
+
+private fun GoTaintRuleGenerationCtx.evaluateGoMethodConditionAndEffect(
+    fieldCtx: FieldModifierCtx,
+    edgeKind: GoTaintEdgeKind,
+    edgeState: State,
+    condition: EdgeCondition,
+    effect: EdgeEffect,
+    semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ): List<GoEvaluatedEdgeCondition> {
     val evaluatedConditions = mutableListOf<GoEvaluatedEdgeCondition>()
 
@@ -302,20 +297,56 @@ private fun GoTaintRuleGenerationCtx.evaluateGoMethodConditionAndEffect(
     for (ruleBuilder in ruleBuilders) {
         condition.readMetaVar.values.flatten().forEach {
             val signature = it.predicate.signature.notEvaluatedSignature(evaluatedSignature)
-            evaluateGoEdgePredicateConstraint(this, edgeKind, edgeState, signature, it.predicate.constraint, it.negated, ruleBuilder.conditions, semgrepRuleTrace)
+            evaluateGoEdgePredicateConstraint(this, fieldCtx, edgeKind, edgeState, signature, it.predicate.constraint, it.negated, ruleBuilder.conditions, semgrepRuleTrace)
         }
         condition.other.forEach {
             val signature = it.predicate.signature.notEvaluatedSignature(evaluatedSignature)
-            evaluateGoEdgePredicateConstraint(this, edgeKind, edgeState, signature, it.predicate.constraint, it.negated, ruleBuilder.conditions, semgrepRuleTrace)
+            evaluateGoEdgePredicateConstraint(this, fieldCtx, edgeKind, edgeState, signature, it.predicate.constraint, it.negated, ruleBuilder.conditions, semgrepRuleTrace)
         }
 
         val varPositions = hashMapOf<MetavarAtom, GoRegisterVarPosition>()
-        effect.assignMetaVar.values.flatten().forEach { findGoMetaVarPosition(it.predicate.constraint, varPositions) }
+        effect.assignMetaVar.values.flatten().forEach { findGoMetaVarPosition(fieldCtx, it.predicate.constraint, varPositions) }
 
         evaluatedConditions += GoEvaluatedEdgeCondition(ruleBuilder.build(), varPositions)
     }
 
     return evaluatedConditions
+}
+
+private fun EdgeEffect.dropFieldResultModifier(fieldChains: MutableList<String>) =
+    EdgeEffect(assignMetaVar.dropFieldResultModifier(fieldChains))
+
+private fun EdgeCondition.dropFieldResultModifier(fieldChains: MutableList<String>) =
+    EdgeCondition(readMetaVar.dropFieldResultModifier(fieldChains), other.dropFieldResultModifier(fieldChains))
+
+private fun Map<MetavarAtom, List<MethodPredicate>>.dropFieldResultModifier(fieldChains: MutableList<String>) =
+    mapValues { (_, v) -> v.dropFieldResultModifier(fieldChains) }
+
+private fun List<MethodPredicate>.dropFieldResultModifier(fieldChains: MutableList<String>): List<MethodPredicate> =
+    mapNotNull { it.dropFieldResultModifier(fieldChains) }
+
+private fun MethodPredicate.dropFieldResultModifier(fieldChains: MutableList<String>): MethodPredicate? {
+    val constraint = predicate.constraint as? ParamConstraint ?: return this
+    val paramModifier = constraint.condition as? ParamCondition.ParamModifier ?: return this
+    val remainingModifier = paramModifier.dropFieldResultModifier { field ->
+        fieldChains += field
+        check(constraint.position is Position.Result) { "Field modifier on non-result position" }
+        check(!negated) { "Negated field modifier" }
+    }
+    return if (remainingModifier != null) this else null
+}
+
+private fun createFieldCtx(resultFieldChains: List<String>): FieldModifierCtx {
+    if (resultFieldChains.isEmpty()) return FieldModifierCtx(resultModifiers = null)
+
+    val uniqueChains = resultFieldChains.distinct()
+    if (uniqueChains.size > 1) {
+        error("Multiple result field chains")
+    }
+
+    val resultFieldChain = uniqueChains.first()
+    val fields = GoLanguageStrategy.splitFieldNames(resultFieldChain)
+    return FieldModifierCtx(fields.toSerializedPosModifiers())
 }
 
 private fun MethodSignature.notEvaluatedSignature(evaluated: MethodSignature): MethodSignature? {
@@ -471,6 +502,7 @@ private fun evaluateGoFormulaSignatureMethodName(
 
 private fun evaluateGoEdgePredicateConstraint(
     ctx: GoTaintRuleGenerationCtx,
+    fieldCtx: FieldModifierCtx,
     edgeKind: GoTaintEdgeKind,
     edgeState: State,
     signature: MethodSignature?,
@@ -480,16 +512,17 @@ private fun evaluateGoEdgePredicateConstraint(
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ) {
     if (!negated) {
-        evaluateGoMethodConstraints(ctx, edgeKind, edgeState, signature, constraint, conditions, semgrepRuleTrace)
+        evaluateGoMethodConstraints(ctx, fieldCtx, edgeKind, edgeState, signature, constraint, conditions, semgrepRuleTrace)
     } else {
         val negatedConds = hashSetOf<GoSerializedCondition>()
-        evaluateGoMethodConstraints(ctx, edgeKind, edgeState, signature, constraint, negatedConds, semgrepRuleTrace)
+        evaluateGoMethodConstraints(ctx, fieldCtx, edgeKind, edgeState, signature, constraint, negatedConds, semgrepRuleTrace)
         conditions += GoSerializedCondition.not(GoSerializedCondition.and(negatedConds.toList()))
     }
 }
 
 private fun evaluateGoMethodConstraints(
     ctx: GoTaintRuleGenerationCtx,
+    fieldCtx: FieldModifierCtx,
     edgeKind: GoTaintEdgeKind,
     edgeState: State,
     signature: MethodSignature?,
@@ -503,11 +536,8 @@ private fun evaluateGoMethodConstraints(
     when (constraint) {
         null -> {}
         is NumberOfArgsConstraint -> conditions += GoSerializedCondition.NumberOfArgs(constraint.num)
-        is ParamConstraint -> evaluateGoParamConstraints(ctx, edgeKind, edgeState, constraint, conditions, semgrepRuleTrace)
-        // ClassModifierConstraint / MethodModifierConstraint — Java-only (annotations); omitted on Go.
-        else -> {
-            // Drop unsupported constraints silently — Go has no annotations/modifiers.
-        }
+        is ParamConstraint -> evaluateGoParamConstraints(ctx, fieldCtx, edgeKind, edgeState, constraint, conditions, semgrepRuleTrace)
+        else -> error("Unsupported constraint: $constraint")
     }
 }
 
@@ -527,22 +557,24 @@ private fun evaluateGoMethodSignatureCondition(
 
 private fun evaluateGoParamConstraints(
     ctx: GoTaintRuleGenerationCtx,
+    fieldCtx: FieldModifierCtx,
     edgeKind: GoTaintEdgeKind,
     edgeState: State,
     param: ParamConstraint,
     conditions: MutableSet<GoSerializedCondition>,
     semgrepRuleTrace: SemgrepRuleLoadStepTrace,
 ) {
-    val position = param.position.toGoSerializedPosition()
+    val position = param.position.toGoSerializedPosition(fieldCtx)
     conditions += evaluateGoParamCondition(ctx, edgeKind, edgeState, position, param.condition, semgrepRuleTrace)
 }
 
 private fun findGoMetaVarPosition(
+    fieldCtx: FieldModifierCtx,
     constraint: MethodConstraint?,
     varPositions: MutableMap<MetavarAtom, GoRegisterVarPosition>,
 ) {
     if (constraint !is ParamConstraint) return
-    val position = constraint.position.toGoSerializedPosition()
+    val position = constraint.position.toGoSerializedPosition(fieldCtx)
     findGoMetaVarPositionUtil(position, constraint.condition, varPositions)
 }
 
@@ -668,11 +700,25 @@ private fun MetaVarConstraintFormula<MetaVarConstraint>?.toGoSerializedCondition
     }
 }
 
-private fun Position.toGoSerializedPosition(): PositionBaseWithModifiers = when (this) {
-    is Position.Argument -> when (val idx = index) {
-        is Position.ArgumentIndex.Any -> PositionBase.AnyArgument(idx.paramClassifier).baseGo()
-        is Position.ArgumentIndex.Concrete -> PositionBase.Argument(idx.idx).baseGo()
+private fun Position.toGoSerializedPosition(ctx: FieldModifierCtx): PositionBaseWithModifiers {
+    return when (this) {
+        is Position.Argument -> when (val idx = index) {
+            is Position.ArgumentIndex.Any -> PositionBase.AnyArgument(idx.paramClassifier).baseGo()
+            is Position.ArgumentIndex.Concrete -> PositionBase.Argument(idx.idx).baseGo()
+        }
+
+        is Position.Object -> PositionBase.This.baseGo()
+        is Position.Result -> {
+            val baseResult = PositionBase.Result.baseGo()
+            val resMod = ctx.resultModifiers ?: return baseResult
+            PositionBaseWithModifiers.WithModifiers(baseResult.base, resMod)
+        }
     }
-    is Position.Object -> PositionBase.This.baseGo()
-    is Position.Result -> PositionBase.Result.baseGo()
+}
+
+private fun List<String>.toSerializedPosModifiers(): List<PositionModifier> = map {
+    when (it) {
+        GoLanguageStrategy.INDEX_AUX_FIELD_NAME -> PositionModifier.ArrayElement
+        else -> PositionModifier.Field("", it, "")
+    }
 }

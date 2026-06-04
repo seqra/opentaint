@@ -8,7 +8,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.semgrep.pattern.Mark.GeneratedMark
 
-internal fun PositionBase.baseGo(): PositionBaseWithModifiers = PositionBaseWithModifiers.BaseOnly(this)
+internal fun PositionBase.baseGo(): PositionBaseWithModifiers.BaseOnly = PositionBaseWithModifiers.BaseOnly(this)
 
 internal fun goAnyNameMatcher(): GoNameMatcher = GoNameMatcher.Pattern(".*")
 
