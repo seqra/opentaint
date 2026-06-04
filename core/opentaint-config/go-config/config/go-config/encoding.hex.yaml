@@ -20,3 +20,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+- function:
+    package: encoding/hex
+    name: EncodeToString
+    receiver: false
+  copy:
+    - from: arg(0)
+      to: result
