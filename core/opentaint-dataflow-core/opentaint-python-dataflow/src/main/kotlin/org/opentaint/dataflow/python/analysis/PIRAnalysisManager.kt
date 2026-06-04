@@ -3,6 +3,7 @@ package org.opentaint.dataflow.python.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
@@ -197,6 +198,9 @@ private object NoOpCallPrecondition : MethodCallPrecondition {
     ): List<MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact> =
         emptyList()
 
-    override fun resolvePassRuleCondition(precondition: PassRuleCondition): List<MethodCallPrecondition.PassRuleConditionFacts> =
+    override fun resolvePassRuleCondition(
+        precondition: PassRuleCondition,
+        edges: MethodAnalyzerEdges
+    ): List<MethodCallPrecondition.PassRuleConditionFacts> =
         emptyList()
 }

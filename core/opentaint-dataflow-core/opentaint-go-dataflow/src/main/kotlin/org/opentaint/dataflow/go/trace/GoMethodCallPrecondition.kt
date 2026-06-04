@@ -31,6 +31,7 @@ import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluatePassRulePrecondition
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.value.GoIRValue
 
@@ -178,4 +179,7 @@ class GoMethodCallPrecondition(
 
         return result
     }
+
+    override fun allStatements(): List<CommonInst> =
+        statement.location.functionBody.instructions
 }
