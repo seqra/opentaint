@@ -61,7 +61,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         return analyzeTaintWithIfdsEngine(entryPoints)
     }
 
-    private object UnrollStrategy : AnyAccessorUnrollStrategy {
+    open val unrollStrategy: AnyAccessorUnrollStrategy = object : AnyAccessorUnrollStrategy {
         override fun unrollAccessor(accessor: Accessor): Boolean = when (accessor) {
             is ElementAccessor -> true
             is FieldAccessor -> accessor.fieldName != "<rule-storage>"
@@ -71,15 +71,16 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             is TaintMarkAccessor,
             is TypeInfoAccessor,
             is TypeInfoGroupAccessor -> false
+
             is ValueAccessor -> error("Unexpected accessor to unroll: $accessor")
         }
     }
 
     private val apManager by lazy {
         when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(UnrollStrategy)
-            ApMode.Cactus -> CactusApManager(UnrollStrategy)
-            ApMode.Automata -> AutomataApManager(UnrollStrategy)
+            ApMode.Tree -> TreeApManager(unrollStrategy)
+            ApMode.Cactus -> CactusApManager(unrollStrategy)
+            ApMode.Automata -> AutomataApManager(unrollStrategy)
         }
     }
 
