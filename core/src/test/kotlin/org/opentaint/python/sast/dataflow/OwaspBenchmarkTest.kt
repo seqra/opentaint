@@ -90,7 +90,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
         assertSinkReachable(getFunctionName("00283"))
     }
 
-    @Ignore
     @Test
     fun benchmarkTest00099() {
         assertSinkReachable(getFunctionName("00099"))

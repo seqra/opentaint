@@ -17,6 +17,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResol
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
+import org.opentaint.dataflow.python.alias.forEachAliasAfterStatement
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
@@ -480,6 +481,7 @@ class PIRMethodSequentFlowFunction(
             val accessor = mkFieldAccessor(store.attribute)
             val newFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
             propagateFact(newFact)
+            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, newFact) { propagateFact(it) }
             unchanged()
             return
         }
@@ -521,9 +523,9 @@ class PIRMethodSequentFlowFunction(
         val accessor = ElementAccessor
 
         if (valueBase != null && currentFactAp.base == valueBase) {
-            val results = mutableSetOf<Sequent>()
             val elementFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
             propagateFact(elementFact)
+            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, elementFact) { propagateFact(it) }
             unchanged()
             return
         }
@@ -535,4 +537,6 @@ class PIRMethodSequentFlowFunction(
 
         unchanged()
     }
+
+    // TODO propagateAbstractFactWithFieldExcluded with aliasing ?
 }

@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.python.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntCollection
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
@@ -16,7 +15,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.forEachIntEntry
 import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRBinaryExpr
 import org.opentaint.ir.api.python.PIRCall
@@ -64,37 +62,13 @@ class PIRDSUAliasAnalysis(
             manager.getElementUncheck(a).compareTo(manager.getElementUncheck(b))
     }
 
-    data class ConnectedAliases(val aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>)
-
-    data class AnalysisResult(
-        val statesBeforeStmt: List<ConnectedAliases>,
-        val statesAfterStmt: List<ConnectedAliases>,
+    class AnalysisResult(
+        val manager: AAInfoManager,
+        val statesBeforeStmt: Array<ImmutableState?>,
+        val statesAfterStmt: Array<ImmutableState?>,
     )
 
     private fun AAInfo.index(): Int = aliasManager.getOrAdd(this)
-
-    private fun getConnectedAliases(states: Array<ImmutableState?>): List<ConnectedAliases> =
-        List(states.size) { stmt ->
-            val state = states[stmt]?.mutableCopy()
-                ?: return@List ConnectedAliases(Int2ObjectOpenHashMap())
-
-            val groupsElements = Int2ObjectOpenHashMap<IntOpenHashSet>()
-            state.allElements().forEachInt { element ->
-                val groupId = state.aliasGroupId(element)
-                val group = groupsElements.get(groupId)
-                    ?: IntOpenHashSet().also { groupsElements.put(groupId, it) }
-                group.add(element)
-            }
-
-            val groups = Int2ObjectOpenHashMap<List<AAInfo>>()
-            groupsElements.forEachIntEntry { key, groupElements ->
-                val elements = mutableListOf<AAInfo>()
-                groupElements.forEachInt { elements += aliasManager.getElementUncheck(it) }
-                groups.put(key, elements)
-            }
-
-            ConnectedAliases(groups)
-        }
 
     fun analyze(pig: PIRInstGraph): AnalysisResult {
         val initialState = State.empty(aliasManager, dsuMergeStrategy)
@@ -103,10 +77,7 @@ class PIRDSUAliasAnalysis(
 
         analyze(pig, initialState, analysisState)
 
-        return AnalysisResult(
-            getConnectedAliases(analysisState.stateBeforeStmt),
-            getConnectedAliases(analysisState.stateAfterStmt),
-        )
+        return AnalysisResult(aliasManager, analysisState.stateBeforeStmt, analysisState.stateAfterStmt)
     }
 
     private fun analyze(pig: PIRInstGraph, initialState: ImmutableState, analysisState: GraphAnalysisState) {

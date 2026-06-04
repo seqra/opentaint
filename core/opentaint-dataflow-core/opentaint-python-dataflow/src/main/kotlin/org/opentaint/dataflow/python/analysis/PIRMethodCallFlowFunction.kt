@@ -26,11 +26,9 @@ import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.adapter.callExpr
+import org.opentaint.dataflow.python.alias.forEachAliasAfterCallStatement
 import org.opentaint.dataflow.taint.FinalFactReader
-import org.opentaint.dataflow.taint.PositionAccess
-import org.opentaint.dataflow.taint.PositionTypeResolver
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
-import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
@@ -247,6 +245,10 @@ class PIRMethodCallFlowFunction(
                     facts.forEach { fact ->
                         ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, fact.fact, typeChecker).forEach { mappedFact ->
                             propagateFact(reader, mappedFact)
+
+                            ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, mappedFact) {
+                                propagateFact(reader, it)
+                            }
                         }
                     }
                 }
