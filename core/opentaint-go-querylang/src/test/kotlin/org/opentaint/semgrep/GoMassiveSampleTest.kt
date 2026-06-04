@@ -179,7 +179,7 @@ class GoMassiveSampleTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return GoTaintConfiguration(program).loadGoTaintConfiguration(typed)
+        return GoTaintConfiguration().loadGoTaintConfiguration(typed)
     }
 
     private data class AnalysisResult(

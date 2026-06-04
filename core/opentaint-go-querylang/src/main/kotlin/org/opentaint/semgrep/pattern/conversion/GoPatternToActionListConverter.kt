@@ -99,17 +99,19 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         is GoStmt -> transformPatternToActionList(pattern.call)
         is AssignStmt -> {
             if (pattern.op != "=") transformationFailed("Assignment_op_${pattern.op}")
-            if (pattern.lhs.size != 1 || pattern.rhs.size != 1) transformationFailed("multi-LHS assignment")
-            transformAssignment(pattern.lhs.single(), declType = null, value = pattern.rhs.single())
+            if (pattern.rhs.size != 1) {
+                transformationFailed("multi-RHS assignment")
+            }
+            transformAssignment(pattern.lhs, value = pattern.rhs.single())
         }
         is ShortVarDecl -> {
-            if (pattern.lhs.size != 1 || pattern.rhs.size != 1) transformationFailed("multi-LHS assignment")
-            transformAssignment(pattern.lhs.single(), declType = null, value = pattern.rhs.single())
+            if (pattern.rhs.size != 1) transformationFailed("multi-RHS assignment")
+            transformAssignment(pattern.lhs, value = pattern.rhs.single())
         }
         is VarDecl -> {
             val spec = pattern.specs.singleOrNull() ?: transformationFailed("VarDecl_multiple_specs")
             if (spec.names.size != 1 || spec.values.size != 1) transformationFailed("multi-LHS assignment")
-            transformAssignment(target = null, targetName = spec.names.single(), declType = spec.type, value = spec.values.single())
+            transformAssignment(targetName = spec.names.single(), declType = spec.type, value = spec.values.single())
         }
         is CompositeLit -> transformObjectCreation(pattern)
         is UnaryExpr ->
@@ -447,26 +449,74 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
     }
 
     private fun transformAssignment(
-        target: SemgrepGoPattern?,
-        declType: TypeName?,
+        targets: List<SemgrepGoPattern>,
         value: SemgrepGoPattern,
-        targetName: Name? = null,
     ): SemgrepPatternActionList {
+        if (targets.isEmpty()) {
+            transformationFailed("Assignment without targets")
+        }
+
+        val conditions = mutableListOf<ParamCondition>()
+        val names = targets.map { it.assignmentTargetName(conditions) }
+
+        if (names.size == 1) {
+            val name = names.first()
+            if (name != null) {
+                conditions += IsMetavar(MetavarAtom.create(name))
+            }
+
+            return transformAssignmentValue(conditions, value)
+        }
+
+        if (names.count { it != null } > 1) {
+            transformationFailed("Assignment into multiple named locations")
+        }
+
+        val assignedNameIdx = names.indexOfFirst { it != null }
+        if (assignedNameIdx == -1) {
+            return transformAssignmentValue(conditions, value)
+        }
+
+        val assignedName = names[assignedNameIdx]!!
+        conditions += IsMetavar(MetavarAtom.create(assignedName))
+        conditions += createFieldModifier(prevModifier = null, "tuple$$assignedNameIdx")
+
+        return transformAssignmentValue(conditions, value)
+    }
+
+    private fun SemgrepGoPattern.assignmentTargetName(
+        conditions: MutableList<ParamCondition>
+    ): String? = when {
+        this is Metavar -> name
+        this is TypedMetavar -> {
+            conditions += ParamCondition.TypeIs(transformType(type))
+            name
+        }
+
+        this is Identifier && name is MetavarName -> name.name
+        this is Identifier && name is ConcreteName && name.name == "_" -> null
+
+        else -> transformationFailed("Assignment_target_not_metavar")
+    }
+
+    private fun transformAssignment(
+        declType: TypeName?,
+        targetName: Name,
+        value: SemgrepGoPattern,
+    ): SemgrepPatternActionList {
+        val name: String = (targetName as? MetavarName)?.name
+            ?: transformationFailed("Assignment_target_not_metavar")
+
         val conditions = mutableListOf<ParamCondition>()
         declType?.let { conditions += ParamCondition.TypeIs(transformType(it)) }
-
-        val name: String = when {
-            targetName != null -> (targetName as? MetavarName)?.name
-                ?: transformationFailed("Assignment_target_not_metavar")
-            target is Metavar -> target.name
-            target is TypedMetavar -> {
-                conditions += ParamCondition.TypeIs(transformType(target.type)); target.name
-            }
-            target is Identifier && target.name is MetavarName -> target.name.name
-            else -> transformationFailed("Assignment_target_not_metavar")
-        }
         conditions += IsMetavar(MetavarAtom.create(name))
+        return transformAssignmentValue(conditions, value)
+    }
 
+    private fun transformAssignmentValue(
+        conditions: List<ParamCondition>,
+        value: SemgrepGoPattern,
+    ): SemgrepPatternActionList {
         val actionList = transformPatternToActionList(value)
         if (actionList.actions.isEmpty()) transformationFailed("Assignment_nothing_to_assign")
         val last = actionList.actions.last()

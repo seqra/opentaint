@@ -307,16 +307,16 @@ object GoFlowFunctionUtils {
         is PositionAccessor.FieldAccessor -> createFieldAccessor(className, fieldName)
     }
 
-    fun detectGlobalReadName(inst: GoIRAssignInst): String? {
+    fun detectGlobalReadName(inst: GoIRAssignInst): GoGlobalFieldSignature? {
         val expr = inst.expr
         if (expr !is GoIRGlobalValueExpr) return null
-        return expr.global.fullName
+        return GoGlobalFieldSignature(expr.global.fullName, expr.type)
     }
 
-    fun detectFieldReadName(inst: GoIRAssignInst): String? {
+    fun detectFieldReadName(inst: GoIRAssignInst): GoFieldSignature? {
         val expr = inst.expr
-        if (expr is GoIRFieldExpr) return expr.fieldName
-        if (expr is GoIRFieldAddrExpr) return expr.fieldName
+        if (expr is GoIRFieldExpr) return GoFieldSignature(expr.fieldName, expr.type)
+        if (expr is GoIRFieldAddrExpr) return GoFieldSignature(expr.fieldName, expr.type)
         return null
     }
 

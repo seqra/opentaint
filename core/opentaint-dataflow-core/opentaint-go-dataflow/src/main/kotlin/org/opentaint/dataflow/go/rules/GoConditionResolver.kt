@@ -11,36 +11,37 @@ import org.opentaint.dataflow.configuration.mkOr
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.go.GoFunctionSignature
-import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.type.GoIRArrayType
 import org.opentaint.ir.go.type.GoIRMapType
+import org.opentaint.ir.go.type.GoIRPointerType
 import org.opentaint.ir.go.type.GoIRSliceType
 import org.opentaint.ir.go.type.GoIRStructType
+import org.opentaint.ir.go.type.GoIRTupleType
 import org.opentaint.ir.go.type.GoIRType
 
-internal fun GoSerializedCondition?.resolveToRuleCondition(signature: GoFunctionSignature, project: GoIRProgram?): CommonCondition<GoRuleCondition> {
-    val resolved = this?.resolveImpl(signature, project) ?: mkTrue()
+internal fun GoSerializedCondition?.resolveToRuleCondition(signature: GoFunctionSignature): CommonCondition<GoRuleCondition> {
+    val resolved = this?.resolveImpl(signature) ?: mkTrue()
     return resolved.simplify()
 }
 
-private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature, project: GoIRProgram?): CommonCondition<GoRuleCondition> = when (this) {
+private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature): CommonCondition<GoRuleCondition> = when (this) {
     GoSerializedCondition.True -> mkTrue()
 
-    is GoSerializedCondition.And -> mkAnd(allOf.map { it.resolveImpl(signature, project) })
-    is GoSerializedCondition.Or -> mkOr(anyOf.map { it.resolveImpl(signature, project) })
-    is GoSerializedCondition.Not -> CommonCondition.Not(not.resolveImpl(signature, project))
+    is GoSerializedCondition.And -> mkAnd(allOf.map { it.resolveImpl(signature) })
+    is GoSerializedCondition.Or -> mkOr(anyOf.map { it.resolveImpl(signature) })
+    is GoSerializedCondition.Not -> CommonCondition.Not(not.resolveImpl(signature))
 
-    is GoSerializedCondition.ContainsMark -> pos.resolveAny(signature, project, PositionBaseWithModifiers::resolve) {
+    is GoSerializedCondition.ContainsMark -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
         GoRuleCondition.ContainsMark(it, tainted)
     }
 
-    is GoSerializedCondition.ContainsMarkOnAnyAccessor -> pos.resolveAny(signature, project, PositionBaseWithModifiers::resolve) {
+    is GoSerializedCondition.ContainsMarkOnAnyAccessor -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
         GoRuleCondition.ContainsMarkOnAnyAccessor(it, tainted)
     }
 
     is GoSerializedCondition.ConstantCmp -> {
         val typedValue = value.toTypedConstantValue()
-        pos.resolveAny(signature, project, PositionBase::resolve) {
+        pos.resolveAny(signature, PositionBase::resolve) {
             when (cmp) {
                 GoSerializedCondition.ConstantCmpType.Eq -> GoRuleCondition.ConstantEq(it, typedValue)
                 GoSerializedCondition.ConstantCmpType.Lt -> GoRuleCondition.ConstantLt(it, typedValue)
@@ -49,32 +50,31 @@ private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature, pr
         }
     }
 
-    is GoSerializedCondition.ConstantMatches -> pos.resolveAny(signature, project, PositionBase::resolve) {
+    is GoSerializedCondition.ConstantMatches -> pos.resolveAny(signature, PositionBase::resolve) {
         GoRuleCondition.ConstantMatches(it, Regex(pattern))
     }
 
-    is GoSerializedCondition.IsNull -> pos.resolveAny(signature, project, PositionBase::resolve) {
+    is GoSerializedCondition.IsNull -> pos.resolveAny(signature, PositionBase::resolve) {
         GoRuleCondition.IsNull(it)
     }
 
-    is GoSerializedCondition.IsConstant -> pos.resolveAny(signature, project, PositionBase::resolve) {
+    is GoSerializedCondition.IsConstant -> pos.resolveAny(signature, PositionBase::resolve) {
         GoRuleCondition.IsConstant(it)
     }
 
     is GoSerializedCondition.NumberOfArgs -> if (n == signature.arity) mkTrue() else mkFalse()
 
-    is GoSerializedCondition.IsType -> pos.resolveAny(signature, project, PositionBase::resolve) {
+    is GoSerializedCondition.IsType -> pos.resolveAny(signature, PositionBase::resolve) {
         GoRuleCondition.IsType(typeName, it)
     }
 }
 
 private fun <T, R> T.resolveAny(
     signature: GoFunctionSignature,
-    project: GoIRProgram?,
-    resolve: T.(GoFunctionSignature, GoIRProgram?) -> List<R>,
+    resolve: T.(GoFunctionSignature) -> List<R>,
     body: (R) -> GoRuleCondition
 ): CommonCondition<GoRuleCondition> =
-    mkOr(resolve(signature, project).map { CommonCondition.Atom(body(it)) })
+    mkOr(resolve(signature).map { CommonCondition.Atom(body(it)) })
 
 private fun GoSerializedCondition.ConstantValue.toTypedConstantValue(): ConstantValue =
     when (type) {
@@ -83,7 +83,7 @@ private fun GoSerializedCondition.ConstantValue.toTypedConstantValue(): Constant
         GoSerializedCondition.ConstantType.Int -> ConstantIntValue(value.toInt())
     }
 
-fun PositionBase.resolve(signature: GoFunctionSignature, project: GoIRProgram?): List<Position.Simple> = when (this) {
+fun PositionBase.resolve(signature: GoFunctionSignature): List<Position.Simple> = when (this) {
     is PositionBase.AnyArgument -> {
         // todo: any arg classifier
         List(signature.arity) { Position.Argument(it) }
@@ -105,8 +105,8 @@ fun PositionBase.resolve(signature: GoFunctionSignature, project: GoIRProgram?):
     is PositionBase.This -> if (signature.hasReceiver) listOf(Position.This) else emptyList()
 }
 
-fun PositionBaseWithModifiers.resolve(signature: GoFunctionSignature, project: GoIRProgram?): List<Position> {
-    val base = base.resolve(signature, project)
+fun PositionBaseWithModifiers.resolve(signature: GoFunctionSignature): List<Position> {
+    val base = base.resolve(signature)
     val modifiers = when (this) {
         is PositionBaseWithModifiers.BaseOnly -> return base
         is PositionBaseWithModifiers.WithModifiers -> modifiers
@@ -118,7 +118,7 @@ fun PositionBaseWithModifiers.resolve(signature: GoFunctionSignature, project: G
     }
 
     return base.mapNotNull {
-        val type = signature.positionType(it, project)
+        val type = signature.positionType(it)
             ?: return@mapNotNull null
 
         val accessors = modifiers.resolveWithType(type)
@@ -128,18 +128,10 @@ fun PositionBaseWithModifiers.resolve(signature: GoFunctionSignature, project: G
     }
 }
 
-private fun GoFunctionSignature.positionType(pos: Position.Simple, project: GoIRProgram?): GoIRType? {
-    val typeName = when (pos) {
-        is Position.Argument -> paramTypes.getOrNull(pos.index)
-        is Position.Result -> resultType
-        is Position.This -> receiverType
-    }
-
-    val nonPtrType = typeName?.trimStart('*') ?: return null
-    val typePkg = nonPtrType.substringBeforeLast('.', "")
-    val simpleTypeName = nonPtrType.substringAfterLast('.')
-
-    return project?.findPackage(typePkg)?.findNamedType(simpleTypeName)?.underlying
+private fun GoFunctionSignature.positionType(pos: Position.Simple): GoIRType? = when (pos) {
+    is Position.Argument -> paramTypes.getOrNull(pos.index)
+    is Position.Result -> resultType
+    is Position.This -> receiverType
 }
 
 private fun mkPosition(
@@ -169,6 +161,7 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
     var type = baseType
     val accessors = mutableListOf<PositionAccessor>()
     for (mod in this) {
+        type = type.unwrapPtr()
         when (mod) {
             is PositionModifier.ArrayElement -> {
                 accessors += PositionAccessor.ElementAccessor
@@ -182,6 +175,18 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
             }
 
             is PositionModifier.Field -> {
+                val tupleElement = tupleFieldNamePattern.matchEntire(mod.fieldName)
+                if (tupleElement != null) {
+                    if (type !is GoIRTupleType) return null
+
+                    val tupleElementIdx = tupleElement.destructured.component1().toInt()
+                    val elementType = type.elements.getOrNull(tupleElementIdx) ?: return null
+
+                    accessors += PositionAccessor.FieldAccessor("tuple", "$$tupleElementIdx", elementType.typeName)
+                    type = elementType
+                    continue
+                }
+
                 if (type !is GoIRStructType) return null
                 val field = type.fields.firstOrNull { it.name == mod.fieldName } ?: return null
 
@@ -195,4 +200,11 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
         }
     }
     return accessors
+}
+
+private val tupleFieldNamePattern = Regex("tuple\\$(\\d+)")
+
+private fun GoIRType.unwrapPtr(): GoIRType {
+    if (this !is GoIRPointerType) return this
+    return elem.unwrapPtr()
 }

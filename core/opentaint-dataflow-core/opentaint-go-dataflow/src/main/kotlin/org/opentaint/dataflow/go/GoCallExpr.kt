@@ -57,8 +57,8 @@ class GoInstanceCallExpr(
 
 fun GoCallExpr.signature(): GoFunctionSignature? {
     val name = calleeName ?: return null
-    val receiverType = effectiveReceiver?.type?.displayName
-    val paramTypes = explicitArgs.map { it.type.displayName }
-    val resultType = callInfo.resultType.displayName
+    val receiverType = effectiveReceiver?.type
+    val paramTypes = explicitArgs.map { it.type }
+    val resultType = callInfo.resultType
     return GoFunctionSignature(name, receiverType, paramTypes, resultType)
 }

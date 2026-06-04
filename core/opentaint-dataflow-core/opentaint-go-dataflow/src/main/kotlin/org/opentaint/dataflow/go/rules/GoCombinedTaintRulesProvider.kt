@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.go.rules
 
+import org.opentaint.dataflow.go.GoFieldSignature
 import org.opentaint.dataflow.go.GoFunctionSignature
+import org.opentaint.dataflow.go.GoGlobalFieldSignature
 
 class GoCombinedTaintRulesProvider(
     private val base: GoTaintRulesProvider,
@@ -17,17 +19,17 @@ class GoCombinedTaintRulesProvider(
         val globalSource: CombinationMode = CombinationMode.OVERRIDE,
     )
 
-    override fun sourceRulesForGlobal(globalName: String, fieldType: String) =
+    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature) =
         combine(options.globalSource,
-            base.sourceRulesForGlobal(globalName, fieldType),
-            combined.sourceRulesForGlobal(globalName, fieldType)
+            base.sourceRulesForGlobal(signature),
+            combined.sourceRulesForGlobal(signature)
         )
 
-    override fun sourceRulesForFieldRead(fieldName: String, fieldType: String) =
+    override fun sourceRulesForFieldRead(signature: GoFieldSignature) =
         combine(
             options.source,
-            base.sourceRulesForFieldRead(fieldName, fieldType),
-            combined.sourceRulesForFieldRead(fieldName, fieldType)
+            base.sourceRulesForFieldRead(signature),
+            combined.sourceRulesForFieldRead(signature)
         )
 
     override fun sourceRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =

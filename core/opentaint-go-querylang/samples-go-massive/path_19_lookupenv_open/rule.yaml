@@ -5,6 +5,8 @@ rules:
     message: Tainted value from os.LookupEnv reaches os.Open (path traversal)
     mode: taint
     pattern-sources:
-      - pattern: os.LookupEnv("CFG_PATH")
+      - patterns:
+          - pattern: $UNTRUSTED, _ = os.LookupEnv("CFG_PATH")
+            focus-metavariable: $UNTRUSTED
     pattern-sinks:
       - pattern: os.Open($P)

@@ -14,20 +14,20 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfi
 import org.opentaint.dataflow.configuration.isFalse
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.go.GoFieldSignature
 import org.opentaint.dataflow.go.GoFunctionSignature
-import org.opentaint.ir.go.api.GoIRProgram
+import org.opentaint.dataflow.go.GoGlobalFieldSignature
+import org.opentaint.ir.go.type.GoIRType
 import java.util.concurrent.atomic.AtomicInteger
 
-class GoTaintConfiguration(
-    val project: GoIRProgram?
-) : GoTaintRulesProvider {
+class GoTaintConfiguration : GoTaintRulesProvider {
     private val globalSourceSimple = hashMapOf<String, MutableList<GoSerializedGlobalSource>>()
     private val globalSourcePatterns = mutableListOf<GoSerializedGlobalSource>()
-    private val globalSourceMemo = hashMapOf<String, List<TaintRule.GlobalReadSource>>()
+    private val globalSourceMemo = hashMapOf<GoGlobalFieldSignature, List<TaintRule.GlobalReadSource>>()
 
     private val fieldSourceSimple = hashMapOf<String, MutableList<GoSerializedFieldSource>>()
     private val fieldSourcePatterns = mutableListOf<GoSerializedFieldSource>()
-    private val fieldSourceMemo = hashMapOf<String, List<TaintRule.FieldReadSource>>()
+    private val fieldSourceMemo = hashMapOf<GoFieldSignature, List<TaintRule.FieldReadSource>>()
 
     private val sourceSimple = hashMapOf<String, MutableList<GoSerializedRule.Source>>()
     private val sourcePatterns = mutableListOf<GoSerializedRule.Source>()
@@ -65,11 +65,11 @@ class GoTaintConfiguration(
         cleanerMemo.clear()
     }
 
-    override fun sourceRulesForGlobal(globalName: String, fieldType: String): List<TaintRule.GlobalReadSource> =
-        sourceForGlobal(globalName, fieldType)
+    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature): List<TaintRule.GlobalReadSource> =
+        sourceForGlobal(signature)
 
-    override fun sourceRulesForFieldRead(fieldName: String, fieldType: String): List<TaintRule.FieldReadSource> =
-        sourceForFieldRead(fieldName, fieldType)
+    override fun sourceRulesForFieldRead(signature: GoFieldSignature): List<TaintRule.FieldReadSource> =
+        sourceForFieldRead(signature)
 
     override fun sourceRulesForCall(
         signature: GoFunctionSignature, allRelevant: Boolean,
@@ -128,17 +128,17 @@ class GoTaintConfiguration(
     }
 
     @Synchronized
-    fun sourceForGlobal(name: String, fieldType: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
-        val (pkgName, varName) = name.splitFullName()
+    fun sourceForGlobal(signature: GoGlobalFieldSignature): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(signature) {
+        val (pkgName, varName) = signature.name.splitFullName()
         candidates(varName, globalSourceSimple, globalSourcePatterns, { global })
             .filter { it.pkg.matchPackage(pkgName) }
-            .mapNotNull { specialize(it, name, fieldType) }
+            .mapNotNull { specialize(it, signature.name, signature.type) }
     }
 
     @Synchronized
-    fun sourceForFieldRead(name: String, fieldType: String): List<TaintRule.FieldReadSource> = fieldSourceMemo.getOrPut(name) {
-        candidates(name, fieldSourceSimple, fieldSourcePatterns, { field })
-            .mapNotNull { specialize(it, name, fieldType) }
+    fun sourceForFieldRead(signature: GoFieldSignature): List<TaintRule.FieldReadSource> = fieldSourceMemo.getOrPut(signature) {
+        candidates(signature.name, fieldSourceSimple, fieldSourcePatterns, { field })
+            .mapNotNull { specialize(it, signature.name, signature.type) }
     }
 
     @Synchronized
@@ -184,19 +184,19 @@ class GoTaintConfiguration(
         return direct + patternMatches
     }
 
-    private fun specialize(rule: GoSerializedGlobalSource, name: String, fieldType: String) =
+    private fun specialize(rule: GoSerializedGlobalSource, name: String, fieldType: GoIRType) =
         specializeFieldSourceRule(name, fieldType, rule.condition, rule.taint) { name, condition, actions ->
             TaintRule.GlobalReadSource(name, condition, actions, rule.info)
         }
 
-    private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: String)  =
+    private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: GoIRType)  =
         specializeFieldSourceRule(name, fieldType, rule.condition, rule.taint) { name, condition, actions ->
             TaintRule.FieldReadSource(name, condition, actions, rule.info)
         }
 
     private inline fun <T> specializeFieldSourceRule(
         name: String,
-        type: String,
+        type: GoIRType,
         condition: GoSerializedCondition?,
         taint: List<GoSerializedAssignAction>,
         buildRule: (String, CommonCondition<GoRuleCondition>, List<GoAssignAction>) -> T
@@ -207,7 +207,7 @@ class GoTaintConfiguration(
         val fakeSig = GoFunctionSignature(
             name = name, receiverType = null, paramTypes = emptyList(), resultType = type
         )
-        val condition = condition.resolveToRuleCondition(fakeSig, project)
+        val condition = condition.resolveToRuleCondition(fakeSig)
         if (condition.isFalse()) return null
 
         val actions = taint.specialize(fakeSig)
@@ -215,7 +215,7 @@ class GoTaintConfiguration(
     }
 
     private fun specialize(rule: GoSerializedRule.Source, signature: GoFunctionSignature): TaintRule.Source? {
-        val condition = rule.condition.resolveToRuleCondition(signature, project)
+        val condition = rule.condition.resolveToRuleCondition(signature)
         if (condition.isFalse()) return null
 
         val actions = rule.taint.specialize(signature)
@@ -223,7 +223,7 @@ class GoTaintConfiguration(
     }
 
     private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRule.Sink? {
-        val condition = rule.condition.resolveToRuleCondition(signature, project)
+        val condition = rule.condition.resolveToRuleCondition(signature)
         if (condition.isFalse()) return null
 
         val trackFacts = rule.trackFactsReachAnalysisEnd
@@ -238,10 +238,10 @@ class GoTaintConfiguration(
 
     private fun List<GoSerializedAssignAction>.specialize(signature: GoFunctionSignature) = flatMap { t ->
         when (t) {
-            is GoSerializedAssignAction.Direct -> t.pos.resolve(signature, project)
+            is GoSerializedAssignAction.Direct -> t.pos.resolve(signature)
                 .map { GoAssignAction.Direct(t.kind, it) }
 
-            is GoSerializedAssignAction.AnyAccessor -> t.pos.resolve(signature, project)
+            is GoSerializedAssignAction.AnyAccessor -> t.pos.resolve(signature)
                 .flatMap {
                     listOf(
                         GoAssignAction.AnyAccessor(t.kind, it),
@@ -257,7 +257,7 @@ class GoTaintConfiguration(
     }
 
     private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRule.Cleaner? {
-        val condition = rule.condition.resolveToRuleCondition(signature, project)
+        val condition = rule.condition.resolveToRuleCondition(signature)
         if (condition.isFalse()) return null
 
         val actions = rule.cleans.flatMap { it.toTaintAction(signature) }
@@ -265,15 +265,15 @@ class GoTaintConfiguration(
     }
 
     private fun GoSerializedPassAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =
-        from.resolve(signature, project).flatMap { f ->
-            to.resolve(signature, project).map { t ->
+        from.resolve(signature).flatMap { f ->
+            to.resolve(signature).map { t ->
                 val kind = taintKind
                 if (kind == null) CopyData(f, t) else CopyTaintMark(kind, f, t)
             }
         }
 
     private fun GoSerializedCleanAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =
-        pos.resolve(signature, project).map {
+        pos.resolve(signature).map {
             val kind = taintKind
             if (kind == null) RemoveAllMarks(it) else RemoveMark(kind, it)
         }
