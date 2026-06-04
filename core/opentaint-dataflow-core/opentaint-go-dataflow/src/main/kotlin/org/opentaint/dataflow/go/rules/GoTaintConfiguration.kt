@@ -129,10 +129,9 @@ class GoTaintConfiguration(
 
     @Synchronized
     fun sourceForGlobal(name: String, fieldType: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
-        val varName = name.substringAfterLast('.')
-        val pkgName = name.substringBeforeLast('.', "")
+        val (pkgName, varName) = name.splitFullName()
         candidates(varName, globalSourceSimple, globalSourcePatterns, { global })
-            .filter { it.pkg.matches(pkgName) }
+            .filter { it.pkg.matchPackage(pkgName) }
             .mapNotNull { specialize(it, name, fieldType) }
     }
 
@@ -166,8 +165,11 @@ class GoTaintConfiguration(
         sig: GoFunctionSignature,
         simpleByName: Map<String, List<R>>,
         patternRules: List<R>,
-    ): List<R> = candidates(sig.name.substringAfterLast('.'), simpleByName, patternRules) { function }
-        .filter { it.pkg.matches(sig.name.substringBeforeLast('.', "")) }
+    ): List<R> {
+        val (pkgName, functionName) = sig.name.splitFullName()
+        return candidates(functionName, simpleByName, patternRules) { function }
+            .filter { it.pkg.matchPackage(pkgName) }
+    }
 
     private fun <R> candidates(
         name: String,
@@ -304,5 +306,18 @@ class GoTaintConfiguration(
 
     private fun validatePositionBaseForFieldSource(pos: PositionBase) {
         check(pos is PositionBase.Result) { "Unsupported field-source position: $pos" }
+    }
+
+    private fun String.splitFullName(): Pair<String, String> {
+        val simpleName = substringAfterLast('.')
+        val pkgName = substringBeforeLast('.', "")
+        return pkgName to simpleName
+    }
+
+    private fun GoNameMatcher.matchPackage(pkgName: String): Boolean {
+        if (matches(pkgName)) return true
+
+        val lastPkgPart = pkgName.substringAfterLast('/')
+        return matches(lastPkgPart)
     }
 }
