@@ -3,7 +3,7 @@ bin/
 !npm/bin/
 dist/
 dist-npm/
-lib/
+/lib/
 /opentaint
 
 # Operating system files
