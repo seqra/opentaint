@@ -77,28 +77,36 @@ passThrough:
     receiver: false
   copy:
   - from: arg(0)
-    to: result
+    to:
+      - result
+      - '[*]'
 - function:
     package: strings
     name: SplitAfter
     receiver: false
   copy:
   - from: arg(0)
-    to: result
+    to:
+      - result
+      - '[*]'
 - function:
     package: strings
     name: SplitAfterN
     receiver: false
   copy:
   - from: arg(0)
-    to: result
+    to:
+      - result
+      - '[*]'
 - function:
     package: strings
     name: SplitN
     receiver: false
   copy:
   - from: arg(0)
-    to: result
+    to:
+      - result
+      - '[*]'
 - function:
     package: strings
     name: Title
