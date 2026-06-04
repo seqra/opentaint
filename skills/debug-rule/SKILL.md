@@ -59,6 +59,8 @@ A finding that appears here but not in the full run points to entry-point discov
 
 ### 4. Classify the cause
 
+An engine bug is the least likely outcome by far — assume it last. Nearly every taint kill is a missing or wrong library model (an un-approximated method, or an approximation whose signature/from→to is off) or a rule defect; both are tedious to rule out, but that's not a reason to jump to "engine". Exhaust the first two before you even consider the third.
+
 The killing instruction decides who owns the fix:
 
 - external library method → missing or broken model. If the method is NOT in `approximated-external-methods.yaml`, step 1 should have caught it (route to analyze-external-methods + create-*-approximation). If it IS listed (a built-in claims to model it) yet taint dies here, the built-in is wrong for this case — write your own override: passthrough overrides at the rule level, so prefer a passthrough config for the specific method; a dataflow override conflicts with built-ins at load, so fall back to passthrough on that method, or if only a dataflow shape can express the propagation, treat it as an engine issue
@@ -77,5 +79,6 @@ None — diagnostic, writes no tracking file
 
 ## Gotchas
 
+- Don't reach for an "engine" verdict because ruling out a model or rule cause is tedious — a missing/wrong approximation or a rule gap is overwhelmingly more likely. Classify engine only when the killing instruction is a plain propagation (assignment, cast, field read, an already-modeled call) with the model proven complete and the rule proven correct
 - One rule per fact-reachability run; across many rules the report is unusably huge
 - Debug the exact run that showed the problem — same model, rulesets, approximation dirs — or you debug something else; never swap the model mid-analysis

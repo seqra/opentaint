@@ -1,5 +1,7 @@
 # Approximation iteration
 
+Every dropped method MUST end up either modeled (a passthrough/dataflow unit) or in `skipped.yaml` — no exceptions, no "good enough". This loop does not finish while any method in `dropped-external-methods.yaml` is still unclassified. Do not stop early because the important-looking ones are done, because a batch is large, or because the remaining methods seem minor — an unmodeled method silently kills taint and hides real findings. Keep iterating until the only thing left dropped is the skip set.
+
 Loop until stabilization:
 
 1. analyze-external-methods — Inputs: dropped-file `.opentaint/results/dropped-external-methods.yaml`, tracking-dir `.opentaint/tracking`, `<project-root>`. Writes one `approximations/<package>-passthrough.yaml` and/or `<package>-dataflow.yaml` per package, plus `skipped.yaml`, only for methods not already in a unit. Returns one line per unit

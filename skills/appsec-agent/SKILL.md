@@ -27,7 +27,7 @@ After installing, run `opentaint health` to confirm the autobuilder/analyzer/rul
 
 ## Choose a workflow
 
-Begin by asking the user two things — two separate AskUserQuestion calls, scan level then triage level. Record the chosen `scan_level` and `triage_level` in `state.yaml`:
+Begin by asking the user both things in a single AskUserQuestion call — two questions, scan level and triage level, presented together (never one call then another). Record the chosen `scan_level` and `triage_level` in `state.yaml`:
 
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan with existing rules
@@ -82,13 +82,16 @@ Orchestration practices:
 
 ## Resource limits
 
-A fan-out unit that compiles or scans (approximation creation, rule test-projects, discovery) each spawns a heavy `opentaint` JVM, so unbounded parallelism OOMs the machine. At run start, compute a concurrency cap and never dispatch more than that many such subagents at once:
+Two limits apply to every fan-out — a global one against rate-limiting, and a tighter one against memory:
 
-- cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
-- free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
-- cap = `min(cores, floor(free_GB / 4))`, floored at 1 — budget ~4 GB per concurrent JVM
+- Global cap of 7 — never dispatch more than 7 subagents at once, of any kind. Bursting more reliably trips transient rate-limiting (a fan-out of 20 left half the agents rate-limited mid-run). It binds light and heavy agents alike
+- RAM-heavy agents each spawn a heavy `opentaint` JVM, so they take a tighter memory bound on top of the global cap. The heavy set is exactly `build-project`, `run-scan`, `create-rule`, `create-dataflow-approximation`, and sometimes `debug-rule` (when it traces a real scan). Compute the bound at run start and never dispatch more than this many heavy subagents at once:
+  - cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
+  - free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
+  - `cap_heavy = max(1, min(cores, floor(free_GB / 2), 7))` — budget ~2 GB per concurrent JVM
+- Every other agent is not RAM-bound — discover-attack-surface (reads jars + the built model), create-test-project (compiles once), triage-dependencies, analyze-external-methods, analyze-findings, create-pass-through-approximation, assemble-lib-rules, generate-poc. They're held only by the global cap of 7
 
-It's machine state, not run state — recompute on resume, don't track it. Light subagents that only read/write tracking (analyze-external-methods, analyze-findings, assemble-lib-rules) aren't bound by the cap; PoC is already sequential.
+It's machine state, not run state — recompute on resume, don't track it. PoC is already sequential.
 
 ## State and resumption
 
@@ -181,21 +184,23 @@ notes: >
   free-form
 ```
 
-rules/join/<class>.yaml — one per vuln-class security join, written by assemble-lib-rules after the lib rules exist and verified by the main scan:
+rules/join/<class>.yaml — one file per vuln class, written by assemble-lib-rules after the lib rules exist and verified by the main scan. A join references exactly ONE sink rule, so a class with several sinks holds several joins — one entry under `joins:` per sink rule, each its own file/id:
 
 ```yaml
-name: ssrf              # the vuln class; the join rule's file and id
-rule_id: java/security/ssrf.yaml:ssrf
-artifact: .opentaint/rules/java/security/ssrf.yaml
-sources:                # built-in + created
+name: ssrf
+sources:
   - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
   - ref: java/lib/spring/webflux-request-source.yaml#webflux-request-source
-sinks:                  # created + built-in
-  - new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
-  - builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+joins:
+  - rule_id: java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml:ssrf-webclient-ssrf-sink-lib-ext
+    artifact: .opentaint/rules/java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml
+    sink: { new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink }
+  - rule_id: java/security/ssrf-java-ssrf-sink-lib-ext.yaml:ssrf-java-ssrf-sink-lib-ext
+    artifact: .opentaint/rules/java/security/ssrf-java-ssrf-sink-lib-ext.yaml
+    sink: { builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink }
 stages:                 # pending | in_progress | done
   written: done
-  verified: pending     # done once the main scan confirms it
+  verified: pending
 notes: >
   free-form
 ```

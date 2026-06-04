@@ -91,4 +91,6 @@ Do not touch other stages or fields
 
 - One expected verdict per sample
 - One unit per `<name>` folder — never write into another unit's project, so concurrent agents don't race
+- The scaffold (`test rule init` / `test approximation init`) defaults to Java 8 — bump `source/targetCompatibility` when the samples use a library needing Java 17/21 (Spring 7, spring-data 4, Lucene 10, Jackson 3). Set `release` on the running JDK; a Gradle `toolchain{}` block fails here (only JDK 21 is locatable, with no download repo)
+- A positive must route the marker `source()` into the sink — a sink whose only untrusted input is a bare method parameter with no in-sample source (e.g. `getValue(Expression e)`) can't be satisfied by any taint-flow join; feed the parameter from `test.Taint.source()` or the sample is unprovable
 - For library-method behavior the requirements don't pin down (does it sanitize? propagate taint?), read the dependency or its docs rather than guessing

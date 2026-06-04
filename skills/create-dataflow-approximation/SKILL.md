@@ -121,6 +121,8 @@ Do not touch other stages or fields
 ## Constraints
 
 - Java 8 source compatibility
+- Put the `@Approximate` classes in a neutral package (e.g. `com.example.approximations`) — never the target library's own package. Inside the library's package every bare FQN resolves to your approximation's non-generic class instead of the real type, breaking compilation wholesale
+- Model every method and overload the unit lists, not only the shapes you happen to have a sample for — an under-covered unit silently drops taint through the overloads you skipped
 - One approximation class per target class — a strict bijection enforced at load (duplicates throw `IllegalArgumentException`). Built-in dataflow approximations are first-priority and presumed correct; you cannot override them — see Troubleshooting if debug-rule traces a kill to one
 - Method signatures must match the target class methods exactly
 - Don't unpack or grep the analyzer JAR for built-in models or signatures — its internals aren't a stable API; go through the CLI

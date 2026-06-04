@@ -18,6 +18,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Methods to model `<methods>` — the target method(s) and what each propagates, from the tracking file's `methods` (all `type: passthrough`)
 - Tracking file `<tracking-file>` — the passThrough approximation unit. Default: `.opentaint/tracking/approximations/<name>.yaml`
 - Config output `<config-file>` — where to write the passThrough approximation. Default: `.opentaint/pass-through/<name>.yaml`
+- Test model `<test-model>` (optional) — any compiled model to dry-run the config against for a load/parse check. Default: `.opentaint/project` if it exists, else any `.opentaint/test-compiled/*` model
 
 ## Workflow
 
@@ -125,7 +126,20 @@ passThrough:
     - '[*]'
 ```
 
-### 2. Verification is the scan
+### 2. Optional — dry-run the config for load errors
+
+There's no dedicated load-check command, but if a compiled `<test-model>` is present you can catch YAML load/parse errors before the main scan by running a quick scan with the config applied (won't verify propagation — there's no matching flow — only that the config loads):
+
+```bash
+opentaint scan --project-model <test-model> \
+  -o .opentaint/test-results/<name>/passthrough-loadcheck.sarif \
+  --ruleset builtin \
+  --passthrough-approximations <config-file>
+```
+
+A config error aborts the scan with the parse/load message — fix the YAML and re-run. Nice-to-have, not required; skip it when no model is around
+
+### 3. Verification is the scan
 
 There's no test project for passThrough. The main scan applies `<config-file>` and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
 
@@ -135,7 +149,7 @@ There's no test project for passThrough. The main scan applies `<config-file>` a
 
 Never invoke or grep the analyzer JAR — its internals aren't a stable API; for built-in rules use `opentaint health --rules`, for everything else the CLI
 
-### 3. When the config won't converge
+### 4. When the config won't converge
 
 After ~2 fix re-invocations without a clearer cause — matcher fields and `from`/`to` checked, writer/reader slots confirmed identical, the modeled method no longer in `dropped-external-methods.yaml`, but the scan still doesn't surface the flow — don't keep guessing. Report non-convergence to the caller; the orchestrator escalates to debug-rule for a fact-reachability trace of where taint dies
 
@@ -183,6 +197,7 @@ Conditions (the only keys that load from YAML)
 
 ## Gotchas
 
+- The `#` comments in the examples here are for you — don't copy them into the config you write; keep produced YAML comment-free
 - The approximation merges with built-ins at the rule level — a provided rule overrides a built-in only if it matches one. Don't redefine a method already in `approximated-external-methods.yaml` unless debug-rule shows the built-in isn't propagating taint here, then override deliberately
 - A wrong argument position copies the wrong value — point `from`/`to` at the tainted one
 - In doubt about how a method moves taint — which argument or field reaches the result — read the library's source rather than guessing

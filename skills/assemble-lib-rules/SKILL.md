@@ -27,17 +27,24 @@ Built-in rules are available at `opentaint health --rules`
 
 Read every per-package lib unit in `<lib-units>` (the source/sink `rule_id`s create-rule wrote, sinks carrying their `vuln_class`) and the built-in source/sink lib rules (`opentaint health --rules`). Collect every source rule (built-in + created) and every sink rule grouped by vuln class
 
-### 2. Write one security join per vuln class
+### 2. Write one security join per (vuln class, sink rule)
 
-For each vuln class that has a **created** (new) sink or for which there is any **created** source, write `<rules-dir>/java/security/<class>.yaml` (file and `id` = the class), `mode: join`, refing the relevant sources and sinks and wiring **only new-end combinations** in `on:`:
+A join references exactly ONE right-hand (sink) rule — you cannot merge several sinks into one join. So a vuln class with more than one relevant sink becomes several joins: one per sink rule, each refing all the relevant sources on the left. Sources are many; the sink is always one.
 
-- built-in sources + created sources → that class's **new** sinks
-- created sources → that class's **built-in** sinks
-- skip built-in source → built-in sink — the built-in join already covers it, so repeating it double-reports
+For each vuln class, and within it each sink rule that needs new wiring, write `<rules-dir>/java/security/<class>-<sink>-lib-ext.yaml` with `mode: join`, refing the relevant sources + that one sink, wiring only new-end combinations in `on:`:
+
+- a created (new) sink ← from every relevant source (built-in + created)
+- a built-in sink ← from created sources only (built-in source → built-in sink is already covered by the built-in join — repeating it double-reports)
+
+Two rules that bite here:
+
+- Unique id — use `id: <class>-<sink>-lib-ext`, never the bare class name; a custom join named `ssrf`/`xxe`/`path-traversal` collides silently with the built-in join of that id and is dropped with no error (only the scan's rule statistics reveal it)
+- Same metavariable both sides — every `on:` clause connects the metavariable both lib rules bind (`$UNTRUSTED` by convention) as `source.$UNTRUSTED -> sink.$UNTRUSTED`; don't invent a new name on either end, or the join won't connect
 
 ```yaml
+# java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml
 rules:
-  - id: ssrf
+  - id: ssrf-webclient-ssrf-sink-lib-ext
     severity: ERROR
     message: Untrusted data reaches an SSRF sink
     metadata:
@@ -48,20 +55,17 @@ rules:
     join:
       refs:
         - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-          as: servlet-source          # built-in source
+          as: servlet-source
         - rule: java/lib/spring/webflux-request-source.yaml#webflux-request-source
-          as: webflux-source          # created source
+          as: webflux-source
         - rule: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
-          as: new-sink                # created (new) sink
-        - rule: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
-          as: builtin-sink            # built-in sink
+          as: sink
       on:
-        - 'servlet-source.$UNTRUSTED -> new-sink.$UNTRUSTED'      # built-in source → new sink
-        - 'webflux-source.$UNTRUSTED -> new-sink.$UNTRUSTED'      # created source → new sink
-        - 'webflux-source.$UNTRUSTED -> builtin-sink.$UNTRUSTED'  # created source → built-in sink
+        - 'servlet-source.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'webflux-source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-(no `servlet-source -> builtin-sink` line — the built-in join already covers that pair)
+The same class's built-in sink is a second file (`ssrf-java-ssrf-sink-lib-ext.yaml`), refing only the created sources → that built-in sink. The `#` comments in these examples are for you — don't copy them into the rules you write
 
 ### 3. Stop — the main scan verifies
 
@@ -69,32 +73,34 @@ These joins carry no test project — the main scan applies them. Write them and
 
 ## Output
 
-- One `<rules-dir>/java/security/<class>.yaml` per vuln-class join, refing the created + built-in lib rules
-- One `<tracking-dir>/rules/join/<class>.yaml` per join, with `stages.written: done`
-- A brief summary to the caller: one line per join (class, source/sink count, which ends are new)
+- One `<rules-dir>/java/security/<class>-<sink>-lib-ext.yaml` per (vuln class, sink rule), each refing all relevant sources + its one sink
+- One `<tracking-dir>/rules/join/<class>.yaml` per vuln class, listing every join it produced, with `stages.written: done`
+- A brief summary to the caller: one line per join (class, sink, source count, which ends are new)
 
 ## Tracking
 
-`<tracking-dir>/rules/join/<class>.yaml` — the security join, verified by the main scan:
+`<tracking-dir>/rules/join/<class>.yaml` — one file per vuln class, listing each join (one per sink rule), verified by the main scan:
 
 ```yaml
-name: ssrf                    # the vuln class; the join rule's file and id
-rule_id: java/security/ssrf.yaml:ssrf
-artifact: .opentaint/rules/java/security/ssrf.yaml
-sources:                      # built-in + created
+name: ssrf
+sources:
   - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
   - ref: java/lib/spring/webflux-request-source.yaml#webflux-request-source
-sinks:                        # created + built-in
-  - new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
-  - builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+joins:
+  - rule_id: java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml:ssrf-webclient-ssrf-sink-lib-ext
+    artifact: .opentaint/rules/java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml
+    sink: { new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink }
+  - rule_id: java/security/ssrf-java-ssrf-sink-lib-ext.yaml:ssrf-java-ssrf-sink-lib-ext
+    artifact: .opentaint/rules/java/security/ssrf-java-ssrf-sink-lib-ext.yaml
+    sink: { builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink }
 stages:
   written: done
-  verified: pending           # done once the main scan confirms it
+  verified: pending
 notes: >
   free-form
 ```
 
 ## Gotchas
 
-- One join per vuln class, aggregating every relevant source — don't write a separate join per source or per package
+- One join references exactly one sink — a class with N relevant sinks yields N joins, each aggregating every relevant source; never pack two sinks into one join
 - Ref the existing lib rules (built-in + created); never re-declare a source or sink

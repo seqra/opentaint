@@ -170,7 +170,7 @@ stages:
 
 - Library rules MUST have `options.lib: true` and `severity: NOTE`
 - Security rules (the joins) MUST have `metadata.cwe` and `metadata.short-description`
-- Source/sink metavariable names must match across `refs` and `on` clauses, or the join won't connect
+- Source/sink metavariable names must match across `refs` and `on` clauses, or the join won't connect; bind the tainted value as `$UNTRUSTED` in every lib source/sink rule, so the security joins assemble-lib-rules writes later reference one consistent name
 - The `rule:` path in `refs` is relative to the ruleset root — a marker ref resolves under the test project's `test-rules`, a lib ref under `<rules-dir>`
 - Rule IDs must be globally unique
 - For simple structural patterns (no dataflow), omit `mode:` (uses default mode)
@@ -182,4 +182,7 @@ stages:
 - A wrong argument position in `(..., $UNTRUSTED, ...)` focuses the wrong parameter — point `focus-metavariable` at the tainted one
 - Refine the rule, never the test project — don't edit or weaken samples here; if one is wrong, hand it back upstream
 - A positive that won't pass because a library method drops taint is not a rule bug — don't broaden the rule to force it; surface it for approximation (step 5)
+- The `#` comments in the examples here are for you — don't copy them into the rule files you write; keep produced YAML comment-free
+- An implicit-receiver pattern `this.method(...)` is unsupported ("Failed to transform pattern: ThisExpr") — match the unqualified call as a bare `method($X)` pattern instead
+- A structural (no-source) sink and a taint-flow sink can't share one join id — the engine forbids one id being both; if a class needs both, split them into separate rules/joins
 - Don't unpack or grep the analyzer JAR for built-in rules — its internals aren't a stable API; read the YAMLs from `opentaint health --rules`
