@@ -45,7 +45,6 @@ import org.opentaint.semgrep.pattern.StringEllipsis
 import org.opentaint.semgrep.pattern.StringLiteral
 import org.opentaint.semgrep.pattern.TopList
 import org.opentaint.semgrep.pattern.TypeName
-import org.opentaint.semgrep.pattern.TypeOnlyPattern
 import org.opentaint.semgrep.pattern.TypedMetavar
 import org.opentaint.semgrep.pattern.UnaryExpr
 import org.opentaint.semgrep.pattern.VarDecl
@@ -120,7 +119,6 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
 
         is IndexExpr -> transformIndexRead(pattern)
         is SelectorExpr -> transformFieldReadOrFail(pattern)
-        is TypeOnlyPattern -> transformGlobalReadFromType(pattern.type)
 
         is BlockStmt -> transformSequence(pattern.stmts)
         is ReturnStmt -> {
@@ -290,17 +288,6 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             hasEllipsisInTheBeginning = false,
             hasEllipsisInTheEnd = false,
         )
-    }
-
-    private fun transformGlobalReadFromType(type: TypeName): SemgrepPatternActionList {
-        val qt = type as? QualifiedType ?: transformationFailed("TypeOnly_not_qualified")
-        val fieldName = (qt.name as? ConcreteName)?.name
-            ?: transformationFailed("TypeOnly_field_not_concrete")
-
-        return when (val pkg = qt.pkg) {
-            is ConcreteName -> mkGlobalReadActionList(pkg.name, fieldName)
-            is MetavarName -> mkFieldReadActionList(fieldName, IsMetavar(MetavarAtom.create(pkg.name)))
-        }
     }
 
     private fun mkGlobalReadActionList(pkgName: String, fieldName: String): SemgrepPatternActionList {
