@@ -16,13 +16,15 @@ import kotlin.test.Test
 class TypeOpsTest : AnalysisTest() {
 
     private val intSource = GoSerializedRule.Source(
-        function = GoNameMatcher.Simple("test/util.SourceInt"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("SourceInt"),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
         info = null,
     )
     private val floatSink = GoSerializedRule.Sink(
-        function = GoNameMatcher.Simple("test/util.SinkFloat"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("SinkFloat"),
         condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "test-id",
@@ -30,7 +32,8 @@ class TypeOpsTest : AnalysisTest() {
         info = null,
     )
     private val anySource = GoSerializedRule.Source(
-        function = GoNameMatcher.Simple("test/util.SourceAny"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("SourceAny"),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
         info = null,

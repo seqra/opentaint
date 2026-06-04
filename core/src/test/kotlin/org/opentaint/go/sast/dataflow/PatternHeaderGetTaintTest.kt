@@ -24,7 +24,8 @@ class PatternHeaderGetTaintTest : AnalysisTest() {
         GoConfigLoader.getConfig()?.passThrough ?: emptyList()
 
     private val headerSource = Source(
-        function = GoNameMatcher.Simple("test.sourceHeader"),
+        pkg = GoNameMatcher.Simple("test"),
+        function = GoNameMatcher.Simple("sourceHeader"),
         condition = null,
         taint = listOf(
             GoSerializedAssignAction("taint", WithModifiers(Result, listOf(ArrayElement, ArrayElement))),
@@ -33,7 +34,8 @@ class PatternHeaderGetTaintTest : AnalysisTest() {
     )
 
     private val fprintfSink = Sink(
-        function = GoNameMatcher.Simple("test.fprintfStub"),
+        pkg = GoNameMatcher.Simple("test"),
+        function = GoNameMatcher.Simple("fprintfStub"),
         condition = GoSerializedCondition.ContainsMark(
             "taint",
             PositionBaseWithModifiers.BaseOnly(Argument(1)),

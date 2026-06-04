@@ -14,7 +14,8 @@ import kotlin.test.assertTrue
 class PassThroughTest : AnalysisTest() {
 
     private val passthroughRule = GoSerializedRule.PassThrough(
-        function = GoNameMatcher.Simple("test/util.Passthrough"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("Passthrough"),
         copy = listOf(
             GoSerializedPassAction(
                 from = PositionBaseWithModifiers.BaseOnly(Argument(0)),
@@ -25,7 +26,8 @@ class PassThroughTest : AnalysisTest() {
     )
 
     private val transformRule = GoSerializedRule.PassThrough(
-        function = GoNameMatcher.Simple("test/util.Transform"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("Transform"),
         copy = listOf(
             GoSerializedPassAction(
                 from = PositionBaseWithModifiers.BaseOnly(Argument(0)),

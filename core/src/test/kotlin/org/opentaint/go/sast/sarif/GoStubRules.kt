@@ -18,7 +18,8 @@ object GoStubRules {
 
     val defaultSources: List<GoSerializedRule.Source> = listOf(
         GoSerializedRule.Source(
-            function = GoNameMatcher.Simple("test/util.Source"),
+            pkg = GoNameMatcher.Simple("test/util"),
+            function = GoNameMatcher.Simple("Source"),
             condition = null,
             taint = listOf(
                 GoSerializedAssignAction(TAINT_MARK, PositionBaseWithModifiers.BaseOnly(PositionBase.Result)),
@@ -29,7 +30,8 @@ object GoStubRules {
 
     val defaultSinks: List<GoSerializedRule.Sink> = listOf(
         GoSerializedRule.Sink(
-            function = GoNameMatcher.Simple("test/util.Sink"),
+            pkg = GoNameMatcher.Simple("test/util"),
+            function = GoNameMatcher.Simple("Sink"),
             condition = GoSerializedCondition.ContainsMark(
                 TAINT_MARK,
                 PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(0)),

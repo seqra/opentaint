@@ -19,7 +19,8 @@ class PatternXssFprintfSpreadTest : AnalysisTest() {
         GoConfigLoader.getConfig()?.passThrough ?: emptyList()
 
     private val fprintfSink = Sink(
-        function = GoNameMatcher.Simple("test.fprintfStub"),
+        pkg = GoNameMatcher.Simple("test"),
+        function = GoNameMatcher.Simple("fprintfStub"),
         condition = GoSerializedCondition.ContainsMark(
             "taint",
             PositionBaseWithModifiers.BaseOnly(Argument(1)),

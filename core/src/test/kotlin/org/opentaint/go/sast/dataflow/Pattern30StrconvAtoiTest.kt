@@ -21,7 +21,8 @@ class Pattern30StrconvAtoiTest : AnalysisTest() {
         GoConfigLoader.getConfig()?.passThrough ?: emptyList()
 
     private val intSink = Sink(
-        function = GoNameMatcher.Simple("test/util.SinkInt"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("SinkInt"),
         condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "test-id",

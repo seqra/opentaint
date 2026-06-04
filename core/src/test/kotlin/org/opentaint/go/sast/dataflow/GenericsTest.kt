@@ -15,13 +15,15 @@ import kotlin.test.Test
 class GenericsTest : AnalysisTest() {
 
     private val intSource = GoSerializedRule.Source(
-        function = GoNameMatcher.Simple("test/util.SourceInt"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("SourceInt"),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
         info = null,
     )
     private val intSink = GoSerializedRule.Sink(
-        function = GoNameMatcher.Simple("test/util.SinkInt"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("SinkInt"),
         condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "test-id",

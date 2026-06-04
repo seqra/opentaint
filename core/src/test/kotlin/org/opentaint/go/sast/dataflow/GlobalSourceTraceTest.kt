@@ -22,7 +22,8 @@ import kotlin.test.assertTrue
 class GlobalSourceTraceTest : AnalysisTest() {
 
     private val osArgsGlobalSource = GoSerializedGlobalSource(
-        global = GoNameMatcher.Simple("os.Args"),
+        pkg = GoNameMatcher.Simple("os"),
+        global = GoNameMatcher.Simple("Args"),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", WithModifiers(Result, listOf(ArrayElement)))),
         info = null,

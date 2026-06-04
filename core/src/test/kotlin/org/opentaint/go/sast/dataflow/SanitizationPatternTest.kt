@@ -13,7 +13,8 @@ import kotlin.test.assertTrue
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SanitizationPatternTest : AnalysisTest() {
     private val passthroughRule = GoSerializedRule.PassThrough(
-        function = GoNameMatcher.Simple("test/util.Passthrough"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("Passthrough"),
         copy = listOf(
             GoSerializedPassAction(
                 from = PositionBaseWithModifiers.BaseOnly(Argument(0)),

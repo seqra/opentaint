@@ -15,14 +15,16 @@ import kotlin.test.Test
 class SampleTest : AnalysisTest() {
 
     private fun source(function: String) = GoSerializedRule.Source(
-        function = GoNameMatcher.Simple(function),
+        pkg = GoNameMatcher.Simple(function.substringBeforeLast('.', "")),
+        function = GoNameMatcher.Simple(function.substringAfterLast('.')),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
         info = null,
     )
 
     private fun sink(function: String, id: String) = GoSerializedRule.Sink(
-        function = GoNameMatcher.Simple(function),
+        pkg = GoNameMatcher.Simple(function.substringBeforeLast('.', "")),
+        function = GoNameMatcher.Simple(function.substringAfterLast('.')),
         condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = id,

@@ -25,12 +25,13 @@ import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.ext.findFunctionByFullName
+import org.opentaint.ir.go.type.GoIRUnsafePointerType
 import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.toGoTaintConfiguration
+import org.opentaint.semgrep.pattern.conversion.loadGoTaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -87,7 +88,7 @@ class GoSemgrepReachabilityTest {
 
         @Suppress("UNCHECKED_CAST")
         val firstRule = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        val config: GoTaintConfiguration = firstRule.toGoTaintConfiguration()
+        val config: GoTaintConfiguration = GoTaintConfiguration().loadGoTaintConfiguration(firstRule)
 
         // Assert the generated config names match the Go IR; a name mismatch must fail loudly here.
         assertTrue(
@@ -139,6 +140,8 @@ class GoSemgrepReachabilityTest {
         }
     }
 
+    private val anyType = GoIRUnsafePointerType
+
     fun String.signature(args: Int): GoFunctionSignature =
-        GoFunctionSignature(this, receiverType = null, paramTypes = List(args) { "any" }, resultType = "any")
+        GoFunctionSignature(this, receiverType = null, paramTypes = List(args) { anyType }, resultType = anyType)
 }

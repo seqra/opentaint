@@ -33,7 +33,7 @@ class GoTaintRuleEmitterTest {
                 pkg = GoNameMatcher.Simple("util"),
                 function = GoNameMatcher.Simple("Source"),
                 condition = null,
-                taint = listOf(GoSerializedAssignAction.Direct("taint", baseOnly(PositionBase.Result))),
+                taint = listOf(GoSerializedAssignAction("taint", baseOnly(PositionBase.Result))),
                 info = null,
             ),
         )

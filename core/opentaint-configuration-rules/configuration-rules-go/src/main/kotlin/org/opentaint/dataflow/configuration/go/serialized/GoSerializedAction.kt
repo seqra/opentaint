@@ -25,6 +25,10 @@ sealed interface GoSerializedAssignAction : GoSerializedAction {
         override fun rawPosition(): PositionBaseWithModifiers = pos
         override fun changePos(newPos: PositionBaseWithModifiers) = copy(pos = newPos)
     }
+
+    companion object {
+        operator fun invoke(kind: String, pos: PositionBaseWithModifiers) = Direct(kind, pos)
+    }
 }
 
 data class GoSerializedCleanAction(

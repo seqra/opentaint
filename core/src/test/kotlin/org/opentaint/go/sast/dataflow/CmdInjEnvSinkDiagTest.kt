@@ -21,14 +21,16 @@ class CmdInjEnvSinkDiagTest : AnalysisTest() {
         GoConfigLoader.getConfig()?.passThrough ?: emptyList()
 
     private val getenvSource = Source(
-        function = GoNameMatcher.Pattern("(.*/)?os\\.Getenv"),
+        pkg = GoNameMatcher.Simple("os"),
+        function = GoNameMatcher.Simple("Getenv"),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
         info = null,
     )
 
     private val combinedOutputSink = Sink(
-        function = GoNameMatcher.Pattern("\\(\\*(.*/)?exec\\.Cmd\\)\\.CombinedOutput"),
+        pkg = GoNameMatcher.Pattern("(.*/)?exec\\.Cmd\\)"),
+        function = GoNameMatcher.Simple("CombinedOutput"),
         condition = GoSerializedCondition.ContainsMarkOnAnyAccessor("taint", PositionBaseWithModifiers.BaseOnly(This)),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "cmdinj-test",
