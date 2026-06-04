@@ -24,6 +24,8 @@ sealed interface PositionAccessor {
         val fieldName: String,
         val fieldType: String
     ) : PositionAccessor
+
+    data object AnyAccessor : PositionAccessor
 }
 
 data class PositionWithAccess(

@@ -2,6 +2,7 @@ package org.opentaint.dataflow.go
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -305,6 +306,7 @@ object GoFlowFunctionUtils {
     fun PositionAccessor.resolvePosAccess(): Accessor = when (this) {
         is PositionAccessor.ElementAccessor -> ElementAccessor
         is PositionAccessor.FieldAccessor -> createFieldAccessor(className, fieldName)
+        is PositionAccessor.AnyAccessor -> AnyAccessor
     }
 
     fun detectGlobalReadName(inst: GoIRAssignInst): GoGlobalFieldSignature? {

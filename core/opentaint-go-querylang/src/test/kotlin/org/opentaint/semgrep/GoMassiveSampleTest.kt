@@ -4,7 +4,10 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
@@ -200,7 +203,7 @@ class GoMassiveSampleTest {
             GoAnalysisManager(program, config, externalMethodTracker = tracker),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = UtilUnitResolver as UnitResolver<CommonMethod>,
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
+            apManager = TreeApManager(AnyUnrollStrategy),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
         )
@@ -226,5 +229,10 @@ class GoMassiveSampleTest {
                 "util" -> SingletonUnit
                 else -> UnknownUnit
             }
+    }
+
+    private object AnyUnrollStrategy : AnyAccessorUnrollStrategy {
+        override fun unrollAccessor(accessor: Accessor): Boolean =
+            accessor is FieldAccessor || accessor is ElementAccessor
     }
 }

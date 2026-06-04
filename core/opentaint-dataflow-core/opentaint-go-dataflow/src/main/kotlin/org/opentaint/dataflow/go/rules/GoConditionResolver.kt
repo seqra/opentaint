@@ -153,7 +153,7 @@ private fun List<PositionModifier>.resolveUntyped(): List<PositionAccessor>? {
                 PositionAccessor.FieldAccessor(mod.className, mod.fieldName, mod.fieldType)
             }
 
-            is PositionModifier.AnyField -> error("Unused")
+            is PositionModifier.AnyField -> PositionAccessor.AnyAccessor
         }
     }
 }
