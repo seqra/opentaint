@@ -5,7 +5,7 @@ rules:
     message: Tainted stdin-read URL reaches http.Post (SSRF)
     mode: taint
     pattern-sources:
-      - pattern: bufio.NewReader(os.Stdin).ReadString($X)
+      - pattern: $UNTRUSTED, _ = bufio.NewReader(os.Stdin).ReadString($X)
     pattern-sinks:
       - patterns:
           - pattern: http.Post($URL, $CT, $BODY)

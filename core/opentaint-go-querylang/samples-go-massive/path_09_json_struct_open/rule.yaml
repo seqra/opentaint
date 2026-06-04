@@ -5,6 +5,6 @@ rules:
     message: Tainted stdin JSON body decoded into struct, then field reaches os.Open
     mode: taint
     pattern-sources:
-      - pattern: bufio.NewReader(os.Stdin).ReadString($X)
+      - pattern: $UNTRUSTED, _ = bufio.NewReader(os.Stdin).ReadString($X)
     pattern-sinks:
       - pattern: os.Open($P)

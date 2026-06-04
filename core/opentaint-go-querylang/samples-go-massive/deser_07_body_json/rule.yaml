@@ -5,6 +5,6 @@ rules:
     message: Request body bytes reach json.Unmarshal (deserialization)
     mode: taint
     pattern-sources:
-      - pattern: ioutil.ReadAll($R.Body)
+      - pattern: $UNTRUSTED, _ = ioutil.ReadAll($R.Body)
     pattern-sinks:
       - pattern: json.Unmarshal($DATA, $TARGET)

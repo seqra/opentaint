@@ -122,7 +122,7 @@ class GoMassiveSampleTest {
         // sessions exhaust JVM and server heap, so close per sample.
         try {
             val config = try {
-                loadConfig(yamlFile, program)
+                loadConfig(yamlFile)
             } catch (e: Throwable) {
                 perSampleNotes += "[$name] rule load failed: ${e.message}"
                 fail("[$name] rule load failed: ${e.message}")
@@ -170,7 +170,7 @@ class GoMassiveSampleTest {
         }
     }
 
-    private fun loadConfig(yamlFile: File, program: GoIRProgram): GoTaintConfiguration {
+    private fun loadConfig(yamlFile: File): GoTaintConfiguration {
         val yaml = yamlFile.readText()
         val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path(yamlFile.name), Path("."), SemgrepLoadTrace())

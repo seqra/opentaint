@@ -139,6 +139,14 @@ passThrough:
 - function:
     package: net/url
     type: URL
+    name: String
+    receiver: true
+  copy:
+    - from: this
+      to: result
+- function:
+    package: net/url
+    type: URL
     name: ResolveReference
     receiver: true
   copy:
