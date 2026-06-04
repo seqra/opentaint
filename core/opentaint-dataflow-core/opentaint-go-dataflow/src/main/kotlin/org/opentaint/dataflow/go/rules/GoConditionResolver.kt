@@ -13,6 +13,7 @@ import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.ir.go.type.GoIRArrayType
 import org.opentaint.ir.go.type.GoIRMapType
+import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRPointerType
 import org.opentaint.ir.go.type.GoIRSliceType
 import org.opentaint.ir.go.type.GoIRStructType
@@ -204,7 +205,8 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
 
 private val tupleFieldNamePattern = Regex("tuple\\$(\\d+)")
 
-private fun GoIRType.unwrapPtr(): GoIRType {
-    if (this !is GoIRPointerType) return this
-    return elem.unwrapPtr()
+private fun GoIRType.unwrapPtr(): GoIRType = when (this) {
+    is GoIRPointerType -> elem.unwrapPtr()
+    is GoIRNamedTypeRef -> namedType.underlying.unwrapPtr()
+    else -> this
 }
