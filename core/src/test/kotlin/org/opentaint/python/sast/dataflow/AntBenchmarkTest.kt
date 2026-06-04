@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.opentaint.common.sast.dataflow.DummySerializationContext
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
@@ -22,7 +23,6 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.PIRClasspathLoader
-import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
