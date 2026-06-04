@@ -256,6 +256,19 @@ class PatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
                 hasEllipsisInTheEnd = false
             )
         }
+
+        val prevGlobalName = concreteMethodName?.let { GoLanguageStrategy.globalReadFieldOrNull(it.name) }
+        if (prevGlobalName != null) {
+            val fieldChain = GoLanguageStrategy.joinFieldNames(prevGlobalName, fieldName)
+            val chainMethodName = SignatureName.Concrete(GoLanguageStrategy.globalReadAuxFnName(fieldChain))
+            val modifiedAction = lastAction.copy(methodName = chainMethodName)
+            return SemgrepPatternActionList(
+                listOf(modifiedAction),
+                hasEllipsisInTheBeginning = false,
+                hasEllipsisInTheEnd = false
+            )
+        }
+
         return null
     }
 

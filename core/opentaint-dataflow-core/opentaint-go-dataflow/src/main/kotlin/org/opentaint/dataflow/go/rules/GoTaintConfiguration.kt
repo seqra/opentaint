@@ -129,7 +129,10 @@ class GoTaintConfiguration(
 
     @Synchronized
     fun sourceForGlobal(name: String, fieldType: String): List<TaintRule.GlobalReadSource> = globalSourceMemo.getOrPut(name) {
-        candidates(name, globalSourceSimple, globalSourcePatterns, { global })
+        val varName = name.substringAfterLast('.')
+        val pkgName = name.substringBeforeLast('.', "")
+        candidates(varName, globalSourceSimple, globalSourcePatterns, { global })
+            .filter { it.pkg.matches(pkgName) }
             .mapNotNull { specialize(it, name, fieldType) }
     }
 

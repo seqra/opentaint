@@ -13,6 +13,8 @@ import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.type.GoIRArrayType
+import org.opentaint.ir.go.type.GoIRMapType
+import org.opentaint.ir.go.type.GoIRSliceType
 import org.opentaint.ir.go.type.GoIRStructType
 import org.opentaint.ir.go.type.GoIRType
 
@@ -169,10 +171,14 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
     for (mod in this) {
         when (mod) {
             is PositionModifier.ArrayElement -> {
-                if (type !is GoIRArrayType) return null
                 accessors += PositionAccessor.ElementAccessor
 
-                type = type.elem
+                type = when (type) {
+                    is GoIRArrayType -> type.elem
+                    is GoIRSliceType -> type.elem
+                    is GoIRMapType -> type.value
+                    else -> return null
+                }
             }
 
             is PositionModifier.Field -> {

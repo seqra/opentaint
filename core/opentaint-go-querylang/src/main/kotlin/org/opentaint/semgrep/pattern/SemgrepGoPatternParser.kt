@@ -123,7 +123,6 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
             val name = pkgCtx.packageName().identifier().parseName()
             return PackageOnlyPattern(PackageClause(name))
         }
-        ctx.type_()?.let { t -> return TypeOnlyPattern(parseType(t)) }
         ctx.semgrepTopList()?.let { return visitSemgrepTopList(it) }
         throw UnsupportedGoElement(ctx)
     }
@@ -142,7 +141,6 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
         ctx.declaration()?.let { return parseDeclaration(it) }
         ctx.statement()?.let { return parseStatement(it) }
         ctx.compositeLit()?.let { return parseCompositeLit(it) }
-        ctx.type_()?.let { return TypeOnlyPattern(parseType(it)) }
         throw UnsupportedGoElement(ctx)
     }
 

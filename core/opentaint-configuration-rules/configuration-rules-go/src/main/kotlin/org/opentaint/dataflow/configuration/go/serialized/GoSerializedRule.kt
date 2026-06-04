@@ -7,6 +7,7 @@ sealed interface GoSerializedItem {
 }
 
 data class GoSerializedGlobalSource(
+    val pkg: GoNameMatcher,
     val global: GoNameMatcher,
     val condition: GoSerializedCondition?,
     val taint: List<GoSerializedAssignAction>,

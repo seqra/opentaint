@@ -64,7 +64,7 @@
  WS_NLSEMI: [ \t]+ -> channel(HIDDEN);
 --- a/GoParser.g4
 +++ b/GoParser.g4
-@@ -39,10 +39,54 @@
+@@ -39,10 +39,52 @@
      superClass = GoParserBase;
  }
  
@@ -92,7 +92,6 @@
  
 +semgrepPattern
 +    : packageClause EOF
-+    | type_ EOF
 +    | semgrepTopList EOF
 +    ;
 +
@@ -107,7 +106,6 @@
 +    | methodDecl
 +    | declaration
 +    | statement
-+    | type_
 +    | compositeLit
 +    | ELLIPSIS
 +    ;

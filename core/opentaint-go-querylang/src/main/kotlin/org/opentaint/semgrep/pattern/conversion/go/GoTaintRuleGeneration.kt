@@ -91,11 +91,12 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = info,
                             )
                         },
-                        global = { globalField ->
+                        global = { globalField, fieldChain ->
                             rules += GoSerializedGlobalSource(
+                                pkg = fn.pkgMatcher,
                                 global = globalField,
                                 condition = condition.ruleCondition.condition,
-                                taint = actions,
+                                taint = actions.assignOnFieldChain(fieldChain),
                                 info = info,
                             )
                         },
@@ -140,7 +141,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = null,
                             )
                         },
-                        global = { _ ->
+                        global = { _, _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global sinks are not supported yet"))
                         },
                         field = { _, _ ->
@@ -178,7 +179,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 info = info,
                             )
                         },
-                        global = { _ ->
+                        global = { _, _ ->
                             ctx.trace.error(FailedToCreateTaintRules("Global cleaners are not supported yet"))
                         },
                         field = { _, _ ->
@@ -214,13 +215,14 @@ private fun PositionBaseWithModifiers.assignOnFieldChain(fields: List<String>): 
 
 private inline fun GoFunctionNameMatcher.handleMethodCall(
     call: () -> Unit,
-    global: (GoNameMatcher) -> Unit,
+    global: (GoNameMatcher, List<String>) -> Unit,
     field: (GoNameMatcher, List<String>) -> Unit,
 ) {
     if (nameMatcher is GoNameMatcher.Simple) {
         val globalField = GoLanguageStrategy.globalReadFieldOrNull(nameMatcher.name)
         if (globalField != null) {
-            global(GoNameMatcher.Simple(globalField))
+            val fieldChain = GoLanguageStrategy.splitFieldNames(globalField)
+            global(GoNameMatcher.Simple(fieldChain.first()), fieldChain.drop(1))
             return
         }
 
