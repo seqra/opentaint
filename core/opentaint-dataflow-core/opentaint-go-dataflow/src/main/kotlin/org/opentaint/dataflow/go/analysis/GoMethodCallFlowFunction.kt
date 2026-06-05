@@ -59,6 +59,15 @@ class GoMethodCallFlowFunction(
             CallToReturnZeroFact,
             CallToStartZeroFact,
         )
+
+        applySinkRules(
+            emptySet(), null,
+            addUnchecked = {
+                check(it is ZeroCallFact)
+                result.add(it)
+            }
+        )
+
         applySourceRules(
             emptySet(), null, ExclusionSet.Universe,
             createFinalFact = { it, trace ->
@@ -91,7 +100,7 @@ class GoMethodCallFlowFunction(
 
         val factReader = FinalFactReader(factAp, apManager)
 
-        applySinkRules(factReader, initialFacts, addUnchecked)
+        applySinkRules(initialFacts, factReader, addUnchecked)
 
         applySourceRules(
             initialFacts, factReader, exclusion,
@@ -151,8 +160,8 @@ class GoMethodCallFlowFunction(
     }
 
     private fun applySinkRules(
-        factReader: FinalFactReader,
         initialFacts: Set<InitialFactAp>,
+        factReader: FinalFactReader?,
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
         val signature = callSignature ?: return

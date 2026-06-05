@@ -81,6 +81,10 @@ class GoSampleBasedTest {
         client.close()
     }
 
+    @Test fun matchingRule() = runSample("MatchingRule")
+
+    @Test fun matchingRuleWithSink() = runSample("MatchingRuleWithSink")
+
     @Test fun simpleSourceSink() = runSample("SimpleSourceSink")
 
     @Test fun passThrough() = runSample("PassThrough")
