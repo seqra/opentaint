@@ -24,6 +24,14 @@ rules:
           - pattern: $R.URL.RawPath
           - pattern: $R.RequestURI
           - pattern: $R.Header.Get($K)
+          - pattern: $R.Header[$K]
+          - pattern: $R.Header[$K][$I]
+          - pattern: $R.Form[$K]
+          - pattern: $R.Form[$K][$I]
+          - pattern: $R.PostForm[$K]
+          - pattern: $R.PostForm[$K][$I]
+          - pattern: $R.URL.Query()[$K]
+          - pattern: $R.URL.Query()[$K][$I]
           - pattern: $R.Header.Values($K)
           - pattern: $R.Form.Get($K)
           - pattern: $R.PostForm.Get($K)
@@ -43,6 +51,8 @@ rules:
           - pattern: $C.GetString($K, $DEF)
           - pattern: $C.GetStrings($K)
           - pattern: $C.GetStrings($K, $DEF)
+          - pattern: $C.GetStrings($K)[$IDX]
+          - pattern: $C.GetStrings($K, $DEF)[$IDX]
           - pattern: $C.GetInt($K)
           - pattern: $C.GetInt($K, $DEF)
           - pattern: $C.GetInt8($K)
@@ -62,6 +72,7 @@ rules:
           - pattern: $C.ParseForm($PTR)
           # beego Context.Input methods (c.Ctx.Input.X)
           - pattern: $X.Param($K)
+          - pattern: $X.Header($K)
           - pattern: $X.Params()
           - pattern: $X.URI()
           - pattern: $X.URL()

@@ -1,11 +1,11 @@
 rules:
-  - id: go-path-traversal
+  - id: go-trust-boundary-cwe-501
     languages: [go]
     severity: ERROR
-    message: Tainted user input reaches filesystem path (path traversal)
+    message: Tainted user input stored across a trust boundary (cookie/header/session)
     metadata:
-      cwe: CWE-22
-      short-description: Path traversal
+      cwe: CWE-501
+      short-description: Trust boundary violation
     mode: taint
     pattern-sources:
       - pattern-either:
@@ -22,6 +22,7 @@ rules:
           - pattern: $R.URL.Path
           - pattern: $R.URL.RawQuery
           - pattern: $R.URL.RawPath
+          - pattern: $R.RequestURI
           - pattern: $R.Header.Get($K)
           - pattern: $R.Header[$K]
           - pattern: $R.Header[$K][$I]
@@ -71,6 +72,7 @@ rules:
           - pattern: $C.ParseForm($PTR)
           # beego Context.Input methods (c.Ctx.Input.X)
           - pattern: $X.Param($K)
+          - pattern: $X.Header($K)
           - pattern: $X.Params()
           - pattern: $X.URI()
           - pattern: $X.URL()
@@ -78,34 +80,5 @@ rules:
           - pattern: $X.Bind($PTR)
     pattern-sinks:
       - pattern-either:
-          - pattern: os.Open($P)
-          - pattern: os.OpenFile($P, ...)
-          - pattern: os.Create($P)
-          - pattern: os.CreateTemp($DIR, $PAT)
-          - pattern: os.MkdirTemp($DIR, $PAT)
-          - pattern: os.Mkdir($P, ...)
-          - pattern: os.MkdirAll($P, ...)
-          - pattern: os.Remove($P)
-          - pattern: os.RemoveAll($P)
-          - pattern: os.ReadFile($P)
-          - pattern: os.WriteFile($P, ...)
-          - pattern: os.ReadDir($P)
-          - pattern: os.Stat($P)
-          - pattern: os.Lstat($P)
-          - pattern: os.Truncate($P, ...)
-          - pattern: os.Chdir($P)
-          - pattern: os.Chmod($P, ...)
-          - pattern: os.Chown($P, ...)
-          - pattern: os.Lchown($P, ...)
-          - pattern: os.Chtimes($P, ...)
-          - pattern: os.Readlink($P)
-          - pattern: os.Rename($A, $B)
-          - pattern: os.Link($A, $B)
-          - pattern: os.Symlink($A, $B)
-          - pattern: os.DirFS($P)
-          - pattern: ioutil.ReadFile($P)
-          - pattern: ioutil.WriteFile($P, ...)
-          - pattern: ioutil.ReadDir($P)
-          - pattern: ioutil.TempFile($DIR, $PAT)
-          - pattern: ioutil.TempDir($DIR, $PAT)
-          - pattern: http.ServeFile($W, $R, $P)
+          - pattern: http.SetCookie($W, $C)
+          - pattern: $C.SetSession($K, $V)
