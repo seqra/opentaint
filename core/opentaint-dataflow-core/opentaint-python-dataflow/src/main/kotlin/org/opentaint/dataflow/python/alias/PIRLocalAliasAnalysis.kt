@@ -66,7 +66,7 @@ class PIRLocalAliasAnalysis(
         accessors: List<AliasAccessor>,
         statement: CommonInst,
     ): List<AliasApInfo>? {
-        val stmtAlias = result.statesBeforeStmt.getOrNull(languageManager.getInstIndex(statement)) ?: return null
+        val stmtAlias = result.statesAfterStmt.getOrNull(languageManager.getInstIndex(statement)) ?: return null
         return stmtAlias.unsafeState().findHeapAlias(result.manager, base.idx, accessors)
     }
 

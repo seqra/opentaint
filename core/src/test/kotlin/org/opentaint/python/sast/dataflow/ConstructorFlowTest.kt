@@ -45,4 +45,16 @@ class ConstructorFlowTest : AnalysisTest() {
         sink = Sink("ConstructorArgFlow.MyService", "taint", PositionBase.Argument(0), "ctor"),
         entryPointFunction = "ConstructorArgFlow.ctor_untainted_arg"
     )
+
+    // --- ConstructorFieldFlow.py ---
+
+    // Tainted ctor arg stored on `self.value` in __init__ surfaces on the
+    // constructed object `b` and reaches the sink via `b.value`. Exercises the
+    // constructor self↔constructed-object binding in PIRDSUAliasAnalysis.
+    @Test
+    fun testConstructorFieldToSink() = assertSinkReachable(
+        source = Source("ConstructorFieldFlow.source", "taint", PositionBase.Result),
+        sink = Sink("ConstructorFieldFlow.sink", "taint", PositionBase.Argument(0), "field"),
+        entryPointFunction = "ConstructorFieldFlow.ctor_field_to_sink"
+    )
 }

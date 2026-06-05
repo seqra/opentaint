@@ -134,7 +134,7 @@ class PIRDSUAliasAnalysis(
             val calleeInitial = bindReceiver(stateBefore, calleeRef, method, resolvedMethod)
             analyze(resolvedMethod.graph, calleeInitial, resolvedMethod.state)
             statesAfterCall += resolvedMethod.state.mapCallFinalStates(
-                resolvedMethod.graph, callerLValue, callFrame.ctx.level
+                resolvedMethod.graph, callerLValue, callFrame.ctx.level, isConstructor(method),
             )
         }
 
@@ -142,6 +142,18 @@ class PIRDSUAliasAnalysis(
         if (statesAfterCall.size == 1) return statesAfterCall.first().mutableCopy()
         return State.merge(aliasManager, dsuMergeStrategy, statesAfterCall)
     }
+
+    /**
+     * The callee's implicit `self`/`cls` slot in [ctx] — the unbound `Argument(0)`
+     * that [NestedCallInstEvalCtx.createArg] maps to `Local(-1, ctx)` (the receiver
+     * has no positional actual). Bound to the call's receiver by [bindReceiver], and
+     * reused as the synthetic constructor return value by [mapCallFinalStates].
+     */
+    private fun selfRef(ctx: ContextInfo): RefValue.Local = RefValue.Local(-1, ctx)
+
+    /** Resolved callee is a constructor body — an instance `__init__` of a class. */
+    private fun isConstructor(method: PIRFunction): Boolean =
+        method.name == "__init__" && PIRFlowFunctionUtils.implicitParamOffset(method) == 1
 
     /**
      * Binds an instance method's implicit `self` (callee `Argument(0)`, the unbound
@@ -156,7 +168,7 @@ class PIRDSUAliasAnalysis(
         resolvedMethod: ResolvedCallMethod,
     ): ImmutableState {
         if (PIRFlowFunctionUtils.implicitParamOffset(method) != 1 || calleeRef == null) return stateBefore
-        val selfSlot = RefValue.Local(-1, resolvedMethod.state.call.ctx)
+        val selfSlot = selfRef(resolvedMethod.state.call.ctx)
         val state = stateBefore.mutableCopy()
         val receiverHeap = createFieldAlias(state.heapObj(calleeRef.aliasInfo()), selfField)
         return state.mergeWith(selfSlot.aliasInfo().index(), receiverHeap.index()).asImmutable()
@@ -314,10 +326,16 @@ class PIRDSUAliasAnalysis(
         graph: PIRInstGraph,
         callerLValue: RefValue?,
         level: Int,
+        isConstructor: Boolean,
     ): List<ImmutableState> =
         graph.statements.filterIsInstance<PIRReturn>().mapNotNull { retInst ->
             val finalState = stateAfterStmt[retInst.location.index] ?: return@mapNotNull null
-            val retVal = retInst.value?.let { call.instEvalCtx.refValue(it) }
+            // A constructor call yields `self`, whatever __init__'s body returns,
+            // so the constructed object (lhs) binds to self's post-init heap state.
+            val retVal = when {
+                isConstructor -> selfRef(call.ctx)
+                else -> retInst.value?.let { call.instEvalCtx.refValue(it) }
+            }
             finalState.createStateAfterCall(callerLValue, retVal, level)
         }
 

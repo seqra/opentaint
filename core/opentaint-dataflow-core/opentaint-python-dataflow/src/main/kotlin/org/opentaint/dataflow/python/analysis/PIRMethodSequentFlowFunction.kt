@@ -239,6 +239,8 @@ class PIRMethodSequentFlowFunction(
         val accessor = mkFieldAccessor(inst.attribute)
 
         if (currentFactAp.base == objBase) {
+            propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR))
+
             if (currentFactAp.startsWithAccessor(accessor)) {
                 // Concrete: strip the field accessor and rebase
                 currentFactAp.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
@@ -256,7 +258,6 @@ class PIRMethodSequentFlowFunction(
                 // Propagate abstract fact with field excluded on both edge ends
                 propagateFactWithAccessorExclude(currentFactAp, accessor)
             } else {
-                propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR))
                 // Fact on obj but field doesn't match — pass through
                 unchanged()
             }
@@ -531,7 +532,7 @@ class PIRMethodSequentFlowFunction(
         }
 
         if (currentFactAp.base == objBase && currentFactAp.startsWithAccessor(accessor)) {
-            // Strong update: element is being overwritten — kill
+            propagateFact(currentFactAp)
             return
         }
 
