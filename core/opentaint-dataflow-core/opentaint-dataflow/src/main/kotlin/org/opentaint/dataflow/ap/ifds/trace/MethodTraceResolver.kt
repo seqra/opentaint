@@ -1267,7 +1267,7 @@ class MethodTraceResolver(
             }
 
             is TaintRulePrecondition.Pass -> {
-                val conditionFacts = preconditionFunction.resolvePassRuleCondition(rule.condition)
+                val conditionFacts = preconditionFunction.resolvePassRuleCondition(rule.condition, edges)
                 return conditionFacts.flatMap {
                     resolvePassCallRulePrecondition(currentEdges, statement, rule, it.facts)
                 }

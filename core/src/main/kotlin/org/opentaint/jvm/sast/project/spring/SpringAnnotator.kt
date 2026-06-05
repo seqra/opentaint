@@ -14,7 +14,7 @@ import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.ast.AstSpanResolverProvider
 import org.opentaint.jvm.sast.dataflow.matchedAnnotations
 import org.opentaint.jvm.sast.project.SarifWebInfoAnnotator
-import org.opentaint.jvm.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.jvm.sast.sarif.getMethod
 import org.opentaint.jvm.sast.sarif.isPureEntryPoint
 

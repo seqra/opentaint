@@ -12,7 +12,7 @@ import kotlin.io.path.visitFileTree
 sealed interface ProjectResolver {
     val projectSourceRoot: Path
 
-    fun resolveProject(): Project?
+    fun resolveProject(): JavaProject?
 
     companion object {
         val logger = object : KLogging() {}.logger
@@ -45,7 +45,7 @@ sealed interface ProjectResolver {
             return null
         }
 
-        fun resolveProject(rootDir: Path, resolverWorkDir: Path): Project? {
+        fun resolveProject(rootDir: Path, resolverWorkDir: Path): JavaProject? {
             resolverWorkDir.createDirectories()
 
             val projectResolvers = mutableListOf<ProjectResolver>()
@@ -81,7 +81,7 @@ sealed interface ProjectResolver {
                 }
             }
 
-            val resolvedProjects = mutableListOf<Project>()
+            val resolvedProjects = mutableListOf<JavaProject>()
             for (resolver in projectResolvers) {
                 logger.info { "Start project resolution for: ${resolver.projectSourceRoot}" }
                 try {
@@ -101,7 +101,7 @@ sealed interface ProjectResolver {
 
                 else -> {
                     // todo: better handling for multiple projects
-                    Project(
+                    JavaProject(
                         sourceRoot = rootDir,
                         javaToolchain = resolvedProjects.first().javaToolchain,
                         modules = emptyList(),

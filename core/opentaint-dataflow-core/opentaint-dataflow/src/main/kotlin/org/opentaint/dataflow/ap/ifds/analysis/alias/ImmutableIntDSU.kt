@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.alias
+package org.opentaint.dataflow.ap.ifds.analysis.alias
 
 interface ImmutableIntDSU {
     fun mutableCopy(): IntDisjointSets

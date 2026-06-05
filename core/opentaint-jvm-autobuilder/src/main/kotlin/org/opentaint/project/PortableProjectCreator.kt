@@ -90,21 +90,21 @@ class PortableProjectCreator(
         relativeProject.dump(portableProjectPath.resolve("project.yaml"))
     }
 
-    private fun create(ctx: ProjectPortContext, project: Project): Project = Project(
-        sourceRoot = project.sourceRoot?.let { copySources(ctx, it) },
+    private fun create(ctx: ProjectPortContext, project: JavaProject): JavaProject = JavaProject(
+        sourceRoot = project.sourceRoot?.let { copySources(ctx, project, it) },
         javaToolchain = project.javaToolchain?.let { copyToolchain(ctx, it) },
-        modules = project.modules.map { create(ctx, it) },
+        modules = project.modules.map { create(ctx, project, it) },
         dependencies = project.dependencies.map { copyDependency(ctx, it) },
         subProjects = project.subProjects.map { create(ctx, it) }
     )
 
-    private fun create(ctx: ProjectPortContext, module: ProjectModuleClasses) = ProjectModuleClasses(
+    private fun create(ctx: ProjectPortContext, rootProject: JavaProject, module: ProjectModuleClasses) = ProjectModuleClasses(
         packages = module.packages,
-        moduleSourceRoot = module.moduleSourceRoot?.let { copySources(ctx, it) },
+        moduleSourceRoot = module.moduleSourceRoot?.let { copySources(ctx, rootProject, it) },
         moduleClasses = module.moduleClasses.map { copyClasses(ctx, it) }
     )
 
-    private fun copySources(ctx: ProjectPortContext, source: Path): Path {
+    private fun copySources(ctx: ProjectPortContext, rootProject: JavaProject, source: Path): Path {
         val relativeOriginal = rootProject.sourceRoot?.let { source.relativeTo(it) } ?: source
         return ctx.sources.resolve(relativeOriginal)
     }

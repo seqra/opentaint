@@ -21,5 +21,6 @@ interface TaintRuleStrategy<R, Cond, Assign, Clean> {
     fun posContainsAnyMark(pos: PositionBaseWithModifiers, marks: Set<Mark.GeneratedMark>): Cond
     fun createCleanAction(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): Clean
     fun createAssignMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): Assign
+    fun createAssignTaintMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): Assign = createAssignMark(mark, pos)
     fun assignedMark(assign: Assign): Mark.GeneratedMark
 }

@@ -1,4 +1,4 @@
-package org.opentaint.jvm.sast.dataflow
+package org.opentaint.common.sast.dataflow
 
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import kotlin.time.Duration

@@ -5,35 +5,38 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import mu.KLogging
+import org.opentaint.common.sast.ProjectAnalysisStatus
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.toProjectStatus
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.project.rules.analysisConfig
-import org.opentaint.jvm.sast.project.rules.loadSemgrepRules
-import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.jvm.sast.project.rules.semgrepRulesWithDefaultConfig
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
-import org.opentaint.jvm.sast.sarif.SarifGenerator
+import org.opentaint.jvm.sast.sarif.JirSarifGenerator
 import org.opentaint.jvm.sast.util.locationChecker
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
-import org.opentaint.project.Project
+import org.opentaint.project.JavaProject
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 
 class TestProjectAnalyzer(
-    project: Project,
+    project: JavaProject,
     private val resultDir: Path,
     providedOptions: ProjectAnalysisOptions,
 ) {
-    private val options = providedOptions.copy(storeSummaries = false)
+    private val options = with(providedOptions) { copy(common = common.copy(storeSummaries = false)) }
     private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, options)
     private val loadedRules = options.common.loadSemgrepRules(JavaLanguageStrategy())
 
@@ -189,14 +192,14 @@ class TestProjectAnalyzer(
     private fun ProjectAnalysisContext.analyzeTestSample(
         rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         sample: TestSample
-    ): Pair<List<VulnerabilityWithTrace>, JIRTaintAnalyzer.Status> {
+    ): Pair<List<VulnerabilityWithTrace>, TaintAnalyzer.Status> {
         val loadedConfig = rules.semgrepRulesWithDefaultConfig(cp)
         val config = analysisConfig(loadedConfig)
 
         JIRTaintAnalyzer(
             cp, config,
             projectClasses = projectClasses.locationChecker(),
-            options = options.taintAnalyzerOptions(),
+            options = options.common.taintAnalyzerOptions(),
         ).use { analyzer ->
             logger.info { "Start IFDS analysis for test: $sample" }
             val traces = analyzer.analyzeWithIfds(sample.methods)
@@ -240,7 +243,7 @@ class TestProjectAnalyzer(
 
     private fun ProjectAnalysisContext.generateSarif(traces: List<VulnerabilityWithTrace>, testSetName: String) {
         val sourcesResolver = project.sourceResolver(projectClasses)
-        val generator = SarifGenerator(
+        val generator = JirSarifGenerator(
             options.common.sarifGenerationOptions, project.sourceRoot,
             sourcesResolver, JIRSarifTraits(cp)
         )

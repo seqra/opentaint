@@ -29,10 +29,10 @@ import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
-import org.opentaint.jvm.sast.dataflow.DebugOptions
+import org.opentaint.common.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
-import org.opentaint.jvm.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.ProjectAnalysisContext
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
@@ -41,7 +41,7 @@ import org.opentaint.jvm.sast.project.initializeProjectAnalysisContext
 import org.opentaint.jvm.sast.project.selectProjectEntryPoints
 import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.jvm.sast.util.locationChecker
-import org.opentaint.project.Project
+import org.opentaint.project.JavaProject
 import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.time.Duration
@@ -50,7 +50,7 @@ private val logger = object : KLogging() {}.logger
 
 @Suppress("unused")
 fun testProjectAnalyzerOnTraces(
-    project: Project,
+    project: JavaProject,
     ifdsAnalysisTimeout: Duration,
     ifdsApMode: ApMode,
     projectKind: ProjectKind,

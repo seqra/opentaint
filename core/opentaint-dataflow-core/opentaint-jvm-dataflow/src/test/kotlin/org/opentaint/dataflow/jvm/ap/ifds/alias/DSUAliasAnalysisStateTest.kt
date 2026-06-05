@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.State
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
+import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

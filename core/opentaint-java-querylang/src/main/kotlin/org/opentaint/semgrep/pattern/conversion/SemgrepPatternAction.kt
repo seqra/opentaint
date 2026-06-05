@@ -42,10 +42,6 @@ sealed interface SemgrepPatternAction {
             }
 
         override fun setResultCondition(condition: ParamCondition): SemgrepPatternAction {
-            check(result == null) {
-                "Cannot change existing metavar"
-            }
-
             return MethodCall(methodName, condition, params, obj, enclosingClassName)
         }
     }
@@ -64,10 +60,6 @@ sealed interface SemgrepPatternAction {
             }
 
         override fun setResultCondition(condition: ParamCondition): SemgrepPatternAction {
-            check(result == null) {
-                "Cannot change existing metavar"
-            }
-
             return ConstructorCall(className, condition, params)
         }
     }

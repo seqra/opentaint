@@ -3,6 +3,11 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
 import org.opentaint.dataflow.graph.CompactGraph
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
@@ -233,6 +238,7 @@ class JIRIntraProcAliasAnalysis(
         val accessor = when (val a = this.heapAccessor) {
             is ArrayAlias -> AliasAccessor.Array
             is FieldAlias -> a.field
+            else -> error("Impossible")
         }
 
         return instances.mapNotNull {
@@ -273,6 +279,7 @@ class JIRIntraProcAliasAnalysis(
             is Unknown -> return null
 
             is HeapAlias -> error("unreachable")
+            else -> error("Impossible aa-info")
         }
 
         return AliasApInfo(base, emptyList())

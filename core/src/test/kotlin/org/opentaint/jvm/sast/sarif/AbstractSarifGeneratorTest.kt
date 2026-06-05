@@ -5,11 +5,11 @@ import io.github.detekt.sarif4k.Region
 import io.github.detekt.sarif4k.ThreadFlowLocation
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.dataflow.AnalysisTest
-import org.opentaint.jvm.sast.project.SarifGenerationOptions
 import java.nio.file.Path
 import java.util.BitSet
 
@@ -25,7 +25,7 @@ abstract class AbstractSarifGeneratorTest: AnalysisTest() {
         val sourceFileResolver = JIRSourceFileResolver(sourcesDir, locs.associateWith { sourcesDir })
         val options = SarifGenerationOptions()
 
-        val generator = SarifGenerator(
+        val generator = JirSarifGenerator(
             options = options,
             sourceRoot = sourcesDir,
             sourceFileResolver = sourceFileResolver,

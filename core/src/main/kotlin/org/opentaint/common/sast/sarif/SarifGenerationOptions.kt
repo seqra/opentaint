@@ -1,4 +1,4 @@
-package org.opentaint.jvm.sast.project
+package org.opentaint.common.sast.sarif
 
 data class SarifGenerationOptions(
     val sarifFileName: String = DEFAULT_FILE_NAME,

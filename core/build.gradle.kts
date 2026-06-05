@@ -10,6 +10,7 @@ import OpentaintUtilDependency.opentaintUtilJvm
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
+import org.opentaint.common.resolveIncludedProjectTask
 
 plugins {
     id("kotlin-conventions")

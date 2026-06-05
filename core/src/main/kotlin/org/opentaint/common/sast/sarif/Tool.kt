@@ -1,4 +1,4 @@
-package org.opentaint.jvm.sast.sarif
+package org.opentaint.common.sast.sarif
 
 import io.github.detekt.sarif4k.Level
 import io.github.detekt.sarif4k.MultiformatMessageString
@@ -8,7 +8,6 @@ import io.github.detekt.sarif4k.ReportingDescriptor
 import io.github.detekt.sarif4k.Tool
 import io.github.detekt.sarif4k.ToolComponent
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
-import org.opentaint.jvm.sast.project.SarifGenerationOptions
 import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.readStrings

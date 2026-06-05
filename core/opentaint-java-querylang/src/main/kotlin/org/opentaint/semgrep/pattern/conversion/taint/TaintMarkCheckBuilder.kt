@@ -6,7 +6,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedCondition.T
 import org.opentaint.semgrep.pattern.Mark.GeneratedMark
 
 interface MarkConditionBuilder<C> {
-    fun checkMark(mark: GeneratedMark, pos: PositionBaseWithModifiers): C
+    fun checkTaintMark(mark: GeneratedMark, pos: PositionBaseWithModifiers): C
     fun negate(cond: C): C
     fun and(args: List<C>): C
     fun or(args: List<C>): C
@@ -15,7 +15,7 @@ interface MarkConditionBuilder<C> {
 }
 
 data object JavaMarkConditionBuilder : MarkConditionBuilder<SerializedCondition> {
-    override fun checkMark(mark: GeneratedMark, pos: PositionBaseWithModifiers) = mark.mkContainsMark(pos)
+    override fun checkTaintMark(mark: GeneratedMark, pos: PositionBaseWithModifiers) = mark.mkContainsMark(pos)
     override fun negate(cond: SerializedCondition) = SerializedCondition.not(cond)
     override fun and(args: List<SerializedCondition>) = SerializedCondition.and(args)
     override fun or(args: List<SerializedCondition>) = serializedConditionOr(args)
@@ -29,7 +29,7 @@ sealed interface TaintMarkCheckBuilder {
 
 data class TaintMarkLabelCheckBuilder(val label: GeneratedMark) : TaintMarkCheckBuilder {
     override fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
-        builder.checkMark(label, position)
+        builder.checkTaintMark(label, position)
 }
 
 data class TaintMarkNotCheckBuilder(val arg: TaintMarkCheckBuilder) : TaintMarkCheckBuilder {

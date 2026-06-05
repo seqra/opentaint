@@ -1,9 +1,8 @@
-package org.opentaint.jvm.sast.sarif
+package org.opentaint.common.sast.sarif
 
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import mu.KLogging
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry.SourceStartEntry
@@ -14,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSink
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSource
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.SourceToSinkTrace
+import org.opentaint.ir.api.common.cfg.CommonInst
 
 private val logger = object : KLogging() {}.logger
 

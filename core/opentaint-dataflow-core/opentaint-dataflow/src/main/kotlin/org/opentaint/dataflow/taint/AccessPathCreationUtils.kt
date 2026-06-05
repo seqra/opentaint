@@ -12,12 +12,6 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 fun ApManager.mkAccessPath(
     position: PositionAccess,
     exclusionSet: ExclusionSet,
-    mark: String,
-): FinalFactAp = mkAccessPath(position, exclusionSet, TaintMarkAccessor(mark))
-
-fun ApManager.mkAccessPath(
-    position: PositionAccess,
-    exclusionSet: ExclusionSet,
     mark: TaintMarkAccessor,
 ): FinalFactAp = mkAccessPath(
     position,
@@ -34,6 +28,15 @@ fun ApManager.mkInitialAccessPath(
     // we use stub base and exclusion here
     createFinalInitialAp(AccessPathBase.This, ExclusionSet.Universe),
     exclusionSet
+)
+
+fun ApManager.mkInitialAbstractAccessPath(
+    position: PositionAccess,
+): InitialFactAp = mkAccessPath(
+    position,
+    // we use stub base here
+    mostAbstractInitialAp(AccessPathBase.This),
+    ExclusionSet.Empty
 )
 
 fun mkAccessPath(position: PositionAccess, basicAp: FinalFactAp, exclusionSet: ExclusionSet): FinalFactAp =

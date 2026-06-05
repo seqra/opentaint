@@ -29,6 +29,7 @@ import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluatePassRulePrecondition
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -190,6 +191,9 @@ class JIRMethodCallPrecondition(
             { mapExit2Return(it) }
         )
     }
+
+    override fun allStatements(): List<CommonInst> =
+        statement.location.method.instList.toList()
 
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)

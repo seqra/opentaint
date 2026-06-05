@@ -1,8 +1,8 @@
-package org.opentaint.jvm.sast.dataflow
+package org.opentaint.common.sast.dataflow
 
-import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
+import org.opentaint.ir.api.common.CommonMethod
 
 object DummySerializationContext : SummarySerializationContext {
     override fun getIdByMethod(method: CommonMethod) = error("Should not be called")

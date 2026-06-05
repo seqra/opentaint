@@ -1,4 +1,4 @@
-package org.opentaint.jvm.sast.util
+package org.opentaint.common.sast.util
 
 import kotlin.time.Duration
 import kotlin.time.TimeSource

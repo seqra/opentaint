@@ -1,3 +1,5 @@
+package org.opentaint.common
+
 import org.gradle.api.Task
 import org.gradle.api.initialization.IncludedBuild
 import org.gradle.api.internal.tasks.TaskDependencyContainer

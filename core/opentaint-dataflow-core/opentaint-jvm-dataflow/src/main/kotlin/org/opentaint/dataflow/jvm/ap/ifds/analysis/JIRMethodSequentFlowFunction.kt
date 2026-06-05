@@ -26,9 +26,9 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayRemoveAfter
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.readAccessorTo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
-import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterFieldsResolver
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
+import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.api.jvm.JIRType
@@ -613,7 +613,7 @@ class JIRMethodSequentFlowFunction(
         )
 
         val markAfterAnyFieldResolver = initialFacts?.let {
-            createMarkAfterFieldsResolver(analysisContext.methodEntryPoint, it) { i, k ->
+            createMarkAfterAccessorResolver(analysisContext.methodEntryPoint, it) { i, k ->
                 sideEffect(Sequent.FactSideEffect(i, k))
             }
         }

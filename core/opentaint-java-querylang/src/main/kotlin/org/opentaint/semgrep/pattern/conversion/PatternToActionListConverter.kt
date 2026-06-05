@@ -285,13 +285,24 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
         if (objActionList.actions.isEmpty()) {
             return emptyList<SemgrepPatternAction>() to null
         }
-        val result = objActionList.actions.toMutableList()
-        result.removeLast()
-        val lastAction = objActionList.actions.last()
+
+        val (result, metavar) = objActionList.actions.ensureLastActionMetaVar()
+        return result to IsMetavar(metavar)
+    }
+
+    private fun List<SemgrepPatternAction>.ensureLastActionMetaVar(): Pair<List<SemgrepPatternAction>, MetavarAtom> {
+        val lastAction = last()
+        val lastResult = lastAction.result
+        if (lastResult != null) {
+            if (lastResult is IsMetavar) return this to lastResult.metavar
+            error("Last action result is complex")
+        }
+
+        val result = toMutableList()
         val metavar = provideArtificialMetavar()
         val newLastAction = lastAction.setResultCondition(IsMetavar(metavar))
-        result += newLastAction
-        return result to IsMetavar(metavar)
+        result[result.lastIndex] = newLastAction
+        return result to metavar
     }
 
     private fun methodArgumentsToPatternList(pattern: MethodArguments): List<SemgrepJavaPattern> =

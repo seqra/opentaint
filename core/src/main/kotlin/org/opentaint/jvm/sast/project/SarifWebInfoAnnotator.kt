@@ -12,7 +12,7 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.ast.AstSpanResolverProvider
-import org.opentaint.jvm.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNode
 
 abstract class SarifWebInfoAnnotator(
     val sourceFileResolver: JIRSourceFileResolver,

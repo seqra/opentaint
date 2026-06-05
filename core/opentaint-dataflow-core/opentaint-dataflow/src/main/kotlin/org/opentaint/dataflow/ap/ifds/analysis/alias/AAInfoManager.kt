@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.alias
+package org.opentaint.dataflow.ap.ifds.analysis.alias
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import java.util.BitSet
@@ -10,6 +10,12 @@ class AAInfoManager(
 ) {
     init {
         elementToIndex.defaultReturnValue(NOT_PRESENT)
+    }
+
+    fun find(x: AAInfo): Int? {
+        val index = elementToIndex.getInt(x)
+        if (index != NOT_PRESENT) return index
+        return null
     }
 
     fun getOrAdd(x: AAInfo): Int {
@@ -37,7 +43,7 @@ class AAInfoManager(
 
     fun isHeapAlias(index: Int): Boolean = heapElements.get(index)
 
-    fun getHeapRefUnchecked(index: Int): HeapAlias =
+    fun getHeapRefUnchecked(index: Int): HeapAlias  =
         getElementUncheck(index) as? HeapAlias
             ?: error("Heap alias expected")
 

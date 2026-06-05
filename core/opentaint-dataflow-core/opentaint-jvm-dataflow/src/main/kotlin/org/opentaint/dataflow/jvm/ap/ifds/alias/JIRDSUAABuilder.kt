@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRPrimitiveType

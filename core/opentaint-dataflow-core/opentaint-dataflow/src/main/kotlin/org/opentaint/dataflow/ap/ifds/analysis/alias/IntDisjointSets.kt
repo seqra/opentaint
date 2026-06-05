@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.alias
+package org.opentaint.dataflow.ap.ifds.analysis.alias
 
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
@@ -120,7 +120,7 @@ class IntDisjointSets(
 
         val rawElementParent = parent.remove(element)
 
-        if (children.isEmpty) return RemoveResult.EntireSetRemoved
+        if (children.isEmpty && rawElementParent == NO_VALUE) return RemoveResult.EntireSetRemoved
 
         val newRoot = if (rawElementParent != NO_VALUE) {
             rawElementParent

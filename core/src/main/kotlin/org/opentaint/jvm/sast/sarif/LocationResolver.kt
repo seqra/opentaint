@@ -8,6 +8,9 @@ import io.github.detekt.sarif4k.PhysicalLocation
 import io.github.detekt.sarif4k.Region
 import io.github.detekt.sarif4k.ThreadFlowLocation
 import mu.KLogging
+import org.opentaint.common.sast.sarif.SarifGenerationOptions
+import org.opentaint.common.sast.sarif.SarifLocationResolver
+import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.BytecodeGraph
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -28,7 +31,6 @@ import org.opentaint.jvm.sast.project.KotlinInlineFunctionScopeTransformer.LAMBD
 import org.opentaint.jvm.sast.project.KotlinInlineFunctionScopeTransformer.ScopeDescriptor
 import org.opentaint.jvm.sast.project.KotlinInlineFunctionScopeTransformer.ScopeManageEvent
 import org.opentaint.jvm.sast.project.KotlinInlineFunctionScopeTransformer.ScopeManageType
-import org.opentaint.jvm.sast.project.SarifGenerationOptions
 import org.opentaint.jvm.sast.util.DebugInfo
 import org.opentaint.jvm.sast.util.KotlinDebugInfoParser
 import org.opentaint.jvm.sast.util.SourcePosition
@@ -64,8 +66,8 @@ class LocationResolver(
     private val sourceFileResolver: JIRSourceFileResolver,
     private val traits: SarifTraits<CommonMethod, CommonInst>,
     private val spanResolver: AstSpanResolverProvider
-) {
-    fun resolve(locations: List<IntermediateLocation>): List<ThreadFlowLocation> {
+): SarifLocationResolver<IntermediateLocation> {
+    override fun resolve(locations: List<IntermediateLocation>): List<ThreadFlowLocation> {
         var currentIdx = 0
         val inlineStackByMethod = hashMapOf<CommonMethod, List<ScopeDescriptor>>()
         val result = mutableListOf<ThreadFlowLocation>()
@@ -93,7 +95,7 @@ class LocationResolver(
         return traits.lineNumber(a) == traits.lineNumber(b) && aSource == bSource
     }
 
-    fun generateSarifLocation(location: IntermediateLocation): Location {
+    override fun generateSarifLocation(location: IntermediateLocation): Location {
         val ktRealPosition = getCachedKotlinDebugInfo(location)?.findRealPosition(location.info.lineNumber)
         val source = if (ktRealPosition != null) {
             location.info.lineNumber = ktRealPosition.line

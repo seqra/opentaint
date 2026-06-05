@@ -327,7 +327,10 @@ class JIRMethodSequentPrecondition(
                     this += MethodSequentPrecondition.SequentSource(fact, src)
                 },
                 mkPass = { _, _, e ->
-                    val preconditionFacts = e.preconditionDnf(apManager) { listOf(it) }
+                    val preconditionFacts = e.preconditionDnf(
+                        apManager,
+                        allFactsAtStatement = { TODO("All facts enumeration is not supported") }
+                    ) { listOf(it) }
                     for (factCube in preconditionFacts) {
                         if (factCube.facts.size != 1) {
                             logger.warn("Exit source precondition is not resolved")

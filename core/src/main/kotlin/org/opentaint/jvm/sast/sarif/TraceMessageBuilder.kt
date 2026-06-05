@@ -1,6 +1,8 @@
 package org.opentaint.jvm.sast.sarif
 
 import mu.KLogging
+import org.opentaint.common.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor

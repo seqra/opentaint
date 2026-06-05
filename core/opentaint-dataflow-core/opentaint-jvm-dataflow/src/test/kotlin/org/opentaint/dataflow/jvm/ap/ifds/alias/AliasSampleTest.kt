@@ -2,7 +2,6 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
 import org.opentaint.dataflow.ap.ifds.access.FactAp
@@ -43,7 +42,6 @@ import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AliasSampleTest : BasicTestUtils() {

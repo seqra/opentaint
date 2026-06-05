@@ -7,13 +7,13 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import mu.KLogging
+import org.opentaint.common.sast.ProjectAnalysisStatus
+import org.opentaint.common.sast.dataflow.DebugOptions
 import org.opentaint.dataflow.ap.ifds.access.ApMode
-import org.opentaint.jvm.sast.dataflow.DebugOptions
-import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
 import org.opentaint.jvm.sast.project.ProjectKind
 import org.opentaint.jvm.sast.util.file
 import org.opentaint.jvm.sast.util.newDirectory
-import org.opentaint.project.Project
+import org.opentaint.project.JavaProject
 import org.opentaint.util.CliWithLogger
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -65,7 +65,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         .newDirectory()
         .required()
 
-    private val debugOptions by lazy {
+    val debugOptions by lazy {
         DebugOptions(
             taintRulesStatsSamplingPeriod = debugTaintRulesStatsSamplingPeriod.takeIf { debugTaintRulesStats },
             enableIfdsCoverage = debugIfdsCoverage,
@@ -77,7 +77,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
     }
 
     override fun main() {
-        val project = runCatching { Project.load(project) }
+        val project = runCatching { JavaProject.load(this.project) }
             .onFailure {
                 logger.error(it) { "Incorrect project configuration" }
                 exitProcess(-1)
@@ -92,10 +92,10 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         exitProcessIfNotOk(status)
     }
 
-    private fun runProjectAnalysisRecursively(project: Project): ProjectAnalysisStatus {
+    private fun runProjectAnalysisRecursively(project: JavaProject): ProjectAnalysisStatus {
         val status = try {
             logger.info { "Start analysis for project: ${project.sourceRoot}" }
-            analyzeProject(project, outputDir, debugOptions).also {
+            analyzeProject(project, outputDir).also {
                 logger.info { "Finish analysis for project: ${project.sourceRoot}" }
             }
         } catch (ex: Throwable) {
@@ -119,7 +119,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         exitProcess(exitCode)
     }
 
-    protected abstract fun analyzeProject(project: Project, analyzerOutputDir: Path, debugOptions: DebugOptions): ProjectAnalysisStatus
+    protected abstract fun analyzeProject(project: JavaProject, analyzerOutputDir: Path): ProjectAnalysisStatus
 
     companion object {
         private val logger = object : KLogging() {}.logger

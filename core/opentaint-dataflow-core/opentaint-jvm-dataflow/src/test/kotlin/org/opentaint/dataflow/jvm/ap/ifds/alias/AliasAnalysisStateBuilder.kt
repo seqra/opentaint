@@ -1,8 +1,12 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor.Field
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.State
 import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias.SimpleLoc
 import java.util.IdentityHashMap
 

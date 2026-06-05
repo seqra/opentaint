@@ -1,10 +1,10 @@
-package org.opentaint.jvm.sast.project.rules
+package org.opentaint.common.sast.rules
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KLogging
+import org.opentaint.common.sast.CommonAnalysisOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
-import org.opentaint.jvm.sast.project.CommonAnalysisOptions
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy

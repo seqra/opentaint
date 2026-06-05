@@ -23,14 +23,14 @@ import org.opentaint.jvm.sast.project.spring.createSpringProjectContext
 import org.opentaint.jvm.transformer.JMultiDimArrayAllocationTransformer
 import org.opentaint.jvm.transformer.JStringConcatTransformer
 import org.opentaint.jvm.util.types.installClassScorer
-import org.opentaint.project.Project
+import org.opentaint.project.JavaProject
 import org.opentaint.project.ProjectModuleClasses
 import java.io.File
 
 private val logger = object : KLogging() {}.logger
 
 fun initializeProjectAnalysisContext(
-    project: Project,
+    project: JavaProject,
     options: ProjectAnalysisOptions
 ): ProjectAnalysisContext = initializeProjectAnalysisContextUtil(project, options) {
     val cpFiles = dependencyFiles + projectModulesFiles.keys
@@ -38,7 +38,7 @@ fun initializeProjectAnalysisContext(
 }
 
 fun initializeProjectModulesAnalysisContexts(
-    project: Project,
+    project: JavaProject,
     options: ProjectAnalysisOptions
 ): List<Pair<ProjectModuleClasses, ProjectAnalysisContext>> =
     initializeProjectAnalysisContextUtil(project, options) {
@@ -51,7 +51,7 @@ fun initializeProjectModulesAnalysisContexts(
     }
 
 private fun <T> initializeProjectAnalysisContextUtil(
-    project: Project,
+    project: JavaProject,
     options: ProjectAnalysisOptions,
     createAnalysisContext: AnalysisContextBuilder.() -> T
 ): T {
@@ -86,7 +86,7 @@ private fun <T> initializeProjectAnalysisContextUtil(
 
         installClassScorer()
 
-        options.summariesApMode?.let {
+        options.common.summariesApMode?.let {
             installFeatures(JIRSummariesFeature(it))
         }
 
@@ -113,7 +113,7 @@ private data class AnalysisContextBuilder(
 )
 
 private fun AnalysisContextBuilder.createAnalysisContextWithCp(
-    project: Project,
+    project: JavaProject,
     cpFiles: List<File>
 ): ProjectAnalysisContext {
     val projectClasses = ProjectClasses(projectModulesFiles)
@@ -157,7 +157,7 @@ private fun AnalysisContextBuilder.createAnalysisContextWithCp(
     )
 }
 
-private fun checkProjectModules(project: Project, projectClasses: ProjectClasses) {
+private fun checkProjectModules(project: JavaProject, projectClasses: ProjectClasses) {
     val missedModules = project.modules.toSet() - projectClasses.locationProjectModules.values.toSet()
     if (missedModules.isEmpty()) return
 
@@ -174,7 +174,7 @@ private fun JIRClasspath.validate(settings: JIRSettings) {
 }
 
 class ProjectAnalysisContext(
-    val project: Project,
+    val project: JavaProject,
     val projectKind: ProjectKind,
     val db: JIRDatabase,
     val cp: JIRClasspath,

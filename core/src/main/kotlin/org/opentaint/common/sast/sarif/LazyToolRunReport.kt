@@ -1,4 +1,4 @@
-package org.opentaint.jvm.sast.sarif
+package org.opentaint.common.sast.sarif
 
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result

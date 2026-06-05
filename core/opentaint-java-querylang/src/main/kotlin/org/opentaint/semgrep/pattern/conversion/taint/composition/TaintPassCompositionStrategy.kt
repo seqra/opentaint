@@ -34,7 +34,7 @@ class TaintPassCompositionStrategy<Item, Cond, Assign, Clean>(
         pos: PositionBaseWithModifiers
     ): List<Assign>? {
         if (state !in rule.automata.finalAcceptStates) return null
-        return listOf(strategy.createAssignMark(markName, pos))
+        return listOf(strategy.createAssignTaintMark(markName, pos))
     }
 
     override fun stateAccessedMarks(

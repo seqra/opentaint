@@ -39,7 +39,7 @@ class TaintSourceCompositionStrategy<Item, Cond, Assign, Clean>(
     ): List<Assign>? {
         if (state !in rule.automata.finalAcceptStates) return null
         if (varName !in taintedVars) return null
-        return listOf(strategy.createAssignMark(label, pos))
+        return listOf(strategy.createAssignTaintMark(label, pos))
     }
 
     override fun stateAccessedMarks(

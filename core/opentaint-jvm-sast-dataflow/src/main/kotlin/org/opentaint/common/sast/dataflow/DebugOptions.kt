@@ -1,4 +1,4 @@
-package org.opentaint.jvm.sast.dataflow
+package org.opentaint.common.sast.dataflow
 
 data class DebugOptions(
     val taintRulesStatsSamplingPeriod: Int?,

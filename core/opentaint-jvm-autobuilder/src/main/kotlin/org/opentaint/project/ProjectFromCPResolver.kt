@@ -13,14 +13,14 @@ import kotlin.io.path.outputStream
 import kotlin.io.path.walk
 
 class ProjectFromCPResolver {
-    fun resolveProject(rootDir: Path, resolverWorkDir: Path, projectCp: ProjectFromCP): Project {
+    fun resolveProject(rootDir: Path, resolverWorkDir: Path, projectCp: ProjectFromCP): JavaProject {
         if (projectCp.pkg.isEmpty()) {
             logger.warn { "Project packages not specified. Consider all jar files as project components." }
         }
 
         val resolvedCp = projectCp.cp.flatMap { resolveProjectCp(it, resolverWorkDir) }
         val module = ProjectModuleClasses(rootDir, projectCp.pkg, resolvedCp)
-        return Project(rootDir, projectCp.toolchain, listOf(module))
+        return JavaProject(rootDir, projectCp.toolchain, listOf(module))
     }
 
     private var unpackId = 0

@@ -22,13 +22,13 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSimpleFactAwareConditionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleaner
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.sinkRules
-import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRFactWithMarkAfterAnyFieldResolver
-import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterFieldsResolver
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRMethodCallTaintUtil
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.jvm.util.callee
+import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
+import org.opentaint.dataflow.taint.FactWithMarkAfterAnyAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
@@ -104,7 +104,7 @@ class JIRMethodCallFlowFunction(
 
         val factReader = FinalFactReader(factAp, apManager)
 
-        val markAfterAnyFieldResolver = createMarkAfterFieldsResolver(
+        val markAfterAnyFieldResolver = createMarkAfterAccessorResolver(
             analysisContext.methodEntryPoint, initialFacts
         ) { i, k ->
             addUnchecked(MethodCallFlowFunction.FactSideEffect(i, k))
@@ -236,7 +236,7 @@ class JIRMethodCallFlowFunction(
     private fun applySinkRules(
         conditionRewriter: JIRMarkAwareConditionRewriter,
         factReader: FinalFactReader?,
-        markAfterAnyFieldResolver: JIRFactWithMarkAfterAnyFieldResolver?,
+        markAfterAnyFieldResolver: FactWithMarkAfterAnyAccessorResolver?,
     ): List<Pair<FinalFactAp, TraceInfo>> {
         val sinkRules = sinkRules(config, callExpr.callee, statement, factReader?.factAp).toList()
         if (sinkRules.isEmpty()) return emptyList()

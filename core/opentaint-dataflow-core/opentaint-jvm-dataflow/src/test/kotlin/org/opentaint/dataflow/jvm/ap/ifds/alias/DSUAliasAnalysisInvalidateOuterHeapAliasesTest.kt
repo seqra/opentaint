@@ -1,6 +1,10 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.State
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.JIRInstGraph
 import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias.SimpleLoc
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -420,7 +424,10 @@ class DSUAliasAnalysisInvalidateOuterHeapAliasesTest {
 
         // Seed with h1 itself (a heap alias). The first pass doesn't taint the group through h1,
         // but `removeUnsafe({h1})` cascades to h2 because h2's instance group equals h1's group.
-        val h1Seed = HeapAlias(state.aliasGroupId(builder.infoId(SimpleLoc(RefValue.Local(0, ContextInfo.rootContext)))), ArrayAlias)
+        val h1Seed = HeapAlias(
+            state.aliasGroupId(builder.infoId(SimpleLoc(RefValue.Local(0, ContextInfo.rootContext)))),
+            ArrayAlias
+        )
         val result = state.invalidate(builder, setOf(h1Seed))
 
         val expected = buildState {

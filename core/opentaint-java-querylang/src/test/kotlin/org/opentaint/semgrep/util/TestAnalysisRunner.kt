@@ -1,6 +1,7 @@
 package org.opentaint.semgrep.util
 
 import kotlinx.coroutines.runBlocking
+import org.opentaint.common.sast.dataflow.DummySerializationContext
 import org.opentaint.config.ConfigLoader
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
@@ -29,7 +30,6 @@ import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.impl.features.classpaths.UnknownClasses
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
-import org.opentaint.jvm.sast.dataflow.DummySerializationContext
 import org.opentaint.jvm.sast.dataflow.JIRMethodExitRuleProvider
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration

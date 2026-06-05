@@ -44,7 +44,7 @@ class MavenProjectResolver(
 
     private lateinit var javaToolchain: JavaToolchain
 
-    override fun resolveProject(): Project? {
+    override fun resolveProject(): JavaProject? {
         if (!executableFound) {
             logger.error { "Could not find Maven executable!" }
             return null
@@ -62,7 +62,7 @@ class MavenProjectResolver(
             logger.error { "Maven dependency resolution failed for: $projectSourceRoot" }
         }
 
-        return Project(projectSourceRoot, javaToolchain.path(), resolvedModules, resolvedProjectDependencies)
+        return JavaProject(projectSourceRoot, javaToolchain.path(), resolvedModules, resolvedProjectDependencies)
     }
 
     private fun registerModule(moduleRoot: Path, processModuleContent: (Path) -> Unit) {

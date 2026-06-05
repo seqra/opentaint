@@ -17,15 +17,21 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 
+sealed interface CommonProject {
+    fun sourceRoot(): Path?
+}
+
 @Serializable
-data class Project(
+data class JavaProject(
     val sourceRoot: @Serializable(with = PathAsStringSerializer::class) Path? = null,
     val javaToolchain: @Serializable(with = PathAsStringSerializer::class) Path? = null,
     val modules: List<ProjectModuleClasses> = emptyList(),
     val dependencies: List<@Serializable(with = PathAsStringSerializer::class) Path> = emptyList(),
-    val subProjects: List<Project> = emptyList(),
-) {
-    fun relativeTo(path: Path): Project = Project(
+    val subProjects: List<JavaProject> = emptyList(),
+): CommonProject {
+    override fun sourceRoot(): Path? = sourceRoot
+
+    fun relativeTo(path: Path): JavaProject = JavaProject(
         sourceRoot?.relativeTo(path),
         javaToolchain?.relativeTo(path),
         modules.map { it.relativeTo(path) },
@@ -33,7 +39,7 @@ data class Project(
         subProjects.map { it.relativeTo(path) }
     )
 
-    fun resolve(base: Path): Project = Project(
+    fun resolve(base: Path): JavaProject = JavaProject(
         sourceRoot?.let { base.resolve(it) },
         javaToolchain?.let { base.resolve(it) },
         modules.map { it.resolve(base) },
@@ -56,8 +62,8 @@ data class Project(
             )
         )
 
-        fun load(path: Path): Project = path.inputStream().use {
-            yaml().decodeFromStream<Project>(it)
+        fun load(path: Path): JavaProject = path.inputStream().use {
+            yaml().decodeFromStream<JavaProject>(it)
         }
     }
 }

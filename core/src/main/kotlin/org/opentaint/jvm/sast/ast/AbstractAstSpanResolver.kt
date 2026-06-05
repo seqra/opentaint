@@ -21,7 +21,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.jvm.sast.sarif.IntermediateLocation
 import org.opentaint.jvm.sast.sarif.LocationSpan
 import org.opentaint.jvm.sast.sarif.LocationType
-import org.opentaint.jvm.sast.sarif.TracePathNodeKind
+import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.jvm.sast.sarif.isPureEntryPoint
 
 abstract class AbstractAstSpanResolver(protected val traits: JIRSarifTraits) : AstSpanResolver {

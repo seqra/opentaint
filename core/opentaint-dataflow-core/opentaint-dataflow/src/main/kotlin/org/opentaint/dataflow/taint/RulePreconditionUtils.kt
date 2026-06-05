@@ -1,9 +1,12 @@
 package org.opentaint.dataflow.taint
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
@@ -134,6 +137,7 @@ data class PreconditionCube(val facts: Set<InitialFactAp>)
 
 fun TaintMarkAwareConditionExpr.preconditionDnf(
     apManager: ApManager,
+    allFactsAtStatement: (InitialFactAp) -> List<FinalFactAp>,
     mapFacts: (InitialFactAp) -> List<InitialFactAp>,
 ): List<PreconditionCube> = when (this) {
     is TaintMarkAwareConditionExpr.ContainsMarkLiteral -> {
@@ -142,18 +146,64 @@ fun TaintMarkAwareConditionExpr.preconditionDnf(
     }
 
     is TaintMarkAwareConditionExpr.ContainsMarkOnAnyAccessorLiteral -> {
-        TODO("ContainsMarkOnAnyAccessor is not supported for non-sink rule preconditions")
+        val factStartsWith = apManager.mkInitialAbstractAccessPath(position)
+        val allRelevantDelta = mapFacts(factStartsWith).flatMapTo(hashSetOf()) { factPrefix ->
+            allFactsAtStatement(factPrefix)
+                .filter { it.getAllAccessors().contains(mark) }
+                .flatMap { it.delta(factPrefix) }
+                .filter { it.getAllAccessors().contains(mark) }
+        }
+
+        val anySpecialization = hashSetOf<List<Accessor>>()
+        allRelevantDelta.forEach {
+            extractFactPaths(anySpecialization, emptyList(), it, hashSetOf(), mark)
+        }
+
+        val tailPosition = PositionAccess.Complex(PositionAccess.Simple(AccessPathBase.This), mark)
+        val tail = apManager.mkInitialAccessPath(tailPosition, ExclusionSet.Universe)
+        val tailWithAnySpecialized = anySpecialization.map { specialization ->
+            specialization.foldRight(tail) { a, f -> f.prependAccessor(a) }
+        }
+
+        val resultFacts = tailWithAnySpecialized.map {
+            mkAccessPath(position, it, ExclusionSet.Universe)
+        }
+
+        resultFacts.flatMap { mapFacts(it) }.map { PreconditionCube(setOf(it)) }
     }
 
-    is TaintMarkAwareConditionExpr.Or -> args.flatMap { it.preconditionDnf(apManager, mapFacts) }
+    is TaintMarkAwareConditionExpr.Or -> args.flatMap { it.preconditionDnf(apManager, allFactsAtStatement, mapFacts) }
     is TaintMarkAwareConditionExpr.And -> {
         val result = mutableListOf<PreconditionCube>()
-        val cubeLists = args.map { it.preconditionDnf(apManager, mapFacts) }
+        val cubeLists = args.map { it.preconditionDnf(apManager, allFactsAtStatement, mapFacts) }
         cubeLists.cartesianProductMapTo { cubes ->
             val facts = hashSetOf<InitialFactAp>()
             cubes.flatMapTo(facts) { it.facts }
             result += PreconditionCube(facts)
         }
         result
+    }
+}
+
+private fun extractFactPaths(
+    result: MutableSet<List<Accessor>>,
+    path: List<Accessor>,
+    currentFact: FinalFactAp.Delta,
+    visited: MutableSet<FinalFactAp.Delta>,
+    target: Accessor
+) {
+    if (currentFact.startsWithAccessor(target)) {
+        result.add(path)
+    }
+
+    if (!visited.add(currentFact)) return
+
+    if (!currentFact.getAllAccessors().contains(target)) {
+        return
+    }
+
+    currentFact.getStartAccessors().forEach { accessor ->
+        val nextFact = currentFact.readAccessor(accessor) ?: return@forEach
+        extractFactPaths(result, path + accessor, nextFact, visited, target)
     }
 }

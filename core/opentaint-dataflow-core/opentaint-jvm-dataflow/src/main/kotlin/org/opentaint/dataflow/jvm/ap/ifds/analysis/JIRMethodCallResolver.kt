@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallResolutionResult
+import org.opentaint.dataflow.call.tryExtractCallTypeInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
@@ -112,33 +113,7 @@ class JIRMethodCallResolver(
         handler: MethodCallHandler,
         analyzer: MethodAnalyzer,
     ) {
-        val (start, fact) = when (handler) {
-            is MethodCallHandler.ZeroToZeroHandler,
-            is MethodCallHandler.NDFactToFactHandler -> return
-
-            is MethodCallHandler.FactToFactHandler -> {
-                handler.startFactBase to handler.currentEdge.factAp
-            }
-
-            is MethodCallHandler.ZeroToFactHandler -> {
-                handler.startFactBase to handler.currentEdge.factAp
-            }
-        }
-
-        if (start != AccessPathBase.This) return
-
-        val typeInfoGroup = fact.readAccessor(TypeInfoGroupAccessor)
-        if (typeInfoGroup == null) {
-            if (handler is MethodCallHandler.FactToFactHandler) {
-                val edge = handler.currentEdge
-                val refinedInitial = edge.initialFactAp.exclude(TypeInfoGroupAccessor)
-                analyzer.triggerSideEffectRequirement(refinedInitial)
-            }
-            return
-        }
-
-        val typeInfos = typeInfoGroup.getStartAccessors().filterIsInstance<TypeInfoAccessor>()
-        typeInfos.forEach { typeInfo ->
+        tryExtractCallTypeInfo(handler, analyzer, { it == AccessPathBase.This }) { typeInfo ->
             val cls = callResolver.cp.findClassOrNull(typeInfo.typeName)
             check(cls is LambdaAnonymousClassFeature.JIRLambdaClass) {
                 "Unexpected type info: $cls"
@@ -148,7 +123,7 @@ class JIRMethodCallResolver(
             val lambdaImpl = cls.findMethodOrNull(lambdaMethod.name, lambdaMethod.description)
             if (lambdaImpl == null) {
                 logger.debug { "Lambda class $cls has no lambda method $lambdaMethod" }
-                return@forEach
+                return@tryExtractCallTypeInfo
             }
 
             lambdaResolver.addLambda(cls)

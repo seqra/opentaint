@@ -39,7 +39,7 @@ class GradleProjectResolver(
 
     private lateinit var javaToolchain: JavaToolchain
 
-    override fun resolveProject(): Project? {
+    override fun resolveProject(): JavaProject? {
         logger.info { "Gradle build start for: $projectSourceRoot" }
         if (!buildProject()) {
             logger.error { "Gradle build failed for: $projectSourceRoot" }
@@ -51,7 +51,7 @@ class GradleProjectResolver(
             logger.error { "Gradle dependency resolution failed for: $projectSourceRoot" }
         }
 
-        return Project(projectSourceRoot, javaToolchain.path(), resolvedModules, resolvedProjectDependencies)
+        return JavaProject(projectSourceRoot, javaToolchain.path(), resolvedModules, resolvedProjectDependencies)
     }
 
     private fun buildProject(): Boolean {

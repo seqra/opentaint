@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.jvm.ap.ifds.alias
+package org.opentaint.dataflow.ap.ifds.analysis.alias
 
 import org.opentaint.dataflow.util.Cancellation
 import kotlin.time.Duration
