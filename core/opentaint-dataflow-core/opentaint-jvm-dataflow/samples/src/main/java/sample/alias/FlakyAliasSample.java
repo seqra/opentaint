@@ -1,8 +1,10 @@
 package sample.alias;
 
 import java.nio.ByteBuffer;
+import sample.AliasSettings;
+import sample.BaseSample;
 
-public final class FlakyAliasSample {
+public final class FlakyAliasSample extends BaseSample {
 
     interface Pooled<T> {
         T getResource();
@@ -10,12 +12,13 @@ public final class FlakyAliasSample {
 
     private Pooled<ByteBuffer> buffer;
 
-    static void sinkOneValue(Object v) { }
-
+    @AliasSettings(interProcDepth = 1)
     public int write(java.nio.ByteBuffer src) {
+        Object copyForNonEmptyAlias = identity(src);
         java.nio.ByteBuffer[] arr = new java.nio.ByteBuffer[]{src};
         flushBufferWithUserData(arr);
-        sinkOneValue(arr);
+        sinkOneValue(copyForNonEmptyAlias);
+        identity(arr);
         return 0;
     }
 

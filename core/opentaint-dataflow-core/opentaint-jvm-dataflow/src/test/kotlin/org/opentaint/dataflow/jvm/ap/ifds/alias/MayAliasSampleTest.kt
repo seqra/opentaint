@@ -1,117 +1,22 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
-import org.opentaint.dataflow.ap.ifds.access.FactAp
-import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.configuration.jvm.TaintCleaner
-import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
-import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
-import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
-import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
-import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
-import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
-import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
-import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
-import org.opentaint.dataflow.ifds.SingletonUnit
-import org.opentaint.dataflow.ifds.UnitType
-import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.BasicTestUtils
-import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
-import org.opentaint.dataflow.util.Cancellation
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.ir.api.jvm.JIRField
-import org.opentaint.ir.api.jvm.JIRMethod
-import org.opentaint.ir.api.jvm.RegisteredLocation
-import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
-import org.opentaint.ir.api.jvm.cfg.JIRValue
-import org.opentaint.ir.impl.features.usagesExt
-import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AliasSampleTest : BasicTestUtils() {
-    private val noRules = object : TaintRulesProvider {
-        override fun entryPointRulesForMethod(
-            method: CommonMethod,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintEntryPointSource> = emptyList()
-
-        override fun sourceRulesForMethod(
-            method: CommonMethod,
-            statement: CommonInst,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintMethodSource> = emptyList()
-
-        override fun exitSourceRulesForMethod(
-            method: CommonMethod,
-            statement: CommonInst,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintMethodExitSource> = emptyList()
-
-        override fun sinkRulesForMethod(
-            method: CommonMethod,
-            statement: CommonInst,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintMethodSink> = emptyList()
-
-        override fun sinkRulesForMethodEntry(
-            method: CommonMethod,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintMethodEntrySink> = emptyList()
-
-        override fun sinkRulesForMethodExit(
-            method: CommonMethod,
-            statement: CommonInst,
-            fact: FactAp?,
-            initialFacts: Set<InitialFactAp>?,
-            allRelevant: Boolean
-        ): Iterable<TaintMethodExitSink> = emptyList()
-
-        override fun passTroughRulesForMethod(
-            method: CommonMethod,
-            statement: CommonInst,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintPassThrough> = emptyList()
-
-        override fun cleanerRulesForMethod(
-            method: CommonMethod,
-            statement: CommonInst,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintCleaner> = emptyList()
-
-        override fun sourceRulesForStaticField(
-            field: JIRField,
-            statement: CommonInst,
-            fact: FactAp?,
-            allRelevant: Boolean
-        ): Iterable<TaintStaticFieldSource> = emptyList()
-    }
-    
-    private val manager by lazy { JIRAnalysisManager(cp, noRules) }
+class MayAliasSampleTest : BasicTestUtils() {
+    override fun JIRLocalAliasAnalysis.getAliases(
+        base: AccessPathBase.LocalVar,
+        statement: JIRInst
+    ): List<JIRLocalAliasAnalysis.AliasInfo>? = findAlias(base, statement)
 
     @Test
     fun `test simple aliasing`() {
@@ -497,7 +402,7 @@ class AliasSampleTest : BasicTestUtils() {
     @Test
     fun `test getter aliases this field`() {
         val method = findMethod(INTERPROC_SAMPLE, "testGetterAlias")
-        val aa = aaForMethod(method, interProcParams(depth = 1))
+        val aa = aaForMethod(method)
 
         val sink = method.findSinkCall("sinkOneValue")
         val apAliases = aa.sinkArgApAliases(sink)
@@ -512,7 +417,7 @@ class AliasSampleTest : BasicTestUtils() {
     @Test
     fun `test setter then getter`() {
         val method = findMethod(INTERPROC_SAMPLE, "testSetterThenGetter")
-        val aa = aaForMethod(method, interProcParams(depth = 1))
+        val aa = aaForMethod(method)
 
         val sink = method.findSinkCall("sinkOneValue")
         val apAliases = aa.sinkArgApAliases(sink)
@@ -523,7 +428,7 @@ class AliasSampleTest : BasicTestUtils() {
     @Test
     fun `test identity same-class call`() {
         val method = findMethod(INTERPROC_SAMPLE, "testIdentityCall")
-        val aa = aaForMethod(method, interProcParams(depth = 1))
+        val aa = aaForMethod(method)
 
         val sink = method.findSinkCall("sinkOneValue")
         val apAliases = aa.sinkArgApAliases(sink)
@@ -550,7 +455,7 @@ class AliasSampleTest : BasicTestUtils() {
         val sink = method.findSinkCall("sinkOneValue")
         val apAliases = aa.sinkArgApAliases(sink)
 
-        assertFalse { apAliases.any { it.isPlainBase(Argument(0)) } }
+        assertTrue { apAliases.any { it.isPlainBase(Argument(0)) } }
     }
 
     @Test
@@ -559,6 +464,7 @@ class AliasSampleTest : BasicTestUtils() {
 
         val aa = aaForMethod(method)
         val sink = method.findSinkCall("sinkOneValue")
+        // checking the analysis has finished successfully
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
     }
 
@@ -566,75 +472,142 @@ class AliasSampleTest : BasicTestUtils() {
     fun `HeaderValues addAll fixpoint must terminate`() {
         val method = findMethod(HEADER_VALUES_SAMPLE, "addAllEntry")
 
-        val aa = aaForMethod(method, interProcParams(depth = 1))
+        val aa = aaForMethod(method)
         val sink = method.findSinkCall("sinkOneValue")
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
     }
 
-    private fun aaForMethod(
-        method: JIRMethod,
-        params: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params()
-    ): JIRLocalAliasAnalysis {
-        val ep = method.instList.first()
-        val usages = runBlocking { cp.usagesExt() }
-        val graph = JApplicationGraphImpl(cp, usages)
+    @Test
+    fun `test combined write arg then touch heap`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "writeArgThenTouchHeap")
+        val aa = aaForMethod(method)
 
-        val callResolver = JIRCallResolver(cp, SingleLocationUnit(method.enclosingClass.declaration.location))
-        val localReachability = JIRLocalVariableReachability(method, graph, manager)
-        val cancellation = Cancellation().also { it.activate() }
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
 
-        return JIRLocalAliasAnalysis(ep, graph, callResolver, localReachability, cancellation, manager, params)
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
     }
 
-    private fun interProcParams(depth: Int) =
-        JIRLocalAliasAnalysis.Params(useAliasAnalysis = true, aliasAnalysisInterProcCallDepth = depth)
+    @Test
+    fun `test combined return argument field`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "returnArgField")
+        val aa = aaForMethod(method)
 
-    private fun JIRMethod.findSinkCall(sinkName: String): JIRCallInst =
-        instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == sinkName }
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
 
-    private fun JIRLocalAliasAnalysis.valueApAliases(value: JIRValue, stmt: JIRInst): List<AliasApInfo> =
-        valueAliases(value, stmt).filterIsInstance<AliasApInfo>()
-
-    private fun JIRLocalAliasAnalysis.sinkArgApAliases(sink: JIRCallInst): List<AliasApInfo> =
-        valueApAliases(sink.callExpr.args[0], sink)
-
-    private fun JIRLocalAliasAnalysis.valueAliases(
-        value: JIRValue,
-        stmt: JIRInst
-    ): List<JIRLocalAliasAnalysis.AliasInfo> {
-        check(value is JIRLocalVar) { "Only local var aliases supported" }
-        return findAlias(AccessPathBase.LocalVar(value.index), stmt).orEmpty()
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
     }
 
-    private fun AliasApInfo.isPlainBase(expected: AccessPathBase): Boolean =
-        accessors.isEmpty() && base == expected
+    @Test
+    fun `test combined return identity then write field`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "returnIdentityThenWriteField")
+        val aa = aaForMethod(method)
 
-    private fun AliasAccessor.isField(name: String): Boolean =
-        this is AliasAccessor.Field && this.fieldName == name
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
 
-    private fun List<AliasAccessor>.singleFieldNamed(name: String): Boolean =
-        size == 1 && single().isField(name)
-
-    private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
-        override fun resolve(method: JIRMethod): UnitType =
-            if (method.enclosingClass.declaration.location == loc) SingletonUnit else UnknownUnit
-
-        override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc != this.loc
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
     }
 
-    companion object {
-        const val ALIAS_SAMPLE_PKG = "sample.alias"
-        const val SIMPLE_SAMPLE = "$ALIAS_SAMPLE_PKG.SimpleAliasSample"
-        const val LOOP_SAMPLE = "$ALIAS_SAMPLE_PKG.LoopAliasSample"
-        const val HEAP_SAMPLE = "$ALIAS_SAMPLE_PKG.HeapAliasSample"
-        const val INTERPROC_SAMPLE = "$ALIAS_SAMPLE_PKG.InterProcAliasSample"
-        const val FLAKY_SAMPLE = "$ALIAS_SAMPLE_PKG.FlakyAliasSample"
-        const val HEADER_VALUES_SAMPLE = "sample.alias.HeaderValuesHangSample"
+    @Test
+    fun `test combined fresh object carries returned arg`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "freshObjectCarriesReturnedArg")
+        val aa = aaForMethod(method)
 
-        private const val FIELD_VALUE = "value"
-        private const val FIELD_BOX = "box"
-        private const val FIELD_NEXT = "next"
-        private const val FIELD_DATA = "data"
-        private const val FIELD_INTERPROC = "field"
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(0)) } }
+    }
+
+    @Test
+    fun `test combined fresh object copies argument field`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "freshObjectCopiesArgumentField")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+    }
+
+    @Test
+    fun `test combined pass through receiver then read field`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "passThroughReceiverThenReadField")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+    }
+
+    @Test
+    fun `test combined nested write return and touch heap`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "nestedWriteReturnAndTouchHeap")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+        assertTrue { apAliases.any { it.base == Argument(0) && it.accessors.isNotEmpty() } }
+    }
+
+    @Test
+    fun `test combined overwrite field with fresh object`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "overwriteFieldWithFreshObject")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        // note: may want to remove this alias link for may analysis in the future
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+    }
+
+    @Test
+    fun `test combined return fresh box then alias field`() {
+        val method = findMethod(COMBINED_HEAP_SAMPLE, "returnFreshBoxThenAliasField")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
     }
 }

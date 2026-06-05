@@ -1,5 +1,8 @@
 package org.opentaint.dataflow.util
 
+import java.lang.management.ManagementFactory
+import kotlin.time.Duration
+
 class Cancellation {
     class Cancelled : Exception("Operation cancelled") {
         override fun fillInStackTrace(): Throwable = this
@@ -21,5 +24,19 @@ class Cancellation {
     fun checkpoint() {
         if (isActive) return
         throw Cancelled()
+    }
+
+    companion object {
+        private val isDebugActive = lazy { getDebuggerAttachment() }
+
+        private fun getDebuggerAttachment() =
+            ManagementFactory.getRuntimeMXBean().inputArguments
+                .any { it.contains("-agentlib:jdwp") || it.contains("-Xdebug") }
+
+        fun getActiveDuration(duration: Duration) =
+            if (isDebugActive.value)
+                Duration.INFINITE
+            else
+                duration
     }
 }

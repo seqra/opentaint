@@ -1,22 +1,10 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.State
+import org.opentaint.dataflow.jvm.DSUAliasAnalysisTestUtils
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class DSUAliasAnalysisStateTest {
-
-    private val manager = AAInfoManager()
-    private val strategy = DSUAliasAnalysis.DsuMergeStrategy(manager)
-
-    private inline fun buildState(body: StateBuilder.() -> Unit): State =
-        fillState(body).build()
-
-    private inline fun fillState(body: StateBuilder.() -> Unit): StateBuilder {
-        val builder = StateBuilder(manager, strategy)
-        builder.body()
-        return builder
-    }
+class DSUMustAliasAnalysisStateTest : DSUAliasAnalysisTestUtils(MergeType.Must) {
 
     @Test
     fun mergeAliasSetsOfTwoLocals() {
@@ -167,10 +155,7 @@ class DSUAliasAnalysisStateTest {
             )
         }
 
-        val set2 = buildState {
-            merge(setOf(local(0), local(1)))
-            merge(setOf(local(2), local(3)))
-        }
+        val set2 = buildState {}
 
         assertEquals(set2, set1)
     }
@@ -184,9 +169,7 @@ class DSUAliasAnalysisStateTest {
             )
         }
 
-        val set2 = buildState {
-            merge(setOf(local(0), local(1), local(2)))
-        }
+        val set2 = buildState {}
 
         assertEquals(set2, set1)
     }
@@ -257,7 +240,7 @@ class DSUAliasAnalysisStateTest {
         }
 
         val set2 = buildState {
-            merge(setOf(local(0), local(1), local(2), local(3)))
+            merge(setOf(local(1), local(2)))
         }
 
         assertEquals(set2, set1)
@@ -322,14 +305,13 @@ class DSUAliasAnalysisStateTest {
     fun mergeStatesWithUnknownAliases() {
         val set1 = buildState {
             mergeStates(
-                fillState { merge(setOf(local(0), unknown(0))) },
-                fillState { merge(setOf(local(1), unknown(1))) },
+                fillState { merge(setOf(local(0), unknown(0), unknown(1))) },
+                fillState { merge(setOf(local(1), unknown(0), unknown(1))) },
             )
         }
 
         val set2 = buildState {
-            merge(setOf(local(0), unknown(0)))
-            merge(setOf(local(1), unknown(1)))
+            merge(setOf(unknown(0), unknown(1)))
         }
 
         assertEquals(set2, set1)
@@ -365,14 +347,14 @@ class DSUAliasAnalysisStateTest {
     fun mergeThreeOverlappingStates() {
         val set1 = buildState {
             mergeStates(
-                fillState { merge(setOf(local(0), local(1))) },
-                fillState { merge(setOf(local(1), local(2))) },
-                fillState { merge(setOf(local(2), local(3))) },
+                fillState { merge(setOf(local(0), local(1), local(2), local(4))) },
+                fillState { merge(setOf(local(0), local(1), local(2), local(5))) },
+                fillState { merge(setOf(local(0), local(1), local(2), local(3))) },
             )
         }
 
         val set2 = buildState {
-            merge(setOf(local(0), local(1), local(2), local(3)))
+            merge(setOf(local(0), local(1), local(2)))
         }
 
         assertEquals(set2, set1)
@@ -383,17 +365,17 @@ class DSUAliasAnalysisStateTest {
         val set1 = buildState {
             mergeStates(
                 fillState {
-                    merge(setOf(local(0), local(1)))
-                    merge(setOf(local(2)))
+                    merge(setOf(local(0), local(2)))
+                    merge(setOf(local(1)))
                 },
-                fillState { merge(setOf(local(3), local(4))) },
+                fillState { merge(setOf(local(0), local(1), local(2))) },
             )
             remove(setOf(local(2)))
             merge(setOf(local(0), local(3)))
         }
 
         val set2 = buildState {
-            merge(setOf(local(0), local(1), local(3), local(4)))
+            merge(setOf(local(0), local(3)))
         }
 
         assertEquals(set2, set1)
@@ -519,7 +501,7 @@ class DSUAliasAnalysisStateTest {
                     val h1 = arrayAlias(loc)
                     val h2 = arrayAlias(h1)
                     val h3 = arrayAlias(h2)
-                    merge(setOf(h1, h2, h3))
+                    merge(setOf(loc, h1, h2, h3))
                 },
             )
         }
@@ -527,9 +509,7 @@ class DSUAliasAnalysisStateTest {
         val set2 = buildState {
             val loc = local(40)
             val h1 = arrayAlias(loc)
-            val h2 = arrayAlias(h1)
-            val h3 = arrayAlias(h2)
-            merge(setOf(loc, h1, h2, h3))
+            merge(setOf(loc, h1))
         }
 
         assertEquals(set2, set1)
@@ -616,8 +596,8 @@ class DSUAliasAnalysisStateTest {
     fun equalityStateMergeVsManualMergeAliasSets() {
         val set1 = buildState {
             mergeStates(
-                fillState { merge(setOf(local(0), local(1))) },
-                fillState { merge(setOf(local(1), local(2))) },
+                fillState { merge(setOf(local(0), local(1), local(2), local(3))) },
+                fillState { merge(setOf(local(0), local(1), local(2), local(4))) },
             )
         }
 
@@ -644,16 +624,16 @@ class DSUAliasAnalysisStateTest {
                     val h1 = arrayAlias(loc)
                     val h2 = fieldAlias(h1, "q")
                     val h3 = arrayAlias(h2)
-                    merge(setOf(loc, h1, h2))
-                    merge(setOf(h3))
+                    val h4 = arrayAlias(h3)
+                    merge(setOf(loc, h1, h2, h3, h4, local(92)))
                 },
                 fillState {
                     val loc = local(90)
                     val h1 = arrayAlias(loc)
                     val h2 = fieldAlias(h1, "q")
                     val h3 = arrayAlias(h2)
-                    merge(setOf(h2, h3))
-                    merge(setOf(local(91)))
+                    val h5 = fieldAlias(h3, "q")
+                    merge(setOf(loc, h1, h2, h3, h5, local(91)))
                 },
             )
         }
@@ -663,11 +643,6 @@ class DSUAliasAnalysisStateTest {
             val h1 = arrayAlias(loc)
             val h2 = fieldAlias(h1, "q")
             val h3 = arrayAlias(h2)
-            merge(setOf(loc))
-            merge(setOf(h1))
-            merge(setOf(h2))
-            merge(setOf(h3))
-            merge(setOf(local(91)))
             merge(setOf(loc, h1, h2, h3))
         }
 
@@ -792,7 +767,9 @@ class DSUAliasAnalysisStateTest {
                 fillState {
                     val loc = local(140)
                     val f1 = fieldAlias(loc, "a")
-                    merge(setOf(loc, f1))
+                    val f2 = fieldAlias(f1, "b")
+                    val f3 = fieldAlias(f2, "c")
+                    merge(setOf(loc, f1, f2, f3, local(141)))
                 },
             )
             remove(setOf(local(141)))
