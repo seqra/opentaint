@@ -2,12 +2,11 @@ package org.opentaint.go.sast.sarif
 
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.ir.go.cfg.GoIRCallInfo
+import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRCallMode
-import org.opentaint.ir.go.value.GoIRBuiltinValue
-import org.opentaint.ir.go.value.GoIRFunctionValue
-import org.opentaint.jvm.sast.sarif.TracePathNode
-import org.opentaint.jvm.sast.sarif.TracePathNodeKind
+import org.opentaint.common.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNodeKind
 
 /**
  * Go counterpart of [org.opentaint.jvm.sast.sarif.TraceMessageBuilder].
@@ -40,9 +39,9 @@ class GoTraceMessageBuilder(private val sinkMessage: String) {
     }
 
     private fun calleeName(callInfo: GoIRCallInfo): String? {
-        when (val func = callInfo.function) {
-            is GoIRFunctionValue -> return shortName(func.function.fullName)
-            is GoIRBuiltinValue -> return func.name
+        when (val target = callInfo.target) {
+            is GoIRCallTarget.Function -> return shortName(target.function.fullName)
+            is GoIRCallTarget.Builtin -> return target.name
             else -> {}
         }
         if (callInfo.mode == GoIRCallMode.INVOKE) {

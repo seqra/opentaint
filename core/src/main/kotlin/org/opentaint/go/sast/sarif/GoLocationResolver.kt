@@ -7,9 +7,10 @@ import io.github.detekt.sarif4k.Message
 import io.github.detekt.sarif4k.PhysicalLocation
 import io.github.detekt.sarif4k.Region
 import io.github.detekt.sarif4k.ThreadFlowLocation
+import org.opentaint.common.sast.sarif.SarifGenerationOptions
+import org.opentaint.common.sast.sarif.SarifLocationResolver
 import org.opentaint.ir.go.api.GoIRPosition
 import org.opentaint.ir.go.inst.GoIRInst
-import org.opentaint.jvm.sast.project.SarifGenerationOptions
 import org.opentaint.jvm.sast.sarif.IntermediateLocation
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -21,9 +22,9 @@ import kotlin.io.path.relativeTo
  * have no end coordinates. Missing positions fall back to the instruction's
  * recorded line number (or line 1) and the function's fully-qualified name as URI.
  */
-class GoLocationResolver(private val sourceRoot: Path?) {
+class GoLocationResolver(private val sourceRoot: Path?): SarifLocationResolver<IntermediateLocation> {
 
-    fun toSarifLocation(location: IntermediateLocation): Location {
+    override fun generateSarifLocation(location: IntermediateLocation): Location {
         val position = (location.inst as? GoIRInst)?.location?.position
         return Location(
             physicalLocation = PhysicalLocation(
@@ -43,12 +44,12 @@ class GoLocationResolver(private val sourceRoot: Path?) {
         )
     }
 
-    fun toThreadFlowLocations(locations: List<IntermediateLocation>): List<ThreadFlowLocation> =
+    override fun resolve(locations: List<IntermediateLocation>): List<ThreadFlowLocation> =
         locations.mapIndexed { idx, loc ->
             ThreadFlowLocation(
                 executionOrder = idx.toLong(),
                 kinds = listOf(loc.kind),
-                location = toSarifLocation(loc),
+                location = generateSarifLocation(loc),
             )
         }
 

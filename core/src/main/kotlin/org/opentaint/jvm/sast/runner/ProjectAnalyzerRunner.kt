@@ -9,16 +9,15 @@ import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
+import org.opentaint.common.sast.CommonAnalysisOptions
+import org.opentaint.common.sast.ProjectAnalysisStatus
+import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
-import org.opentaint.common.sast.dataflow.DebugOptions
-import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.go.sast.project.GoProjectAnalyzer
-import org.opentaint.jvm.sast.project.CommonAnalysisOptions
+import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
-import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
-import org.opentaint.jvm.sast.project.ProjectAnalyzer
-import org.opentaint.jvm.sast.project.SarifGenerationOptions
+import org.opentaint.jvm.sast.project.JirProjectAnalyzer
 import org.opentaint.jvm.sast.project.TestProjectAnalyzer
 import org.opentaint.jvm.sast.util.directory
 import org.opentaint.jvm.sast.util.file
@@ -83,47 +82,49 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val experimentalAAInterProcCallDepth: Int by option(help = "Experimental options: inter-proc alias analysis call depth")
         .int().default(1)
 
-    override fun analyzeProject(project: JavaProject, analyzerOutputDir: Path, debugOptions: DebugOptions): ProjectAnalysisStatus {
+    private val sarifOptions = SarifGenerationOptions(
+        sarifFileName = sarifFileName,
+        sarifCodeFlowLimit = sarifCodeFlowLimit,
+        useSemgrepStyleId = sarifSemgrepStyleId,
+        toolVersion = sarifToolVersion,
+        toolSemanticVersion = sarifToolSemanticVersion,
+        uriBase = sarifUriBase,
+        generateFingerprint = sarifGenerateFingerprint,
+    )
+
+    private val commonOptions = CommonAnalysisOptions(
+        customApproximationConfig = approximationsConfig,
+        semgrepRuleSet = semgrepRuleSet,
+        semgrepRuleLoadTrace = semgrepRuleLoadTrace,
+        semgrepSeverity = semgrepRuleSeverity,
+        semgrepRuleId = semgrepRuleId,
+        trackExternalMethods = trackExternalMethods,
+        ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
+        ifdsApMode = ifdsApMode,
+        debugOptions = debugOptions,
+        sarifGenerationOptions = sarifOptions,
+        cwe = cwe,
+        useSymbolicExecution = useSymbolicExecution,
+        symbolicExecutionTimeout = symbolicExecutionTimeout.seconds,
+        storeSummaries = false,
+        experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
+    )
+
+    override fun analyzeProject(project: JavaProject, analyzerOutputDir: Path): ProjectAnalysisStatus {
         if (project.modules.isEmpty()) {
             return ProjectAnalysisStatus.OK
         }
 
-        val sarifOptions = SarifGenerationOptions(
-            sarifFileName = sarifFileName,
-            sarifCodeFlowLimit = sarifCodeFlowLimit,
-            useSemgrepStyleId = sarifSemgrepStyleId,
-            toolVersion = sarifToolVersion,
-            toolSemanticVersion = sarifToolSemanticVersion,
-            uriBase = sarifUriBase,
-            generateFingerprint = sarifGenerateFingerprint,
-        )
-
         val options = ProjectAnalysisOptions(
-            common = CommonAnalysisOptions(
-                customApproximationConfig = approximationsConfig,
-                semgrepRuleSet = semgrepRuleSet,
-                semgrepRuleLoadTrace = semgrepRuleLoadTrace,
-                semgrepSeverity = semgrepRuleSeverity,
-                semgrepRuleId = semgrepRuleId,
-                trackExternalMethods = trackExternalMethods,
-                ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
-                ifdsApMode = ifdsApMode,
-                debugOptions = debugOptions,
-                sarifGenerationOptions = sarifOptions,
-            ),
-            cwe = cwe,
-            useSymbolicExecution = useSymbolicExecution,
-            symbolicExecutionTimeout = symbolicExecutionTimeout.seconds,
+            common = commonOptions,
             projectKind = projectKind,
-            storeSummaries = false,
-            experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
             approximationOptions = DataFlowApproximationLoader.Options(
                 customApproximationPaths = dataflowApproximations,
             ),
         )
 
         return if (!debugOptions.runRuleTests) {
-            val projectAnalyzer = ProjectAnalyzer(project, analyzerOutputDir, options)
+            val projectAnalyzer = JirProjectAnalyzer(project, analyzerOutputDir, options)
             projectAnalyzer.analyze()
         } else {
             val testAnalyzer = TestProjectAnalyzer(project, analyzerOutputDir, options)
@@ -131,36 +132,8 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         }
     }
 
-    override fun analyzeGoProject(
-        project: GoProject,
-        analyzerOutputDir: Path,
-        debugOptions: DebugOptions,
-    ): ProjectAnalysisStatus {
-        val sarifOptions = SarifGenerationOptions(
-            sarifFileName = sarifFileName,
-            sarifCodeFlowLimit = sarifCodeFlowLimit,
-            useSemgrepStyleId = sarifSemgrepStyleId,
-            toolVersion = sarifToolVersion,
-            toolSemanticVersion = sarifToolSemanticVersion,
-            uriBase = sarifUriBase,
-            generateFingerprint = sarifGenerateFingerprint,
-        )
-
-        val options = GoProjectAnalysisOptions(
-            common = CommonAnalysisOptions(
-                customApproximationConfig = approximationsConfig,
-                semgrepRuleSet = semgrepRuleSet,
-                semgrepRuleLoadTrace = semgrepRuleLoadTrace,
-                semgrepSeverity = semgrepRuleSeverity,
-                semgrepRuleId = semgrepRuleId,
-                trackExternalMethods = trackExternalMethods,
-                ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
-                ifdsApMode = ifdsApMode,
-                debugOptions = debugOptions,
-                sarifGenerationOptions = sarifOptions,
-            ),
-        )
-
+    override fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path): ProjectAnalysisStatus {
+        val options = GoProjectAnalysisOptions(common = commonOptions)
         return GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
     }
 

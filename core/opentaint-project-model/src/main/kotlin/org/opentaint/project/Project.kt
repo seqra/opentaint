@@ -18,6 +18,10 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 
+sealed interface CommonProject {
+    fun sourceRoot(): Path?
+}
+
 @Suppress("DEPRECATION")
 @Serializable
 data class JavaProject(
@@ -27,7 +31,9 @@ data class JavaProject(
     val dependencies: List<@Serializable(with = PathAsStringSerializer::class) Path> = emptyList(),
     @Deprecated("Use top-level Project.javaProjects instead")
     val subProjects: List<JavaProject> = emptyList(),
-) {
+): CommonProject {
+    override fun sourceRoot(): Path? = sourceRoot
+
     fun relativeTo(path: Path): JavaProject = JavaProject(
         sourceRoot?.relativeTo(path),
         javaToolchain?.relativeTo(path),
@@ -79,7 +85,9 @@ data class ProjectModuleClasses(
 @Serializable
 data class GoProject(
     val projectDir: @Serializable(with = PathAsStringSerializer::class) Path,
-) {
+): CommonProject {
+    override fun sourceRoot(): Path = projectDir
+
     fun relativeTo(path: Path): GoProject = GoProject(projectDir.relativeTo(path))
 
     fun resolve(base: Path): GoProject = GoProject(base.resolve(projectDir))

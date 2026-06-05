@@ -17,8 +17,8 @@ import org.opentaint.jvm.sast.sarif.IntermediateLocation
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.LocationSpan
 import org.opentaint.jvm.sast.sarif.LocationType
-import org.opentaint.jvm.sast.sarif.TracePathNode
-import org.opentaint.jvm.sast.sarif.TracePathNodeKind
+import org.opentaint.common.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.project.JavaProject
 import org.opentaint.project.ProjectModuleClasses
 import java.io.File

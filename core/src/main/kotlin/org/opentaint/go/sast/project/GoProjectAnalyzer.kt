@@ -1,13 +1,15 @@
 package org.opentaint.go.sast.project
 
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
-import com.charleskorn.kaml.encodeToStream
 import mu.KLogging
+import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
+import org.opentaint.common.sast.ProjectAnalyzer
+import org.opentaint.common.sast.sarif.SarifGenerator
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
-import org.opentaint.dataflow.ap.ifds.taint.SkippedExternalMethods
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
+import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
 import org.opentaint.dataflow.go.rules.GoCombinedTaintRulesProvider
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
@@ -15,109 +17,115 @@ import org.opentaint.go.config.GoConfigLoader
 import org.opentaint.go.config.loadGoSerializedTaintConfig
 import org.opentaint.go.sast.dataflow.GoTaintAnalyzer
 import org.opentaint.go.sast.dataflow.GoUnitResolver
+import org.opentaint.go.sast.project.GoProjectAnalyzer.AnalysisCtx
+import org.opentaint.go.sast.sarif.GoDebugFactReachabilitySarifGenerator
 import org.opentaint.go.sast.sarif.GoSarifGenerator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.client.GoIRLoadMode
-import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
-import org.opentaint.jvm.sast.project.rules.loadSemgrepRules
+import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.project.GoProject
-import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.toGoSerializedTaintConfig
+import java.io.InputStream
 import java.nio.file.Path
-import kotlin.io.path.div
-import kotlin.io.path.inputStream
-import kotlin.io.path.outputStream
 
 class GoProjectAnalyzer(
-    private val project: GoProject,
-    private val resultDir: Path,
-    private val options: GoProjectAnalysisOptions = GoProjectAnalysisOptions(),
+    project: GoProject,
+    resultDir: Path,
+    goOptions: GoProjectAnalysisOptions = GoProjectAnalysisOptions(),
+) : ProjectAnalyzer<AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
+    project,
+    resultDir,
+    goOptions.common
 ) {
-    fun analyze(): ProjectAnalysisStatus = try {
-        GoIRClient().use { client ->
-            logger.info { "Building Go IR for project: ${project.projectDir}" }
-            val cp = client.buildFromDir(project.projectDir, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).program
-
-            val rulesProvider = loadRules()
-            val tracker = if (options.common.trackExternalMethods) ExternalMethodTracker() else null
-
-            val analyzer = GoTaintAnalyzer(
-                cp = cp,
-                taintConfig = rulesProvider,
-                unitResolver = GoUnitResolver(),
-                externalMethodTracker = tracker,
-                analysisTimeout = options.common.ifdsAnalysisTimeout,
-            )
-            val entryPoints = selectEntryPoints(cp)
-            logger.info { "Selected ${entryPoints.size} Go entry points" }
-
-            val traces = analyzer.analyzeWithIfds(entryPoints)
-            logger.info { "Go analysis produced ${traces.size} traces" }
-
-            writeReport(traces)
-            tracker?.let { writeExternalMethodsYaml(it.getExternalMethods()) }
+    class AnalysisCtx(
+        private val prj: GoProject,
+        val client: GoIRClient,
+    ) : AutoCloseable by client {
+        val cp: GoIRProgram by lazy {
+            logger.info { "Building Go IR for project: ${prj.projectDir}" }
+            client.buildFromDir(prj.projectDir, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).program
         }
-        ProjectAnalysisStatus.OK
-    } catch (ex: Throwable) {
-        logger.error(ex) { "Go analysis failed for project: ${project.projectDir}" }
-        ProjectAnalysisStatus.EXCEPTION
     }
 
-    private fun loadRules(): GoTaintRulesProvider {
-        val userConfig = GoTaintConfiguration()
-
-        GoConfigLoader.getConfig()?.let { userConfig.loadConfig(it) }
-
-        val semgrepRules = options.common.loadSemgrepRules(GoLanguageStrategy())
-        for ((rule, _) in semgrepRules.rulesWithMeta) {
-            @Suppress("UNCHECKED_CAST")
-            val typed = rule as TaintRuleFromSemgrep<GoSerializedItem>
-            userConfig.loadConfig(typed.toGoSerializedTaintConfig())
-        }
-
-        if (options.common.customApproximationConfig.isEmpty()) return userConfig
-
-        val approxConfig = GoTaintConfiguration()
-        options.common.customApproximationConfig.forEach { cfg ->
-            cfg.inputStream().use { approxConfig.loadConfig(loadGoSerializedTaintConfig(it)) }
-        }
-        return GoCombinedTaintRulesProvider(userConfig, approxConfig)
+    override fun initializeProjectAnalysisContext(): AnalysisCtx {
+        val client = GoIRClient()
+        return AnalysisCtx(project, client)
     }
 
-    private fun selectEntryPoints(cp: GoIRProgram): List<GoIRFunction> =
-        cp.packages.values
+    override fun AnalysisCtx.selectProjectEntryPoints(): List<GoIRFunction> {
+        val all = cp.packages.values
             .filter { it.isProject }
             .flatMap { it.functions }
             .filter { it.hasBody && !it.isSynthetic && it.parent == null }
 
-    private fun writeReport(traces: List<VulnerabilityWithTrace>) {
-        val sarif = options.common.sarifGenerationOptions
-        val generator = GoSarifGenerator(sarif, project.projectDir)
-        (resultDir / sarif.sarifFileName).outputStream().use { out ->
-            generator.generateSarif(out, traces.asSequence())
+        val selector = options.debugOptions?.debugRunAnalysisOnSelectedEntryPoints
+        val filtered = filterEntryPoints(all, selector)
+        if (selector != null && selector != "*" && filtered.isEmpty()) {
+            logger.warn { "Entry-point selector matched no project function: '$selector'" }
         }
-        logger.info { "Wrote Go SARIF report to ${resultDir / sarif.sarifFileName}" }
+        return filtered
     }
 
-    private fun writeExternalMethodsYaml(methods: SkippedExternalMethods) {
-        val yaml = Yaml(configuration = YamlConfiguration(encodeDefaults = true))
-        (resultDir / "external-methods-without-rules.yaml").outputStream().use {
-            yaml.encodeToStream(methods.withoutRules, it)
+    override fun ruleStrategy() = GoLanguageStrategy()
+
+    override fun loadApproximationConfig(stream: InputStream): GoSerializedTaintConfig =
+        loadGoSerializedTaintConfig(stream)
+
+    override fun AnalysisCtx.createAnalyzer(
+        externalMethodTracker: ExternalMethodTracker?,
+        rules: PreloadedRules<GoSerializedItem, GoSerializedTaintConfig>
+    ): TaintAnalyzer<GoIRFunction, GoIRInst> {
+        val rulesProvider = loadRules(rules)
+        return GoTaintAnalyzer(
+            cp,
+            rulesProvider,
+            GoUnitResolver(),
+            options.taintAnalyzerOptions(),
+            externalMethodTracker
+        )
+    }
+
+    override fun AnalysisCtx.sarifGenerator() =
+        GoSarifGenerator(options.sarifGenerationOptions, project.sourceRoot())
+
+    override fun AnalysisCtx.debugSarifGenerator() =
+        GoDebugFactReachabilitySarifGenerator(options.sarifGenerationOptions, project.sourceRoot())
+
+    override fun AnalysisCtx.runSeAnalyzer(
+        engine: TaintAnalysisUnitRunnerManager,
+        traces: List<VulnerabilityWithTrace>
+    ): List<VulnerabilityWithTrace> {
+        TODO("Not yet implemented")
+    }
+
+    private fun loadRules(rules: PreloadedRules<GoSerializedItem, GoSerializedTaintConfig>): GoTaintRulesProvider {
+        val userConfig = GoTaintConfiguration()
+        GoConfigLoader.getConfig()?.let { userConfig.loadConfig(it) }
+
+        rules.rules.forEach {
+            userConfig.loadConfig(it.toGoSerializedTaintConfig())
         }
-        (resultDir / "external-methods-with-rules.yaml").outputStream().use {
-            yaml.encodeToStream(methods.withRules, it)
-        }
-        logger.info {
-            "Wrote external-methods YAMLs (${methods.withoutRules.size} without rules, " +
-                "${methods.withRules.size} with rules)"
-        }
+
+        if (rules.customApproximationConfig.isEmpty()) return userConfig
+
+        val approxConfig = GoTaintConfiguration()
+        rules.customApproximationConfig.forEach { approxConfig.loadConfig(it) }
+        return GoCombinedTaintRulesProvider(userConfig, approxConfig)
     }
 
     companion object {
         private val logger = object : KLogging() {}.logger
     }
+}
+
+internal fun filterEntryPoints(
+    entryPoints: List<GoIRFunction>,
+    selector: String?,
+): List<GoIRFunction> {
+    if (selector == null || selector == "*") return entryPoints
+    return entryPoints.filter { it.fullName == selector }
 }

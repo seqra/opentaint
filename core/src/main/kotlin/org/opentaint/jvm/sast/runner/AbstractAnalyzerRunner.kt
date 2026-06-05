@@ -7,9 +7,9 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import mu.KLogging
-import org.opentaint.dataflow.ap.ifds.access.ApMode
+import org.opentaint.common.sast.ProjectAnalysisStatus
 import org.opentaint.common.sast.dataflow.DebugOptions
-import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.jvm.sast.project.ProjectKind
 import org.opentaint.jvm.sast.util.file
 import org.opentaint.jvm.sast.util.newDirectory
@@ -67,7 +67,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         .newDirectory()
         .required()
 
-    private val debugOptions by lazy {
+    val debugOptions by lazy {
         DebugOptions(
             taintRulesStatsSamplingPeriod = debugTaintRulesStatsSamplingPeriod.takeIf { debugTaintRulesStats },
             enableIfdsCoverage = debugIfdsCoverage,
@@ -103,7 +103,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
 
     private fun runGoProjectAnalysis(project: GoProject): ProjectAnalysisStatus = try {
         logger.info { "Start Go analysis for project: ${project.projectDir}" }
-        analyzeGoProject(project, outputDir, debugOptions).also {
+        analyzeGoProject(project, outputDir).also {
             logger.info { "Finish Go analysis for project: ${project.projectDir}" }
         }
     } catch (ex: Throwable) {
@@ -113,7 +113,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
 
     private fun runProjectAnalysisRecursively(project: JavaProject): ProjectAnalysisStatus = try {
         logger.info { "Start analysis for project: ${project.sourceRoot}" }
-        analyzeProject(project, outputDir, debugOptions).also {
+        analyzeProject(project, outputDir).also {
             logger.info { "Finish analysis for project: ${project.sourceRoot}" }
         }
     } catch (ex: Throwable) {
@@ -131,9 +131,9 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         exitProcess(exitCode)
     }
 
-    protected abstract fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path, debugOptions: DebugOptions): ProjectAnalysisStatus
+    protected abstract fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path): ProjectAnalysisStatus
 
-    protected abstract fun analyzeProject(project: JavaProject, analyzerOutputDir: Path, debugOptions: DebugOptions): ProjectAnalysisStatus
+    protected abstract fun analyzeProject(project: JavaProject, analyzerOutputDir: Path): ProjectAnalysisStatus
 
     companion object {
         private val logger = object : KLogging() {}.logger
