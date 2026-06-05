@@ -12,14 +12,14 @@ import kotlin.io.path.relativeTo
 
 class PortableProjectCreator(
     private val portableProjectPath: Path,
-    private val rootProject: Project
+    private val rootProject: JavaProject
 ) {
     sealed interface PortAction {
         data class Copy(val dst: Path) : PortAction
         data class Ported(val path: Path) : PortAction
     }
 
-    private inner class ProjectPortContext(
+    private class ProjectPortContext(
         val sources: Path,
         val classes: Path,
         val dependencies: Path,
