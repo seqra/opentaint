@@ -40,6 +40,7 @@ import kotlin.io.path.writeText
 import kotlin.io.print
 import kotlin.io.readText
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 import kotlin.use
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -182,7 +183,10 @@ abstract class AnalysisTest {
         val loadedConfig = GoTaintConfiguration()
         loadedConfig.loadConfig(serializedConfig)
 
-        val analyzer = GoTaintAnalyzer(cp, loadedConfig, GoTestUnitResolver, CommonAnalysisOptions().taintAnalyzerOptions())
+        val options = CommonAnalysisOptions(
+            ifdsAnalysisTimeout = 1.minutes
+        )
+        val analyzer = GoTaintAnalyzer(cp, loadedConfig, GoTestUnitResolver, options.taintAnalyzerOptions())
         analyzer.use {
             val result = it.analyzeWithIfds(listOf(entryPoint))
             if (printFacts) {
