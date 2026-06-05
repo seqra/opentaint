@@ -3,12 +3,8 @@ package org.opentaint.go.sast.dataflow
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
-import org.opentaint.dataflow.ap.ifds.MethodWithContext
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
-import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.common.sast.CommonAnalysisOptions
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
@@ -22,22 +18,17 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.dataflow.go.analysis.GoAnalysisManager
-import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.ext.findFunctionByFullName
-import org.opentaint.jvm.sast.dataflow.DummySerializationContext
-import org.opentaint.util.analysis.ApplicationGraph
+import org.opentaint.ir.go.inst.GoIRInst
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.bufferedReader
@@ -46,10 +37,9 @@ import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
+import kotlin.io.print
 import kotlin.io.readText
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.use
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -60,13 +50,15 @@ abstract class AnalysisTest {
 
     // Standard source/sink rules
     val stdSource = Source(
-        function = GoNameMatcher.Simple("test/util.Source"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("Source"),
         condition = null,
         taint = listOf(GoSerializedAssignAction("taint", PositionBaseWithModifiers.BaseOnly(Result))),
         info = null,
     )
     val stdSink = Sink(
-        function = GoNameMatcher.Simple("test/util.Sink"),
+        pkg = GoNameMatcher.Simple("util"),
+        function = GoNameMatcher.Simple("Sink"),
         condition = GoSerializedCondition.ContainsMark("taint", PositionBaseWithModifiers.BaseOnly(Argument(0))),
         trackFactsReachAnalysisEnd = emptyList(),
         id = "test-id",
@@ -165,9 +157,24 @@ abstract class AnalysisTest {
         return runAnalysisOnConfig(serializedConfig, entryPointFunction)
     }
 
+    fun printFactsAt(
+        entryPointFunction: String,
+        source: Source = stdSource,
+        sink: Sink = stdSink,
+        extraPassRules: List<PassThrough> = emptyList(),
+    ) {
+        val allPassRules = commonPassRules + extraPassRules
+        val serializedConfig = GoSerializedTaintConfig(
+            source = listOf(source), sink = listOf(sink), passThrough = allPassRules
+        )
+
+        runAnalysisOnConfig(serializedConfig, entryPointFunction, printFacts = true)
+    }
+
     private fun runAnalysisOnConfig(
         serializedConfig: GoSerializedTaintConfig,
         entryPointFunction: String,
+        printFacts: Boolean = false,
     ): List<VulnerabilityWithTrace> {
         val entryPoint = cp.findFunctionByFullName(entryPointFunction)
             ?: error("Entry point not found: $entryPointFunction")
@@ -175,39 +182,56 @@ abstract class AnalysisTest {
         val loadedConfig = GoTaintConfiguration()
         loadedConfig.loadConfig(serializedConfig)
 
-        val ifdsGraph = GoApplicationGraph(cp, TestUnitResolver)
-
-        @Suppress("UNCHECKED_CAST")
-        val engine = TaintAnalysisUnitRunnerManager(
-            GoAnalysisManager(cp, loadedConfig),
-            ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
-            unitResolver = TestUnitResolver as UnitResolver<CommonMethod>,
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
-            summarySerializationContext = DummySerializationContext,
-            taintRulesStatsSamplingPeriod = null,
-        )
-
-        val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
-        return engine.use { eng ->
-            eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
-            val allVulnerabilities = eng.getVulnerabilities()
-            eng.resolveVulnerabilityTraces(
-                setOf(entryPoint), allVulnerabilities,
-                resolverParams = TraceResolver.Params(),
-                timeout = 1.minutes, cancellationTimeout = 10.seconds,
-            ).filter { it.trace != null }
+        val analyzer = GoTaintAnalyzer(cp, loadedConfig, GoTestUnitResolver, CommonAnalysisOptions().taintAnalyzerOptions())
+        analyzer.use {
+            val result = it.analyzeWithIfds(listOf(entryPoint))
+            if (printFacts) {
+                it.printFacts(entryPoint)
+            }
+            return result.first
         }
     }
 
-    private object TestUnitResolver : UnitResolver<GoIRFunction> {
+    internal object GoTestUnitResolver : UnitResolver<GoIRFunction> {
         override fun resolve(method: GoIRFunction): UnitType {
-            val pkgName = method.pkg?.importPath
-            return when (pkgName) {
-                "test" -> SingletonUnit
-                "test/util" -> UnknownUnit
-                "errors" -> UnknownUnit
-                else -> error("Unknown test pkg: $pkgName")
+            val pkgName = method.pkg?.importPath ?: return UnknownUnit
+            return when {
+                pkgName == "test" -> SingletonUnit
+                pkgName == "test/util" -> UnknownUnit
+                // Stdlib / external dependencies the sample may import (strings,
+                // container/list, sync/atomic, …) — treat as opaque so the
+                // analysis still runs.
+                else -> UnknownUnit
             }
         }
+    }
+
+    private fun GoTaintAnalyzer.printFacts(entryPoint: GoIRFunction) {
+        @Suppress("UNCHECKED_CAST")
+        val allFacts = statementsWithFacts() as Map<GoIRInst, Set<FinalFactAp>>
+
+        val sb = StringBuilder()
+        sb.appendLine("=== Facts at $entryPoint ===")
+        val body = entryPoint.body
+        if (body == null) {
+            sb.appendLine("  (no body)")
+        } else {
+            val sortedInsts = body.instructions.sortedWith(
+                compareBy(
+                    { it.location.blockIndex },
+                    { it.location.index },
+                )
+            )
+            for (stmt in sortedInsts) {
+                val loc = stmt.location
+                val line = loc.position?.line ?: -1
+                val coord = "${loc.blockIndex}:${loc.index}"
+                val facts = allFacts[stmt].orEmpty()
+                val factStr = if (facts.isEmpty()) "∅" else facts.joinToString(", ") { it.toString() }
+                sb.appendLine("  L${line.toString().padStart(3)} [$coord]  $stmt    facts: $factStr")
+            }
+        }
+        val report = sb.toString()
+        print(report)
     }
 }
