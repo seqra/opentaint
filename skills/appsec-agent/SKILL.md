@@ -105,7 +105,7 @@ On start, and after any compaction, reconstruct position from artifacts before d
 
 ## Tracking layout
 
-The single source of truth for the tracking schema; each skill writes only its own slice (named in its block reference).
+The single source of truth for the tracking schema; each skill writes only its own slice (named in its block reference). The `#` comments in the YAML below are for understanding only — never copy them into produced files.
 
 ```
 .opentaint/tracking/
@@ -236,7 +236,7 @@ methods:                # engine asks to approximate these, but they carry no ta
   project/                      # built project model (project.yaml)
   rules/java/{lib/generic,lib/spring,security}/   # custom rules
   pass-through/<name>.yaml      # passThrough approximation configs
-  approximations/<name>/        # code-based (dataflow) approximation sources, per unit
+  dataflow/<name>/              # code-based (dataflow) approximation sources, per unit
   test-projects/<name>/         # per-unit test project sources; a rule unit holds sinks/ and sources/ sub-projects, each with a test-rules/ (the generic markers + that side's test join — test-only, never loaded by the main scan)
   test-compiled/<name>/         # per-unit compiled test model (a rule unit: sinks/ and sources/ models)
   test-results/<name>/          # per-unit test outputs
@@ -252,8 +252,10 @@ methods:                # engine asks to approximate these, but they carry no ta
 
 ## Key constraints
 
+- the engine models stored / second-order injection (data persisted then read back) on its own — no source, sink-side, or propagator needs to be added for the store→read path
 - approximations apply only to external library methods — never an application-internal class
 - `--passthrough-approximations` merges with built-ins at the rule level; a provided rule overrides a built-in only when it matches one already there — it does not replace the built-in set
 - both approximation dir flags walk the tree recursively, so the final scan points at the parent dirs and applies every unit
 - `--rule-id` drops every rule not named, including library `refs` — list them all when restricting
 - a custom approximation targeting a class that already has a built-in one errors at load
+- a custom dataflow approximation overrides a passThrough for the same method — the passThrough→dataflow fallback when a passThrough won't converge; remove that method's passThrough config when re-planning it as dataflow, before the dataflow one is tested or scanned, to avoid override issues

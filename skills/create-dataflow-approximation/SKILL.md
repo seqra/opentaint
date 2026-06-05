@@ -17,7 +17,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 - Methods to model `<methods>` — the target method(s) and how taint flows through them, from the tracking file's `methods` (all `type: dataflow`)
 - Tracking file `<tracking-file>` — the dataflow approximation unit (`<package-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`). Default: `.opentaint/tracking/approximations/<name>.yaml`
-- Approximation sources `<approx-src>` — this package's own directory for the `.java` approximation files. Default: `.opentaint/approximations/<name>`
+- Approximation sources `<approx-src>` — this package's own directory for the `.java` approximation files. Default: `.opentaint/dataflow/<name>`
 - Compiled test project `<test-compiled>` — the per-package compiled model to test against. Default: `.opentaint/test-compiled/<name>`
 
 ## Workflow
@@ -111,7 +111,7 @@ After ~2 fix attempts without a clearer cause — `@Approximate` target matches 
 In `<tracking-file>`, once the source exists and its sample passes:
 
 ```yaml
-artifact: .opentaint/approximations/<name>/com/example/approximations/ReactiveProcessor.java
+artifact: .opentaint/dataflow/<name>/com/example/approximations/ReactiveProcessor.java
 stages:
   tests_passing: done
 ```
@@ -120,6 +120,7 @@ Do not touch other stages or fields
 
 ## Constraints
 
+- Also the passThrough fallback — when a passThrough for a method won't converge, the orchestrator re-plans it here; target the same dropped class and the dataflow approximation overrides the passThrough (the orchestrator removes the stale passThrough config before this one is tested)
 - Java 8 source compatibility
 - Put the `@Approximate` classes in a neutral package (e.g. `com.example.approximations`) — never the target library's own package. Inside the library's package every bare FQN resolves to your approximation's non-generic class instead of the real type, breaking compilation wholesale
 - Model every method and overload the unit lists, not only the shapes you happen to have a sample for — an under-covered unit silently drops taint through the overloads you skipped

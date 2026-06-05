@@ -20,7 +20,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Rule IDs `<full-id>` (optional) — full IDs to restrict the scan to, omit to run all loaded rules
 - SARIF output `<report.sarif>` — Default: `.opentaint/results/report.sarif`
 - PassThrough config `<config-dir>` (optional) — a passThrough YAML file or a directory of them. Default: `.opentaint/pass-through`
-- Dataflow approximations directory `<approx-dir>` (optional) — Default: `.opentaint/approximations`
+- Dataflow approximations directory `<approx-dir>` (optional) — Default: `.opentaint/dataflow`
 
 ## Workflow
 

@@ -27,7 +27,7 @@ Read `<model-dir>/project.yaml` — its `dependencies:` is every jar on the clas
 
 ### 2. Mark each library
 
-For each library decide: could it introduce an attacker-controlled source (e.g. HTTP/RPC request data, message-broker payloads, second-order rows read back and so on) or a dangerous sink (e.g. query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection and so on)?
+For each library decide: could it introduce an attacker-controlled source (e.g. HTTP/RPC request data, message-broker payloads and so on) or a dangerous sink (e.g. query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection and so on)?
 
 - clearly irrelevant — build/Gradle plugins, logging, annotations, bytecode tooling (ASM, byte-buddy), test libraries, pure data structures: dismiss
 - clearly relevant — web frameworks, query/ORM libraries, HTTP clients, deserializers, template engines, LDAP/JNDI, scripting: flag

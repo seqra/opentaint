@@ -20,7 +20,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Ruleset `<rules-dir>` — Default: `builtin` plus `.opentaint/rules`
 - Output directory `<results-dir>` — where the debug SARIF lands. Default: `.opentaint/test-results/<name>` for a test model, or `.opentaint/results` for a main scan
 - Dropped external methods `<dropped-file>` — the list from the run that showed the problem. Default: `dropped-external-methods.yaml` next to that run's SARIF
-- Approximation directories `<config-dir>` / `<approx-dir>` (optional) — apply when the behavior depends on them, so the debug run matches the run that showed the problem. Default: `.opentaint/pass-through`, `.opentaint/approximations`
+- Approximation directories `<config-dir>` / `<approx-dir>` (optional) — apply when the behavior depends on them, so the debug run matches the run that showed the problem. Default: `.opentaint/pass-through`, `.opentaint/dataflow`
 
 ## Workflow
 

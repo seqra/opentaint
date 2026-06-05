@@ -34,7 +34,7 @@ Before enumerating anything, see what the built-ins already match for this packa
 
 Find the package's jar in `<deps-dir>` (match the artifact from the dependency GAV; `unzip -l <jar> | grep <package-as-path>` confirms it owns the package) and read its compiled API with `javap` / `unzip` — capture as many real sources and sinks as the package exposes, not just the ones the app happens to call today. Never read the analyzer jar — only dependency jars
 
-- **sources** — methods returning attacker-controlled data (HTTP/RPC request data, message-broker payloads, second-order rows read back); general, not class-tagged
+- **sources** — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution): a method that *returns* attacker-controlled data — HTTP/RPC request data, a message-broker payload. NOT a method that merely passes data it was handed along — that's a propagator the engine already handles, not a source. General, not class-tagged
 - **sinks** — dangerous operations (query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection); tag each with its vuln class (`ssrf`, `sqli`, `path-traversal`, …)
 
 Verify each is real before recording: a source genuinely attacker-controlled, a sink genuinely dangerous with tainted input. Don't trace a flow between them — the analyzer pairs them at scan time
@@ -89,6 +89,7 @@ notes: >
 
 - Spring projects: the analyzer auto-discovers Spring endpoints, so `network` inbound sources are largely ones the built-ins already see — focus on the sinks
 - Generic projects: the analyzer treats all public/protected methods of public classes as entry points
+- Stored / second-order injection (data persisted then read back) is modeled by the engine on its own — don't plan a source for the read-back or a propagator for the store→read path
 
 ## Gotchas
 

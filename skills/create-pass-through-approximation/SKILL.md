@@ -86,6 +86,25 @@ passThrough:
     - .org.springframework.ldap.query.LdapQuery#filter#java.lang.Object
 ```
 
+Builder terminal — a no-arg `build()` / `toX()` that returns a new object carrying what the builder accumulated; no argument is involved, so copy each slot from `this` to the matching slot on `result` (the setters that filled the builder slot are separate rules of their own):
+```yaml
+passThrough:
+- function: com.google.common.collect.ImmutableMap$Builder#build
+  copy:
+  - from:
+    - this
+    - .java.util.Map#MapKey#java.lang.Object
+    to:
+    - result
+    - .java.util.Map#MapKey#java.lang.Object
+  - from:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
+    to:
+    - result
+    - .java.util.Map#MapValue#java.lang.Object
+```
+
 Conditional propagation — gate a rule with a `condition` (the copy still routes through a slot):
 ```yaml
 passThrough:
@@ -151,7 +170,7 @@ Never invoke or grep the analyzer JAR — its internals aren't a stable API; for
 
 ### 4. When the config won't converge
 
-After ~2 fix re-invocations without a clearer cause — matcher fields and `from`/`to` checked, writer/reader slots confirmed identical, the modeled method no longer in `dropped-external-methods.yaml`, but the scan still doesn't surface the flow — don't keep guessing. Report non-convergence to the caller; the orchestrator escalates to debug-rule for a fact-reachability trace of where taint dies
+After ~2 fix re-invocations without a clearer cause — matcher fields and `from`/`to` checked, writer/reader slots confirmed identical, the modeled method no longer in `dropped-external-methods.yaml`, but the scan still doesn't surface the flow — don't keep guessing at the copy. Report non-convergence to the caller: a passThrough can't express this method's propagation, so the fix is a dataflow approximation for it (a custom dataflow overrides the passThrough). The orchestrator re-plans the method as a dataflow unit and removes this passThrough config before the dataflow one is tested
 
 ## Output
 
@@ -190,7 +209,7 @@ Overrides
 - `overrides: false`: exact class only
 
 Conditions (the only keys that load from YAML)
-- take a `pos: <position>`: `typeIs`, `annotatedWith`, `constantMatches`, `constantEq`, `tainted`
+- take a `pos: <position>`: `typeIs`, `constantMatches`, `constantEq`, `tainted`
 - take the position directly, no `pos:` field: `isConstant`, `isNull` — adding `pos:` fails to load
 - nest other conditions: `anyOf`, `allOf`, `not`
 - `constantGt` / `constantLt` load but crash the scan when actually evaluated against a constant (their string-typed bound fails an engine type-check) — avoid until fixed
