@@ -82,7 +82,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val experimentalAAInterProcCallDepth: Int by option(help = "Experimental options: inter-proc alias analysis call depth")
         .int().default(1)
 
-    private val sarifOptions = SarifGenerationOptions(
+    private val sarifOptions get() = SarifGenerationOptions(
         sarifFileName = sarifFileName,
         sarifCodeFlowLimit = sarifCodeFlowLimit,
         useSemgrepStyleId = sarifSemgrepStyleId,
@@ -92,7 +92,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         generateFingerprint = sarifGenerateFingerprint,
     )
 
-    private val commonOptions = CommonAnalysisOptions(
+    private val commonOptions get() = CommonAnalysisOptions(
         customApproximationConfig = approximationsConfig,
         semgrepRuleSet = semgrepRuleSet,
         semgrepRuleLoadTrace = semgrepRuleLoadTrace,
