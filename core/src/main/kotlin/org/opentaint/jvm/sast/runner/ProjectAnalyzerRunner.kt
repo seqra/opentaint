@@ -16,8 +16,8 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Sev
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.go.sast.project.GoProjectAnalyzer
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
-import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.JirProjectAnalyzer
+import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.TestProjectAnalyzer
 import org.opentaint.jvm.sast.util.directory
 import org.opentaint.jvm.sast.util.file
@@ -134,7 +134,11 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
 
     override fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path): ProjectAnalysisStatus {
         val options = GoProjectAnalysisOptions(common = commonOptions)
-        return GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
+        return if (!debugOptions.runRuleTests) {
+            GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
+        } else {
+            TODO("GO project testing is not supported yet")
+        }
     }
 
     companion object {
