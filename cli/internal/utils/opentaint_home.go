@@ -50,22 +50,41 @@ func exeDir() string {
 	return filepath.Dir(exe)
 }
 
+// resolveBundledDir locates a bundled artifact directory (e.g. "lib" or "jre")
+// relative to the binary, supporting both supported install layouts:
+//
+//   - flat: <exe-dir>/<name> — the managed install (~/.opentaint/install/) keeps
+//     the binary, lib/ and jre/ in the same directory.
+//   - FHS:  <exe-dir>/../<name> — `make install` puts the binary in <prefix>/bin
+//     and artifacts in <prefix>/lib, so the directory is a sibling of bin/.
+//
+// The first layout whose directory exists wins. When neither exists it falls
+// back to the flat path so callers keep a stable default probe/download target.
+// Returns empty string if exeDir is empty (executable path undeterminable).
+func resolveBundledDir(exeDir, name string) string {
+	if exeDir == "" {
+		return ""
+	}
+	flat := filepath.Join(exeDir, name)
+	if pathExists(flat) {
+		return flat
+	}
+	if sibling := filepath.Join(exeDir, "..", name); pathExists(sibling) {
+		return sibling
+	}
+	return flat
+}
+
 // GetBundledLibPath returns the path to the bundled lib directory next to the binary.
 // Returns empty string if the path cannot be determined.
 func GetBundledLibPath() string {
-	if dir := exeDir(); dir != "" {
-		return filepath.Join(dir, "lib")
-	}
-	return ""
+	return resolveBundledDir(exeDir(), "lib")
 }
 
 // GetBundledJREPath returns the path to the bundled JRE directory next to the binary.
 // Returns empty string if the path cannot be determined.
 func GetBundledJREPath() string {
-	if dir := exeDir(); dir != "" {
-		return filepath.Join(dir, "jre")
-	}
-	return ""
+	return resolveBundledDir(exeDir(), "jre")
 }
 
 // GetInstallDir returns the path to ~/.opentaint/install/.
