@@ -177,20 +177,28 @@ func ReconcileInstallMarker() {
 	_ = WriteInstallVersionMarker()
 }
 
-// resolveArtifactPath resolves the path for an artifact by checking tiers in order:
+// resolveArtifactTier resolves both the storage tier and path for an artifact by
+// checking tiers in order:
 //  1. Bundled path (next to binary) — only if version matches bindVersion
 //  2. Install path (~/.opentaint/install/lib/) — only if version matches bindVersion
 //  3. Cache path (~/.opentaint/<cacheName>)
-func resolveArtifactPath(def globals.ArtifactDef) (string, error) {
+// When no tier exists yet, it returns the last tier as the default download target.
+func resolveArtifactTier(def globals.ArtifactDef) (string, string, error) {
 	tiers, err := ArtifactTiers(def)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if found := FindExisting(CurrentTiers(tiers, IsInstallCurrent())); found != nil {
-		return found.Path, nil
+		return found.Name, found.Path, nil
 	}
-	// Return last tier as default download target (even if artifact not yet downloaded)
-	return tiers[len(tiers)-1].Path, nil
+	last := tiers[len(tiers)-1]
+	return last.Name, last.Path, nil
+}
+
+// resolveArtifactPath resolves the path for an artifact. See resolveArtifactTier.
+func resolveArtifactPath(def globals.ArtifactDef) (string, error) {
+	_, path, err := resolveArtifactTier(def)
+	return path, err
 }
 
 func GetAutobuilderJarPath(version string) (string, error) {
