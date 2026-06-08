@@ -80,53 +80,14 @@ func GetLatestRelease(owner, repo, token string) (string, string, error) {
 }
 
 // DownloadReleaseArchive downloads the appropriate release archive for the current platform.
-func DownloadReleaseArchive(owner, repo, tag, token, destDir string, skipVerify bool) (string, error) {
-	client := newGithubClient(token)
-
+func DownloadReleaseArchive(owner, repo, tag, token, destDir string, skipVerify bool, printer *output.Printer) (string, error) {
 	archiveName := getArchiveName()
-	ctx := context.Background()
-
-	release, _, err := client.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
-	if err != nil {
-		return "", fmt.Errorf("failed to get release %s: %w", tag, err)
+	destPath := filepath.Join(destDir, archiveName)
+	if err := DownloadGithubReleaseAsset(owner, repo, tag, archiveName, destPath, token, skipVerify, printer); err != nil {
+		return "", fmt.Errorf("failed to download release archive %s: %w", archiveName, err)
 	}
-
-	for _, asset := range release.Assets {
-		if asset.GetName() == archiveName {
-			rc, _, err := client.Repositories.DownloadReleaseAsset(ctx, owner, repo, asset.GetID(), client.Client())
-			if err != nil {
-				return "", fmt.Errorf("failed to download asset: %w", err)
-			}
-			defer func() { _ = rc.Close() }()
-
-			destPath := filepath.Join(destDir, archiveName)
-			f, err := os.Create(destPath)
-			if err != nil {
-				return "", err
-			}
-			defer func() { _ = f.Close() }()
-
-			if _, err := f.ReadFrom(rc); err != nil {
-				return "", fmt.Errorf("failed to write archive: %w", err)
-			}
-
-			if err := f.Close(); err != nil {
-				return "", err
-			}
-
-			if !skipVerify {
-				if err := verifyAssetChecksum(client, owner, repo, release, asset, destPath); err != nil {
-					_ = os.Remove(destPath)
-					return "", err
-				}
-			}
-
-			output.LogDebugf("Downloaded release archive to %s", destPath)
-			return destPath, nil
-		}
-	}
-
-	return "", fmt.Errorf("archive %s not found in release %s", archiveName, tag)
+	output.LogDebugf("Downloaded release archive to %s", destPath)
+	return destPath, nil
 }
 
 func getArchiveName() string {
