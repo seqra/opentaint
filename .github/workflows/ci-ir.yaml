@@ -90,7 +90,7 @@ jobs:
           retention-days: 1
 
   go-ir:
-    name: Run lifecycle tests
+    name: Run Go-ir tests
     runs-on: ubuntu-latest
     container: ubuntu:latest
 
