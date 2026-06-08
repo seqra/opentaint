@@ -76,15 +76,8 @@ class SemgrepRuleLoader(
     ) {
         val ruleSet = parseSemgrepYaml(ruleSetText, semgrepFileTrace) ?: return
 
-        val (supportedRules, otherRules) = ruleSet.rules.partition { it.isSupportedRule() || it.isJoinRule() }
+        val (supportedRules, _) = ruleSet.rules.partition { it.isSupportedRule() }
         semgrepFileTrace.info("Found ${supportedRules.size} supported rules")
-
-        otherRules.forEach {
-            val ruleId = SemgrepRuleUtils.getRuleId(ruleSetName, it.id)
-            semgrepFileTrace
-                .ruleTrace(ruleId, it.id)
-                .error(Step.LOAD_RULESET, UnsupportedRuleLanguage(it.languages))
-        }
 
         supportedRules.forEach {
             val ruleId = SemgrepRuleUtils.getRuleId(ruleSetName, it.id)
@@ -466,9 +459,6 @@ class SemgrepRuleLoader(
     }
 
     private fun SemgrepYamlRule.isSupportedRule(): Boolean = strategyFor(this) != null
-
-    private fun SemgrepYamlRule.isJoinRule(): Boolean =
-        mode?.equals("join", ignoreCase = true) ?: false
 
     private fun SemgrepYamlRule.isLibraryRule(): Boolean =
         options?.getBoolKeyOrFalse("lib") ?: false
