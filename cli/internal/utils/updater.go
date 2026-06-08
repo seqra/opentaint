@@ -199,8 +199,8 @@ func SelfUpdate(archivePath, installDir string) error {
 	// Preserve the installation style: if bundled artifacts exist next to the
 	// binary, update them in place. Otherwise, place into the install tier
 	// (~/.opentaint/install/) so bare-binary installations stay bare.
-	libBundled := pathExists(filepath.Join(installDir, "lib"))
-	jreBundled := pathExists(filepath.Join(installDir, "jre"))
+	libBundled := PathExists(filepath.Join(installDir, "lib"))
+	jreBundled := PathExists(filepath.Join(installDir, "jre"))
 
 	if err := updateArtifactDir(tmpDir, "lib", libBundled, installDir); err != nil {
 		output.LogInfof("Failed to update lib directory: %v", err)

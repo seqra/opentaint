@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/seqra/opentaint/internal/utils"
 )
 
 // FixedRuleFileName is the rule's path relative to the ruleset root, and the value
@@ -33,17 +35,8 @@ func WriteFixedRule(dir string) (string, error) {
 // and the Taint source/sink helper. Samples are the agent's to write; the approximation under test
 // lives in its own unit folder (.opentaint/approximations/<name>), never inside this test project.
 func Scaffold(projectDir string) error {
-	files := map[string][]byte{
+	return utils.WriteFiles(map[string][]byte{
 		filepath.Join(projectDir, FixedRuleFileName):                           fixedRule,
 		filepath.Join(projectDir, "src", "main", "java", "test", "Taint.java"): taintJava,
-	}
-	for path, content := range files {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return fmt.Errorf("create %s: %w", filepath.Dir(path), err)
-		}
-		if err := os.WriteFile(path, content, 0o644); err != nil {
-			return fmt.Errorf("write %s: %w", filepath.Base(path), err)
-		}
-	}
-	return nil
+	})
 }

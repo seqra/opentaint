@@ -89,7 +89,7 @@ func runHealth() {
 	for _, c := range components {
 		value := c.path
 		if c.version != "" {
-			value = displayVersion(c.version) + "  " + c.path
+			value = shortVersion(c.version) + "  " + c.path
 		}
 		if !c.present {
 			value += "  " + out.Theme().Error.Render("missing")
@@ -105,10 +105,10 @@ func resolveHealthComponent(key string) healthComponent {
 	switch key {
 	case "autobuilder":
 		path, err := utils.GetAutobuilderJarPath(globals.Config.Autobuilder.Version)
-		return healthComponent{"Autobuilder", globals.Config.Autobuilder.Version, path, err == nil && pathExistsCmd(path)}
+		return healthComponent{"Autobuilder", globals.Config.Autobuilder.Version, path, err == nil && utils.PathExists(path)}
 	case "analyzer":
 		path, err := utils.GetAnalyzerJarPath(globals.Config.Analyzer.Version)
-		return healthComponent{"Analyzer", globals.Config.Analyzer.Version, path, err == nil && pathExistsCmd(path)}
+		return healthComponent{"Analyzer", globals.Config.Analyzer.Version, path, err == nil && utils.PathExists(path)}
 	case "rules":
 		return resolveRulesComponent()
 	case "runtime":
@@ -127,7 +127,7 @@ func resolveRulesComponent() healthComponent {
 		return c
 	}
 	c.path = path
-	if pathExistsCmd(path) {
+	if utils.PathExists(path) {
 		c.present = true
 		return c
 	}
@@ -139,7 +139,7 @@ func resolveRulesComponent() healthComponent {
 		fmt.Fprintf(os.Stderr, "Error downloading rules: %s\n", dlErr)
 		return c
 	}
-	c.present = pathExistsCmd(path)
+	c.present = utils.PathExists(path)
 	return c
 }
 
@@ -166,18 +166,10 @@ func resolveRuntimeComponent() healthComponent {
 	return c
 }
 
-// displayVersion strips the artifact-kind prefix (e.g. "rules/v0.1.1" → "v0.1.1").
-func displayVersion(v string) string {
+// shortVersion strips the artifact-kind prefix (e.g. "rules/v0.1.1" → "v0.1.1").
+func shortVersion(v string) string {
 	if idx := strings.LastIndex(v, "/"); idx >= 0 {
 		return v[idx+1:]
 	}
 	return v
-}
-
-func pathExistsCmd(p string) bool {
-	if p == "" {
-		return false
-	}
-	_, err := os.Stat(p)
-	return err == nil
 }

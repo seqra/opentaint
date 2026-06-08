@@ -30,8 +30,8 @@ func GetOpenTaintHome() (string, error) {
 	return path, nil
 }
 
-// pathExists reports whether a path exists on disk.
-func pathExists(p string) bool {
+// PathExists reports whether a path exists on disk.
+func PathExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil
 }
@@ -66,10 +66,10 @@ func resolveBundledDir(exeDir, name string) string {
 		return ""
 	}
 	flat := filepath.Join(exeDir, name)
-	if pathExists(flat) {
+	if PathExists(flat) {
 		return flat
 	}
-	if sibling := filepath.Join(exeDir, "..", name); pathExists(sibling) {
+	if sibling := filepath.Join(exeDir, "..", name); PathExists(sibling) {
 		return sibling
 	}
 	return flat
@@ -170,7 +170,7 @@ func ReconcileInstallMarker() {
 		return
 	}
 	for _, def := range globals.Artifacts() {
-		if !pathExists(filepath.Join(installLib, def.LibSubpath)) {
+		if !PathExists(filepath.Join(installLib, def.LibSubpath)) {
 			return
 		}
 	}
@@ -182,6 +182,7 @@ func ReconcileInstallMarker() {
 //  1. Bundled path (next to binary) — only if version matches bindVersion
 //  2. Install path (~/.opentaint/install/lib/) — only if version matches bindVersion
 //  3. Cache path (~/.opentaint/<cacheName>)
+//
 // When no tier exists yet, it returns the last tier as the default download target.
 func resolveArtifactTier(def globals.ArtifactDef) (string, string, error) {
 	tiers, err := ArtifactTiers(def)

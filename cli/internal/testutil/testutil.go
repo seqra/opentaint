@@ -11,6 +11,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/seqra/opentaint/internal/utils"
 )
 
 //go:generate go run ./generate_jar.go
@@ -45,7 +47,7 @@ func ExtractJar() (string, error) {
 	markerPath := filepath.Join(extractDir, ".content-hash")
 	wantHash := contentHash(jarData)
 
-	if !needsExtract(markerPath, wantHash) && fileExists(extractPath) {
+	if !needsExtract(markerPath, wantHash) && utils.PathExists(extractPath) {
 		return extractPath, nil
 	}
 
@@ -75,9 +77,4 @@ func needsExtract(markerPath, wantHash string) bool {
 		return true
 	}
 	return strings.TrimSpace(string(data)) != wantHash
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }

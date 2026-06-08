@@ -29,6 +29,12 @@ Use --project-model to scan a pre-compiled project model instead of compiling fr
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Args:        cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
+		// `reachability` is `scan` with a forced flag preset. scan reads its
+		// inputs from package-level vars (bound to its cobra flags), so we set
+		// those vars here and delegate to scanCmd.Run rather than duplicating
+		// the scan pipeline. This relies on shared mutable state: it assumes a
+		// single, non-concurrent command invocation per process (the CLI
+		// contract), and any new scan input must be wired through the same vars.
 		RuleID = []string{args[0]}
 		DebugFactReachabilitySarif = true
 		expandRuleRefs = true
