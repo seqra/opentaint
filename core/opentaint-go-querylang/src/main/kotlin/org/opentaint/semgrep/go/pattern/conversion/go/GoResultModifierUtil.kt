@@ -1,6 +1,6 @@
-package org.opentaint.semgrep.pattern.conversion.go
+package org.opentaint.semgrep.go.pattern.conversion.go
 
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy.Companion.FIELD_AUX_MODIFIER
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy.Companion.FIELD_AUX_MODIFIER
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifierValue
 

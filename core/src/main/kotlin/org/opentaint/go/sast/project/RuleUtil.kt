@@ -7,7 +7,7 @@ import org.opentaint.dataflow.go.rules.GoCombinedTaintRulesProvider
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.go.config.GoConfigLoader
-import org.opentaint.semgrep.pattern.conversion.toGoSerializedTaintConfig
+import org.opentaint.semgrep.go.pattern.conversion.toGoSerializedTaintConfig
 
 fun PreloadedRules<GoSerializedItem, GoSerializedTaintConfig>.loadRules(): GoTaintRulesProvider {
     val userConfig = GoTaintConfiguration()

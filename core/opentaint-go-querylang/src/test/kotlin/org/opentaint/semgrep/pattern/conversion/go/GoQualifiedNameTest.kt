@@ -1,10 +1,11 @@
 package org.opentaint.semgrep.pattern.conversion.go
 
-import org.opentaint.semgrep.pattern.conversion.GoConcreteType
+import org.opentaint.semgrep.go.pattern.conversion.GoConcreteType
+import org.opentaint.semgrep.go.pattern.conversion.go.goQualifiedName
+import org.opentaint.semgrep.go.pattern.conversion.goNamed
+import org.opentaint.semgrep.go.pattern.conversion.goQualified
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
 import org.opentaint.semgrep.pattern.conversion.TypeConstraint
-import org.opentaint.semgrep.pattern.conversion.goNamed
-import org.opentaint.semgrep.pattern.conversion.goQualified
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

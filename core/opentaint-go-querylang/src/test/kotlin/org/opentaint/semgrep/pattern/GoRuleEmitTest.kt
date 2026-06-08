@@ -4,8 +4,8 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.ir.go.type.GoIRUnsafePointerType
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.loadGoTaintConfiguration
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.go.pattern.conversion.loadGoTaintConfiguration
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertTrue

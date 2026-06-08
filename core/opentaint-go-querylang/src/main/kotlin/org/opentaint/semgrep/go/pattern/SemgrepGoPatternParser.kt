@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern
+package org.opentaint.semgrep.go.pattern
 
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
@@ -8,6 +8,9 @@ import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.RecognitionException
 import org.antlr.v4.runtime.Recognizer
 import org.antlr.v4.runtime.tree.TerminalNode
+import org.opentaint.semgrep.pattern.PatternParsingAstFailed
+import org.opentaint.semgrep.pattern.PatternParsingFailure
+import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternParser
 import org.opentaint.semgrep.pattern.go.antlr.GoLexer
 import org.opentaint.semgrep.pattern.go.antlr.GoParser

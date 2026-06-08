@@ -1,7 +1,12 @@
-package org.opentaint.semgrep.pattern.conversion
+package org.opentaint.semgrep.go.pattern.conversion
 
 import org.opentaint.semgrep.pattern.MetaVarConstraints
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
+import org.opentaint.semgrep.pattern.conversion.LanguageConcreteType
+import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
+import org.opentaint.semgrep.pattern.conversion.TypeConstraint
+import org.opentaint.semgrep.pattern.conversion.collectMetavars
+import org.opentaint.semgrep.pattern.conversion.unifyTypeConstraint
 
 sealed interface GoConcreteType : LanguageConcreteType {
     data class Named(val name: String) : GoConcreteType { override fun toString() = name }

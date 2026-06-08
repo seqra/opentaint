@@ -1,7 +1,8 @@
 package org.opentaint.semgrep.pattern.conversion
 
-import org.opentaint.semgrep.pattern.SemgrepGoPatternParser
-import org.opentaint.semgrep.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParser
+import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.go.pattern.conversion.GoPatternToActionListConverter
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 import kotlin.test.Test

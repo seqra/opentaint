@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern.conversion
+package org.opentaint.semgrep.go.pattern.conversion
 
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedFieldSource
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedGlobalSource

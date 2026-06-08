@@ -23,8 +23,8 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.util.io.inputStream
 import org.opentaint.project.GoProject
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.exists

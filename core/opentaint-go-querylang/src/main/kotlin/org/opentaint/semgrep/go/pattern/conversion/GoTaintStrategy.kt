@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern.conversion
+package org.opentaint.semgrep.go.pattern.conversion
 
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCleanAction
@@ -6,15 +6,16 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.semgrep.go.pattern.conversion.go.emitGoTaintRules
+import org.opentaint.semgrep.go.pattern.conversion.go.matchAnything
+import org.opentaint.semgrep.go.pattern.conversion.go.mkGoAssignMark
+import org.opentaint.semgrep.go.pattern.conversion.go.mkGoCleanMark
+import org.opentaint.semgrep.go.pattern.conversion.go.mkGoContainsMark
+import org.opentaint.semgrep.go.pattern.conversion.go.mkGoContainsMarkOnAnyAccessor
 import org.opentaint.semgrep.pattern.Mark
 import org.opentaint.semgrep.pattern.TaintRuleMatchAnything
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy.SinkDiscardMode
-import org.opentaint.semgrep.pattern.conversion.go.emitGoTaintRules
-import org.opentaint.semgrep.pattern.conversion.go.matchAnything
-import org.opentaint.semgrep.pattern.conversion.go.mkGoAssignMark
-import org.opentaint.semgrep.pattern.conversion.go.mkGoCleanMark
-import org.opentaint.semgrep.pattern.conversion.go.mkGoContainsMark
-import org.opentaint.semgrep.pattern.conversion.go.mkGoContainsMarkOnAnyAccessor
+import org.opentaint.semgrep.pattern.conversion.TaintRuleStrategy
 import org.opentaint.semgrep.pattern.conversion.taint.MarkConditionBuilder
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleGenerationCtx

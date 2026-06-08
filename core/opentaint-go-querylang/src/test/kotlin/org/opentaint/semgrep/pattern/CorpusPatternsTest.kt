@@ -2,6 +2,9 @@ package org.opentaint.semgrep.pattern
 
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import org.opentaint.semgrep.go.pattern.SemgrepGoPattern
+import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParser
+import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParsingResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

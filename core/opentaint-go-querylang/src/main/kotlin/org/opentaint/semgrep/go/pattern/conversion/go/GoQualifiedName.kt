@@ -1,6 +1,6 @@
-package org.opentaint.semgrep.pattern.conversion.go
+package org.opentaint.semgrep.go.pattern.conversion.go
 
-import org.opentaint.semgrep.pattern.conversion.GoConcreteType
+import org.opentaint.semgrep.go.pattern.conversion.GoConcreteType
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
 import org.opentaint.semgrep.pattern.conversion.TypeConstraint
 

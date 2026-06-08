@@ -1,11 +1,11 @@
-package org.opentaint.semgrep.pattern.conversion.go
+package org.opentaint.semgrep.go.pattern.conversion.go
 
+import org.opentaint.semgrep.go.pattern.conversion.GoConcreteType
+import org.opentaint.semgrep.go.pattern.conversion.GoTaintRuleGenerationCtx
 import org.opentaint.semgrep.pattern.MetaVarConstraint
 import org.opentaint.semgrep.pattern.MetaVarConstraintFormula
 import org.opentaint.semgrep.pattern.PlaceholderTypeName
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
-import org.opentaint.semgrep.pattern.conversion.GoConcreteType
-import org.opentaint.semgrep.pattern.conversion.GoTaintRuleGenerationCtx
 import org.opentaint.semgrep.pattern.conversion.TypeConstraint
 import org.opentaint.semgrep.pattern.conversion.taint.MetaVarConstraintOrPlaceHolder
 import org.opentaint.semgrep.pattern.transform

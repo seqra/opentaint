@@ -1,6 +1,6 @@
 package org.opentaint.semgrep.pattern
 
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.SemgrepRuleAutomataBuilder
 import org.opentaint.semgrep.pattern.conversion.automata.SemgrepRuleAutomata
 import kotlin.test.Test

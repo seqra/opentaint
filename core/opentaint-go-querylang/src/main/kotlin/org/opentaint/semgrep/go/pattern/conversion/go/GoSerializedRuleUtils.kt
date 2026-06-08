@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern.conversion.go
+package org.opentaint.semgrep.go.pattern.conversion.go
 
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction

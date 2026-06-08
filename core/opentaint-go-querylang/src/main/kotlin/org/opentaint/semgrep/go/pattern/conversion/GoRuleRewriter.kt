@@ -1,9 +1,10 @@
-package org.opentaint.semgrep.pattern.conversion
+package org.opentaint.semgrep.go.pattern.conversion
 
+import org.opentaint.semgrep.go.pattern.SemgrepGoPattern
 import org.opentaint.semgrep.pattern.NormalizedSemgrepRule
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 import org.opentaint.semgrep.pattern.RuleWithMetaVars
-import org.opentaint.semgrep.pattern.SemgrepGoPattern
+import org.opentaint.semgrep.pattern.conversion.RuleRewriter
 
 /** No AST rewrites for Go in v1. */
 class GoRuleRewriter : RuleRewriter<SemgrepGoPattern> {

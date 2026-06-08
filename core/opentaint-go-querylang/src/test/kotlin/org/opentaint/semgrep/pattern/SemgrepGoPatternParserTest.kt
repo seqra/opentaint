@@ -1,5 +1,22 @@
 package org.opentaint.semgrep.pattern
 
+import org.opentaint.semgrep.go.pattern.CallExpr
+import org.opentaint.semgrep.go.pattern.ConcreteName
+import org.opentaint.semgrep.go.pattern.DeepExpr
+import org.opentaint.semgrep.go.pattern.Ellipsis
+import org.opentaint.semgrep.go.pattern.EllipsisArgPrefix
+import org.opentaint.semgrep.go.pattern.EllipsisStmt
+import org.opentaint.semgrep.go.pattern.FuncDecl
+import org.opentaint.semgrep.go.pattern.Identifier
+import org.opentaint.semgrep.go.pattern.ImportDecl
+import org.opentaint.semgrep.go.pattern.Metavar
+import org.opentaint.semgrep.go.pattern.MetavarName
+import org.opentaint.semgrep.go.pattern.SelectorExpr
+import org.opentaint.semgrep.go.pattern.SemgrepGoPattern
+import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParser
+import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParsingResult
+import org.opentaint.semgrep.go.pattern.StringEllipsis
+import org.opentaint.semgrep.go.pattern.StringLiteral
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

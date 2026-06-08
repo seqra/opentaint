@@ -1,5 +1,9 @@
 package org.opentaint.semgrep.pattern.conversion
 
+import org.opentaint.semgrep.go.pattern.conversion.GoConcreteType
+import org.opentaint.semgrep.go.pattern.conversion.GoTypeOps
+import org.opentaint.semgrep.go.pattern.conversion.goNamed
+import org.opentaint.semgrep.go.pattern.conversion.goQualified
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 import kotlin.test.Test
 import kotlin.test.assertEquals

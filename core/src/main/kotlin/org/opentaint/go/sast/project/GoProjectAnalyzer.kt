@@ -17,7 +17,7 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.project.GoProject
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import java.io.InputStream
 import java.nio.file.Path
 

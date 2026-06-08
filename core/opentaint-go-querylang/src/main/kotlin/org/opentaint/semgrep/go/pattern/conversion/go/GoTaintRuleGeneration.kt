@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern.conversion.go
+package org.opentaint.semgrep.go.pattern.conversion.go
 
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
@@ -13,6 +13,8 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.go.pattern.conversion.GoTaintRuleGenerationCtx
 import org.opentaint.semgrep.pattern.FailedToCreateTaintRules
 import org.opentaint.semgrep.pattern.IgnoredMetavarConstraint
 import org.opentaint.semgrep.pattern.MetaVarConstraint
@@ -21,8 +23,6 @@ import org.opentaint.semgrep.pattern.NonMethodCallCleaner
 import org.opentaint.semgrep.pattern.PlaceholderMethodName
 import org.opentaint.semgrep.pattern.PlaceholderStringValue
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.GoTaintRuleGenerationCtx
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
