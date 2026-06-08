@@ -21,7 +21,6 @@ jobs:
 
     permissions:
       contents: write
-      packages: write
 
     steps:
       # ubuntu-latest GitHub-hosted runners already ship git and the GitHub CLI (gh),
