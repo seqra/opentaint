@@ -2,8 +2,10 @@ package org.opentaint.project
 
 import mu.KLogging
 import java.nio.file.Path
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.forEachDirectoryEntry
 import kotlin.io.path.isDirectory
@@ -87,8 +89,8 @@ class PortableProjectCreator(
 
         if (portableProjectPath.exists()) {
             if (!portableProjectPath.isDirectory() || portableProjectPath.isNotEmpty()) {
-                logger.error { "Portable project path exists" }
-                return null
+                logger.warn { "Portable project path exists: overwrite $portableProjectPath" }
+                portableProjectPath.cleanupDirectory() ?: return null
             }
         }
 
@@ -106,8 +108,8 @@ class PortableProjectCreator(
 
         if (portableProjectPath.exists()) {
             if (!portableProjectPath.isDirectory() || portableProjectPath.isNotEmpty()) {
-                logger.error { "Portable project path exists" }
-                return null
+                logger.warn { "Portable project path exists: overwrite $portableProjectPath" }
+                portableProjectPath.cleanupDirectory() ?: return null
             }
         }
 
@@ -182,6 +184,14 @@ class PortableProjectCreator(
     private fun copyDirectory(from: Path, dst: Path) {
         dst.createDirectories()
         from.copyDirRecursivelyTo(dst)
+    }
+
+    @OptIn(ExperimentalPathApi::class)
+    private fun Path.cleanupDirectory(): Unit? = try {
+        deleteRecursively()
+    } catch (e: Exception) {
+        logger.error("Directory $this cleanup failed", e)
+        null
     }
 
     companion object {
