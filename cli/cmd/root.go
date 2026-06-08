@@ -131,6 +131,10 @@ func init() {
 	_ = rootCmd.PersistentFlags().MarkHidden("go-server-version")
 	_ = viper.BindPFlag("go-server.version", rootCmd.PersistentFlags().Lookup("go-server-version"))
 
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Binary, "go-server-binary", "", "Path to go-ssa-server binary (dev override, skips download)")
+	_ = rootCmd.PersistentFlags().MarkHidden("go-server-binary")
+	_ = viper.BindPFlag("go-server.binary", rootCmd.PersistentFlags().Lookup("go-server-binary"))
+
 	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to use for running analyzer")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))
 

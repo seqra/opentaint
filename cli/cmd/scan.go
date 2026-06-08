@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -389,10 +390,35 @@ func scan(cmd *cobra.Command) {
 		nativeBuilder.AddDataflowApproximations(compiledPath)
 	}
 
+	// Go projects: the analyzer drives an out-of-process go-ssa-server. Verify the
+	// Go toolchain is present (friendly preflight), resolve the server binary, and
+	// pass its ABSOLUTE path to the analyzer via GOIR_SERVER_BINARY. Non-Go scans
+	// skip all of this entirely (R6). This runs only on the real scan path (after
+	// the --dry-run early return above), so dry-run stays side-effect-free.
+	//
+	// sourceRoot is the live source tree for source scans and the project.yaml
+	// sourceRoot for --project-model scans, so Go detection covers both paths;
+	// for a precompiled model it relies on the recorded source root still existing
+	// on disk with its go.mod (otherwise detection yields false and the env var is
+	// not set).
+	var goServerEnv map[string]string
+	if validation.IsGoProject(sourceRoot) {
+		if _, lookErr := exec.LookPath("go"); lookErr != nil {
+			out.Fatal("Scanning a Go project requires the Go toolchain, but `go` was not found on your PATH.\n" +
+				"Install Go (https://go.dev/dl/) and ensure `go` is on your PATH, then re-run.")
+		}
+		goServerPath, goErr := EnsureGoServerAvailable()
+		if goErr != nil {
+			out.Fatalf("Native scan preparation failed: %s", goErr)
+		}
+		goServerEnv = map[string]string{"GOIR_SERVER_BINARY": goServerPath}
+	}
+
 	analyzerJavaRunner := java.NewJavaRunner().
 		WithSkipVerify(globals.Config.SkipVerify).
 		WithDebugOutput(out.DebugStream("Analyzer")).
 		WithImageType(java.AdoptiumImageJRE).
+		WithExtraEnv(goServerEnv).
 		TrySpecificVersion(globals.DefaultJavaVersion)
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		out.Fatalf("Failed to resolve Java for analyzer: %s", err)
@@ -616,7 +642,24 @@ func ensureAnalyzerAvailable() (string, error) {
 //
 // This is the public entry point intended to be called for Go projects (Task 03)
 // and by `opentaint pull`. It does not set any environment variables.
+//
+// When the --go-server-binary override is set (globals.Config.GoServer.Binary),
+// it short-circuits: the provided path is validated to exist, converted to an
+// absolute path, and returned WITHOUT downloading, WITHOUT requiring the version
+// manifest tag, and WITHOUT chmod (the user-provided file is respected). This
+// mirrors how --analyzer-jar overrides ensureAnalyzerAvailable().
 func EnsureGoServerAvailable() (string, error) {
+	if globals.Config.GoServer.Binary != "" {
+		if _, err := os.Stat(globals.Config.GoServer.Binary); err != nil {
+			return "", fmt.Errorf("go-ssa-server binary not found at %s: %w", globals.Config.GoServer.Binary, err)
+		}
+		absPath, err := filepath.Abs(globals.Config.GoServer.Binary)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve absolute path to the go-ssa-server: %w", err)
+		}
+		return absPath, nil
+	}
+
 	version := globals.Config.GoServer.Version
 	if version == "" {
 		version = globals.GoServerBindVersion

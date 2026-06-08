@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -189,4 +190,13 @@ func ValidateSourceProject(absProjectRoot string) error {
 // always operates on source directories.
 func ValidateSourceProjectForCompile(absProjectRoot string) error {
 	return validateSourceDir(absProjectRoot, false)
+}
+
+// IsGoProject reports whether absProjectRoot is detected as a Go project, i.e. a
+// go.mod marker is found within the marker search depth. It reuses the same
+// (unexported) detection logic as source validation, so it stays in sync with
+// the supportedLanguages registry. Returns false when the directory does not
+// exist or cannot be walked.
+func IsGoProject(absProjectRoot string) bool {
+	return slices.Contains(detectLanguages(absProjectRoot), "Go")
 }

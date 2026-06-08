@@ -90,6 +90,7 @@ type Rules struct {
 
 type GoServer struct {
 	Version string `mapstructure:"version"`
+	Binary  string `mapstructure:"binary"`
 }
 
 type Java struct {
