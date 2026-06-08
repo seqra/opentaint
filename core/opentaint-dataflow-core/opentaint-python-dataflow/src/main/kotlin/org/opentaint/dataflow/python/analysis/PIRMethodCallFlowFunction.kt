@@ -7,20 +7,12 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartFFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.NDFactCallFailureFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Unchanged
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFailureFact
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils
@@ -42,7 +34,7 @@ class PIRMethodCallFlowFunction(
     private val apManager: ApManager,
     private val returnValue: CommonValue?,
     private val callResolver: PIRCallResolver,
-) : MethodCallFlowFunction {
+) : MethodCallFlowFunction.Default {
     private val callExpr = callInst.callExpr ?: error("Unexpected null call expr")
 
     private val resolvedMethods by lazy { callResolver.resolveCall(callInst) } // TODO apply rules separately
@@ -61,58 +53,6 @@ class PIRMethodCallFlowFunction(
         return results
     }
 
-    override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<ZeroCallFact> = buildSet {
-        propagateFact(
-            currentFactAp = currentFactAp,
-            skipCall = { this += Unchanged },
-            addCallToStart = { factReader, callerFactAp, startFactBase ->
-                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
-                this += CallToStartZFact(callerFactAp, startFactBase, null)
-            },
-            addCallToReturn = { factReader, factAp ->
-                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
-                this += CallToReturnZFact(factAp, null)
-            },
-            addSideEffectRequirement = { factReader ->
-                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
-            },
-        )
-    }
-
-    override fun propagateFactToFact(
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-    ): Set<FactCallFact> = buildSet {
-        propagateFact(
-            currentFactAp = currentFactAp,
-            skipCall = { this += Unchanged },
-            addSideEffectRequirement = { factReader ->
-                this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
-            },
-            addCallToReturn = { factReader, factAp ->
-                this += CallToReturnFFact(
-                    factReader.refineFact(initialFactAp),
-                    factReader.refineFact(factAp),
-                    traceInfo = null
-                )
-            },
-            addCallToStart = { factReader, callerFactAp, startFactBase ->
-                this += CallToStartFFact(
-                    factReader.refineFact(initialFactAp),
-                    factReader.refineFact(callerFactAp),
-                    startFactBase,
-                    traceInfo = null,
-                )
-            },
-        )
-    }
-
-    override fun propagateNDFactToFact(
-        initialFacts: Set<InitialFactAp>,
-        currentFactAp: FinalFactAp,
-    ): Set<NDFactCallFact> = setOf(Unchanged)
-
-    // --- Shared propagation logic ---
 
     /**
      * Shared logic for both zero-to-fact and fact-to-fact propagation at call sites.
@@ -123,19 +63,22 @@ class PIRMethodCallFlowFunction(
      * [mkCallToStartFact] creates a call-to-start fact from (callerFact, startBase).
      * [mkUnchanged] creates the "unchanged" fact to keep in caller frame.
      */
-    private fun propagateFact(
-        currentFactAp: FinalFactAp,
+    override fun propagateFact(
+        initialFacts: Set<InitialFactAp>,
+        exclusion: ExclusionSet,
+        factAp: FinalFactAp,
         skipCall: () -> Unit,
-        addCallToStart: (FinalFactReader, FinalFactAp, AccessPathBase) -> Unit,
-        addCallToReturn: (FinalFactReader, FinalFactAp) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit
     ) {
-        if (!ctx.methodCallFactMapper.factIsRelevantToMethodCall(callInst, returnValue = null, callExpr, currentFactAp)) {
+        if (!ctx.methodCallFactMapper.factIsRelevantToMethodCall(callInst, returnValue = null, callExpr, factAp)) {
             skipCall()
             return
         }
 
-        val reader = FinalFactReader(currentFactAp, apManager)
+        val reader = FinalFactReader(factAp, apManager)
         applySinkRules(reader)
 
         ctx.methodCallFactMapper.mapMethodCallToStartFlowFact(
@@ -143,12 +86,10 @@ class PIRMethodCallFlowFunction(
             callInst.location.method,
             callExpr,
             returnValue,
-            currentFactAp,
+            factAp,
             FactTypeChecker.Dummy,
         ) { fact, startBase ->
-            applyPassRules(reader, fact.rebase(startBase), addCallToReturn)
-
-            addCallToStart(reader, fact, startBase)
+            addCallToStart(reader, fact, startBase, TraceInfo.Flow)
         }
 
         if (reader.hasRefinement) {
@@ -156,37 +97,34 @@ class PIRMethodCallFlowFunction(
         }
     }
 
-    override fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact> =
-        setOf(CallToReturnZeroFact)
+    override fun propagateUnresolvedCallFact(
+        factAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit
+    ) {
+        val factReader = FinalFactReader(factAp, apManager)
 
-    override fun propagateZeroToFactResolutionFailure(
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<ZeroCallFailureFact> {
-        return setOf(CallToReturnZFact(currentFactAp, traceInfo = null))
+        unresolvedCallPropagateDefault(factReader, factAp, addCallToReturn)
+
+        applyPassRules(factReader, factAp.rebase(startFactBase), addCallToReturn)
+
+        if (factReader.hasRefinement) {
+            addSideEffectRequirement(factReader)
+        }
     }
 
-    override fun propagateFactToFactResolutionFailure(
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<FactCallFailureFact> {
-        return setOf(CallToReturnFFact(initialFactAp, currentFactAp, traceInfo = null))
-    }
-
-    override fun propagateNDFactToFactResolutionFailure(
-        initialFacts: Set<InitialFactAp>,
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<NDFactCallFailureFact> {
-        return setOf(
-            MethodCallFlowFunction.CallToReturnNonDistributiveFact(initialFacts, currentFactAp, traceInfo = null)
-        )
+    fun unresolvedCallPropagateDefault(
+        reader: FinalFactReader,
+        factAp: FinalFactAp,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
+    ) {
+        addCallToReturn(reader, factAp, null)
     }
 
     private fun applySourceRules(
         exclusionSet: ExclusionSet,
-        createFinalFact: (FinalFactAp, MethodCallFlowFunction.TraceInfo) -> Unit,
+        createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         val sourceRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
             ctx.taintRules.sourcesForMethod(method)
@@ -223,7 +161,7 @@ class PIRMethodCallFlowFunction(
     private fun applyPassRules(
         originalFactReader: FinalFactReader,
         mappedFact: FinalFactAp,
-        propagateFact: (FinalFactReader, FinalFactAp) -> Unit,
+        propagateFact: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
     ) {
         val typeChecker = FactTypeChecker.Dummy
         val passRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
@@ -243,11 +181,12 @@ class PIRMethodCallFlowFunction(
 
                 evaluator.propagateData(rule, action, from, to).onSome { facts ->
                     facts.forEach { fact ->
+                        val traceInfo = TraceInfo.Rule(rule, action)
                         ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, fact.fact, typeChecker).forEach { mappedFact ->
-                            propagateFact(reader, mappedFact)
+                            propagateFact(reader, mappedFact, traceInfo)
 
                             ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, mappedFact) {
-                                propagateFact(reader, it)
+                                propagateFact(reader, it, traceInfo)
                             }
                         }
                     }
