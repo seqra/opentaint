@@ -90,8 +90,77 @@ class OwaspBenchmarkTest : AnalysisTest() {
     }
 
     @Test
+    fun benchmarkTest00284() {
+        assertSinkReachable(getFunctionName("00284"))
+    }
+
+    @Ignore
+    @Test
+    fun benchmarkTest00454() {
+        assertSinkReachable(getFunctionName("00454"))
+    }
+
+    @Ignore
+    @Test
+    fun benchmarkTest00455() {
+        assertSinkReachable(getFunctionName("00455"))
+    }
+
+    @Test
     fun benchmarkTest00099() {
         assertSinkReachable(getFunctionName("00099"))
+    }
+
+    @Test
+    fun benchmarkTest00012() {
+        assertSinkNotReachable(getFunctionName("00012"))
+    }
+
+    @Test
+    fun benchmarkTest00100() {
+        assertSinkNotReachable(getFunctionName("00100"))
+    }
+
+    @Ignore
+    @Test
+    fun benchmarkTest00192() {
+        assertSinkNotReachable(getFunctionName("00192"))
+    }
+
+    @Test
+    fun benchmarkTest00285() {
+        assertSinkNotReachable(getFunctionName("00285"))
+    }
+
+    @Test
+    fun benchmarkTest00286() {
+        assertSinkNotReachable(getFunctionName("00286"))
+    }
+
+    @Ignore
+    @Test
+    fun benchmarkTest00287() {
+        assertSinkNotReachable(getFunctionName("00287"))
+    }
+
+    @Test
+    fun benchmarkTest00755() {
+        assertSinkNotReachable(getFunctionName("00755"))
+    }
+
+    @Test
+    fun benchmarkTest01021() {
+        assertSinkNotReachable(getFunctionName("01021"))
+    }
+
+    @Test
+    fun benchmarkTest01203() {
+        assertSinkNotReachable(getFunctionName("01203"))
+    }
+
+    @Test
+    fun benchmarkTest01229() {
+        assertSinkNotReachable(getFunctionName("01229"))
     }
 
 
