@@ -1,0 +1,7 @@
+tests:
+  - rule-id: go/security/sql-injection.yaml#go-sql-injection
+    positive:
+      - test/security/sql-injection/sqlinj_01_env_basic.Positive_basic
+
+    negative:
+      - test/security/sql-injection/sqlinj_01_env_basic.Negative_const

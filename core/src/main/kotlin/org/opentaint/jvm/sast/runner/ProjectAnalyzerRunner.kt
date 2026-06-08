@@ -15,6 +15,7 @@ import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.go.sast.project.GoProjectAnalyzer
+import org.opentaint.go.sast.project.GoTestProjectAnalyzer
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.jvm.sast.project.JirProjectAnalyzer
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
@@ -141,7 +142,8 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         return if (!debugOptions.runRuleTests) {
             GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
         } else {
-            TODO("GO project testing is not supported yet")
+            val testAnalyzer = GoTestProjectAnalyzer(project, analyzerOutputDir, options)
+            testAnalyzer.analyze()
         }
     }
 
