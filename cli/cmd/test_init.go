@@ -183,7 +183,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("open source: %w", err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return fmt.Errorf("create parent dir: %w", err)
@@ -193,10 +193,14 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("create destination: %w", err)
 	}
-	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, in); err != nil {
+		_ = outFile.Close()
 		return fmt.Errorf("copy: %w", err)
+	}
+
+	if err := outFile.Close(); err != nil {
+		return fmt.Errorf("close destination: %w", err)
 	}
 	return nil
 }
