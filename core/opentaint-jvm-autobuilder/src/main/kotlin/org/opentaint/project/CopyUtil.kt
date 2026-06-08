@@ -1,9 +1,11 @@
 package org.opentaint.project
 
 import mu.KLogging
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import kotlin.io.path.CopyActionResult
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.OnErrorResult
 import kotlin.io.path.copyToRecursively
@@ -43,14 +45,15 @@ private fun copyDirRecursively(from: Path, to: Path) {
         },
         followLinks = false,
     ) { src, dst ->
-        val result = src.copyToIgnoringExistingDirectory(dst, followLinks = false)
-        // The source may be a read-only JDK (e.g. from the Nix store); a directory copied from it
-        // lacks the owner write bit, so its files then fail to copy with AccessDeniedException.
-        // Restore it on each copied directory before its children are visited.
-        if (dst.isDirectory(LinkOption.NOFOLLOW_LINKS)) {
-            dst.toFile().setWritable(true, true)
+        if (src.isDirectory(LinkOption.NOFOLLOW_LINKS)) {
+            when {
+                !dst.exists(LinkOption.NOFOLLOW_LINKS) -> Files.createDirectory(dst)
+                !dst.isDirectory(LinkOption.NOFOLLOW_LINKS) -> throw FileAlreadyExistsException(dst.toString())
+            }
+            CopyActionResult.CONTINUE
+        } else {
+            src.copyToIgnoringExistingDirectory(dst, followLinks = false)
         }
-        result
     }
 }
 
