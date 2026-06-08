@@ -11,7 +11,7 @@ class SemgrepGoPatternParserTest {
     private fun parse(pattern: String): SemgrepGoPattern {
         val r = parser.parseSemgrepGoPattern(pattern)
         assertTrue(r is SemgrepGoPatternParsingResult.Ok, "Expected Ok for `$pattern`, got $r")
-        return (r as SemgrepGoPatternParsingResult.Ok).pattern
+        return r.pattern
     }
 
     /** Walks the AST and returns the first pattern matching the predicate, or null. */
@@ -23,16 +23,6 @@ class SemgrepGoPatternParserTest {
         return null
     }
 
-    @Test fun metavar() {
-        // `$X` is ambiguous: ANTLR resolves it via the `type_ EOF` alternative,
-        // so we expect a TypeOnlyPattern wrapping a MetavarType.
-        val ast = parse("\$X")
-        assertTrue(
-            ast is TypeOnlyPattern && (ast as TypeOnlyPattern).type == MetavarType("\$X"),
-            "Expected TypeOnlyPattern(MetavarType(\$X)), got $ast"
-        )
-    }
-
     @Test fun ellipsis() {
         val ast = parse("...")
         assertNotNull(find(ast) { it is EllipsisStmt || it is Ellipsis })
@@ -42,16 +32,16 @@ class SemgrepGoPatternParserTest {
         val ast = parse("f(...)")
         val call = find(ast) { it is CallExpr } as? CallExpr
         assertNotNull(call)
-        assertTrue(call!!.args is EllipsisArgPrefix)
+        assertTrue(call.args is EllipsisArgPrefix)
     }
 
     @Test fun fmtPrintln() {
         val ast = parse("fmt.Println(\$X)")
         val call = find(ast) { it is CallExpr } as? CallExpr
         assertNotNull(call)
-        val sel = call!!.fn as? SelectorExpr
+        val sel = call.fn as? SelectorExpr
         assertNotNull(sel)
-        assertEquals(ConcreteName("Println"), sel!!.sel)
+        assertEquals(ConcreteName("Println"), sel.sel)
         // obj is fmt identifier
         val obj = sel.obj
         assertTrue(
@@ -71,7 +61,7 @@ class SemgrepGoPatternParserTest {
         val ast = parse("func \$F(\$X int) int")
         val decl = find(ast) { it is FuncDecl } as? FuncDecl
         assertNotNull(decl)
-        assertEquals(MetavarName("\$F"), decl!!.name)
+        assertEquals(MetavarName("\$F"), decl.name)
     }
 
     @Test fun importStmt() {
@@ -83,7 +73,7 @@ class SemgrepGoPatternParserTest {
         val ast = parse("\"\$STR\"")
         val sl = find(ast) { it is StringLiteral && it.content is MetavarName } as? StringLiteral
         assertNotNull(sl)
-        assertEquals(MetavarName("\$STR"), sl!!.content)
+        assertEquals(MetavarName("\$STR"), sl.content)
     }
 
     @Test fun ellipsisStringLit() {

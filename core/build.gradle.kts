@@ -11,6 +11,8 @@ import OpentaintProjectDependency.opentaintProject
 import OpentaintUtilDependency.opentaintUtilCli
 import OpentaintUtilDependency.opentaintUtilJvm
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
 import org.opentaint.common.resolveIncludedProjectTask
@@ -91,6 +93,13 @@ tasks.withType<Test> {
 
 tasks.withType<JavaCompile> {
     sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+}
+
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
 }
 
 val projectAnalyzerJar = tasks.register<ShadowJar>("projectAnalyzerJar") {
