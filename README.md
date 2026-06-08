@@ -149,7 +149,7 @@ OpenTaint includes agent skills that turn static analysis into an end-to-end app
 npx skills add https://github.com/seqra/opentaint
 ```
 
-The `appsec-agent` skill orchestrates a full JVM project assessment: build the project, run OpenTaint, model missing library data flows, triage findings, and optionally generate dynamic proof-of-concept checks for confirmed vulnerabilities.
+The `appsec-agent` skill orchestrates a full project assessment: build the project, run OpenTaint, discover the attack surface, add targeted rules, model missing library data flows, triage findings, and optionally generate dynamic proof-of-concept checks for confirmed vulnerabilities.
 
 Included skills cover the common security-analysis loop:
 
