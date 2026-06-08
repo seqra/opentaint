@@ -46,6 +46,7 @@ import org.opentaint.ir.api.python.PIRClassType
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRParameter
 import org.opentaint.ir.api.python.PIRType
+import org.opentaint.ir.api.python.PythonNames
 
 /**
  * Compiles serialized Python taint rules against a concrete
@@ -220,7 +221,7 @@ internal object MethodTaintConfigurationResolver {
         if (method is PIRSimpleNameUnknownFunction) return name.substringAfterLast('.') == method.name
 
         val qn = method.qualifiedName
-        val ctorQn = if (method.enclosingClass != null) qn.removeSuffix(".__init__") else qn
+        val ctorQn = if (method.enclosingClass != null) qn.removeSuffix(".${PythonNames.INIT_METHOD}") else qn
         return when {
             hasRegexMetaChar(name) -> {
                 val rx = Regex(name)

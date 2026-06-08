@@ -14,6 +14,7 @@ import org.opentaint.ir.api.python.PIRModuleNameRef
 import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRReadName
 import org.opentaint.ir.api.python.PIRType
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.api.python.targets
 
 class PIRMethodQFNameReconstructor private constructor(
@@ -174,7 +175,7 @@ class PIRMethodQFNameReconstructor private constructor(
     private fun constructorInitQnOrNull(calleeName: NameEntry): String? {
         val qn = calleeName.flattenOrNull() ?: return null
         if (cp.findClassOrNull(qn) == null) return null
-        val initQn = "$qn.__init__"
+        val initQn = "$qn.${PythonNames.INIT_METHOD}"
         return if (cp.findFunctionOrNull(initQn) != null) initQn else null
     }
 

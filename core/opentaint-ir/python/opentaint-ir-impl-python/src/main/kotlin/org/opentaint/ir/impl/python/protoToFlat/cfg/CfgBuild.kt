@@ -62,12 +62,20 @@ internal object CfgBuild {
         sourceLabel: String = qualifiedName,
         errorPrefix: String = "Failed to build CFG for $qualifiedName",
         imports: ImportManager = module.imports.nestedChild(),
+        isConstructor: Boolean = false,
     ): CfgBuildResult {
+        val constructorSelf = if (isConstructor) {
+            parameters.firstOrNull()?.let { FlatLocal(it.name, it.type) }
+        } else {
+            null
+        }
+
         val session = CfgSession(
             module = module,
             currentFunctionQualifiedName = qualifiedName,
             currentFunctionName = functionName,
             imports = imports,
+            constructorSelf = constructorSelf,
         )
         return runOrEmpty(module, sourceLabel, errorPrefix) {
             for (param in parameters) {

@@ -32,6 +32,7 @@ import org.opentaint.ir.api.python.PIRStringExpr
 import org.opentaint.ir.api.python.PIRSubscriptExpr
 import org.opentaint.ir.api.python.PIRTupleExpr
 import org.opentaint.ir.api.python.PIRValue
+import org.opentaint.ir.api.python.PythonNames
 
 /**
  * DSU alias simulator — port of the JVM `DSUAliasAnalysis`, dispatching directly
@@ -134,7 +135,7 @@ class PIRDSUAliasAnalysis(
             val calleeInitial = bindReceiver(stateBefore, calleeRef, method, resolvedMethod)
             analyze(resolvedMethod.graph, calleeInitial, resolvedMethod.state)
             statesAfterCall += resolvedMethod.state.mapCallFinalStates(
-                resolvedMethod.graph, callerLValue, callFrame.ctx.level, isConstructor(method),
+                resolvedMethod.graph, callerLValue, callFrame.ctx.level
             )
         }
 
@@ -143,23 +144,20 @@ class PIRDSUAliasAnalysis(
         return State.merge(aliasManager, dsuMergeStrategy, statesAfterCall)
     }
 
-    /**
-     * The callee's implicit `self`/`cls` slot in [ctx] — the unbound `Argument(0)`
-     * that [NestedCallInstEvalCtx.createArg] maps to `Local(-1, ctx)` (the receiver
-     * has no positional actual). Bound to the call's receiver by [bindReceiver], and
-     * reused as the synthetic constructor return value by [mapCallFinalStates].
-     */
-    private fun selfRef(ctx: ContextInfo): RefValue.Local = RefValue.Local(-1, ctx)
-
     /** Resolved callee is a constructor body — an instance `__init__` of a class. */
     private fun isConstructor(method: PIRFunction): Boolean =
-        method.name == "__init__" && PIRFlowFunctionUtils.implicitParamOffset(method) == 1
+        method.name == PythonNames.INIT_METHOD && method.enclosingClass != null
 
     /**
      * Binds an instance method's implicit `self` (callee `Argument(0)`, the unbound
      * slot `Local(-1, nestedCtx)`) to the call's receiver — the group of
      * `call.callee.$PIR_SELF`, recorded at the attribute load (see [handleLoadAttr]).
      * Module/static callees (offset 0) take no receiver and are left unchanged.
+     *
+     * Constructors are skipped: the callee is the *class*, not a bound method, so it
+     * has no receiver and no `$PIR_SELF`. The `self ~ classRef.$PIR_SELF` binding
+     * would be a meaningless (if harmless) junk alias — the constructed object is
+     * tied to `self` through the `return self` value instead (see [mapCallFinalStates]).
      */
     private fun bindReceiver(
         stateBefore: ImmutableState,
@@ -168,7 +166,8 @@ class PIRDSUAliasAnalysis(
         resolvedMethod: ResolvedCallMethod,
     ): ImmutableState {
         if (PIRFlowFunctionUtils.implicitParamOffset(method) != 1 || calleeRef == null) return stateBefore
-        val selfSlot = selfRef(resolvedMethod.state.call.ctx)
+        if (isConstructor(method)) return stateBefore
+        val selfSlot = RefValue.Local(-1, resolvedMethod.state.call.ctx)
         val state = stateBefore.mutableCopy()
         val receiverHeap = createFieldAlias(state.heapObj(calleeRef.aliasInfo()), selfField)
         return state.mergeWith(selfSlot.aliasInfo().index(), receiverHeap.index()).asImmutable()
@@ -326,16 +325,10 @@ class PIRDSUAliasAnalysis(
         graph: PIRInstGraph,
         callerLValue: RefValue?,
         level: Int,
-        isConstructor: Boolean,
     ): List<ImmutableState> =
         graph.statements.filterIsInstance<PIRReturn>().mapNotNull { retInst ->
             val finalState = stateAfterStmt[retInst.location.index] ?: return@mapNotNull null
-            // A constructor call yields `self`, whatever __init__'s body returns,
-            // so the constructed object (lhs) binds to self's post-init heap state.
-            val retVal = when {
-                isConstructor -> selfRef(call.ctx)
-                else -> retInst.value?.let { call.instEvalCtx.refValue(it) }
-            }
+            val retVal = retInst.value?.let { call.instEvalCtx.refValue(it) }
             finalState.createStateAfterCall(callerLValue, retVal, level)
         }
 

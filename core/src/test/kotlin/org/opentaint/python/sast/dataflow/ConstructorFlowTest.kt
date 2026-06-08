@@ -57,4 +57,15 @@ class ConstructorFlowTest : AnalysisTest() {
         sink = Sink("ConstructorFieldFlow.sink", "taint", PositionBase.Argument(0), "field"),
         entryPointFunction = "ConstructorFieldFlow.ctor_field_to_sink"
     )
+
+    // --- ConstructorFieldViaMethod.py ---
+
+    // Field set in __init__ from a tainted arg, then read in a SEPARATE method
+    // via self. Minimal mirror of owasp request_wrapper (BenchmarkTest00283).
+    @Test
+    fun testConstructorFieldViaMethod() = assertSinkReachable(
+        source = Source("ConstructorFieldViaMethod.source", "taint", PositionBase.Result),
+        sink = Sink("ConstructorFieldViaMethod.sink", "taint", PositionBase.Argument(0), "via-method"),
+        entryPointFunction = "ConstructorFieldViaMethod.ctor_field_via_method"
+    )
 }

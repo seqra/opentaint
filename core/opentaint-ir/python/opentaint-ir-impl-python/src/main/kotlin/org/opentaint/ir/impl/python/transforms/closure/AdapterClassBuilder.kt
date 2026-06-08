@@ -1,5 +1,6 @@
 package org.opentaint.ir.impl.python.transforms.closure
 
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.impl.python.flat.FlatAnyType
 import org.opentaint.ir.impl.python.flat.FlatArgKind
 import org.opentaint.ir.impl.python.flat.FlatBlock
@@ -74,7 +75,8 @@ private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
                         attribute = ClosureRuntime.CLOSURE_ATTR_NAME,
                         value = envParamLocal,
                     ),
-                    FlatReturn(null),
+                    // Constructors return their instance (see CfgSession.constructorSelf).
+                    FlatReturn(selfLocal),
                 ),
                 exceptionHandlers = emptyList(),
             ),
@@ -83,8 +85,8 @@ private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
         exitBlocks = listOf(0),
     )
     return FlatFunctionIR(
-        name = "__init__",
-        qualifiedName = "$adapterQn.__init__",
+        name = PythonNames.INIT_METHOD,
+        qualifiedName = "$adapterQn.${PythonNames.INIT_METHOD}",
         parentQualifiedName = null,
         kind = FlatFunctionKind.METHOD,
         cfg = cfg,

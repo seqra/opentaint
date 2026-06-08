@@ -39,6 +39,14 @@ internal class CfgSession(
      * enclosing scope's manager so resolution walks the lexical chain.
      */
     val imports: ImportManager = module.imports,
+    /**
+     * For a constructor (`__init__`) body: the `self` local to return in place of
+     * a value-less `return`. Python's `__init__` syntactically returns `None`, but
+     * `C(...)` yields the constructed instance, so we lower every bare/implicit
+     * `return` in a constructor to `return self` — making the "self is the result"
+     * mapping explicit in the IR. `null` for every non-constructor scope.
+     */
+    val constructorSelf: FlatValue? = null,
 ) {
     // ─── CFG state (private) ───────────────────────────────
 
@@ -137,7 +145,7 @@ internal class CfgSession(
     ) = emit(FlatBranch(condition, trueBlock, falseBlock, location))
 
     fun emitReturn(value: FlatValue?, location: PIRPhysicalLocation? = null) =
-        emit(FlatReturn(value, location))
+        emit(FlatReturn(value ?: constructorSelf, location))
 
     fun newTempValue(): FlatLocal = FlatLocal(scope.newTemp())
 

@@ -1,5 +1,6 @@
 package org.opentaint.ir.impl.python.protoToFlat
 
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.impl.python.flat.*
 import org.opentaint.ir.impl.python.protoToFlat.cfg.CfgBuild
 import org.opentaint.ir.impl.python.proto.MypyFuncDefProto
@@ -27,6 +28,7 @@ internal object FunctionLowering {
     ): FlatFunctionIR {
         val qualifiedName = qualifyTopLevel(module.moduleName, enclosingClassQualifiedName, funcDef)
         val parameters = TypeLowering.convertParameters(funcDef.argumentsList)
+        val isConstructor = enclosingClassQualifiedName != null && funcDef.name == PythonNames.INIT_METHOD
         val cfgResult = if (funcDef.hasBody()) {
             CfgBuild.buildFunctionCfg(
                 module = module,
@@ -36,6 +38,7 @@ internal object FunctionLowering {
                 parameters = parameters,
                 sourceLabel = funcDef.name,
                 imports = module.imports.nestedChild(),
+                isConstructor = isConstructor,
             )
         } else CfgBuild.CfgBuildResult.EMPTY
 
