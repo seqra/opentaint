@@ -27,16 +27,16 @@ type healthComponent struct {
 	present bool
 }
 
-// healthCmd represents the health command
+// healthCmd represents the health command.
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Print the resolved dependency paths",
-	Long: `Print the on-disk paths OpenTaint resolves for its dependencies: autobuilder,
-analyzer, rules, and the Java runtime.
+	Short: "Show resolved dependency paths",
+	Long: `Show the on-disk paths OpenTaint uses for the autobuilder, analyzer,
+built-in rules, and Java runtime.
 
-Pass --autobuilder, --analyzer, --rules or --runtime to show only those; with a
-single flag just the bare path is printed. Nothing is downloaded except the
-rules, which are fetched on demand.`,
+Use --autobuilder, --analyzer, --rules, or --runtime to select components. When
+exactly one component is selected, only its path is printed. The command does
+not download artifacts except built-in rules, which are fetched on demand.`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		runHealth()
@@ -45,10 +45,10 @@ rules, which are fetched on demand.`,
 
 func init() {
 	rootCmd.AddCommand(healthCmd)
-	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Show only the autobuilder JAR path")
-	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Show only the analyzer JAR path")
-	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Show only the built-in rules path (downloads on demand)")
-	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Show only the Java runtime path")
+	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
+	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
+	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path, downloading rules if needed")
+	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
 func runHealth() {

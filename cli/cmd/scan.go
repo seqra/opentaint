@@ -145,14 +145,11 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
 	cmd.Flags().StringVar(&ScanLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 
-	cmd.Flags().StringArrayVar(&PassthroughApproximations, "passthrough-approximations", nil, "passThrough approximation YAML file or directory of them (OVERRIDE mode, repeatable)")
-	_ = cmd.Flags().MarkHidden("passthrough-approximations")
+	cmd.Flags().StringArrayVar(&PassthroughApproximations, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
 
-	cmd.Flags().StringArrayVar(&DataflowApproximations, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
-	_ = cmd.Flags().MarkHidden("dataflow-approximations")
+	cmd.Flags().StringArrayVar(&DataflowApproximations, "dataflow-approximations", nil, "Dataflow approximation class directory or Java source directory (repeatable)")
 
-	cmd.Flags().BoolVar(&TrackExternalMethods, "track-external-methods", false, "Write dropped-external-methods.yaml and approximated-external-methods.yaml next to the SARIF report")
-	_ = cmd.Flags().MarkHidden("track-external-methods")
+	cmd.Flags().BoolVar(&TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.

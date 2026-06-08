@@ -21,21 +21,19 @@ var initRuleSourcesOnly bool
 
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Bootstrap rule test projects (sinks and/or sources) with the generic Taint marker",
-	Long: `Creates the rule test projects under <output-dir>: a 'sinks' project (a package's sink
-lib rules tested against the generic Taint source) and a 'sources' project (a package's source
-lib rules tested against the generic Taint sink). Pass --sinks-only or --sources-only for a
-package that has only one side.
+	Short: "Create rule test projects with source and sink harnesses",
+	Long: `Create one or two Gradle test projects under <output-dir>. The sinks
+project tests sink rules against a generic Taint source; the sources project
+tests source rules against a generic Taint sink. Use --sinks-only or
+--sources-only when only one project is needed.
 
 Each project includes:
   - build.gradle.kts with compile-only dependencies, settings.gradle.kts
   - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample)
   - src/main/java/test/ with Taint.java (the generic source()/sink()) for test sample sources
-  - test-rules/java/lib/test/generic-{source,sink}.yaml — the marker lib rules an agent refs
-    from a test join; these and the test join live only here, never in .opentaint/rules, so
-    they never reach the main project scan
+  - test-rules/java/lib/test/generic-{source,sink}.yaml marker rules for test-only joins
 
-Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
+Use --dependency to add compile-only Maven dependencies for the samples.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
@@ -60,20 +58,20 @@ Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 
 var testApproximationInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Bootstrap a dataflow approximation test project with the fixed Taint source/sink and rule",
-	Long: `Creates a minimal Gradle project structure for testing OpenTaint dataflow approximations.
+	Short: "Create a dataflow approximation test project",
+	Long: `Create a minimal Gradle project for testing OpenTaint dataflow approximations.
 
 The project includes:
   - build.gradle.kts with compile-only dependencies
   - settings.gradle.kts
   - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample annotations)
-  - approximation-rule.yaml, the fixed source->sink rule the samples are checked against
+  - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
   - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
 
-The approximation under test is NOT part of this project: it lives in its own unit folder
-(.opentaint/approximations/<name>) and is applied at test time via --dataflow-approximations.
+The approximation under test is supplied separately at test time with
+--dataflow-approximations.
 
-Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
+Use --dependency to add compile-only Maven dependencies for the samples.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		bootstrapTestProject(args[0], "approximation-test-project", initApproxProjectDeps)
@@ -87,15 +85,15 @@ Use --dependency to add Maven dependencies (e.g., servlet-api, Spring Web).`,
 func init() {
 	testRuleCmd.AddCommand(testRuleInitCmd)
 	testRuleInitCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
-		"Maven dependency coordinates to add (e.g., 'javax.servlet:javax.servlet-api:4.0.1')")
+		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSinksOnly, "sinks-only", false,
-		"Scaffold only the sinks test project (a package with no sources)")
+		"Create only the sinks test project")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
-		"Scaffold only the sources test project (a package with no sinks)")
+		"Create only the sources test project")
 
 	testApproximationCmd.AddCommand(testApproximationInitCmd)
 	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
-		"Maven dependency coordinates to add (e.g., 'javax.servlet:javax.servlet-api:4.0.1')")
+		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
 }
 
 // bootstrapTestProject creates the shared Gradle layout (dirs, test-util JAR, build files)

@@ -17,14 +17,14 @@ var (
 
 var testApproximationRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
-	Short: "Run rule tests against annotated test samples with approximations applied",
-	Long: `Run rule tests against annotated test samples with the given approximations applied.
+	Short: "Run dataflow approximation tests on a compiled project model",
+	Long: `Run annotated samples with the supplied dataflow approximations applied.
 
-The fixed source->sink harness rule is applied automatically; samples reference it as
+A built-in source-to-sink harness rule is applied automatically; positive samples reference it as
 ` + "`@PositiveRuleSample(value = \"approximation-rule.yaml\", id = \"approximation-rule\")`" + `.
 
 Exit codes:
-  0    All rule tests passed
+  0    All approximation tests passed
   1    General failure (configuration or infrastructure error)
   252  Unhandled analyzer exception
   253  Out of memory (try increasing --max-memory)
@@ -55,8 +55,8 @@ Exit codes:
 func init() {
 	testApproximationCmd.AddCommand(testApproximationRunCmd)
 
-	testApproximationRunCmd.Flags().StringVarP(&testApproxOutputDir, "output", "o", "", "Output directory for test results (test-result.json)")
-	testApproximationRunCmd.Flags().DurationVar(&testApproxTimeout, "timeout", 600*time.Second, "Timeout for analysis")
-	testApproximationRunCmd.Flags().StringVar(&testApproxMaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 8G)")
-	testApproximationRunCmd.Flags().StringArrayVar(&testApproxDataflow, "dataflow-approximations", nil, "Directory of compiled approximation class files or .java sources (repeatable)")
+	testApproximationRunCmd.Flags().StringVarP(&testApproxOutputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
+	testApproximationRunCmd.Flags().DurationVar(&testApproxTimeout, "timeout", 600*time.Second, "Analysis timeout")
+	testApproximationRunCmd.Flags().StringVar(&testApproxMaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g., 8G)")
+	testApproximationRunCmd.Flags().StringArrayVar(&testApproxDataflow, "dataflow-approximations", nil, "Dataflow approximation class directory or Java source directory (repeatable)")
 }
