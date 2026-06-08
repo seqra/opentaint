@@ -1,0 +1,12 @@
+rules:
+  - id: xss-17-html-escape-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches w.Write unless sanitized via html.EscapeString
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)
+    pattern-sanitizers:
+      - pattern: html.EscapeString($V)

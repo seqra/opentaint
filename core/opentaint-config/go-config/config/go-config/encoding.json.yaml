@@ -1,0 +1,123 @@
+passThrough:
+- function:
+    package: encoding/json
+    name: Compact
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: encoding/json
+    name: HTMLEscape
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: encoding/json
+    name: Indent
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+  - from: arg(2)
+    to: arg(0)
+  - from: arg(3)
+    to: arg(0)
+- function:
+    package: encoding/json
+    name: Marshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: encoding/json
+    name: MarshalIndent
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(1)
+    to: result(0)
+  - from: arg(2)
+    to: result(0)
+- function:
+    package: encoding/json
+    name: NewDecoder
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: encoding/json
+    name: Unmarshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: encoding/json
+    type: Decoder
+    name: Buffered
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: encoding/json
+    type: Decoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: encoding/json
+    type: Decoder
+    name: Token
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding/json
+    type: Encoder
+    name: Encode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/json
+    type: Encoder
+    name: SetIndent
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: encoding/json
+    type: Marshaler
+    name: MarshalJSON
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding/json
+    type: Unmarshaler
+    name: UnmarshalJSON
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/json
+    name: NewEncoder
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

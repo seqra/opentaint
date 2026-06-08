@@ -1,0 +1,23 @@
+rules:
+  - id: go-sql-injection
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input flows into SQL query (SQL injection)
+    metadata:
+      cwe: CWE-89
+      short-description: SQL injection
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#go-http-sources
+          as: src
+        - rule: go/lib/http-sources-requesturi.yaml#go-http-sources-requesturi
+          as: extra_requesturi
+        - rule: go/lib/http-sources-header-index.yaml#go-http-sources-header-index
+          as: extra_header
+        - rule: go/lib/go-sql-sinks.yaml#go-sql-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'extra_requesturi.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'extra_header.$UNTRUSTED -> sink.$UNTRUSTED'

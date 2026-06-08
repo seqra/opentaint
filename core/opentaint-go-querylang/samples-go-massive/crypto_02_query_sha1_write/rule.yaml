@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-02-query-sha1-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted query reaches sha1 hash.Write (weak hash)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: $H.Write($X)

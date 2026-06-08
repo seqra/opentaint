@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-20-variadic-sprintf
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value flows through variadic fmt.Sprintf into http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

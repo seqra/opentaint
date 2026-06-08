@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-13-defer-get
+    languages: [go]
+    severity: WARNING
+    message: Deferred http.Get fetches a tainted URL (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: http.Get($U)

@@ -1,0 +1,12 @@
+rules:
+  - id: java-array-example
+    languages: [go]
+    severity: ERROR
+    message: match example/ArrayExample (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sinks:
+      - pattern-either:
+          - pattern: "util.ArraySink($X)"
+          - pattern: "util.OtherElementSink($X)"

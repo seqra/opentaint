@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-04-query-upper
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: util.Sink_ExecCommand($X)

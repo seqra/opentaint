@@ -1,0 +1,10 @@
+rules:
+  - id: loginj-02-env-logprintf-concat
+    languages: [go]
+    severity: WARNING
+    message: Tainted env concatenated and logged via log.Printf (log injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("REQ_ID")
+    pattern-sinks:
+      - pattern: log.Printf($FMT, $X)

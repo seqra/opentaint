@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-19-parse-recompose
+    languages: [go]
+    severity: WARNING
+    message: Parse-and-recompose anti-pattern; tainted host survives url.Parse and reaches http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

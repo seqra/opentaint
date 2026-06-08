@@ -1,0 +1,104 @@
+passThrough:
+- function:
+    package: net/http/httputil
+    name: DumpRequest
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/http/httputil
+    name: DumpRequestOut
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/http/httputil
+    name: DumpResponse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/http/httputil
+    name: NewChunkedReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/http/httputil
+    name: NewClientConn
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: net/http/httputil
+    name: NewProxyClientConn
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: net/http/httputil
+    type: BufferPool
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/http/httputil
+    type: BufferPool
+    name: Put
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: net/http/httputil
+    type: ClientConn
+    name: Hijack
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+  - from: this
+    to: result(1)
+- function:
+    package: net/http/httputil
+    type: ServerConn
+    name: Hijack
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+  - from: this
+    to: result(1)
+- function:
+    package: net/http/httputil
+    name: NewChunkedWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: net/http/httputil
+    name: NewClientConn
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: net/http/httputil
+    name: NewProxyClientConn
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

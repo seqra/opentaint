@@ -1,0 +1,359 @@
+--- a/GoLexer.g4
++++ b/GoLexer.g4
+@@ -69,6 +69,15 @@
+ TYPE        : 'type';
+ VAR         : 'var';
+ 
++
++// --- Semgrep extensions ---
++LDOTS              : '<...';
++RDOTS              : '...>' -> mode(NLSEMI);
++METAVAR_ELLIPSIS   : '$...' [A-Z_] [A-Z_0-9]* -> mode(NLSEMI);
++ANONYMOUS_METAVAR  : '$_' -> mode(NLSEMI);
++METAVAR_IDENT      : '$' [A-Z_] [A-Z_0-9]* -> mode(NLSEMI);
++// --- end semgrep extensions ---
++
+ IDENTIFIER: LETTER (LETTER | UNICODE_DIGIT)* -> mode(NLSEMI);
+ 
+ // Punctuation
+@@ -87,7 +96,10 @@
+ PLUS_PLUS      : '++' -> mode(NLSEMI);
+ MINUS_MINUS    : '--' -> mode(NLSEMI);
+ DECLARE_ASSIGN : ':=';
+-ELLIPSIS       : '...';
++// Semgrep: a statement-level `...` must terminate the statement so the following
++// line parses as a new statement. NLSEMI emits EOS on a trailing newline; inside
++// calls/literals (`...)`, `...,`, `...}` on one line) OTHER fires instead, no EOS.
++ELLIPSIS       : '...' -> mode(NLSEMI);
+ 
+ // Logical
+ 
+@@ -168,8 +180,15 @@
+ 
+ // String literals
+ 
++// --- Semgrep string-form metavar / ellipsis literals ---
++METAVAR_LITERAL  : '"' '$' [A-Z_] [A-Z_0-9]* '"' -> mode(NLSEMI);
++ELLIPSIS_LITERAL : '"' '...' '"'                 -> mode(NLSEMI);
++// ---
++
+ RAW_STRING_LIT         : '`' ~'`'* '`'                     -> mode(NLSEMI);
+-INTERPRETED_STRING_LIT : '"' (~["\\] | ESCAPED_VALUE)* '"' -> mode(NLSEMI);
++// Semgrep: tolerate any `\<char>` escape (e.g. regex literals like "=~/\/bin\/env/"),
++// which are not valid Go escapes, by accepting backslash followed by any character.
++INTERPRETED_STRING_LIT : '"' (~["\\] | '\\' .)* '"'        -> mode(NLSEMI);
+ 
+ // Hidden tokens
+ 
+@@ -210,6 +229,16 @@
+ fragment UNICODE_LETTER: [\p{L}];
+ 
+ mode NLSEMI;
++// --- Semgrep extensions in NLSEMI mode ---
++LDOTS_NLSEMI             : '<...'                            -> type(LDOTS), mode(DEFAULT_MODE);
++RDOTS_NLSEMI             : '...>'                            -> type(RDOTS);
++METAVAR_ELLIPSIS_NLSEMI  : '$...' [A-Z_] [A-Z_0-9]*           -> type(METAVAR_ELLIPSIS);
++ANONYMOUS_METAVAR_NLSEMI : '$_'                              -> type(ANONYMOUS_METAVAR);
++METAVAR_IDENT_NLSEMI     : '$' [A-Z_] [A-Z_0-9]*              -> type(METAVAR_IDENT);
++METAVAR_LITERAL_NLSEMI   : '"' '$' [A-Z_] [A-Z_0-9]* '"'      -> type(METAVAR_LITERAL);
++ELLIPSIS_LITERAL_NLSEMI  : '"' '...' '"'                     -> type(ELLIPSIS_LITERAL);
++// --- end semgrep extensions ---
++
+ 
+ // Treat whitespace as normal
+ WS_NLSEMI: [ \t]+ -> channel(HIDDEN);
+--- a/GoParser.g4
++++ b/GoParser.g4
+@@ -39,10 +39,52 @@
+     superClass = GoParserBase;
+ }
+ 
++@parser::members {
++    // Semgrep: enable the `operand` (composite-literal) alternative for a qualified
++    // type literal `pkg.T{...}`. Without imports the base predicate routes `pkg.T`
++    // to `methodExpr`, which cannot carry a `{...}` literal value. We only widen the
++    // gate; ANTLR still picks `methodExpr`/`operandName` contextually elsewhere.
++    @Override
++    public boolean isOperand() {
++        org.antlr.v4.runtime.BufferedTokenStream stream = (org.antlr.v4.runtime.BufferedTokenStream) _input;
++        if (stream.LT(1).getType() == GoParser.IDENTIFIER
++                && stream.LT(2).getType() == GoParser.DOT
++                && (stream.LT(3).getType() == GoParser.IDENTIFIER || stream.LT(3).getType() == GoParser.METAVAR_IDENT)
++                && stream.LT(4).getType() == GoParser.L_CURLY) {
++            return true;
++        }
++        return super.isOperand();
++    }
++}
++
+ sourceFile
+     : packageClause eos (importDecl eos)* ((functionDecl | methodDecl | declaration) eos)* EOF
+     ;
+ 
++semgrepPattern
++    : packageClause EOF
++    | semgrepTopList EOF
++    ;
++
++semgrepTopList
++    : semgrepTopItem (eos semgrepTopItem)* eos?
++    ;
++
++semgrepTopItem
++    : packageClause
++    | importDecl
++    | functionDecl
++    | methodDecl
++    | declaration
++    | statement
++    | compositeLit
++    | ELLIPSIS
++    ;
++
++semgrepStmtList
++    : statement (eos statement)* eos?
++    ;
++
+ packageClause
+     : PACKAGE packageName {this.myreset();}
+     ;
+@@ -51,10 +95,10 @@
+     : identifier
+     ;
+ 
+-identifier : IDENTIFIER ;
++identifier : IDENTIFIER | METAVAR_IDENT | METAVAR_ELLIPSIS | ANONYMOUS_METAVAR ;
+ 
+ importDecl
+-    : IMPORT (importSpec | L_PAREN (importSpec eos)* R_PAREN)
++    : IMPORT (importSpec | L_PAREN ((importSpec | ELLIPSIS) eos)* R_PAREN)
+     ;
+ 
+ importSpec
+@@ -80,7 +124,7 @@
+     ;
+ 
+ identifierList
+-    : IDENTIFIER (COMMA IDENTIFIER)*
++    : identifier (COMMA identifier)*
+     ;
+ 
+ expressionList
+@@ -97,11 +141,11 @@
+     ;
+ 
+ aliasDecl
+-    : IDENTIFIER typeParameters? ASSIGN type_
++    : identifier typeParameters? ASSIGN type_
+     ;
+ 
+ typeDef
+-    : IDENTIFIER typeParameters? type_
++    : identifier typeParameters? type_
+     ;
+ 
+ typeParameters
+@@ -123,11 +167,11 @@
+ // Function declarations
+ 
+ functionDecl
+-    : FUNC IDENTIFIER typeParameters? signature block?
++    : FUNC identifier typeParameters? signature block?
+     ;
+ 
+ methodDecl
+-    : FUNC receiver IDENTIFIER signature block?
++    : FUNC receiver identifier signature block?
+     ;
+ 
+ receiver
+@@ -201,7 +245,7 @@
+     ;
+ 
+ labeledStmt
+-    : IDENTIFIER COLON statement?
++    : identifier COLON statement?
+     ;
+ 
+ returnStmt
+@@ -209,15 +253,15 @@
+     ;
+ 
+ breakStmt
+-    : BREAK IDENTIFIER?
++    : BREAK identifier?
+     ;
+ 
+ continueStmt
+-    : CONTINUE IDENTIFIER?
++    : CONTINUE identifier?
+     ;
+ 
+ gotoStmt
+-    : GOTO IDENTIFIER
++    : GOTO identifier
+     ;
+ 
+ fallthroughStmt
+@@ -247,6 +291,7 @@
+ 
+ exprSwitchCase
+     : CASE expressionList
++    | CASE ELLIPSIS
+     | DEFAULT
+     ;
+ 
+@@ -255,7 +300,7 @@
+     ;
+ 
+ typeSwitchGuard
+-    : (IDENTIFIER DECLARE_ASSIGN)? primaryExpr DOT L_PAREN TYPE R_PAREN
++    : (identifier DECLARE_ASSIGN)? primaryExpr DOT L_PAREN TYPE R_PAREN
+     ;
+ 
+ typeCaseClause
+@@ -264,6 +309,7 @@
+ 
+ typeSwitchCase
+     : CASE typeList
++    | CASE ELLIPSIS
+     | DEFAULT
+     ;
+ 
+@@ -281,6 +327,7 @@
+ 
+ commCase
+     : CASE (sendStmt | recvStmt)
++    | CASE ELLIPSIS
+     | DEFAULT
+     ;
+ 
+@@ -290,6 +337,7 @@
+ 
+ forStmt
+     : FOR (condition | forClause | rangeClause)? block
++    | FOR ELLIPSIS block
+     ;
+ 
+ condition
+@@ -321,6 +369,7 @@
+ typeName
+     : qualifiedIdent
+     | IDENTIFIER
++    | METAVAR_IDENT
+     ;
+ 
+ typeLit
+@@ -351,7 +400,7 @@
+     ;
+ 
+ interfaceType
+-    : INTERFACE L_CURLY ((methodSpec | typeElement) eos)* R_CURLY
++    : INTERFACE L_CURLY ((methodSpec | typeElement | ELLIPSIS) eos)* R_CURLY
+     ;
+ 
+ sliceType
+@@ -368,8 +417,8 @@
+     ;
+ 
+ methodSpec
+-    : IDENTIFIER parameters result
+-    | IDENTIFIER parameters
++    : identifier parameters result
++    | identifier parameters
+     ;
+ 
+ functionType
+@@ -391,6 +440,9 @@
+ 
+ parameterDecl
+     : identifierList? ELLIPSIS? type_
++    | ELLIPSIS
++    | METAVAR_ELLIPSIS
++    | METAVAR_IDENT
+     ;
+ 
+ expression
+@@ -408,13 +460,15 @@
+     ) expression
+     | expression LOGICAL_AND expression
+     | expression LOGICAL_OR expression
++    | ELLIPSIS
++    | LDOTS expression RDOTS
+     ;
+ 
+ primaryExpr :
+     ( {this.isOperand()}? operand
+     | {this.isConversion()}? conversion
+     | {this.isMethodExpr()}? methodExpr )
+-    ( DOT IDENTIFIER | index | slice_ | typeAssertion | arguments )*
++    ( DOT IDENTIFIER | DOT METAVAR_IDENT | DOT ELLIPSIS | index | slice_ | typeAssertion | arguments )*
+     ;
+ 
+ conversion
+@@ -424,6 +478,7 @@
+ operand
+     : literal
+     | operandName typeArgs?
++    | L_PAREN METAVAR_IDENT COLON type_ R_PAREN
+     | L_PAREN expression R_PAREN
+     ;
+ 
+@@ -451,11 +506,17 @@
+ 
+ operandName
+     : IDENTIFIER
++    | METAVAR_IDENT
++    | ANONYMOUS_METAVAR
++    | METAVAR_ELLIPSIS
+     | qualifiedIdent
+     ;
+ 
+ qualifiedIdent
+     : IDENTIFIER DOT IDENTIFIER
++    | IDENTIFIER DOT METAVAR_IDENT
++    | METAVAR_IDENT DOT IDENTIFIER
++    | METAVAR_IDENT DOT METAVAR_IDENT
+     ;
+ 
+ compositeLit
+@@ -472,7 +533,7 @@
+     ;
+ 
+ literalValue
+-    : L_CURLY (elementList COMMA?)? R_CURLY
++    : L_CURLY (elementList COMMA?)? eos? R_CURLY
+     ;
+ 
+ elementList
+@@ -491,6 +552,7 @@
+ element
+     : expression
+     | literalValue
++    | ELLIPSIS
+     ;
+ 
+ structType
+@@ -499,11 +561,14 @@
+ 
+ fieldDecl
+     : (identifierList type_ | embeddedField) tag = string_?
++    | ELLIPSIS
+     ;
+ 
+ string_
+     : RAW_STRING_LIT
+     | INTERPRETED_STRING_LIT
++    | METAVAR_LITERAL
++    | ELLIPSIS_LITERAL
+     ;
+ 
+ embeddedField
+@@ -532,6 +597,7 @@
+ 
+ methodExpr
+     : type_ DOT IDENTIFIER
++    | type_ DOT METAVAR_IDENT
+     ;
+ 
+ eos

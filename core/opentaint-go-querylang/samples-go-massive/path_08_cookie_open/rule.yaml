@@ -1,0 +1,10 @@
+rules:
+  - id: path-08-cookie-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted Cookie header reaches os.Open (path traversal via cookie value)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get("Cookie")
+    pattern-sinks:
+      - pattern: os.Open($P)

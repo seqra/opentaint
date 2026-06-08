@@ -1,0 +1,29 @@
+passThrough:
+- function:
+    package: github.com/davecgh/go-spew/spew
+    name: Sdump
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+- function:
+    package: github.com/davecgh/go-spew/spew
+    name: Sprint
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+- function:
+    package: github.com/davecgh/go-spew/spew
+    name: Sprintln
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+- function:
+    package: github.com/davecgh/go-spew/spew
+    name: Sprintf
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

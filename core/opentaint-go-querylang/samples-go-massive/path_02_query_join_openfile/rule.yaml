@@ -1,0 +1,10 @@
+rules:
+  - id: path-02-query-join-openfile
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query value reaches os.OpenFile via filepath.Join (classic ../ escape)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: os.OpenFile($P, $FLAG, $PERM)

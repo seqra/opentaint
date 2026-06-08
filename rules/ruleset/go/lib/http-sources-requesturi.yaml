@@ -1,0 +1,10 @@
+rules:
+  - id: go-http-sources-requesturi
+    options: {lib: true}
+    languages: [go]
+    severity: NOTE
+    message: Untrusted request URI source
+    mode: taint
+    pattern-sources:
+      - label: "$UNTRUSTED"
+        pattern: $R.RequestURI

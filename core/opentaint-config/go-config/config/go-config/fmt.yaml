@@ -1,0 +1,286 @@
+passThrough:
+- function:
+    package: fmt
+    type: GoStringer
+    name: GoString
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fmt
+    type: ScanState
+    name: Read
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fmt
+    type: ScanState
+    name: Token
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: fmt
+    type: State
+    name: Write
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: fmt
+    type: Stringer
+    name: String
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fmt
+    name: Append
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fmt
+    name: Append
+    receiver: false
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Appendf
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fmt
+    name: Appendf
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: fmt
+    name: Appendf
+    receiver: false
+  copy:
+  - from:
+    - arg(2)
+    - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Appendln
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fmt
+    name: Appendln
+    receiver: false
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Sprint
+    receiver: false
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Sprintf
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fmt
+    name: Sprintf
+    receiver: false
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Sprintln
+    receiver: false
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Append
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Appendf
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Appendln
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Sprint
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Sprintf
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Sprintln
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Fprint
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: arg(0)
+  - from:
+      - arg(*)
+      - '[*]'
+    to: arg(0)
+- function:
+    package: fmt
+    name: Fprintf
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: arg(0)
+  - from:
+      - arg(*)
+      - '[*]'
+    to: arg(0)
+- function:
+    package: fmt
+    name: Fprintln
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: arg(0)
+  - from:
+      - arg(*)
+      - '[*]'
+    to: arg(0)
+- function:
+    package: fmt
+    name: Sscan
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(*)
+- function:
+    package: fmt
+    name: Sscanf
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(*)
+  - from: arg(1)
+    to: arg(*)
+- function:
+    package: fmt
+    name: Sscanln
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(*)
+- function:
+    package: fmt
+    name: Errorf
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
+- function:
+    package: fmt
+    name: Fscan
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(*)
+- function:
+    package: fmt
+    name: Fscanf
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(*)
+  - from: arg(1)
+    to: arg(*)
+- function:
+    package: fmt
+    name: Fscanln
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(*)

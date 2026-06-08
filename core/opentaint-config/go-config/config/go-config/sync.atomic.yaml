@@ -1,0 +1,181 @@
+passThrough:
+- function:
+    package: sync/atomic
+    name: AddUintptr
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: AddUintptr
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: sync/atomic
+    name: CompareAndSwapPointer
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: CompareAndSwapUintptr
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: LoadPointer
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: sync/atomic
+    name: LoadUintptr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: sync/atomic
+    name: StorePointer
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: StoreUintptr
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: SwapPointer
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: SwapPointer
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: sync/atomic
+    name: SwapUintptr
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: sync/atomic
+    name: SwapUintptr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: sync/atomic
+    type: Pointer
+    name: Load
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: sync/atomic
+    type: Pointer
+    name: Store
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: sync/atomic
+    type: Pointer
+    name: Swap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: sync/atomic
+    type: Pointer
+    name: Swap
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: sync/atomic
+    type: Uintptr
+    name: Load
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: sync/atomic
+    type: Uintptr
+    name: Store
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: sync/atomic
+    type: Uintptr
+    name: Swap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: sync/atomic
+    type: Uintptr
+    name: Swap
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: sync/atomic
+    type: Value
+    name: Load
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: sync/atomic
+    type: Value
+    name: Store
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: sync/atomic
+    type: Value
+    name: Swap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: sync/atomic
+    type: Value
+    name: Swap
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this

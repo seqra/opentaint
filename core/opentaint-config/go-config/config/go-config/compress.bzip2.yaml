@@ -1,0 +1,8 @@
+passThrough:
+- function:
+    package: compress/bzip2
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result

@@ -1,0 +1,16 @@
+passThrough:
+- function:
+    package: weak
+    name: Make
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: weak
+    type: Pointer
+    name: Value
+    receiver: false
+  copy:
+  - from: this
+    to: result(0)

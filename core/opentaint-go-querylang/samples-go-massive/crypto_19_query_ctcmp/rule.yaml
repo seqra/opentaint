@@ -1,0 +1,12 @@
+rules:
+  - id: crypto-19-query-ctcmp
+    languages: [go]
+    severity: WARNING
+    message: Tainted query reaches subtle.ConstantTimeCompare arg 0 (user-controlled comparand)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: subtle.ConstantTimeCompare($X, $Y)
+          - focus-metavariable: $X

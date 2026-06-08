@@ -1,0 +1,121 @@
+passThrough:
+- function:
+    package: gopkg.in/square/go-jose/jwt
+    name: ParseEncrypted
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: gopkg.in/go-jose/go-jose/jwt
+    name: ParseEncrypted
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/square/go-jose/jwt
+    name: ParseEncrypted
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/go-jose/go-jose/jwt
+    name: ParseEncrypted
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: gopkg.in/square/go-jose/jwt
+    name: ParseSigned
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: gopkg.in/go-jose/go-jose/jwt
+    name: ParseSigned
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/square/go-jose/jwt
+    name: ParseSigned
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/go-jose/go-jose/jwt
+    name: ParseSigned
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: gopkg.in/square/go-jose/jwt
+    type: NestedJSONWebToken
+    name: ParseSignedAndEncrypted
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: gopkg.in/go-jose/go-jose/jwt
+    type: NestedJSONWebToken
+    name: ParseSignedAndEncrypted
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/square/go-jose/jwt
+    type: NestedJSONWebToken
+    name: ParseSignedAndEncrypted
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/go-jose/go-jose/jwt
+    type: NestedJSONWebToken
+    name: ParseSignedAndEncrypted
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: gopkg.in/square/go-jose/jwt
+    type: NestedJSONWebToken
+    name: Decrypt
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: gopkg.in/go-jose/go-jose/jwt
+    type: NestedJSONWebToken
+    name: Decrypt
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/square/go-jose/jwt
+    type: NestedJSONWebToken
+    name: Decrypt
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/go-jose/go-jose/jwt
+    type: NestedJSONWebToken
+    name: Decrypt
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

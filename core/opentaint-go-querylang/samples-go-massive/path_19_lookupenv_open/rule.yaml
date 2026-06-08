@@ -1,0 +1,12 @@
+rules:
+  - id: path-19-lookupenv-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted value from os.LookupEnv reaches os.Open (path traversal)
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $UNTRUSTED, _ = os.LookupEnv("CFG_PATH")
+            focus-metavariable: $UNTRUSTED
+    pattern-sinks:
+      - pattern: os.Open($P)

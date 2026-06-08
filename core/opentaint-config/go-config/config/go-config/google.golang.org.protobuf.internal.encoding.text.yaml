@@ -1,0 +1,9 @@
+passThrough:
+- function:
+    package: google.golang.org/protobuf/internal/encoding/text
+    type: Token
+    name: String
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

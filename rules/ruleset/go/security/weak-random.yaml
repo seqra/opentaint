@@ -1,0 +1,24 @@
+rules:
+  - id: go-weak-random-cwe-330
+    languages: [go]
+    severity: ERROR
+    message: Use of a weak (non-cryptographic) random number generator
+    metadata:
+      cwe: CWE-330
+      short-description: Insecure randomness
+    mode: search
+    pattern-either:
+      - pattern: rand.Int()
+      - pattern: rand.Intn(...)
+      - pattern: rand.Int31()
+      - pattern: rand.Int31n(...)
+      - pattern: rand.Int63()
+      - pattern: rand.Int63n(...)
+      - pattern: rand.Float64()
+      - pattern: rand.Float32()
+      - pattern: rand.NormFloat64()
+      - pattern: rand.ExpFloat64()
+      - pattern: rand.Uint32()
+      - pattern: rand.Uint64()
+      - pattern: rand.Perm(...)
+      - pattern: rand.New(...)

@@ -1,0 +1,41 @@
+passThrough:
+- function:
+    package: golang.org/x/net/context
+    name: WithCancel
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/context
+    name: WithDeadline
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/context
+    name: WithTimeout
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/context
+    name: WithValue
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+- function:
+    package: golang.org/x/net/context
+    type: Context
+    name: Value
+    receiver: true
+  copy:
+  - from: this
+    to: result

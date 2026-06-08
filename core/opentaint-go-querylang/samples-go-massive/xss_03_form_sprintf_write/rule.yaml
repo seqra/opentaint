@@ -1,0 +1,10 @@
+rules:
+  - id: xss-03-form-sprintf-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value flows through fmt.Sprintf HTML into w.Write (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

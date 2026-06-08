@@ -11,8 +11,8 @@ import kotlin.io.path.name
 import kotlin.io.path.relativeTo
 
 class PortableProjectCreator(
-    private val portableProjectPath: Path,
-    private val rootProject: JavaProject
+    private val portableProjectRootPath: Path,
+    private val topLevelProject: Project
 ) {
     sealed interface PortAction {
         data class Copy(val dst: Path) : PortAction
@@ -64,12 +64,50 @@ class PortableProjectCreator(
     }
 
     fun create() {
+        val portableJava = topLevelProject.javaProjects.mapIndexed { index, project ->
+            val projectPath = portableProjectRootPath.resolve("java_$index")
+            createJava(project, projectPath) ?: return
+        }
+
+        val portableGo = topLevelProject.goProjects.mapIndexed { index, project ->
+            val projectPath = portableProjectRootPath.resolve("go_$index")
+            createGo(project, projectPath) ?: return
+        }
+
+        val portableProject = Project(
+            goProjects = portableGo,
+            javaProjects = portableJava,
+        )
+
+        portableProject.dump(portableProjectRootPath.resolve("project.yaml"))
+    }
+
+    fun createGo(rootProject: GoProject, portableProjectPath: Path): GoProject? {
         logger.info { "Start portable project creation" }
 
         if (portableProjectPath.exists()) {
             if (!portableProjectPath.isDirectory() || portableProjectPath.isNotEmpty()) {
                 logger.error { "Portable project path exists" }
-                return
+                return null
+            }
+        }
+
+        portableProjectPath.createDirectories()
+
+        copy(rootProject.projectDir, portableProjectPath)
+
+        val portableProject = GoProject(portableProjectPath)
+        val relativeProject = portableProject.relativeTo(portableProjectRootPath)
+        return relativeProject
+    }
+
+    fun createJava(rootProject: JavaProject, portableProjectPath: Path): JavaProject? {
+        logger.info { "Start portable project creation" }
+
+        if (portableProjectPath.exists()) {
+            if (!portableProjectPath.isDirectory() || portableProjectPath.isNotEmpty()) {
+                logger.error { "Portable project path exists" }
+                return null
             }
         }
 
@@ -85,9 +123,8 @@ class PortableProjectCreator(
         rootProject.sourceRoot?.let { copyDirectory(it, ctx.sources) }
 
         val portableProject = create(ctx, rootProject)
-        val relativeProject = portableProject.relativeTo(portableProjectPath)
-
-        relativeProject.dump(portableProjectPath.resolve("project.yaml"))
+        val relativeProject = portableProject.relativeTo(portableProjectRootPath)
+        return relativeProject
     }
 
     private fun create(ctx: ProjectPortContext, project: JavaProject): JavaProject = JavaProject(

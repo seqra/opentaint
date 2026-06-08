@@ -1,0 +1,12 @@
+rules:
+  - id: ssrf-07-multiarg-newrequest-url
+    languages: [go]
+    severity: WARNING
+    message: Tainted value in URL arg (2nd) of http.NewRequest (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.NewRequest($METHOD, $URL, $BODY)
+          - focus-metavariable: $URL

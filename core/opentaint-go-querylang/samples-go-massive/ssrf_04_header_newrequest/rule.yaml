@@ -1,0 +1,12 @@
+rules:
+  - id: ssrf-04-header-newrequest
+    languages: [go]
+    severity: WARNING
+    message: Tainted header reaches http.NewRequest URL arg (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.NewRequest($METHOD, $URL, $BODY)
+          - focus-metavariable: $URL

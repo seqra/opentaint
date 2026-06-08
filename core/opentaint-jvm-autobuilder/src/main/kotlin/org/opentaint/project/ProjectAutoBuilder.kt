@@ -38,7 +38,6 @@ class ProjectAutoBuilder : CliWithLogger() {
         val resolvedProject = when (val b = buildType) {
             is BuildProject -> {
                 ProjectResolver.resolveProject(projectRootDir, resolverWorkDir)
-                    ?: return
             }
 
             is ProjectFromCP -> {
@@ -46,13 +45,27 @@ class ProjectAutoBuilder : CliWithLogger() {
             }
         }
 
+        val javaProjects = resolvedProject?.let { Project.flattenJavaProject(it) }.orEmpty()
+        val goProjects = GoProjectResolver.resolveProject(projectRootDir, resolverWorkDir)
+
+        if (javaProjects.isEmpty() && goProjects.isEmpty()) {
+            logger.error { "No projects resolved at $projectRootDir" }
+            return
+        }
+
+        val topLevelProject = Project(
+            projectRoot = projectRootDir,
+            goProjects = goProjects,
+            javaProjects = javaProjects,
+        )
+
         when (val b = build) {
             is SimpleProjectBuild -> {
-                resolvedProject.dump(b.result.createParentDirectories())
+                topLevelProject.dump(b.result.createParentDirectories())
             }
 
             is PortableProjectBuild -> {
-                val portableProjectCreator = PortableProjectCreator(b.resultDir, resolvedProject)
+                val portableProjectCreator = PortableProjectCreator(b.resultDir, topLevelProject)
                 portableProjectCreator.create()
             }
         }

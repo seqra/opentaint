@@ -1,0 +1,12 @@
+rules:
+  - id: xss-14-nested-escape-miss
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches w.Write; sanitizer applied to nested field only, outer remains tainted
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)
+    pattern-sanitizers:
+      - pattern: template.HTMLEscapeString($V)

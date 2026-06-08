@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-15-env-md5-stub
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches util.Sink_HashMd5 (weak hash stub)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: util.Sink_HashMd5($X)

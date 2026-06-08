@@ -6,3 +6,8 @@ include("opentaint-ir-api-storage")
 include("opentaint-ir-core")
 include("opentaint-ir-storage")
 include("opentaint-ir-approximations")
+
+include("go:go-ir-api")
+include("go:go-ir-client")
+include("go:go-ir-codegen")
+include("go:go-ir-tests")

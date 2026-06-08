@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-13-query-closure-md5
+    languages: [go]
+    severity: WARNING
+    message: Tainted query captured by closure reaches md5.Sum (weak hash)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: md5.Sum($X)

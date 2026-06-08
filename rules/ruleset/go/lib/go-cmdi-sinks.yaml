@@ -1,0 +1,20 @@
+rules:
+  - id: go-cmdi-sinks
+    options: {lib: true}
+    languages: [go]
+    severity: ERROR
+    message: OS command execution sink
+    mode: taint
+    pattern-sinks:
+      - pattern-either:
+          - pattern: exec.Command($NAME, ...)
+          - pattern: exec.CommandContext($CTX, $NAME, ...)
+          - pattern: exec.LookPath($NAME)
+          - pattern: os.StartProcess($NAME, ...)
+          - pattern: syscall.Exec($NAME, ...)
+          - pattern: syscall.ForkExec($NAME, ...)
+          - pattern: syscall.StartProcess($NAME, ...)
+          - pattern: $C.CombinedOutput()
+          - pattern: $C.Run()
+          - pattern: $C.Output()
+          - pattern: $C.Start()

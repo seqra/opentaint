@@ -1,0 +1,32 @@
+rules:
+  - id: go-sql-sinks
+    options: {lib: true}
+    languages: [go]
+    severity: ERROR
+    message: SQL query execution sink
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern: $DB.Query($SQL, ...)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.QueryContext($CTX, $SQL, ...)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.QueryRow($SQL, ...)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.QueryRowContext($CTX, $SQL, ...)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.Exec($SQL, ...)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.ExecContext($CTX, $SQL, ...)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.Prepare($SQL)
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern: $DB.PrepareContext($CTX, $SQL)
+          - focus-metavariable: $SQL

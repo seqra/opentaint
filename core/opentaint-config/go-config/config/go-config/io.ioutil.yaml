@@ -1,0 +1,15 @@
+passThrough:
+- function:
+    package: io/ioutil
+    name: NopCloser
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: io/ioutil
+    name: ReadAll
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)

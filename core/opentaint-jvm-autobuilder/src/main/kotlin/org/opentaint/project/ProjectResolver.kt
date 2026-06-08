@@ -92,11 +92,7 @@ sealed interface ProjectResolver {
             }
 
             return when (resolvedProjects.size) {
-                0 -> {
-                    logger.error { "No projects resolved at $rootDir" }
-                    null
-                }
-
+                0 -> null
                 1 -> resolvedProjects.single()
 
                 else -> {

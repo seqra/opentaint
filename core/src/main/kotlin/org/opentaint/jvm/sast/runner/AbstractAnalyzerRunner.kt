@@ -13,7 +13,9 @@ import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.jvm.sast.project.ProjectKind
 import org.opentaint.jvm.sast.util.file
 import org.opentaint.jvm.sast.util.newDirectory
+import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
+import org.opentaint.project.Project
 import org.opentaint.util.CliWithLogger
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -77,7 +79,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
     }
 
     override fun main() {
-        val project = runCatching { JavaProject.load(this.project) }
+        val project = runCatching { Project.load(this.project) }
             .onFailure {
                 logger.error(it) { "Incorrect project configuration" }
                 exitProcess(-1)
@@ -88,25 +90,35 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
 
         outputDir.createDirectories()
 
-        val status = runProjectAnalysisRecursively(resolvedProject)
+        val javaStatus = resolvedProject.javaProjects.fold(ProjectAnalysisStatus.OK) { acc, jp ->
+            maxOf(acc, runProjectAnalysisRecursively(jp))
+        }
+
+        val status = resolvedProject.goProjects.fold(javaStatus) { acc, gp ->
+            maxOf(acc, runGoProjectAnalysis(gp))
+        }
+
         exitProcessIfNotOk(status)
     }
 
-    private fun runProjectAnalysisRecursively(project: JavaProject): ProjectAnalysisStatus {
-        val status = try {
-            logger.info { "Start analysis for project: ${project.sourceRoot}" }
-            analyzeProject(project, outputDir).also {
-                logger.info { "Finish analysis for project: ${project.sourceRoot}" }
-            }
-        } catch (ex: Throwable) {
-            logger.error(ex) { "Fail analysis for project: ${project.sourceRoot}" }
-            ProjectAnalysisStatus.EXCEPTION
+    private fun runGoProjectAnalysis(project: GoProject): ProjectAnalysisStatus = try {
+        logger.info { "Start Go analysis for project: ${project.projectDir}" }
+        analyzeGoProject(project, outputDir).also {
+            logger.info { "Finish Go analysis for project: ${project.projectDir}" }
         }
+    } catch (ex: Throwable) {
+        logger.error(ex) { "Fail Go analysis for project: ${project.projectDir}" }
+        ProjectAnalysisStatus.EXCEPTION
+    }
 
-        return project.subProjects.fold(status) { currentStatus, it ->
-            val status = runProjectAnalysisRecursively(it)
-            maxOf(currentStatus, status)
+    private fun runProjectAnalysisRecursively(project: JavaProject): ProjectAnalysisStatus = try {
+        logger.info { "Start analysis for project: ${project.sourceRoot}" }
+        analyzeProject(project, outputDir).also {
+            logger.info { "Finish analysis for project: ${project.sourceRoot}" }
         }
+    } catch (ex: Throwable) {
+        logger.error(ex) { "Fail analysis for project: ${project.sourceRoot}" }
+        ProjectAnalysisStatus.EXCEPTION
     }
 
     private fun exitProcessIfNotOk(status: ProjectAnalysisStatus) {
@@ -118,6 +130,8 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
         }
         exitProcess(exitCode)
     }
+
+    protected abstract fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path): ProjectAnalysisStatus
 
     protected abstract fun analyzeProject(project: JavaProject, analyzerOutputDir: Path): ProjectAnalysisStatus
 

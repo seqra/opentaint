@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-return-chained
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturnChained (Go port, chained calls)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.MkType2($X)"
+    pattern-sinks:
+      - pattern: "util.MkType1($X)"

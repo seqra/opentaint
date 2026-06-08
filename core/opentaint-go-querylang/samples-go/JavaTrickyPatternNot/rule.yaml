@@ -1,0 +1,12 @@
+rules:
+  - id: java-tricky-pattern-not
+    languages: [go]
+    severity: ERROR
+    message: match example/TrickyPatternNot (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sanitizers:
+      - pattern: "util.Clean($X)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

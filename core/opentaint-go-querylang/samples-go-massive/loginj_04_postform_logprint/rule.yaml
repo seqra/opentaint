@@ -1,0 +1,10 @@
+rules:
+  - id: loginj-04-postform-logprint
+    languages: [go]
+    severity: WARNING
+    message: Tainted PostFormValue reaches log.Print via Sprintf (log injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.PostFormValue($K)
+    pattern-sinks:
+      - pattern: log.Print($X)

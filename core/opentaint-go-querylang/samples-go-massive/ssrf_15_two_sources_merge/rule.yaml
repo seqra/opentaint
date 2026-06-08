@@ -1,0 +1,11 @@
+rules:
+  - id: ssrf-15-two-sources-merge
+    languages: [go]
+    severity: WARNING
+    message: Tainted env+query merge into URL and reach http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

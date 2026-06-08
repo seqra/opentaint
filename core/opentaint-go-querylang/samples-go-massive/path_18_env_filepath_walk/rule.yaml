@@ -1,0 +1,10 @@
+rules:
+  - id: path-18-env-filepath-walk
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches filepath.Walk root (directory traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("WALK_ROOT")
+    pattern-sinks:
+      - pattern: filepath.Walk($P, $FN)

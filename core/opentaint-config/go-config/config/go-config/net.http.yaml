@@ -1,0 +1,180 @@
+passThrough:
+- function:
+    package: net/http
+    name: CanonicalHeaderKey
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/http
+    name: Error
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: net/http
+    name: MaxBytesReader
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: net/http
+    name: NewRequest
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: net/http
+    name: NewRequestWithContext
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result(0)
+- function:
+    package: net/http
+    name: ReadRequest
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/http
+    name: ReadResponse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/http
+    name: SetCookie
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: net/http
+    type: Header
+    name: Add
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net/http
+    type: Header
+    name: Clone
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/http
+    type: Header
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - '[*]'
+    - '[*]'
+    to: result
+- function:
+    package: net/http
+    type: Header
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net/http
+    type: Header
+    name: Values
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/http
+    type: Header
+    name: Write
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net/http
+    type: Header
+    name: WriteSubset
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net/http
+    type: Hijacker
+    name: Hijack
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+  - from: this
+    to: result(1)
+- function:
+    package: net/http
+    type: Request
+    name: AddCookie
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: net/http
+    type: Request
+    name: Clone
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/http
+    type: Request
+    name: Write
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net/http
+    type: Request
+    name: WriteProxy
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net/http
+    type: Response
+    name: Write
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net/http
+    type: Transport
+    name: Clone
+    receiver: true
+  copy:
+  - from: this
+    to: result

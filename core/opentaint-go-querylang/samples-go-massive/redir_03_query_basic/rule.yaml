@@ -1,0 +1,12 @@
+rules:
+  - id: redir-03-query-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query reaches http.Redirect URL (open redirect)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.Redirect($W, $R, $URL, $CODE)
+          - focus-metavariable: $URL

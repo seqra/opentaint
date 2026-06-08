@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-mixed-metavar-concrete
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithMixedMetavarConcrete (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

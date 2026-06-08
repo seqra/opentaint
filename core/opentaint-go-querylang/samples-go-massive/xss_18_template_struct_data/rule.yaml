@@ -1,0 +1,12 @@
+rules:
+  - id: xss-18-template-struct-data
+    languages: [go]
+    severity: WARNING
+    message: Tainted env data reaches text/template Execute via struct data argument (template injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: $T.Execute($W, $D)
+          - focus-metavariable: $D

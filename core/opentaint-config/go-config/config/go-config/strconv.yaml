@@ -1,0 +1,140 @@
+passThrough:
+- function:
+    package: strconv
+    name: AppendQuote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: strconv
+    name: AppendQuoteToASCII
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: strconv
+    name: AppendQuoteToGraphic
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: strconv
+    name: Quote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: QuoteToASCII
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: QuoteToGraphic
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: QuotedPrefix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: Unquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: UnquoteChar
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(2)
+- function:
+    package: strconv
+    name: Atoi
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseInt
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseUint
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseFloat
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: ParseBool
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: strconv
+    name: Itoa
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatInt
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatUint
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatFloat
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strconv
+    name: FormatBool
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result

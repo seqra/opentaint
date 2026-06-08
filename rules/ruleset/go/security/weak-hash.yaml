@@ -1,0 +1,15 @@
+rules:
+  - id: go-weak-hash-cwe-328
+    languages: [go]
+    severity: ERROR
+    message: Use of a weak or broken cryptographic hash
+    metadata:
+      cwe: CWE-328
+      short-description: Weak cryptographic hash
+    mode: search
+    pattern-either:
+      - pattern: md5.New(...)
+      - pattern: md5.Sum(...)
+      - pattern: sha1.New(...)
+      - pattern: sha1.Sum(...)
+      - pattern: md4.New(...)

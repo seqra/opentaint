@@ -1,0 +1,10 @@
+rules:
+  - id: go-needs-conditions-rule
+    languages: [go]
+    mode: taint
+    message: "Source with metavar method name cannot be emitted"
+    severity: WARNING
+    pattern-sources:
+      - pattern: "$F(...)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-pattern-not-with-signature
+    languages: [go]
+    severity: ERROR
+    message: match example/RulePatternNotWithSignature (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sanitizers:
+      - pattern: "util.Clean($X)"
+    pattern-sinks:
+      - pattern: "util.F($X)"

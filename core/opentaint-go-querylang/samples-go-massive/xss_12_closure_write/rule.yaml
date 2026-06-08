@@ -1,0 +1,10 @@
+rules:
+  - id: xss-12-closure-write
+    languages: [go]
+    severity: WARNING
+    message: Closure captures tainted form value and writes it to w (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

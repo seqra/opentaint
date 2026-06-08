@@ -1,0 +1,66 @@
+passThrough:
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: Parse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    type: Parser
+    name: Parse
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: ParseWithClaims
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    type: Parser
+    name: ParseWithClaims
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: ParseECPrivateKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: ParseECPublicKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: ParseRSAPrivateKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: ParseRSAPrivateKeyFromPEMWithPassword
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/dgrijalva/jwt-go
+    name: ParseRSAPublicKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)

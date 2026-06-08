@@ -1,0 +1,321 @@
+passThrough:
+- function:
+    package: bytes
+    name: Clone
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Cut
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: bytes
+    name: CutPrefix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: bytes
+    name: CutSuffix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: bytes
+    name: Fields
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: FieldsFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Join
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: bytes
+    name: Map
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: bytes
+    name: NewBuffer
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: NewBufferString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Repeat
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Replace
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Replace
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result
+- function:
+    package: bytes
+    name: ReplaceAll
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: ReplaceAll
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result
+- function:
+    package: bytes
+    name: Runes
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Split
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: SplitAfter
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: SplitAfterN
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: SplitN
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: Title
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: ToLower
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: ToLowerSpecial
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: bytes
+    name: ToTitle
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: ToTitleSpecial
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: bytes
+    name: ToUpper
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: ToUpperSpecial
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: bytes
+    name: ToValidUTF8
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: bytes
+    name: Trim
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimLeft
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimLeftFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimPrefix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimRight
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimRightFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimSpace
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    name: TrimSuffix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bytes
+    type: Buffer
+    name: Bytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: bytes
+    type: Buffer
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: bytes
+    type: Buffer
+    name: Peek
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bytes
+    type: Buffer
+    name: ReadBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bytes
+    type: Buffer
+    name: ReadString
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bytes
+    type: Reader
+    name: Reset
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this

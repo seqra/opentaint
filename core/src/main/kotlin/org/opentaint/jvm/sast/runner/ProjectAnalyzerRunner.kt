@@ -13,11 +13,15 @@ import org.opentaint.common.sast.CommonAnalysisOptions
 import org.opentaint.common.sast.ProjectAnalysisStatus
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
+import org.opentaint.go.sast.project.GoProjectAnalysisOptions
+import org.opentaint.go.sast.project.GoProjectAnalyzer
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.jvm.sast.project.JirProjectAnalyzer
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.TestProjectAnalyzer
 import org.opentaint.jvm.sast.util.directory
+import org.opentaint.jvm.sast.util.file
+import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
 import org.opentaint.util.newFile
 import java.nio.file.Path
@@ -129,6 +133,15 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         } else {
             val testAnalyzer = TestProjectAnalyzer(project, analyzerOutputDir, options)
             testAnalyzer.analyze()
+        }
+    }
+
+    override fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path): ProjectAnalysisStatus {
+        val options = GoProjectAnalysisOptions(common = commonOptions)
+        return if (!debugOptions.runRuleTests) {
+            GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
+        } else {
+            TODO("GO project testing is not supported yet")
         }
     }
 

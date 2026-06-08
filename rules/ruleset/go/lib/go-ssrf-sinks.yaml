@@ -1,0 +1,21 @@
+rules:
+  - id: go-ssrf-sinks
+    options: {lib: true}
+    languages: [go]
+    severity: ERROR
+    message: Outbound HTTP request sink
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: http.Get($U)
+              - pattern: http.Head($U)
+              - pattern: http.Post($U, ...)
+              - pattern: http.PostForm($U, ...)
+              - pattern: $C.Get($U)
+              - pattern: $C.Head($U)
+              - pattern: $C.Post($U, ...)
+              - pattern: $C.PostForm($U, ...)
+              - pattern: http.NewRequest($M, $U, ...)
+              - pattern: http.NewRequestWithContext($CTX, $M, $U, ...)
+          - focus-metavariable: $U

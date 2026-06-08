@@ -1,0 +1,12 @@
+rules:
+  - id: creds-19-env-iowritestring
+    languages: [go]
+    severity: WARNING
+    message: VAULT_TOKEN env var written to file via io.WriteString (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("VAULT_TOKEN")
+    pattern-sinks:
+      - patterns:
+          - pattern: io.WriteString($W, $S)
+          - focus-metavariable: $S

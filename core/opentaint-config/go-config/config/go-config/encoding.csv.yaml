@@ -1,0 +1,47 @@
+passThrough:
+- function:
+    package: encoding/csv
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: encoding/csv
+    type: Reader
+    name: Read
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding/csv
+    type: Reader
+    name: ReadAll
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding/csv
+    type: Writer
+    name: Write
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/csv
+    type: Writer
+    name: WriteAll
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/csv
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

@@ -1,0 +1,10 @@
+rules:
+  - id: deser-08-gob-nested
+    languages: [go]
+    severity: WARNING
+    message: Tainted env value reaches gob.NewDecoder(...).Decode (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: gob.NewDecoder($R).Decode($TARGET)

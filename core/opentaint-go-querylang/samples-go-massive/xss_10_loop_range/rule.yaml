@@ -1,0 +1,10 @@
+rules:
+  - id: xss-10-loop-range
+    languages: [go]
+    severity: WARNING
+    message: Tainted env, ranged over, reaches w.Write each iteration (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

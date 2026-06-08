@@ -1,0 +1,15 @@
+rules:
+  - id: go-ssti-sinks
+    options: {lib: true}
+    languages: [go]
+    severity: ERROR
+    message: Template source parse sink
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: template.New($N).Parse($SRC)
+              - pattern: template.Must(template.New($N).Parse($SRC))
+              - pattern: template.New($N).ParseFiles($SRC, ...)
+              - pattern: template.New($N).ParseGlob($SRC)
+          - focus-metavariable: $SRC

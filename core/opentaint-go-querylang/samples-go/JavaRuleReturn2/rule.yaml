@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-return-2
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturn2 (Go port, return with cleaner)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source()"
+    pattern-sanitizers:
+      - pattern: "util.Clean($X)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

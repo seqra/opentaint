@@ -1,0 +1,38 @@
+passThrough:
+- function:
+    package: compress/gzip
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: compress/gzip
+    type: Reader
+    name: Reset
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: compress/gzip
+    type: Writer
+    name: Reset
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: compress/gzip
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: compress/gzip
+    name: NewWriterLevel
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)

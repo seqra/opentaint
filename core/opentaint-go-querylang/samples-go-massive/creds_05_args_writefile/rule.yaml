@@ -1,0 +1,12 @@
+rules:
+  - id: creds-05-args-writefile
+    languages: [go]
+    severity: WARNING
+    message: Tainted CLI password arg reaches os.WriteFile data (credential leak to file)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - patterns:
+          - pattern: os.WriteFile($PATH, $DATA, $PERM)
+          - focus-metavariable: $DATA

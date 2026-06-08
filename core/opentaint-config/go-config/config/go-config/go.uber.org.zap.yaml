@@ -1,0 +1,105 @@
+passThrough:
+- function:
+    package: go.uber.org/zap
+    name: Any
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Binary
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: ByteString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: ByteStrings
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Error
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Errors
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: NamedError
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Reflect
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: String
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Stringp
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Strings
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: go.uber.org/zap
+    name: Fields
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

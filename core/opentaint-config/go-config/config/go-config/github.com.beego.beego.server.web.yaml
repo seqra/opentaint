@@ -1,0 +1,148 @@
+passThrough:
+- function:
+    package: github.com/astaxie/beego
+    name: HTML2str
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego
+    name: HTML2str
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/server/web
+    name: HTML2str
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego
+    name: Htmlquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego
+    name: Htmlquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/server/web
+    name: Htmlquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego
+    name: Htmlunquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego
+    name: Htmlunquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/server/web
+    name: Htmlunquote
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego
+    name: MapGet
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/beego/beego
+    name: MapGet
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/beego/beego/server/web
+    name: MapGet
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/astaxie/beego
+    name: ParseForm
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/beego/beego
+    name: ParseForm
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/beego/beego/server/web
+    name: ParseForm
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/astaxie/beego
+    name: Str2html
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego
+    name: Str2html
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/server/web
+    name: Str2html
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/astaxie/beego
+    name: Substr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego
+    name: Substr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/beego/beego/server/web
+    name: Substr
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result

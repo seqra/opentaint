@@ -1,0 +1,10 @@
+rules:
+  - id: deser-19-env-json-decoder
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches json.NewDecoder(...).Decode (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: json.NewDecoder($R).Decode($TARGET)

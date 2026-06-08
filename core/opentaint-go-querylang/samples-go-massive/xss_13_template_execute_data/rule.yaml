@@ -1,0 +1,12 @@
+rules:
+  - id: xss-13-template-execute-data
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches template.Execute data argument (template injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: $T.Execute($W, $D)
+          - focus-metavariable: $D

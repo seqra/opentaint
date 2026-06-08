@@ -1,0 +1,10 @@
+rules:
+  - id: deser-15-xml-decoder-chain
+    languages: [go]
+    severity: WARNING
+    message: Tainted header reaches xml.NewDecoder(...).Decode (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: xml.NewDecoder($R2).Decode($TARGET)

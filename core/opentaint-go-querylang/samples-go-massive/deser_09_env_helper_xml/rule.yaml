@@ -1,0 +1,10 @@
+rules:
+  - id: deser-09-env-helper-xml
+    languages: [go]
+    severity: WARNING
+    message: Tainted env passes through helper to xml.Unmarshal (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

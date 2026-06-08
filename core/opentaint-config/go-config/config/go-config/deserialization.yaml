@@ -1,0 +1,11 @@
+# todo: remove after enabling any accessors in rules
+passThrough:
+  - function:
+      package: encoding/json
+      name: Unmarshal
+      receiver: false
+    copy:
+      - from: arg(0)
+        to:
+          - arg(1)
+          - '.*'

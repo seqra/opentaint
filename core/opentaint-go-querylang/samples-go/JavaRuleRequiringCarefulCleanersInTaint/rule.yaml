@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-requiring-careful-cleaners-in-taint
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleRequiringCarefulCleanersInTaint (Go port, simplified)
+    mode: taint
+    pattern-sources:
+      - pattern: "util.GetObjGood($X)"
+    pattern-sanitizers:
+      - pattern: "util.GetObjBad($X)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"

@@ -1,0 +1,17 @@
+rules:
+  - id: go-reflected-xss
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input written to HTTP response body (reflected XSS)
+    metadata:
+      cwe: CWE-79
+      short-description: Reflected cross-site scripting
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#go-http-sources
+          as: src
+        - rule: go/lib/go-xss-sinks.yaml#go-xss-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

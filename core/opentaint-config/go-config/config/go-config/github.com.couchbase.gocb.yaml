@@ -1,0 +1,1153 @@
+passThrough:
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    name: NewAnalyticsQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    name: NewAnalyticsQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    name: NewAnalyticsQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    name: NewN1qlQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    name: NewN1qlQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    name: NewN1qlQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsResults
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsResults
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsResults
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsResults
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsResults
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsResults
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsResults
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsResults
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsResults
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsQuery
+    name: ContextId
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsQuery
+    name: ContextId
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsQuery
+    name: ContextId
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsQuery
+    name: Deferred
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsQuery
+    name: Deferred
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsQuery
+    name: Deferred
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsQuery
+    name: Pretty
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsQuery
+    name: Pretty
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsQuery
+    name: Pretty
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsQuery
+    name: Priority
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsQuery
+    name: Priority
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsQuery
+    name: Priority
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsQuery
+    name: RawParam
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsQuery
+    name: RawParam
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsQuery
+    name: RawParam
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: AnalyticsQuery
+    name: ServerSideTimeout
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: AnalyticsQuery
+    name: ServerSideTimeout
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: AnalyticsQuery
+    name: ServerSideTimeout
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: AdHoc
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: AdHoc
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: AdHoc
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: Consistency
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: Consistency
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: Consistency
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: ConsistentWith
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: ConsistentWith
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: ConsistentWith
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: Custom
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: Custom
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: Custom
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: PipelineBatch
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: PipelineBatch
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: PipelineBatch
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: PipelineCap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: PipelineCap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: PipelineCap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: Profile
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: Profile
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: Profile
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: ReadOnly
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: ReadOnly
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: ReadOnly
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: ScanCap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: ScanCap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: ScanCap
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: N1qlQuery
+    name: Timeout
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: N1qlQuery
+    name: Timeout
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: N1qlQuery
+    name: Timeout
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: QueryResults
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: QueryResults
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: QueryResults
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: QueryResults
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: QueryResults
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: QueryResults
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: QueryResults
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: QueryResults
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: QueryResults
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: fixed-version:github.com/couchbase/gocb
+    type: SearchResults
+    name: Hits
+    receiver: true
+  copy:
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function:
+    package: fixed-version:gopkg.in/couchbase/gocb.v1
+    type: SearchResults
+    name: Hits
+    receiver: true
+  copy:
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function:
+    package: fixed-version:github.com/couchbaselabs/gocb
+    type: SearchResults
+    name: Hits
+    receiver: true
+  copy:
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: AnalyticsResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: AnalyticsResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: AnalyticsResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: AnalyticsResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: AnalyticsResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: AnalyticsResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: AnalyticsResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: AnalyticsResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: AnalyticsResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: AnalyticsResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: AnalyticsResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: AnalyticsResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: GetResult
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: GetResult
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: GetResult
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: LookupInAllReplicasResult
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: LookupInAllReplicasResult
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: LookupInAllReplicasResult
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: LookupInResult
+    name: ContentAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: LookupInResult
+    name: ContentAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: LookupInResult
+    name: ContentAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: MutateInResult
+    name: ContentAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: MutateInResult
+    name: ContentAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: MutateInResult
+    name: ContentAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(1)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: QueryResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: QueryResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: QueryResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: QueryResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: QueryResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: QueryResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: QueryResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: QueryResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: QueryResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: QueryResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: QueryResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: QueryResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: ScanResult
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: ScanResult
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: ScanResult
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: ScanResultItem
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: ScanResultItem
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: ScanResultItem
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: SearchResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: SearchResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: SearchResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: SearchResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: SearchResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: SearchResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: SearchResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: SearchResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: SearchResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: TransactionGetResult
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: TransactionGetResult
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: TransactionGetResult
+    name: Content
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: TransactionQueryResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: TransactionQueryResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: TransactionQueryResult
+    name: One
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: TransactionQueryResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: TransactionQueryResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: TransactionQueryResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: ViewResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: ViewResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: ViewResult
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: ViewResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: ViewResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: ViewResult
+    name: Row
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/couchbase/gocb/v2
+    type: ViewResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: gopkg.in/couchbase/gocb.v2
+    type: ViewResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/couchbaselabs/gocb/v2
+    type: ViewResultRaw
+    name: NextBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

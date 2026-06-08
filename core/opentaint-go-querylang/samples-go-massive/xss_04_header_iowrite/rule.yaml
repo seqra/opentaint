@@ -1,0 +1,12 @@
+rules:
+  - id: xss-04-header-iowrite
+    languages: [go]
+    severity: WARNING
+    message: Tainted header reaches io.WriteString writer (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: io.WriteString($W, $S)
+          - focus-metavariable: $S

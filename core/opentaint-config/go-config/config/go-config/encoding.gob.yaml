@@ -1,0 +1,63 @@
+passThrough:
+- function:
+    package: encoding/gob
+    name: NewDecoder
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: encoding/gob
+    type: Decoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: encoding/gob
+    type: Decoder
+    name: DecodeValue
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: encoding/gob
+    type: Encoder
+    name: Encode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/gob
+    type: Encoder
+    name: EncodeValue
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/gob
+    type: GobDecoder
+    name: GobDecode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: encoding/gob
+    type: GobEncoder
+    name: GobEncode
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: encoding/gob
+    name: NewEncoder
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

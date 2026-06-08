@@ -1,0 +1,12 @@
+rules:
+  - id: ssrf-18-env-newrequestctx
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches URL arg of http.NewRequestWithContext (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.NewRequestWithContext($CTX, $METHOD, $URL, $BODY)
+          - focus-metavariable: $URL

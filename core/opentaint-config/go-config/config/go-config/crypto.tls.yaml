@@ -1,0 +1,36 @@
+passThrough:
+- function:
+    package: crypto/tls
+    name: Client
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: crypto/tls
+    name: NewListener
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: crypto/tls
+    name: Server
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: crypto/tls
+    name: Client
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: crypto/tls
+    name: Server
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

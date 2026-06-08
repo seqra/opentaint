@@ -1,0 +1,14 @@
+rules:
+  - id: pass-through
+    languages: [go]
+    severity: WARNING
+    message: "Taint flows through util.Wrap from util.Source to util.Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - pattern: "util.Sink($X)"
+    pattern-propagators:
+      - pattern: "$OUT = util.Wrap($IN)"
+        from: "$IN"
+        to: "$OUT"
