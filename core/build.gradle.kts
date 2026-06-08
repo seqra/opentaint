@@ -1,5 +1,6 @@
 import OpentaintConfigDependency.opentaintGoConfig
 import OpentaintConfigDependency.opentaintJavaConfig
+import OpentaintConfigDependency.opentaintPythonConfig
 import OpentaintIrDependency.opentaint_ir_api_go
 import OpentaintIrDependency.opentaint_ir_api_jvm
 import OpentaintIrDependency.opentaint_ir_api_python
@@ -29,6 +30,7 @@ dependencies {
     implementation(opentaintProject)
     implementation(opentaintJavaConfig)
     implementation(opentaintGoConfig)
+    implementation(opentaintPythonConfig)
 
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-python")
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")

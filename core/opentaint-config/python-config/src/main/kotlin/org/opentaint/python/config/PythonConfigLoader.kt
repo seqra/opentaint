@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.python.rules
+package org.opentaint.python.config
 
 import java.nio.file.FileSystems
 import java.nio.file.Files

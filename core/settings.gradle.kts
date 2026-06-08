@@ -100,6 +100,7 @@ includeBuild("opentaint-config") {
     dependencySubstitution {
         substitute(module("org.opentaint.config:java-config")).using(project(":java-config"))
         substitute(module("org.opentaint.config:go-config")).using(project(":go-config"))
+        substitute(module("org.opentaint.config:python-config")).using(project(":python-config"))
     }
 }
 
