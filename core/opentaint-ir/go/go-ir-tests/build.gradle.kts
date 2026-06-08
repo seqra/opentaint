@@ -165,14 +165,14 @@ tasks.register("downloadBenchmarks") {
                     .directory(targetDir)
                     .redirectErrorStream(true)
                     .start()
-                fetch.inputStream.readAllBytes() // drain
+                fetch.inputStream.readBytes() // drain
                 fetch.waitFor(60, TimeUnit.SECONDS)
 
                 val checkout = ProcessBuilder("git", "checkout", commitHash)
                     .directory(targetDir)
                     .redirectErrorStream(true)
                     .start()
-                checkout.inputStream.readAllBytes() // drain
+                checkout.inputStream.readBytes() // drain
                 checkout.waitFor(30, TimeUnit.SECONDS)
             }
             println("    OK")

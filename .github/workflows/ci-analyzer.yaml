@@ -74,10 +74,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install CA certificates
+      - name: Install Go-ir dependencies
         run: |
           apt-get update
-          apt-get install -y ca-certificates
+          apt-get install -y ca-certificates protobuf-compiler
           update-ca-certificates
 
       - name: Set up Go
