@@ -74,6 +74,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
