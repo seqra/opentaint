@@ -59,7 +59,7 @@ tasks.register<Exec>("buildGoServer") {
           --go-grpc_opt=module=$goModulePath \
           "$goProtoDir/goir/service.proto"
 
-        go build -o "$goServerBinary" ./cmd/go-ssa-server
+        go build -buildvcs=false -o "$goServerBinary" ./cmd/go-ssa-server
         """.trimIndent()
     )
 }
