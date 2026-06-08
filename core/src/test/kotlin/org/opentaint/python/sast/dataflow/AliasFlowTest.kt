@@ -1,16 +1,15 @@
 package org.opentaint.python.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.python.rules.TaintRules.Sink
-import org.opentaint.dataflow.python.rules.TaintRules.Source
+import org.opentaint.dataflow.configuration.python.Argument
+import org.opentaint.dataflow.configuration.python.Result
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AliasFlowTest : AnalysisTest() {
 
-    private val source = Source("AliasField.source", "taint", PositionBase.Result)
-    private val sink = Sink("AliasField.sink", "taint", PositionBase.Argument(0), "alias")
+    private val source = source("AliasField.source", "taint", Result)
+    private val sink = sink("AliasField.sink", "taint", Argument(0), "alias")
 
     @Test
     fun testAliasSimple() = assertSinkReachable(

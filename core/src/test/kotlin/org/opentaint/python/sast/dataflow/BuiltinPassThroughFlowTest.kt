@@ -2,16 +2,15 @@ package org.opentaint.python.sast.dataflow
 
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.python.rules.TaintRules.Sink
-import org.opentaint.dataflow.python.rules.TaintRules.Source
+import org.opentaint.dataflow.configuration.python.Argument
+import org.opentaint.dataflow.configuration.python.Result
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BuiltinPassThroughFlowTest : AnalysisTest() {
 
-    private fun source() = Source("BuiltinPassThrough.source", "taint", PositionBase.Result)
-    private fun sink() = Sink("BuiltinPassThrough.sink", "taint", PositionBase.Argument(0), "builtin")
+    private fun source() = source("BuiltinPassThrough.source", "taint", Result)
+    private fun sink() = sink("BuiltinPassThrough.sink", "taint", Argument(0), "builtin")
 
     // --- String method pass-through ---
 

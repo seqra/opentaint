@@ -1,9 +1,8 @@
 package org.opentaint.python.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.python.rules.TaintRules.Sink
-import org.opentaint.dataflow.python.rules.TaintRules.Source
+import org.opentaint.dataflow.configuration.python.Argument
+import org.opentaint.dataflow.configuration.python.Result
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -14,8 +13,8 @@ class ConstructorFlowTest : AnalysisTest() {
     // Tainted constructor argument is stepped into __init__ and reaches the sink there.
     @Test
     fun testConstructorArgToSink() = assertSinkReachable(
-        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
-        sink = Sink("ConstructorArgFlow.sink", "taint", PositionBase.Argument(0), "ctor"),
+        source = source("ConstructorArgFlow.source", "taint", Result),
+        sink = sink("ConstructorArgFlow.sink", "taint", Argument(0), "ctor"),
         entryPointFunction = "ConstructorArgFlow.ctor_arg_to_sink"
     )
 
@@ -23,8 +22,8 @@ class ConstructorFlowTest : AnalysisTest() {
     // resolved MyService.__init__ via the matcher's .__init__ strip.
     @Test
     fun testConstructorClassQnSink() = assertSinkReachable(
-        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
-        sink = Sink("ConstructorArgFlow.MyService", "taint", PositionBase.Argument(0), "ctor"),
+        source = source("ConstructorArgFlow.source", "taint", Result),
+        sink = sink("ConstructorArgFlow.MyService", "taint", Argument(0), "ctor"),
         entryPointFunction = "ConstructorArgFlow.ctor_arg_to_sink"
     )
 
@@ -32,8 +31,8 @@ class ConstructorFlowTest : AnalysisTest() {
     // binding still resolves `obj.handle(...)` to NoInitService.handle.
     @Test
     fun testNoInitClassChainedMethod() = assertSinkReachable(
-        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
-        sink = Sink("ConstructorArgFlow.sink", "taint", PositionBase.Argument(0), "ctor"),
+        source = source("ConstructorArgFlow.source", "taint", Result),
+        sink = sink("ConstructorArgFlow.sink", "taint", Argument(0), "ctor"),
         entryPointFunction = "ConstructorArgFlow.no_init_chained_method"
     )
 
@@ -41,8 +40,8 @@ class ConstructorFlowTest : AnalysisTest() {
     // though a source was produced elsewhere in the entry point.
     @Test
     fun testConstructorClassQnSinkNotReachableWhenArgUntainted() = assertSinkNotReachable(
-        source = Source("ConstructorArgFlow.source", "taint", PositionBase.Result),
-        sink = Sink("ConstructorArgFlow.MyService", "taint", PositionBase.Argument(0), "ctor"),
+        source = source("ConstructorArgFlow.source", "taint", Result),
+        sink = sink("ConstructorArgFlow.MyService", "taint", Argument(0), "ctor"),
         entryPointFunction = "ConstructorArgFlow.ctor_untainted_arg"
     )
 
@@ -53,8 +52,8 @@ class ConstructorFlowTest : AnalysisTest() {
     // constructor self↔constructed-object binding in PIRDSUAliasAnalysis.
     @Test
     fun testConstructorFieldToSink() = assertSinkReachable(
-        source = Source("ConstructorFieldFlow.source", "taint", PositionBase.Result),
-        sink = Sink("ConstructorFieldFlow.sink", "taint", PositionBase.Argument(0), "field"),
+        source = source("ConstructorFieldFlow.source", "taint", Result),
+        sink = sink("ConstructorFieldFlow.sink", "taint", Argument(0), "field"),
         entryPointFunction = "ConstructorFieldFlow.ctor_field_to_sink"
     )
 
@@ -64,8 +63,8 @@ class ConstructorFlowTest : AnalysisTest() {
     // via self. Minimal mirror of owasp request_wrapper (BenchmarkTest00283).
     @Test
     fun testConstructorFieldViaMethod() = assertSinkReachable(
-        source = Source("ConstructorFieldViaMethod.source", "taint", PositionBase.Result),
-        sink = Sink("ConstructorFieldViaMethod.sink", "taint", PositionBase.Argument(0), "via-method"),
+        source = source("ConstructorFieldViaMethod.source", "taint", Result),
+        sink = sink("ConstructorFieldViaMethod.sink", "taint", Argument(0), "via-method"),
         entryPointFunction = "ConstructorFieldViaMethod.ctor_field_via_method"
     )
 }

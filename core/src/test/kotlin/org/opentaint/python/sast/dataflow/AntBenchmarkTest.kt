@@ -12,11 +12,9 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
-import org.opentaint.dataflow.python.rules.TaintRules
 import org.opentaint.dataflow.python.rules.loadDefaultConfig
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -116,17 +114,6 @@ class AntBenchmarkTest {
         val entryPoint = cp.findFunctionOrNull(case.functionName)
         assumeTrue(entryPoint != null, "Entry point not found: ${case.functionName}")
         entryPoint!!
-
-        // Configure taint rules
-        val entrySources = listOf(
-            TaintRules.EntrySource(case.functionName, "taint", 0)
-        )
-
-        // TODO add them to config
-        val sinks = listOf(
-            TaintRules.Sink("os.system", "taint", PositionBase.Argument(0), "benchmark"),
-            TaintRules.Sink("${case.moduleName}.taint_sink", "taint", PositionBase.Argument(0), "benchmark"),
-        )
 
         val ifdsGraph = PIRApplicationGraph(cp)
 

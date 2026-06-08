@@ -10,22 +10,27 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
-import org.opentaint.dataflow.configuration.python.serialized.PythonPosition
-import org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase
-import org.opentaint.dataflow.configuration.python.serialized.PythonSinkMetaData
-import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
-import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
-import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
-import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
-import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
-import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
+import org.opentaint.dataflow.configuration.CommonCondition
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.configuration.python.ContainsMark
+import org.opentaint.dataflow.configuration.python.Position
+import org.opentaint.dataflow.configuration.python.TaintAssignAction
+import org.opentaint.dataflow.configuration.python.TaintCleaner
+import org.opentaint.dataflow.configuration.python.TaintEntryPointSource
+import org.opentaint.dataflow.configuration.python.TaintMark
+import org.opentaint.dataflow.configuration.python.TaintPassThrough
+import org.opentaint.dataflow.configuration.python.TaintSink
+import org.opentaint.dataflow.configuration.python.TaintSinkMeta
+import org.opentaint.dataflow.configuration.python.TaintSource
+import org.opentaint.dataflow.configuration.python.Target
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
-import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
-import org.opentaint.dataflow.python.rules.PythonConfigLoader
-import org.opentaint.dataflow.python.rules.TaintRules
+import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
+import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
+import org.opentaint.dataflow.python.rules.loadDefaultConfig
+import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRClasspath
@@ -125,33 +130,27 @@ abstract class AnalysisTest {
     }
 
     fun assertSinkReachable(
-        source: TaintRules.Source,
-        sink: TaintRules.Sink,
+        source: TestSource,
+        sink: TestSink,
         entryPointFunction: String
     ) {
-        val taintRules = buildPirTaintConfiguration(listOf(source), listOf(sink))
-        val vulnerabilities = runAnalysis(taintRules, entryPointFunction)
+        val vulnerabilities = runAnalysis(rulesWith(source, sink), entryPointFunction)
         assertTrue(vulnerabilities.isNotEmpty(), "Sink was not reached")
     }
 
     fun assertSinkNotReachable(
-        source: TaintRules.Source,
-        sink: TaintRules.Sink,
+        source: TestSource,
+        sink: TestSink,
         entryPointFunction: String
     ) {
-        val taintRules = buildPirTaintConfiguration(listOf(source), listOf(sink))
-        val vulnerabilities = runAnalysis(taintRules, entryPointFunction)
+        val vulnerabilities = runAnalysis(rulesWith(source, sink), entryPointFunction)
         assertTrue(vulnerabilities.isEmpty(), "Sink should not be reached")
     }
 
-    private fun shippedRules(): PIRTaintConfiguration {
-        val serializedConfig = PythonConfigLoader.getConfig()
-            ?: error("Couldn't resolve python config")
-        return PIRTaintConfiguration(serializedConfig)
-    }
+    private fun shippedRules(): PIRTaintRulesProvider = loadDefaultConfig()
 
     fun runAnalysis(
-        taintConfig: PIRTaintConfiguration,
+        taintConfig: PIRTaintRulesProvider,
         entryPointFunction: String,
     ): List<TaintSinkTracker.TaintVulnerability> {
         val entryPoint = cp.findFunctionOrNull(entryPointFunction)
@@ -175,53 +174,69 @@ abstract class AnalysisTest {
             eng.getVulnerabilities()
         }
     }
+
+    // region Test-only rule builders: declare per-fixture source / sink rules
+    // inline and layer them over the shipped config (stdlib pass-throughs,
+    // library rules) via PIRCombinedTaintRulesProvider.
+    protected fun source(function: String, mark: String, pos: Position): TestSource =
+        TestSource(function, mark, pos)
+
+    protected fun sink(function: String, mark: String, pos: Position, id: String): TestSink =
+        TestSink(function, mark, pos, id)
+
+    private fun rulesWith(source: TestSource, sink: TestSink): PIRTaintRulesProvider =
+        PIRCombinedTaintRulesProvider(
+            loadDefaultConfig(),
+            TestRulesProvider(listOf(source), listOf(sink)),
+            PIRCombinedTaintRulesProvider.CombinationOptions(
+                source = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
+                sink = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
+            ),
+        )
+    // endregion
 }
 
-// region Test-only adapter: layer the test's TaintRules.Source/Sink rules
-// on top of the shipped YAML config (which already provides stdlib
-// pass-throughs and other library rules) so each test can keep its
-// per-fixture source / sink declarations inline.
-// TODO introduce taintProvider interface
-private fun buildPirTaintConfiguration(
-    sources: List<TaintRules.Source>,
-    sinks: List<TaintRules.Sink>,
-): PIRTaintConfiguration {
-    val shipped: SerializedPythonTaintConfig = PythonConfigLoader.getConfig()
-        ?: SerializedPythonTaintConfig()
+/** Synthetic per-fixture source rule: taints [pos] of [function]'s call with [mark]. */
+data class TestSource(val function: String, val mark: String, val pos: Position)
 
-    val merged = SerializedPythonTaintConfig(
-        entryPoint = shipped.entryPoint,
-        source = shipped.source + sources.map { src ->
-            SerializedPythonSource(
-                target = PythonTarget.Function(src.function, null),
-                condition = null,
-                taint = listOf(SerializedPythonTaintAssignAction(
-                    kind = src.mark,
-                    pos = PythonPosition.BaseOnly(src.pos.toPython()),
-                )),
+/** Synthetic per-fixture sink rule: flags when [mark] reaches [pos] of [function]. */
+data class TestSink(val function: String, val mark: String, val pos: Position, val id: String)
+
+/**
+ * In-place [PIRTaintRulesProvider] over synthetic [TestSource] / [TestSink] rules.
+ * Matches a call by fully-qualified name (constructor calls also match the class
+ * FQN) and emits the compiled runtime rule directly — no serialized config.
+ */
+private class TestRulesProvider(
+    private val sources: List<TestSource>,
+    private val sinks: List<TestSink>,
+) : PIRTaintRulesProvider {
+    override fun sourcesForMethod(method: PIRFunction): List<TaintSource> =
+        sources.filter { method.matches(it.function) }.map {
+            TaintSource(Target.Function(method), mkTrue(), listOf(TaintAssignAction(TaintMark(it.mark), it.pos)))
+        }
+
+    override fun sinksForMethod(method: PIRFunction): List<TaintSink> =
+        sinks.filter { method.matches(it.function) }.map {
+            TaintSink(
+                target = Target.Function(method),
+                condition = CommonCondition.Atom(ContainsMark(TaintMark(it.mark), it.pos)),
+                id = it.id,
+                meta = TaintSinkMeta(it.id, CommonTaintConfigurationSinkMeta.Severity.Warning, cwe = null, note = it.id),
             )
-        },
-        sink = shipped.sink + sinks.map { sk ->
-            SerializedPythonSink(
-                target = PythonTarget.Function(sk.function, null),
-                condition = SerializedPythonCondition.ContainsMark(
-                    tainted = sk.mark,
-                    pos = PythonPosition.BaseOnly(sk.pos.toPython()),
-                ),
-                meta = PythonSinkMetaData(cwe = null, note = sk.id),
-            )
-        },
-        passThrough = shipped.passThrough,
-        cleaner = shipped.cleaner,
-    )
-    return PIRTaintConfiguration(merged)
-}
+        }
 
-private fun PositionBase.toPython(): PythonPositionBase = when (this) {
-    is PositionBase.Argument -> PythonPositionBase.Argument(idx)
-    PositionBase.Result -> PythonPositionBase.Result
-    PositionBase.This -> PythonPositionBase.This
-    is PositionBase.ClassStatic -> PythonPositionBase.ClassRef(className)
-    is PositionBase.AnyArgument -> error("AnyArgument is not used in Python test rules")
+    override fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource> = emptyList()
+    override fun passThroughForMethod(method: PIRFunction): List<TaintPassThrough> = emptyList()
+    override fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> = emptyList()
+    override fun sourcesForAttribute(name: String): List<TaintSource> = emptyList()
+    override fun sinksForAttribute(name: String): List<TaintSink> = emptyList()
+    override fun passThroughForAttribute(name: String): List<TaintPassThrough> = emptyList()
+    override fun cleanersForAttribute(name: String): List<TaintCleaner> = emptyList()
+
+    private fun PIRFunction.matches(name: String): Boolean {
+        val qn = qualifiedName
+        val ctorQn = if (enclosingClass != null) qn.removeSuffix(".__init__") else qn
+        return qn == name || ctorQn == name
+    }
 }
-// endregion

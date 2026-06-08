@@ -31,7 +31,7 @@ import org.opentaint.dataflow.python.PIRLanguageManager
 import org.opentaint.dataflow.python.alias.PIRLocalAliasAnalysis
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext
-import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
+import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -44,7 +44,7 @@ import org.opentaint.util.analysis.ApplicationGraph
 
 class PIRAnalysisManager(
     cp: PIRClasspath,
-    val taintRules: PIRTaintConfiguration,
+    val taintRules: PIRTaintRulesProvider,
     private val aliasParams: PIRLocalAliasAnalysis.Params = PIRLocalAliasAnalysis.Params(),
 ) : PIRLanguageManager(cp), TaintAnalysisManager {
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
