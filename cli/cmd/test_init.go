@@ -185,8 +185,8 @@ func copyFile(src, dst string) error {
 	}
 	defer func() { _ = in.Close() }()
 
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return fmt.Errorf("create parent dir: %w", err)
+	if err := utils.EnsureParentDir(dst); err != nil {
+		return err
 	}
 
 	outFile, err := os.Create(dst)

@@ -143,7 +143,7 @@ For more options, see [Installation](docs/README.md#installation) and [Usage](do
 
 ## AI Agent Workflows
 
-OpenTaint now ships agent skills for turning static analysis into an end-to-end application-security workflow. Install them with:
+OpenTaint includes agent skills that turn static analysis into an end-to-end application-security workflow. Install them with:
 
 ```bash
 npx skills add https://github.com/seqra/opentaint
