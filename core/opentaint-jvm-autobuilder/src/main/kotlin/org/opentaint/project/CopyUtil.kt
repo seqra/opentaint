@@ -9,6 +9,7 @@ import kotlin.io.path.CopyActionResult
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.OnErrorResult
 import kotlin.io.path.copyToRecursively
+import kotlin.io.path.createDirectory
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
@@ -46,14 +47,22 @@ private fun copyDirRecursively(from: Path, to: Path) {
         followLinks = false,
     ) { src, dst ->
         if (src.isDirectory(LinkOption.NOFOLLOW_LINKS)) {
-            when {
-                !dst.exists(LinkOption.NOFOLLOW_LINKS) -> Files.createDirectory(dst)
-                !dst.isDirectory(LinkOption.NOFOLLOW_LINKS) -> throw FileAlreadyExistsException(dst.toString())
-            }
+            createDirectoryIgnoringExisting(dst)
             CopyActionResult.CONTINUE
         } else {
             src.copyToIgnoringExistingDirectory(dst, followLinks = false)
         }
+    }
+}
+
+// Create a directory explicitly instead of copying it from the source. Copying would propagate the
+// source's attributes, and a read-only source (e.g. a JDK from the Nix store) lacks the owner write
+// bit, which then makes its child files fail to copy with AccessDeniedException. Mirrors the
+// "ignore existing directory" semantics of copyToIgnoringExistingDirectory.
+private fun createDirectoryIgnoringExisting(dst: Path) {
+    when {
+        !dst.exists(LinkOption.NOFOLLOW_LINKS) -> dst.createDirectory()
+        !dst.isDirectory(LinkOption.NOFOLLOW_LINKS) -> throw FileAlreadyExistsException(dst.toString())
     }
 }
 
