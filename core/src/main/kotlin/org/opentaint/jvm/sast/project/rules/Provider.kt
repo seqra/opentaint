@@ -4,6 +4,9 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.jvm.JIRClasspath
+import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider
+import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationMode
+import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationOptions
 import org.opentaint.jvm.sast.dataflow.JIRMethodExitRuleProvider
 import org.opentaint.jvm.sast.dataflow.JIRMethodGetDefaultProvider
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
@@ -26,6 +29,29 @@ fun List<TaintRuleFromSemgrep<SerializedItem>>.semgrepRulesWithDefaultConfig(
     this.forEach { config.loadConfig(it.createTaintConfig()) }
 
     return JIRTaintRulesProvider(config)
+}
+
+val approximationConfigCombinationOptions = CombinationOptions(
+    entryPoint = CombinationMode.IGNORE,
+    source = CombinationMode.IGNORE,
+    sink = CombinationMode.IGNORE,
+    cleaner = CombinationMode.IGNORE,
+    passThrough = CombinationMode.OVERRIDE,
+)
+
+fun JIRTaintRulesProvider.withApproximationConfigs(
+    cp: JIRClasspath,
+    approximationConfigs: List<SerializedTaintConfig>,
+): TaintRulesProvider {
+    if (approximationConfigs.isEmpty()) return this
+
+    val approximationsConfig = TaintConfiguration(cp)
+    approximationConfigs.forEach { approximationsConfig.loadConfig(it) }
+
+    return JIRCombinedTaintRulesProvider(
+        this, JIRTaintRulesProvider(approximationsConfig),
+        approximationConfigCombinationOptions,
+    )
 }
 
 fun ProjectAnalysisContext.analysisConfig(initialConfig: TaintRulesProvider): TaintRulesProvider {

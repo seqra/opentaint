@@ -2,12 +2,14 @@ package org.opentaint.project
 
 import mu.KLogging
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.OnErrorResult
 import kotlin.io.path.copyToRecursively
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.io.path.isSameFileAs
 import kotlin.io.path.isSymbolicLink
 
@@ -40,8 +42,16 @@ private fun copyDirRecursively(from: Path, to: Path) {
             OnErrorResult.SKIP_SUBTREE
         },
         followLinks = false,
-        overwrite = false
-    )
+    ) { src, dst ->
+        val result = src.copyToIgnoringExistingDirectory(dst, followLinks = false)
+        // The source may be a read-only JDK (e.g. from the Nix store); a directory copied from it
+        // lacks the owner write bit, so its files then fail to copy with AccessDeniedException.
+        // Restore it on each copied directory before its children are visited.
+        if (dst.isDirectory(LinkOption.NOFOLLOW_LINKS)) {
+            dst.toFile().setWritable(true, true)
+        }
+        result
+    }
 }
 
 private fun Path.copyTargetIsSubdirectory(target: Path): Boolean {

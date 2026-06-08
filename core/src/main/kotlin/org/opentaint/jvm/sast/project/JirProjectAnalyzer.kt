@@ -14,13 +14,11 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider
-import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationMode
-import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationOptions
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.rules.analysisConfig
+import org.opentaint.jvm.sast.project.rules.withApproximationConfigs
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.JirDebugFactReachabilitySarifGenerator
 import org.opentaint.jvm.sast.sarif.JirSarifGenerator
@@ -57,18 +55,7 @@ class JirProjectAnalyzer(
         val defaultPassRules = loadDefaultConfig()
         config.loadConfig(defaultPassRules)
 
-        val provider = JIRTaintRulesProvider(config)
-        if (rules.customApproximationConfig.isEmpty()) return provider
-
-        val approximationsConfig = TaintConfiguration(cp)
-        rules.customApproximationConfig.forEach {
-            approximationsConfig.loadConfig(it)
-        }
-
-        return JIRCombinedTaintRulesProvider(
-            provider, JIRTaintRulesProvider(approximationsConfig),
-            approximationConfigCombinationOptions,
-        )
+        return JIRTaintRulesProvider(config).withApproximationConfigs(cp, rules.customApproximationConfig)
     }
 
     override fun ProjectAnalysisContext.createAnalyzer(
@@ -114,16 +101,6 @@ class JirProjectAnalyzer(
         return JirDebugFactReachabilitySarifGenerator(
             options.sarifGenerationOptions,
             sourcesResolver, JIRSarifTraits(cp)
-        )
-    }
-
-    companion object {
-        private val approximationConfigCombinationOptions = CombinationOptions(
-            entryPoint = CombinationMode.IGNORE,
-            source = CombinationMode.IGNORE,
-            sink = CombinationMode.IGNORE,
-            cleaner = CombinationMode.IGNORE,
-            passThrough = CombinationMode.OVERRIDE,
         )
     }
 }

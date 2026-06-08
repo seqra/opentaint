@@ -194,24 +194,27 @@ abstract class ProjectAnalyzer<
     }
 
     private fun writeExternalMethodsYaml(extMethods: SkippedExternalMethods) {
-        val withoutRulesPath = resultDir / "external-methods-without-rules.yaml"
-        val withRulesPath = resultDir / "external-methods-with-rules.yaml"
+        val droppedPath = resultDir / DROPPED_EXTERNAL_METHODS_FILE_NAME
+        val approximatedPath = resultDir / APPROXIMATED_EXTERNAL_METHODS_FILE_NAME
 
-        withoutRulesPath.outputStream().use { stream ->
+        droppedPath.outputStream().use { stream ->
             skippedMethodsYaml.encodeToStream(extMethods.withoutRules, stream)
         }
 
-        logger.info { "Wrote external methods without rules to $withoutRulesPath (${extMethods.withoutRules.size} entries)" }
+        logger.info { "Wrote dropped external methods to $droppedPath (${extMethods.withoutRules.size} entries)" }
 
-        withRulesPath.outputStream().use { stream ->
+        approximatedPath.outputStream().use { stream ->
             skippedMethodsYaml.encodeToStream(extMethods.withRules, stream)
         }
 
-        logger.info { "Wrote external methods with rules to $withRulesPath (${extMethods.withRules.size} entries)" }
+        logger.info { "Wrote approximated external methods to $approximatedPath (${extMethods.withRules.size} entries)" }
     }
 
     companion object {
         private val logger = object : KLogging() {}.logger
+
+        const val DROPPED_EXTERNAL_METHODS_FILE_NAME = "dropped-external-methods.yaml"
+        const val APPROXIMATED_EXTERNAL_METHODS_FILE_NAME = "approximated-external-methods.yaml"
 
         private val skippedMethodsYaml = Yaml(
             configuration = YamlConfiguration(encodeDefaults = true)

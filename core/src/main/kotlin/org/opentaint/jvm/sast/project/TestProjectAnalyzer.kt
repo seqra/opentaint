@@ -10,6 +10,8 @@ import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.toProjectStatus
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
+import org.opentaint.dataflow.configuration.jvm.serialized.loadSerializedTaintConfig
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
@@ -18,6 +20,7 @@ import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.project.rules.analysisConfig
 import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.jvm.sast.project.rules.semgrepRulesWithDefaultConfig
+import org.opentaint.jvm.sast.project.rules.withApproximationConfigs
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.JirSarifGenerator
@@ -28,6 +31,7 @@ import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import java.nio.file.Path
 import kotlin.io.path.div
+import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 
@@ -39,6 +43,11 @@ class TestProjectAnalyzer(
     private val options = with(providedOptions) { copy(common = common.copy(storeSummaries = false)) }
     private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, options)
     private val loadedRules = options.common.loadSemgrepRules(JavaLanguageStrategy())
+
+    private val approximationConfigs: List<SerializedTaintConfig> =
+        options.common.customApproximationConfig.map { cfg ->
+            cfg.inputStream().use { loadSerializedTaintConfig(it) }
+        }
 
     @Serializable
     data class RuleInfo(val rulePath: String, val ruleId: String?)
@@ -194,6 +203,7 @@ class TestProjectAnalyzer(
         sample: TestSample
     ): Pair<List<VulnerabilityWithTrace>, TaintAnalyzer.Status> {
         val loadedConfig = rules.semgrepRulesWithDefaultConfig(cp)
+            .withApproximationConfigs(cp, approximationConfigs)
         val config = analysisConfig(loadedConfig)
 
         JIRTaintAnalyzer(
