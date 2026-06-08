@@ -8,14 +8,14 @@ rules:
     pattern-sources:
       - label: "$UNTRUSTED"
         pattern-either:
-          - pattern: $R.FormValue($K)
-          - pattern: $R.PostFormValue($K)
-          - pattern: $R.FormFile($K)
-          - pattern: $R.Cookie($K)
-          - pattern: $R.Cookies()
-          - pattern: $R.MultipartReader()
-          - pattern: $R.Referer()
-          - pattern: $R.UserAgent()
+          - pattern: "($R : *http.Request).FormValue($K)"
+          - pattern: "($R : *http.Request).PostFormValue($K)"
+          - pattern: "($R : *http.Request).FormFile($K)"
+          - pattern: "($R : *http.Request).Cookie($K)"
+          - pattern: "($R : *http.Request).Cookies()"
+          - pattern: "($R : *http.Request).MultipartReader()"
+          - pattern: "($R : *http.Request).Referer()"
+          - pattern: "($R : *http.Request).UserAgent()"
           - pattern: $R.URL.Query()
           - pattern: $R.URL.Query().Get($K)
           - pattern: $R.URL.Path
@@ -45,33 +45,33 @@ rules:
           - pattern: os.LookupEnv($K)
           - pattern: os.Args
           # beego Controller methods
-          - pattern: $C.GetString($K)
-          - pattern: $C.GetString($K, $DEF)
-          - pattern: $C.GetStrings($K)
-          - pattern: $C.GetStrings($K, $DEF)
+          - pattern: "($C : *web.Controller).GetString($K)"
+          - pattern: "($C : *web.Controller).GetString($K, $DEF)"
+          - pattern: "($C : *web.Controller).GetStrings($K)"
+          - pattern: "($C : *web.Controller).GetStrings($K, $DEF)"
           - pattern: $C.GetStrings($K)[$IDX]
           - pattern: $C.GetStrings($K, $DEF)[$IDX]
-          - pattern: $C.GetInt($K)
-          - pattern: $C.GetInt($K, $DEF)
-          - pattern: $C.GetInt8($K)
-          - pattern: $C.GetInt16($K)
-          - pattern: $C.GetInt32($K)
-          - pattern: $C.GetInt64($K)
-          - pattern: $C.GetUint8($K)
-          - pattern: $C.GetUint16($K)
-          - pattern: $C.GetUint32($K)
-          - pattern: $C.GetUint64($K)
-          - pattern: $C.GetFloat($K)
-          - pattern: $C.GetBool($K)
-          - pattern: $C.GetFile($K)
-          - pattern: $C.GetFiles($K)
-          - pattern: $C.GetSession($K)
-          - pattern: $C.Input()
-          - pattern: $C.ParseForm($PTR)
+          - pattern: "($C : *web.Controller).GetInt($K)"
+          - pattern: "($C : *web.Controller).GetInt($K, $DEF)"
+          - pattern: "($C : *web.Controller).GetInt8($K)"
+          - pattern: "($C : *web.Controller).GetInt16($K)"
+          - pattern: "($C : *web.Controller).GetInt32($K)"
+          - pattern: "($C : *web.Controller).GetInt64($K)"
+          - pattern: "($C : *web.Controller).GetUint8($K)"
+          - pattern: "($C : *web.Controller).GetUint16($K)"
+          - pattern: "($C : *web.Controller).GetUint32($K)"
+          - pattern: "($C : *web.Controller).GetUint64($K)"
+          - pattern: "($C : *web.Controller).GetFloat($K)"
+          - pattern: "($C : *web.Controller).GetBool($K)"
+          - pattern: "($C : *web.Controller).GetFile($K)"
+          - pattern: "($C : *web.Controller).GetFiles($K)"
+          - pattern: "($C : *web.Controller).GetSession($K)"
+          - pattern: "($C : *web.Controller).Input()"
+          - pattern: "($C : *web.Controller).ParseForm($PTR)"
           # beego Context.Input methods (c.Ctx.Input.X)
-          - pattern: $X.Param($K)
-          - pattern: $X.Params()
-          - pattern: $X.URI()
-          - pattern: $X.URL()
+          - pattern: "($X : *context.BeegoInput).Param($K)"
+          - pattern: "($X : *context.BeegoInput).Params()"
+          - pattern: "($X : *context.BeegoInput).URI()"
+          - pattern: "($X : *context.BeegoInput).URL()"
           - pattern: $X.RequestBody
-          - pattern: $X.Bind($PTR)
+          - pattern: "($X : *context.BeegoInput).Bind($PTR)"

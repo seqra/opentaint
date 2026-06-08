@@ -11,6 +11,8 @@ rules:
     pattern-sources:
       - pattern-either:
           - pattern: "($R : *http.Request).FormValue($K)"
+          - pattern: "($C : *web.Controller).GetString($K)"
+          - pattern: "($X : *context.BeegoInput).Param($K)"
           - pattern: "util.Source(...)"
     pattern-sinks:
       - pattern-either:

@@ -12,10 +12,10 @@ rules:
               - pattern: http.Head($U)
               - pattern: http.Post($U, ...)
               - pattern: http.PostForm($U, ...)
-              - pattern: $C.Get($U)
-              - pattern: $C.Head($U)
-              - pattern: $C.Post($U, ...)
-              - pattern: $C.PostForm($U, ...)
+              - pattern: "($C : *http.Client).Get($U)"
+              - pattern: "($C : *http.Client).Head($U)"
+              - pattern: "($C : *http.Client).Post($U, ...)"
+              - pattern: "($C : *http.Client).PostForm($U, ...)"
               - pattern: http.NewRequest($M, $U, ...)
               - pattern: http.NewRequestWithContext($CTX, $M, $U, ...)
           - focus-metavariable: $U

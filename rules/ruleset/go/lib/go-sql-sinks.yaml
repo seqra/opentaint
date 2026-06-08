@@ -7,26 +7,26 @@ rules:
     mode: taint
     pattern-sinks:
       - patterns:
-          - pattern: $DB.Query($SQL, ...)
+          - pattern: "($DB : *sql.DB).Query($SQL, ...)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.QueryContext($CTX, $SQL, ...)
+          - pattern: "($DB : *sql.DB).QueryContext($CTX, $SQL, ...)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.QueryRow($SQL, ...)
+          - pattern: "($DB : *sql.DB).QueryRow($SQL, ...)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.QueryRowContext($CTX, $SQL, ...)
+          - pattern: "($DB : *sql.DB).QueryRowContext($CTX, $SQL, ...)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.Exec($SQL, ...)
+          - pattern: "($DB : *sql.DB).Exec($SQL, ...)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.ExecContext($CTX, $SQL, ...)
+          - pattern: "($DB : *sql.DB).ExecContext($CTX, $SQL, ...)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.Prepare($SQL)
+          - pattern: "($DB : *sql.DB).Prepare($SQL)"
           - focus-metavariable: $SQL
       - patterns:
-          - pattern: $DB.PrepareContext($CTX, $SQL)
+          - pattern: "($DB : *sql.DB).PrepareContext($CTX, $SQL)"
           - focus-metavariable: $SQL

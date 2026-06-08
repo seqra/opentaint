@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 	"text/template"
+
+	beegoctx "util/context"
+	"util/web"
 )
 
 func Source() string { return "tainted" }
@@ -13,6 +16,16 @@ func Sink(s string)  { _ = s }
 // (r.FormValue) flows to an untyped sink — isolates the typed SOURCE pattern.
 func Positive_typed_request_source(r *http.Request) {
 	s := r.FormValue("q")
+	Sink(s)
+}
+
+func Positive_typed_beego_controller_source(c *web.Controller) {
+	s := c.GetString("q")
+	Sink(s)
+}
+
+func Positive_typed_beego_input_source(i *beegoctx.BeegoInput) {
+	s := i.Param(":id")
 	Sink(s)
 }
 

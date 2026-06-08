@@ -14,7 +14,7 @@ rules:
           - pattern: syscall.Exec($NAME, ...)
           - pattern: syscall.ForkExec($NAME, ...)
           - pattern: syscall.StartProcess($NAME, ...)
-          - pattern: $C.CombinedOutput()
-          - pattern: $C.Run()
-          - pattern: $C.Output()
-          - pattern: $C.Start()
+          - pattern: "($C : *exec.Cmd).CombinedOutput()"
+          - pattern: "($C : *exec.Cmd).Run()"
+          - pattern: "($C : *exec.Cmd).Output()"
+          - pattern: "($C : *exec.Cmd).Start()"
