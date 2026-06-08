@@ -20,8 +20,8 @@ rules:
     pattern-sanitizers:
       - pattern: template.HTMLEscapeString($X)
       - pattern: template.JSEscapeString($X)
-      - pattern: template.URLQueryEscaper(...)
-      - pattern: template.HTMLEscaper(...)
+      - pattern: template.URLQueryEscaper($X)
+      - pattern: template.HTMLEscaper($X)
       - pattern: html.EscapeString($X)
       - pattern: url.QueryEscape($X)
       - pattern: url.PathEscape($X)

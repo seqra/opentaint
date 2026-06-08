@@ -1,7 +1,213 @@
 tests:
   - rule-id: go/security/sql-injection.yaml#go-sql-injection
     positive:
-      - test/security/sql-injection/sqlinj_01_env_basic.Positive_basic
-
+      - test/security/all-patterns.PositiveSourceRequestFormValue
+      - test/security/all-patterns.PositiveSourceRequestPostFormValue
+      - test/security/all-patterns.PositiveSourceRequestCookies
+      - test/security/all-patterns.PositiveSourceRequestReferer
+      - test/security/all-patterns.PositiveSourceRequestUserAgent
+      - test/security/all-patterns.PositiveSourceURLQuery
+      - test/security/all-patterns.PositiveSourceURLQueryGet
+      - test/security/all-patterns.PositiveSourceURLPath
+      - test/security/all-patterns.PositiveSourceURLRawQuery
+      - test/security/all-patterns.PositiveSourceURLRawPath
+      - test/security/all-patterns.PositiveSourceHeaderGet
+      - test/security/all-patterns.PositiveSourceHeaderMap
+      - test/security/all-patterns.PositiveSourceHeaderMapIndex
+      - test/security/all-patterns.PositiveSourceFormMap
+      - test/security/all-patterns.PositiveSourceFormMapIndex
+      - test/security/all-patterns.PositiveSourcePostFormMap
+      - test/security/all-patterns.PositiveSourcePostFormMapIndex
+      - test/security/all-patterns.PositiveSourceURLQueryMap
+      - test/security/all-patterns.PositiveSourceURLQueryMapIndex
+      - test/security/all-patterns.PositiveSourceHeaderValues
+      - test/security/all-patterns.PositiveSourceFormGet
+      - test/security/all-patterns.PositiveSourcePostFormGet
+      - test/security/all-patterns.PositiveSourceBody
+      - test/security/all-patterns.PositiveSourceGetBody
+      - test/security/all-patterns.PositiveSourceForm
+      - test/security/all-patterns.PositiveSourcePostForm
+      - test/security/all-patterns.PositiveSourceMultipartForm
+      - test/security/all-patterns.PositiveSourceHeader
+      - test/security/all-patterns.PositiveSourceTrailer
+      - test/security/all-patterns.PositiveSourceURL
+      - test/security/all-patterns.PositiveSourceGetenv
+      - test/security/all-patterns.PositiveSourceArgs
+      - test/security/all-patterns.PositiveSourceRequestURI
+      - test/security/all-patterns.PositiveSourceBeegoGetString
+      - test/security/all-patterns.PositiveSourceBeegoGetStringDefault
+      - test/security/all-patterns.PositiveSourceBeegoGetStrings
+      - test/security/all-patterns.PositiveSourceBeegoGetStringsDefault
+      - test/security/all-patterns.PositiveSourceBeegoGetStringsIndex
+      - test/security/all-patterns.PositiveSourceBeegoGetStringsDefaultIndex
+      - test/security/all-patterns.PositiveSourceBeegoGetSession
+      - test/security/all-patterns.PositiveSourceBeegoInput
+      - test/security/all-patterns.PositiveSourceBeegoInputParam
+      - test/security/all-patterns.PositiveSourceBeegoInputParams
+      - test/security/all-patterns.PositiveSourceBeegoInputURI
+      - test/security/all-patterns.PositiveSourceBeegoInputURL
+      - test/security/all-patterns.PositiveSourceBeegoInputRequestBody
+      - test/security/all-patterns.PositiveSourceHeaderMethod
+      - test/security/all-patterns.PositiveSQLDBQuery
+      - test/security/all-patterns.PositiveSQLDBQueryContext
+      - test/security/all-patterns.PositiveSQLDBQueryRow
+      - test/security/all-patterns.PositiveSQLDBQueryRowContext
+      - test/security/all-patterns.PositiveSQLDBExec
+      - test/security/all-patterns.PositiveSQLDBExecContext
+      - test/security/all-patterns.PositiveSQLDBPrepare
+      - test/security/all-patterns.PositiveSQLDBPrepareContext
+      - test/security/all-patterns.PositiveSQLHelperReturnFlow
+      - test/security/all-patterns.PositiveSQLStructFieldFlow
+      - test/security/all-patterns.PositiveSQLInterfaceDispatchFlow
     negative:
-      - test/security/sql-injection/sqlinj_01_env_basic.Negative_const
+      - test/security/all-patterns.NegativeSQLParameterizedArgument
+
+  - rule-id: go/security/cmdinj.yaml#go-command-injection
+    positive:
+      - test/security/all-patterns.PositiveCmdExecCommand
+      - test/security/all-patterns.PositiveCmdExecCommandContext
+      - test/security/all-patterns.PositiveCmdExecLookPath
+      - test/security/all-patterns.PositiveCmdOSStartProcess
+      - test/security/all-patterns.PositiveCmdSyscallExec
+      - test/security/all-patterns.PositiveCmdSyscallForkExec
+      - test/security/all-patterns.PositiveCmdSyscallStartProcess
+      - test/security/all-patterns.PositiveCmdCombinedOutput
+      - test/security/all-patterns.PositiveCmdRun
+      - test/security/all-patterns.PositiveCmdOutput
+      - test/security/all-patterns.PositiveCmdStart
+      - test/security/all-patterns.PositiveCmdHelperReturnFlow
+      - test/security/all-patterns.PositiveCmdStructFieldFlow
+      - test/security/all-patterns.PositiveCmdInterfaceDispatchFlow
+
+  - rule-id: go/security/path-traversal.yaml#go-path-traversal
+    positive:
+      - test/security/all-patterns.PositivePathOSOpen
+      - test/security/all-patterns.PositivePathOSOpenFile
+      - test/security/all-patterns.PositivePathOSCreate
+      - test/security/all-patterns.PositivePathOSCreateTempDir
+      - test/security/all-patterns.PositivePathOSCreateTempPattern
+      - test/security/all-patterns.PositivePathOSMkdirTempDir
+      - test/security/all-patterns.PositivePathOSMkdirTempPattern
+      - test/security/all-patterns.PositivePathOSMkdir
+      - test/security/all-patterns.PositivePathOSMkdirAll
+      - test/security/all-patterns.PositivePathOSRemove
+      - test/security/all-patterns.PositivePathOSRemoveAll
+      - test/security/all-patterns.PositivePathOSReadFile
+      - test/security/all-patterns.PositivePathOSWriteFile
+      - test/security/all-patterns.PositivePathOSReadDir
+      - test/security/all-patterns.PositivePathOSStat
+      - test/security/all-patterns.PositivePathOSLstat
+      - test/security/all-patterns.PositivePathOSTruncate
+      - test/security/all-patterns.PositivePathOSChdir
+      - test/security/all-patterns.PositivePathOSChmod
+      - test/security/all-patterns.PositivePathOSChown
+      - test/security/all-patterns.PositivePathOSLchown
+      - test/security/all-patterns.PositivePathOSChtimes
+      - test/security/all-patterns.PositivePathOSReadlink
+      - test/security/all-patterns.PositivePathOSRenameSource
+      - test/security/all-patterns.PositivePathOSRenameTarget
+      - test/security/all-patterns.PositivePathOSLinkSource
+      - test/security/all-patterns.PositivePathOSLinkTarget
+      - test/security/all-patterns.PositivePathOSSymlinkSource
+      - test/security/all-patterns.PositivePathOSSymlinkTarget
+      - test/security/all-patterns.PositivePathOSDirFS
+      - test/security/all-patterns.PositivePathIoutilReadFile
+      - test/security/all-patterns.PositivePathIoutilWriteFile
+      - test/security/all-patterns.PositivePathIoutilReadDir
+      - test/security/all-patterns.PositivePathIoutilTempFileDir
+      - test/security/all-patterns.PositivePathIoutilTempFilePattern
+      - test/security/all-patterns.PositivePathIoutilTempDirDir
+      - test/security/all-patterns.PositivePathIoutilTempDirPattern
+      - test/security/all-patterns.PositivePathHTTPServeFile
+      - test/security/all-patterns.PositivePathHelperReturnFlow
+      - test/security/all-patterns.PositivePathStructFieldFlow
+      - test/security/all-patterns.PositivePathInterfaceDispatchFlow
+
+  - rule-id: go/security/ssrf.yaml#go-ssrf
+    positive:
+      - test/security/all-patterns.PositiveSSRFHTTPGet
+      - test/security/all-patterns.PositiveSSRFHTTPHead
+      - test/security/all-patterns.PositiveSSRFHTTPPost
+      - test/security/all-patterns.PositiveSSRFHTTPPostForm
+      - test/security/all-patterns.PositiveSSRFClientGet
+      - test/security/all-patterns.PositiveSSRFClientHead
+      - test/security/all-patterns.PositiveSSRFClientPost
+      - test/security/all-patterns.PositiveSSRFClientPostForm
+      - test/security/all-patterns.PositiveSSRFNewRequest
+      - test/security/all-patterns.PositiveSSRFNewRequestWithContext
+      - test/security/all-patterns.PositiveSSRFHelperReturnFlow
+      - test/security/all-patterns.PositiveSSRFChannelFlow
+
+  - rule-id: go/security/ssti.yaml#go-ssti
+    positive:
+      - test/security/all-patterns.PositiveSSTITemplateParse
+      - test/security/all-patterns.PositiveSSTITemplateMustParse
+      - test/security/all-patterns.PositiveSSTITemplateParseFiles
+      - test/security/all-patterns.PositiveSSTITemplateParseGlob
+      - test/security/all-patterns.PositiveSSTIBuilderChainFlow
+    negative:
+      - test/security/all-patterns.NegativeSSTIConstantTemplateTaintedData
+
+  - rule-id: go/security/xss.yaml#go-reflected-xss
+    positive:
+      - test/security/all-patterns.PositiveXSSWrite
+      - test/security/all-patterns.PositiveXSSWriteString
+      - test/security/all-patterns.PositiveXSSBody
+      - test/security/all-patterns.PositiveXSSFprint
+      - test/security/all-patterns.PositiveXSSFprintf
+      - test/security/all-patterns.PositiveXSSFprintln
+      - test/security/all-patterns.PositiveXSSIOWriteString
+      - test/security/all-patterns.PositiveXSSJSONEncoderEncode
+      - test/security/all-patterns.PositiveXSSServeJSON
+      - test/security/all-patterns.PositiveXSSOutputJSON
+      - test/security/all-patterns.PositiveXSSHelperReturnFlow
+      - test/security/all-patterns.PositiveXSSChannelFlow
+    negative:
+      - test/security/all-patterns.NegativeXSSHTMLEscapeString
+      - test/security/all-patterns.NegativeXSSJSEscapeString
+      - test/security/all-patterns.NegativeXSSHTMLEscape
+      - test/security/all-patterns.NegativeXSSURLQueryEscape
+      - test/security/all-patterns.NegativeXSSURLPathEscape
+
+  - rule-id: go/security/trust-boundary.yaml#go-trust-boundary-cwe-501
+    positive:
+      - test/security/all-patterns.PositiveTrustSetCookie
+      - test/security/all-patterns.PositiveTrustSetSession
+      - test/security/all-patterns.PositiveTrustSourceBeegoInputHeader
+      - test/security/all-patterns.PositiveTrustCookiePathFlow
+
+  - rule-id: go/security/weak-crypto.yaml#go-weak-crypto-cwe-327
+    positive:
+      - test/security/all-patterns.PositiveWeakCryptoDES
+      - test/security/all-patterns.PositiveWeakCryptoTripleDES
+      - test/security/all-patterns.PositiveWeakCryptoRC4
+      - test/security/all-patterns.PositiveWeakCryptoMD4
+      - test/security/all-patterns.PositiveWeakCryptoCipherECBEncrypter
+      - test/security/all-patterns.PositiveWeakCryptoCipherECBDecrypter
+      - test/security/all-patterns.PositiveWeakCryptoECBEncrypter
+      - test/security/all-patterns.PositiveWeakCryptoECBDecrypter
+
+  - rule-id: go/security/weak-hash.yaml#go-weak-hash-cwe-328
+    positive:
+      - test/security/all-patterns.PositiveWeakHashMD5New
+      - test/security/all-patterns.PositiveWeakHashMD5Sum
+      - test/security/all-patterns.PositiveWeakHashSHA1New
+      - test/security/all-patterns.PositiveWeakHashSHA1Sum
+      - test/security/all-patterns.PositiveWeakHashMD4New
+
+  - rule-id: go/security/weak-random.yaml#go-weak-random-cwe-330
+    positive:
+      - test/security/all-patterns.PositiveWeakRandomInt
+      - test/security/all-patterns.PositiveWeakRandomIntn
+      - test/security/all-patterns.PositiveWeakRandomInt31
+      - test/security/all-patterns.PositiveWeakRandomInt31n
+      - test/security/all-patterns.PositiveWeakRandomInt63
+      - test/security/all-patterns.PositiveWeakRandomInt63n
+      - test/security/all-patterns.PositiveWeakRandomFloat64
+      - test/security/all-patterns.PositiveWeakRandomFloat32
+      - test/security/all-patterns.PositiveWeakRandomNormFloat64
+      - test/security/all-patterns.PositiveWeakRandomExpFloat64
+      - test/security/all-patterns.PositiveWeakRandomUint32
+      - test/security/all-patterns.PositiveWeakRandomUint64
+      - test/security/all-patterns.PositiveWeakRandomPerm
+      - test/security/all-patterns.PositiveWeakRandomNew
