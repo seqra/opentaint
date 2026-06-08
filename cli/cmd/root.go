@@ -127,6 +127,10 @@ func init() {
 	_ = rootCmd.PersistentFlags().MarkHidden("rules-version")
 	_ = viper.BindPFlag("rules.version", rootCmd.PersistentFlags().Lookup("rules-version"))
 
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Version, "go-server-version", globals.GoServerBindVersion, "Version of go-ssa-server")
+	_ = rootCmd.PersistentFlags().MarkHidden("go-server-version")
+	_ = viper.BindPFlag("go-server.version", rootCmd.PersistentFlags().Lookup("go-server-version"))
+
 	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to use for running analyzer")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))
 

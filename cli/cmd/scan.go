@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
@@ -602,6 +603,51 @@ func ensureAnalyzerAvailable() (string, error) {
 	}
 
 	return analyzerJarPath, nil
+}
+
+// EnsureGoServerAvailable resolves the go-ssa-server binary path, downloading the
+// per-platform asset if absent, makes it executable on unix, and returns its
+// ABSOLUTE path.
+//
+// The release tag is the configured go-server version ("go-server/<ver>", default
+// globals.GoServerBindVersion) and the downloaded asset is the platform-specific
+// globals.GoServerAssetName() ("go-ssa-server_<GOOS>_<GOARCH>", with ".exe" on
+// windows). Checksums are verified automatically by DownloadGithubReleaseAsset.
+//
+// This is the public entry point intended to be called for Go projects (Task 03)
+// and by `opentaint pull`. It does not set any environment variables.
+func EnsureGoServerAvailable() (string, error) {
+	version := globals.Config.GoServer.Version
+	if version == "" {
+		version = globals.GoServerBindVersion
+	}
+
+	assetName := globals.GoServerAssetName()
+
+	goServerPath, err := utils.GetGoServerPath(version)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct path to the go-ssa-server: %w", err)
+	}
+
+	if err := ensureArtifactAvailable("go-ssa-server", version, goServerPath, func() error {
+		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, version, assetName, goServerPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
+	}); err != nil {
+		return "", err
+	}
+
+	// The go-ssa-server is a single native binary and must be executable to run.
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(goServerPath, 0o755); err != nil {
+			return "", fmt.Errorf("failed to mark go-ssa-server executable at %s: %w", goServerPath, err)
+		}
+	}
+
+	absPath, err := filepath.Abs(goServerPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path to the go-ssa-server: %w", err)
+	}
+
+	return absPath, nil
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {
