@@ -141,6 +141,24 @@ For more options, see [Installation](docs/README.md#installation) and [Usage](do
 
 ---
 
+## AI Agent Workflows
+
+OpenTaint now ships agent skills for turning static analysis into an end-to-end application-security workflow. Install them with:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+The `appsec-agent` skill orchestrates a full JVM project assessment: build the project, run OpenTaint, model missing library data flows, triage findings, and optionally generate dynamic proof-of-concept checks for confirmed vulnerabilities.
+
+Included skills cover the common security-analysis loop:
+
+- **Scan and triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Coverage expansion:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Dataflow modeling:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## Documentation
 
 Full guides — installation, usage, configuration, CI/CD integration: **[Documentation](docs/README.md)**.
