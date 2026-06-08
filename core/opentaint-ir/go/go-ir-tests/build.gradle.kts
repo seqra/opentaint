@@ -152,7 +152,7 @@ tasks.register("downloadBenchmarks") {
             val clone = ProcessBuilder("git", "clone", "--depth", "1", cloneUrl, targetDir.absolutePath)
                 .redirectErrorStream(true)
                 .start()
-            val cloneOutput = clone.inputStream.readAllBytes().decodeToString()
+            val cloneOutput = clone.inputStream.readBytes().decodeToString()
             val cloneOk = clone.waitFor(180, TimeUnit.SECONDS)
             if (!cloneOk || clone.exitValue() != 0) {
                 println("    CLONE FAILED: $cloneOutput")
