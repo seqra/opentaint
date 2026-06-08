@@ -7,7 +7,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY
 
 class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     private val manager = suffixNode.manager
-    private val root = TrieNode(isAbstract = false, isFinal = false, prefixLink = null, depth = 0)
+    private val root = TrieNode(suffixNode.isAbstract, suffixNode.isFinal, prefixLink = null, depth = 0)
 
     private data class TrieNode(
         val isAbstract: Boolean,
@@ -26,7 +26,8 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         override fun toString(): String {
             val abstraction = if (isAbstract) "A" else ""
             val final = if (isFinal) "F" else ""
-            return "($abstraction$final, depth=$depth, $children)"
+            val sep = if (isAbstract || isFinal) ", " else ""
+            return "($abstraction$final${sep}depth=$depth, $children)"
         }
 
         override fun equals(other: Any?): Boolean {
@@ -96,47 +97,26 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
                     prefix = root.children.get(accessor) ?: root
                 }
                 val newTrieNode = TrieNode(
-                    isAbstract = node.isAbstract || prefix.isAbstract,
+                    isAbstract = node.isAbstract,
                     isFinal = node.isFinal || prefix.isFinal,
                     prefix, depth
                 )
                 triePar.children.put(accessor, newTrieNode)
 
-                node.forEachAccessor{ accessor, accessorNode ->
+                node.forEachAccessor { accessor, accessorNode ->
                     unprocessed.addLast(RawNodeWithParent(accessorNode, accessor, newTrieNode, depth + 1, curNotCoveredByAny))
                 }
             }
         }
     }
 
-    fun getNonMatchingNode(accessors: IntArray, nodes: Array<AccessTree.AccessNode>): Pair<IntArray, Array<AccessTree.AccessNode>> {
-        val accessorIdx = mutableListOf<AccessorIdx>()
-        val accessorNodes = mutableListOf<AccessTree.AccessNode>()
-
-        accessors.forEachIndexed { i, accessor ->
-            val accessorNode = nodes[i]
-            val afterAny = root.children.get(accessor)
-            val accessorCovered = accessor.coveredByAny()
-            if (afterAny == null && !accessorCovered) {
-                // two [any]-branches can be merged naturally, as those not accepted by [any]
-                accessorIdx.add(accessor)
-                accessorNodes.add(accessorNode)
-            }
-            else {
-                val child = getNonMatchingNode(afterAny ?: root, accessorNode, accessorCovered)
-                if (child != null) {
-                    accessorIdx.add(accessor)
-                    accessorNodes.add(child)
-                }
-            }
-        }
-
-        return accessorIdx.toIntArray() to accessorNodes.toTypedArray()
-    }
+    fun getNonMatchingNode(node: AccessTree.AccessNode) =
+        getNonMatchingNode(root, node, true) ?: manager.emptyNode
 
     private fun getNonMatchingNode(trie: TrieNode, node: AccessTree.AccessNode, prefixCoveredByAny: Boolean): AccessTree.AccessNode? {
         val accessorIdx = mutableListOf<AccessorIdx>()
         val accessorNodes = mutableListOf<AccessTree.AccessNode>()
+        var areChildrenChanged = false
 
         node.forEachAccessor { accessor, accessorNode ->
             val prefixStillCovered = prefixCoveredByAny && (accessor == ANY_ACCESSOR_IDX || accessor.coveredByAny())
@@ -147,21 +127,27 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
                 // fell out of suffix
                 accessorIdx.add(accessor)
                 accessorNodes.add(accessorNode)
+                return@forEachAccessor
             }
-            val child = next?.let { getNonMatchingNode(it, accessorNode, prefixStillCovered) }
+            val child = getNonMatchingNode(next, accessorNode, prefixStillCovered)
+            if (child != accessorNode)
+                areChildrenChanged = true
             if (child != null) {
                 accessorIdx.add(accessor)
                 accessorNodes.add(child)
             }
         }
 
-        val thisAbstract = node.isAbstract && !trie.isAbstract
         val thisFinal = node.isFinal && !trie.isFinal
 
         // all branches matched the any-suffix
-        if (!thisAbstract && !thisFinal && accessorIdx.isEmpty())
+        if (!node.isAbstract && !thisFinal && accessorIdx.isEmpty())
             return null
 
-        return manager.create(thisAbstract, thisFinal, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
+        // node is left unchanged
+        if (!areChildrenChanged && thisFinal == node.isFinal)
+            return node
+
+        return manager.create(node.isAbstract, thisFinal, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
     }
 }
