@@ -192,6 +192,17 @@ func ValidateSourceProjectForCompile(absProjectRoot string) error {
 	return validateSourceDir(absProjectRoot, false)
 }
 
+// DetectLanguages returns the human-readable names of the supported languages
+// detected under absProjectRoot (e.g. "Go", "Java/Kotlin"), found by searching for
+// the registered build-system markers up to maxMarkerSearchDepth. It is the
+// exported wrapper over the unexported detectLanguages, so callers (e.g. the scan
+// wiring) can distinguish Go-only from polyglot projects without duplicating the
+// detection logic. Returns an empty slice when the directory does not exist or
+// cannot be walked.
+func DetectLanguages(absProjectRoot string) []string {
+	return detectLanguages(absProjectRoot)
+}
+
 // IsGoProject reports whether absProjectRoot is detected as a Go project, i.e. a
 // go.mod marker is found within the marker search depth. It reuses the same
 // (unexported) detection logic as source validation, so it stays in sync with

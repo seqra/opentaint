@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
@@ -271,6 +272,38 @@ func scan(cmd *cobra.Command) {
 		return
 	}
 
+	// Go projects: the analyzer drives an out-of-process go-ssa-server, which in
+	// turn shells out to the `go` toolchain at runtime. Decide the Go wiring up
+	// front — after the --dry-run early return (so dry-run stays side-effect-free)
+	// and BEFORE the autobuilder compile + analyzer download — so a Go-only scan
+	// with a missing `go` toolchain fails fast rather than after a long compile.
+	//
+	// sourceRoot is the live source tree for source scans and the project.yaml
+	// sourceRoot for --project-model scans, so detection covers both paths; for a
+	// precompiled model it relies on the recorded source root still existing on
+	// disk with its go.mod (otherwise detection yields no languages).
+	//
+	// The `go` preflight is INDEPENDENT of the --go-server-binary override
+	// (go-ssa-server still shells out to `go`), so it applies whenever Go is
+	// detected. When Go is the SOLE language we hard-fail; when other languages are
+	// also present we warn and skip Go wiring rather than failing the whole scan.
+	needGoServer := false
+	langs := validation.DetectLanguages(sourceRoot)
+	if slices.Contains(langs, "Go") {
+		if _, lookErr := exec.LookPath("go"); lookErr != nil {
+			if len(langs) == 1 {
+				out.Fatal("Scanning a Go project requires the Go toolchain, but `go` was not found on your PATH.\n" +
+					"Install Go (https://go.dev/dl/) and ensure `go` is on your PATH, then re-run.")
+			} else {
+				out.Warnf("Detected a Go module (go.mod) but `go` was not found on your PATH; " +
+					"skipping Go analysis setup and continuing with the other detected language(s). " +
+					"Install Go (https://go.dev/dl/) to enable Go analysis.")
+			}
+		} else {
+			needGoServer = true
+		}
+	}
+
 	for _, ruleSetPath := range absRuleSetPaths {
 		if !ruleSetPath.Builtin {
 			continue
@@ -390,23 +423,15 @@ func scan(cmd *cobra.Command) {
 		nativeBuilder.AddDataflowApproximations(compiledPath)
 	}
 
-	// Go projects: the analyzer drives an out-of-process go-ssa-server. Verify the
-	// Go toolchain is present (friendly preflight), resolve the server binary, and
-	// pass its ABSOLUTE path to the analyzer via GOIR_SERVER_BINARY. Non-Go scans
-	// skip all of this entirely (R6). This runs only on the real scan path (after
-	// the --dry-run early return above), so dry-run stays side-effect-free.
-	//
-	// sourceRoot is the live source tree for source scans and the project.yaml
-	// sourceRoot for --project-model scans, so Go detection covers both paths;
-	// for a precompiled model it relies on the recorded source root still existing
-	// on disk with its go.mod (otherwise detection yields false and the env var is
-	// not set).
+	// Go projects: resolve the go-ssa-server binary (download, or the
+	// --go-server-binary override) and pass its ABSOLUTE path to the analyzer via
+	// GOIR_SERVER_BINARY. needGoServer was decided early (after the --dry-run
+	// return), where the `go` preflight already ran; here we only do the binary
+	// resolution + env injection. Non-Go scans — and polyglot scans where `go` was
+	// missing — leave goServerEnv nil, so WithExtraEnv(nil) is a strict no-op and
+	// those runs are byte-for-byte unchanged.
 	var goServerEnv map[string]string
-	if validation.IsGoProject(sourceRoot) {
-		if _, lookErr := exec.LookPath("go"); lookErr != nil {
-			out.Fatal("Scanning a Go project requires the Go toolchain, but `go` was not found on your PATH.\n" +
-				"Install Go (https://go.dev/dl/) and ensure `go` is on your PATH, then re-run.")
-		}
+	if needGoServer {
 		goServerPath, goErr := EnsureGoServerAvailable()
 		if goErr != nil {
 			out.Fatalf("Native scan preparation failed: %s", goErr)
@@ -650,8 +675,15 @@ func ensureAnalyzerAvailable() (string, error) {
 // mirrors how --analyzer-jar overrides ensureAnalyzerAvailable().
 func EnsureGoServerAvailable() (string, error) {
 	if globals.Config.GoServer.Binary != "" {
-		if _, err := os.Stat(globals.Config.GoServer.Binary); err != nil {
+		info, err := os.Stat(globals.Config.GoServer.Binary)
+		if err != nil {
 			return "", fmt.Errorf("go-ssa-server binary not found at %s: %w", globals.Config.GoServer.Binary, err)
+		}
+		if info.IsDir() {
+			return "", fmt.Errorf("go-ssa-server path %s is a directory, expected an executable file", globals.Config.GoServer.Binary)
+		}
+		if runtime.GOOS != "windows" && info.Mode()&0o111 == 0 {
+			return "", fmt.Errorf("go-ssa-server binary %s is not executable (run: chmod +x %s)", globals.Config.GoServer.Binary, globals.Config.GoServer.Binary)
 		}
 		absPath, err := filepath.Abs(globals.Config.GoServer.Binary)
 		if err != nil {

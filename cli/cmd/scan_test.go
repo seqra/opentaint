@@ -20,7 +20,7 @@ func TestEnsureGoServerAvailable_BinaryOverrideReturnsAbsPath(t *testing.T) {
 
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "go-ssa-server")
-	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o644); err != nil {
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	globals.Config.GoServer.Binary = bin
@@ -43,7 +43,7 @@ func TestEnsureGoServerAvailable_BinaryOverrideRelativePathResolvedToAbs(t *test
 	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
 
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go-ssa-server"), []byte("x"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go-ssa-server"), []byte("x"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(dir)
@@ -74,5 +74,21 @@ func TestEnsureGoServerAvailable_BinaryOverrideMissingReturnsError(t *testing.T)
 	}
 	if !strings.Contains(err.Error(), "not found") {
 		t.Errorf("error should mention binary not found, got: %v", err)
+	}
+}
+
+func TestEnsureGoServerAvailable_BinaryOverrideDirectoryReturnsError(t *testing.T) {
+	orig := globals.Config.GoServer.Binary
+	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
+
+	// Point the override at a directory instead of an executable file.
+	globals.Config.GoServer.Binary = t.TempDir()
+
+	got, err := EnsureGoServerAvailable()
+	if err == nil {
+		t.Fatalf("expected error when override points at a directory, got path %q", got)
+	}
+	if !strings.Contains(err.Error(), "directory") {
+		t.Errorf("error should mention the path is a directory, got: %v", err)
 	}
 }

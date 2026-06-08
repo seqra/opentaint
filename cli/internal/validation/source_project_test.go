@@ -347,3 +347,35 @@ func TestIsGoProject_NestedGoMod(t *testing.T) {
 		t.Errorf("IsGoProject() = false, want true for nested go.mod one level down")
 	}
 }
+
+// --- DetectLanguages (exported) ---
+
+func TestDetectLanguages_PolyglotGoAndJava(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, filepath.Join(dir, "go.mod"))
+	createFile(t, filepath.Join(dir, "pom.xml"))
+
+	got := DetectLanguages(dir)
+	if !slices.Contains(got, "Go") {
+		t.Errorf("DetectLanguages() = %v, want to contain %q for polyglot project", got, "Go")
+	}
+	if !slices.Contains(got, "Java/Kotlin") {
+		t.Errorf("DetectLanguages() = %v, want to contain %q for polyglot project", got, "Java/Kotlin")
+	}
+	if len(got) <= 1 {
+		t.Errorf("DetectLanguages() = %v, want more than one language for polyglot project", got)
+	}
+}
+
+func TestDetectLanguages_JavaOnlyHasNoGo(t *testing.T) {
+	dir := t.TempDir()
+	createFile(t, filepath.Join(dir, "pom.xml"))
+
+	got := DetectLanguages(dir)
+	if slices.Contains(got, "Go") {
+		t.Errorf("DetectLanguages() = %v, want not to contain %q for Java-only project", got, "Go")
+	}
+	if !slices.Contains(got, "Java/Kotlin") {
+		t.Errorf("DetectLanguages() = %v, want to contain %q for Java-only project", got, "Java/Kotlin")
+	}
+}
