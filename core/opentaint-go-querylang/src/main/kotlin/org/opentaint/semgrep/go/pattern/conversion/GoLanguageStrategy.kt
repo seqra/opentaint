@@ -2,12 +2,12 @@ package org.opentaint.semgrep.go.pattern.conversion
 
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.semgrep.go.pattern.ExprStmt
+import org.opentaint.semgrep.go.pattern.Metavar
 import org.opentaint.semgrep.go.pattern.SemgrepGoPattern
 import org.opentaint.semgrep.go.pattern.SemgrepGoPatternParser
 import org.opentaint.semgrep.go.pattern.TopList
 import org.opentaint.semgrep.pattern.JoinRuleMetavarExpected
 import org.opentaint.semgrep.pattern.MetaVarConstraint
-import org.opentaint.semgrep.pattern.Metavar
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
