@@ -32,7 +32,7 @@ Begin by asking the user both things in a single AskUserQuestion call — two qu
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan with existing rules
    - normal — + approximation iteration
-   - deep — + discover-attack-surface + new rules (fixed first)
+   - deep — + discover-attack-surface for project-used dependency members + new rules (fixed first)
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
    - dynamic — + a PoC per confirmed TP. This launches a few test services on the user's current machine (local instances and ports); they're torn down at the end of the run. Make that clear in the option
@@ -41,7 +41,7 @@ The run is one fixed pipeline; the two levels decide which steps execute. Walk i
 
 ```
 build                                    → references/build.md           every run
-[deep] discover + new rules              → references/discover-rules.md  deep scan
+[deep] discover project-used lib rules   → references/discover-rules.md  deep scan
 scan                                     → references/scan.md            every run
 [normal/deep] approximation iteration    → references/approximations.md  normal, deep scan
 triage (generate findings + classify)    → references/triage.md          every run
@@ -89,7 +89,7 @@ Two limits apply to every fan-out — a global one against rate-limiting, and a 
   - cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
   - free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
   - `cap_heavy = max(1, min(cores, floor(free_GB / 2), 7))` — budget ~2 GB per concurrent JVM
-- Every other agent is not RAM-bound — discover-attack-surface (reads jars + the built model), create-test-project (compiles once), triage-dependencies, analyze-external-methods, analyze-findings, create-pass-through-approximation, assemble-lib-rules, generate-poc. They're held only by the global cap of 7
+- Every other agent is not RAM-bound — discover-attack-surface (reads the built model plus dependency jars for signatures/metadata), create-test-project (compiles once), triage-dependencies, analyze-external-methods, analyze-findings, create-pass-through-approximation, assemble-lib-rules, generate-poc. They're held only by the global cap of 7
 
 It's machine state, not run state — recompute on resume, don't track it. PoC is already sequential.
 
@@ -111,8 +111,9 @@ The single source of truth for the tracking schema; each skill writes only its o
 .opentaint/tracking/
   state.yaml                              # you only — levels + phase status
   coverage.yaml                           # triage-dependencies seeds, discover-attack-surface flips — one entry per dependency package weighed (deep)
+  usage/<package-kebab>.yaml              # discover-attack-surface writes project-used package members (deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
-  rules/lib/<package-kebab>.yaml          # per-package rule plan — new source/sink lib rules (discover plans; create-* build + test vs the marker) (deep)
+  rules/lib/<package-kebab>.yaml          # per-package project-used rule plan — new source/sink lib rules (discover plans; create-* build + test vs the marker) (deep)
   rules/join/<class>.yaml                 # per-vuln-class security join (assemble-lib-rules writes; main scan verifies) (deep)
   approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
   approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
@@ -158,7 +159,7 @@ poc: pending            # pending | confirmed | failed
 poc_script: null        # path under .opentaint/pocs/ once generate-poc writes one
 ```
 
-rules/lib/<package-kebab>.yaml — per-package rule plan; `description` fields + `sources`/`sinks` by discover-attack-surface, `test_project` by create-test-project, `tests_passing` + `rule_id`s + `artifact` by create-rule. `coverage: new` ⇒ write a pattern, `expand` ⇒ ref the built-in plus the missing methods:
+rules/lib/<package-kebab>.yaml — per-package rule plan for project-used sources/sinks only; `description` fields + `sources`/`sinks` by discover-attack-surface, `test_project` by create-test-project, `tests_passing` + `rule_id`s + `artifact` by create-rule. `coverage: new` ⇒ write a pattern, `expand` ⇒ ref the built-in plus the missing used methods:
 
 ```yaml
 package: org.springframework.web.reactive.function.client
