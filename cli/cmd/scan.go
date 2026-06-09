@@ -603,13 +603,13 @@ func setupSemgrepRuleLoadTrace() string {
 }
 
 func ensureAnalyzerAvailable() (string, error) {
-	if globals.Config.Analyzer.JarPath != "" {
-		return globals.Config.Analyzer.JarPath, nil
-	}
-
-	analyzerJarPath, err := utils.GetAnalyzerJarPath(globals.Config.Analyzer.Version)
+	def := globals.ArtifactByKind("analyzer")
+	analyzerJarPath, err := utils.ResolveJarPath(def)
 	if err != nil {
 		return "", fmt.Errorf("failed to construct path to the analyzer: %w", err)
+	}
+	if def.Override != "" {
+		return analyzerJarPath, nil
 	}
 
 	if err := ensureArtifactAvailable("analyzer", globals.Config.Analyzer.Version, analyzerJarPath, func() error {

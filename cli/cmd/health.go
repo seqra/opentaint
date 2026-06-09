@@ -104,10 +104,10 @@ func runHealth() {
 func resolveHealthComponent(key string) healthComponent {
 	switch key {
 	case "autobuilder":
-		path, err := utils.GetAutobuilderJarPath(globals.Config.Autobuilder.Version)
+		path, err := utils.ResolveJarPath(globals.ArtifactByKind("autobuilder"))
 		return healthComponent{"Autobuilder", globals.Config.Autobuilder.Version, path, err == nil && utils.PathExists(path)}
 	case "analyzer":
-		path, err := utils.GetAnalyzerJarPath(globals.Config.Analyzer.Version)
+		path, err := utils.ResolveJarPath(globals.ArtifactByKind("analyzer"))
 		return healthComponent{"Analyzer", globals.Config.Analyzer.Version, path, err == nil && utils.PathExists(path)}
 	case "rules":
 		return resolveRulesComponent()

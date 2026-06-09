@@ -202,12 +202,14 @@ func resolveArtifactPath(def globals.ArtifactDef) (string, error) {
 	return path, err
 }
 
-func GetAutobuilderJarPath(version string) (string, error) {
-	return resolveArtifactPath(globals.ArtifactByKind("autobuilder").WithVersion(version))
-}
-
-func GetAnalyzerJarPath(version string) (string, error) {
-	return resolveArtifactPath(globals.ArtifactByKind("analyzer").WithVersion(version))
+// ResolveJarPath resolves an artifact's jar path, honoring an explicit override
+// (which bypasses version-based resolution) and otherwise falling back to the
+// versioned artifact path.
+func ResolveJarPath(def globals.ArtifactDef) (string, error) {
+	if def.Override != "" {
+		return def.Override, nil
+	}
+	return resolveArtifactPath(def)
 }
 
 func GetRulesPath(version string) (string, error) {

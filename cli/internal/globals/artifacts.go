@@ -12,6 +12,7 @@ type ArtifactDef struct {
 	CacheSuffix string // cache filename suffix (".jar", "")
 	BindVersion string // compile-time bind version
 	Version     string // user-configured version
+	Override    string // explicit jar path override; bypasses version resolution and download
 	Unpack      bool   // unpack tar.gz; also implies dir-based cache entry
 }
 
@@ -49,6 +50,7 @@ func Artifacts() []ArtifactDef {
 			CacheSuffix: ".jar",
 			BindVersion: AutobuilderBindVersion,
 			Version:     Config.Autobuilder.Version,
+			Override:    Config.Autobuilder.JarPath,
 		},
 		{
 			Name:        "Analyzer",
@@ -59,6 +61,7 @@ func Artifacts() []ArtifactDef {
 			CacheSuffix: ".jar",
 			BindVersion: AnalyzerBindVersion,
 			Version:     Config.Analyzer.Version,
+			Override:    Config.Analyzer.JarPath,
 		},
 		{
 			Name:        "Rules",

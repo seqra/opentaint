@@ -120,13 +120,13 @@ func init() {
 }
 
 func ensureAutobuilderAvailable() (string, error) {
-	if globals.Config.Autobuilder.JarPath != "" {
-		return globals.Config.Autobuilder.JarPath, nil
-	}
-
-	autobuilderJarPath, err := utils.GetAutobuilderJarPath(globals.Config.Autobuilder.Version)
+	def := globals.ArtifactByKind("autobuilder")
+	autobuilderJarPath, err := utils.ResolveJarPath(def)
 	if err != nil {
 		return "", fmt.Errorf("failed to construct path to the autobuilder: %w", err)
+	}
+	if def.Override != "" {
+		return autobuilderJarPath, nil
 	}
 
 	if err = ensureArtifactAvailable("autobuilder", globals.Config.Autobuilder.Version, autobuilderJarPath, func() error {
