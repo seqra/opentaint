@@ -130,7 +130,7 @@ func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 
 func init() {
 	rootCmd.AddCommand(scanCmd)
-	addScanFlags(scanCmd)
+	addScanFlags(scanCmd, true)
 	addRuleIDFlag(scanCmd)
 }
 
@@ -141,21 +141,34 @@ func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
 }
 
-func addScanFlags(cmd *cobra.Command) {
+// addScanFlags registers the flags shared by `scan` and `test rule
+// reachability`. Only the canonical `scan` command binds them to viper config
+// keys (bindViper); the reachability alias shares the same scanFlags target but
+// must not re-bind the global "scan.*" keys, or the last init() to run would
+// silently steal config precedence from the command the user actually invoked.
+func addScanFlags(cmd *cobra.Command, bindViper bool) {
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Timeout for analysis")
-	_ = viper.BindPFlag("scan.timeout", cmd.Flags().Lookup("timeout"))
+	if bindViper {
+		_ = viper.BindPFlag("scan.timeout", cmd.Flags().Lookup("timeout"))
+	}
 
 	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "YAML rules file, directory of YAML rules files ending in .yml or .yaml, or `builtin` to scan with built-in rules")
-	_ = viper.BindPFlag("scan.ruleset", cmd.Flags().Lookup("ruleset"))
+	if bindViper {
+		_ = viper.BindPFlag("scan.ruleset", cmd.Flags().Lookup("ruleset"))
+	}
 
 	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep compatible ruleId")
 	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF-report output file")
 
 	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Report findings only from rules matching the supplied severity level. By default only warning and error rules are run (note, warning, error)")
 	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 1024m, 8G, 81920k, 83886080)")
-	_ = viper.BindPFlag("scan.max_memory", cmd.Flags().Lookup("max-memory"))
+	if bindViper {
+		_ = viper.BindPFlag("scan.max_memory", cmd.Flags().Lookup("max-memory"))
+	}
 	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows to include in the report (0 = unlimited)")
-	_ = viper.BindPFlag("scan.code_flow_limit", cmd.Flags().Lookup("code-flow-limit"))
+	if bindViper {
+		_ = viper.BindPFlag("scan.code_flow_limit", cmd.Flags().Lookup("code-flow-limit"))
+	}
 	cmd.Flags().BoolVar(&scanFlags.DryRun, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
 	cmd.Flags().BoolVar(&scanFlags.Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
 	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
@@ -296,10 +309,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		if !ruleSetPath.Builtin {
 			continue
 		}
-		if _, err := os.Stat(ruleSetPath.Path); err == nil {
-			continue
-		}
-		if err := utils.DownloadAndUnpackGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, globals.Config.Rules.Version, globals.RulesAssetName, ruleSetPath.Path, globals.Config.Github.Token, globals.Config.SkipVerify, out); err != nil {
+		if _, err := utils.EnsureRulesPath(out); err != nil {
 			out.Fatalf("Unexpected error occurred while trying to download ruleset: %s", err)
 		}
 	}
@@ -392,10 +402,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	for _, ruleID := range ruleIDs {
 		nativeBuilder.AddRuleID(ruleID)
 	}
-	for _, passthrough := range cfg.PassthroughApproximations {
-		absPassthrough := log.AbsPathOrExit(passthrough, "passthrough-approximations")
-		nativeBuilder.AddPassthroughApproximations(absPassthrough)
-	}
+	addPassthroughApproximations(nativeBuilder, cfg.PassthroughApproximations)
 	if cfg.TrackExternalMethods {
 		nativeBuilder.SetTrackExternalMethods(true)
 	}
@@ -413,14 +420,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	nativeBuilder.SetJarPath(analyzerJarPath)
 
 	// Process --dataflow-approximations: auto-compile .java sources if needed
-	for _, approxPath := range cfg.DataflowApproximations {
-		absApproxPath := log.AbsPathOrExit(approxPath, "dataflow-approximations")
-		compiledPath, compileErr := compileApproximationsIfNeeded(absApproxPath, analyzerJarPath, absProjectModelPath)
-		if compileErr != nil {
-			out.Fatalf("Approximation compilation failed: %s", compileErr)
-		}
-		nativeBuilder.AddDataflowApproximations(compiledPath)
-	}
+	addDataflowApproximations(nativeBuilder, cfg.DataflowApproximations, analyzerJarPath, absProjectModelPath)
 
 	analyzerJavaRunner := java.NewJavaRunner().
 		WithSkipVerify(globals.Config.SkipVerify).

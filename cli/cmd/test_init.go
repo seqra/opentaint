@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,12 +108,12 @@ func bootstrapTestProject(outputDir, projectName string, dependencies []string) 
 		}
 	}
 
-	testUtilJarSrc, err := resolveTestUtilJar()
+	testUtilJarSrc, err := testutil.ResolveJar()
 	if err != nil {
 		out.Fatalf("Failed to resolve test-util JAR: %s", err)
 	}
-	testUtilJarDst := filepath.Join(outputDir, "libs", "opentaint-sast-test-util.jar")
-	if err := copyFile(testUtilJarSrc, testUtilJarDst); err != nil {
+	testUtilJarDst := filepath.Join(outputDir, "libs", testutil.JarName)
+	if err := utils.CopyFile(testUtilJarSrc, testUtilJarDst); err != nil {
 		out.Fatalf("Failed to copy test-util JAR: %s", err)
 	}
 
@@ -125,82 +124,6 @@ func bootstrapTestProject(outputDir, projectName string, dependencies []string) 
 	if err := generateSettingsGradle(outputDir, projectName); err != nil {
 		out.Fatalf("Failed to generate settings.gradle.kts: %s", err)
 	}
-}
-
-// resolveTestUtilJar finds the opentaint-sast-test-util.jar.
-// Resolution order:
-//  1. Bundled path next to binary: <exe-dir>/lib/opentaint-sast-test-util.jar
-//  2. Install path: ~/.opentaint/install/lib/opentaint-sast-test-util.jar
-//  3. Dev build: <repo-root>/core/opentaint-sast-test-util/build/libs/opentaint-sast-test-util.jar
-func resolveTestUtilJar() (string, error) {
-	const jarName = "opentaint-sast-test-util.jar"
-
-	// Tier 1: Bundled next to binary
-	if libPath := utils.GetBundledLibPath(); libPath != "" {
-		candidate := filepath.Join(libPath, jarName)
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, nil
-		}
-	}
-
-	// Tier 2: Install path
-	if libPath := utils.GetInstallLibPath(); libPath != "" {
-		candidate := filepath.Join(libPath, jarName)
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, nil
-		}
-	}
-
-	// Tier 3: Dev build — walk up from exe dir to find core/opentaint-sast-test-util/build/libs/
-	if exe, err := os.Executable(); err == nil {
-		exe, _ = filepath.EvalSymlinks(exe)
-		// exe is typically at cli/bin/opentaint, so repo root is ../../
-		dir := filepath.Dir(exe)
-		for i := 0; i < 4; i++ {
-			candidate := filepath.Join(dir, "core", "opentaint-sast-test-util", "build", "libs", jarName)
-			if _, err := os.Stat(candidate); err == nil {
-				return candidate, nil
-			}
-			dir = filepath.Dir(dir)
-		}
-	}
-
-	// Tier 4: Extract from embedded binary
-	if extracted, err := testutil.ExtractJar(); err == nil {
-		return extracted, nil
-	}
-
-	return "", fmt.Errorf(
-		"%s not found; build it with 'cd core && ./gradlew :opentaint-sast-test-util:jar' or reinstall opentaint",
-		jarName,
-	)
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("open source: %w", err)
-	}
-	defer func() { _ = in.Close() }()
-
-	if err := utils.EnsureParentDir(dst); err != nil {
-		return err
-	}
-
-	outFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("create destination: %w", err)
-	}
-
-	if _, err := io.Copy(outFile, in); err != nil {
-		_ = outFile.Close()
-		return fmt.Errorf("copy: %w", err)
-	}
-
-	if err := outFile.Close(); err != nil {
-		return fmt.Errorf("close destination: %w", err)
-	}
-	return nil
 }
 
 func generateBuildGradle(outputDir string, dependencies []string) error {

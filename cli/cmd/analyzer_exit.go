@@ -24,7 +24,6 @@ const (
 // exitCode is the process exit code to forward to os.Exit.
 type analyzerError struct {
 	exitCode int
-	message  string
 }
 
 // analyzerExitMessage returns a human-readable description for a known
@@ -44,25 +43,23 @@ func analyzerExitMessage(code int) string {
 	}
 }
 
-// classifyAnalyzerError converts a *JavaCommandError into an *analyzerError
-// with a human-readable message. Returns nil when cmdErr is nil.
+// classifyAnalyzerError prints a human-readable description of an analyzer
+// failure and returns the *analyzerError carrying its exit code. Returns nil
+// when cmdErr is nil.
 //
-// The error message is printed immediately. The caller is responsible for
-// eventually calling os.Exit with the returned exit code after performing
-// any post-failure work (e.g. printing summaries).
+// The message is printed immediately. The caller is responsible for eventually
+// calling os.Exit with the returned exit code after performing any post-failure
+// work (e.g. printing summaries).
 func classifyAnalyzerError(cmdErr *java.JavaCommandError) *analyzerError {
 	if cmdErr == nil {
 		return nil
 	}
 
 	code := cmdErr.ExitCode
-	if msg := analyzerExitMessage(code); msg != "" {
-		formatted := fmt.Sprintf("Analysis failed (exit code %d): %s", code, msg)
-		out.Error(formatted)
-		return &analyzerError{exitCode: code, message: formatted}
-	}
-
 	formatted := fmt.Sprintf("Analysis failed with exit code %d", code)
+	if msg := analyzerExitMessage(code); msg != "" {
+		formatted = fmt.Sprintf("Analysis failed (exit code %d): %s", code, msg)
+	}
 	out.Error(formatted)
-	return &analyzerError{exitCode: code, message: formatted}
+	return &analyzerError{exitCode: code}
 }

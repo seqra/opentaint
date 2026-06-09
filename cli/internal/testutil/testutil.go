@@ -23,6 +23,50 @@ var jarFiles embed.FS
 // JarName is the filename of the test-util JAR.
 const JarName = "opentaint-sast-test-util.jar"
 
+// ResolveJar locates the opentaint-sast-test-util.jar, checking, in order:
+//  1. Bundled next to the binary: <exe-dir>/lib/<jar>
+//  2. Managed install: ~/.opentaint/install/lib/<jar>
+//  3. Dev build: <repo-root>/core/opentaint-sast-test-util/build/libs/<jar>
+//  4. The copy embedded in this binary, extracted on demand.
+func ResolveJar() (string, error) {
+	if libPath := utils.GetBundledLibPath(); libPath != "" {
+		candidate := filepath.Join(libPath, JarName)
+		if utils.PathExists(candidate) {
+			return candidate, nil
+		}
+	}
+
+	if libPath := utils.GetInstallLibPath(); libPath != "" {
+		candidate := filepath.Join(libPath, JarName)
+		if utils.PathExists(candidate) {
+			return candidate, nil
+		}
+	}
+
+	// Dev build: walk up from the exe dir (typically cli/bin/opentaint, so the
+	// repo root is a few levels up) to find core/.../build/libs/.
+	if exe, err := os.Executable(); err == nil {
+		exe, _ = filepath.EvalSymlinks(exe)
+		dir := filepath.Dir(exe)
+		for range 4 {
+			candidate := filepath.Join(dir, "core", "opentaint-sast-test-util", "build", "libs", JarName)
+			if utils.PathExists(candidate) {
+				return candidate, nil
+			}
+			dir = filepath.Dir(dir)
+		}
+	}
+
+	if extracted, err := ExtractJar(); err == nil {
+		return extracted, nil
+	}
+
+	return "", fmt.Errorf(
+		"%s not found; build it with 'cd core && ./gradlew :opentaint-sast-test-util:jar' or reinstall opentaint",
+		JarName,
+	)
+}
+
 func contentHash(jarData []byte) string {
 	h := sha256.Sum256(jarData)
 	return hex.EncodeToString(h[:])

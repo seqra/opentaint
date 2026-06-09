@@ -91,25 +91,15 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		// The agent should always specify -o to control the output location.
 	} else {
 		outputDir = log.AbsPathOrExit(outputDir, "output")
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+		if err := os.MkdirAll(outputDir, 0o755); err != nil {
 			out.Fatalf("Failed to create output directory: %s", err)
 		}
 	}
 
 	// Ensure builtin rules are available
-	rulesPath, err := utils.GetRulesPath(globals.Config.Rules.Version)
+	rulesPath, err := utils.EnsureRulesPath(out)
 	if err != nil {
-		out.Fatalf("Failed to resolve rules path: %s", err)
-	}
-	if _, err := os.Stat(rulesPath); os.IsNotExist(err) {
-		if dlErr := utils.DownloadAndUnpackGithubReleaseAsset(
-			globals.Config.Owner, globals.Config.Repo,
-			globals.Config.Rules.Version, globals.RulesAssetName,
-			rulesPath, globals.Config.Github.Token,
-			globals.Config.SkipVerify, out,
-		); dlErr != nil {
-			out.Fatalf("Failed to download rules: %s", dlErr)
-		}
+		out.Fatalf("Failed to prepare built-in rules: %s", err)
 	}
 
 	timeoutSeconds := int64(opts.timeout / time.Second)
@@ -147,18 +137,8 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	builder.SetJarPath(analyzerJarPath)
 
 	// Auto-compile .java sources in a --dataflow-approximations dir, as `scan` does.
-	for _, approxPath := range opts.dataflowApprox {
-		absApproxPath := log.AbsPathOrExit(approxPath, "dataflow-approximations")
-		compiledPath, compileErr := compileApproximationsIfNeeded(absApproxPath, analyzerJarPath, projectPath)
-		if compileErr != nil {
-			out.Fatalf("Approximation compilation failed: %s", compileErr)
-		}
-		builder.AddDataflowApproximations(compiledPath)
-	}
-	for _, passthrough := range opts.passthroughApprox {
-		absPassthrough := log.AbsPathOrExit(passthrough, "passthrough-approximations")
-		builder.AddPassthroughApproximations(absPassthrough)
-	}
+	addDataflowApproximations(builder, opts.dataflowApprox, analyzerJarPath, projectPath)
+	addPassthroughApproximations(builder, opts.passthroughApprox)
 
 	javaRunner := java.NewJavaRunner().
 		WithSkipVerify(globals.Config.SkipVerify).

@@ -128,21 +128,12 @@ func resolveHealthComponent(key string) healthComponent {
 // on demand so `health --rules` replaces `dev rules-path`.
 func resolveRulesComponent() healthComponent {
 	c := healthComponent{name: "Rules", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"), "")}
-	path, err := utils.GetRulesPath(globals.Config.Rules.Version)
-	if err != nil {
-		return c
-	}
+	// EnsureRulesPath returns the expected path even on failure, so the report
+	// can still show where the rules belong, flagged as missing.
+	path, err := utils.EnsureRulesPath(out)
 	c.path = path
-	if utils.PathExists(path) {
-		c.present = true
-		return c
-	}
-	if dlErr := utils.DownloadAndUnpackGithubReleaseAsset(
-		globals.Config.Owner, globals.Config.Repo,
-		globals.Config.Rules.Version, globals.RulesAssetName,
-		path, globals.Config.Github.Token, globals.Config.SkipVerify, out,
-	); dlErr != nil {
-		fmt.Fprintf(os.Stderr, "Error downloading rules: %s\n", dlErr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving rules: %s\n", err)
 		return c
 	}
 	c.present = utils.PathExists(path)
