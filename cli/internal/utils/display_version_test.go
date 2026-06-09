@@ -80,3 +80,24 @@ func TestArtifactDisplayVersion(t *testing.T) {
 		t.Errorf("pinned case: got %q, want %q", got, "analyzer/2026.05.27.68ab20a")
 	}
 }
+
+func TestArtifactVersionShortVariants(t *testing.T) {
+	analyzer := globals.ArtifactByKind("analyzer").WithVersion("analyzer/2026.05.27.68ab20a")
+
+	// Pinned release: kind prefix stripped, identical for both helpers.
+	if got := ArtifactVersionWithPath(analyzer, ""); got != "2026.05.27.68ab20a" {
+		t.Errorf("WithPath pinned: got %q, want %q", got, "2026.05.27.68ab20a")
+	}
+	if got := ArtifactVersion(analyzer, ""); got != "2026.05.27.68ab20a" {
+		t.Errorf("bare pinned: got %q, want %q", got, "2026.05.27.68ab20a")
+	}
+
+	// Custom (jar override): WithPath keeps the path (single-line display),
+	// bare collapses to "custom" (the path is shown separately, no dup).
+	if got := ArtifactVersionWithPath(analyzer, "/home/dev/analyzer.jar"); got != "custom (/home/dev/analyzer.jar)" {
+		t.Errorf("WithPath custom: got %q, want %q", got, "custom (/home/dev/analyzer.jar)")
+	}
+	if got := ArtifactVersion(analyzer, "/home/dev/analyzer.jar"); got != "custom" {
+		t.Errorf("bare custom: got %q, want %q", got, "custom")
+	}
+}

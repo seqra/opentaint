@@ -108,12 +108,12 @@ func resolveHealthComponent(key string) healthComponent {
 	case "autobuilder":
 		def := globals.ArtifactByKind("autobuilder")
 		path, err := utils.ResolveJarPath(def)
-		version := utils.ArtifactVersionShort(def, globals.Config.Autobuilder.JarPath)
+		version := utils.ArtifactVersion(def, globals.Config.Autobuilder.JarPath)
 		return healthComponent{"Autobuilder", version, path, err == nil && utils.PathExists(path)}
 	case "analyzer":
 		def := globals.ArtifactByKind("analyzer")
 		path, err := utils.ResolveJarPath(def)
-		version := utils.ArtifactVersionShort(def, globals.Config.Analyzer.JarPath)
+		version := utils.ArtifactVersion(def, globals.Config.Analyzer.JarPath)
 		return healthComponent{"Analyzer", version, path, err == nil && utils.PathExists(path)}
 	case "rules":
 		return resolveRulesComponent()
@@ -127,7 +127,7 @@ func resolveHealthComponent(key string) healthComponent {
 // resolveRulesComponent resolves the built-in rules directory, downloading it
 // on demand so `health --rules` replaces `dev rules-path`.
 func resolveRulesComponent() healthComponent {
-	c := healthComponent{name: "Rules", version: utils.ArtifactVersionShort(globals.ArtifactByKind("rules"), "")}
+	c := healthComponent{name: "Rules", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"), "")}
 	path, err := utils.GetRulesPath(globals.Config.Rules.Version)
 	if err != nil {
 		return c

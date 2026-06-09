@@ -590,14 +590,14 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		if plan.projectCachePath != "" {
 			sb.FieldNode("Project model", plan.absProjectModel)
 		}
-		sb.FieldNode("Autobuilder", utils.ArtifactVersionShort(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
+		sb.FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
 	} else {
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
-	sb.FieldNode("Analyzer", utils.ArtifactVersionShort(globals.ArtifactByKind("analyzer"), globals.Config.Analyzer.JarPath))
+	sb.FieldNode("Analyzer", utils.ArtifactVersionWithPath(globals.ArtifactByKind("analyzer"), globals.Config.Analyzer.JarPath))
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.FieldNode("Bundled ruleset", utils.ArtifactVersionShort(globals.ArtifactByKind("rules"), ""))
+			sb.FieldNode("Bundled ruleset", utils.ArtifactVersionWithPath(globals.ArtifactByKind("rules"), ""))
 		} else {
 			sb.FieldNode("User ruleset", r.Path)
 		}

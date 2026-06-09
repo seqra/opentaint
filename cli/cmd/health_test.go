@@ -15,10 +15,11 @@ func TestResolveHealthComponentUsesAnalyzerJarOverride(t *testing.T) {
 	if c.path != globals.Config.Analyzer.JarPath {
 		t.Fatalf("health analyzer path = %q, want override %q", c.path, globals.Config.Analyzer.JarPath)
 	}
-	// A jar-path override is a custom build, so health must report it as such
-	// (matching scan), not as the nominal configured version.
-	if want := "custom (" + globals.Config.Analyzer.JarPath + ")"; c.version != want {
-		t.Fatalf("health analyzer version = %q, want %q", c.version, want)
+	// A jar-path override is a custom build, so health reports the version as
+	// "custom" — bare, since the path is already shown on its own node (no
+	// duplication), unlike scan's single-line "custom (<path>)".
+	if c.version != "custom" {
+		t.Fatalf("health analyzer version = %q, want %q", c.version, "custom")
 	}
 }
 
