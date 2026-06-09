@@ -87,7 +87,7 @@ func runHealth() {
 	sb := out.Section("OpenTaint Health")
 	th := out.Theme()
 	for _, c := range components {
-		node := out.GroupItem(th.FieldKey.Render(c.name + ":"))
+		node := out.GroupItem(th.FieldKey.Render(c.name))
 		if c.version != "" {
 			node.Child(th.FieldValue.Render(c.version))
 		}
