@@ -44,8 +44,8 @@ class GoIRClient : AutoCloseable {
 
         val totalStart = System.nanoTime()
         val responses = stub.buildProgram(request)
-        val deserializer = GoIRDeserializer()
         val deserializeStart = System.nanoTime()
+        val deserializer = GoIRDeserializer()
         val program = deserializer.deserialize(responses)
         val deserializeMs = (System.nanoTime() - deserializeStart) / 1_000_000
         val totalMs = (System.nanoTime() - totalStart) / 1_000_000

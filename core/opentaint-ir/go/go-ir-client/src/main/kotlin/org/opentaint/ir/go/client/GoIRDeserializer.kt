@@ -1,10 +1,15 @@
 package org.opentaint.ir.go.client
 
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import org.opentaint.ir.go.api.GoIRField
 import org.opentaint.ir.go.api.GoIRFreeVar
 import org.opentaint.ir.go.api.GoIRInterfaceMethod
+import org.opentaint.ir.go.api.GoIRPackage
 import org.opentaint.ir.go.api.GoIRParameter
 import org.opentaint.ir.go.api.GoIRPosition
 import org.opentaint.ir.go.api.GoIRProgram
+import org.opentaint.ir.go.api.GoIrFunctionReference
 import org.opentaint.ir.go.cfg.GoIRCallInfo
 import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.cfg.GoIRSelectState
@@ -17,10 +22,10 @@ import org.opentaint.ir.go.expr.GoIRConvertExpr
 import org.opentaint.ir.go.expr.GoIRExpr
 import org.opentaint.ir.go.expr.GoIRExtractExpr
 import org.opentaint.ir.go.expr.GoIRFieldAddrExpr
+import org.opentaint.ir.go.expr.GoIRFieldExpr
 import org.opentaint.ir.go.expr.GoIRFreeVarValueExpr
 import org.opentaint.ir.go.expr.GoIRFunctionValueExpr
 import org.opentaint.ir.go.expr.GoIRGlobalValueExpr
-import org.opentaint.ir.go.expr.GoIRFieldExpr
 import org.opentaint.ir.go.expr.GoIRIndexAddrExpr
 import org.opentaint.ir.go.expr.GoIRIndexExpr
 import org.opentaint.ir.go.expr.GoIRLookupExpr
@@ -65,7 +70,6 @@ import org.opentaint.ir.go.inst.GoIRRunDefers
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.inst.GoInstLocation
-
 import org.opentaint.ir.go.proto.BuildProgramResponse
 import org.opentaint.ir.go.proto.ProtoBasicTypeKind
 import org.opentaint.ir.go.proto.ProtoBinaryOp
@@ -76,12 +80,16 @@ import org.opentaint.ir.go.proto.ProtoConstValue
 import org.opentaint.ir.go.proto.ProtoFunction
 import org.opentaint.ir.go.proto.ProtoFunctionBody
 import org.opentaint.ir.go.proto.ProtoInstruction
+import org.opentaint.ir.go.proto.ProtoNamedType
 import org.opentaint.ir.go.proto.ProtoNamedTypeKind
 import org.opentaint.ir.go.proto.ProtoPackage
 import org.opentaint.ir.go.proto.ProtoPosition
+import org.opentaint.ir.go.proto.ProtoProgram
 import org.opentaint.ir.go.proto.ProtoTypeDefinition
 import org.opentaint.ir.go.proto.ProtoUnaryOp
 import org.opentaint.ir.go.proto.ProtoValueRef
+import org.opentaint.ir.go.type.GoIRAnonymousInterfaceType
+import org.opentaint.ir.go.type.GoIRAnonymousInterfaceTypeRef
 import org.opentaint.ir.go.type.GoIRArrayType
 import org.opentaint.ir.go.type.GoIRBasicType
 import org.opentaint.ir.go.type.GoIRBasicTypeKind
@@ -91,8 +99,8 @@ import org.opentaint.ir.go.type.GoIRChanDirection
 import org.opentaint.ir.go.type.GoIRChanType
 import org.opentaint.ir.go.type.GoIRFuncType
 import org.opentaint.ir.go.type.GoIRInterfaceMethodSig
-import org.opentaint.ir.go.type.GoIRInterfaceType
 import org.opentaint.ir.go.type.GoIRMapType
+import org.opentaint.ir.go.type.GoIRNamedInterfaceType
 import org.opentaint.ir.go.type.GoIRNamedTypeKind
 import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRPointerType
@@ -101,59 +109,68 @@ import org.opentaint.ir.go.type.GoIRStructField
 import org.opentaint.ir.go.type.GoIRStructType
 import org.opentaint.ir.go.type.GoIRTupleType
 import org.opentaint.ir.go.type.GoIRType
+import org.opentaint.ir.go.type.GoIRTypeParamRef
 import org.opentaint.ir.go.type.GoIRTypeParamType
 import org.opentaint.ir.go.type.GoIRUnaryOp
 import org.opentaint.ir.go.type.GoIRUnsafePointerType
+import org.opentaint.ir.go.type.NamedTypeRef
 import org.opentaint.ir.go.value.GoIRConstValue
 import org.opentaint.ir.go.value.GoIRConstantValue
 import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
 import org.opentaint.ir.go.value.GoIRValue
+import java.util.BitSet
 
 class GoIRDeserializer {
-
-    // ID resolution maps populated during deserialization
-    private val typesById = mutableMapOf<Int, GoIRType>()
-    private val lazyNamedTypeRefs = mutableMapOf<Int, GoIRLazyNamedTypeRef>() // type ID -> lazy ref
-    private val registerTypeIds = mutableListOf<Pair<GoIRRegister, Int>>() // register + original typeId for re-resolution
-    private val exprTypeIds = mutableListOf<Pair<GoIRExpr, Int>>() // expr + original typeId for re-resolution
-    private val rawTypeDefinitions = mutableListOf<ProtoTypeDefinition>() // raw proto type defs for re-resolution
-    private val placeholderNamedTypes = mutableMapOf<Int, GoIRNamedTypeImpl>() // namedTypeId -> placeholder
-    private val packagesById = mutableMapOf<Int, GoIRPackageImpl>()
-    private val functionsById = mutableMapOf<Int, GoIRFunctionImpl>()
-    private val namedTypesById = mutableMapOf<Int, GoIRNamedTypeImpl>()
-    private val globalsById = mutableMapOf<Int, GoIRGlobalImpl>()
-    private val constsById = mutableMapOf<Int, GoIRConstImpl>()
+    private lateinit var packages: Array<GoIRPackageImpl?>
+    private lateinit var types: Array<GoIRType?>
+    private lateinit var namedTypes: Array<GoIRNamedTypeImpl?>
+    private lateinit var functions: Array<GoIRFunctionImpl?>
+    private val globalsById = Int2ObjectOpenHashMap<GoIRGlobalImpl>()
 
     private val errors = mutableListOf<String>()
-    private val stubPackage: GoIRPackageImpl by lazy {
-        GoIRPackageImpl(importPath = "_external_stubs_", name = "_stubs_", isDependency = true)
-    }
 
     /** Time reported by the Go server for SSA build + serialization (ms). */
     var serverBuildTimeMs: Long = 0L
         private set
 
-    private fun getOrCreateStubPackage(): GoIRPackageImpl = stubPackage
-
     fun deserialize(responses: Iterator<BuildProgramResponse>): GoIRProgram {
-        val deferredBodies = mutableListOf<ProtoFunctionBody>()
+        var program: ProtoProgram? = null
         for (r in responses) {
             when (r.payloadCase) {
-                BuildProgramResponse.PayloadCase.TYPE_DEF -> deserializeType(r.typeDef)
-                BuildProgramResponse.PayloadCase.PACKAGE_DEF -> deserializePackage(r.packageDef)
-                BuildProgramResponse.PayloadCase.FUNCTION_BODY -> deferredBodies.add(r.functionBody)
+                BuildProgramResponse.PayloadCase.PROGRAM -> {
+                    program = r.program
+                }
+
                 BuildProgramResponse.PayloadCase.SUMMARY -> serverBuildTimeMs = r.summary.buildTimeMs
                 BuildProgramResponse.PayloadCase.ERROR -> handleError(r.error.message, r.error.fatal)
                 BuildProgramResponse.PayloadCase.PAYLOAD_NOT_SET -> {}
+                BuildProgramResponse.PayloadCase.TYPE_DEF,
+                BuildProgramResponse.PayloadCase.PACKAGE_DEF,
+                BuildProgramResponse.PayloadCase.FUNCTION_BODY -> error("Impossible payload")
             }
         }
-        resolveNamedTypeRefs()
-        for (fb in deferredBodies) {
-            deserializeFunctionBody(fb)
+
+        check(program != null) { "Unexpected IR build issue" }
+
+        val resultPackages = hashMapOf<String, GoIRPackage>()
+        val anonymousInterfaces = Int2ObjectOpenHashMap<GoIRAnonymousInterfaceType>()
+        val result = GoIRProgramImpl(resultPackages, anonymousInterfaces)
+
+        val pkgInfo = deserializePackages(program.packagesList)
+        packages.filterNotNull().forEach {
+            resultPackages[it.importPath] = it
         }
-        resolveReferences()
-        return GoIRProgramImpl(packagesById.values.associateBy { it.importPath })
+
+        deserializeTypes(result, program.typesList, pkgInfo, anonymousInterfaces)
+
+        FunctionDeserializationCtx(pkgInfo, result).deserializeFunctions()
+
+        program.packagesList.forEach { deserializePackageMembers(it) }
+        program.functionBodiesList.forEach { deserializeFunctionBody(it) }
+        pkgInfo.namedTypes.forEach { resolveNamedTypeBindings(it) }
+
+        return result
     }
 
     private fun handleError(message: String, fatal: Boolean) {
@@ -163,40 +180,273 @@ class GoIRDeserializer {
         errors.add(message)
     }
 
+    private data class PackageInfo(
+        val namedTypes: List<ProtoNamedType>,
+        val namedTypePkgId: Int2IntOpenHashMap,
+        val functions: List<ProtoFunction>,
+        val functionPkgId: Int2IntOpenHashMap,
+    )
 
-    // ─── Types ──────────────────────────────────────────────────────
+    private fun deserializePackages(packagesList: List<ProtoPackage>): PackageInfo {
+        val deserialized = arrayOfNulls<GoIRPackageImpl?>(packagesList.size + 1).also {
+            packages = it
+        }
 
-    private fun deserializeType(td: ProtoTypeDefinition) {
-        rawTypeDefinitions.add(td)
+        val namedTypePkgId = Int2IntOpenHashMap()
+        val namedTypes = mutableListOf<ProtoNamedType>()
+
+        val functions = mutableListOf<ProtoFunction>()
+        val functionPkgId = Int2IntOpenHashMap()
+
+        for (pkg in packagesList) {
+            deserialized[pkg.id] = GoIRPackageImpl(
+                importPath = pkg.importPath,
+                name = pkg.name,
+                isStdlib = pkg.isStdlib,
+                isDependency = pkg.isDependency,
+            )
+
+            pkg.namedTypesList.forEach {
+                namedTypes += it
+                namedTypePkgId[it.id] = pkg.id
+            }
+
+            pkg.functionsList.forEach {
+                functions += it
+                functionPkgId[it.id] = pkg.id
+            }
+        }
+
+        return PackageInfo(namedTypes, namedTypePkgId, functions, functionPkgId)
+    }
+
+    private class TypeDeserializationCtx(
+        val program: GoIRProgram,
+        typesList: List<ProtoTypeDefinition>,
+        namedTypes: List<ProtoNamedType>,
+        val namedTypePkg: Int2IntOpenHashMap,
+        val anonymousInterfaces: Int2ObjectOpenHashMap<GoIRAnonymousInterfaceType>,
+    ) {
+        val typeDefinitions: Array<ProtoTypeDefinition?>
+        val namedTypeDefs: Array<ProtoNamedType?>
+
+        init {
+            val maxTypeId = typesList.maxOfOrNull { it.id } ?: -1
+            val maxNamedTypeId = namedTypes.maxOfOrNull { it.id } ?: -1
+
+            val typeDefs = arrayOfNulls<ProtoTypeDefinition>(maxTypeId + 1).also { typeDefinitions = it }
+            val namedDefs = arrayOfNulls<ProtoNamedType>(maxNamedTypeId + 1).also { namedTypeDefs = it }
+
+            typesList.forEach { typeDefs[it.id] = it }
+            namedTypes.forEach { namedDefs[it.id] = it }
+        }
+
+        val deserialized = arrayOfNulls<GoIRType?>(typeDefinitions.size)
+        val deserializedNamed = arrayOfNulls<GoIRNamedTypeImpl?>(namedTypeDefs.size)
+        val namedRefs = arrayOfNulls<NamedTypeRef?>(namedTypeDefs.size)
+
+        val typesOnStackOnce = BitSet()
+        val typesOnStackTwice = BitSet()
+    }
+
+    private fun deserializeTypes(
+        program: GoIRProgram,
+        typesList: List<ProtoTypeDefinition>,
+        packageInfo: PackageInfo,
+        anonymousInterfaces: Int2ObjectOpenHashMap<GoIRAnonymousInterfaceType>,
+    ) {
+        val namedTypes = packageInfo.namedTypes
+        val namedTypePkg = packageInfo.namedTypePkgId
+
+        val ctx = TypeDeserializationCtx(program, typesList, namedTypes, namedTypePkg, anonymousInterfaces)
+        namedTypes.forEach {
+            ctx.deserializedNamed[it.id] = ctx.deserializeNamedTypeBody(it)
+        }
+        typesList.filter { !it.hasFuncType() }.forEach { ctx.deserializeType(it) }
+        typesList.filter { it.hasFuncType() }.forEach { ctx.deserializeType(it) }
+
+        this.types = ctx.deserialized
+        this.namedTypes = ctx.deserializedNamed
+    }
+
+    private fun TypeDeserializationCtx.resolveNamedRef(id: Int): NamedTypeRef? {
+        if (id == 0) return null
+
+        check(id < namedRefs.size) { "Named type was not serialized: $id" }
+
+        val current = namedRefs[id]
+        if (current != null) return current
+
+        val typeDef = namedTypeDefs[id] ?: error("Unexpected named type id: $id")
+
+        val pkg = namedTypePkg(typeDef)
+        val result = NamedTypeRef(pkg.importPath, typeDef.name).also { it.program = program }
+        namedRefs[id] = result
+        return result
+    }
+
+    private fun TypeDeserializationCtx.resolveType(id: Int): GoIRType {
+        check(id < typeDefinitions.size) { "Type was not serialized: $id" }
+
+        if (id == 0) {
+            TODO("No type id")
+        }
+
+        val current = deserialized[id]
+        if (current != null) return current
+
+        val typeDef = typeDefinitions[id]
+            ?: error("Unexpected type id: $id")
+
+        return deserializeType(typeDef)
+    }
+
+    private fun TypeDeserializationCtx.deserializeType(td: ProtoTypeDefinition): GoIRType {
+        val id = td.id
+        val current = deserialized[id]
+        if (current != null) return current
+
+        val stackTracker = when {
+            !typesOnStackOnce.get(id) -> typesOnStackOnce
+            !typesOnStackTwice.get(id) -> typesOnStackTwice
+            else -> TODO("Recursive types")
+        }
+
+        stackTracker.set(id)
+        val result = deserializeTypeBody(td).also {
+            stackTracker.clear(id)
+        }
+
+        deserialized[id] = result
+        return result
+    }
+
+    private fun TypeDeserializationCtx.saveTypeToAvoidRecursion(id: Int, type: GoIRType) {
+        deserialized[id] = type
+        typesOnStackTwice.clear(id)
+    }
+
+    private fun TypeDeserializationCtx.namedTypePkg(typeDef: ProtoNamedType): GoIRPackageImpl {
+        val pkgId = namedTypePkg.get(typeDef.id)
+        return getPackage(pkgId)
+    }
+
+    private fun getPackage(id: Int): GoIRPackageImpl =
+        packages[id] ?: error("No package found for id: $id")
+
+    private fun TypeDeserializationCtx.deserializeNamedTypeBody(nt: ProtoNamedType): GoIRNamedTypeImpl {
+        val pkg = namedTypePkg(nt)
+
+        val namedType = GoIRNamedTypeImpl(
+            name = nt.name,
+            fullName = nt.fullName,
+            pkg = pkg,
+            underlying = resolveType(nt.underlyingTypeId),
+            kind = namedTypeKindFromProto(nt.kind),
+            position = positionFromProto(nt.position),
+        )
+
+        for (fd in nt.fieldsList) {
+            namedType._fields += GoIRField(
+                name = fd.name,
+                type = resolveType(fd.typeId),
+                index = fd.index,
+                isEmbedded = fd.embedded,
+                isExported = fd.exported,
+                tag = fd.tag,
+                enclosingType = namedType,
+            )
+        }
+
+        for (im in nt.interfaceMethodsList) {
+            val funcType = resolveFunctionalType(im.signatureTypeId)
+            namedType._interfaceMethods += GoIRInterfaceMethod(
+                name = im.name,
+                signature = funcType,
+                enclosingInterface = namedType,
+            )
+        }
+
+        pkg.addNamedType(namedType)
+        return namedType
+    }
+
+    private fun resolveNamedTypeBindings(nt: ProtoNamedType) {
+        val type = getNamedType(nt.id)
+
+        nt.embeddedInterfaceIdsList.forEach {
+            type._embeddedInterfaces += getNamedType(it)
+        }
+
+        nt.methodIdsList.forEach {
+            type._methods += getFunction(it)
+        }
+
+        nt.pointerMethodIdsList.forEach {
+            type._pointerMethods += getFunction(it)
+        }
+    }
+
+    private fun TypeDeserializationCtx.resolveFunctionalType(id: Int): GoIRFuncType =
+        resolveType(id) as? GoIRFuncType
+            ?: error("Unexpected non-functional type")
+
+    private fun TypeDeserializationCtx.deserializeTypeBody(td: ProtoTypeDefinition): GoIRType {
         val type = when (td.typeCase) {
             ProtoTypeDefinition.TypeCase.BASIC ->
                 GoIRBasicType(basicKindFromProto(td.basic.kind))
+
             ProtoTypeDefinition.TypeCase.POINTER ->
                 GoIRPointerType(resolveType(td.pointer.elemTypeId))
+
             ProtoTypeDefinition.TypeCase.ARRAY ->
                 GoIRArrayType(resolveType(td.array.elemTypeId), td.array.length)
+
             ProtoTypeDefinition.TypeCase.SLICE ->
                 GoIRSliceType(resolveType(td.slice.elemTypeId))
+
             ProtoTypeDefinition.TypeCase.MAP_TYPE ->
                 GoIRMapType(resolveType(td.mapType.keyTypeId), resolveType(td.mapType.valueTypeId))
+
             ProtoTypeDefinition.TypeCase.CHAN_TYPE ->
                 GoIRChanType(resolveType(td.chanType.elemTypeId), chanDirFromProto(td.chanType.direction))
+
             ProtoTypeDefinition.TypeCase.STRUCT_TYPE -> {
-                val fields = td.structType.fieldsList.map { f ->
+                val st = td.structType
+                val structName = resolveNamedRef(st.namedTypeId)
+                val fields = st.fieldsList.map { f ->
                     GoIRStructField(f.name, resolveType(f.typeId), f.embedded, f.tag)
                 }
-                GoIRStructType(fields, null) // namedType linked later
+                GoIRStructType(fields, structName)
             }
+
             ProtoTypeDefinition.TypeCase.INTERFACE_TYPE -> {
-                val methods = td.interfaceType.methodsList.map { m ->
-                    val sigType = resolveType(m.signatureTypeId)
-                    val funcType = sigType as? GoIRFuncType
-                        ?: GoIRFuncType(emptyList(), emptyList(), false, null) // placeholder for lazy refs
+                val it = td.interfaceType
+                val interfaceName = resolveNamedRef(it.namedTypeId)
+
+                // note: interface method receiver points to this interfaces
+                val interfaceRef = if (interfaceName != null) {
+                    GoIRNamedTypeRef(interfaceName, emptyList())
+                } else {
+                    GoIRAnonymousInterfaceTypeRef(td.id).also { it.program = program }
+                }
+                saveTypeToAvoidRecursion(td.id, interfaceRef)
+
+                val methods = it.methodsList.map { m ->
+                    val funcType = resolveFunctionalType(m.signatureTypeId)
                     GoIRInterfaceMethodSig(m.name, funcType)
                 }
-                val embeds = td.interfaceType.embedTypeIdsList.map { resolveType(it) }
-                GoIRInterfaceType(methods, embeds, null) // namedType linked later
+                val embeds = it.embedTypeIdsList.map { resolveType(it) }
+
+                if (interfaceName != null) {
+                    GoIRNamedInterfaceType(methods, embeds, interfaceName)
+                } else {
+                    GoIRAnonymousInterfaceType(td.id, methods, embeds).also {
+                        anonymousInterfaces.put(td.id, it)
+                    }
+                }
             }
+
             ProtoTypeDefinition.TypeCase.FUNC_TYPE -> {
                 val ft = td.funcType
                 GoIRFuncType(
@@ -206,111 +456,123 @@ class GoIRDeserializer {
                     recv = if (ft.recvTypeId != 0) resolveType(ft.recvTypeId) else null,
                 )
             }
+
             ProtoTypeDefinition.TypeCase.NAMED_REF -> {
-                // Create a placeholder named type that will be filled in during resolution
-                val namedTypeId = td.namedRef.namedTypeId
-                val typeArgIds = td.namedRef.typeArgIdsList.toList()
-                lazyNamedTypeRefs[td.id] = GoIRLazyNamedTypeRef(namedTypeId, typeArgIds)
-                // Check if named type is already available (it might be if sent before)
-                val named = namedTypesById[namedTypeId]
-                if (named != null) {
-                    val typeArgs = typeArgIds.map { resolveType(it) }
-                    GoIRNamedTypeRef(named, typeArgs)
-                } else {
-                    // Create placeholder with a stub named type — will be resolved later
-                    val placeholder = placeholderNamedTypes.getOrPut(namedTypeId) {
-                        GoIRNamedTypeImpl(
-                            name = "?$namedTypeId",
-                            fullName = "?$namedTypeId",
-                            pkg = getOrCreateStubPackage(),
-                            underlying = GoIRBasicType(GoIRBasicTypeKind.INT),
-                            kind = GoIRNamedTypeKind.STRUCT,
-                            position = null,
-                        )
-                    }
-                    GoIRNamedTypeRef(placeholder, emptyList())
-                }
+                val nr = td.namedRef
+                val namedType = resolveNamedRef(nr.namedTypeId)
+                    ?: error("Named type ref without ref")
+
+                val typeArgs = nr.typeArgIdsList.map { resolveType(it) }
+                GoIRNamedTypeRef(namedType, typeArgs)
             }
-            ProtoTypeDefinition.TypeCase.TYPE_PARAM ->
-                GoIRTypeParamType(td.typeParam.name, td.typeParam.index, resolveType(td.typeParam.constraintTypeId))
+
+            ProtoTypeDefinition.TypeCase.TYPE_PARAM -> {
+                val tp = td.typeParam
+                val ref = GoIRTypeParamRef(tp.name, tp.index)
+
+                // note: type params may have recursive constraints
+                saveTypeToAvoidRecursion(td.id, ref)
+
+                val constraint = resolveType(tp.constraintTypeId)
+                GoIRTypeParamType(ref, constraint)
+            }
+
             ProtoTypeDefinition.TypeCase.TUPLE ->
                 GoIRTupleType(td.tuple.elementTypeIdsList.map { resolveType(it) })
+
             ProtoTypeDefinition.TypeCase.UNSAFE_POINTER ->
                 GoIRUnsafePointerType
+
             else -> GoIRBasicType(GoIRBasicTypeKind.INT) // fallback
         }
-        typesById[td.id] = type
+        return type
     }
 
-    // ─── Packages ───────────────────────────────────────────────────
+    private fun getType(id: Int): GoIRType {
+        return types[id]
+            ?: error("No type found for $id")
+    }
 
-    private fun deserializePackage(pp: ProtoPackage) {
-        val pkg = packagesById[pp.id] ?: GoIRPackageImpl(
-            importPath = pp.importPath,
-            name = pp.name,
-            isStdlib = pp.isStdlib,
-            isDependency = pp.isDependency,
-        ).also { packagesById[pp.id] = it }
+    private fun getNamedType(id: Int): GoIRNamedTypeImpl {
+        return namedTypes[id]
+            ?: error("No named type found for $id")
+    }
 
-        // Named types
-        for (nt in pp.namedTypesList) {
-            val namedType = GoIRNamedTypeImpl(
-                name = nt.name,
-                fullName = nt.fullName,
-                pkg = pkg,
-                underlying = resolveType(nt.underlyingTypeId),
-                kind = namedTypeKindFromProto(nt.kind),
-                position = positionFromProto(nt.position),
-            )
-            namedTypesById[nt.id] = namedType
+    private fun getFunctionalType(id: Int): GoIRFuncType =
+        getType(id) as? GoIRFuncType
+            ?: error("Unexpected non-functional type")
 
-            // Link the underlying struct/interface type back to this named type
-            val underlying = namedType.underlying
-            if (underlying is GoIRStructType && underlying.namedType == null) {
-                underlying.namedType = namedType
-            }
-            if (underlying is GoIRInterfaceType && underlying.namedType == null) {
-                underlying.namedType = namedType
-            }
+    private class FunctionDeserializationCtx(
+        val packageInfo: PackageInfo,
+        val program: GoIRProgram,
+    )
 
-            // Fields
-            for (fd in nt.fieldsList) {
-                namedType.addField(org.opentaint.ir.go.api.GoIRField(
-                    name = fd.name,
-                    type = resolveType(fd.typeId),
-                    index = fd.index,
-                    isEmbedded = fd.embedded,
-                    isExported = fd.exported,
-                    tag = fd.tag,
-                    enclosingType = namedType,
-                ))
-            }
+    private fun FunctionDeserializationCtx.deserializeFunctions() {
+        val maxFunctionId = packageInfo.functions.maxOfOrNull { it.id } ?: return
+        val functions = arrayOfNulls<ProtoFunction>(maxFunctionId + 1)
+        packageInfo.functions.forEach { functions[it.id] = it }
 
-            // Interface methods
-            for (im in nt.interfaceMethodsList) {
-                val sigType = resolveType(im.signatureTypeId)
-                val funcType = sigType as? GoIRFuncType
-                    ?: GoIRFuncType(emptyList(), emptyList(), false, null)
-                namedType.addInterfaceMethod(GoIRInterfaceMethod(
-                    name = im.name,
-                    signature = funcType,
-                    enclosingInterface = namedType,
-                ))
-            }
-
-            // Store method IDs and embedded interface IDs for later resolution
-            namedType.methodIds = nt.methodIdsList.toList()
-            namedType.pointerMethodIds = nt.pointerMethodIdsList.toList()
-            namedType.embeddedInterfaceIds = nt.embeddedInterfaceIdsList.toList()
-
-            pkg.addNamedType(namedType)
+        val deserialized = arrayOfNulls<GoIRFunctionImpl?>(maxFunctionId + 1).also {
+            this@GoIRDeserializer.functions = it
         }
 
-        // Functions — register every function in its package (methods, anon funcs, and regular funcs).
-        // Methods are additionally linked to their receiver named type later via methodIds.
+        for (pf in functions) {
+            pf ?: continue
+
+            val pkg = getPackage(packageInfo.functionPkgId.get(pf.id))
+
+            var parentFunction: GoIrFunctionReference? = null
+            if (pf.parentFunctionId != 0) {
+                parentFunction = resolveFunctionReference(pf.parentFunctionId, functions)
+            }
+
+            val anonymousFunctions = pf.anonFunctionIdsList.map { resolveFunctionReference(it, functions) }
+
+            deserialized[pf.id] = GoIRFunctionImpl(
+                name = pf.name,
+                fullName = pf.fullName,
+                pkg = pkg,
+                signature = getFunctionalType(pf.signatureTypeId),
+                params = pf.paramsList.map { p -> GoIRParameter(p.name, getType(p.typeId), p.index) },
+                freeVars = pf.freeVarsList.map { fv -> GoIRFreeVar(fv.name, getType(fv.typeId), fv.index) },
+                position = positionFromProto(pf.position),
+                isMethod = pf.isMethod,
+                isPointerReceiver = pf.isPointerReceiver,
+                isExported = pf.isExported,
+                isSynthetic = pf.isSynthetic,
+                syntheticKind = pf.syntheticKind.ifEmpty { null },
+                declaredHasBody = pf.hasBody,
+                parent = parentFunction,
+                anonymousFunctions = anonymousFunctions,
+            )
+        }
+    }
+
+    private fun FunctionDeserializationCtx.resolveFunctionReference(
+        fnId: Int, defs: Array<ProtoFunction?>
+    ): GoIrFunctionReference {
+        val fDef = defs[fnId]
+            ?: error("Function $fnId not serialized")
+        return resolveFunctionReference(fDef)
+    }
+
+    private fun FunctionDeserializationCtx.resolveFunctionReference(
+        pf: ProtoFunction
+    ): GoIrFunctionReference {
+        val pkg = getPackage(packageInfo.functionPkgId.get(pf.id))
+        val signature = getFunctionalType(pf.signatureTypeId)
+        return GoIrFunctionReference(pkg.importPath, pf.name, signature).also { it.program = program }
+    }
+
+    private fun getFunction(id: Int): GoIRFunctionImpl =
+        functions[id]
+            ?: error("No function found for $id")
+
+    private fun deserializePackageMembers(pp: ProtoPackage) {
+        val pkg = getPackage(pp.id)
+
         for (pf in pp.functionsList) {
-            val fn = deserializeFunction(pf, pkg)
-            functionsById[pf.id] = fn
+            val fn = getFunction(pf.id)
             pkg.addFunction(fn)
         }
 
@@ -319,12 +581,12 @@ class GoIRDeserializer {
             val global = GoIRGlobalImpl(
                 name = pg.name,
                 fullName = pg.fullName,
-                type = resolveType(pg.typeId),
+                type = getType(pg.typeId),
                 pkg = pkg,
                 isExported = pg.isExported,
                 position = positionFromProto(pg.position),
             )
-            globalsById[pg.id] = global
+            globalsById.put(pg.id, global)
             pkg.addGlobal(global)
         }
 
@@ -333,47 +595,30 @@ class GoIRDeserializer {
             val const = GoIRConstImpl(
                 name = pc.name,
                 fullName = pc.fullName,
-                type = resolveType(pc.typeId),
+                type = getType(pc.typeId),
                 value = constValueFromProto(pc.value),
                 pkg = pkg,
                 isExported = pc.isExported,
                 position = positionFromProto(pc.position),
             )
-            constsById[pc.id] = const
             pkg.addConst(const)
         }
 
-        // Store import IDs for later resolution
-        pkg.importIds = pp.importIdsList.toList()
-        pkg.initFunctionId = pp.initFunctionId
-    }
+        if (pp.initFunctionId != 0) {
+            val initFn = getFunction(pp.initFunctionId)
+            pkg.initFunction = initFn
+        }
 
-    private fun deserializeFunction(pf: ProtoFunction, pkg: GoIRPackageImpl): GoIRFunctionImpl {
-        functionsById[pf.id]?.let { return it }
-        return GoIRFunctionImpl(
-            name = pf.name,
-            fullName = pf.fullName,
-            pkg = pkg,
-            signature = resolveType(pf.signatureTypeId) as GoIRFuncType,
-            params = pf.paramsList.map { p -> GoIRParameter(p.name, resolveType(p.typeId), p.index) },
-            freeVars = pf.freeVarsList.map { fv -> GoIRFreeVar(fv.name, resolveType(fv.typeId), fv.index) },
-            position = positionFromProto(pf.position),
-            isMethod = pf.isMethod,
-            isPointerReceiver = pf.isPointerReceiver,
-            isExported = pf.isExported,
-            isSynthetic = pf.isSynthetic,
-            syntheticKind = pf.syntheticKind.ifEmpty { null },
-            declaredHasBody = pf.hasBody,
-            receiverTypeId = pf.receiverTypeId,
-            parentFunctionId = pf.parentFunctionId,
-            anonFunctionIds = pf.anonFunctionIdsList.toList(),
-        )
+        pp.importIdsList.forEach {
+            val importPkg = getPackage(it)
+            pkg._imports.add(importPkg)
+        }
     }
 
     // ─── Function Bodies ────────────────────────────────────────────
 
     private fun deserializeFunctionBody(fb: ProtoFunctionBody) {
-        val fn = functionsById[fb.functionId] ?: return
+        val fn = getFunction(fb.functionId)
 
         val phiEdgeSyntheticLoads = collectPhiEdgeSyntheticLoads(fb, fn.fullName)
         val phiEdgeSyntheticLoadsByPred = phiEdgeSyntheticLoads.groupBy { it.predInstProtoIndex }
@@ -382,19 +627,19 @@ class GoIRDeserializer {
             block.instructionsList.forEach { protoInstBlockIndices[it.index] = blockIndex }
         }
 
-        val protoToNew = mutableMapOf<Int, Int>()
-        val blockStartProtoToNew = mutableMapOf<Int, Int>()
+        val protoToNew = Int2IntOpenHashMap()
+        val blockStartProtoToNew = Int2IntOpenHashMap()
         var nextIndex = 0
         for (pb in fb.blocksList) {
             if (pb.instructionsList.isNotEmpty()) {
-                blockStartProtoToNew[pb.instructionsList[0].index] = nextIndex
+                blockStartProtoToNew.put(pb.instructionsList[0].index, nextIndex)
             }
             for (pi in pb.instructionsList) {
                 phiEdgeSyntheticLoadsByPred[pi.index]?.forEach { load ->
                     load.index = nextIndex++
                 }
                 nextIndex += countSyntheticLoads(pi)
-                protoToNew[pi.index] = nextIndex
+                protoToNew.put(pi.index, nextIndex)
                 nextIndex++
             }
         }
@@ -413,10 +658,9 @@ class GoIRDeserializer {
         val lazyValueMap = ValueMap()
         fb.blocksList.forEach { block ->
             block.instructionsList.forEach { pi ->
-                if (pi.valueId < 0) return@forEach
-                val newIdx = protoToNew[pi.index]
-                    ?: error("No protoToNew entry for proto index ${pi.index} in ${fn.fullName}")
-                val reg = GoIRRegister(resolveType(pi.typeId), newIdx, pi.name)
+                if (pi.valueId <= 0) return@forEach
+                val newIdx = protoToNew.get(pi.index)
+                val reg = GoIRRegister(getType(pi.typeId), newIdx, pi.name)
                 lazyValueMap.register(pi.valueId, reg)
             }
         }
@@ -508,83 +752,80 @@ class GoIRDeserializer {
         pi: ProtoInstruction,
     ): GoIRInst {
         fun ref(vr: ProtoValueRef): GoIRValue = valueRefFromProto(vr, this)
-        fun type(id: Int): GoIRType = resolveType(id)
+        fun type(id: Int): GoIRType = getType(id)
         fun translate(protoIdx: Int): GoIRInstRef = GoIRInstRef(
-            protoToNew[protoIdx]
-                ?: error("No protoToNew entry for inst ref $protoIdx in ${fn.fullName}")
+            protoToNew.get(protoIdx)
         )
         fun translateBranch(protoIdx: Int): GoIRInstRef = GoIRInstRef(
-            blockStartProtoToNew[protoIdx]
-                ?: error("No block-start mapping for branch target $protoIdx in ${fn.fullName}")
+            blockStartProtoToNew.get(protoIdx)
         )
 
-        val newIdx = protoToNew[pi.index]
-            ?: error("No protoToNew entry for proto index ${pi.index} in ${fn.fullName}")
+        val newIdx = protoToNew.get(pi.index)
         val loc = GoInstLocation(body, newIdx, blockIdx, positionFromProto(pi.position))
-        val exprType = type(pi.typeId)
+
+        fun exprType() = type(pi.typeId)
+
         fun assign(expr: GoIRExpr): GoIRAssignInst {
             val reg = valueMap[pi.valueId]
-            registerTypeIds.add(reg to pi.typeId)
-            exprTypeIds.add(expr to pi.typeId)
             return GoIRAssignInst(loc, reg, expr)
         }
 
         return when (pi.instCase) {
             ProtoInstruction.InstCase.ALLOC -> assign(
-                GoIRAllocExpr(exprType, type(pi.alloc.allocTypeId), pi.alloc.heap, pi.alloc.comment.ifEmpty { null })
+                GoIRAllocExpr(exprType(), type(pi.alloc.allocTypeId), pi.alloc.heap, pi.alloc.comment.ifEmpty { null })
             )
             ProtoInstruction.InstCase.BIN_OP -> assign(
-                GoIRBinOpExpr(exprType, binOpFromProto(pi.binOp.op), ref(pi.binOp.x), ref(pi.binOp.y))
+                GoIRBinOpExpr(exprType(), binOpFromProto(pi.binOp.op), ref(pi.binOp.x), ref(pi.binOp.y))
             )
             ProtoInstruction.InstCase.UN_OP -> assign(
-                GoIRUnOpExpr(exprType, unOpFromProto(pi.unOp.op), ref(pi.unOp.x), pi.unOp.commaOk)
+                GoIRUnOpExpr(exprType(), unOpFromProto(pi.unOp.op), ref(pi.unOp.x), pi.unOp.commaOk)
             )
             ProtoInstruction.InstCase.CHANGE_TYPE -> assign(
-                GoIRChangeTypeExpr(exprType, ref(pi.changeType.x))
+                GoIRChangeTypeExpr(exprType(), ref(pi.changeType.x))
             )
             ProtoInstruction.InstCase.CONVERT -> assign(
-                GoIRConvertExpr(exprType, ref(pi.convert.x))
+                GoIRConvertExpr(exprType(), ref(pi.convert.x))
             )
             ProtoInstruction.InstCase.MULTI_CONVERT -> assign(
-                GoIRMultiConvertExpr(exprType, ref(pi.multiConvert.x), type(pi.multiConvert.fromTypeId), type(pi.multiConvert.toTypeId))
+                GoIRMultiConvertExpr(exprType(), ref(pi.multiConvert.x), type(pi.multiConvert.fromTypeId), type(pi.multiConvert.toTypeId))
             )
             ProtoInstruction.InstCase.CHANGE_INTERFACE -> assign(
-                GoIRChangeInterfaceExpr(exprType, ref(pi.changeInterface.x))
+                GoIRChangeInterfaceExpr(exprType(), ref(pi.changeInterface.x))
             )
             ProtoInstruction.InstCase.SLICE_TO_ARRAY_POINTER -> assign(
-                GoIRSliceToArrayPointerExpr(exprType, ref(pi.sliceToArrayPointer.x))
+                GoIRSliceToArrayPointerExpr(exprType(), ref(pi.sliceToArrayPointer.x))
             )
             ProtoInstruction.InstCase.MAKE_INTERFACE -> assign(
-                GoIRMakeInterfaceExpr(exprType, ref(pi.makeInterface.x))
+                GoIRMakeInterfaceExpr(exprType(), ref(pi.makeInterface.x))
             )
             ProtoInstruction.InstCase.MAKE_CLOSURE -> {
-                val closureFn = resolveFunctionOrStub(pi.makeClosure.fnId, exprType)
-                assign(GoIRMakeClosureExpr(exprType, closureFn, pi.makeClosure.bindingsList.map { ref(it) }))
+                val closureFn = getFunction(pi.makeClosure.fnId)
+                assign(GoIRMakeClosureExpr(exprType(), closureFn, pi.makeClosure.bindingsList.map { ref(it) }))
             }
             ProtoInstruction.InstCase.MAKE_MAP -> assign(
-                GoIRMakeMapExpr(exprType, if (pi.makeMap.hasReserve) ref(pi.makeMap.reserve) else null)
+                GoIRMakeMapExpr(exprType(), if (pi.makeMap.hasReserve) ref(pi.makeMap.reserve) else null)
             )
             ProtoInstruction.InstCase.MAKE_CHAN -> assign(
-                GoIRMakeChanExpr(exprType, ref(pi.makeChan.size))
+                GoIRMakeChanExpr(exprType(), ref(pi.makeChan.size))
             )
             ProtoInstruction.InstCase.MAKE_SLICE -> assign(
-                GoIRMakeSliceExpr(exprType, ref(pi.makeSlice.len), ref(pi.makeSlice.cap))
+                GoIRMakeSliceExpr(exprType(), ref(pi.makeSlice.len), ref(pi.makeSlice.cap))
             )
             ProtoInstruction.InstCase.FIELD_ADDR -> assign(
-                GoIRFieldAddrExpr(exprType, ref(pi.fieldAddr.x), pi.fieldAddr.fieldIndex, pi.fieldAddr.fieldName)
+                GoIRFieldAddrExpr(exprType(), ref(pi.fieldAddr.x), pi.fieldAddr.fieldIndex, pi.fieldAddr.fieldName)
             )
             ProtoInstruction.InstCase.FIELD -> assign(
-                GoIRFieldExpr(exprType, ref(pi.field.x), pi.field.fieldIndex, pi.field.fieldName)
+                GoIRFieldExpr(exprType(), ref(pi.field.x), pi.field.fieldIndex, pi.field.fieldName)
             )
             ProtoInstruction.InstCase.INDEX_ADDR -> assign(
-                GoIRIndexAddrExpr(exprType, ref(pi.indexAddr.x), ref(pi.indexAddr.index))
+                GoIRIndexAddrExpr(exprType(), ref(pi.indexAddr.x), ref(pi.indexAddr.index))
             )
             ProtoInstruction.InstCase.INDEX_INST -> assign(
-                GoIRIndexExpr(exprType, ref(pi.indexInst.x), ref(pi.indexInst.index))
+                GoIRIndexExpr(exprType(), ref(pi.indexInst.x), ref(pi.indexInst.index))
             )
             ProtoInstruction.InstCase.SLICE_INST -> assign(
                 GoIRSliceExpr(
-                    exprType,
+                    exprType(),
                     ref(pi.sliceInst.x),
                     if (pi.sliceInst.hasLow) ref(pi.sliceInst.low) else null,
                     if (pi.sliceInst.hasHigh) ref(pi.sliceInst.high) else null,
@@ -592,20 +833,20 @@ class GoIRDeserializer {
                 )
             )
             ProtoInstruction.InstCase.LOOKUP -> assign(
-                GoIRLookupExpr(exprType, ref(pi.lookup.x), ref(pi.lookup.index), pi.lookup.commaOk)
+                GoIRLookupExpr(exprType(), ref(pi.lookup.x), ref(pi.lookup.index), pi.lookup.commaOk)
             )
             ProtoInstruction.InstCase.TYPE_ASSERT -> assign(
-                GoIRTypeAssertExpr(exprType, ref(pi.typeAssert.x), type(pi.typeAssert.assertedTypeId), pi.typeAssert.commaOk)
+                GoIRTypeAssertExpr(exprType(), ref(pi.typeAssert.x), type(pi.typeAssert.assertedTypeId), pi.typeAssert.commaOk)
             )
             ProtoInstruction.InstCase.RANGE_INST -> assign(
-                GoIRRangeExpr(exprType, ref(pi.rangeInst.x))
+                GoIRRangeExpr(exprType(), ref(pi.rangeInst.x))
             )
             ProtoInstruction.InstCase.NEXT -> assign(
-                GoIRNextExpr(exprType, ref(pi.next.iter), pi.next.isString)
+                GoIRNextExpr(exprType(), ref(pi.next.iter), pi.next.isString)
             )
             ProtoInstruction.InstCase.SELECT_INST -> assign(
                 GoIRSelectExpr(
-                    exprType,
+                    exprType(),
                     pi.selectInst.statesList.map { st ->
                         GoIRSelectState(
                             chanDirFromProto(st.direction), ref(st.chan),
@@ -617,11 +858,10 @@ class GoIRDeserializer {
                 )
             )
             ProtoInstruction.InstCase.EXTRACT -> assign(
-                GoIRExtractExpr(exprType, ref(pi.extract.tuple), pi.extract.extractIndex)
+                GoIRExtractExpr(exprType(), ref(pi.extract.tuple), pi.extract.extractIndex)
             )
             ProtoInstruction.InstCase.PHI -> {
                 val reg = valueMap[pi.valueId]
-                registerTypeIds.add(reg to pi.typeId)
                 val edges = linkedMapOf<GoIRInstRef, GoIRValue>()
                 pi.phi.edgesList.forEachIndexed { edgeIndex, edge ->
                     check(edge.hasPredInstRef()) {
@@ -644,7 +884,6 @@ class GoIRDeserializer {
             }
             ProtoInstruction.InstCase.CALL -> {
                 val reg = valueMap[pi.valueId]
-                registerTypeIds.add(reg to pi.typeId)
                 GoIRCall(loc, reg, callInfoFromProto(pi.call.call, this))
             }
             ProtoInstruction.InstCase.JUMP -> {
@@ -676,7 +915,7 @@ class GoIRDeserializer {
                 when (addr.refCase) {
                     ProtoValueRef.RefCase.GLOBAL_ID -> GoIRGlobalStore(
                         loc,
-                        resolveGlobalOrStub(addr.globalId, type(addr.typeId)),
+                        resolveGlobal(addr.globalId),
                         ref(pi.store.`val`),
                     )
                     ProtoValueRef.RefCase.FUNCTION_ID,
@@ -716,7 +955,7 @@ class GoIRDeserializer {
     // ─── Value references ───────────────────────────────────────────
 
     private fun valueRefFromProto(vr: ProtoValueRef, ctx: InstContext): GoIRValue {
-        val type = resolveType(vr.typeId)
+        val type = getType(vr.typeId)
         return when (vr.refCase) {
             ProtoValueRef.RefCase.INST_VALUE_ID ->
                 ctx.valueMap[vr.instValueId]
@@ -745,15 +984,15 @@ class GoIRDeserializer {
             receiver = if (ci.hasReceiver()) valueRefFromProto(ci.receiver, ctx) else null,
             methodName = ci.methodName.ifEmpty { null },
             args = ci.argsList.map { valueRefFromProto(it, ctx) },
-            resultType = resolveType(ci.resultTypeId),
+            resultType = getType(ci.resultTypeId),
         )
     }
 
     private fun callTargetFromProto(vr: ProtoValueRef, ctx: InstContext): GoIRCallTarget {
-        val type = resolveType(vr.typeId)
+        val type = getType(vr.typeId)
         return when (vr.refCase) {
             ProtoValueRef.RefCase.FUNCTION_ID ->
-                GoIRCallTarget.Function(resolveFunctionOrStub(vr.functionId, type))
+                GoIRCallTarget.Function(getFunction(vr.functionId))
             ProtoValueRef.RefCase.BUILTIN_NAME ->
                 GoIRCallTarget.Builtin(vr.builtinName, type)
             ProtoValueRef.RefCase.GLOBAL_ID ->
@@ -763,47 +1002,9 @@ class GoIRDeserializer {
         }
     }
 
-    private fun createStubFunction(functionId: Int, type: GoIRType): GoIRFunctionImpl {
-        val stubName = "ext_fn_$functionId"
-        val funcType = (type as? GoIRFuncType)
-            ?: GoIRFuncType(emptyList(), emptyList(), false, null)
-        val stubFunc = GoIRFunctionImpl(
-            name = stubName,
-            fullName = stubName,
-            pkg = null,
-            signature = funcType,
-            params = emptyList(),
-            freeVars = emptyList(),
-            position = null,
-            isMethod = false,
-            isPointerReceiver = false,
-            isExported = true,
-            isSynthetic = true,
-            syntheticKind = "external-stub",
-        )
-        functionsById[functionId] = stubFunc
-        return stubFunc
-    }
-
-    private fun resolveGlobalOrStub(globalId: Int, type: GoIRType): GoIRGlobalImpl {
-        globalsById[globalId]?.let { return it }
-        val stubPkg = getOrCreateStubPackage()
-        val stubGlobal = GoIRGlobalImpl(
-            name = "ext_global_$globalId",
-            fullName = "ext_global_$globalId",
-            type = type,
-            pkg = stubPkg,
-            isExported = true,
-            position = null,
-        )
-        globalsById[globalId] = stubGlobal
-        return stubGlobal
-    }
-
-    private fun resolveFunctionOrStub(functionId: Int, type: GoIRType): GoIRFunctionImpl {
-        functionsById[functionId]?.let { return it }
-        return createStubFunction(functionId, type)
-    }
+    private fun resolveGlobal(globalId: Int): GoIRGlobalImpl =
+        globalsById.get(globalId)
+            ?: error("Global was not found for $globalId")
 
     private fun synthLoadGlobal(globalId: Int, typeId: Int, ctx: InstContext): GoIRRegister {
         val idx = ctx.take()
@@ -853,12 +1054,10 @@ class GoIRDeserializer {
         blockIndex: Int,
         index: Int,
     ): Pair<GoIRRegister, GoIRAssignInst> {
-        val type = resolveType(typeId)
-        val global = resolveGlobalOrStub(globalId, type)
+        val type = getType(typeId)
+        val global = resolveGlobal(globalId)
         val reg = GoIRRegister(type, index, "_g$index")
-        registerTypeIds.add(reg to typeId)
         val expr = GoIRGlobalValueExpr(type, global)
-        exprTypeIds.add(expr to typeId)
         val loc = GoInstLocation(body, index, blockIndex, null)
         return reg to GoIRAssignInst(loc, reg, expr)
     }
@@ -870,12 +1069,10 @@ class GoIRDeserializer {
         blockIndex: Int,
         index: Int,
     ): Pair<GoIRRegister, GoIRAssignInst> {
-        val type = resolveType(typeId)
-        val func = resolveFunctionOrStub(functionId, type)
+        val type = getType(typeId)
+        val func = getFunction(functionId)
         val reg = GoIRRegister(type, index, "_f$index")
-        registerTypeIds.add(reg to typeId)
         val expr = GoIRFunctionValueExpr(type, func)
-        exprTypeIds.add(expr to typeId)
         val loc = GoInstLocation(body, index, blockIndex, null)
         return reg to GoIRAssignInst(loc, reg, expr)
     }
@@ -887,11 +1084,9 @@ class GoIRDeserializer {
         blockIndex: Int,
         index: Int,
     ): Pair<GoIRRegister, GoIRAssignInst> {
-        val type = resolveType(typeId)
+        val type = getType(typeId)
         val reg = GoIRRegister(type, index, "_b$index")
-        registerTypeIds.add(reg to typeId)
         val expr = GoIRBuiltinValueExpr(type, name)
-        exprTypeIds.add(expr to typeId)
         val loc = GoInstLocation(body, index, blockIndex, null)
         return reg to GoIRAssignInst(loc, reg, expr)
     }
@@ -903,12 +1098,10 @@ class GoIRDeserializer {
         blockIndex: Int,
         index: Int,
     ): Pair<GoIRRegister, GoIRAssignInst> {
-        val type = resolveType(typeId)
+        val type = getType(typeId)
         val freeVarName = body.function.freeVars[freeVarIndex].name
         val reg = GoIRRegister(type, index, "_v$index")
-        registerTypeIds.add(reg to typeId)
         val expr = GoIRFreeVarValueExpr(type, freeVarIndex, freeVarName)
-        exprTypeIds.add(expr to typeId)
         val loc = GoInstLocation(body, index, blockIndex, null)
         return reg to GoIRAssignInst(loc, reg, expr)
     }
@@ -1030,164 +1223,6 @@ class GoIRDeserializer {
         }
     }
 
-    // ─── Reference resolution ───────────────────────────────────────
-
-    /**
-     * Phase 1: Resolve named type references.
-     * Called BEFORE function body deserialization so that types are correct.
-     *
-     * During initial type deserialization, NAMED_REF types may reference named types
-     * that haven't been loaded yet (from packages). We create placeholder GoIRNamedTypeRef
-     * objects with stub named types. Now that packages are loaded, we:
-     * 1. Replace placeholders with real named types in existing GoIRNamedTypeRef objects
-     * 2. Re-deserialize all types to rebuild composite types (pointers, slices, etc.)
-     */
-    private fun resolveNamedTypeRefs() {
-        // Step 1: Update placeholder GoIRNamedTypeRef objects to point to real named types
-        for ((typeId, lazyRef) in lazyNamedTypeRefs) {
-            val named = namedTypesById[lazyRef.namedTypeId]
-            if (named != null) {
-                val existing = typesById[typeId]
-                if (existing is GoIRNamedTypeRef) {
-                    // Update in-place — all references to this object will see the real named type
-                    existing.namedType = named
-                    existing.typeArgs = lazyRef.typeArgIds.map { resolveType(it) }
-                } else {
-                    typesById[typeId] = GoIRNamedTypeRef(named, lazyRef.typeArgIds.map { resolveType(it) })
-                }
-            }
-        }
-
-        // Step 2: Re-deserialize all types to rebuild composites (Pointer, Slice, etc.)
-        // that reference now-resolved named types
-        val savedTypeDefs = rawTypeDefinitions.toList()
-        rawTypeDefinitions.clear()
-        for (td in savedTypeDefs) {
-            deserializeType(td)
-        }
-        // Re-apply named ref resolution (re-deserialization may have overwritten entries)
-        for ((typeId, lazyRef) in lazyNamedTypeRefs) {
-            val named = namedTypesById[lazyRef.namedTypeId]
-            if (named != null) {
-                val existing = typesById[typeId]
-                if (existing is GoIRNamedTypeRef) {
-                    existing.namedType = named
-                    existing.typeArgs = lazyRef.typeArgIds.map { resolveType(it) }
-                } else {
-                    typesById[typeId] = GoIRNamedTypeRef(named, lazyRef.typeArgIds.map { resolveType(it) })
-                }
-            }
-        }
-    }
-
-    /**
-     * Phase 2: Resolve remaining cross-references (methods, imports, etc.)
-     */
-    private fun resolveReferences() {
-        // Re-resolve register types (captured during function body deserialization).
-        // Use reference equality: types are interned in `typesById` and Go generics
-            // (e.g. `T comparable[T]`) produce cyclic `equals` graphs that blow the stack
-        // if a structural comparison is used here.
-        for ((reg, typeId) in registerTypeIds) {
-            val resolved = resolveType(typeId)
-            if (resolved !== reg.type) {
-                reg.type = resolved
-            }
-        }
-
-        // Re-resolve expression types
-        for ((expr, typeId) in exprTypeIds) {
-            val resolved = resolveType(typeId)
-            if (resolved !== expr.type) {
-                expr.updateType(resolved)
-            }
-        }
-
-        // Resolve method references on named types
-        for (nt in namedTypesById.values) {
-            nt.resolveMethods(functionsById)
-            nt.resolveEmbeddedInterfaces(namedTypesById)
-        }
-
-        // Resolve package imports
-        for (pkg in packagesById.values) {
-            pkg.resolveImports(packagesById)
-            pkg.resolveInitFunction(functionsById)
-        }
-
-        // Resolve function cross-references
-        for (fn in functionsById.values) {
-            fn.resolveReferences(functionsById, namedTypesById)
-        }
-
-        // Resolve receiver types for methods that weren't linked via named type method lists
-        // (e.g. pointer-wrapper synthetic methods). receiverTypeId is a type ID that resolves
-        // to a named-type reference.
-        for (fn in functionsById.values) {
-            if (fn.isMethod && fn.receiverType == null && fn.receiverTypeId != 0) {
-                val recvType = resolveType(fn.receiverTypeId)
-                val named = (recvType as? GoIRNamedTypeRef)?.namedType
-                if (named != null) {
-                    fn.resolveReceiverType(named)
-                }
-            }
-        }
-    }
-
-    /** Mutation helper for deserialization — updates the mutable [type] property on concrete expr classes. */
-    private fun GoIRExpr.updateType(newType: GoIRType) {
-        when (this) {
-            is GoIRAllocExpr -> type = newType
-            is GoIRBinOpExpr -> type = newType
-            is GoIRUnOpExpr -> type = newType
-            is GoIRChangeTypeExpr -> type = newType
-            is GoIRConvertExpr -> type = newType
-            is GoIRMultiConvertExpr -> type = newType
-            is GoIRChangeInterfaceExpr -> type = newType
-            is GoIRSliceToArrayPointerExpr -> type = newType
-            is GoIRMakeInterfaceExpr -> type = newType
-            is GoIRTypeAssertExpr -> type = newType
-            is GoIRMakeClosureExpr -> type = newType
-            is GoIRMakeMapExpr -> type = newType
-            is GoIRMakeChanExpr -> type = newType
-            is GoIRMakeSliceExpr -> type = newType
-            is GoIRFieldAddrExpr -> type = newType
-            is GoIRFieldExpr -> type = newType
-            is GoIRIndexAddrExpr -> type = newType
-            is GoIRIndexExpr -> type = newType
-            is GoIRSliceExpr -> type = newType
-            is GoIRLookupExpr -> type = newType
-            is GoIRRangeExpr -> type = newType
-            is GoIRNextExpr -> type = newType
-            is GoIRSelectExpr -> type = newType
-            is GoIRExtractExpr -> type = newType
-            is GoIRGlobalValueExpr -> type = newType
-            is GoIRFunctionValueExpr -> type = newType
-            is GoIRBuiltinValueExpr -> type = newType
-            is GoIRFreeVarValueExpr -> type = newType
-        }
-    }
-
-
-    // ─── Helpers ────────────────────────────────────────────────────
-
-    private fun resolveType(id: Int): GoIRType {
-        if (id == 0) return GoIRBasicType(GoIRBasicTypeKind.INT) // fallback for unset
-        val cached = typesById[id]
-        // If the type was a NAMED_REF placeholder (stored as INT), check if we can resolve it now
-        if (cached is GoIRBasicType && cached.kind == GoIRBasicTypeKind.INT && id in lazyNamedTypeRefs) {
-            val lazyRef = lazyNamedTypeRefs[id]!!
-            val named = namedTypesById[lazyRef.namedTypeId]
-            if (named != null) {
-                val typeArgs = lazyRef.typeArgIds.map { resolveType(it) }
-                val resolved = GoIRNamedTypeRef(named, typeArgs)
-                typesById[id] = resolved
-                return resolved
-            }
-        }
-        return cached ?: GoIRBasicType(GoIRBasicTypeKind.INT) // fallback
-    }
-
     companion object {
         fun positionFromProto(pos: ProtoPosition?): GoIRPosition? {
             if (pos == null || pos.line == 0) return null
@@ -1291,26 +1326,15 @@ class GoIRDeserializer {
     }
 }
 
-/** Placeholder type for named type references that are resolved later.
- * Uses GoIRBasicType as a wrapper since we can't extend sealed GoIRType from another module.
- * The actual type is stored in the namedTypeId/typeArgIds fields and resolved later.
- */
-internal class GoIRLazyNamedTypeRef(
-    val namedTypeId: Int,
-    val typeArgIds: List<Int>,
-) {
-    val displayName: String get() = "lazy#$namedTypeId"
-}
-
 class ValueMap {
-    private val registers = mutableMapOf<Int, GoIRRegister>()
+    private val registers = Int2ObjectOpenHashMap<GoIRRegister>()
 
     fun register(id: Int, reg: GoIRRegister) {
-        registers[id] = reg
+        registers.put(id, reg)
     }
 
     operator fun get(id: Int): GoIRRegister {
-        return registers[id] ?: error("Register for value $id not registered")
+        return registers.get(id) ?: error("Register for value $id not registered")
     }
 }
 
@@ -1332,10 +1356,13 @@ private class InstContext(
     val fn: GoIRFunctionImpl,
     val valueMap: ValueMap,
     var instructions: MutableList<GoIRInst>,
-    val protoToNew: Map<Int, Int>,
-    val blockStartProtoToNew: Map<Int, Int>,
+    val protoToNew: Int2IntOpenHashMap,
+    val blockStartProtoToNew: Int2IntOpenHashMap,
     val phiEdgeSyntheticValues: Map<PhiEdgeSyntheticLoadKey, GoIRRegister>,
 ) {
     var nextIndex: Int = 0
     fun take(): Int = nextIndex++
 }
+
+private inline fun <T> Int2ObjectOpenHashMap<T>.getOrCreate(key: Int, crossinline body: () -> T): T =
+    computeIfAbsent(key) { body() }

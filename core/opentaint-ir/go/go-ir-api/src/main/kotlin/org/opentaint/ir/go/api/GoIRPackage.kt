@@ -20,7 +20,6 @@ interface GoIRPackage {
     val imports: List<GoIRPackage>
     val initFunction: GoIRFunction?
 
-    fun findFunction(name: String): GoIRFunction?
     fun findNamedType(name: String): GoIRNamedType?
     fun findGlobal(name: String): GoIRGlobal?
     fun findConstant(name: String): GoIRConst?

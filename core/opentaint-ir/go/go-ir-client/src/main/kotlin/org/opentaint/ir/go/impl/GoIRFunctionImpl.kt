@@ -1,6 +1,14 @@
 package org.opentaint.ir.go.impl
 
-import org.opentaint.ir.go.api.*
+import org.opentaint.ir.go.api.GoIRBody
+import org.opentaint.ir.go.api.GoIRBodyUnavailableException
+import org.opentaint.ir.go.api.GoIRFreeVar
+import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.api.GoIRPackage
+import org.opentaint.ir.go.api.GoIRParameter
+import org.opentaint.ir.go.api.GoIRPosition
+import org.opentaint.ir.go.api.GoIRTypeParamDecl
+import org.opentaint.ir.go.api.GoIrFunctionReference
 import org.opentaint.ir.go.type.GoIRFuncType
 
 class GoIRFunctionImpl(
@@ -17,9 +25,8 @@ class GoIRFunctionImpl(
     override val isSynthetic: Boolean,
     override val syntheticKind: String?,
     private val declaredHasBody: Boolean = false,
-    internal val receiverTypeId: Int = 0,
-    internal val parentFunctionId: Int = 0,
-    internal val anonFunctionIds: List<Int> = emptyList(),
+    override val parent: GoIrFunctionReference?,
+    override val anonymousFunctions: List<GoIrFunctionReference>,
 ) : GoIRFunction {
     private var _body: GoIRBody? = null
 
@@ -34,41 +41,10 @@ class GoIRFunctionImpl(
     override val hasBody: Boolean get() = declaredHasBody
     override val bodyAvailable: Boolean get() = _body != null
 
-    override var receiverType: GoIRNamedType? = null
-        internal set
-
-    override var parent: GoIRFunction? = null
-        internal set
-
-    private val _anonymousFunctions = mutableListOf<GoIRFunction>()
-    override val anonymousFunctions: List<GoIRFunction> get() = _anonymousFunctions
-
     override val typeParams: List<GoIRTypeParamDecl> = emptyList() // TODO: implement
 
     fun setBody(body: GoIRBody) {
         this._body = body
-    }
-
-    fun resolveReferences(
-        functionsById: Map<Int, GoIRFunctionImpl>,
-        namedTypesById: Map<Int, GoIRNamedTypeImpl>,
-    ) {
-        if (parentFunctionId != 0) {
-            parent = functionsById[parentFunctionId]
-        }
-        for (id in anonFunctionIds) {
-            functionsById[id]?.let { _anonymousFunctions.add(it) }
-        }
-        // receiverType is resolved externally via resolveReceiverType after type
-        // references have been linked, because receiverTypeId is a type ID (not a
-        // named-type ID) and methods may not be referenced from any named type's
-        // method list (e.g. pointer-wrapper synthetic methods).
-    }
-
-    fun resolveReceiverType(named: GoIRNamedType) {
-        if (receiverType == null) {
-            receiverType = named
-        }
     }
 
     override fun toString(): String = "GoIRFunction($fullName)"

@@ -36,7 +36,10 @@ func runBuild(t *testing.T, req *pb.BuildProgramRequest) ([]*pb.ProtoPackage, ma
 
 	conn, err := grpc.NewClient("passthrough:///bufnet",
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return lis.DialContext(ctx) }),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		// The bulk program payload can exceed gRPC's default 4 MB receive limit;
+		// mirror the production client (GoSsaServerProcess) which allows 256 MB.
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(256*1024*1024)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +60,11 @@ func runBuild(t *testing.T, req *pb.BuildProgramRequest) ([]*pb.ProtoPackage, ma
 			break
 		}
 		switch p := resp.Payload.(type) {
+		case *pb.BuildProgramResponse_Program:
+			pkgs = append(pkgs, p.Program.Packages...)
+			for _, b := range p.Program.FunctionBodies {
+				bodies[b.FunctionId] = true
+			}
 		case *pb.BuildProgramResponse_PackageDef:
 			pkgs = append(pkgs, p.PackageDef)
 		case *pb.BuildProgramResponse_FunctionBody:

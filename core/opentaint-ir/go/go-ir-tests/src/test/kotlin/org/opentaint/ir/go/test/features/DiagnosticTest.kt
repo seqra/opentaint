@@ -48,7 +48,7 @@ class DiagnosticTest {
             }
             println("  All Methods:")
             for (m in pkg.allMethods()) {
-                println("    name='${m.name}' fullName='${m.fullName}' isMethod=${m.isMethod} receiverType=${m.receiverType?.fullName}")
+                println("    name='${m.name}' fullName='${m.fullName}' isMethod=${m.isMethod} receiverType=${m.receiverType?.displayName}")
             }
             println("  Globals:")
             for (g in pkg.globals) {

@@ -21,6 +21,7 @@ object TypeFormatter {
         is GoIRFuncType -> formatFunc(type)
         is GoIRNamedTypeRef -> formatNamedRef(type)
         is GoIRTypeParamType -> type.name
+        is GoIRTypeParamRef -> type.name
         is GoIRTupleType -> "(${type.elements.joinToString(", ") { format(it) }})"
         is GoIRUnsafePointerType -> "unsafe.Pointer"
     }
@@ -48,7 +49,7 @@ object TypeFormatter {
     private fun formatStruct(type: GoIRStructType): String {
         // If the struct has a named type, use its name
         val named = type.namedType
-        if (named != null) return formatNamedTypeName(named.name, named.pkg?.importPath)
+        if (named != null) return formatNamedTypeName(named.name, named.pkg.importPath)
 
         // Anonymous struct
         if (type.fields.isEmpty()) return "struct{}"
@@ -60,19 +61,26 @@ object TypeFormatter {
     }
 
     private fun formatInterface(type: GoIRInterfaceType): String {
-        val named = type.namedType
-        if (named != null) return formatNamedTypeName(named.name, named.pkg?.importPath)
+        return when (type) {
+            is GoIRNamedInterfaceType -> {
+                val named = type.namedType
+                formatNamedTypeName(named.name, named.pkg.importPath)
+            }
 
-        // Empty interface
-        if (type.methods.isEmpty() && type.embeds.isEmpty()) return "interface{}"
+            is GoIRAnonymousInterfaceTypeRef -> formatInterface(type.interfaceType)
+            is GoIRAnonymousInterfaceType -> {
+                // Empty interface
+                if (type.methods.isEmpty() && type.embeds.isEmpty()) return "interface{}"
 
-        // Anonymous interface
-        val parts = mutableListOf<String>()
-        type.embeds.forEach { parts.add(format(it)) }
-        type.methods.forEach { m ->
-            parts.add("${m.name}${formatFuncSignature(m.signature)}")
+                // Anonymous interface
+                val parts = mutableListOf<String>()
+                type.embeds.forEach { parts.add(format(it)) }
+                type.methods.forEach { m ->
+                    parts.add("${m.name}${formatFuncSignature(m.signature)}")
+                }
+                "interface{ ${parts.joinToString("; ")} }"
+            }
         }
-        return "interface{ ${parts.joinToString("; ")} }"
     }
 
     private fun formatFunc(type: GoIRFuncType): String {
@@ -103,7 +111,7 @@ object TypeFormatter {
     }
 
     private fun formatNamedRef(type: GoIRNamedTypeRef): String {
-        val base = formatNamedTypeName(type.namedType.name, type.namedType.pkg?.importPath)
+        val base = formatNamedTypeName(type.namedType.name, type.namedType.pkg.importPath)
         return if (type.typeArgs.isEmpty()) base
         else "$base[${type.typeArgs.joinToString(", ") { format(it) }}]"
     }
@@ -137,10 +145,10 @@ object TypeFormatter {
         is GoIRNamedTypeRef -> {
             // Check if underlying is a primitive
             val underlying = type.namedType.underlying
-            if (underlying != null) zeroValue(underlying)
-            else "${format(type)}{}"
+            zeroValue(underlying)
         }
         is GoIRTupleType -> "" // tuples don't have zero values in Go
         is GoIRTypeParamType -> "*new(${type.name})" // zero value for type params
+        is GoIRTypeParamRef -> "*new(${type.name})" // zero value for type params
     }
 }

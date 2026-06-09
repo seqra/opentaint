@@ -6,6 +6,7 @@ import org.opentaint.ir.api.common.CommonTypeName
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import org.opentaint.ir.go.type.GoIRFuncType
+import org.opentaint.ir.go.type.GoIRType
 
 /**
  * A Go function (top-level, method, anonymous, or synthetic).
@@ -22,7 +23,7 @@ interface GoIRFunction: CommonMethod {
 
     // Method info
     val isMethod: Boolean
-    val receiverType: GoIRNamedType?
+    val receiverType: GoIRType? get() = signature.recv
     val isPointerReceiver: Boolean
 
     // Flags
@@ -36,8 +37,8 @@ interface GoIRFunction: CommonMethod {
     val bodyAvailable: Boolean get() = hasBody
 
     // Closure
-    val parent: GoIRFunction?
-    val anonymousFunctions: List<GoIRFunction>
+    val parent: GoIrFunctionReference?
+    val anonymousFunctions: List<GoIrFunctionReference>
 
     // Generics
     val typeParams: List<GoIRTypeParamDecl>
