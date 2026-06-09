@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/utils"
@@ -90,7 +89,7 @@ func runHealth() {
 	for _, c := range components {
 		node := out.GroupItem(th.FieldKey.Render(c.name + ":"))
 		if c.version != "" {
-			node.Child(th.FieldValue.Render(shortVersion(c.version)))
+			node.Child(th.FieldValue.Render(c.version))
 		}
 		path := c.path
 		if !c.present {
@@ -107,11 +106,15 @@ func runHealth() {
 func resolveHealthComponent(key string) healthComponent {
 	switch key {
 	case "autobuilder":
-		path, err := utils.ResolveJarPath(globals.ArtifactByKind("autobuilder"))
-		return healthComponent{"Autobuilder", globals.Config.Autobuilder.Version, path, err == nil && utils.PathExists(path)}
+		def := globals.ArtifactByKind("autobuilder")
+		path, err := utils.ResolveJarPath(def)
+		version := utils.ArtifactVersionShort(def, globals.Config.Autobuilder.JarPath)
+		return healthComponent{"Autobuilder", version, path, err == nil && utils.PathExists(path)}
 	case "analyzer":
-		path, err := utils.ResolveJarPath(globals.ArtifactByKind("analyzer"))
-		return healthComponent{"Analyzer", globals.Config.Analyzer.Version, path, err == nil && utils.PathExists(path)}
+		def := globals.ArtifactByKind("analyzer")
+		path, err := utils.ResolveJarPath(def)
+		version := utils.ArtifactVersionShort(def, globals.Config.Analyzer.JarPath)
+		return healthComponent{"Analyzer", version, path, err == nil && utils.PathExists(path)}
 	case "rules":
 		return resolveRulesComponent()
 	case "runtime":
@@ -124,7 +127,7 @@ func resolveHealthComponent(key string) healthComponent {
 // resolveRulesComponent resolves the built-in rules directory, downloading it
 // on demand so `health --rules` replaces `dev rules-path`.
 func resolveRulesComponent() healthComponent {
-	c := healthComponent{name: "Rules", version: globals.Config.Rules.Version}
+	c := healthComponent{name: "Rules", version: utils.ArtifactVersionShort(globals.ArtifactByKind("rules"), "")}
 	path, err := utils.GetRulesPath(globals.Config.Rules.Version)
 	if err != nil {
 		return c
@@ -146,33 +149,26 @@ func resolveRulesComponent() healthComponent {
 	return c
 }
 
-// resolveRuntimeComponent reports the Java the analyzer uses: a managed JRE if
-// present, otherwise system Java.
+// resolveRuntimeComponent reports the Java the analyzer runs on, and where it
+// comes from: "builtin" is the JRE OpenTaint manages itself (downloaded/bundled
+// into its own install), "system" is a Java already on the user's PATH.
 func resolveRuntimeComponent() healthComponent {
 	c := healthComponent{name: "Runtime"}
 	if jre := utils.FindExistingJRE(utils.ManagedJRETiers()); jre != nil {
 		c.path = utils.JavaBinaryPath(jre.Path)
-		c.version = "Java " + strconv.Itoa(globals.DefaultJavaVersion) + " · managed"
+		c.version = "Java " + strconv.Itoa(globals.DefaultJavaVersion) + " (builtin)"
 		c.present = true
 		return c
 	}
 	if sys := java.DetectSystemJava(); sys != nil {
 		c.path = sys.Path
-		c.version = "Java " + sys.FullVersion + " · " + sys.Vendor
+		c.version = "Java " + sys.FullVersion + " (system)"
 		c.present = true
 		return c
 	}
-	c.version = "Java " + strconv.Itoa(globals.DefaultJavaVersion)
+	c.version = "Java " + strconv.Itoa(globals.DefaultJavaVersion) + " (builtin)"
 	if jre := utils.GetInstallJREPath(); jre != "" {
 		c.path = utils.JavaBinaryPath(jre)
 	}
 	return c
-}
-
-// shortVersion strips the artifact-kind prefix (e.g. "rules/v0.1.1" → "v0.1.1").
-func shortVersion(v string) string {
-	if idx := strings.LastIndex(v, "/"); idx >= 0 {
-		return v[idx+1:]
-	}
-	return v
 }

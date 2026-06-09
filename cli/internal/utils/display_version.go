@@ -2,9 +2,18 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/seqra/opentaint/internal/globals"
 )
+
+// ArtifactVersionShort is ArtifactDisplayVersion without the leading "<kind>/"
+// prefix. Use it where the value is already labelled with the artifact kind
+// (e.g. an "Analyzer:" tree node), so the kind isn't shown twice. The
+// "custom (...)" form carries no such prefix and is returned unchanged.
+func ArtifactVersionShort(def globals.ArtifactDef, jarPathOverride string) string {
+	return strings.TrimPrefix(ArtifactDisplayVersion(def, jarPathOverride), def.Kind()+"/")
+}
 
 func ArtifactDisplayVersion(def globals.ArtifactDef, jarPathOverride string) string {
 	resolvedTier, resolvedPath := "", ""

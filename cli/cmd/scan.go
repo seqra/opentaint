@@ -273,7 +273,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	// Display scan information in tree format
-	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths, localVersion)
+	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths)
 
 	var nonBuiltinRulesetPaths []string
 	for _, r := range absRuleSetPaths {
@@ -578,7 +578,7 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	}
 }
 
-func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType, analyzerVersion string) {
+func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType) {
 	sb := out.Section(plan.mode.String())
 	addConfigFields(cmd, sb)
 	if globals.Config.Output.Debug {
@@ -590,14 +590,14 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		if plan.projectCachePath != "" {
 			sb.FieldNode("Project model", plan.absProjectModel)
 		}
-		sb.FieldNode("Autobuilder", utils.ArtifactDisplayVersion(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
+		sb.FieldNode("Autobuilder", utils.ArtifactVersionShort(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
 	} else {
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
-	sb.FieldNode("Analyzer", analyzerVersion)
+	sb.FieldNode("Analyzer", utils.ArtifactVersionShort(globals.ArtifactByKind("analyzer"), globals.Config.Analyzer.JarPath))
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.FieldNode("Bundled ruleset", utils.ArtifactDisplayVersion(globals.ArtifactByKind("rules"), ""))
+			sb.FieldNode("Bundled ruleset", utils.ArtifactVersionShort(globals.ArtifactByKind("rules"), ""))
 		} else {
 			sb.FieldNode("User ruleset", r.Path)
 		}
