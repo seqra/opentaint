@@ -86,15 +86,18 @@ func runHealth() {
 	}
 
 	sb := out.Section("OpenTaint Health")
+	th := out.Theme()
 	for _, c := range components {
-		value := c.path
+		node := out.GroupItem(th.FieldKey.Render(c.name + ":"))
 		if c.version != "" {
-			value = shortVersion(c.version) + "  " + c.path
+			node.Child(th.FieldValue.Render(shortVersion(c.version)))
 		}
+		path := c.path
 		if !c.present {
-			value += "  " + out.Theme().Error.Render("missing")
+			path += "  " + th.Error.Render("missing")
 		}
-		sb.Field(c.name, value)
+		node.Child(th.FieldValue.Render(path))
+		sb.Child(node)
 	}
 	sb.Render()
 }
