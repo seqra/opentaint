@@ -33,8 +33,6 @@ archives:
     files:
       - src: lib/**
         dst: lib
-      - src: lib/.versions
-        dst: lib
 
   - id: full
     formats: [tar.gz]
@@ -44,8 +42,6 @@ archives:
     name_template: "{{ .Binary }}-full_{{ .Os }}_{{ .Arch }}"
     files:
       - src: lib/**
-        dst: lib
-      - src: lib/.versions
         dst: lib
 
 checksum:

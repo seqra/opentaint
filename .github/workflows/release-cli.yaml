@@ -170,6 +170,10 @@ jobs:
           tar -xzf /tmp/opentaint-rules.tar.gz -C lib/rules
 
           cp internal/globals/versions.yaml lib/.versions
+          if [ ! -f lib/.versions ]; then
+            echo "::error::lib/.versions was not created; the bundled release would ship without a version marker" >&2
+            exit 1
+          fi
 
           echo "Bundled artifacts:"
           ls -la lib/
