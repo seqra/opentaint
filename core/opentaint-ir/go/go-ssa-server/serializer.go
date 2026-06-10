@@ -433,6 +433,11 @@ func (s *serializer) typeID(t types.Type) int32 {
 	if t == nil {
 		return 0
 	}
+	// Resolve type aliases to their target. Since Go 1.23 (gotypesalias=1 by
+	// default) the type checker materializes *types.Alias nodes, which none of
+	// the kind switches below handle; left unresolved they would be assigned an
+	// ID but never emitted, producing a dangling type reference on the client.
+	t = types.Unalias(t)
 	s.collectType(t)
 	return s.ids.typeID(t)
 }
@@ -441,6 +446,7 @@ func (s *serializer) collectType(t types.Type) {
 	if t == nil {
 		return
 	}
+	t = types.Unalias(t) // see typeID: never collect a bare *types.Alias
 	if s.collectedTypes[t] {
 		return // already collected in this call
 	}
@@ -519,6 +525,7 @@ func (s *serializer) collectType(t types.Type) {
 // ─── Streaming phase 1: Types ───────────────────────────────────────
 
 func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
+	t = types.Unalias(t) // aliases are resolved away in typeID/collectType
 	id := s.typeID(t)
 
 	switch ut := t.(type) {

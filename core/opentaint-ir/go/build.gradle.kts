@@ -12,8 +12,8 @@ val goServerDir = goRootDir.dir("go-ssa-server")
 val goProtoDir = goRootDir.dir("proto")
 val goServerBinary = goServerDir.file("go-ssa-server")
 val goModulePath = "github.com/opentaint/go-ir/go-ssa-server"
-val protocGenGoVersion = "v1.36.1"
-val protocGenGoGrpcVersion = "v1.5.1"
+val protocGenGoVersion = "v1.36.11"
+val protocGenGoGrpcVersion = "v1.6.2"
 
 fun goEnvironment(): Map<String, String> {
     return mapOf(
