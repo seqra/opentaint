@@ -2,6 +2,7 @@ package org.opentaint.ir.go.client
 
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.ir.go.api.GoIRField
 import org.opentaint.ir.go.api.GoIRFreeVar
 import org.opentaint.ir.go.api.GoIRInterfaceMethod
@@ -119,7 +120,6 @@ import org.opentaint.ir.go.value.GoIRConstantValue
 import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
 import org.opentaint.ir.go.value.GoIRValue
-import java.util.BitSet
 
 class GoIRDeserializer {
     private lateinit var packages: Array<GoIRPackageImpl?>
@@ -162,9 +162,11 @@ class GoIRDeserializer {
             resultPackages[it.importPath] = it
         }
 
-        deserializeTypes(result, program.typesList, pkgInfo, anonymousInterfaces)
+        TypeDeserializationCtx(result, program.typesList, pkgInfo, anonymousInterfaces)
+            .deserializeTypes()
 
-        FunctionDeserializationCtx(pkgInfo, result).deserializeFunctions()
+        FunctionDeserializationCtx(pkgInfo, result)
+            .deserializeFunctions()
 
         program.packagesList.forEach { deserializePackageMembers(it) }
         program.functionBodiesList.forEach { deserializeFunctionBody(it) }
@@ -223,50 +225,57 @@ class GoIRDeserializer {
     private class TypeDeserializationCtx(
         val program: GoIRProgram,
         typesList: List<ProtoTypeDefinition>,
-        namedTypes: List<ProtoNamedType>,
-        val namedTypePkg: Int2IntOpenHashMap,
+        val pkgInfo: PackageInfo,
         val anonymousInterfaces: Int2ObjectOpenHashMap<GoIRAnonymousInterfaceType>,
     ) {
-        val typeDefinitions: Array<ProtoTypeDefinition?>
-        val namedTypeDefs: Array<ProtoNamedType?>
-
-        init {
-            val maxTypeId = typesList.maxOfOrNull { it.id } ?: -1
-            val maxNamedTypeId = namedTypes.maxOfOrNull { it.id } ?: -1
-
-            val typeDefs = arrayOfNulls<ProtoTypeDefinition>(maxTypeId + 1).also { typeDefinitions = it }
-            val namedDefs = arrayOfNulls<ProtoNamedType>(maxNamedTypeId + 1).also { namedTypeDefs = it }
-
-            typesList.forEach { typeDefs[it.id] = it }
-            namedTypes.forEach { namedDefs[it.id] = it }
-        }
+        val typeDefinitions: Array<ProtoTypeDefinition?> = typesList.toArrayById { id }
+        val namedTypeDefs: Array<ProtoNamedType?> = pkgInfo.namedTypes.toArrayById { id }
 
         val deserialized = arrayOfNulls<GoIRType?>(typeDefinitions.size)
         val deserializedNamed = arrayOfNulls<GoIRNamedTypeImpl?>(namedTypeDefs.size)
         val namedRefs = arrayOfNulls<NamedTypeRef?>(namedTypeDefs.size)
 
-        val typesOnStackOnce = BitSet()
-        val typesOnStackTwice = BitSet()
+        val typesOnStackOnce = IntOpenHashSet()
+        val typesOnStackTwice = IntOpenHashSet()
+
+        private inline fun <reified T> List<T>.toArrayById(id: T.() -> Int): Array<T?> {
+            var result = arrayOfNulls<T?>(size + 128)
+            for (it in this) {
+                val id = it.id()
+                if (id < result.size) {
+                    result[id] = it
+                    continue
+                }
+
+                val newSize = id + 128
+                result = result.copyOf(newSize)
+                result[id] = it
+            }
+            return result
+        }
     }
 
-    private fun deserializeTypes(
-        program: GoIRProgram,
-        typesList: List<ProtoTypeDefinition>,
-        packageInfo: PackageInfo,
-        anonymousInterfaces: Int2ObjectOpenHashMap<GoIRAnonymousInterfaceType>,
-    ) {
-        val namedTypes = packageInfo.namedTypes
-        val namedTypePkg = packageInfo.namedTypePkgId
-
-        val ctx = TypeDeserializationCtx(program, typesList, namedTypes, namedTypePkg, anonymousInterfaces)
-        namedTypes.forEach {
-            ctx.deserializedNamed[it.id] = ctx.deserializeNamedTypeBody(it)
+    private fun TypeDeserializationCtx.deserializeTypes() {
+        this.namedTypeDefs.forEach {
+            if (it != null) {
+                deserializedNamed[it.id] = deserializeNamedTypeBody(it)
+            }
         }
-        typesList.filter { !it.hasFuncType() }.forEach { ctx.deserializeType(it) }
-        typesList.filter { it.hasFuncType() }.forEach { ctx.deserializeType(it) }
 
-        this.types = ctx.deserialized
-        this.namedTypes = ctx.deserializedNamed
+        this.typeDefinitions.forEach {
+            if (it != null && !it.hasFuncType()) {
+                deserializeType(it)
+            }
+        }
+
+        this.typeDefinitions.forEach {
+            if (it != null && it.hasFuncType()) {
+                deserializeType(it)
+            }
+        }
+
+        this@GoIRDeserializer.types = deserialized
+        this@GoIRDeserializer.namedTypes = deserializedNamed
     }
 
     private fun TypeDeserializationCtx.resolveNamedRef(id: Int): NamedTypeRef? {
@@ -307,14 +316,13 @@ class GoIRDeserializer {
         if (current != null) return current
 
         val stackTracker = when {
-            !typesOnStackOnce.get(id) -> typesOnStackOnce
-            !typesOnStackTwice.get(id) -> typesOnStackTwice
+            typesOnStackOnce.add(id) -> typesOnStackOnce
+            typesOnStackTwice.add(id) -> typesOnStackTwice
             else -> TODO("Recursive types")
         }
 
-        stackTracker.set(id)
         val result = deserializeTypeBody(td).also {
-            stackTracker.clear(id)
+            stackTracker.remove(id)
         }
 
         deserialized[id] = result
@@ -323,11 +331,11 @@ class GoIRDeserializer {
 
     private fun TypeDeserializationCtx.saveTypeToAvoidRecursion(id: Int, type: GoIRType) {
         deserialized[id] = type
-        typesOnStackTwice.clear(id)
+        typesOnStackTwice.remove(id)
     }
 
     private fun TypeDeserializationCtx.namedTypePkg(typeDef: ProtoNamedType): GoIRPackageImpl {
-        val pkgId = namedTypePkg.get(typeDef.id)
+        val pkgId = pkgInfo.namedTypePkgId.get(typeDef.id)
         return getPackage(pkgId)
     }
 
