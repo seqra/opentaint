@@ -84,12 +84,12 @@ Orchestration practices:
 
 Two limits apply to every fan-out — a global one against rate-limiting, and a tighter one against memory:
 
-- Global cap of 7 — never dispatch more than 7 subagents at once, of any kind. Bursting more reliably trips transient rate-limiting (a fan-out of 20 left half the agents rate-limited mid-run). It binds light and heavy agents alike
+- Global cap of 7 — never dispatch more than 7 subagents at once, of any kind. Bursting more reliably trips transient rate-limiting. It binds light and heavy agents alike. Treat 7 as a starting ceiling: each time a subagent comes back rate-limited, drop the cap by 1 for the rest of the run
 - RAM-heavy agents each spawn a heavy `opentaint` JVM, so they take a tighter memory bound on top of the global cap. The heavy set is exactly `build-project`, `run-scan`, `create-rule`, `create-dataflow-approximation`, and sometimes `debug-rule` (when it traces a real scan). Compute the bound at run start and never dispatch more than this many heavy subagents at once:
   - cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
   - free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
   - `cap_heavy = max(1, min(cores, floor(free_GB / 2), 7))` — budget ~2 GB per concurrent JVM
-- Every other agent is not RAM-bound — discover-attack-surface (reads the built model plus dependency jars for signatures/metadata), create-test-project (compiles once), triage-dependencies, analyze-external-methods, analyze-findings, create-pass-through-approximation, assemble-lib-rules, generate-poc. They're held only by the global cap of 7
+- Every other agent is not RAM-bound — discover-attack-surface, create-test-project (compiles once), triage-dependencies, analyze-external-methods, analyze-findings, create-pass-through-approximation, assemble-lib-rules, generate-poc. They're held only by the global cap of 7
 
 It's machine state, not run state — recompute on resume, don't track it. PoC is already sequential.
 
@@ -239,7 +239,7 @@ methods:                # engine asks to approximate these, but they carry no ta
   pass-through/<name>.yaml      # passThrough approximation configs
   dataflow/<name>/              # code-based (dataflow) approximation sources, per unit
   test-projects/<name>/         # per-unit test project sources; a rule unit holds sinks/ and sources/ sub-projects, each with a test-rules/ (the generic markers + that side's test join — test-only, never loaded by the main scan)
-  test-compiled/<name>/         # per-unit compiled test model (a rule unit: sinks/ and sources/ models)
+  test-compiled/<name>/         # per-unit compiled test model (a rule unit: sinks/ and sources/ models); delete once the unit's tests pass — large and unused after
   test-results/<name>/          # per-unit test outputs
   results/
     report.sarif

@@ -65,6 +65,8 @@ install: core
 		'exec "$$BIN_DIR/$(CLI_BINARY_NAME)" --experimental --analyzer-jar "$$LIB_DIR/$(notdir $(ANALYZER_JAR))" --autobuilder-jar "$$LIB_DIR/$(notdir $(AUTOBUILDER_JAR))" "$$@"' \
 		> $(INSTALLED_DEV_BINARY)
 	chmod 0755 $(INSTALLED_DEV_BINARY)
+	# Pull any assets the local build doesn't produce (e.g. the Java runtime).
+	$(INSTALLED_CLI_BINARY) pull
 
 clean:
 	$(MAKE) -C $(CLI_DIR) clean

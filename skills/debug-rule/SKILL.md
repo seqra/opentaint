@@ -45,7 +45,7 @@ When the thing under debug is an approximation (or the flow depends on one), app
 
 ### 3. Isolate an entry point (optional)
 
-When the run misses the flow and you suspect the entry method is never reached, force analysis onto it with the same `reachability` command plus `--entry-points` — `*` for all methods, or a method FQN:
+When the run misses the flow and you suspect the entry method is never reached, force analysis onto it with the same `reachability` command plus `--entry-points` set to a method FQN:
 
 ```bash
 opentaint test rule reachability <full-id> \
