@@ -1,0 +1,58 @@
+--- a/PythonLexer.g4	2026-06-08 17:14:25.521646467 +0300
++++ b/PythonLexer.g4	2026-06-08 17:14:47.023676746 +0300
+@@ -150,6 +150,14 @@
+ OPEN_BRACKET  : '[' {this.IncIndentLevel();};
+ CLOSE_BRACKET : ']' {this.DecIndentLevel();};
+ 
++// --- Semgrep extensions ---
++LDOTS             : '<...';
++RDOTS             : '...>';
++METAVAR_ELLIPSIS  : '$...' [A-Z_] [A-Z_0-9]*;
++ANONYMOUS_METAVAR : '$_';
++METAVAR           : '$' [A-Z_] [A-Z_0-9]*;
++// --- end semgrep extensions ---
++
+ NAME: ID_START ID_CONTINUE*;
+ 
+ LINE_JOIN : '\\' [ \t]* RN -> channel(HIDDEN);
+--- a/PythonParser.g4	2026-06-08 17:14:25.825646926 +0300
++++ b/PythonParser.g4	2026-06-08 17:14:47.023676746 +0300
+@@ -41,6 +41,12 @@
+     : (single_input | file_input | eval_input)? EOF
+     ;
+ 
++// Semgrep pattern entry point: a single expression, or one/more statements.
++semgrepPattern
++    : eval_input EOF
++    | file_input EOF
++    ;
++
+ // A single interactive statement;
+ single_input
+     : LINE_BREAK
+@@ -140,6 +146,7 @@
+ def_parameter
+     : named_parameter (ASSIGN test)?
+     | STAR
++    | ELLIPSIS
+     ;
+ 
+ named_parameter
+@@ -308,6 +315,7 @@
+     | OPEN_BRACE dictorsetmaker? CLOSE_BRACE
+     | REVERSE_QUOTE testlist COMMA? REVERSE_QUOTE
+     | ELLIPSIS
++    | LDOTS test RDOTS
+     | name
+     | PRINT
+     | EXEC
+@@ -339,6 +347,9 @@
+     : NAME
+     | TRUE
+     | FALSE
++    | METAVAR
++    | ANONYMOUS_METAVAR
++    | METAVAR_ELLIPSIS
+     ;
+ 
+ number
