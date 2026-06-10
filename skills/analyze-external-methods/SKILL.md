@@ -49,6 +49,7 @@ Create one file per (package, kind); fill only the discovery-stage fields. The t
 ```yaml
 # <package-kebab>-passthrough.yaml — simple copies, no test project
 package: com.foo
+artifact: null
 stages:
   description: done
   written: pending
@@ -62,6 +63,7 @@ methods:
 ```yaml
 # <package-kebab>-dataflow.yaml — lambda/callback/async, tested on a test project
 package: com.foo
+artifact: null
 dependencies:                 # exact GAV the test project needs, from the build files
   - com.foo:foo-core:1.2.3
 stages:

@@ -147,7 +147,7 @@ passThrough:
 
 ### 2. Optional — dry-run the config for load errors
 
-There's no dedicated load-check command, but if a compiled `<test-model>` is present you can catch YAML load/parse errors before the main scan by running a quick scan with the config applied (won't verify propagation — there's no matching flow — only that the config loads):
+There's no dedicated load-check command. ONLY when invoked standalone — never under the appsec-agent orchestrator, whose subagents must not run `opentaint scan` (the orchestrator's scan phase verifies the config instead): if a compiled `<test-model>` is present you can catch YAML load/parse errors early by running a quick scan with the config applied (won't verify propagation — there's no matching flow — only that the config loads):
 
 ```bash
 opentaint scan --project-model <test-model> \

@@ -4,7 +4,7 @@ The scan must be stable first.
 
 ## Generate finding files
 
-Run this skill's bundled `scripts/sarif-to-findings.py` over `.opentaint/results/report.sarif` (`python3 scripts/sarif-to-findings.py .opentaint/results/report.sarif -o .opentaint/tracking/findings`). It writes one `tracking/findings/<finding_name>.yaml` per rule and is idempotent — a rescan adds new result hashes and resets changed findings to `pending`. This is a deterministic script with no context cost, so run it yourself, not via a subagent.
+Run this skill's bundled `scripts/sarif-to-findings.py` over `.opentaint/results/report.sarif` (`python3 <this skill's directory>/scripts/sarif-to-findings.py .opentaint/results/report.sarif -o .opentaint/tracking/findings` — the script lives in the skill directory, not the project; the project-relative paths are arguments). It writes one `tracking/findings/<finding_name>.yaml` per rule and is idempotent — a rescan adds new result hashes and resets changed findings to `pending`. This is a deterministic script with no context cost, so run it yourself, not via a subagent.
 
 ## Classify — never in main
 
