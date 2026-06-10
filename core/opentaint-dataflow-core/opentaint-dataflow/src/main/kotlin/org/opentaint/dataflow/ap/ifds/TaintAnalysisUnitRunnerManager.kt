@@ -50,6 +50,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+var aliasesApplied = 0L
+
 class TaintAnalysisUnitRunnerManager(
     private val analysisManager: TaintAnalysisManager,
     val graph: ApplicationGraph<CommonMethod, CommonInst>,
@@ -172,6 +174,7 @@ class TaintAnalysisUnitRunnerManager(
                 }
 
                 reportRunnerProgress(currentProgress)
+                logger.info { "Total aliases applied: $aliasesApplied" }
                 logger.info { "Analysis done in ${timeStart.elapsedNow()}" }
             }
         }
