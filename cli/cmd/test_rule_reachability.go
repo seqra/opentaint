@@ -13,7 +13,7 @@ var testRuleReachabilityCmd = &cobra.Command{
 fact-reachability details. Use this to debug why a rule does or does not fire.
 
 Arguments:
-  rule-id      - Full rule ID, e.g. security/sqli.yaml:sql-injection
+  rule-id      - Full rule ID, e.g. java/security/sqli.yaml:sql-injection
   source-path  - Path to the project sources (default: current directory)
 
 Referenced library source and sink rules are collected and analyzed automatically.

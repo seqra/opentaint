@@ -147,8 +147,8 @@ The `test` command group is experimental tooling for rule and approximation deve
 ```bash
 opentaint test rule init .opentaint/test-projects/my-rule
 opentaint compile .opentaint/test-projects/my-rule/sinks -o .opentaint/test-compiled/my-rule/sinks
-opentaint test rule run .opentaint/test-compiled/my-rule/sinks --ruleset .opentaint/rules
-opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-model .opentaint/test-compiled/my-rule/sinks --ruleset .opentaint/rules
+opentaint test rule run .opentaint/test-compiled/my-rule/sinks --ruleset .opentaint/rules --ruleset .opentaint/test-projects/my-rule/sinks/test-rules
+opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-model .opentaint/test-compiled/my-rule/sinks --ruleset builtin --ruleset .opentaint/rules
 ```
 
 | Command | Description |
