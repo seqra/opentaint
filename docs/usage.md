@@ -140,7 +140,7 @@ With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Jav
 
 ### opentaint test
 
-The `test` command group is experimental tooling for rule and approximation development.
+The `test` command group is tooling for rule and approximation development.
 
 #### Rule tests
 

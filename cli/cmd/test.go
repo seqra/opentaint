@@ -8,8 +8,8 @@ import (
 
 var testCmd = &cobra.Command{
 	Use:   "test",
-	Short: "Create and run rule and approximation tests (experimental)",
-	Long:  `Experimental tools for creating test projects, running annotated rule and approximation tests, and debugging rule reachability.`,
+	Short: "Create and run rule and approximation tests",
+	Long:  `Tools for creating test projects, running annotated rule and approximation tests, and debugging rule reachability.`,
 }
 
 var testRuleCmd = &cobra.Command{
