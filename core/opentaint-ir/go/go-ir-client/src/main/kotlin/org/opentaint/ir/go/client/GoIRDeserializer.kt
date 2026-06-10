@@ -256,23 +256,22 @@ class GoIRDeserializer {
     }
 
     private fun TypeDeserializationCtx.deserializeTypes() {
-        this.namedTypeDefs.forEach {
-            if (it != null) {
-                deserializedNamed[it.id] = deserializeNamedTypeBody(it)
+        this.namedTypeDefs.forEachNonNull {
+            deserializedNamed[it.id] = deserializeNamedTypeBody(it)
+        }
+
+        val unprocessedFunctions = mutableListOf<ProtoTypeDefinition>()
+        this.typeDefinitions.forEachNonNull {
+            if (!it.hasFuncType()) {
+                deserializeType(it)
+            } else {
+                if (deserialized[it.id] == null) {
+                    unprocessedFunctions.add(it)
+                }
             }
         }
 
-        this.typeDefinitions.forEach {
-            if (it != null && !it.hasFuncType()) {
-                deserializeType(it)
-            }
-        }
-
-        this.typeDefinitions.forEach {
-            if (it != null && it.hasFuncType()) {
-                deserializeType(it)
-            }
-        }
+        unprocessedFunctions.forEach { deserializeType(it) }
 
         this@GoIRDeserializer.types = deserialized
         this@GoIRDeserializer.namedTypes = deserializedNamed
@@ -422,7 +421,7 @@ class GoIRDeserializer {
             ProtoTypeDefinition.TypeCase.STRUCT_TYPE -> {
                 val st = td.structType
                 val structName = resolveNamedRef(st.namedTypeId)
-                val fields = st.fieldsList.map { f ->
+                val fields = st.fieldsList.mapNonEmpty { f ->
                     GoIRStructField(f.name, resolveType(f.typeId), f.embedded, f.tag)
                 }
                 GoIRStructType(fields, structName)
@@ -440,11 +439,11 @@ class GoIRDeserializer {
                 }
                 saveTypeToAvoidRecursion(td.id, interfaceRef)
 
-                val methods = it.methodsList.map { m ->
+                val methods = it.methodsList.mapNonEmpty { m ->
                     val funcType = resolveFunctionalType(m.signatureTypeId)
                     GoIRInterfaceMethodSig(m.name, funcType)
                 }
-                val embeds = it.embedTypeIdsList.map { resolveType(it) }
+                val embeds = it.embedTypeIdsList.mapNonEmpty { resolveType(it) }
 
                 if (interfaceName != null) {
                     GoIRNamedInterfaceType(methods, embeds, interfaceName)
@@ -458,8 +457,8 @@ class GoIRDeserializer {
             ProtoTypeDefinition.TypeCase.FUNC_TYPE -> {
                 val ft = td.funcType
                 GoIRFuncType(
-                    params = ft.paramTypeIdsList.map { resolveType(it) },
-                    results = ft.resultTypeIdsList.map { resolveType(it) },
+                    params = ft.paramTypeIdsList.mapNonEmpty { resolveType(it) },
+                    results = ft.resultTypeIdsList.mapNonEmpty { resolveType(it) },
                     isVariadic = ft.variadic,
                     recv = if (ft.recvTypeId != 0) resolveType(ft.recvTypeId) else null,
                 )
@@ -470,7 +469,7 @@ class GoIRDeserializer {
                 val namedType = resolveNamedRef(nr.namedTypeId)
                     ?: error("Named type ref without ref")
 
-                val typeArgs = nr.typeArgIdsList.map { resolveType(it) }
+                val typeArgs = nr.typeArgIdsList.mapNonEmpty { resolveType(it) }
                 GoIRNamedTypeRef(namedType, typeArgs)
             }
 
@@ -486,7 +485,7 @@ class GoIRDeserializer {
             }
 
             ProtoTypeDefinition.TypeCase.TUPLE ->
-                GoIRTupleType(td.tuple.elementTypeIdsList.map { resolveType(it) })
+                GoIRTupleType(td.tuple.elementTypeIdsList.mapNonEmpty { resolveType(it) })
 
             ProtoTypeDefinition.TypeCase.UNSAFE_POINTER ->
                 GoIRUnsafePointerType
@@ -1372,5 +1371,11 @@ private class InstContext(
     fun take(): Int = nextIndex++
 }
 
-private inline fun <T> Int2ObjectOpenHashMap<T>.getOrCreate(key: Int, crossinline body: () -> T): T =
-    computeIfAbsent(key) { body() }
+private inline fun <T> Array<T?>.forEachNonNull(body: (T) -> Unit) {
+    for (it in this) {
+        it?.apply(body)
+    }
+}
+
+private inline fun <T, R> List<T>.mapNonEmpty(transform: (T) -> R): List<R> =
+    if (isEmpty()) emptyList() else map(transform)
