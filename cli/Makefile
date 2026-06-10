@@ -19,9 +19,9 @@ build: generate
 	mkdir -p $(BUILD_DIR)
 	$(GO) build -o $(BINARY_PATH) .
 
-install: generate
-	mkdir -p $(BINDIR)
-	GOBIN=$(INSTALL_GOBIN) $(GO) install .
+install: build
+	mkdir -p $(INSTALL_GOBIN)
+	install -m 0755 $(BINARY_PATH) $(INSTALL_GOBIN)/$(BINARY_NAME)
 
 clean:
 	rm -f $(BINARY_PATH)

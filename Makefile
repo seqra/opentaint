@@ -29,7 +29,9 @@ INSTALLED_DEV_BINARY := $(BINDIR)/$(CLI_DEV_BINARY_NAME)
 
 all: core cli
 
-core: projectAnalyzerJar core/autobuilder core/opentaint-sast-test-util
+# One Gradle invocation: configuration runs once and the jar tasks parallelize.
+core:
+	cd $(CORE_DIR) && $(GRADLEW) $(ANALYZER_TASK) $(AUTOBUILDER_TASK) $(TEST_UTIL_TASK)
 
 projectAnalyzerJar:
 	cd $(CORE_DIR) && $(GRADLEW) $(ANALYZER_TASK)
@@ -40,12 +42,13 @@ core/autobuilder:
 core/opentaint-sast-test-util:
 	cd $(CORE_DIR) && $(GRADLEW) $(TEST_UTIL_TASK)
 
-cli:
+# go generate embeds the test-util jar, so the cli build needs it built first.
+cli: core/opentaint-sast-test-util
 	$(MAKE) -C $(CLI_DIR) build
 
-install: core cli
+install: core
 	mkdir -p $(BINDIR) $(LIBDIR)
-	$(MAKE) -C $(CLI_DIR) install PREFIX=$(PREFIX) BINDIR=$(BINDIR)
+	$(MAKE) -C $(CLI_DIR) install PREFIX=$(PREFIX) BINDIR=$(abspath $(BINDIR))
 	$(INSTALL) -m 0644 $(ANALYZER_JAR) $(INSTALLED_ANALYZER_JAR)
 	$(INSTALL) -m 0644 $(AUTOBUILDER_JAR) $(INSTALLED_AUTOBUILDER_JAR)
 	$(INSTALL) -m 0644 $(TEST_UTIL_JAR) $(LIBDIR)/$(notdir $(TEST_UTIL_JAR))
@@ -55,7 +58,8 @@ install: core cli
 	printf '%s\n' \
 		'#!/bin/sh' \
 		'set -eu' \
-		'BIN_DIR=$$(CDPATH= cd -- "$$(dirname -- "$$(realpath "$$0")")" && pwd)' \
+		'if command -v realpath >/dev/null 2>&1; then SELF=$$(realpath "$$0"); else SELF=$$0; fi' \
+		'BIN_DIR=$$(CDPATH= cd -- "$$(dirname -- "$$SELF")" && pwd -P)' \
 		'PREFIX_DIR=$$(CDPATH= cd -- "$$BIN_DIR/.." && pwd)' \
 		'LIB_DIR="$$PREFIX_DIR/lib"' \
 		'exec "$$BIN_DIR/$(CLI_BINARY_NAME)" --experimental --analyzer-jar "$$LIB_DIR/$(notdir $(ANALYZER_JAR))" --autobuilder-jar "$$LIB_DIR/$(notdir $(AUTOBUILDER_JAR))" "$$@"' \
