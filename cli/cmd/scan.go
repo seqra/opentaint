@@ -262,7 +262,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	sarifReportName := filepath.Base(absSarifReportPath)
 
-	localVersion := utils.ArtifactDisplayVersion(globals.ArtifactByKind("analyzer"), globals.Config.Analyzer.JarPath)
+	localVersion := utils.ArtifactDisplayVersion(globals.ArtifactByKind("analyzer"))
 	localSemanticVersion := version.GetVersion()
 
 	var sourceRoot string
@@ -590,14 +590,14 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		if plan.projectCachePath != "" {
 			sb.FieldNode("Project model", plan.absProjectModel)
 		}
-		sb.FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath))
+		sb.FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder")))
 	} else {
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
-	sb.FieldNode("Analyzer", utils.ArtifactVersionWithPath(globals.ArtifactByKind("analyzer"), globals.Config.Analyzer.JarPath))
+	sb.FieldNode("Analyzer", utils.ArtifactVersionWithPath(globals.ArtifactByKind("analyzer")))
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.FieldNode("Bundled ruleset", utils.ArtifactVersionWithPath(globals.ArtifactByKind("rules"), ""))
+			sb.FieldNode("Bundled ruleset", utils.ArtifactVersionWithPath(globals.ArtifactByKind("rules")))
 		} else {
 			sb.FieldNode("User ruleset", r.Path)
 		}

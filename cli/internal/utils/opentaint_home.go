@@ -115,6 +115,26 @@ func GetInstallJREPath() string {
 	return ""
 }
 
+// BundledReleaseMarkerName is the manifest the release pipeline writes next to
+// the bundled jars; its presence (matching the embedded versions.yaml) marks
+// the bundled lib dir as an unmodified official release rather than a local build.
+const BundledReleaseMarkerName = "release-versions.yaml"
+
+// IsBundledRelease reports whether the bundled lib dir next to the binary was
+// produced by the release pipeline for exactly the embedded bind versions.
+// A `make install` dev layout has no marker and reads as a custom build.
+func IsBundledRelease() bool {
+	lib := GetBundledLibPath()
+	if lib == "" {
+		return false
+	}
+	data, err := os.ReadFile(filepath.Join(lib, BundledReleaseMarkerName))
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(data, globals.GetVersionsYAML())
+}
+
 // IsInstallCurrent reports whether the install-tier version marker matches
 // the embedded versions.yaml. Returns false if the marker is missing or differs.
 func IsInstallCurrent() bool {

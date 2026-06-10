@@ -73,7 +73,7 @@ Arguments:
 		}
 		sb.FieldNode("Project", absProjectRoot).
 			FieldNode("Output project model", absOutputProjectModelPath).
-			FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath)).
+			FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"))).
 			Render()
 
 		if DryRunCompile {
