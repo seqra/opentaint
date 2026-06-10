@@ -127,6 +127,7 @@ jobs:
 
           DOCS_PATTERNS=(
             "docs/"
+            "skills/"
             "scripts/"
             "(.*/)?README\.md"
             "(.*/)?CHANGELOG\.md"
@@ -135,6 +136,7 @@ jobs:
             ".*\.svg"
             ".*\.png"
             ".gitignore"
+            "Makefile"
           )
           DOCS_PATTERN=$(IFS="|"; echo "${DOCS_PATTERNS[*]}")
           SCOPE_PATHS[docs]="^(${DOCS_PATTERN})"
