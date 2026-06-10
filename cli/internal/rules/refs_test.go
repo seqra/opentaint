@@ -90,3 +90,45 @@ func assertEqual(t *testing.T, got, want []string) {
 		}
 	}
 }
+
+func TestExpandRuleIDs_BareSameFileRef(t *testing.T) {
+	root := t.TempDir()
+	writeRule(t, root, "java/security/deser.yaml", `
+rules:
+  - id: unsafe-deserialization
+    mode: join
+    join:
+      refs:
+        - rule: unsafe-object-mapper-sink
+          as: sink
+  - id: unsafe-object-mapper-sink
+    options: {lib: true}
+`)
+
+	got := ExpandRuleIDs([]string{"java/security/deser.yaml:unsafe-deserialization"}, []string{root})
+	want := []string{
+		"java/security/deser.yaml:unsafe-deserialization",
+		"java/security/deser.yaml:unsafe-object-mapper-sink",
+	}
+	assertEqual(t, got, want)
+}
+
+func TestExpandRuleIDs_BareRefTransitive(t *testing.T) {
+	root := t.TempDir()
+	writeRule(t, root, "a.yaml", `
+rules:
+  - id: a
+    join:
+      refs:
+        - rule: helper
+  - id: helper
+    join:
+      refs:
+        - rule: b.yaml#b
+`)
+	writeRule(t, root, "b.yaml", "rules:\n  - id: b\n")
+
+	got := ExpandRuleIDs([]string{"a.yaml:a"}, []string{root})
+	want := []string{"a.yaml:a", "a.yaml:helper", "b.yaml:b"}
+	assertEqual(t, got, want)
+}

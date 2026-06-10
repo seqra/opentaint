@@ -67,7 +67,7 @@ func refsOf(id string, rulesetRoots []string) []string {
 		}
 		var refs []string
 		for _, ref := range r.Join.Refs {
-			if full := refToRuleID(ref.Rule); full != "" {
+			if full := refToRuleID(ref.Rule, relPath); full != "" {
 				refs = append(refs, full)
 			}
 		}
@@ -85,11 +85,14 @@ func splitRuleID(id string) (relPath, shortID string, ok bool) {
 	return id[:idx], id[idx+1:], true
 }
 
-// refToRuleID converts a join ref ("path.yaml#short") to a full id ("path.yaml:short").
-func refToRuleID(ref string) string {
+// refToRuleID converts a join ref to a full rule id. A cross-file ref is
+// "path.yaml#short"; a fragment-less ref names a rule in the referencing file
+// itself, so it is qualified with that file's path — mirroring the analyzer's
+// resolveRefRuleId, which resolves a bare ref to "<currentFile>:<shortId>".
+func refToRuleID(ref, currentRelPath string) string {
 	idx := strings.LastIndex(ref, "#")
 	if idx < 0 {
-		return ref
+		return currentRelPath + ":" + ref
 	}
 	return ref[:idx] + ":" + ref[idx+1:]
 }
