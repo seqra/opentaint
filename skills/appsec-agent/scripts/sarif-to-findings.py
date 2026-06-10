@@ -72,8 +72,9 @@ def result_hash(res):
 def scan_results(sarif):
     """rule_id -> {hash: message}"""
     out = {}
-    for run in sarif.get("runs", []):
-        for res in run.get("results", []):
+    for run in sarif.get("runs") or []:
+        # An aborted run may carry an explicit "results": null (SARIF allows it).
+        for res in run.get("results") or []:
             rid = res.get("ruleId") or "unknown"
             msg = (res.get("message", {}) or {}).get("text", "").strip()
             out.setdefault(rid, {})[result_hash(res)] = msg
@@ -83,16 +84,38 @@ def scan_results(sarif):
 NAME_RE = re.compile(r'^finding_name:\s*(.+?)\s*$', re.M)
 RULE_RE = re.compile(r'^rule_id:\s*(.+?)\s*$', re.M)
 HASHES_RE = re.compile(r'^sarif_hashes:\s*\[(.*)\]\s*$', re.M)
+HASHES_BLOCK_RE = re.compile(r'^sarif_hashes:\s*\n((?:[ \t]+-[^\n]*\n?)+)', re.M)
+
+
+def parse_hashes(text):
+    """Hashes from either flow style ([a, b]) or block style (- a / - b)."""
+    m = HASHES_RE.search(text)
+    if m:
+        return [h.strip() for h in m.group(1).split(",") if h.strip()]
+    m = HASHES_BLOCK_RE.search(text)
+    if m:
+        return [ln.strip().lstrip("-").strip()
+                for ln in m.group(1).splitlines() if ln.strip().lstrip("-").strip()]
+    return []
+
+
+def replace_hashes(text, merged):
+    """Rewrite the sarif_hashes entry (either style) as a flow list; if the key
+    is missing entirely, prepend it so merged hashes are never silently lost."""
+    line = "sarif_hashes: " + fmt_list(merged)
+    if HASHES_RE.search(text):
+        return HASHES_RE.sub(lambda m: line, text, count=1)
+    if HASHES_BLOCK_RE.search(text):
+        return HASHES_BLOCK_RE.sub(line + "\n", text, count=1)
+    return line + "\n" + text
 
 
 def parse_existing(text):
     name = NAME_RE.search(text)
     rid = RULE_RE.search(text)
-    hm = HASHES_RE.search(text)
-    hashes = [h.strip() for h in hm.group(1).split(",") if h.strip()] if hm else []
     return (name.group(1) if name else None,
             rid.group(1) if rid else None,
-            hashes)
+            parse_hashes(text))
 
 
 def fmt_list(hashes):
@@ -118,7 +141,7 @@ def main():
                     help="findings dir (default: .opentaint/tracking/findings)")
     args = ap.parse_args()
 
-    by_rule = scan_results(json.loads(Path(args.sarif).read_text()))
+    by_rule = scan_results(json.loads(Path(args.sarif).read_text(encoding="utf-8")))
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -126,7 +149,7 @@ def main():
     existing = {}   # rule_id -> [(path, hashes)]
     taken = set()
     for p in sorted(glob.glob(str(out / "*.yaml"))):
-        name, rid, hashes = parse_existing(Path(p).read_text())
+        name, rid, hashes = parse_existing(Path(p).read_text(encoding="utf-8"))
         if name:
             taken.add(name)
         if rid:
@@ -141,7 +164,7 @@ def main():
             taken.add(name)
             notes = "\n".join(sorted({m for m in hashmap.values() if m}))
             (out / f"{name}.yaml").write_text(
-                new_file_text(name, rid, sorted(scanned), notes))
+                new_file_text(name, rid, sorted(scanned), notes), encoding="utf-8")
             created += 1
             continue
         already = set().union(*(set(h) for _, h in files))
@@ -152,10 +175,10 @@ def main():
         # add new hashes to the first finding file for this rule; reset verdict
         path, hashes = files[0]
         merged = sorted(set(hashes) | set(new))
-        text = path.read_text()
-        text = HASHES_RE.sub(lambda m: "sarif_hashes: " + fmt_list(merged), text, count=1)
+        text = path.read_text(encoding="utf-8")
+        text = replace_hashes(text, merged)
         text = re.sub(r'^verdict:\s*.+$', "verdict: pending", text, count=1, flags=re.M)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
         updated += 1
 
     print(f"findings: {created} created, {updated} updated, {unchanged} unchanged "
