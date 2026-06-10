@@ -1,6 +1,9 @@
 package globals
 
-import "strings"
+import (
+	"runtime"
+	"strings"
+)
 
 // ArtifactDef declaratively describes a downloadable artifact.
 type ArtifactDef struct {
@@ -40,6 +43,13 @@ func (a ArtifactDef) WithVersion(v string) ArtifactDef {
 // Artifacts returns the list of artifact definitions, reading current globals and Config.
 // This is a function (not a var) so it picks up mutable bind version vars and Config at call time.
 func Artifacts() []ArtifactDef {
+	// go-ssa-server is a single native binary (Unpack:false). Bundled/install tiers store it
+	// under its platform asset name; the per-machine cache file carries the windows .exe suffix
+	// so the resolved path stays executable on windows.
+	goServerCacheSuffix := ""
+	if runtime.GOOS == "windows" {
+		goServerCacheSuffix = ".exe"
+	}
 	return []ArtifactDef{
 		{
 			Name:        "Autobuilder",
@@ -73,6 +83,17 @@ func Artifacts() []ArtifactDef {
 			BindVersion: RulesBindVersion,
 			Version:     Config.Rules.Version,
 			Unpack:      true,
+		},
+		{
+			Name:        "GoServer",
+			RepoName:    Config.Repo,
+			AssetName:   GoServerAssetName(),
+			LibSubpath:  GoServerAssetName(),
+			CachePrefix: GoServerAssetNamePrefix,
+			CacheSuffix: goServerCacheSuffix,
+			BindVersion: GoServerBindVersion,
+			Version:     Config.GoServer.Version,
+			Unpack:      false,
 		},
 	}
 }
