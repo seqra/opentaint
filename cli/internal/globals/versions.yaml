@@ -1,4 +1,4 @@
-analyzer: "analyzer/2026.06.09.fc56601"
-autobuilder: "autobuilder/2026.06.09.fc56601"
+analyzer: "analyzer/2026.06.11.1fd5326"
+autobuilder: "autobuilder/2026.06.11.1fd5326"
 rules: "rules/v0.2.0"
 java: 21
