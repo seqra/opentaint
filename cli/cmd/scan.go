@@ -56,37 +56,26 @@ type RulesetType struct {
 	Builtin bool
 }
 
-type ScanMode int
-
-const (
-	Scan ScanMode = iota
-	CompileAndScan
-)
-
 const (
 	dryRunScanProjectModelPath  = "opentaint-scan-dry-run/project-model"
 	dryRunRuleLoadTraceFileName = "opentaint-rule-load-trace.dry-run.json"
 )
 
-func (m ScanMode) String() string {
-	switch m {
-	case Scan:
-		return "OpenTaint Scan"
-	case CompileAndScan:
-		return "OpenTaint Compile and Scan"
-	default:
-		return "Unknown"
-	}
-}
-
 // scanPlan holds the resolved compilation/cache plan for a scan invocation,
 // derived from a ScanConfig and the on-disk model cache.
 type scanPlan struct {
-	mode             ScanMode
 	absProjectModel  string // absolute path to the project model (always the cache dir when projectCachePath is set)
 	projectCachePath string // cache dir for this project (empty for explicit model / dry-run)
 	needsCompilation bool   // true when compilation is needed before scanning
 	cacheLock        *utils.FileLock
+}
+
+// title names the scan flavor for the info tree header.
+func (p scanPlan) title() string {
+	if p.needsCompilation {
+		return "OpenTaint Compile and Scan"
+	}
+	return "OpenTaint Scan"
 }
 
 // scanCmd represents the scan command
@@ -169,14 +158,28 @@ func addScanFlags(cmd *cobra.Command) {
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.
-// All scan command suggestions should use this as the base to ensure that adding a new
-// flag in one place automatically propagates to every suggestion.
+// All scan command suggestions should use this as the base; every ScanConfig field that
+// changes scan semantics must be represented here or suggestions will silently drop it.
 func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintCommandBuilder {
-	return utils.NewScanCommand(sourcePath).
+	b := utils.NewScanCommand(sourcePath).
 		WithOutput(cfg.SarifReportPath).
 		WithTimeout(globals.Config.Scan.Timeout).
 		WithRuleset(cfg.Ruleset).
-		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif)
+		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
+		WithRuleID(cfg.RuleID).
+		WithPassthroughApproximations(cfg.PassthroughApproximations).
+		WithDataflowApproximations(cfg.DataflowApproximations).
+		WithTrackExternalMethods(cfg.TrackExternalMethods)
+	if !isDefaultSeverity(cfg.Severity) {
+		b.WithSeverity(cfg.Severity)
+	}
+	return b
+}
+
+// isDefaultSeverity reports whether sev is exactly the flag default, in which
+// case suggestions omit the flag entirely.
+func isDefaultSeverity(sev []string) bool {
+	return len(sev) == 2 && sev[0] == "warning" && sev[1] == "error"
 }
 
 // dockerScanSuggestion builds the "try Docker-based scan" fallback hint.
@@ -282,7 +285,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		}
 	}
 
-	maxMemory, err := validation.ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportPath, nonBuiltinRulesetPaths, cfg.Severity, globals.Config.Scan.MaxMemory, plan.mode == Scan)
+	maxMemory, err := validation.ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportPath, nonBuiltinRulesetPaths, cfg.Severity, globals.Config.Scan.MaxMemory, !plan.needsCompilation)
 	if err != nil {
 		out.Fatalf("Input validation failed: %s", err)
 	}
@@ -292,12 +295,16 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		return
 	}
 
+	hasBuiltin := false
 	for _, ruleSetPath := range absRuleSetPaths {
-		if !ruleSetPath.Builtin {
-			continue
+		if ruleSetPath.Builtin {
+			hasBuiltin = true
+			break
 		}
+	}
+	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
-			out.Fatalf("Unexpected error occurred while trying to download ruleset: %s", err)
+			out.Fatalf("Failed to prepare built-in rules: %s", err)
 		}
 	}
 
@@ -482,7 +489,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	if cfg.ProjectModelPath != "" {
 		return scanPlan{
-			mode:            Scan,
 			absProjectModel: log.AbsPathOrExit(filepath.Clean(cfg.ProjectModelPath), "project model path"),
 		}
 	}
@@ -490,7 +496,6 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	if cfg.DryRun {
 		dryRunPath := filepath.Join(os.TempDir(), dryRunScanProjectModelPath)
 		return scanPlan{
-			mode:             CompileAndScan,
 			absProjectModel:  dryRunPath,
 			needsCompilation: true,
 		}
@@ -512,7 +517,6 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 			if utils.IsCachedModelComplete(projectCachePath) {
 				output.LogDebugf("Reusing cached model at: %s", cachedModelPath)
 				return scanPlan{
-					mode:             Scan,
 					absProjectModel:  cachedModelPath,
 					projectCachePath: projectCachePath,
 					cacheLock:        sharedLock,
@@ -549,7 +553,6 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	}
 
 	return scanPlan{
-		mode:             CompileAndScan,
 		absProjectModel:  cachedModelPath,
 		projectCachePath: projectCachePath,
 		needsCompilation: true,
@@ -558,7 +561,7 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 }
 
 func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType) {
-	sb := out.Section(plan.mode.String())
+	sb := out.Section(plan.title())
 	addConfigFields(cmd, sb)
 	if globals.Config.Output.Debug {
 		sb.FieldNode("Rule load trace", absSemgrepRuleLoadTracePath)
