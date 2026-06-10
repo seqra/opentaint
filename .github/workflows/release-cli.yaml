@@ -169,8 +169,32 @@ jobs:
           mkdir -p lib/rules
           tar -xzf /tmp/opentaint-rules.tar.gz -C lib/rules
 
+          # Mark this lib/ as an unmodified official release for these exact
+          # pinned versions; the CLI shows pinned versions (not "custom") only
+          # when this marker matches its embedded versions.yaml.
+          cp internal/globals/versions.yaml lib/release-versions.yaml
+
           echo "Bundled artifacts:"
           ls -la lib/
+      -
+        name: Set up JDK for test-util jar
+        if: ${{ steps.release_version.outputs.status == 'succeeded' }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      -
+        name: Build and embed test-util jar
+        if: ${{ steps.release_version.outputs.status == 'succeeded' }}
+        run: |
+          set -euo pipefail
+          # Build the jar, embed it into the Go binary (go:embed), and bundle
+          # it into lib/ so `opentaint test ... init` works from every install
+          # channel (archives, brew, npm, and the Docker image built from this
+          # same workspace).
+          (cd core && ./gradlew :opentaint-sast-test-util:jar)
+          (cd cli && go generate ./...)
+          cp core/opentaint-sast-test-util/build/libs/opentaint-sast-test-util.jar cli/lib/
       -
         name: Run GoReleaser
         if: ${{ steps.release_version.outputs.status == 'succeeded' }}
