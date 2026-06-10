@@ -5,6 +5,6 @@ rules:
     message: match example/RuleReturnChained (Go port, chained calls)
     mode: taint
     pattern-sources:
-      - pattern: "util.MkType2($X)"
+      - pattern: "JavaRuleReturnChained.MkType2($X)"
     pattern-sinks:
-      - pattern: "util.MkType1($X)"
+      - pattern: "JavaRuleReturnChained.MkType1($X)"

@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithConcreteReturnType (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithConcreteReturnType.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithConcreteReturnType.Sink($X)"

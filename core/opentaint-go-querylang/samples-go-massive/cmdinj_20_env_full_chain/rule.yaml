@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("X")
     pattern-sinks:
-      - pattern: util.Sink_ExecCommand($X)
+      - pattern: cmdinj_20_env_full_chain.Sink_ExecCommand($X)

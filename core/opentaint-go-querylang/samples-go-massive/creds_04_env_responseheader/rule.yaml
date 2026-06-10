@@ -8,5 +8,5 @@ rules:
       - pattern: os.Getenv("SECRET")
     pattern-sinks:
       - patterns:
-          - pattern: util.Sink_ResponseHeader($K, $V)
+          - pattern: creds_04_env_responseheader.Sink_ResponseHeader($K, $V)
           - focus-metavariable: $V

@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithPatternInside (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithPatternInside.Source(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithPatternInside.Sink($X)"

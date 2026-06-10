@@ -5,8 +5,8 @@ rules:
     message: match example/CleanerAfterSink2 (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaCleanerAfterSink2.Source()"
     pattern-sanitizers:
-      - pattern: "util.Clean($X, $Y)"
+      - pattern: "JavaCleanerAfterSink2.Clean($X, $Y)"
     pattern-sinks:
-      - pattern: "util.Sink($X, $Y)"
+      - pattern: "JavaCleanerAfterSink2.Sink($X, $Y)"

@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("AWS_SECRET")
     pattern-sinks:
-      - pattern: util.Sink_SubprocessEnv($X)
+      - pattern: creds_06_env_subprocessenv.Sink_SubprocessEnv($X)

@@ -6,14 +6,14 @@ rules:
     mode: taint
     pattern-sources:
       - patterns:
-          - pattern: "$X = util.GetUntrustedInput()"
+          - pattern: "$X = JavaJoinWithTaintAndMatchingLeft.GetUntrustedInput()"
           - focus-metavariable: "$X"
     pattern-propagators:
-      - pattern: "$Y = util.ProcessInput($X)"
+      - pattern: "$Y = JavaJoinWithTaintAndMatchingLeft.ProcessInput($X)"
         from: "$X"
         to: "$Y"
-      - pattern: "$Y = util.TransformData($X)"
+      - pattern: "$Y = JavaJoinWithTaintAndMatchingLeft.TransformData($X)"
         from: "$X"
         to: "$Y"
     pattern-sinks:
-      - pattern: "util.ExecuteDangerous($X)"
+      - pattern: "JavaJoinWithTaintAndMatchingLeft.ExecuteDangerous($X)"

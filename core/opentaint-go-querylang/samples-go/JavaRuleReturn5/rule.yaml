@@ -5,8 +5,8 @@ rules:
     message: match example/RuleReturn5 (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleReturn5.Source()"
     pattern-sanitizers:
-      - pattern: "util.Clean($X)"
+      - pattern: "JavaRuleReturn5.Clean($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleReturn5.Sink($X)"

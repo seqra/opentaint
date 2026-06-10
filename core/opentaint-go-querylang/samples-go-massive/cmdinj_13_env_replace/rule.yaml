@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("PATH_LIKE")
     pattern-sinks:
-      - pattern: util.Sink_ExecCommand($X)
+      - pattern: cmdinj_13_env_replace.Sink_ExecCommand($X)

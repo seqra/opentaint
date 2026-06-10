@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_MongoFind($X)
+      - pattern: nosql_07_form_wrapmongo.Sink_MongoFind($X)

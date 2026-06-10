@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"text/template"
 
-	beegoctx "util/context"
-	"util/web"
+	beegoctx "samples/TypedPatterns/context"
+	"samples/TypedPatterns/web"
 )
 
 func Source() string { return "tainted" }

@@ -7,6 +7,6 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_LdapSearch($X)
+      - pattern: ldap_08_form_escape_sanitizer.Sink_LdapSearch($X)
     pattern-sanitizers:
       - pattern: escapeLdapFilter($V)

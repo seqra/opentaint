@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("GITHUB_TOKEN")
     pattern-sinks:
-      - pattern: util.Sink_LogOutput($X)
+      - pattern: creds_11_env_branch_log.Sink_LogOutput($X)

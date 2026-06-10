@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Args[$IDX]
     pattern-sinks:
-      - pattern: util.Sink_ExecLookPath($X)
+      - pattern: cmdinj_02_args_direct.Sink_ExecLookPath($X)

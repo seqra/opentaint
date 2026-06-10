@@ -5,8 +5,8 @@ rules:
     message: match example/RuleReturnNotInside (Go port, recast as call-based)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleReturnNotInside.Source(...)"
     pattern-sanitizers:
-      - pattern: "util.Sanitize($X)"
+      - pattern: "JavaRuleReturnNotInside.Sanitize($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleReturnNotInside.Sink($X)"

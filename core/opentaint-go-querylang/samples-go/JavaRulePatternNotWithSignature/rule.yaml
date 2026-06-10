@@ -5,8 +5,8 @@ rules:
     message: match example/RulePatternNotWithSignature (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRulePatternNotWithSignature.Source()"
     pattern-sanitizers:
-      - pattern: "util.Clean($X)"
+      - pattern: "JavaRulePatternNotWithSignature.Clean($X)"
     pattern-sinks:
-      - pattern: "util.F($X)"
+      - pattern: "JavaRulePatternNotWithSignature.F($X)"

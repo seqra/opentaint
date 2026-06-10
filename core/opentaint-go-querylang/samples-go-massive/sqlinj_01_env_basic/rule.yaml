@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("USER_ID")
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_01_env_basic.Sink_DbQuery($X)

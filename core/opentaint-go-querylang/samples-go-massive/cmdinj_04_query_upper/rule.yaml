@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.URL.Query().Get($K)
     pattern-sinks:
-      - pattern: util.Sink_ExecCommand($X)
+      - pattern: cmdinj_04_query_upper.Sink_ExecCommand($X)

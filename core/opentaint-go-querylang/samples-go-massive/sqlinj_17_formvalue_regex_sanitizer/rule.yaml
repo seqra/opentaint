@@ -7,6 +7,6 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_17_formvalue_regex_sanitizer.Sink_DbQuery($X)
     pattern-sanitizers:
       - pattern: regexp.MustCompile($P).ReplaceAllString($V, $R2)

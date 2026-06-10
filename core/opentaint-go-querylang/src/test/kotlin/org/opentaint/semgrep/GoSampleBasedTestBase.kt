@@ -44,7 +44,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
-    val samplesDir: Path by lazy {
+    private val samplesDir: Path by lazy {
         val prop = System.getProperty(samplesDirProperty)
             ?: error("System property $samplesDirProperty not set; check build.gradle.kts wiring")
         Path(prop).also {
@@ -53,6 +53,10 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
     }
 
     private val client: GoIRClient by lazy { GoIRClient() }
+
+    private val program: GoIRProgram by lazy {
+        client.buildFromDir(samplesDir, GoIRLoadConfig()).program
+    }
 
     open val tracker: ExternalMethodTracker? = null
 
@@ -74,8 +78,6 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
             "Sample directory missing: $sampleDir"
         }
 
-        val program = client.buildFromDir(sampleDir, GoIRLoadConfig()).program
-
         val yamlFile = sampleDir.toFile().listFiles { f -> f.extension == "yaml" }
             ?.singleOrNull()
             ?: fail("Expected exactly one *.yaml rule under $sampleDir")
@@ -86,9 +88,14 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
             config.loadConfig(defaultConfig)
         }
 
-        val entries = program.allFunctions().filter {
-            it.pkg?.importPath == "util" &&
-                !it.isSynthetic &&
+        val samplePkgImportPath = "$MODULE_NAME/$ruleName"
+        val pkg = program.findPackage(samplePkgImportPath)
+            ?: error("Could not find package $samplePkgImportPath")
+
+        val resolver = SamplePkgUnitResolver(samplePkgImportPath)
+
+        val entries = pkg.functions.filter {
+            !it.isSynthetic &&
                     it.hasBody &&
                     it.parent == null &&
                     (it.name.startsWith("Positive_") || it.name.startsWith("Negative_"))
@@ -96,11 +103,11 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
 
         check(entries.isNotEmpty()) {
             "No Positive_*/Negative_* top-level entry points found in $sampleDir " +
-                "(seen: ${program.allFunctions().map { it.fullName }})"
+                    "(seen: ${program.allFunctions().map { it.fullName }})"
         }
 
         for (entry in entries) {
-            val result = runAnalysis(program, config, entry)
+            val result = runAnalysis(config, entry, resolver)
             val isPositive = entry.name.startsWith("Positive_")
             if (isPositive) {
                 assertTrue(
@@ -135,17 +142,17 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
     )
 
     private fun runAnalysis(
-        program: GoIRProgram,
         config: GoTaintConfiguration,
         entryPoint: GoIRFunction,
+        resolver: UnitResolver<GoIRFunction>,
     ): AnalysisResult {
-        val ifdsGraph = GoApplicationGraph(program, UtilUnitResolver)
+        val ifdsGraph = GoApplicationGraph(program, resolver)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
             GoAnalysisManager(program, config, tracker),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
-            unitResolver = UtilUnitResolver as UnitResolver<CommonMethod>,
+            unitResolver = resolver as UnitResolver<CommonMethod>,
             apManager = TreeApManager(AnyUnrollStrategy),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
@@ -173,11 +180,16 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
             accessor is FieldAccessor || accessor is ElementAccessor
     }
 
-    private object UtilUnitResolver : UnitResolver<GoIRFunction> {
-        override fun resolve(method: GoIRFunction): UnitType =
-            when (method.pkg?.importPath) {
-                "util" -> SingletonUnit
-                else -> UnknownUnit
-            }
+    private class SamplePkgUnitResolver(
+        private val samplePkgImportPath: String,
+    ) : UnitResolver<GoIRFunction> {
+        override fun resolve(method: GoIRFunction): UnitType {
+            val pkg = method.pkg?.importPath ?: return UnknownUnit
+            return if (pkg.startsWith(samplePkgImportPath)) SingletonUnit else UnknownUnit
+        }
+    }
+
+    companion object {
+        private const val MODULE_NAME = "samples"
     }
 }

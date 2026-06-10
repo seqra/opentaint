@@ -9,4 +9,4 @@ rules:
       - pattern: "$R.Header.Get($K)"
       - pattern: "$R.Header[$KEY][$IDX]"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "SourceHeaderMapIndex.Sink($X)"

@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithIntersection (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithIntersection.Source(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithIntersection.Sink($X)"

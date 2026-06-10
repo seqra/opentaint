@@ -7,6 +7,6 @@ rules:
     pattern-sources:
       - pattern: $R.Header.Get($K)
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_15_header_sanitizer.Sink_DbQuery($X)
     pattern-sanitizers:
       - pattern: strings.ReplaceAll($V, ";", "")

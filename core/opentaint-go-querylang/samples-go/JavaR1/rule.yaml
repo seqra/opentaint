@@ -5,6 +5,6 @@ rules:
     message: match example/R1 (Go port, recast as source-sink return)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaR1.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaR1.Sink($X)"

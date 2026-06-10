@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.URL.Query().Get($K)
     pattern-sinks:
-      - pattern: util.Sink_MongoFind($X)
+      - pattern: nosql_05_query_basic.Sink_MongoFind($X)

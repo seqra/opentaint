@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.URL.Query().Get($K)
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_12_query_closure.Sink_DbQuery($X)

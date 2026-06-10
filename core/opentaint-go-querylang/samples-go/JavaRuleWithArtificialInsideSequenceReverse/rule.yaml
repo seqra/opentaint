@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithArtificialInsideSequenceReverse (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.F($X)"
+      - pattern: "JavaRuleWithArtificialInsideSequenceReverse.F($X)"
     pattern-sanitizers:
-      - pattern: "util.Clean($X)"
+      - pattern: "JavaRuleWithArtificialInsideSequenceReverse.Clean($X)"
     pattern-sinks:
-      - pattern: "util.H($X)"
+      - pattern: "JavaRuleWithArtificialInsideSequenceReverse.H($X)"

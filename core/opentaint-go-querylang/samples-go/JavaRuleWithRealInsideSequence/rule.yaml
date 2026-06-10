@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithRealInsideSequence (Go port — ObjectMapper-like sequence)
     mode: taint
     pattern-sources:
-      - pattern: "util.EnableDefaultTyping($OM)"
+      - pattern: "JavaRuleWithRealInsideSequence.EnableDefaultTyping($OM)"
     pattern-sinks:
-      - pattern: "util.ReadValue($X)"
+      - pattern: "JavaRuleWithRealInsideSequence.ReadValue($X)"

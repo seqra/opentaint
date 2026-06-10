@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithPatternsSimple (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithPatternsSimple.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithPatternsSimple.Sink($X)"

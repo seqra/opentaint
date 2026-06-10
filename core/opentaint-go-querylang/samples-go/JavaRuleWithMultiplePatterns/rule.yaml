@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithMultiplePatterns (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.SourceA(...)"
-      - pattern: "util.SourceB(...)"
-      - pattern: "util.SourceC(...)"
+      - pattern: "JavaRuleWithMultiplePatterns.SourceA(...)"
+      - pattern: "JavaRuleWithMultiplePatterns.SourceB(...)"
+      - pattern: "JavaRuleWithMultiplePatterns.SourceC(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithMultiplePatterns.Sink($X)"

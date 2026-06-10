@@ -5,7 +5,7 @@ rules:
   - id: join-source-sink
     languages: [go]
     severity: WARNING
-    message: "Taint from util.Source reaches util.Sink (composed via join)"
+    message: "Taint from JoinSourceSink.Source reaches JoinSourceSink.Sink (composed via join)"
     mode: join
     join:
       refs:
@@ -21,7 +21,7 @@ rules:
     severity: NOTE
     message: "Untrusted source (lib)"
     mode: search
-    pattern: "$X = util.Source(...)"
+    pattern: "$X = JoinSourceSink.Source(...)"
   - id: join-sink
     options: {lib: true}
     languages: [go]
@@ -30,5 +30,5 @@ rules:
     mode: taint
     pattern-sinks:
       - patterns:
-          - pattern: "util.Sink($UNTRUSTED)"
+          - pattern: "JoinSourceSink.Sink($UNTRUSTED)"
           - focus-metavariable: $UNTRUSTED

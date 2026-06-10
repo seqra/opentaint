@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: "$X.Params()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "SourceBeegoInputParamsRange.Sink($X)"

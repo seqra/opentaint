@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithState (Go port — sequence via state token)
     mode: taint
     pattern-sources:
-      - pattern: "util.F()"
+      - pattern: "JavaRuleWithState.F()"
     pattern-sinks:
-      - pattern: "util.G($X)"
+      - pattern: "JavaRuleWithState.G($X)"

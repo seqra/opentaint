@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: "$R.URL.RawQuery"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "SourceUrlRawQuery.Sink($X)"

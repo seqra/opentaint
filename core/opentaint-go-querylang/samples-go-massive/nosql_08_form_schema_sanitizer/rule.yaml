@@ -7,6 +7,6 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_MongoFind($X)
+      - pattern: nosql_08_form_schema_sanitizer.Sink_MongoFind($X)
     pattern-sanitizers:
       - pattern: validateSchema($V)

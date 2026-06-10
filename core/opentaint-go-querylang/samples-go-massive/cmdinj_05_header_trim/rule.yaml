@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.Header.Get($K)
     pattern-sinks:
-      - pattern: util.Sink_ExecLookPath($X)
+      - pattern: cmdinj_05_header_trim.Sink_ExecLookPath($X)

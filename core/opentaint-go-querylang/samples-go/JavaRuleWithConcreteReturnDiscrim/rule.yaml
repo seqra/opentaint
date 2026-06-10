@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithConcreteReturnDiscrim (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithConcreteReturnDiscrim.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithConcreteReturnDiscrim.Sink($X)"

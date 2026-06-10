@@ -2,11 +2,11 @@ rules:
   - id: ellipsis-source-sink
     languages: [go]
     severity: WARNING
-    message: "Taint from util.Source reaches util.Sink after intervening statements"
+    message: "Taint from EllipsisSourceSink.Source reaches EllipsisSourceSink.Sink after intervening statements"
     mode: taint
     pattern-sources:
       - patterns:
-          - pattern: "$X = util.Source(...)"
+          - pattern: "$X = EllipsisSourceSink.Source(...)"
           - focus-metavariable: "$X"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "EllipsisSourceSink.Sink($X)"

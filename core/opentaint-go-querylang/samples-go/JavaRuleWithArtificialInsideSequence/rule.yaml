@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithArtificialInsideSequence (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.G($X)"
+      - pattern: "JavaRuleWithArtificialInsideSequence.G($X)"
     pattern-sanitizers:
-      - pattern: "util.Clean($X)"
+      - pattern: "JavaRuleWithArtificialInsideSequence.Clean($X)"
     pattern-sinks:
-      - pattern: "util.F($X)"
+      - pattern: "JavaRuleWithArtificialInsideSequence.F($X)"

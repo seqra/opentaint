@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithAnyPattern (Go port, recast)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithAnyPattern.Source()"
     pattern-sinks:
-      - pattern: "util.Method($X)"
+      - pattern: "JavaRuleWithAnyPattern.Method($X)"

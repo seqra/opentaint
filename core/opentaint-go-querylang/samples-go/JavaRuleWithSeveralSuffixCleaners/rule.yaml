@@ -5,9 +5,9 @@ rules:
     message: match example/RuleWithSeveralSuffixCleaners (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.Source(...)"
     pattern-sanitizers:
-      - pattern: "util.Clean1($X)"
-      - pattern: "util.Clean2($X)"
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.Clean1($X)"
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.Clean2($X)"
     pattern-sinks:
-      - pattern: "util.F($X)"
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.F($X)"

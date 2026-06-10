@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_BcryptHash($X)
+      - pattern: crypto_07_form_bcrypt_stub.Sink_BcryptHash($X)

@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithMultiplePatternsUnification (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.MkType2($SOURCE)"
+      - pattern: "JavaRuleWithMultiplePatternsUnification.MkType2($SOURCE)"
     pattern-sinks:
-      - pattern: "util.NewType3($SOURCE)"
+      - pattern: "JavaRuleWithMultiplePatternsUnification.NewType3($SOURCE)"

@@ -5,6 +5,6 @@ rules:
     message: match example/RuleReturnInsideSignature (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Src($X)"
+      - pattern: "JavaRuleReturnInsideSignature.Src($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleReturnInsideSignature.Sink($X)"

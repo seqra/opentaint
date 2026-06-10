@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("REFRESH_TOKEN")
     pattern-sinks:
-      - pattern: util.Sink_LogOutput($X)
+      - pattern: creds_20_env_variadic_sprintf_log.Sink_LogOutput($X)

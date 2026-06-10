@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.URL.Query().Get("token")
     pattern-sinks:
-      - pattern: util.Sink_PostFormBody($X)
+      - pattern: creds_18_query_postform_exfil.Sink_PostFormBody($X)
