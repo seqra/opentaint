@@ -215,7 +215,7 @@ func SelfUpdate(archivePath, installDir string) error {
 	// (called from PersistentPreRunE) handles it on the new binary's first run.
 	if !libBundled || !jreBundled {
 		if dir := GetInstallDir(); dir != "" {
-			_ = os.Remove(filepath.Join(dir, ".versions"))
+			_ = os.Remove(filepath.Join(dir, VersionMarkerName))
 		}
 	}
 

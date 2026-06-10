@@ -103,14 +103,18 @@ func GetInstallJREPath() string {
 	return ""
 }
 
-const BundledReleaseMarkerName = "release-versions.yaml"
+// VersionMarkerName is the byte-for-byte copy of the embedded versions.yaml
+// dropped alongside an artifact tier so a later run can detect whether that
+// tier matches the current bind version. Used both next to the binary (bundled
+// tier) and in ~/.opentaint/install/ (install tier).
+const VersionMarkerName = ".versions"
 
 func IsBundledRelease() bool {
 	lib := GetBundledLibPath()
 	if lib == "" {
 		return false
 	}
-	data, err := os.ReadFile(filepath.Join(lib, BundledReleaseMarkerName))
+	data, err := os.ReadFile(filepath.Join(lib, VersionMarkerName))
 	if err != nil {
 		return false
 	}
@@ -124,7 +128,7 @@ func IsInstallCurrent() bool {
 	if installDir == "" {
 		return false
 	}
-	data, err := os.ReadFile(filepath.Join(installDir, ".versions"))
+	data, err := os.ReadFile(filepath.Join(installDir, VersionMarkerName))
 	if err != nil {
 		return false
 	}
@@ -141,7 +145,7 @@ func WriteInstallVersionMarker() error {
 	if err := os.MkdirAll(installDir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(installDir, ".versions"), globals.GetVersionsYAML(), 0o644)
+	return os.WriteFile(filepath.Join(installDir, VersionMarkerName), globals.GetVersionsYAML(), 0o644)
 }
 
 // CleanInstallDir removes the install-tier lib and jre directories along with
@@ -151,7 +155,7 @@ func CleanInstallDir() error {
 	if installDir == "" {
 		return nil
 	}
-	for _, sub := range []string{"lib", "jre", ".versions"} {
+	for _, sub := range []string{"lib", "jre", VersionMarkerName} {
 		if err := os.RemoveAll(filepath.Join(installDir, sub)); err != nil {
 			return err
 		}

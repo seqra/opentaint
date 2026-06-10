@@ -169,7 +169,7 @@ jobs:
           mkdir -p lib/rules
           tar -xzf /tmp/opentaint-rules.tar.gz -C lib/rules
 
-          cp internal/globals/versions.yaml lib/release-versions.yaml
+          cp internal/globals/versions.yaml lib/.versions
 
           echo "Bundled artifacts:"
           ls -la lib/
