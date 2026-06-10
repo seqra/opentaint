@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Install via npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Or run instantly with npx — no install required (needs Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Scan your project:**
 ```bash
 opentaint scan

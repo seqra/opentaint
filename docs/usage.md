@@ -1,5 +1,7 @@
 # Usage
 
+> **Run without installing:** every `opentaint <command>` below can be run install-free with `npx @seqra/opentaint <command>` (requires Node.js), e.g. `npx @seqra/opentaint scan`. See [Installation](installation.md#npm).
+
 ## Scanning Projects
 
 ```bash
@@ -107,7 +109,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 
 #### Rule-authoring flags
 
-These experimental flags support custom rules and approximations:
+These flags are to work with custom approximations:
 
 | Flag | Description |
 |------|-------------|
