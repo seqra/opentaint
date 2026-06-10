@@ -320,11 +320,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			out.Fatalf("Native compile preparation failed: %s", err)
 		}
 
-		compileJavaRunner := java.NewJavaRunner().
-			WithSkipVerify(globals.Config.SkipVerify).
-			WithDebugOutput(out.DebugStream("Autobuilder")).
-			TrySystem().
-			TrySpecificVersion(globals.Config.Java.Version)
+		compileJavaRunner := newAutobuilderJavaRunner()
 		if _, err := compileJavaRunner.EnsureJava(); err != nil {
 			out.Fatalf("Failed to resolve Java for compilation: %s", err)
 		}
@@ -422,11 +418,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	// Process --dataflow-approximations: auto-compile .java sources if needed
 	addDataflowApproximations(nativeBuilder, cfg.DataflowApproximations, analyzerJarPath, absProjectModelPath)
 
-	analyzerJavaRunner := java.NewJavaRunner().
-		WithSkipVerify(globals.Config.SkipVerify).
-		WithDebugOutput(out.DebugStream("Analyzer")).
-		WithImageType(java.AdoptiumImageJRE).
-		TrySpecificVersion(globals.DefaultJavaVersion)
+	analyzerJavaRunner := newAnalyzerJavaRunner()
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		out.Fatalf("Failed to resolve Java for analyzer: %s", err)
 	}
@@ -617,25 +609,6 @@ func setupSemgrepRuleLoadTrace() string {
 
 	// Rule load trace path is now displayed in the tree format
 	return absSemgrepRuleLoadTracePath
-}
-
-func ensureAnalyzerAvailable() (string, error) {
-	def := globals.ArtifactByKind("analyzer")
-	analyzerJarPath, err := utils.ResolveJarPath(def)
-	if err != nil {
-		return "", fmt.Errorf("failed to construct path to the analyzer: %w", err)
-	}
-	if def.Override != "" {
-		return analyzerJarPath, nil
-	}
-
-	if err := ensureArtifactAvailable("analyzer", globals.Config.Analyzer.Version, analyzerJarPath, func() error {
-		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, globals.Config.Analyzer.Version, globals.AnalyzerAssetName, analyzerJarPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
-	}); err != nil {
-		return "", err
-	}
-
-	return analyzerJarPath, nil
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {
