@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-01-env-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("CMD")
+    pattern-sinks:
+      - pattern: cmdinj_01_env_basic.Sink_ExecCommand($X)

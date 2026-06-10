@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-10-formvalue-for
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue in loop reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: cmdinj_10_formvalue_for.Sink_ExecCommand($X)

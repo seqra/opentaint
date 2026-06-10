@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-03-form-des-key
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches des.NewCipher key (weak cipher key from user input)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: des.NewCipher($X)

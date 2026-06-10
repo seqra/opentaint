@@ -1,0 +1,25 @@
+rules:
+  - id: go-sql-injection
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input flows into SQL query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $X.Param($K)
+          - pattern: $X.Header($K)
+          - pattern: $X.Params()
+          - pattern: $X.URI()
+          - pattern: $X.URL()
+          - pattern: $X.RequestBody
+          - pattern: $X.Bind($PTR)
+    pattern-sinks:
+      - pattern-either:
+          - pattern: $DB.Query($SQL, ...)
+          - pattern: $DB.QueryContext($CTX, $SQL, ...)
+          - pattern: $DB.QueryRow($SQL, ...)
+          - pattern: $DB.QueryRowContext($CTX, $SQL, ...)
+          - pattern: $DB.Exec($SQL, ...)
+          - pattern: $DB.ExecContext($CTX, $SQL, ...)
+          - pattern: $DB.Prepare($SQL)
+          - pattern: $DB.PrepareContext($CTX, $SQL)

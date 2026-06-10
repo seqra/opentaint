@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-return-multi-inside-not-inside-c
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturnMultiInsideNotInsideC (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleReturnMultiInsideNotInsideC.MkType2($X)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleReturnMultiInsideNotInsideC.SanitizeC($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleReturnMultiInsideNotInsideC.MkType3($X)"

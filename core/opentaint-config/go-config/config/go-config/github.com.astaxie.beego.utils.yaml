@@ -1,0 +1,8 @@
+passThrough:
+- function:
+    package: github.com/astaxie/beego/utils
+    name: GetDisplayString
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result(0)

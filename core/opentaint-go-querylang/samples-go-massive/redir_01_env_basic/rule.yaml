@@ -1,0 +1,12 @@
+rules:
+  - id: redir-01-env-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches http.Redirect URL (open redirect)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("LOGIN_RETURN_URL")
+    pattern-sinks:
+      - patterns:
+          - pattern: http.Redirect($W, $R, $URL, $CODE)
+          - focus-metavariable: $URL

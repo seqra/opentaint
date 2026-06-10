@@ -1,0 +1,10 @@
+rules:
+  - id: source-beego-ctx-input-header
+    languages: [go]
+    severity: WARNING
+    message: "Taint from Ctx.Input.Header reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "$X.Header($K)"
+    pattern-sinks:
+      - pattern: "SourceBeegoCtxInputHeader.Sink($X)"

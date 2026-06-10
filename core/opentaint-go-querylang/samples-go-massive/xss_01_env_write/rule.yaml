@@ -1,0 +1,10 @@
+rules:
+  - id: xss-01-env-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches w.Write (raw bytes to HTTP response, reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

@@ -1,0 +1,12 @@
+rules:
+  - id: sqlinj-16-env-branch-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches db.Exec unless sanitized in branch (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("LIMIT")
+    pattern-sinks:
+      - pattern: sqlinj_16_env_branch_sanitizer.Sink_DbExec($X)
+    pattern-sanitizers:
+      - pattern: sqlinj_16_env_branch_sanitizer.sanitizeID($V)

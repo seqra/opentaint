@@ -1,0 +1,12 @@
+rules:
+  - id: loginj-08-env-escape-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches log.Printf unless newlines escaped (log injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("TRACE_ID")
+    pattern-sinks:
+      - pattern: log.Printf($FMT, $X)
+    pattern-sanitizers:
+      - pattern: escapeNewlines($V)

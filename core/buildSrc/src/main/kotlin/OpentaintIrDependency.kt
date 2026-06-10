@@ -38,4 +38,16 @@ object OpentaintIrDependency : OpentaintDependency {
             group = "org.opentaint.ir",
             name = "opentaint-ir-approximations"
         )
+
+    val Project.opentaint_ir_api_go
+        get() = propertyDep(
+            group = "org.opentaint.ir.go",
+            name = "go-ir-api"
+        )
+
+    val Project.opentaint_ir_core_go
+        get() = propertyDep(
+            group = "org.opentaint.ir.go",
+            name = "go-ir-client"
+        )
 }

@@ -1,0 +1,12 @@
+rules:
+  - id: deser-18-sanitizer-schema
+    languages: [go]
+    severity: WARNING
+    message: Tainted form reaches json.Unmarshal unless schema-validated first
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: json.Unmarshal($DATA, $TARGET)
+    pattern-sanitizers:
+      - pattern: validateSchema($V)

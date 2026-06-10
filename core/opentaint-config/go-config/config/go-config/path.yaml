@@ -1,0 +1,45 @@
+passThrough:
+- function:
+    package: path
+    name: Base
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path
+    name: Clean
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path
+    name: Dir
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path
+    name: Ext
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path
+    name: Split
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: path
+    name: Join
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

@@ -1,0 +1,12 @@
+rules:
+  - id: creds-14-env-logoutput-multiarg
+    languages: [go]
+    severity: WARNING
+    message: PRIVATE_KEY env var flows to log.Output message arg (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("PRIVATE_KEY")
+    pattern-sinks:
+      - patterns:
+          - pattern: $L.Output($DEPTH, $MSG)
+          - focus-metavariable: $MSG

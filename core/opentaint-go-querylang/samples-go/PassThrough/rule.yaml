@@ -1,0 +1,14 @@
+rules:
+  - id: pass-through
+    languages: [go]
+    severity: WARNING
+    message: "Taint flows through PassThrough.Wrap from PassThrough.Source to PassThrough.Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "PassThrough.Source(...)"
+    pattern-sinks:
+      - pattern: "PassThrough.Sink($X)"
+    pattern-propagators:
+      - pattern: "$OUT = PassThrough.Wrap($IN)"
+        from: "$IN"
+        to: "$OUT"

@@ -1,0 +1,169 @@
+passThrough:
+- function:
+    package: github.com/revel/revel
+    type: Params
+    name: Bind
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/robfig/revel
+    type: Params
+    name: Bind
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/revel/revel
+    type: Params
+    name: BindJSON
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/robfig/revel
+    type: Params
+    name: BindJSON
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/revel/revel
+    type: RevelHeader
+    name: Add
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: github.com/robfig/revel
+    type: RevelHeader
+    name: Add
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: github.com/revel/revel
+    type: RevelHeader
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/robfig/revel
+    type: RevelHeader
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/revel/revel
+    type: RevelHeader
+    name: GetAll
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/robfig/revel
+    type: RevelHeader
+    name: GetAll
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/revel/revel
+    type: RevelHeader
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: github.com/robfig/revel
+    type: RevelHeader
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: github.com/revel/revel
+    type: RevelHeader
+    name: SetCookie
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: github.com/robfig/revel
+    type: RevelHeader
+    name: SetCookie
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: github.com/revel/revel
+    type: ServerCookie
+    name: GetValue
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/robfig/revel
+    type: ServerCookie
+    name: GetValue
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/revel/revel
+    type: ServerMultipartForm
+    name: GetFiles
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/robfig/revel
+    type: ServerMultipartForm
+    name: GetFiles
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/revel/revel
+    type: ServerMultipartForm
+    name: GetValues
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/robfig/revel
+    type: ServerMultipartForm
+    name: GetValues
+    receiver: true
+  copy:
+  - from: this
+    to: result

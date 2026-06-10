@@ -1,0 +1,10 @@
+rules:
+  - id: source-request-uri
+    languages: [go]
+    severity: WARNING
+    message: "Taint from r.RequestURI reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "$R.RequestURI"
+    pattern-sinks:
+      - pattern: "SourceRequestUri.Sink($X)"

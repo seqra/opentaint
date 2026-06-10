@@ -1,0 +1,12 @@
+rules:
+  - id: multi-arg-sink
+    languages: [go]
+    severity: WARNING
+    message: "Taint from MultiArgSink.Source reaches arg 1 of MultiArgSink.Exec"
+    mode: taint
+    pattern-sources:
+      - pattern: "MultiArgSink.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern: "MultiArgSink.Exec($CMD, $ARG)"
+          - focus-metavariable: "$ARG"

@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-patterns-signature
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithPatternsSignature (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithPatternsSignature.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithPatternsSignature.Sink($X)"

@@ -1,0 +1,80 @@
+passThrough:
+- function:
+    package: github.com/golang-jwt/jwt
+    name: Parse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    type: Parser
+    name: Parse
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseWithClaims
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    type: Parser
+    name: ParseWithClaims
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseECPrivateKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseECPublicKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseEdPrivateKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseEdPublicKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseRSAPrivateKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: ParseRSAPublicKeyFromPEM
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang-jwt/jwt
+    name: RegisterSigningMethod
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)

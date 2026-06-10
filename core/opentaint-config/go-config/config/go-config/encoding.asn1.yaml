@@ -1,0 +1,59 @@
+passThrough:
+- function:
+    package: encoding/asn1
+    name: Marshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: encoding/asn1
+    name: MarshalWithParams
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: encoding/asn1
+    name: Unmarshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: encoding/asn1
+    name: Unmarshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: encoding/asn1
+    name: UnmarshalWithParams
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: encoding/asn1
+    name: UnmarshalWithParams
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: encoding/asn1
+    name: UnmarshalWithParams
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: arg(1)
+- function:
+    package: encoding/asn1
+    name: UnmarshalWithParams
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result(0)

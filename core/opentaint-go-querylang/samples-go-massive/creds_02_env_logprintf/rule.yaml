@@ -1,0 +1,10 @@
+rules:
+  - id: creds-02-env-logprintf
+    languages: [go]
+    severity: WARNING
+    message: Tainted DB_PASS env var reaches log output sink (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("DB_PASS")
+    pattern-sinks:
+      - pattern: creds_02_env_logprintf.Sink_LogOutput($X)

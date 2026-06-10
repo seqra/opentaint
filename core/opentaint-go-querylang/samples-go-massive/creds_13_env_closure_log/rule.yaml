@@ -1,0 +1,10 @@
+rules:
+  - id: creds-13-env-closure-log
+    languages: [go]
+    severity: WARNING
+    message: GCP_KEY env var captured by closure then logged (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("GCP_KEY")
+    pattern-sinks:
+      - pattern: creds_13_env_closure_log.Sink_LogOutput($X)

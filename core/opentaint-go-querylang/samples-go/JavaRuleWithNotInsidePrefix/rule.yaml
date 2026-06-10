@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-not-inside-prefix
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithNotInsidePrefix (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithNotInsidePrefix.Source(...)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleWithNotInsidePrefix.PrefixClean($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithNotInsidePrefix.Sink($X)"

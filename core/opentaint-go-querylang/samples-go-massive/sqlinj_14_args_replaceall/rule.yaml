@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-14-args-replaceall
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args via ReplaceAll reaches db.QueryRow (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: sqlinj_14_args_replaceall.Sink_DbQueryRow($X)

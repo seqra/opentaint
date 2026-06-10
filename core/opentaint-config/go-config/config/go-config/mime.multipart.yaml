@@ -1,0 +1,80 @@
+passThrough:
+- function:
+    package: mime/multipart
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: mime/multipart
+    type: FileHeader
+    name: Open
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: mime/multipart
+    type: Part
+    name: FileName
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: mime/multipart
+    type: Part
+    name: FormName
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: mime/multipart
+    type: Reader
+    name: NextPart
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: mime/multipart
+    type: Reader
+    name: NextRawPart
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: mime/multipart
+    type: Reader
+    name: ReadForm
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: mime/multipart
+    type: Writer
+    name: WriteField
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: mime/multipart
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: mime/multipart
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

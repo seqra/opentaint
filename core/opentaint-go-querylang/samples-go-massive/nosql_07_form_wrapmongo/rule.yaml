@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-07-form-wrapmongo
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue passes through wrapMongoFilter into MongoDB Find (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: nosql_07_form_wrapmongo.Sink_MongoFind($X)

@@ -1,0 +1,12 @@
+rules:
+  - id: sqlinj-15-header-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted header reaches db.Query unless sanitized (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: sqlinj_15_header_sanitizer.Sink_DbQuery($X)
+    pattern-sanitizers:
+      - pattern: strings.ReplaceAll($V, ";", "")

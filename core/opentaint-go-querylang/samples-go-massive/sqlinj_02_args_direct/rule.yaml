@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-02-args-direct
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args reaches db.Exec (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: sqlinj_02_args_direct.Sink_DbExec($X)

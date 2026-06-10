@@ -1,0 +1,10 @@
+rules:
+  - id: creds-03-env-responsewrite
+    languages: [go]
+    severity: WARNING
+    message: Tainted TOKEN env var reaches HTTP response body (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("TOKEN")
+    pattern-sinks:
+      - pattern: creds_03_env_responsewrite.Sink_ResponseWrite($X)

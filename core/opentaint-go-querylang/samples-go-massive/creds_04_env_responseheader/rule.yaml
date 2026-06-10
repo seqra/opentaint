@@ -1,0 +1,12 @@
+rules:
+  - id: creds-04-env-responseheader
+    languages: [go]
+    severity: WARNING
+    message: Tainted SECRET env var flows into HTTP response header value (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("SECRET")
+    pattern-sinks:
+      - patterns:
+          - pattern: creds_04_env_responseheader.Sink_ResponseHeader($K, $V)
+          - focus-metavariable: $V

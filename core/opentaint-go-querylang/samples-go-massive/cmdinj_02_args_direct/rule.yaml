@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-02-args-direct
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args reaches exec.LookPath (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: cmdinj_02_args_direct.Sink_ExecLookPath($X)

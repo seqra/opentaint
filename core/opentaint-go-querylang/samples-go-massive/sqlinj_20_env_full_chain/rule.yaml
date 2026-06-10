@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-20-env-full-chain
+    languages: [go]
+    severity: WARNING
+    message: Tainted env through long chain reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("Q")
+    pattern-sinks:
+      - pattern: sqlinj_20_env_full_chain.Sink_DbQuery($X)

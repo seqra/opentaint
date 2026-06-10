@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-return-not-inside-prefix
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturnNotInsidePrefix (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleReturnNotInsidePrefix.MkType2($X)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleReturnNotInsidePrefix.Clean($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleReturnNotInsidePrefix.MkType1($X)"

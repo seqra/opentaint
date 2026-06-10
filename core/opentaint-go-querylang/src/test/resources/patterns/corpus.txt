@@ -1,0 +1,1540 @@
+===PATTERN===
+$DB.Exec($QUERY,...)
+===END===
+===PATTERN===
+$DB.ExecContent($QUERY,...)
+===END===
+===PATTERN===
+$DB.Query($QUERY,...)
+===END===
+===PATTERN===
+$DB.QueryContext($QUERY,...)
+===END===
+===PATTERN===
+$DB.QueryRow($QUERY,...)
+===END===
+===PATTERN===
+$DB.QueryRowContext($QUERY,...)
+===END===
+===PATTERN===
+import "database/sql"
+...
+===END===
+===PATTERN===
+func $HANDLER($CTX $CTXTYPE, $EVENT $TYPE, ...) {...}
+...
+lambda.Start($HANDLER, ...)
+===END===
+===PATTERN===
+func $HANDLER($EVENT $TYPE) {...}
+...
+lambda.Start($HANDLER, ...)
+===END===
+===PATTERN===
+func $HANDLER($EVENT context.Context) {...}
+...
+lambda.Start($HANDLER, ...)
+===END===
+===PATTERN===
+"$SQLSTR" + ...
+===END===
+===PATTERN===
+fmt.Fprintf($F, "$SQLSTR", ...)
+===END===
+===PATTERN===
+fmt.Sprintf("$SQLSTR", ...)
+===END===
+===PATTERN===
+fmt.Printf("$SQLSTR", ...)
+===END===
+===PATTERN===
+log.$PRINT(...)
+===END===
+===PATTERN===
+strconv.Atoi(...)
+===END===
+===PATTERN===
+$VM = otto.New(...)
+...
+===END===
+===PATTERN===
+$VM.Run("...", ...)
+===END===
+===PATTERN===
+$VM.Run(...)
+===END===
+===PATTERN===
+import "github.com/golang-jwt/jwt"
+...
+===END===
+===PATTERN===
+import "github.com/dgrijalva/jwt-go"
+...
+===END===
+===PATTERN===
+jwt.SigningMethodNone
+===END===
+===PATTERN===
+jwt.UnsafeAllowNoneSignatureType
+===END===
+===PATTERN===
+[]byte("$F")
+===END===
+===PATTERN===
+$TOKEN.SignedString($F)
+===END===
+===PATTERN===
+$JWT.ParseUnverified(...)
+===END===
+===PATTERN===
+&sessions.Options{
+  ...,
+  HttpOnly: true,
+  ...,
+}
+===END===
+===PATTERN===
+&sessions.Options{
+  ...,
+}
+===END===
+===PATTERN===
+&sessions.Options{
+  ...,
+  SameSite: http.SameSiteNoneMode,
+  ...,
+}
+===END===
+===PATTERN===
+import ("github.com/gorilla/websocket")
+...
+===END===
+===PATTERN===
+$UPGRADER = websocket.Upgrader{..., CheckOrigin: $FN ,...}
+...
+===END===
+===PATTERN===
+$UPGRADER.CheckOrigin = $FN2
+...
+===END===
+===PATTERN===
+$UPGRADER.Upgrade(...)
+===END===
+===PATTERN===
+&sessions.Options{
+  ...,
+  Secure: true,
+  ...,
+}
+===END===
+===PATTERN===
+func $HANDLER(..., $R *http.Request, ...) {
+  ...
+}
+===END===
+===PATTERN===
+$R.query
+===END===
+===PATTERN===
+$Y, err := store.Get(...)
+...
+$VAR := $Y.Values[...]
+...
+$VAR = $R
+===END===
+===PATTERN===
+$Y, err := store.Get(...)
+...
+var $VAR $INT = $Y.Values["..."].($INT)
+...
+$VAR = $R
+===END===
+===PATTERN===
+ioutil.WriteFile("=~//tmp/.*$/", ...)
+===END===
+===PATTERN===
+os.Create("=~//tmp/.*$/", ...)
+===END===
+===PATTERN===
+os.WriteFile("=~//tmp/.*$/", ...)
+===END===
+===PATTERN===
+import "net/url"
+...
+===END===
+===PATTERN===
+... = url.Parse(...)
+...
+===END===
+===PATTERN===
+... = url.ParseRequestURI(...)
+...
+===END===
+===PATTERN===
+... = url.URL{...}
+...
+===END===
+===PATTERN===
+var $URL *$X.URL
+...
+===END===
+===PATTERN===
+$URL.RawQuery = ...
+===END===
+===PATTERN===
+$URL.Path = ...
+===END===
+===PATTERN===
+$URL.RawPath = ...
+===END===
+===PATTERN===
+$URL.Fragment = ...
+===END===
+===PATTERN===
+$URL.RawFragment = ...
+===END===
+===PATTERN===
+$URL.Scheme = ...
+===END===
+===PATTERN===
+$URL.Opaque = ...
+===END===
+===PATTERN===
+$URL.Host = ...
+===END===
+===PATTERN===
+$URL.User = ...
+===END===
+===PATTERN===
+reader, $ERR := zip.OpenReader($ARCHIVE)
+...
+for _, $FILE := range reader.File {
+  ...
+  path := filepath.Join($TARGET, $FILE.Name)
+  ...
+}
+===END===
+===PATTERN===
+import "net/http/httputil"
+...
+===END===
+===PATTERN===
+$PROXY.Director = $FUNC
+===END===
+===PATTERN===
+httputil.ReverseProxy{
+    ...
+}
+===END===
+===PATTERN===
+Director: $FUNC
+===END===
+===PATTERN===
+($REQUEST : *http.Request).$ANYTHING
+===END===
+===PATTERN===
+($REQUEST : http.Request).$ANYTHING
+===END===
+===PATTERN===
+filepath.Clean($...INNER)
+===END===
+===PATTERN===
+path.Clean($...INNER)
+===END===
+===PATTERN===
+"/" + ...
+===END===
+===PATTERN===
+io.Copy(...)
+===END===
+===PATTERN===
+io.CopyBuffer(...)
+===END===
+===PATTERN===
+gzip.NewReader(...)
+...
+===END===
+===PATTERN===
+zlib.NewReader(...)
+...
+===END===
+===PATTERN===
+zlib.NewReaderDict(...)
+...
+===END===
+===PATTERN===
+bzip2.NewReader(...)
+...
+===END===
+===PATTERN===
+flate.NewReader(...)
+...
+===END===
+===PATTERN===
+flate.NewReaderDict(...)
+...
+===END===
+===PATTERN===
+lzw.NewReader(...)
+...
+===END===
+===PATTERN===
+tar.NewReader(...)
+...
+===END===
+===PATTERN===
+zip.NewReader(...)
+...
+===END===
+===PATTERN===
+zip.OpenReader(...)
+...
+===END===
+===PATTERN===
+var $VAR interface{}
+...
+json.Unmarshal($DATA, &$VAR)
+===END===
+===PATTERN===
+var $VAR interface{}
+...
+yaml.Unmarshal($DATA, &$VAR)
+===END===
+===PATTERN===
+var $VAR interface{}
+...
+xml.Unmarshal($DATA, &$VAR)
+===END===
+===PATTERN===
+"$URLSTR" + $INPUT
+===END===
+===PATTERN===
+fmt.Fprintf($F, "$URLSTR", $INPUT, ...)
+===END===
+===PATTERN===
+fmt.Sprintf("$URLSTR", $INPUT, ...)
+===END===
+===PATTERN===
+fmt.Printf("$URLSTR", $INPUT, ...)
+===END===
+===PATTERN===
+$CLIENT := &http.Client{...}
+...
+===END===
+===PATTERN===
+$CLIENT.$METHOD($URL, ...)
+===END===
+===PATTERN===
+http.$METHOD($URL, ...)
+===END===
+===PATTERN===
+http.NewRequest("$METHOD", $URL, ...)
+===END===
+===PATTERN===
+html.EscapeString(...)
+===END===
+===PATTERN===
+fmt.Printf("$HTMLSTR", ...)
+===END===
+===PATTERN===
+fmt.Sprintf("$HTMLSTR", ...)
+===END===
+===PATTERN===
+fmt.Fprintf($W, "$HTMLSTR", ...)
+===END===
+===PATTERN===
+"$HTMLSTR" + ...
+===END===
+===PATTERN===
+$VAR = "$SQLSTR";
+...
+===END===
+===PATTERN===
+$VAR += ...
+===END===
+===PATTERN===
+var $SB strings.Builder
+...
+===END===
+===PATTERN===
+$SB.WriteString("$SQLSTR")
+...
+$SB.String(...)
+===END===
+===PATTERN===
+$SB.WriteString(...)
+===END===
+===PATTERN===
+($X: bool)
+===END===
+===PATTERN===
+http.Redirect($W, $REQ, $URL, ...)
+===END===
+===PATTERN===
+md5.New
+===END===
+===PATTERN===
+md5.Sum
+===END===
+===PATTERN===
+$FUNCTION(...)
+===END===
+===PATTERN===
+reflect.MakeFunc(...)
+===END===
+===PATTERN===
+$CW.Write($BYTE)
+===END===
+===PATTERN===
+$CW,$ERR := $CMD.StdinPipe()
+...
+===END===
+===PATTERN===
+$CW.Write("...")
+===END===
+===PATTERN===
+$CW.Write([]byte("..."))
+===END===
+===PATTERN===
+$CW.Write([]byte("..."+"..."))
+===END===
+===PATTERN===
+$BYTE = []byte("...");
+...
+===END===
+===PATTERN===
+$BYTE = []byte("..."+"...");
+...
+===END===
+===PATTERN===
+import "os/exec"
+...
+===END===
+===PATTERN===
+exec.Command($CMD,...)
+===END===
+===PATTERN===
+exec.CommandContext($CTX,$CMD,...)
+===END===
+===PATTERN===
+exec.Command("...",...)
+===END===
+===PATTERN===
+exec.CommandContext($CTX,"...",...)
+===END===
+===PATTERN===
+exec.Command("=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$CMD,...)
+===END===
+===PATTERN===
+exec.CommandContext($CTX,"=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$CMD,...)
+===END===
+===PATTERN===
+exec.Command("...","...","...",...)
+===END===
+===PATTERN===
+exec.CommandContext($CTX,"...","...","...",...)
+===END===
+===PATTERN===
+exec.Command("=~/\/bin\/env/","=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$CMD,...)
+===END===
+===PATTERN===
+exec.CommandContext($CTX,"=~/\/bin\/env/","=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$CMD,...)
+===END===
+===PATTERN===
+$CMD,$ERR := exec.LookPath("...");
+...
+===END===
+===PATTERN===
+$CMD = "...";
+...
+===END===
+===PATTERN===
+$SMTH.MethodByName($NAME,...)
+===END===
+===PATTERN===
+$SMTH.FieldByName($NAME,...)
+===END===
+===PATTERN===
+$SMTH.MethodByName("...",...)
+===END===
+===PATTERN===
+$SMTH.FieldByName("...",...)
+===END===
+===PATTERN===
+import "reflect"
+...
+===END===
+===PATTERN===
+unsafe.$FUNC(...)
+===END===
+===PATTERN===
+exec.Cmd {...,Path: $CMD,...}
+===END===
+===PATTERN===
+exec.Cmd {...,Path: "...",...}
+===END===
+===PATTERN===
+exec.Cmd {...,Args: $ARGS,...}
+===END===
+===PATTERN===
+exec.Cmd {...,Args: []string{...},...}
+===END===
+===PATTERN===
+$ARGS = []string{"...",...};
+...
+===END===
+===PATTERN===
+$CMD = "...";
+...
+$ARGS = []string{$CMD,...};
+...
+===END===
+===PATTERN===
+$CMD = exec.LookPath("...");
+...
+$ARGS = []string{$CMD,...};
+...
+===END===
+===PATTERN===
+exec.Cmd {...,Args: []string{$CMD,...},...}
+===END===
+===PATTERN===
+exec.Cmd {...,Args: []string{"...",...},...}
+===END===
+===PATTERN===
+exec.Cmd {...,Args: []string{"=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$EXE,...},...}
+===END===
+===PATTERN===
+exec.Cmd {...,Args: []string{$CMD,"-c",$EXE,...},...}
+===END===
+===PATTERN===
+$CMD,$ERR := exec.LookPath("=~/(sh|bash|ksh|csh|tcsh|zsh)/");
+...
+===END===
+===PATTERN===
+exec.Cmd {...,Args: []string{"...","...","...",...},...}
+===END===
+===PATTERN===
+$EXE = "...";
+...
+===END===
+===PATTERN===
+syscall.$METHOD($BIN,...)
+===END===
+===PATTERN===
+syscall.$METHOD("...",...)
+===END===
+===PATTERN===
+$BIN,$ERR := exec.LookPath("...");
+...
+===END===
+===PATTERN===
+$BIN = "...";
+...
+===END===
+===PATTERN===
+syscall.$METHOD($BIN,$ARGS,...)
+===END===
+===PATTERN===
+syscall.$METHOD($BIN,[]string{"...",...},...)
+===END===
+===PATTERN===
+$ARGS := []string{"...",...};
+...
+===END===
+===PATTERN===
+$CMD,$ERR := exec.LookPath("...");
+...
+$ARGS = []string{$CMD,...};
+...
+===END===
+===PATTERN===
+syscall.$METHOD($BIN,[]string{"=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$EXE,...},...)
+===END===
+===PATTERN===
+syscall.$METHOD($BIN,[]string{"...","...","...",...},...)
+===END===
+===PATTERN===
+$ARGS := []string{"=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$EXE,...};
+...
+===END===
+===PATTERN===
+$CMD = "=~/(sh|bash|ksh|csh|tcsh|zsh)/";
+...
+$ARGS = []string{$CMD,"-c",$EXE,...};
+...
+===END===
+===PATTERN===
+$CMD,$ERR := exec.LookPath("=~/(sh|bash|ksh|csh|tcsh|zsh)/");
+...
+$ARGS = []string{$CMD,"-c",$EXE,...};
+...
+===END===
+===PATTERN===
+$ARGS := []string{"...","...","...",...};
+...
+===END===
+===PATTERN===
+$CMD = "...";
+...
+$ARGS = []string{$CMD,"...","...",...};
+...
+===END===
+===PATTERN===
+$CMD,$ERR := exec.LookPath("...");
+...
+$ARGS = []string{$CMD,"...","...",...};
+...
+===END===
+===PATTERN===
+import "syscall"
+...
+===END===
+===PATTERN===
+import ("github.com/lestrrat-go/libxml2/parser")
+...
+===END===
+===PATTERN===
+$PARSER := parser.New(parser.XMLParseNoEnt)
+===END===
+===PATTERN===
+func $FUNC(..., $W http.ResponseWriter, ...) {
+  ...
+  var $TEMPLATE = "..."
+  ...
+  $W.Write([]byte(fmt.$PRINTF($TEMPLATE, ...)), ...)
+  ...
+}
+===END===
+===PATTERN===
+$PARAMS = r.URL.Query()
+...
+$DATA, $ERR := $PARAMS[...]
+...
+$INTERM = $ANYTHING(..., $DATA, ...)
+...
+$W.Write([]byte(fmt.$PRINTF(..., $INTERM, ...)))
+===END===
+===PATTERN===
+$PARAMS = r.URL.Query()
+...
+$DATA, $ERR := $PARAMS[...]
+...
+$INTERM = $DATA[...]
+...
+$W.Write([]byte(fmt.$PRINTF(..., $INTERM, ...)))
+===END===
+===PATTERN===
+$DATA, $ERR := r.URL.Query()[...]
+...
+$INTERM = $DATA[...]
+...
+$W.Write([]byte(fmt.$PRINTF(..., $INTERM, ...)))
+===END===
+===PATTERN===
+$DATA, $ERR := r.URL.Query()[...]
+...
+$INTERM = $ANYTHING(..., $DATA, ...)
+...
+$W.Write([]byte(fmt.$PRINTF(..., $INTERM, ...)))
+===END===
+===PATTERN===
+$PARAMS = r.URL.Query()
+...
+$DATA, $ERR := $PARAMS[...]
+...
+$W.Write([]byte(fmt.$PRINTF(..., $DATA, ...)))
+===END===
+===PATTERN===
+package $PACKAGE
+...
+&httptrace.ClientTrace { ... }
+...
+===END===
+===PATTERN===
+httptrace.WithClientTrace($ANY, $TRACE)
+===END===
+===PATTERN===
+tls.Listen($NETWORK, "=~/^0.0.0.0:.*$/", ...)
+===END===
+===PATTERN===
+net.Listen($NETWORK, "=~/^0.0.0.0:.*$/", ...)
+===END===
+===PATTERN===
+tls.Listen($NETWORK, "=~/^:.*$/", ...)
+===END===
+===PATTERN===
+net.Listen($NETWORK, "=~/^:.*$/", ...)
+===END===
+===PATTERN===
+$FS := http.FileServer(...)
+...
+===END===
+===PATTERN===
+http.ListenAndServe(..., $FS)
+===END===
+===PATTERN===
+http.ListenAndServeTLS(..., $FS)
+===END===
+===PATTERN===
+http.Handle(..., $FS)
+===END===
+===PATTERN===
+http.HandleFunc(..., $FS)
+===END===
+===PATTERN===
+http.$FN(..., http.FileServer(...))
+===END===
+===PATTERN===
+template.HTMLAttr($T + $X, ...)
+===END===
+===PATTERN===
+template.HTMLAttr(fmt.$P("...", ...), ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$T = $FXN(..., $T, ...)
+...
+template.HTMLAttr($T, ...)
+===END===
+===PATTERN===
+$T = fmt.$P("...", ...)
+...
+template.HTMLAttr($T, ...)
+===END===
+===PATTERN===
+$T, $ERR = fmt.$P("...", ...)
+...
+template.HTMLAttr($T, ...)
+===END===
+===PATTERN===
+$T = $X + $Y
+...
+template.HTMLAttr($T, ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$OTHER, $ERR = fmt.$P(..., $T, ...)
+...
+template.HTMLAttr($OTHER, ...)
+===END===
+===PATTERN===
+template.HTML("..." + "...")
+===END===
+===PATTERN===
+template.HTML($T + $X, ...)
+===END===
+===PATTERN===
+template.HTML(fmt.$P("...", ...), ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$T = $FXN(..., $T, ...)
+...
+template.HTML($T, ...)
+===END===
+===PATTERN===
+$T = fmt.$P("...", ...)
+...
+template.HTML($T, ...)
+===END===
+===PATTERN===
+$T, $ERR = fmt.$P("...", ...)
+...
+template.HTML($T, ...)
+===END===
+===PATTERN===
+$T = $X + $Y
+...
+template.HTML($T, ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$OTHER, $ERR = fmt.$P(..., $T, ...)
+...
+template.HTML($OTHER, ...)
+===END===
+===PATTERN===
+import _ "net/http/pprof"
+...
+===END===
+===PATTERN===
+func $ANY(...) {
+  ...
+}
+===END===
+===PATTERN===
+$MUX = http.NewServeMux(...)
+...
+http.ListenAndServe($ADDR, $MUX)
+===END===
+===PATTERN===
+http.ListenAndServe("=~/^localhost.*/", ...)
+===END===
+===PATTERN===
+http.ListenAndServe("=~/^127[.]0[.]0[.]1.*/", ...)
+===END===
+===PATTERN===
+http.ListenAndServe(...)
+===END===
+===PATTERN===
+http.Cookie{
+  ...,
+  Secure: true,
+  ...,
+}
+===END===
+===PATTERN===
+http.Cookie{
+  ...,
+}
+===END===
+===PATTERN===
+template.JS($T + $X, ...)
+===END===
+===PATTERN===
+template.JS(fmt.$P("...", ...), ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$T = $FXN(..., $T, ...)
+...
+template.JS($T, ...)
+===END===
+===PATTERN===
+$T = fmt.$P("...", ...)
+...
+template.JS($T, ...)
+===END===
+===PATTERN===
+$T, $ERR = fmt.$P("...", ...)
+...
+template.JS($T, ...)
+===END===
+===PATTERN===
+$T = $X + $Y
+...
+template.JS($T, ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$OTHER, $ERR = fmt.$P(..., $T, ...)
+...
+template.JS($OTHER, ...)
+===END===
+===PATTERN===
+template.URL($T + $X, ...)
+===END===
+===PATTERN===
+template.URL(fmt.$P("...", ...), ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$T = $FXN(..., $T, ...)
+...
+template.URL($T, ...)
+===END===
+===PATTERN===
+$T = fmt.$P("...", ...)
+...
+template.URL($T, ...)
+===END===
+===PATTERN===
+$T, $ERR = fmt.$P("...", ...)
+...
+template.URL($T, ...)
+===END===
+===PATTERN===
+$T = $X + $Y
+...
+template.URL($T, ...)
+===END===
+===PATTERN===
+$T = "..."
+...
+$OTHER, $ERR = fmt.$P(..., $T, ...)
+...
+template.URL($OTHER, ...)
+===END===
+===PATTERN===
+http.Cookie{
+  ...,
+  HttpOnly: true,
+  ...,
+}
+===END===
+===PATTERN===
+http.ListenAndServe($ADDR, $HANDLER)
+===END===
+===PATTERN===
+$DB.$METHOD(...,$QUERY,...)
+===END===
+===PATTERN===
+$QUERY = $X + $Y
+...
+===END===
+===PATTERN===
+$QUERY += $X
+...
+===END===
+===PATTERN===
+$QUERY = fmt.Sprintf("...", $PARAM1, ...)
+...
+===END===
+===PATTERN===
+$QUERY += "..."
+...
+===END===
+===PATTERN===
+$QUERY = "..." + "..."
+...
+===END===
+===PATTERN===
+$DB.$METHOD(..., $X + $Y, ...)
+===END===
+===PATTERN===
+$DB.$METHOD(..., fmt.Sprintf("...", $PARAM1, ...), ...)
+===END===
+===PATTERN===
+$DB, ... = pgx.Connect(...)
+...
+===END===
+===PATTERN===
+$DB, ... = pgx.NewConnPool(...)
+...
+===END===
+===PATTERN===
+$DB, ... = pgx.ConnectConfig(...)
+...
+===END===
+===PATTERN===
+func $FUNCNAME(..., $DB *pgx.Conn, ...) {
+  ...
+}
+===END===
+===PATTERN===
+$DB.$METHOD(..., "..." + "...", ...)
+===END===
+===PATTERN===
+$DB, ... = sql.Open(...)
+...
+===END===
+===PATTERN===
+func $FUNCNAME(..., $DB *sql.DB, ...) {
+  ...
+}
+===END===
+===PATTERN===
+import (
+  ...
+  "$IMPORT"
+)
+...
+===END===
+===PATTERN===
+$DB.$INTFUNC1(...).$METHOD(..., $X + $Y, ...).$INTFUNC2(...)
+===END===
+===PATTERN===
+$DB.$METHOD(..., fmt.Sprintf("...", $PARAM1, ...), ...)
+===END===
+===PATTERN===
+$DB = pg.Connect(...)
+...
+===END===
+===PATTERN===
+func $FUNCNAME(..., $DB *pg.DB, ...) {
+  ...
+}
+===END===
+===PATTERN===
+$QUERY = fmt.Sprintf("...", ...,"...", ...)
+...
+===END===
+===PATTERN===
+$DB.$METHOD(...,"...",...)
+===END===
+===PATTERN===
+$DB.$INTFUNC1(...).$METHOD(..., "...", ...).$INTFUNC2(...)
+===END===
+===PATTERN===
+$QUERY = "..." + "..."
+===END===
+===PATTERN===
+"..."
+===END===
+===PATTERN===
+path.Join(...)
+===END===
+===PATTERN===
+filepath.Join(...)
+===END===
+===PATTERN===
+$DB.$METHOD(...,$QUERY,...)
+===END===
+===PATTERN===
+func $HANDLER(..., $WRITER http.ResponseWriter, ...) {
+  ...
+}
+===END===
+===PATTERN===
+func(..., $WRITER http.ResponseWriter, ...) {
+  ...
+}
+===END===
+===PATTERN===
+$WRITER.Write(<... fmt.$PRINTF(...) ...>, ...)
+===END===
+===PATTERN===
+io.WriteString($WRITER, "...")
+===END===
+===PATTERN===
+io.WriteString($WRITER, $STRING)
+===END===
+===PATTERN===
+fmt.$PRINTF($WRITER, "...")
+===END===
+===PATTERN===
+fmt.$PRINTF($WRITER, ...)
+===END===
+===PATTERN===
+<{{ ... }} ... >
+===END===
+===PATTERN===
+template.$ANY("..." + "...")
+===END===
+===PATTERN===
+template.$ANY("...")
+===END===
+===PATTERN===
+template.HTML(...)
+===END===
+===PATTERN===
+template.CSS(...)
+===END===
+===PATTERN===
+template.HTMLAttr(...)
+===END===
+===PATTERN===
+template.JS(...)
+===END===
+===PATTERN===
+template.JSStr(...)
+===END===
+===PATTERN===
+template.Srcset(...)
+===END===
+===PATTERN===
+template.URL(...)
+===END===
+===PATTERN===
+func $HANDLER(..., $WRITER *http.ResponseWriter, ...) {
+  ...
+}
+===END===
+===PATTERN===
+$WRITER.Write(...)
+===END===
+===PATTERN===
+(*$WRITER).Write(...)
+===END===
+===PATTERN===
+$WRITER.Write([]byte("..."))
+===END===
+===PATTERN===
+<script ...> ... ... ... ... ... </script>
+===END===
+===PATTERN===
+` ... {{ ... }} ...`
+===END===
+===PATTERN===
+import "$IMPORT"
+===END===
+===PATTERN===
+import "crypto/md5"
+...
+===END===
+===PATTERN===
+md5.New()
+===END===
+===PATTERN===
+md5.Sum(...)
+===END===
+===PATTERN===
+import "crypto/sha1"
+...
+===END===
+===PATTERN===
+sha1.New()
+===END===
+===PATTERN===
+sha1.Sum(...)
+===END===
+===PATTERN===
+import "crypto/des"
+...
+===END===
+===PATTERN===
+des.NewTripleDESCipher(...)
+===END===
+===PATTERN===
+des.NewCipher(...)
+===END===
+===PATTERN===
+import "crypto/rc4"
+...
+===END===
+===PATTERN===
+rc4.NewCipher(...)
+===END===
+===PATTERN===
+import $RAND "$MATH"
+===END===
+===PATTERN===
+import "$MATH"
+===END===
+===PATTERN===
+...
+rand.$FUNC(...)
+===END===
+===PATTERN===
+...
+$RAND.$FUNC(...)
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_RSA_WITH_RC4_128_SHA, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_RSA_WITH_AES_128_CBC_SHA256, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, ...}}
+===END===
+===PATTERN===
+tls.Config{..., CipherSuites: []$TYPE{..., tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, ...}}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_RSA_WITH_RC4_128_SHA, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_RSA_WITH_3DES_EDE_CBC_SHA, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_RSA_WITH_AES_128_CBC_SHA256, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_ECDHE_RSA_WITH_RC4_128_SHA, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, ...}
+===END===
+===PATTERN===
+tls.CipherSuite{..., TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, ...}
+===END===
+===PATTERN===
+tls.Config{ $...CONF }
+===END===
+===PATTERN===
+tls.Config{..., MinVersion: ..., ...}
+===END===
+===PATTERN===
+tls.Config{..., MinVersion: $TLS.VersionSSL30, ...}
+===END===
+===PATTERN===
+import "net/http/cgi"
+...
+===END===
+===PATTERN===
+cgi.$FUNC(...)
+===END===
+===PATTERN===
+ssh.InsecureIgnoreHostKey()
+===END===
+===PATTERN===
+import "crypto/sha256"
+...
+===END===
+===PATTERN===
+sha256.New224()
+===END===
+===PATTERN===
+sha256.Sum224(...)
+===END===
+===PATTERN===
+import "golang.org/x/crypto/sha3"
+...
+===END===
+===PATTERN===
+sha3.New224()
+===END===
+===PATTERN===
+sha3.Sum224(...)
+===END===
+===PATTERN===
+rsa.GenerateKey(..., $BITS)
+===END===
+===PATTERN===
+rsa.GenerateMultiPrimeKey(..., $BITS)
+===END===
+===PATTERN===
+$VAR = "..." + "..."
+...
+$OBJ.$SINK(..., $VAR, ...)
+===END===
+===PATTERN===
+$OBJ.Exec("...")
+===END===
+===PATTERN===
+$OBJ.ExecContext($CTX, "...")
+===END===
+===PATTERN===
+$OBJ.Query("...")
+===END===
+===PATTERN===
+$OBJ.QueryContext($CTX, "...")
+===END===
+===PATTERN===
+$OBJ.QueryRow("...")
+===END===
+===PATTERN===
+$OBJ.QueryRow($CTX, "...")
+===END===
+===PATTERN===
+$OBJ.QueryRowContext($CTX, "...")
+===END===
+===PATTERN===
+$OBJ.Exec($X + ...)
+===END===
+===PATTERN===
+$OBJ.ExecContext($CTX, $X + ...)
+===END===
+===PATTERN===
+$OBJ.Query($X + ...)
+===END===
+===PATTERN===
+$OBJ.QueryContext($CTX, $X + ...)
+===END===
+===PATTERN===
+$OBJ.QueryRow($X + ...)
+===END===
+===PATTERN===
+$OBJ.QueryRow($CTX, $X + ...)
+===END===
+===PATTERN===
+$OBJ.QueryRowContext($CTX, $X + ...)
+===END===
+===PATTERN===
+$OBJ.Exec(fmt.$P("...", ...))
+===END===
+===PATTERN===
+$OBJ.ExecContext($CTX, fmt.$P("...", ...))
+===END===
+===PATTERN===
+$OBJ.Query(fmt.$P("...", ...))
+===END===
+===PATTERN===
+$OBJ.QueryContext($CTX, fmt.$P("...", ...))
+===END===
+===PATTERN===
+$OBJ.QueryRow(fmt.$P("...", ...))
+===END===
+===PATTERN===
+$OBJ.QueryRow($CTX, fmt.$U("...", ...))
+===END===
+===PATTERN===
+$OBJ.QueryRowContext($CTX, fmt.$P("...", ...))
+===END===
+===PATTERN===
+$QUERY = fmt.Fprintf($F, "$SQLSTR", ...)
+===END===
+===PATTERN===
+$QUERY = fmt.Sprintf("$SQLSTR", ...)
+===END===
+===PATTERN===
+$QUERY = fmt.Printf("$SQLSTR", ...)
+===END===
+===PATTERN===
+$QUERY = $X + ...
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.Query($QUERY, ...)
+    ...
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.ExecContext($CTX, $QUERY, ...)
+    ...
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.Exec($QUERY, ...)
+    ...
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.QueryRow($CTX, $QUERY)
+    ...
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.QueryRow($QUERY)
+    ...
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.QueryContext($CTX, $QUERY)
+    ...
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+    ...
+    $OBJ.QueryRowContext($CTX, $QUERY, ...)
+    ...
+}
+===END===
+===PATTERN===
+for _, $VALUE := range $SOURCE {
+  <... &($VALUE) ...>
+}
+===END===
+===PATTERN===
+for _, $VALUE := range $SOURCE {
+  <... func() { <... &$VALUE ...> } ...>
+}
+===END===
+===PATTERN===
+for _, $VALUE := range $SOURCE {
+  <... $ANYTHING(..., <... &$VALUE ...>, ...) ...>
+}
+===END===
+===PATTERN===
+($STR : string)
+===END===
+===PATTERN===
+import "path"
+...
+===END===
+===PATTERN===
+path.$FUNC(...)
+===END===
+===PATTERN===
+import "path/filepath"
+...
+===END===
+===PATTERN===
+filepath.$FUNC(...)
+===END===
+===PATTERN===
+url.Parse(...)
+...
+===END===
+===PATTERN===
+assert(...)
+===END===
+===PATTERN===
+$X == $X
+===END===
+===PATTERN===
+$X != $X
+===END===
+===PATTERN===
+1 == 1
+===END===
+===PATTERN===
+if (true) { ... }
+===END===
+===PATTERN===
+if (false) { ... }
+===END===
+===PATTERN===
+os.Chmod($NAME, $PERM)
+===END===
+===PATTERN===
+os.Mkdir($NAME, $PERM)
+===END===
+===PATTERN===
+os.OpenFile($NAME, $FLAG, $PERM)
+===END===
+===PATTERN===
+os.MkdirAll($NAME, $PERM)
+===END===
+===PATTERN===
+ioutil.WriteFile($NAME, $DATA, $PERM)
+===END===
+===PATTERN===
+$F, $ERR := strconv.Atoi($NUM)
+...
+int16($F)
+===END===
+===PATTERN===
+$F, $ERR := strconv.Atoi($NUM)
+...
+int32($F)
+===END===
+===PATTERN===
+if ($X) {
+    ...
+} else if ($X) {
+    ...
+}
+===END===
+===PATTERN===
+if ($X) {
+    $S
+} else {
+    $S
+}
+===END===
+===PATTERN===
+$MUX.Lock()
+$VALUE <- $CHANNEL
+$MUX.Unlock()
+===END===
+===PATTERN===
+$MUX.Lock()
+$VALUE = <- $CHANNEL
+$MUX.Unlock()
+===END===
+===PATTERN===
+func $FUNC(...) {
+  go func() {
+    ...
+  }(...)
+  $MORE
+}
+===END===
+===PATTERN===
+func $FUNC(...) {
+  go func() {
+    ...
+  }(...)
+}
+===END===
+===PATTERN===
+grpc.NewServer($OPT, ...)
+===END===
+===PATTERN===
+grpc.NewServer()
+===END===
+===PATTERN===
+grpc.ServerOption{ ... }
+===END===
+===PATTERN===
+grpc.Creds(...)
+===END===
+===PATTERN===
+$GRPC.Dial($ADDR, ..., $GRPC.WithInsecure(...), ...)
+===END===
+===PATTERN===
+import ("gorm.io/gorm")
+...
+===END===
+===PATTERN===
+func $VAL(..., $GORM *gorm.DB,... ) {
+  ...
+}
+===END===
+===PATTERN===
+$GORM. ... .$METHOD($VALUE)
+===END===
+===PATTERN===
+$DB := $GORM. ... .$ANYTHING(...)
+...
+$DB. ... .$METHOD($VALUE)
+===END===
+===PATTERN===
+import ("html/template")
+...
+===END===
+===PATTERN===
+$TEMPLATE = fmt.Sprintf("...", $ARG, ...)
+===END===
+===PATTERN===
+func $FN(..., $REQ *http.Request, ...){
+...
+}
+===END===
+===PATTERN===
+func $FN(..., $REQ http.Request, ...){
+...
+}
+===END===
+===PATTERN===
+func(..., $REQ *http.Request, ...){
+...
+}
+===END===
+===PATTERN===
+$ARG := $REQ.URL.Query().Get(...)
+...
+$T, $ERR := $TMPL.Parse($TEMPLATE)
+===END===
+===PATTERN===
+$ARG := $REQ.Form.Get(...)
+...
+$T, $ERR := $TMPL.Parse($TEMPLATE)
+===END===
+===PATTERN===
+$ARG := $REQ.PostForm.Get(...)
+...
+$T, $ERR := $TMPL.Parse($TEMPLATE)
+===END===
+===PATTERN===
+import "html/template"
+...
+===END===
+===PATTERN===
+var $VAR template.HTML = $EXP
+===END===
+===PATTERN===
+var $VAR template.CSS = $EXP
+===END===
+===PATTERN===
+var $VAR template.HTMLAttr = $EXP
+===END===
+===PATTERN===
+var $VAR template.JS = $EXP
+===END===
+===PATTERN===
+var $VAR template.JSStr = $EXP
+===END===
+===PATTERN===
+var $VAR template.Srcset = $EXP
+===END===

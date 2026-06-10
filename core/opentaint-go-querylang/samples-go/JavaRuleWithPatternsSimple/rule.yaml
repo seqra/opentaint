@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-patterns-simple
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithPatternsSimple (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithPatternsSimple.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithPatternsSimple.Sink($X)"

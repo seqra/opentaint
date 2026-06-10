@@ -1,0 +1,10 @@
+rules:
+  - id: deser-20-variadic-sprintf-xml
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value flows through fmt.Sprintf variadic args into xml.Unmarshal
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-01-env-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("USER_ID")
+    pattern-sinks:
+      - pattern: sqlinj_01_env_basic.Sink_DbQuery($X)

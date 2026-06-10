@@ -1,0 +1,10 @@
+rules:
+  - id: xss-16-third-party-renderer
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches xss_16_third_party_renderer.Sink_HtmlOutput (3rd-party templating renderer, XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: xss_16_third_party_renderer.Sink_HtmlOutput($X)

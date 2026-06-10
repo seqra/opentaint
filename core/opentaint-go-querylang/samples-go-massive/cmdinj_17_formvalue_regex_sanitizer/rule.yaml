@@ -1,0 +1,12 @@
+rules:
+  - id: cmdinj-17-formvalue-regex-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches exec.Command unless regex-sanitized (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: cmdinj_17_formvalue_regex_sanitizer.Sink_ExecCommand($X)
+    pattern-sanitizers:
+      - pattern: regexp.MustCompile($P).ReplaceAllString($V, $R2)

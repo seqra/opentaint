@@ -6,6 +6,7 @@ rootProject.name = "opentaint-jvm-sast"
 
 include("opentaint-java-querylang")
 include("opentaint-java-querylang:samples")
+include("opentaint-go-querylang")
 include("samples")
 
 fun DependencySubstitutions.substituteProjects(group: String, projects: List<String>) {
@@ -16,13 +17,27 @@ fun DependencySubstitutions.substituteProjects(group: String, projects: List<Str
 
 includeBuild("opentaint-configuration-rules") {
     dependencySubstitution {
-        substituteProjects("org.opentaint.opentaint-configuration-rules", listOf("configuration-rules-common", "configuration-rules-jvm"))
+        substituteProjects(
+            "org.opentaint.opentaint-configuration-rules",
+            listOf(
+                "configuration-rules-common",
+                "configuration-rules-jvm",
+                "configuration-rules-go",
+            )
+        )
     }
 }
 
 includeBuild("opentaint-dataflow-core") {
     dependencySubstitution {
-        substituteProjects("org.opentaint.opentaint-dataflow-core", listOf("opentaint-dataflow", "opentaint-jvm-dataflow"))
+        substituteProjects(
+            "org.opentaint.opentaint-dataflow-core",
+            listOf(
+                "opentaint-dataflow",
+                "opentaint-jvm-dataflow",
+                "opentaint-go-dataflow",
+            )
+        )
     }
 }
 
@@ -37,6 +52,15 @@ includeBuild("opentaint-ir") {
             "opentaint-ir-storage",
         )
         substituteProjects("org.opentaint.ir", modules)
+
+        val goModules = listOf(
+            "go-ir-api",
+            "go-ir-client"
+        )
+
+        for (module in goModules) {
+            substitute(module("org.opentaint.ir.go:$module")).using(project(":go:$module"))
+        }
     }
 }
 
@@ -71,10 +95,8 @@ includeBuild("opentaint-utils") {
 
 includeBuild("opentaint-config") {
     dependencySubstitution {
-        val modules = listOf(
-            "java-config",
-        )
-        substituteProjects("org.opentaint.config", modules)
+        substitute(module("org.opentaint.config:java-config")).using(project(":java-config"))
+        substitute(module("org.opentaint.config:go-config")).using(project(":go-config"))
     }
 }
 

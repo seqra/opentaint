@@ -1,0 +1,10 @@
+rules:
+  - id: xss-07-json-field-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted form-derived JSON field reaches w.Write (stored XSS pattern)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

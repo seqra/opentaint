@@ -1,0 +1,12 @@
+rules:
+  - id: java-cleaner-after-sink-0
+    languages: [go]
+    severity: ERROR
+    message: match example/CleanerAfterSink0 (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaCleanerAfterSink0.Source()"
+    pattern-sanitizers:
+      - pattern: "JavaCleanerAfterSink0.Clean($X)"
+    pattern-sinks:
+      - pattern: "JavaCleanerAfterSink0.Sink($X)"

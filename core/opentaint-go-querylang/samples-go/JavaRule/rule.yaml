@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule
+    languages: [go]
+    severity: ERROR
+    message: match example/Rule (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRule.Source(...)"
+    pattern-sanitizers:
+      - pattern: "JavaRule.Clean($X)"
+    pattern-sinks:
+      - pattern: "JavaRule.Sink($X)"

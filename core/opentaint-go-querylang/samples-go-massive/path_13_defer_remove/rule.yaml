@@ -1,0 +1,10 @@
+rules:
+  - id: path-13-defer-remove
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches deferred os.Remove (path traversal at cleanup)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("TMP_FILE")
+    pattern-sinks:
+      - pattern: os.Remove($P)

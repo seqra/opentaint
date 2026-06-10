@@ -1,0 +1,12 @@
+rules:
+  - id: creds-17-env-redact-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: SECRET env var reaches log output unless redacted (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("SECRET")
+    pattern-sinks:
+      - pattern: creds_17_env_redact_sanitizer.Sink_LogOutput($X)
+    pattern-sanitizers:
+      - pattern: redact($V)

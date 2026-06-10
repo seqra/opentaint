@@ -1,0 +1,13 @@
+rules:
+  - id: nil-check
+    languages: [go]
+    severity: WARNING
+    message: "Taint reaches Sink without a nil check"
+    mode: taint
+    pattern-sources:
+      - pattern: "NilCheck.Source(...)"
+    pattern-sanitizers:
+      - pattern: "NilCheck.IsNil($X)"
+        by-side-effect: true
+    pattern-sinks:
+      - pattern: "NilCheck.Sink($X)"

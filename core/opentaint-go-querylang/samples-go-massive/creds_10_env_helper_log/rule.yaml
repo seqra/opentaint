@@ -1,0 +1,10 @@
+rules:
+  - id: creds-10-env-helper-log
+    languages: [go]
+    severity: WARNING
+    message: STRIPE_KEY env var reaches log output through helper (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("STRIPE_KEY")
+    pattern-sinks:
+      - pattern: creds_10_env_helper_log.Sink_LogOutput($X)

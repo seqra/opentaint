@@ -1,0 +1,40 @@
+passThrough:
+- function:
+    package: encoding/base64
+    name: NewDecoder
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: encoding/base64
+    type: Encoding
+    name: Decode
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: encoding/base64
+    type: Encoding
+    name: Encode
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: encoding/base64
+    type: Encoding
+    name: EncodeToString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: encoding/base64
+    type: Encoding
+    name: DecodeString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)

@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-06-query-trim
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query trimmed into MongoDB Find filter (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: nosql_06_query_trim.Sink_MongoFind($X)

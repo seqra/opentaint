@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-06-env-helper1
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via helper reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("TOOL")
+    pattern-sinks:
+      - pattern: cmdinj_06_env_helper1.Sink_ExecCommand($X)

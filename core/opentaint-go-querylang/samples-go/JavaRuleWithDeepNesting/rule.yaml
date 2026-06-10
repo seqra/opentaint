@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-deep-nesting
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithDeepNesting (Go port, recast)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithDeepNesting.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithDeepNesting.Sink($X)"

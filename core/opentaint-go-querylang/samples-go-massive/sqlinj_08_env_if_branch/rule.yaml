@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-08-env-if-branch
+    languages: [go]
+    severity: WARNING
+    message: Tainted env in one if-branch reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("MODE")
+    pattern-sinks:
+      - pattern: sqlinj_08_env_if_branch.Sink_DbQuery($X)

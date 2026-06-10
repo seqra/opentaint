@@ -31,10 +31,24 @@ tasks {
     }
 }
 
+val goSamplesSourceSet = sourceSets.create("goSamples") {
+    resources.setSrcDirs(listOf("src/main/go"))
+}
+
+val goSamples by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = false
+}
+
 tasks.jar {
     from(sourceSets.main.get().allSource) {
         include("**/*.java")
         include("**/*.kt")
+    }
+
+    from(goSamplesSourceSet.resources) {
+        include("**/*.go")
+        include("**/*.mod")
     }
 }
 

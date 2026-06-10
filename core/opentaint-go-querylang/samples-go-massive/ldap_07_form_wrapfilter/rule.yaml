@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-07-form-wrapfilter
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue passes through wrapFilter into LDAP search (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: ldap_07_form_wrapfilter.Sink_LdapSearch($X)

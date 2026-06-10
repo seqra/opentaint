@@ -1,0 +1,10 @@
+rules:
+  - id: loginj-01-env-logprintf
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches log.Printf (log injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("USER_NAME")
+    pattern-sinks:
+      - pattern: log.Printf($FMT, $X)

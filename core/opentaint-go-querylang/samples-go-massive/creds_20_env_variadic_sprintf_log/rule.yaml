@@ -1,0 +1,10 @@
+rules:
+  - id: creds-20-env-variadic-sprintf-log
+    languages: [go]
+    severity: WARNING
+    message: REFRESH_TOKEN env var reaches log via variadic fmt.Sprintf (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("REFRESH_TOKEN")
+    pattern-sinks:
+      - pattern: creds_20_env_variadic_sprintf_log.Sink_LogOutput($X)

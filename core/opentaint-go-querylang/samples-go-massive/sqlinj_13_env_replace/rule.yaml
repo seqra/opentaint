@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-13-env-replace
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via strings.Replace reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("FILTER")
+    pattern-sinks:
+      - pattern: sqlinj_13_env_replace.Sink_DbQuery($X)

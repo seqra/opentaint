@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-concrete-return-type
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithConcreteReturnType (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithConcreteReturnType.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithConcreteReturnType.Sink($X)"

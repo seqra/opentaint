@@ -1,0 +1,10 @@
+rules:
+  - id: path-12-loop-remove
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value split into slice; each iteration calls os.Remove (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: os.Remove($P)

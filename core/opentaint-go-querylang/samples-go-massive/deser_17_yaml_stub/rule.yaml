@@ -1,0 +1,10 @@
+rules:
+  - id: deser-17-yaml-stub
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches deser_17_yaml_stub.Sink_DecodeYAML (yaml deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: deser_17_yaml_stub.Sink_DecodeYAML($DATA, $TARGET)

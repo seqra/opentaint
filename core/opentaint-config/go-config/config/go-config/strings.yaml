@@ -1,0 +1,261 @@
+passThrough:
+- function:
+    package: strings
+    name: Fields
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: FieldsFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: Join
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: strings
+    name: Map
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: strings
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: Repeat
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: Replace
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: Replace
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result
+- function:
+    package: strings
+    name: ReplaceAll
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: ReplaceAll
+    receiver: false
+  copy:
+  - from: arg(2)
+    to: result
+- function:
+    package: strings
+    name: Split
+    receiver: false
+  copy:
+  - from: arg(0)
+    to:
+      - result
+      - '[*]'
+- function:
+    package: strings
+    name: SplitAfter
+    receiver: false
+  copy:
+  - from: arg(0)
+    to:
+      - result
+      - '[*]'
+- function:
+    package: strings
+    name: SplitAfterN
+    receiver: false
+  copy:
+  - from: arg(0)
+    to:
+      - result
+      - '[*]'
+- function:
+    package: strings
+    name: SplitN
+    receiver: false
+  copy:
+  - from: arg(0)
+    to:
+      - result
+      - '[*]'
+- function:
+    package: strings
+    name: Title
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: ToLower
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: ToLowerSpecial
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: strings
+    name: ToTitle
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: ToTitleSpecial
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: strings
+    name: ToUpper
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: ToUpperSpecial
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result
+- function:
+    package: strings
+    name: ToValidUTF8
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: strings
+    name: Trim
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimLeft
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimLeftFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimPrefix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimRight
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimRightFunc
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimSpace
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    name: TrimSuffix
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    type: Reader
+    name: Reset
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: strings
+    type: Replacer
+    name: Replace
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: strings
+    type: Replacer
+    name: WriteString
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: strings
+    name: NewReplacer
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

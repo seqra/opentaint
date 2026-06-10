@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-01-env-get
+    languages: [go]
+    severity: WARNING
+    message: Tainted env value reaches http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: http.Get($U)

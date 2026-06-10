@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-05-header-trim
+    languages: [go]
+    severity: WARNING
+    message: Tainted HTTP header reaches exec.LookPath (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: cmdinj_05_header_trim.Sink_ExecLookPath($X)

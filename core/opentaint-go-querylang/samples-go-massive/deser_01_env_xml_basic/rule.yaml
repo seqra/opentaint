@@ -1,0 +1,10 @@
+rules:
+  - id: deser-01-env-xml-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted env value reaches xml.Unmarshal (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

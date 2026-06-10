@@ -1,0 +1,10 @@
+rules:
+  - id: path-16-helper-sink-fileread
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches path_16_helper_sink_fileread.Sink_FileRead (third-party file-read API; path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: path_16_helper_sink_fileread.Sink_FileRead($P)

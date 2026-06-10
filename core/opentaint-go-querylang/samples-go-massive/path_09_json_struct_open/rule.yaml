@@ -1,0 +1,10 @@
+rules:
+  - id: path-09-json-struct-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted stdin JSON body decoded into struct, then field reaches os.Open
+    mode: taint
+    pattern-sources:
+      - pattern: $UNTRUSTED, _ = bufio.NewReader(os.Stdin).ReadString($X)
+    pattern-sinks:
+      - pattern: os.Open($P)

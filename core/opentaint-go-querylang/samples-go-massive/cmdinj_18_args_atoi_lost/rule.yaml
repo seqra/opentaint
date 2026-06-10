@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-18-args-atoi-lost
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args reaches exec.Command, but Atoi loses taint (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: cmdinj_18_args_atoi_lost.Sink_ExecCommand($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: path-11-branch-remove
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches os.Remove on a conditional branch (path traversal -> delete)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("PURGE")
+    pattern-sinks:
+      - pattern: os.Remove($P)

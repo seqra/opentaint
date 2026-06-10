@@ -1,0 +1,10 @@
+rules:
+  - id: source-url-rawquery
+    languages: [go]
+    severity: WARNING
+    message: "Taint from r.URL.RawQuery reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "$R.URL.RawQuery"
+    pattern-sinks:
+      - pattern: "SourceUrlRawQuery.Sink($X)"

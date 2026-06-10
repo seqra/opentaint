@@ -1,0 +1,10 @@
+rules:
+  - id: java-nd-rule
+    languages: [go]
+    severity: ERROR
+    message: match example/NDRule (Go port, two sources joined via pass)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaNDRule.Source()"
+    pattern-sinks:
+      - pattern: "JavaNDRule.Sink($X)"

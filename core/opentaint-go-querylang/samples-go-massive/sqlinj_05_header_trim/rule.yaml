@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-05-header-trim
+    languages: [go]
+    severity: WARNING
+    message: Tainted HTTP header reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: sqlinj_05_header_trim.Sink_DbQuery($X)

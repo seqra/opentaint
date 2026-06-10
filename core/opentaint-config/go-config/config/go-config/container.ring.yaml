@@ -1,0 +1,41 @@
+passThrough:
+- function:
+    package: container/ring
+    type: Ring
+    name: Link
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: container/ring
+    type: Ring
+    name: Move
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: container/ring
+    type: Ring
+    name: Next
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: container/ring
+    type: Ring
+    name: Prev
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: container/ring
+    type: Ring
+    name: Unlink
+    receiver: true
+  copy:
+  - from: this
+    to: result

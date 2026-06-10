@@ -1,0 +1,9 @@
+passThrough:
+- function:
+    package: crypto
+    type: Decrypter
+    name: Decrypt
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: result(0)

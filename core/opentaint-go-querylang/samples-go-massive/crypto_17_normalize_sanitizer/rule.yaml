@@ -1,0 +1,12 @@
+rules:
+  - id: crypto-17-normalize-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches md5.Sum unless normalizeKey allowlists it
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: md5.Sum($X)
+    pattern-sanitizers:
+      - pattern: crypto_17_normalize_sanitizer.normalizeKey($V)

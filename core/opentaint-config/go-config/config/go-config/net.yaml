@@ -1,0 +1,194 @@
+passThrough:
+- function:
+    package: net
+    name: FileConn
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net
+    name: FilePacketConn
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net
+    name: JoinHostPort
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: net
+    name: SplitHostPort
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: net
+    type: IPConn
+    name: ReadFromIP
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net
+    type: IPConn
+    name: ReadMsgIP
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+  - from: this
+    to: arg(1)
+- function:
+    package: net
+    type: IPConn
+    name: WriteMsgIP
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net
+    type: IPConn
+    name: WriteToIP
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: net
+    type: PacketConn
+    name: ReadFrom
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net
+    type: PacketConn
+    name: WriteTo
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: net
+    type: TCPListener
+    name: File
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net
+    type: UDPConn
+    name: ReadFromUDP
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net
+    type: UDPConn
+    name: ReadMsgUDP
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+  - from: this
+    to: arg(1)
+- function:
+    package: net
+    type: UDPConn
+    name: WriteMsgUDP
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net
+    type: UDPConn
+    name: WriteToUDP
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: net
+    type: UnixConn
+    name: ReadFromUnix
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: net
+    type: UnixConn
+    name: ReadMsgUnix
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+  - from: this
+    to: arg(1)
+- function:
+    package: net
+    type: UnixConn
+    name: WriteMsgUnix
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net
+    type: UnixConn
+    name: WriteToUnix
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: net
+    type: UnixListener
+    name: File
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net
+    name: FileConn
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)
+- function:
+    package: net
+    name: FilePacketConn
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)
+- function:
+    package: net
+    name: Pipe
+    receiver: false
+  copy:
+  - from: result(0)
+    to: result(*)

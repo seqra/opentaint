@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-12-query-closure
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query inside closure reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: sqlinj_12_query_closure.Sink_DbQuery($X)

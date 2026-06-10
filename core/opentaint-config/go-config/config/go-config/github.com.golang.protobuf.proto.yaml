@@ -1,0 +1,29 @@
+passThrough:
+- function:
+    package: github.com/golang/protobuf/proto
+    name: Clone
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: github.com/golang/protobuf/proto
+    name: Marshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/golang/protobuf/proto
+    name: Merge
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: github.com/golang/protobuf/proto
+    name: Unmarshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)

@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-03-formvalue-lower
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches db.Query (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: sqlinj_03_formvalue_lower.Sink_DbQuery($X)

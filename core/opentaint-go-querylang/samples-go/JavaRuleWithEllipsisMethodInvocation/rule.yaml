@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-ellipsis-method-invocation
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithEllipsisMethodInvocation (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithEllipsisMethodInvocation.Source(...)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithEllipsisMethodInvocation.Sink($X, ...)"

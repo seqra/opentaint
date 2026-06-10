@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-11-env-defer
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via defer reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("WORK")
+    pattern-sinks:
+      - pattern: cmdinj_11_env_defer.Sink_ExecCommand($X)

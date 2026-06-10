@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-18-env-rand-seed
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches predictable RNG seed (math/rand seed sink)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: crypto_18_env_rand_seed.Sink_RandSeed($X)

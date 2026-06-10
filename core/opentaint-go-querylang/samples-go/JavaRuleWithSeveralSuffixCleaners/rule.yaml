@@ -1,0 +1,13 @@
+rules:
+  - id: java-rule-with-several-suffix-cleaners
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithSeveralSuffixCleaners (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.Source(...)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.Clean1($X)"
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.Clean2($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithSeveralSuffixCleaners.F($X)"

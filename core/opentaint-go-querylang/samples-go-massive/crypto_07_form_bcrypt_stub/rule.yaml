@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-07-form-bcrypt-stub
+    languages: [go]
+    severity: WARNING
+    message: Tainted password reaches BcryptHash sink (password hash sink)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: crypto_07_form_bcrypt_stub.Sink_BcryptHash($X)

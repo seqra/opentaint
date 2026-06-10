@@ -1,16 +1,24 @@
 import OpentaintConfigDependency.opentaintJavaConfig
+import OpentaintConfigDependency.opentaintGoConfig
+import OpentaintIrDependency.opentaint_ir_api_go
 import OpentaintIrDependency.opentaint_ir_api_jvm
 import OpentaintIrDependency.opentaint_ir_api_storage
 import OpentaintIrDependency.opentaint_ir_approximations
 import OpentaintIrDependency.opentaint_ir_core
+import OpentaintIrDependency.opentaint_ir_core_go
 import OpentaintIrDependency.opentaint_ir_storage
 import OpentaintProjectDependency.opentaintProject
 import OpentaintUtilDependency.opentaintUtilCli
 import OpentaintUtilDependency.opentaintUtilJvm
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
 import org.opentaint.common.resolveIncludedProjectTask
+import org.opentaint.common.ensureGoEnvInitialized
+import org.opentaint.common.goEnvironment
+import org.opentaint.common.setupOpentaintGoEnvironment
 
 plugins {
     id("kotlin-conventions")
@@ -23,14 +31,17 @@ dependencies {
     implementation(opentaintUtilCli)
     implementation(opentaintProject)
     implementation(opentaintJavaConfig)
+    implementation(opentaintGoConfig)
 
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
+    implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-go")
     implementation("org.opentaint.opentaint-dataflow-core:opentaint-jvm-dataflow")
     implementation("org.opentaint.sast.se:api")
 
     implementation("org.opentaint.sast:project")
     implementation("org.opentaint.sast:dataflow")
     implementation(project(":opentaint-java-querylang"))
+    implementation(project(":opentaint-go-querylang"))
 
     implementation(opentaint_ir_api_jvm)
     implementation(opentaint_ir_core)
@@ -53,6 +64,10 @@ dependencies {
     implementation(Libs.jdot)
 
     testCompileOnly(project("samples"))
+
+    implementation(opentaint_ir_api_go)
+    implementation(opentaint_ir_core_go)
+    implementation("org.opentaint.opentaint-dataflow-core:opentaint-go-dataflow")
 }
 
 val testSamples by configurations.creating
@@ -63,6 +78,7 @@ dependencies {
 
 tasks.withType<Test> {
     dependsOn(project("samples").tasks.withType<Jar>())
+    ensureGoEnvInitialized()
 
     doFirst {
         val resolvedTestSamples = testSamples.resolve()
@@ -70,11 +86,20 @@ tasks.withType<Test> {
         val testDependencies = resolvedTestSamples.filter { it.name != "samples.jar" }
         environment("TEST_SAMPLES_JAR", testSamplesJar.absolutePath)
         environment("TEST_DEPENDENCIES_JAR", testDependencies.joinToString(File.pathSeparator) { it.absolutePath })
+
+        goEnvironment().forEach { (key, value) -> environment(key, value) }
     }
 }
 
 tasks.withType<JavaCompile> {
     sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+}
+
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
 }
 
 val projectAnalyzerJar = tasks.register<ShadowJar>("projectAnalyzerJar") {
@@ -92,6 +117,7 @@ fun JavaExec.configureAnalyzer(analyzerRunnerClassName: String) {
     classpath = sourceSets.main.get().runtimeClasspath
 
     ensureSeEnvInitialized()
+    ensureGoEnvInitialized()
 
     doFirst {
         val envVars = analyzerEnvironment()
@@ -132,6 +158,7 @@ fun ShadowJar.jarWithDependencies(name: String, mainClass: String) {
 fun analyzerEnvironment(): Map<String, Any> {
     val analyzerEnv = mutableMapOf<String, Any>()
     setupOpentaintSeEnvironment(analyzerEnv)
+    setupOpentaintGoEnvironment(analyzerEnv)
     return analyzerEnv
 }
 

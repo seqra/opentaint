@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-03-form-sprintf
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue formatted into LDAP search filter (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: ldap_03_form_sprintf.Sink_LdapSearch($X)

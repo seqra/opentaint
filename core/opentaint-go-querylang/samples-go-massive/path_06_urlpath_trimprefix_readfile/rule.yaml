@@ -1,0 +1,10 @@
+rules:
+  - id: path-06-urlpath-trimprefix-readfile
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query value passes through strings.TrimPrefix then reaches os.ReadFile
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: os.ReadFile($P)

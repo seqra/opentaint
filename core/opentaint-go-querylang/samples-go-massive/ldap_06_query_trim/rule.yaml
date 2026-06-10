@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-06-query-trim
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query trimmed into LDAP search filter (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: ldap_06_query_trim.Sink_LdapSearch($X)

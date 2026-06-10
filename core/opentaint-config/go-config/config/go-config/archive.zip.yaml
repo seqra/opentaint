@@ -1,0 +1,53 @@
+passThrough:
+- function:
+    package: archive/zip
+    name: FileInfoHeader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: archive/zip
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: archive/zip
+    name: OpenReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: archive/zip
+    type: File
+    name: Open
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: archive/zip
+    type: File
+    name: OpenRaw
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: archive/zip
+    type: Writer
+    name: Copy
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: archive/zip
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

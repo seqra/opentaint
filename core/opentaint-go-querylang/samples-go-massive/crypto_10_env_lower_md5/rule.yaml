@@ -1,0 +1,10 @@
+rules:
+  - id: crypto-10-env-lower-md5
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via strings.ToLower reaches md5.Sum (weak hash)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: md5.Sum($X)

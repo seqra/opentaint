@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-18-args-atoi-lost
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args reaches db.Exec, but Atoi loses taint (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: sqlinj_18_args_atoi_lost.Sink_DbExec($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: source-beego-ctx-input
+    languages: [go]
+    severity: WARNING
+    message: "Taint from Ctx.Input.Query reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "$X.Query($K)"
+    pattern-sinks:
+      - pattern: "SourceBeegoCtxInput.Sink($X)"

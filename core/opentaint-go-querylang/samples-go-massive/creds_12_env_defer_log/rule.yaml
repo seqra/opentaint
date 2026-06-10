@@ -1,0 +1,10 @@
+rules:
+  - id: creds-12-env-defer-log
+    languages: [go]
+    severity: WARNING
+    message: SLACK_TOKEN env var reaches deferred log output (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("SLACK_TOKEN")
+    pattern-sinks:
+      - pattern: creds_12_env_defer_log.Sink_LogOutput($X)

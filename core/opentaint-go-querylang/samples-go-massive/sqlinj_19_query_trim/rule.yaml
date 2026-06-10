@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-19-query-trim
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query trimmed reaches db.QueryRow (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: sqlinj_19_query_trim.Sink_DbQueryRow($X)

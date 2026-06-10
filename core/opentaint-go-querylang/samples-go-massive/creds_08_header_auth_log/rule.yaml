@@ -1,0 +1,10 @@
+rules:
+  - id: creds-08-header-auth-log
+    languages: [go]
+    severity: WARNING
+    message: Authorization header reaches log output (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get("Authorization")
+    pattern-sinks:
+      - pattern: creds_08_header_auth_log.Sink_LogOutput($X)

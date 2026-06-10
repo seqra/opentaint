@@ -1,0 +1,12 @@
+rules:
+  - id: hdrinj-02-env-redirect-concat
+    languages: [go]
+    severity: WARNING
+    message: Tainted env concatenated into http.Redirect URL (header injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("PATH_NEXT")
+    pattern-sinks:
+      - patterns:
+          - pattern: http.Redirect($W, $R, $URL, $CODE)
+          - focus-metavariable: $URL

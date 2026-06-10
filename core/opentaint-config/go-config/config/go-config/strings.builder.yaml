@@ -1,0 +1,41 @@
+passThrough:
+- function:
+    package: strings
+    type: Builder
+    name: WriteString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: strings
+    type: Builder
+    name: Write
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: strings
+    type: Builder
+    name: WriteByte
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: strings
+    type: Builder
+    name: WriteRune
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: strings
+    type: Builder
+    name: String
+    receiver: true
+  copy:
+  - from: this
+    to: result

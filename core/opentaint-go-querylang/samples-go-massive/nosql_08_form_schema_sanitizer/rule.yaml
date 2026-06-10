@@ -1,0 +1,12 @@
+rules:
+  - id: nosql-08-form-schema-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches MongoDB Find unless schema-validated (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: nosql_08_form_schema_sanitizer.Sink_MongoFind($X)
+    pattern-sanitizers:
+      - pattern: validateSchema($V)

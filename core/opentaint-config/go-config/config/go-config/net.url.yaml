@@ -1,0 +1,193 @@
+passThrough:
+- function:
+    package: net/url
+    name: Parse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/url
+    name: ParseQuery
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/url
+    name: ParseRequestURI
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/url
+    name: PathEscape
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/url
+    name: PathUnescape
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/url
+    name: QueryEscape
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/url
+    name: QueryUnescape
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/url
+    name: User
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/url
+    name: UserPassword
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: EscapedPath
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: Hostname
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: MarshalBinary
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/url
+    type: URL
+    name: Parse
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/url
+    type: URL
+    name: Parse
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: net/url
+    type: URL
+    name: Port
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: Query
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: RequestURI
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: ResolveReference
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: URL
+    name: String
+    receiver: true
+  copy:
+    - from: this
+      to: result
+- function:
+    package: net/url
+    type: URL
+    name: ResolveReference
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/url
+    type: Userinfo
+    name: Password
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/url
+    type: Userinfo
+    name: Username
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: Values
+    name: Encode
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    type: Values
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/url
+    name: JoinPath
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result(0)

@@ -1,0 +1,10 @@
+rules:
+  - id: creds-09-env-tolower-log
+    languages: [go]
+    severity: WARNING
+    message: API_TOKEN env var reaches log output via strings.ToLower (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("API_TOKEN")
+    pattern-sinks:
+      - pattern: creds_09_env_tolower_log.Sink_LogOutput($X)

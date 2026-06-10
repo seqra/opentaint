@@ -1,0 +1,86 @@
+passThrough:
+- function:
+    package: github.com/jmoiron/sqlx
+    name: MapScan
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/jmoiron/sqlx
+    name: SliceScan
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    name: StructScan
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: ColScanner
+    name: Scan
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Row
+    name: MapScan
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Row
+    name: Scan
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Row
+    name: SliceScan
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Row
+    name: StructScan
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Rows
+    name: MapScan
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Rows
+    name: SliceScan
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: github.com/jmoiron/sqlx
+    type: Rows
+    name: StructScan
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)

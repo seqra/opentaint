@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-09-args-switch
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args via switch reaches bash -c (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: cmdinj_09_args_switch.Sink_ExecBash($X)

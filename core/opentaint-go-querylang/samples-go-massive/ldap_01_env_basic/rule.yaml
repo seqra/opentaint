@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-01-env-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches LDAP search filter (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("LDAP_UID")
+    pattern-sinks:
+      - pattern: ldap_01_env_basic.Sink_LdapSearch($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: path-01-env-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches os.Open (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("FILE")
+    pattern-sinks:
+      - pattern: os.Open($P)

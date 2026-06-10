@@ -1,0 +1,12 @@
+rules:
+  - id: cmdinj-16-env-branch-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches exec.Command unless sanitized in branch (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("ARG")
+    pattern-sinks:
+      - pattern: cmdinj_16_env_branch_sanitizer.Sink_ExecCommand($X)
+    pattern-sanitizers:
+      - pattern: cmdinj_16_env_branch_sanitizer.shellEscape($V)

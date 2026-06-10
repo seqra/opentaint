@@ -1,0 +1,14 @@
+rules:
+  - id: ssti-template-parse
+    languages: [go]
+    severity: WARNING
+    message: "Tainted value parsed as a template source (SSTI)"
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: template.New($N).Parse($SRC)
+              - pattern: template.Must(template.New($N).Parse($SRC))
+          - focus-metavariable: $SRC

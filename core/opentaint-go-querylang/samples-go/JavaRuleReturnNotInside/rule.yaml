@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-return-not-inside
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturnNotInside (Go port, recast as call-based)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleReturnNotInside.Source(...)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleReturnNotInside.Sanitize($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleReturnNotInside.Sink($X)"

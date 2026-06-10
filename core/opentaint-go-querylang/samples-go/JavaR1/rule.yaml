@@ -1,0 +1,10 @@
+rules:
+  - id: java-r1
+    languages: [go]
+    severity: ERROR
+    message: match example/R1 (Go port, recast as source-sink return)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaR1.Source()"
+    pattern-sinks:
+      - pattern: "JavaR1.Sink($X)"

@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-without-pattern
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithoutPattern (Go port, recast)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithoutPattern.Source(...)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithoutPattern.Method($X)"

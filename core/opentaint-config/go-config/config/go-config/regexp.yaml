@@ -1,0 +1,180 @@
+passThrough:
+- function:
+    package: regexp
+    name: QuoteMeta
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: Expand
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+  - from: arg(2)
+    to: arg(0)
+- function:
+    package: regexp
+    type: Regexp
+    name: Expand
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ExpandString
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+  - from: arg(2)
+    to: arg(0)
+- function:
+    package: regexp
+    type: Regexp
+    name: ExpandString
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: Find
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindAll
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindAllString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindAllStringSubmatch
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindAllSubmatch
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindStringSubmatch
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: FindSubmatch
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ReplaceAll
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ReplaceAllFunc
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ReplaceAllLiteral
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ReplaceAllLiteralString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ReplaceAllString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: ReplaceAllStringFunc
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: regexp
+    type: Regexp
+    name: Split
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result

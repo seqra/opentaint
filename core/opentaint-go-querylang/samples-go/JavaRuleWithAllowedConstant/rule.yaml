@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-allowed-constant
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithAllowedConstant (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithAllowedConstant.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern: "JavaRuleWithAllowedConstant.Sink($X)"
+          - pattern-not: "JavaRuleWithAllowedConstant.Sink(\"...\")"

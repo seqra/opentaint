@@ -1,0 +1,150 @@
+passThrough:
+- function:
+    package: bufio
+    name: NewReadWriter
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bufio
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bufio
+    name: NewReaderSize
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bufio
+    name: NewScanner
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: bufio
+    name: ScanBytes
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: bufio
+    name: ScanLines
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: bufio
+    name: ScanRunes
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: bufio
+    name: ScanWords
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: bufio
+    type: Reader
+    name: Peek
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bufio
+    type: Reader
+    name: ReadBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bufio
+    type: Reader
+    name: ReadLine
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bufio
+    type: Reader
+    name: ReadSlice
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bufio
+    type: Reader
+    name: ReadString
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: bufio
+    type: Reader
+    name: Reset
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: bufio
+    type: Scanner
+    name: Bytes
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: bufio
+    type: Scanner
+    name: Text
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: bufio
+    type: Writer
+    name: Reset
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: bufio
+    name: NewReadWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(1)
+- function:
+    package: bufio
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: bufio
+    name: NewWriterSize
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

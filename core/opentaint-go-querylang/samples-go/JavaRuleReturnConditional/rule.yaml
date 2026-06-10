@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-return-conditional
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturnConditional (Go port, recast as call-based)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleReturnConditional.Source(...)"
+    pattern-sinks:
+      - pattern: "JavaRuleReturnConditional.Sink($X)"

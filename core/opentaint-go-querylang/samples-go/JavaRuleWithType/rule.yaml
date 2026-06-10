@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-type
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithType (Go port, distinct foos per receiver)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithType.MakeSimple()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithType.FooSimple($X)"

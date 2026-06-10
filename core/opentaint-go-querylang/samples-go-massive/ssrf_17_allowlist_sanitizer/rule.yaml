@@ -1,0 +1,12 @@
+rules:
+  - id: ssrf-17-allowlist-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL reaches http.Get unless passed through allowed-host check (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)
+    pattern-sanitizers:
+      - pattern: ssrf_17_allowlist_sanitizer.assertAllowedHost($V)

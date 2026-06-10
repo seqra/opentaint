@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-04-form-concat
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue concatenated into LDAP search filter (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: ldap_04_form_concat.Sink_LdapSearch($X)

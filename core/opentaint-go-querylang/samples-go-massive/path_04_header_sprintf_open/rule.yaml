@@ -1,0 +1,10 @@
+rules:
+  - id: path-04-header-sprintf-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted HTTP header reaches os.Open via fmt.Sprintf path (path traversal)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: os.Open($P)

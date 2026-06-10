@@ -1,0 +1,10 @@
+rules:
+  - id: creds-07-form-password-log
+    languages: [go]
+    severity: WARNING
+    message: Password form value reaches log output (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue("password")
+    pattern-sinks:
+      - pattern: creds_07_form_password_log.Sink_LogOutput($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: deser-10-branch-json
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches json.Unmarshal on if-branch (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: json.Unmarshal($DATA, $TARGET)

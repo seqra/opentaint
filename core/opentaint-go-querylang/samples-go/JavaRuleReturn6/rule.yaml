@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-return-6
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturn6 (Go port — source-without-sink semantics)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleReturn6.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleReturn6.Sink($X)"

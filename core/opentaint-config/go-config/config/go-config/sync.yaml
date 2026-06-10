@@ -1,0 +1,98 @@
+passThrough:
+- function:
+    package: sync
+    type: Map
+    name: CompareAndSwap
+    receiver: true
+  copy:
+  - from: arg(2)
+    to:
+    - this
+    - .<map>#<value>
+    - '[*]'
+- function:
+    package: sync
+    type: Map
+    name: Load
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .<map>#<value>
+    - '[*]'
+    to: result(0)
+- function:
+    package: sync
+    type: Map
+    name: LoadOrStore
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .<map>#<value>
+    - '[*]'
+    to: result(0)
+  - from: arg(0)
+    to:
+    - this
+    - .<map>#<key>
+    - '[*]'
+  - from: arg(1)
+    to:
+    - this
+    - .<map>#<value>
+    - '[*]'
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: sync
+    type: Map
+    name: Store
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .<map>#<key>
+    - '[*]'
+  - from: arg(1)
+    to:
+    - this
+    - .<map>#<value>
+    - '[*]'
+- function:
+    package: sync
+    type: Map
+    name: Swap
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .<map>#<value>
+    - '[*]'
+    to: result(0)
+  - from: arg(1)
+    to:
+    - this
+    - .<map>#<value>
+    - '[*]'
+- function:
+    package: sync
+    type: Pool
+    name: Get
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .sync.Pool#<element>
+    to: result
+- function:
+    package: sync
+    type: Pool
+    name: Put
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .sync.Pool#<element>

@@ -1,0 +1,12 @@
+rules:
+  - id: crypto-14-form-cbc-iv
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches cipher.NewCBCEncrypter IV arg (predictable IV)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - patterns:
+          - pattern: cipher.NewCBCEncrypter($BLOCK, $IV)
+          - focus-metavariable: $IV

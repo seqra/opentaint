@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-02-env-concat
+    languages: [go]
+    severity: WARNING
+    message: Tainted env concatenated into LDAP search filter (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("LDAP_CN")
+    pattern-sinks:
+      - pattern: ldap_02_env_concat.Sink_LdapSearch($X)

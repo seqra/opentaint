@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-07-args-helper2
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args via two-hop helper reaches db.Exec (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: sqlinj_07_args_helper2.Sink_DbExec($X)

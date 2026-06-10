@@ -1,0 +1,10 @@
+rules:
+  - id: creds-15-env-telemetry
+    languages: [go]
+    severity: WARNING
+    message: SESSION_KEY env var sent to telemetry helper (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("SESSION_KEY")
+    pattern-sinks:
+      - pattern: creds_15_env_telemetry.Sink_SendTelemetry($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-real-inside-sequence
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithRealInsideSequence (Go port — ObjectMapper-like sequence)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithRealInsideSequence.EnableDefaultTyping($OM)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithRealInsideSequence.ReadValue($X)"

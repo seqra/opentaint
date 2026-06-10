@@ -1,0 +1,31 @@
+passThrough:
+- function:
+    package: github.com/json-iterator/go
+    name: Unmarshal
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/json-iterator/go
+    name: UnmarshalFromString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/json-iterator/go
+    type: API
+    name: Unmarshal
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+- function:
+    package: github.com/json-iterator/go
+    type: API
+    name: UnmarshalFromString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: arg(1)

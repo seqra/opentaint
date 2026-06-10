@@ -1,0 +1,120 @@
+passThrough:
+- function:
+    package: golang.org/x/net/html
+    name: EscapeString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: golang.org/x/net/html
+    name: NewTokenizer
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: golang.org/x/net/html
+    name: NewTokenizerFragment
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: golang.org/x/net/html
+    name: Parse
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/html
+    name: ParseFragment
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/html
+    name: ParseFragmentWithOptions
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/html
+    name: ParseWithOptions
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: golang.org/x/net/html
+    name: Render
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: golang.org/x/net/html
+    name: UnescapeString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: golang.org/x/net/html
+    type: Node
+    name: AppendChild
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: golang.org/x/net/html
+    type: Node
+    name: InsertBefore
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: golang.org/x/net/html
+    type: Tokenizer
+    name: Buffered
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: golang.org/x/net/html
+    type: Tokenizer
+    name: Raw
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: golang.org/x/net/html
+    type: Tokenizer
+    name: TagAttr
+    receiver: true
+  copy:
+  - from: this
+    to: result(1)
+- function:
+    package: golang.org/x/net/html
+    type: Tokenizer
+    name: Text
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: golang.org/x/net/html
+    type: Tokenizer
+    name: Token
+    receiver: true
+  copy:
+  - from: this
+    to: result

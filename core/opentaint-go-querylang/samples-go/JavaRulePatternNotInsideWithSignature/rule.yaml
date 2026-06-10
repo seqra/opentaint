@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-pattern-not-inside-with-signature
+    languages: [go]
+    severity: ERROR
+    message: match example/RulePatternNotInsideWithSignature (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRulePatternNotInsideWithSignature.Source()"
+    pattern-sinks:
+      - pattern: "JavaRulePatternNotInsideWithSignature.Sink($X)"

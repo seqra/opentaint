@@ -1,0 +1,12 @@
+rules:
+  - id: sqlinj-17-formvalue-regex-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches db.Query unless regex-sanitized (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: sqlinj_17_formvalue_regex_sanitizer.Sink_DbQuery($X)
+    pattern-sanitizers:
+      - pattern: regexp.MustCompile($P).ReplaceAllString($V, $R2)

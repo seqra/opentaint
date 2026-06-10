@@ -1,0 +1,12 @@
+rules:
+  - id: ssrf-08-stdin-post
+    languages: [go]
+    severity: WARNING
+    message: Tainted stdin-read URL reaches http.Post (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $UNTRUSTED, _ = bufio.NewReader(os.Stdin).ReadString($X)
+    pattern-sinks:
+      - patterns:
+          - pattern: http.Post($URL, $CT, $BODY)
+          - focus-metavariable: $URL

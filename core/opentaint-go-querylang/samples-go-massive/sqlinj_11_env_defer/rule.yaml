@@ -1,0 +1,10 @@
+rules:
+  - id: sqlinj-11-env-defer
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via defer reaches db.Exec (SQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("CLEANUP")
+    pattern-sinks:
+      - pattern: sqlinj_11_env_defer.Sink_DbExec($X)

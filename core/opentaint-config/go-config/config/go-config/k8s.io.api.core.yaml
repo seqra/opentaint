@@ -1,0 +1,81 @@
+passThrough:
+- function:
+    package: k8s.io/api/core
+    type: Secret
+    name: DeepCopy
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/api/core
+    type: Secret
+    name: DeepCopyInto
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/api/core
+    type: Secret
+    name: DeepCopyObject
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/api/core
+    type: Secret
+    name: Marshal
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: k8s.io/api/core
+    type: Secret
+    name: Unmarshal
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/api/core
+    type: SecretList
+    name: DeepCopy
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/api/core
+    type: SecretList
+    name: DeepCopyInto
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: k8s.io/api/core
+    type: SecretList
+    name: DeepCopyObject
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: k8s.io/api/core
+    type: SecretList
+    name: Marshal
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: k8s.io/api/core
+    type: SecretList
+    name: Unmarshal
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)

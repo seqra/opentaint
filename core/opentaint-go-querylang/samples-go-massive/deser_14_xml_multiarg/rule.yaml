@@ -1,0 +1,10 @@
+rules:
+  - id: deser-14-xml-multiarg
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value flows to xml.Unmarshal arg 0 (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

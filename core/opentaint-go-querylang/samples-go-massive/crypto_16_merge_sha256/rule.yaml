@@ -1,0 +1,11 @@
+rules:
+  - id: crypto-16-merge-sha256
+    languages: [go]
+    severity: WARNING
+    message: Tainted value from env or form reaches sha256.Sum256 (taint into hash)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: sha256.Sum256($X)

@@ -1,0 +1,12 @@
+rules:
+  - id: go-reflected-xss
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input written to HTTP response body (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern-either:
+          - pattern: fmt.Fprintf($W, ...)

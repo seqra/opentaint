@@ -1,0 +1,12 @@
+rules:
+  - id: path-17-allowlist-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches os.Open unless run through path_17_allowlist_sanitizer.allowlist (filepath.Clean is NOT sufficient)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: os.Open($P)
+    pattern-sanitizers:
+      - pattern: path_17_allowlist_sanitizer.allowlist($X)

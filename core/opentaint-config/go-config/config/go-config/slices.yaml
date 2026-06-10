@@ -1,0 +1,198 @@
+passThrough:
+- function:
+    package: slices
+    name: Clip
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Clone
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Compact
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: CompactFunc
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Concat
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Delete
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: DeleteFunc
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Grow
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Insert
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Insert
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(2)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Max
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function:
+    package: slices
+    name: MaxFunc
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function:
+    package: slices
+    name: Min
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function:
+    package: slices
+    name: MinFunc
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function:
+    package: slices
+    name: Repeat
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Replace
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: slices
+    name: Replace
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(3)
+    - '[*]'
+    to:
+    - result
+    - '[*]'

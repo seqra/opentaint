@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-pattern-inside
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithPatternInside (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithPatternInside.Source(...)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithPatternInside.Sink($X)"

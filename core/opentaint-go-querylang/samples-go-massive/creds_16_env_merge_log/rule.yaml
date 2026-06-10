@@ -1,0 +1,11 @@
+rules:
+  - id: creds-16-env-merge-log
+    languages: [go]
+    severity: WARNING
+    message: User and password env vars merged into log message (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("DB_USER")
+      - pattern: os.Getenv("DB_PASS")
+    pattern-sinks:
+      - pattern: creds_16_env_merge_log.Sink_LogOutput($X)

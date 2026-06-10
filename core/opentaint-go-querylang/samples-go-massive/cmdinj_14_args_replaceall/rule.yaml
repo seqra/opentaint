@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-14-args-replaceall
+    languages: [go]
+    severity: WARNING
+    message: Tainted os.Args via ReplaceAll reaches exec.LookPath (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Args[$IDX]
+    pattern-sinks:
+      - pattern: cmdinj_14_args_replaceall.Sink_ExecLookPath($X)

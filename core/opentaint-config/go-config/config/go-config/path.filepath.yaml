@@ -1,0 +1,103 @@
+passThrough:
+- function:
+    package: path/filepath
+    name: Abs
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: path/filepath
+    name: Base
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: Clean
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: Dir
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: EvalSymlinks
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: path/filepath
+    name: Ext
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: FromSlash
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: Glob
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: path/filepath
+    name: Rel
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(1)
+    to: result(0)
+- function:
+    package: path/filepath
+    name: Split
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: path/filepath
+    name: SplitList
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: ToSlash
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: VolumeName
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: path/filepath
+    name: Join
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

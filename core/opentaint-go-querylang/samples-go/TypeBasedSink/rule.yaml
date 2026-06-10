@@ -1,0 +1,11 @@
+rules:
+  - id: type-based-sink
+    languages: [go]
+    severity: WARNING
+    message: "Taint reaches TypeBasedSink.Exec on a TypeBasedSink.Cmd argument"
+    mode: taint
+    pattern-sources:
+      - pattern: "TypeBasedSink.SourceCmd(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern: "TypeBasedSink.Exec(($X : TypeBasedSink.Cmd))"

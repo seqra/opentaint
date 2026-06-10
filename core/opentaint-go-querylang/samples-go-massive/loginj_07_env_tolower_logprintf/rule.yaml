@@ -1,0 +1,10 @@
+rules:
+  - id: loginj-07-env-tolower-logprintf
+    languages: [go]
+    severity: WARNING
+    message: Tainted env passes through ToLower into log.Printf (log injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("AUDIT")
+    pattern-sinks:
+      - pattern: log.Printf($FMT, $X)

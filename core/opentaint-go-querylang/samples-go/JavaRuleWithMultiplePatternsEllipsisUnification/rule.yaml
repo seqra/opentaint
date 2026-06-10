@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-multiple-patterns-ellipsis-unification
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithMultiplePatternsEllipsisUnification (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithMultiplePatternsEllipsisUnification.MkType2($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithMultiplePatternsEllipsisUnification.MkType1FromType3($X)"

@@ -1,0 +1,166 @@
+passThrough:
+- function:
+    package: net/textproto
+    name: CanonicalMIMEHeaderKey
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/textproto
+    name: NewConn
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/textproto
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/textproto
+    name: TrimBytes
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/textproto
+    name: TrimString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: net/textproto
+    type: MIMEHeader
+    name: Add
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net/textproto
+    type: MIMEHeader
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/textproto
+    type: MIMEHeader
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+  - from: arg(1)
+    to: this
+- function:
+    package: net/textproto
+    type: MIMEHeader
+    name: Values
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/textproto
+    type: Reader
+    name: DotReader
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadCodeLine
+    receiver: true
+  copy:
+  - from: this
+    to: result(1)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadContinuedLine
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadContinuedLineBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadDotBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadDotLines
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadLine
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadLineBytes
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadMIMEHeader
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: net/textproto
+    type: Reader
+    name: ReadResponse
+    receiver: true
+  copy:
+  - from: this
+    to: result(1)
+- function:
+    package: net/textproto
+    name: NewConn
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)
+- function:
+    package: net/textproto
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result
+    to: arg(0)

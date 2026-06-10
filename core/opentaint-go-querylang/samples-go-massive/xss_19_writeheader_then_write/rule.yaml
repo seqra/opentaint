@@ -1,0 +1,10 @@
+rules:
+  - id: xss-19-writeheader-then-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value reaches w.Write following w.WriteHeader (only w.Write is the sink)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)

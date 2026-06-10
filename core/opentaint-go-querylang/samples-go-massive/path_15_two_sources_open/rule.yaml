@@ -1,0 +1,11 @@
+rules:
+  - id: path-15-two-sources-open
+    languages: [go]
+    severity: WARNING
+    message: Two tainted sources (env + header) merge into a path passed to os.Open
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("DIR")
+      - pattern: $R.Header.Get($K)
+    pattern-sinks:
+      - pattern: os.Open($P)

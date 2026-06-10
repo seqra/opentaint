@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-03-form-sprintf
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue formatted into MongoDB Find filter (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: nosql_03_form_sprintf.Sink_MongoFind($X)

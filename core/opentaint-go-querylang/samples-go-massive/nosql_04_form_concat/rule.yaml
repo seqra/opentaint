@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-04-form-concat
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue concatenated into MongoDB Find filter (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: nosql_04_form_concat.Sink_MongoFind($X)

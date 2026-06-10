@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-intersection
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithIntersection (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithIntersection.Source(...)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithIntersection.Sink($X)"

@@ -1,0 +1,43 @@
+passThrough:
+- function:
+    package: mime
+    name: FormatMediaType
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+- function:
+    package: mime
+    name: ParseMediaType
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+  - from: arg(0)
+    to: result(1)
+- function:
+    package: mime
+    type: WordDecoder
+    name: Decode
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: mime
+    type: WordDecoder
+    name: DecodeHeader
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: mime
+    type: WordEncoder
+    name: Encode
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: result

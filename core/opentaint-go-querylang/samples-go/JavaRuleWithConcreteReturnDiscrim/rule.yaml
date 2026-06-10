@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-concrete-return-discrim
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithConcreteReturnDiscrim (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithConcreteReturnDiscrim.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithConcreteReturnDiscrim.Sink($X)"

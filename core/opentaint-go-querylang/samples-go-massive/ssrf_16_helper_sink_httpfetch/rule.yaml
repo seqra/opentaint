@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-16-helper-sink-httpfetch
+    languages: [go]
+    severity: WARNING
+    message: Tainted value reaches ssrf_16_helper_sink_httpfetch.Sink_HttpFetch (3rd-party HTTP client sink, SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($X)
+    pattern-sinks:
+      - pattern: ssrf_16_helper_sink_httpfetch.Sink_HttpFetch($U)

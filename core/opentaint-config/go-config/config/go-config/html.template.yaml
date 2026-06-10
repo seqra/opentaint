@@ -1,0 +1,66 @@
+passThrough:
+- function:
+    package: html/template
+    name: HTMLEscape
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: html/template
+    name: HTMLEscapeString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: html/template
+    name: JSEscape
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: html/template
+    name: JSEscapeString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: html/template
+    type: Template
+    name: Execute
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: arg(0)
+- function:
+    package: html/template
+    type: Template
+    name: ExecuteTemplate
+    receiver: true
+  copy:
+  - from: arg(2)
+    to: arg(0)
+- function:
+    package: html/template
+    name: HTMLEscaper
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+- function:
+    package: html/template
+    name: JSEscaper
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result
+- function:
+    package: html/template
+    name: URLQueryEscaper
+    receiver: false
+  copy:
+  - from: arg(*)
+    to: result

@@ -1,0 +1,10 @@
+rules:
+  - id: creds-06-env-subprocessenv
+    languages: [go]
+    severity: WARNING
+    message: Tainted AWS_SECRET env var passed to subprocess env (credential leak via env)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("AWS_SECRET")
+    pattern-sinks:
+      - pattern: creds_06_env_subprocessenv.Sink_SubprocessEnv($X)

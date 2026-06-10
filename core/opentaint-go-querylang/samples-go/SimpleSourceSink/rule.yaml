@@ -1,0 +1,10 @@
+rules:
+  - id: simple-source-sink
+    languages: [go]
+    severity: WARNING
+    message: "Taint from SimpleSourceSink.Source reaches SimpleSourceSink.Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "SimpleSourceSink.Source(...)"
+    pattern-sinks:
+      - pattern: "SimpleSourceSink.Sink($X)"

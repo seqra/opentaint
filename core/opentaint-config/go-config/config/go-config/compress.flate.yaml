@@ -1,0 +1,45 @@
+passThrough:
+- function:
+    package: compress/flate
+    name: NewReader
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: compress/flate
+    name: NewReaderDict
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: compress/flate
+    type: Resetter
+    name: Reset
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: compress/flate
+    type: Writer
+    name: Reset
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: compress/flate
+    name: NewWriter
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)
+- function:
+    package: compress/flate
+    name: NewWriterDict
+    receiver: false
+  copy:
+  - from: result(0)
+    to: arg(0)

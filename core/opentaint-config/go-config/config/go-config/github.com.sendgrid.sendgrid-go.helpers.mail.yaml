@@ -1,0 +1,8 @@
+passThrough:
+- function:
+    package: github.com/sendgrid/sendgrid-go/helpers/mail
+    name: NewContent
+    receiver: false
+  copy:
+  - from: arg(1)
+    to: result

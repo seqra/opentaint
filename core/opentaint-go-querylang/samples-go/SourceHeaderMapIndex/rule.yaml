@@ -1,0 +1,12 @@
+rules:
+  - id: source-header-mapindex
+    languages: [go]
+    severity: WARNING
+    message: "Taint from r.Header reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "$R.Header"
+      - pattern: "$R.Header.Get($K)"
+      - pattern: "$R.Header[$KEY][$IDX]"
+    pattern-sinks:
+      - pattern: "SourceHeaderMapIndex.Sink($X)"

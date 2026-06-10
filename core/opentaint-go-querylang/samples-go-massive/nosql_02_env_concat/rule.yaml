@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-02-env-concat
+    languages: [go]
+    severity: WARNING
+    message: Tainted env concatenated into MongoDB Find filter (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("MONGO_ID")
+    pattern-sinks:
+      - pattern: nosql_02_env_concat.Sink_MongoFind($X)

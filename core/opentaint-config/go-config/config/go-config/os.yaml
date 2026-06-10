@@ -1,0 +1,53 @@
+passThrough:
+- function:
+    package: os
+    name: Expand
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: os
+    name: ExpandEnv
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: os
+    name: NewFile
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: os
+    type: File
+    name: Fd
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: os
+    type: File
+    name: Read
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: os
+    type: File
+    name: ReadAt
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: os
+    name: Pipe
+    receiver: false
+  copy:
+  - from: result(1)
+    to: result(0)

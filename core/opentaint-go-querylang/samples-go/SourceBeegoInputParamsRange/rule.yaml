@@ -1,0 +1,10 @@
+rules:
+  - id: source-beego-input-params-range
+    languages: [go]
+    severity: WARNING
+    message: "Taint from Ctx.Input.Params reaches Sink through map range iteration"
+    mode: taint
+    pattern-sources:
+      - pattern: "$X.Params()"
+    pattern-sinks:
+      - pattern: "SourceBeegoInputParamsRange.Sink($X)"

@@ -1,0 +1,10 @@
+rules:
+  - id: ldap-05-query-tolower
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query lowercased into LDAP search filter (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: ldap_05_query_tolower.Sink_LdapSearch($X)

@@ -1,0 +1,10 @@
+rules:
+  - id: creds-18-query-postform-exfil
+    languages: [go]
+    severity: WARNING
+    message: Query string token sent to outbound POST body (credential exfiltration)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get("token")
+    pattern-sinks:
+      - pattern: creds_18_query_postform_exfil.Sink_PostFormBody($X)

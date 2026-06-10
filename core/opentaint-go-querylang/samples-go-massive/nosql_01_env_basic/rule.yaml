@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-01-env-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches MongoDB Find filter (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("MONGO_USER")
+    pattern-sinks:
+      - pattern: nosql_01_env_basic.Sink_MongoFind($X)

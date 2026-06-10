@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-14-closure-get
+    languages: [go]
+    severity: WARNING
+    message: Closure captures tainted URL and reaches http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

@@ -1,0 +1,10 @@
+rules:
+  - id: nosql-05-query-basic
+    languages: [go]
+    severity: WARNING
+    message: Tainted URL query reaches MongoDB Find filter (NoSQL injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: nosql_05_query_basic.Sink_MongoFind($X)

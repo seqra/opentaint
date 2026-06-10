@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-ellipsis-invocation-and-pattern-not
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithEllipsisInvocationAndPatternNot (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithEllipsisInvocationAndPatternNot.Src()"
+    pattern-sanitizers:
+      - pattern: "JavaRuleWithEllipsisInvocationAndPatternNot.GetObjBad($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithEllipsisInvocationAndPatternNot.Sink($X)"

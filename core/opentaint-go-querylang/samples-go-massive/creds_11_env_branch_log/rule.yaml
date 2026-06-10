@@ -1,0 +1,10 @@
+rules:
+  - id: creds-11-env-branch-log
+    languages: [go]
+    severity: WARNING
+    message: GITHUB_TOKEN env var reaches log output on a debug branch (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("GITHUB_TOKEN")
+    pattern-sinks:
+      - pattern: creds_11_env_branch_log.Sink_LogOutput($X)

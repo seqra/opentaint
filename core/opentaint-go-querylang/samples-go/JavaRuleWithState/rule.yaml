@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-state
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithState (Go port — sequence via state token)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithState.F()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithState.G($X)"

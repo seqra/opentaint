@@ -1,0 +1,10 @@
+rules:
+  - id: deser-11-loop-xml
+    languages: [go]
+    severity: WARNING
+    message: Tainted env reaches xml.Unmarshal inside loop body (deserialization)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: xml.Unmarshal($DATA, $TARGET)

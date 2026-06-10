@@ -1,0 +1,48 @@
+passThrough:
+- function:
+    package: container/heap
+    name: Pop
+    receiver: false
+  copy:
+  - from:
+    - arg(0)
+    - .container/heap.Interface#<element>
+    to: result
+- function:
+    package: container/heap
+    name: Push
+    receiver: false
+  copy:
+  - from: arg(1)
+    to:
+    - arg(0)
+    - .container/heap.Interface#<element>
+- function:
+    package: container/heap
+    name: Remove
+    receiver: false
+  copy:
+  - from:
+    - arg(0)
+    - .container/heap.Interface#<element>
+    to: result
+- function:
+    package: container/heap
+    type: Interface
+    name: Pop
+    receiver: true
+  copy:
+  - from:
+    - this
+    - .container/heap.Interface#<element>
+    to: result
+- function:
+    package: container/heap
+    type: Interface
+    name: Push
+    receiver: true
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .container/heap.Interface#<element>

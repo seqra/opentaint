@@ -1,0 +1,10 @@
+rules:
+  - id: java-r3
+    languages: [go]
+    severity: ERROR
+    message: match example/R3 (Go port, recast as bar($X) source-sink)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaR3.Source()"
+    pattern-sinks:
+      - pattern: "JavaR3.Bar($X)"

@@ -1,0 +1,10 @@
+rules:
+  - id: interproc-sink
+    languages: [go]
+    severity: WARNING
+    message: "Taint from InterprocSink.Source reaches InterprocSink.Sink through an interprocedural wrapper"
+    mode: taint
+    pattern-sources:
+      - pattern: "InterprocSink.Source(...)"
+    pattern-sinks:
+      - pattern: "InterprocSink.Sink($X)"

@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-multiple-patterns
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithMultiplePatterns (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithMultiplePatterns.SourceA(...)"
+      - pattern: "JavaRuleWithMultiplePatterns.SourceB(...)"
+      - pattern: "JavaRuleWithMultiplePatterns.SourceC(...)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithMultiplePatterns.Sink($X)"

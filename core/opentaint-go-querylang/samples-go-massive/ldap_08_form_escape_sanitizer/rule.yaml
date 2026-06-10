@@ -1,0 +1,12 @@
+rules:
+  - id: ldap-08-form-escape-sanitizer
+    languages: [go]
+    severity: WARNING
+    message: Tainted FormValue reaches LDAP search unless escaped (LDAP injection)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: ldap_08_form_escape_sanitizer.Sink_LdapSearch($X)
+    pattern-sanitizers:
+      - pattern: escapeLdapFilter($V)

@@ -1,0 +1,11 @@
+rules:
+  - id: creds-01-env-errorf
+    languages: [go]
+    severity: WARNING
+    message: Tainted API_KEY env var reaches log sink via error message (credential leak)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("API_KEY")
+    pattern-sinks:
+      - pattern: creds_01_env_errorf.Sink_LogError($X)
+      - pattern: creds_01_env_errorf.Sink_LogError($X.Error())

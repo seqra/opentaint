@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-13-env-replace
+    languages: [go]
+    severity: WARNING
+    message: Tainted env via strings.Replace reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("PATH_LIKE")
+    pattern-sinks:
+      - pattern: cmdinj_13_env_replace.Sink_ExecCommand($X)

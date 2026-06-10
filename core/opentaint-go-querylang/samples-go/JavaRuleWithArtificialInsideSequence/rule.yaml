@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-artificial-inside-sequence
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithArtificialInsideSequence (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithArtificialInsideSequence.G($X)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleWithArtificialInsideSequence.Clean($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithArtificialInsideSequence.F($X)"

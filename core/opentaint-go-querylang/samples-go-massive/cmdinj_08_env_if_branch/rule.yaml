@@ -1,0 +1,10 @@
+rules:
+  - id: cmdinj-08-env-if-branch
+    languages: [go]
+    severity: WARNING
+    message: Tainted env in one branch reaches exec.Command (command injection)
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv("ACTION")
+    pattern-sinks:
+      - pattern: cmdinj_08_env_if_branch.Sink_ExecCommand($X)

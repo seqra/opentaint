@@ -1,0 +1,7 @@
+rules:
+  - id: source-form-parse
+    languages: [go]
+    severity: WARNING
+    message: "Taint from r.Form reaches Sink"
+    mode: search
+    pattern: "MatchingRule.Sink($X)"

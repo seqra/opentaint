@@ -1,0 +1,12 @@
+rules:
+  - id: java-rule-with-artificial-inside-sequence-reverse
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithArtificialInsideSequenceReverse (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithArtificialInsideSequenceReverse.F($X)"
+    pattern-sanitizers:
+      - pattern: "JavaRuleWithArtificialInsideSequenceReverse.Clean($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithArtificialInsideSequenceReverse.H($X)"

@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-multiple-patterns-unification
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithMultiplePatternsUnification (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithMultiplePatternsUnification.MkType2($SOURCE)"
+    pattern-sinks:
+      - pattern: "JavaRuleWithMultiplePatternsUnification.NewType3($SOURCE)"

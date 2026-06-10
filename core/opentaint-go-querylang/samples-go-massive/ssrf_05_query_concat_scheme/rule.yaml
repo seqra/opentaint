@@ -1,0 +1,10 @@
+rules:
+  - id: ssrf-05-query-concat-scheme
+    languages: [go]
+    severity: WARNING
+    message: Tainted query value concatenated to scheme reaches http.Get (SSRF)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: http.Get($U)

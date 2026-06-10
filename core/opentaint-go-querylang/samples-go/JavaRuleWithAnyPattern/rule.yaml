@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-with-any-pattern
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleWithAnyPattern (Go port, recast)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleWithAnyPattern.Source()"
+    pattern-sinks:
+      - pattern: "JavaRuleWithAnyPattern.Method($X)"

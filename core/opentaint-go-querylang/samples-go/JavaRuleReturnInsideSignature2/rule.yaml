@@ -1,0 +1,10 @@
+rules:
+  - id: java-rule-return-inside-signature-2
+    languages: [go]
+    severity: ERROR
+    message: match example/RuleReturnInsideSignature2 (Go port)
+    mode: taint
+    pattern-sources:
+      - pattern: "JavaRuleReturnInsideSignature2.Pass($X)"
+    pattern-sinks:
+      - pattern: "JavaRuleReturnInsideSignature2.Sink($X)"

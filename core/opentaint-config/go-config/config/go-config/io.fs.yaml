@@ -1,0 +1,100 @@
+passThrough:
+- function:
+    package: io/fs
+    name: FileInfoToDirEntry
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: io/fs
+    name: Glob
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: io/fs
+    name: ReadDir
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: io/fs
+    name: ReadFile
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: io/fs
+    name: Sub
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result(0)
+- function:
+    package: io/fs
+    type: DirEntry
+    name: Info
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: io/fs
+    type: DirEntry
+    name: Name
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: io/fs
+    type: File
+    name: Read
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: io/fs
+    type: FS
+    name: Open
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: io/fs
+    type: GlobFS
+    name: Glob
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: io/fs
+    type: ReadDirFS
+    name: ReadDir
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: io/fs
+    type: ReadFileFS
+    name: ReadFile
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)
+- function:
+    package: io/fs
+    type: SubFS
+    name: Sub
+    receiver: true
+  copy:
+  - from: this
+    to: result(0)

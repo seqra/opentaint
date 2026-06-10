@@ -1,0 +1,10 @@
+rules:
+  - id: path-10-helper-chain-open
+    languages: [go]
+    severity: WARNING
+    message: Tainted form value passes through two helper functions and reaches os.Open
+    mode: taint
+    pattern-sources:
+      - pattern: $R.FormValue($K)
+    pattern-sinks:
+      - pattern: os.Open($P)

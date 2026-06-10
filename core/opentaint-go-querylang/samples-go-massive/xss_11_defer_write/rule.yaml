@@ -1,0 +1,10 @@
+rules:
+  - id: xss-11-defer-write
+    languages: [go]
+    severity: WARNING
+    message: Tainted query value flows through a deferred w.Write (reflected XSS)
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get($K)
+    pattern-sinks:
+      - pattern: $W.Write($B)
