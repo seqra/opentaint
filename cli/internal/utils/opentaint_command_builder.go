@@ -181,7 +181,6 @@ func (cb *OpentaintCommandBuilder) WithRuleID(ruleIDs []string) *OpentaintComman
 	return cb
 }
 
-// WithPassthroughApproximations adds repeatable --passthrough-approximations paths.
 func (cb *OpentaintCommandBuilder) WithPassthroughApproximations(paths []string) *OpentaintCommandBuilder {
 	for _, p := range paths {
 		if p != "" {
@@ -191,7 +190,6 @@ func (cb *OpentaintCommandBuilder) WithPassthroughApproximations(paths []string)
 	return cb
 }
 
-// WithDataflowApproximations adds repeatable --dataflow-approximations paths.
 func (cb *OpentaintCommandBuilder) WithDataflowApproximations(paths []string) *OpentaintCommandBuilder {
 	for _, p := range paths {
 		if p != "" {
@@ -201,7 +199,6 @@ func (cb *OpentaintCommandBuilder) WithDataflowApproximations(paths []string) *O
 	return cb
 }
 
-// WithTrackExternalMethods sets the track-external-methods flag.
 func (cb *OpentaintCommandBuilder) WithTrackExternalMethods(enabled bool) *OpentaintCommandBuilder {
 	if enabled {
 		cb.boolFlags["track-external-methods"] = true

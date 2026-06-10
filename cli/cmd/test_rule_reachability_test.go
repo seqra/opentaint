@@ -31,7 +31,6 @@ func TestReachabilityScanConfigAppliesPresets(t *testing.T) {
 		t.Errorf("entry points = %q, want com.example.A#m", cfg.DebugRunAnalysisOnSelectedEntryPoints)
 	}
 
-	// Base scan flags must be preserved, not clobbered by the preset.
 	if len(cfg.Ruleset) != 1 || cfg.Ruleset[0] != "builtin" {
 		t.Errorf("Ruleset = %v, want base [builtin]", cfg.Ruleset)
 	}
@@ -48,7 +47,6 @@ func TestReachabilityScanConfigOmitsEmptyEntryPoint(t *testing.T) {
 }
 
 func TestReachabilityExplicitFlagsSurviveConfig(t *testing.T) {
-	// Snapshot and restore the shared state this test mutates.
 	origTimeout := globals.Config.Scan.Timeout
 	origMaxMemory := globals.Config.Scan.MaxMemory
 	t.Cleanup(func() {

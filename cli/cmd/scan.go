@@ -23,10 +23,6 @@ import (
 	"github.com/seqra/opentaint/internal/utils/log"
 )
 
-// ScanConfig holds the per-invocation inputs for a scan. The scan command
-// populates it from its flags; sibling commands such as `test rule reachability`
-// construct it directly with preset overrides instead of mutating shared
-// package state.
 type ScanConfig struct {
 	UserProjectPath           string
 	ProjectModelPath          string
@@ -47,8 +43,6 @@ type ScanConfig struct {
 	ExpandRuleRefs                        bool
 }
 
-// scanFlags is the ScanConfig bound to the scan command's flags. Read it only
-// from a command's Run; pass an explicit ScanConfig everywhere else.
 var scanFlags ScanConfig
 
 type RulesetType struct {
@@ -61,8 +55,6 @@ const (
 	dryRunRuleLoadTraceFileName = "opentaint-rule-load-trace.dry-run.json"
 )
 
-// scanPlan holds the resolved compilation/cache plan for a scan invocation,
-// derived from a ScanConfig and the on-disk model cache.
 type scanPlan struct {
 	absProjectModel  string // absolute path to the project model (always the cache dir when projectCachePath is set)
 	projectCachePath string // cache dir for this project (empty for explicit model / dry-run)
@@ -70,7 +62,6 @@ type scanPlan struct {
 	cacheLock        *utils.FileLock
 }
 
-// title names the scan flavor for the info tree header.
 func (p scanPlan) title() string {
 	if p.needsCompilation {
 		return "OpenTaint Compile and Scan"
@@ -96,8 +87,6 @@ Use --project-model to scan a pre-compiled project model instead of compiling fr
 	},
 }
 
-// prepareScanConfig validates the source-path-vs-model invariants shared by
-// every scan entry point and resolves the project path argument into cfg.
 func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 	if len(args) > 0 && cfg.ProjectModelPath != "" {
 		out.Error("Cannot use both a source path argument and --project-model flag")
@@ -122,18 +111,10 @@ func init() {
 	addRuleIDFlag(scanCmd)
 }
 
-// addRuleIDFlag registers the --rule-id flag. Split out from addScanFlags so
-// that `test rule reachability` can omit it (it takes the rule ID
-// positionally and supports only one rule at a time).
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
 }
 
-// addScanFlags registers the flags shared by `scan` and `test rule
-// reachability`. The matching scan.* viper keys are bound to the executing
-// command's flag instances at startup (bindScanFlags in root.go), so explicit
-// flags keep precedence over config/env regardless of which command the user
-// invoked.
 func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Timeout for analysis")
 
@@ -158,8 +139,6 @@ func addScanFlags(cmd *cobra.Command) {
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.
-// All scan command suggestions should use this as the base; every ScanConfig field that
-// changes scan semantics must be represented here or suggestions will silently drop it.
 func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintCommandBuilder {
 	b := utils.NewScanCommand(sourcePath).
 		WithOutput(cfg.SarifReportPath).
@@ -176,8 +155,6 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 	return b
 }
 
-// isDefaultSeverity reports whether sev is exactly the flag default, in which
-// case suggestions omit the flag entirely.
 func isDefaultSeverity(sev []string) bool {
 	return len(sev) == 2 && sev[0] == "warning" && sev[1] == "error"
 }

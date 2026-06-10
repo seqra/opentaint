@@ -9,9 +9,6 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-// ensureArtifactJar resolves an artifact's jar path and downloads the release
-// asset when missing. An explicit Override on the def short-circuits both. It
-// is the single provisioning path for every jar-backed artifact.
 func ensureArtifactJar(def globals.ArtifactDef) (string, error) {
 	path, err := utils.ResolveJarPath(def)
 	if err != nil {

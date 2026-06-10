@@ -5,9 +5,6 @@ import (
 	"os"
 )
 
-// WriteFiles writes each path->content entry to disk, creating parent
-// directories as needed. It is the shared primitive behind the test-project
-// scaffolders (see internal/testrule and internal/testapprox).
 func WriteFiles(files map[string][]byte) error {
 	for path, content := range files {
 		if err := EnsureParentDir(path); err != nil {

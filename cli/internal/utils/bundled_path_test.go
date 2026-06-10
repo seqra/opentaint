@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// FHS layout: `make install` puts the binary in <prefix>/bin and the artifacts
-// in <prefix>/lib, so lib is a sibling of the binary's directory.
 func TestResolveBundledDir_FHSLayout(t *testing.T) {
 	prefix := t.TempDir()
 	binDir := filepath.Join(prefix, "bin")
@@ -24,8 +22,6 @@ func TestResolveBundledDir_FHSLayout(t *testing.T) {
 	}
 }
 
-// Flat layout: the managed install (~/.opentaint/install/) keeps the binary,
-// lib/ and jre/ in the same directory.
 func TestResolveBundledDir_FlatLayout(t *testing.T) {
 	dir := t.TempDir()
 	libDir := filepath.Join(dir, "lib")
@@ -38,8 +34,6 @@ func TestResolveBundledDir_FlatLayout(t *testing.T) {
 	}
 }
 
-// When neither layout has the directory, fall back to the flat path so callers
-// keep a stable default probe/download target (preserves prior behavior).
 func TestResolveBundledDir_NoneFallsBackToFlat(t *testing.T) {
 	binDir := filepath.Join(t.TempDir(), "bin")
 	if err := os.MkdirAll(binDir, 0o755); err != nil {

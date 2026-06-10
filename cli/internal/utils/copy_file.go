@@ -6,8 +6,6 @@ import (
 	"os"
 )
 
-// CopyFile copies the file at src to dst, creating parent directories as
-// needed. dst is truncated if it already exists.
 func CopyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {

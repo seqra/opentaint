@@ -17,10 +17,6 @@ Referenced library source and sink rules are collected and analyzed automaticall
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Args:        cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
-		// `reachability` is `scan` with a forced preset. It shares the scan
-		// flags (so scanFlags carries the parsed --ruleset, --output, ... ) but
-		// builds an explicit ScanConfig with the reachability overrides applied
-		// instead of mutating shared state, then runs the same scan pipeline.
 		if reachabilityEntryPoint != "" {
 			out.Warn("on Spring projects this method is added to the auto-discovered entry points, not used to restrict them")
 		}
@@ -29,10 +25,6 @@ Referenced library source and sink rules are collected and analyzed automaticall
 	},
 }
 
-// reachabilityScanConfig returns the scan config for a `test rule reachability`
-// run: the base scan flags with the reachability-specific presets applied
-// (single rule, fact-reachability SARIF, rule-ref expansion, optional
-// entry-point restriction).
 func reachabilityScanConfig(base ScanConfig, ruleID, entryPoint string) ScanConfig {
 	base.RuleID = []string{ruleID}
 	base.DebugFactReachabilitySarif = true

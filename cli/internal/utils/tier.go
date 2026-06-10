@@ -116,9 +116,6 @@ func JRETiers(javaVersion int, cacheDir string) []Tier {
 	return tiers
 }
 
-// FindCurrentManagedJRE returns the first non-stale managed JRE tier (bundled
-// or install) containing a java binary — the same probe the analyzer's Java
-// runner uses, so health and the runner can't drift. Nil when none exists.
 func FindCurrentManagedJRE() *Tier {
 	return FindExistingJRE(CurrentTiers(ManagedJRETiers(), IsInstallCurrent()))
 }

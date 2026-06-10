@@ -1,5 +1,3 @@
-// Package testutil embeds the opentaint-sast-test-util.jar and extracts it
-// on demand to ~/.opentaint/test-util/ when no bundled copy is available.
 package testutil
 
 import (
@@ -20,14 +18,8 @@ import (
 //go:embed jar/*
 var jarFiles embed.FS
 
-// JarName is the filename of the test-util JAR.
 const JarName = "opentaint-sast-test-util.jar"
 
-// ResolveJar locates the opentaint-sast-test-util.jar, checking, in order:
-//  1. Bundled next to the binary: <exe-dir>/lib/<jar>
-//  2. Managed install: ~/.opentaint/install/lib/<jar>
-//  3. Dev build: <repo-root>/core/opentaint-sast-test-util/build/libs/<jar>
-//  4. The copy embedded in this binary, extracted on demand.
 func ResolveJar() (string, error) {
 	if libPath := utils.GetBundledLibPath(); libPath != "" {
 		candidate := filepath.Join(libPath, JarName)
@@ -43,8 +35,6 @@ func ResolveJar() (string, error) {
 		}
 	}
 
-	// Dev build: walk up from the exe dir (typically cli/bin/opentaint, so the
-	// repo root is a few levels up) to find core/.../build/libs/.
 	if exe, err := os.Executable(); err == nil {
 		exe, _ = filepath.EvalSymlinks(exe)
 		dir := filepath.Dir(exe)
@@ -72,10 +62,6 @@ func contentHash(jarData []byte) string {
 	return hex.EncodeToString(h[:])
 }
 
-// extractJar extracts the embedded test-util JAR to ~/.opentaint/test-util/
-// and returns the path to the extracted JAR. Uses a SHA-256 content hash
-// marker for staleness detection so the extracted copy is refreshed when the
-// binary is rebuilt with a newer JAR.
 func extractJar() (string, error) {
 	jarData, err := embeddedJarData()
 	if err != nil {

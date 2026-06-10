@@ -29,7 +29,6 @@ INSTALLED_DEV_BINARY := $(BINDIR)/$(CLI_DEV_BINARY_NAME)
 
 all: core cli
 
-# One Gradle invocation: configuration runs once and the jar tasks parallelize.
 core:
 	cd $(CORE_DIR) && $(GRADLEW) $(ANALYZER_TASK) $(AUTOBUILDER_TASK) $(TEST_UTIL_TASK)
 
@@ -42,7 +41,6 @@ core/autobuilder:
 core/opentaint-sast-test-util:
 	cd $(CORE_DIR) && $(GRADLEW) $(TEST_UTIL_TASK)
 
-# go generate embeds the test-util jar, so the cli build needs it built first.
 cli: core/opentaint-sast-test-util
 	$(MAKE) -C $(CLI_DIR) build
 
@@ -65,7 +63,6 @@ install: core
 		'exec "$$BIN_DIR/$(CLI_BINARY_NAME)" --experimental --analyzer-jar "$$LIB_DIR/$(notdir $(ANALYZER_JAR))" --autobuilder-jar "$$LIB_DIR/$(notdir $(AUTOBUILDER_JAR))" "$$@"' \
 		> $(INSTALLED_DEV_BINARY)
 	chmod 0755 $(INSTALLED_DEV_BINARY)
-	# Pull any assets the local build doesn't produce (e.g. the Java runtime).
 	$(INSTALLED_CLI_BINARY) pull
 
 clean:

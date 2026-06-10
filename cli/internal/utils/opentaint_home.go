@@ -30,7 +30,6 @@ func GetOpenTaintHome() (string, error) {
 	return path, nil
 }
 
-// PathExists reports whether a path exists on disk.
 func PathExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil
@@ -50,17 +49,6 @@ func exeDir() string {
 	return filepath.Dir(exe)
 }
 
-// resolveBundledDir locates a bundled artifact directory (e.g. "lib" or "jre")
-// relative to the binary, supporting both supported install layouts:
-//
-//   - flat: <exe-dir>/<name> — the managed install (~/.opentaint/install/) keeps
-//     the binary, lib/ and jre/ in the same directory.
-//   - FHS:  <exe-dir>/../<name> — `make install` puts the binary in <prefix>/bin
-//     and artifacts in <prefix>/lib, so the directory is a sibling of bin/.
-//
-// The first layout whose directory exists wins. When neither exists it falls
-// back to the flat path so callers keep a stable default probe/download target.
-// Returns empty string if exeDir is empty (executable path undeterminable).
 func resolveBundledDir(exeDir, name string) string {
 	if exeDir == "" {
 		return ""
@@ -115,14 +103,8 @@ func GetInstallJREPath() string {
 	return ""
 }
 
-// BundledReleaseMarkerName is the manifest the release pipeline writes next to
-// the bundled jars; its presence (matching the embedded versions.yaml) marks
-// the bundled lib dir as an unmodified official release rather than a local build.
 const BundledReleaseMarkerName = "release-versions.yaml"
 
-// IsBundledRelease reports whether the bundled lib dir next to the binary was
-// produced by the release pipeline for exactly the embedded bind versions.
-// A `make install` dev layout has no marker and reads as a custom build.
 func IsBundledRelease() bool {
 	lib := GetBundledLibPath()
 	if lib == "" {
@@ -197,13 +179,6 @@ func ReconcileInstallMarker() {
 	_ = WriteInstallVersionMarker()
 }
 
-// resolveArtifactTier resolves both the storage tier and path for an artifact by
-// checking tiers in order:
-//  1. Bundled path (next to binary) — only if version matches bindVersion
-//  2. Install path (~/.opentaint/install/lib/) — only if version matches bindVersion
-//  3. Cache path (~/.opentaint/<cacheName>)
-//
-// When no tier exists yet, it returns the last tier as the default download target.
 func resolveArtifactTier(def globals.ArtifactDef) (string, string, error) {
 	tiers, err := ArtifactTiers(def)
 	if err != nil {
@@ -216,15 +191,11 @@ func resolveArtifactTier(def globals.ArtifactDef) (string, string, error) {
 	return last.Name, last.Path, nil
 }
 
-// resolveArtifactPath resolves the path for an artifact. See resolveArtifactTier.
 func resolveArtifactPath(def globals.ArtifactDef) (string, error) {
 	_, path, err := resolveArtifactTier(def)
 	return path, err
 }
 
-// ResolveJarPath resolves an artifact's jar path, honoring an explicit override
-// (which bypasses version-based resolution) and otherwise falling back to the
-// versioned artifact path.
 func ResolveJarPath(def globals.ArtifactDef) (string, error) {
 	if def.Override != "" {
 		return def.Override, nil

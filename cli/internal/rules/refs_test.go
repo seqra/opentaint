@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-// writeRule writes a ruleset YAML at root/relPath, creating parent dirs.
 func writeRule(t *testing.T, root, relPath, content string) {
 	t.Helper()
 	full := filepath.Join(root, filepath.FromSlash(relPath))
@@ -71,7 +70,6 @@ func TestExpandRuleIDs_UnresolvedPassesThrough(t *testing.T) {
 func TestExpandRuleIDs_MultipleRoots(t *testing.T) {
 	builtin := t.TempDir()
 	custom := t.TempDir()
-	// Custom security rule refs a builtin lib rule — the agent's main case.
 	writeRule(t, custom, "java/security/my.yaml", "rules:\n  - id: my\n    join:\n      refs:\n        - rule: java/lib/generic/src.yaml#src\n")
 	writeRule(t, builtin, "java/lib/generic/src.yaml", "rules:\n  - id: src\n")
 

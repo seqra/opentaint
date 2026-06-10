@@ -8,8 +8,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// ruleFile is the minimal shape parsed from a ruleset YAML: each rule's id and
-// the rules it pulls in via join.refs.
 type ruleFile struct {
 	Rules []struct {
 		ID   string `yaml:"id"`
@@ -21,12 +19,6 @@ type ruleFile struct {
 	} `yaml:"rules"`
 }
 
-// ExpandRuleIDs returns ruleIDs together with every rule transitively
-// referenced through join.refs, resolved against the given ruleset roots. A
-// full rule id is "<path-relative-to-root>:<short-id>"; a ref is the same path
-// with '#' instead of ':'. Originals come first, the rest in BFS order;
-// duplicates are removed and ids that can't be resolved on disk pass through
-// unchanged.
 func ExpandRuleIDs(ruleIDs []string, rulesetRoots []string) []string {
 	seen := make(map[string]bool, len(ruleIDs))
 	var result []string
@@ -50,8 +42,6 @@ func ExpandRuleIDs(ruleIDs []string, rulesetRoots []string) []string {
 	return result
 }
 
-// refsOf returns the full ids referenced by the rule named id via join.refs,
-// or nil when the rule's file or entry can't be found.
 func refsOf(id string, rulesetRoots []string) []string {
 	relPath, shortID, ok := splitRuleID(id)
 	if !ok {
@@ -76,7 +66,6 @@ func refsOf(id string, rulesetRoots []string) []string {
 	return nil
 }
 
-// splitRuleID splits "java/security/x.yaml:short" into "java/security/x.yaml" and "short".
 func splitRuleID(id string) (relPath, shortID string, ok bool) {
 	idx := strings.LastIndex(id, ":")
 	if idx < 0 {
@@ -85,10 +74,6 @@ func splitRuleID(id string) (relPath, shortID string, ok bool) {
 	return id[:idx], id[idx+1:], true
 }
 
-// refToRuleID converts a join ref to a full rule id. A cross-file ref is
-// "path.yaml#short"; a fragment-less ref names a rule in the referencing file
-// itself, so it is qualified with that file's path — mirroring the analyzer's
-// resolveRefRuleId, which resolves a bare ref to "<currentFile>:<shortId>".
 func refToRuleID(ref, currentRelPath string) string {
 	idx := strings.LastIndex(ref, "#")
 	if idx < 0 {
@@ -97,7 +82,6 @@ func refToRuleID(ref, currentRelPath string) string {
 	return ref[:idx] + ":" + ref[idx+1:]
 }
 
-// loadRuleFile finds relPath under one of the roots and parses it.
 func loadRuleFile(relPath string, rulesetRoots []string) (ruleFile, bool) {
 	for _, root := range rulesetRoots {
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(relPath)))

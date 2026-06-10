@@ -1,7 +1,3 @@
-// Package testproject scaffolds the Gradle layout shared by rule and
-// approximation test projects: the build files and the test-util jar under
-// libs/. The per-flavor payloads (samples, marker rules) stay in
-// internal/testrule and internal/testapprox.
 package testproject
 
 import (
@@ -13,10 +9,6 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-// Bootstrap creates the shared Gradle project layout in outputDir: the
-// build/settings files referencing the test-util jar, and the jar itself
-// copied from testUtilJarSrc into libs/. Parent directories are created as
-// needed by the underlying write helpers.
 func Bootstrap(outputDir, projectName string, dependencies []string, testUtilJarSrc string) error {
 	if err := utils.CopyFile(testUtilJarSrc, filepath.Join(outputDir, "libs", testutil.JarName)); err != nil {
 		return fmt.Errorf("copy test-util JAR: %w", err)

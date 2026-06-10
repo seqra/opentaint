@@ -24,7 +24,6 @@ func TestBootstrapWritesGradleLayoutAndJar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The gradle dependency and the copied jar must share one filename constant.
 	if !strings.Contains(string(build), "libs/"+testutil.JarName) {
 		t.Errorf("build.gradle.kts must reference libs/%s, got:\n%s", testutil.JarName, build)
 	}

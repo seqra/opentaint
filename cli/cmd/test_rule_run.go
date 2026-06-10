@@ -46,21 +46,16 @@ var testRuleRunCmd = &cobra.Command{
 	},
 }
 
-// testProjectOptions holds the inputs shared by `test rule run` and `test approximation run`.
 type testProjectOptions struct {
-	label             string
-	tempDir           string
-	rulesets          []string
-	outputDir         string
-	timeout           time.Duration
-	maxMemory         string
-	ruleIDs           []string
-	dataflowApprox    []string
-	passthroughApprox []string
-	// includeBuiltinRules loads the builtin ruleset alongside opts.rulesets.
-	// Rule tests need it (test joins may ref builtin lib rules); approximation
-	// tests run only against the self-contained harness rule, so skipping it
-	// keeps them download-free.
+	label               string
+	tempDir             string
+	rulesets            []string
+	outputDir           string
+	timeout             time.Duration
+	maxMemory           string
+	ruleIDs             []string
+	dataflowApprox      []string
+	passthroughApprox   []string
 	includeBuiltinRules bool
 }
 
@@ -75,13 +70,11 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		out.Fatalf("Cannot access project model %s: %s", nativeProjectPath, err)
 	}
 
-	// Validate max-memory
 	maxMemory, err := utils.ParseMemoryValue(opts.maxMemory)
 	if err != nil {
 		out.Fatalf("Invalid --max-memory value: %s", err)
 	}
 
-	// Resolve output directory
 	outputDir := opts.outputDir
 	if outputDir == "" {
 		tmpDir, err := os.MkdirTemp("", opts.tempDir)
@@ -89,8 +82,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 			out.Fatalf("Failed to create temp dir: %s", err)
 		}
 		outputDir = tmpDir
-		// Note: temp dir is NOT cleaned up so results remain accessible to the agent.
-		// The agent should always specify -o to control the output location.
 	} else {
 		outputDir = log.AbsPathOrExit(outputDir, "output")
 		if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -122,13 +113,11 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		builder.SetMaxMemory(maxMemory)
 	}
 
-	// Add user rulesets
 	for _, rs := range opts.rulesets {
 		absPath := log.AbsPathOrExit(rs, "ruleset")
 		builder.AddRuleSet(absPath)
 	}
 
-	// Add rule ID filters
 	for _, ruleID := range opts.ruleIDs {
 		builder.AddRuleID(ruleID)
 	}
@@ -139,7 +128,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	builder.SetJarPath(analyzerJarPath)
 
-	// Auto-compile .java sources in a --dataflow-approximations dir, as `scan` does.
 	addDataflowApproximations(builder, opts.dataflowApprox, analyzerJarPath, projectPath)
 	addPassthroughApproximations(builder, opts.passthroughApprox)
 
@@ -157,7 +145,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		out.Error(analyzerFail.Message)
 	}
 
-	// Always print output paths so the agent can inspect partial results
 	resultPath := filepath.Join(outputDir, "test-result.json")
 	fmt.Printf("Results directory: %s\n", outputDir)
 	fmt.Printf("Test results:     %s\n", resultPath)
@@ -166,7 +153,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		os.Exit(analyzerFail.ExitCode)
 	}
 
-	// The analyzer exits 0 even when samples fail; the verdict is in test-result.json.
 	tr, err := analyzer.LoadTestResult(resultPath)
 	if err != nil {
 		out.Fatalf("%s produced no readable test-result.json: %s", opts.label, err)

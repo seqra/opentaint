@@ -43,9 +43,6 @@ def docker_name(seed, taken):
     return name
 
 
-# Prefer a stable, named fingerprint kind. vulnerabilitySourceSinkHash is more stable
-# than vulnerabilityWithTraceHash — it keys on the source+sink and survives changes to
-# the intermediate trace path. Fall back to any fingerprint value, then a content hash.
 _FP_PREFERENCE = ("vulnerabilitySourceSinkHash", "vulnerabilityWithTraceHash")
 
 
@@ -73,7 +70,6 @@ def scan_results(sarif):
     """rule_id -> {hash: message}"""
     out = {}
     for run in sarif.get("runs") or []:
-        # An aborted run may carry an explicit "results": null (SARIF allows it).
         for res in run.get("results") or []:
             rid = res.get("ruleId") or "unknown"
             msg = (res.get("message", {}) or {}).get("text", "").strip()
@@ -146,7 +142,7 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    existing = {}   # rule_id -> [(path, hashes)]
+    existing = {}
     taken = set()
     for p in sorted(glob.glob(str(out / "*.yaml"))):
         name, rid, hashes = parse_existing(Path(p).read_text(encoding="utf-8"))
@@ -172,7 +168,6 @@ def main():
         if not new:
             unchanged += 1
             continue
-        # add new hashes to the first finding file for this rule; reset verdict
         path, hashes = files[0]
         merged = sorted(set(hashes) | set(new))
         text = path.read_text(encoding="utf-8")

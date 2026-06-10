@@ -82,7 +82,6 @@ func TestArtifactDisplayVersionOverride(t *testing.T) {
 }
 
 func TestArtifactVersionShortVariants(t *testing.T) {
-	// Override cases never resolve tiers, so they are host-independent.
 	custom := globals.ArtifactByKind("analyzer").WithVersion("analyzer/2026.05.27.68ab20a")
 	custom.Override = "/home/dev/analyzer.jar"
 

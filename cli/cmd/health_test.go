@@ -18,9 +18,6 @@ func TestResolveHealthComponentUsesAnalyzerJarOverride(t *testing.T) {
 	if c.path != globals.Config.Analyzer.JarPath {
 		t.Fatalf("health analyzer path = %q, want override %q", c.path, globals.Config.Analyzer.JarPath)
 	}
-	// A jar-path override is a custom build, so health reports the version as
-	// "custom" — bare, since the path is already shown on its own node (no
-	// duplication), unlike scan's single-line "custom (<path>)".
 	if c.version != "custom" {
 		t.Fatalf("health analyzer version = %q, want %q", c.version, "custom")
 	}
@@ -38,8 +35,6 @@ func TestResolveHealthComponentUsesAutobuilderJarOverride(t *testing.T) {
 }
 
 func TestResolveRuntimeComponentIgnoresSystemJava(t *testing.T) {
-	// An empty HOME means no managed JRE can exist; the analyzer would download
-	// its own JRE, so health must NOT report a system Java as the runtime.
 	t.Setenv("HOME", t.TempDir())
 
 	c := resolveHealthComponent("runtime")
@@ -58,8 +53,6 @@ func TestResolveRuntimeComponentFindsManagedJRE(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(jreBin, "java"), []byte("#!/bin/sh\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// Without the .versions marker the install tier is stale-filtered, matching
-	// the analyzer's own policy — write it so the JRE counts as current.
 	if err := utils.WriteInstallVersionMarker(); err != nil {
 		t.Fatal(err)
 	}

@@ -12,8 +12,8 @@ type ArtifactDef struct {
 	CacheSuffix string // cache filename suffix (".jar", "")
 	BindVersion string // compile-time bind version
 	Version     string // user-configured version
-	Override    string // explicit jar path override; bypasses version resolution and download
-	Unpack      bool   // unpack tar.gz; also implies dir-based cache entry
+	Override    string
+	Unpack      bool // unpack tar.gz; also implies dir-based cache entry
 }
 
 // CacheName returns the cache filename/dirname for this artifact version.

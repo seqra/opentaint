@@ -18,7 +18,6 @@ var (
 	healthRuntime     bool
 )
 
-// healthComponent is one resolved dependency in the health report.
 type healthComponent struct {
 	name    string
 	version string
@@ -26,7 +25,6 @@ type healthComponent struct {
 	present bool
 }
 
-// healthCmd represents the health command.
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Show resolved dependency paths",
@@ -53,7 +51,6 @@ func init() {
 }
 
 func runHealth() error {
-	// No flags shows every component, in fixed order.
 	var requested []string
 	if healthAutobuilder {
 		requested = append(requested, "autobuilder")
@@ -76,7 +73,6 @@ func runHealth() error {
 		components = append(components, resolveHealthComponent(key))
 	}
 
-	// A single flag prints just the bare path, for scripting.
 	if len(requested) == 1 {
 		c := components[0]
 		if c.path != "" {
@@ -114,8 +110,6 @@ func runHealth() error {
 	return nil
 }
 
-// resolveHealthComponent resolves a component's path and presence. Only the
-// rules are fetched on demand; the rest are reported as-is.
 func resolveHealthComponent(key string) healthComponent {
 	switch key {
 	case "autobuilder", "analyzer":
@@ -129,7 +123,6 @@ func resolveHealthComponent(key string) healthComponent {
 	}
 }
 
-// resolveJarComponent resolves a jar-backed artifact (autobuilder/analyzer).
 func resolveJarComponent(kind string) healthComponent {
 	def := globals.ArtifactByKind(kind)
 	path, err := utils.ResolveJarPath(def)
@@ -137,12 +130,8 @@ func resolveJarComponent(kind string) healthComponent {
 	return healthComponent{def.Name, version, path, err == nil && utils.PathExists(path)}
 }
 
-// resolveRulesComponent resolves the built-in rules directory, downloading it
-// on demand so `health --rules` replaces `dev rules-path`.
 func resolveRulesComponent() healthComponent {
 	c := healthComponent{name: "Rules", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"))}
-	// EnsureRulesPath returns the expected path even on failure, so the report
-	// can still show where the rules belong, flagged as missing.
 	path, err := utils.EnsureRulesPath(out)
 	c.path = path
 	if err != nil {
@@ -153,10 +142,6 @@ func resolveRulesComponent() healthComponent {
 	return c
 }
 
-// resolveRuntimeComponent reports the managed JRE the analyzer actually runs
-// on. The analyzer's runner never consults a system Java (it pins the managed
-// Adoptium JRE), so neither does health; when no managed JRE exists yet, the
-// reported path is where the analyzer will download one on first use.
 func resolveRuntimeComponent() healthComponent {
 	c := healthComponent{
 		name:    "Runtime",
