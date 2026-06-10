@@ -21,13 +21,13 @@ var genericSource []byte
 var genericSink []byte
 
 // Marker locations, relative to the test project root. The marker lib rules and the
-// test join an agent writes alongside them live only under MarkersDir — never in
+// test join an agent writes alongside them live only under the test-rules dir — never in
 // .opentaint/rules — so they never reach the main project scan. The rule paths double
 // as the values an agent refs from a test join (relative to the test-rules root).
 const (
-	MarkersDir        = "test-rules"
-	GenericSourceRule = "java/lib/test/generic-source.yaml"
-	GenericSinkRule   = "java/lib/test/generic-sink.yaml"
+	markersDir        = "test-rules"
+	genericSourceRule = "java/lib/test/generic-source.yaml"
+	genericSinkRule   = "java/lib/test/generic-sink.yaml"
 )
 
 // Scaffold writes the Taint helper into the project sources and the generic
@@ -35,7 +35,7 @@ const (
 func Scaffold(projectDir string) error {
 	return utils.WriteFiles(map[string][]byte{
 		filepath.Join(projectDir, "src", "main", "java", "test", "Taint.java"):       taintJava,
-		filepath.Join(projectDir, MarkersDir, filepath.FromSlash(GenericSourceRule)): genericSource,
-		filepath.Join(projectDir, MarkersDir, filepath.FromSlash(GenericSinkRule)):   genericSink,
+		filepath.Join(projectDir, markersDir, filepath.FromSlash(genericSourceRule)): genericSource,
+		filepath.Join(projectDir, markersDir, filepath.FromSlash(genericSinkRule)):   genericSink,
 	})
 }

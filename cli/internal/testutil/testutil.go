@@ -57,7 +57,7 @@ func ResolveJar() (string, error) {
 		}
 	}
 
-	if extracted, err := ExtractJar(); err == nil {
+	if extracted, err := extractJar(); err == nil {
 		return extracted, nil
 	}
 
@@ -72,11 +72,11 @@ func contentHash(jarData []byte) string {
 	return hex.EncodeToString(h[:])
 }
 
-// ExtractJar extracts the embedded test-util JAR to ~/.opentaint/test-util/
+// extractJar extracts the embedded test-util JAR to ~/.opentaint/test-util/
 // and returns the path to the extracted JAR. Uses a SHA-256 content hash
 // marker for staleness detection so the extracted copy is refreshed when the
 // binary is rebuilt with a newer JAR.
-func ExtractJar() (string, error) {
+func extractJar() (string, error) {
 	jarData, err := embeddedJarData()
 	if err != nil {
 		return "", err

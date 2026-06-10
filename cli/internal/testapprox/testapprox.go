@@ -11,9 +11,9 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-// FixedRuleFileName is the rule's path relative to the ruleset root, and the value
+// fixedRuleFileName is the rule's path relative to the ruleset root, and the value
 // samples reference in @PositiveRuleSample/@NegativeRuleSample.
-const FixedRuleFileName = "approximation-rule.yaml"
+const fixedRuleFileName = "approximation-rule.yaml"
 
 //go:embed example/approximation-rule.yaml
 var fixedRule []byte
@@ -24,7 +24,7 @@ var taintJava []byte
 // WriteFixedRule writes the fixed harness rule into dir and returns its path. Used by
 // test-approximations to apply the rule automatically from a throwaway ruleset directory.
 func WriteFixedRule(dir string) (string, error) {
-	path := filepath.Join(dir, FixedRuleFileName)
+	path := filepath.Join(dir, fixedRuleFileName)
 	if err := os.WriteFile(path, fixedRule, 0o644); err != nil {
 		return "", fmt.Errorf("write fixed approximation rule: %w", err)
 	}
@@ -36,7 +36,7 @@ func WriteFixedRule(dir string) (string, error) {
 // lives in its own unit folder (.opentaint/approximations/<name>), never inside this test project.
 func Scaffold(projectDir string) error {
 	return utils.WriteFiles(map[string][]byte{
-		filepath.Join(projectDir, FixedRuleFileName):                           fixedRule,
+		filepath.Join(projectDir, fixedRuleFileName):                           fixedRule,
 		filepath.Join(projectDir, "src", "main", "java", "test", "Taint.java"): taintJava,
 	})
 }
