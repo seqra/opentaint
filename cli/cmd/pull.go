@@ -76,6 +76,12 @@ When bundled artifacts are present (from a release archive), they will be used d
 func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurrent bool) (*tree.Tree, error) {
 	node := out.GroupItem(fmt.Sprintf("%s %s", spec.Name, spec.Version))
 
+	if spec.Override != "" {
+		// Pull still fetches the release artifact (offline prep stays valid if
+		// the override is later removed), but scans will use the override.
+		node.Child(fmt.Sprintf("Config override active: scans use %s", spec.Override))
+	}
+
 	tiers, err := utils.ArtifactTiers(spec)
 	if err != nil {
 		return node, err
