@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/utils"
-	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/spf13/cobra"
 )
 
@@ -35,10 +35,12 @@ built-in rules, and Java runtime.
 
 Use --autobuilder, --analyzer, --rules, or --runtime to select components. When
 exactly one component is selected, only its path is printed. The command does
-not download artifacts except built-in rules, which are fetched on demand.`,
+not download artifacts except built-in rules, which are fetched on demand.
+
+The exit code is non-zero when any selected component is missing.`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		runHealth()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runHealth()
 	},
 }
 
@@ -50,7 +52,7 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
-func runHealth() {
+func runHealth() error {
 	// No flags shows every component, in fixed order.
 	var requested []string
 	if healthAutobuilder {
@@ -77,15 +79,21 @@ func runHealth() {
 	// A single flag prints just the bare path, for scripting.
 	if len(requested) == 1 {
 		c := components[0]
-		fmt.Println(c.path)
-		if !c.present {
-			fmt.Fprintf(os.Stderr, "%s missing at %s\n", c.name, c.path)
+		if c.path != "" {
+			fmt.Println(c.path)
 		}
-		return
+		if !c.present {
+			if c.path == "" {
+				return fmt.Errorf("%s could not be resolved", c.name)
+			}
+			return fmt.Errorf("%s missing at %s", c.name, c.path)
+		}
+		return nil
 	}
 
 	sb := out.Section("OpenTaint Health")
 	th := out.Theme()
+	var missing []string
 	for _, c := range components {
 		node := out.GroupItem(th.FieldKey.Render(c.name))
 		if c.version != "" {
@@ -94,11 +102,16 @@ func runHealth() {
 		path := c.path
 		if !c.present {
 			path += "  " + th.Error.Render("missing")
+			missing = append(missing, c.name)
 		}
 		node.Child(th.FieldValue.Render(path))
 		sb.Child(node)
 	}
 	sb.Render()
+	if len(missing) > 0 {
+		return fmt.Errorf("missing components: %s", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 // resolveHealthComponent resolves a component's path and presence. Only the
@@ -133,31 +146,27 @@ func resolveRulesComponent() healthComponent {
 	path, err := utils.EnsureRulesPath(out)
 	c.path = path
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error resolving rules: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to prepare built-in rules: %s\n", err)
 		return c
 	}
 	c.present = utils.PathExists(path)
 	return c
 }
 
-// resolveRuntimeComponent reports the Java the analyzer runs on, and where it
-// comes from: "builtin" is the JRE OpenTaint manages itself (downloaded/bundled
-// into its own install), "system" is a Java already on the user's PATH.
+// resolveRuntimeComponent reports the managed JRE the analyzer actually runs
+// on. The analyzer's runner never consults a system Java (it pins the managed
+// Adoptium JRE), so neither does health; when no managed JRE exists yet, the
+// reported path is where the analyzer will download one on first use.
 func resolveRuntimeComponent() healthComponent {
-	c := healthComponent{name: "Runtime"}
-	if jre := utils.FindExistingJRE(utils.ManagedJRETiers()); jre != nil {
+	c := healthComponent{
+		name:    "Runtime",
+		version: "Java " + strconv.Itoa(globals.DefaultJavaVersion) + " (builtin)",
+	}
+	if jre := utils.FindCurrentManagedJRE(); jre != nil {
 		c.path = utils.JavaBinaryPath(jre.Path)
-		c.version = "Java " + strconv.Itoa(globals.DefaultJavaVersion) + " (builtin)"
 		c.present = true
 		return c
 	}
-	if sys := java.DetectSystemJava(); sys != nil {
-		c.path = sys.Path
-		c.version = "Java " + sys.FullVersion + " (system)"
-		c.present = true
-		return c
-	}
-	c.version = "Java " + strconv.Itoa(globals.DefaultJavaVersion) + " (builtin)"
 	if jre := utils.GetInstallJREPath(); jre != "" {
 		c.path = utils.JavaBinaryPath(jre)
 	}
