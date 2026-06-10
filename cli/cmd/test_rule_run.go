@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/seqra/opentaint/internal/globals"
+	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/utils"
-	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -29,25 +28,20 @@ var testRuleRunCmd = &cobra.Command{
 	Long: `Run detection rules against samples annotated with @PositiveRuleSample and
 @NegativeRuleSample in the compiled project model.
 
-Exit codes:
-  0    All rule tests passed
-  1    General failure (configuration or infrastructure error)
-  252  Unhandled analyzer exception
-  253  Out of memory (try increasing --max-memory)
-  254  Analysis timed out (try increasing --timeout)
-  255  Project configuration error`,
+` + testExitCodesHelp("All rule tests passed"),
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runTestProject(args[0], testProjectOptions{
-			label:             "Rule tests",
-			tempDir:           "opentaint-test-rules-*",
-			rulesets:          testRulesRuleset,
-			outputDir:         testRulesOutputDir,
-			timeout:           testRulesTimeout,
-			maxMemory:         testRulesMaxMemory,
-			ruleIDs:           testRulesRuleID,
-			dataflowApprox:    testRulesDataflow,
-			passthroughApprox: testRulesPassthrough,
+			label:               "Rule tests",
+			tempDir:             "opentaint-test-rules-*",
+			rulesets:            testRulesRuleset,
+			outputDir:           testRulesOutputDir,
+			timeout:             testRulesTimeout,
+			maxMemory:           testRulesMaxMemory,
+			ruleIDs:             testRulesRuleID,
+			dataflowApprox:      testRulesDataflow,
+			passthroughApprox:   testRulesPassthrough,
+			includeBuiltinRules: true,
 		})
 	},
 }
@@ -63,14 +57,22 @@ type testProjectOptions struct {
 	ruleIDs           []string
 	dataflowApprox    []string
 	passthroughApprox []string
+	// includeBuiltinRules loads the builtin ruleset alongside opts.rulesets.
+	// Rule tests need it (test joins may ref builtin lib rules); approximation
+	// tests run only against the self-contained harness rule, so skipping it
+	// keeps them download-free.
+	includeBuiltinRules bool
 }
 
 func runTestProject(projectModelArg string, opts testProjectOptions) {
 	projectPath := log.AbsPathOrExit(projectModelArg, "project-model")
 	nativeProjectPath := filepath.Join(projectPath, "project.yaml")
 
-	if _, err := os.Stat(nativeProjectPath); os.IsNotExist(err) {
-		out.Fatalf("Project model not found: %s", nativeProjectPath)
+	if _, err := os.Stat(nativeProjectPath); err != nil {
+		if os.IsNotExist(err) {
+			out.Fatalf("Project model not found: %s", nativeProjectPath)
+		}
+		out.Fatalf("Cannot access project model %s: %s", nativeProjectPath, err)
 	}
 
 	// Validate max-memory
@@ -96,12 +98,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		}
 	}
 
-	// Ensure builtin rules are available
-	rulesPath, err := utils.EnsureRulesPath(out)
-	if err != nil {
-		out.Fatalf("Failed to prepare built-in rules: %s", err)
-	}
-
 	timeoutSeconds := int64(opts.timeout / time.Second)
 	if timeoutSeconds <= 0 {
 		timeoutSeconds = 600
@@ -112,8 +108,15 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		SetOutputDir(outputDir).
 		SetSarifFileName("test-results.sarif").
 		SetIfdsAnalysisTimeout(timeoutSeconds).
-		AddRuleSet(rulesPath).
 		EnableRunRuleTests()
+
+	if opts.includeBuiltinRules {
+		rulesPath, err := utils.EnsureRulesPath(out)
+		if err != nil {
+			out.Fatalf("Failed to prepare built-in rules: %s", err)
+		}
+		builder.AddRuleSet(rulesPath)
+	}
 
 	if maxMemory != "" {
 		builder.SetMaxMemory(maxMemory)
@@ -140,27 +143,39 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	addDataflowApproximations(builder, opts.dataflowApprox, analyzerJarPath, projectPath)
 	addPassthroughApproximations(builder, opts.passthroughApprox)
 
-	javaRunner := java.NewJavaRunner().
-		WithSkipVerify(globals.Config.SkipVerify).
-		WithDebugOutput(out.DebugStream("Analyzer")).
-		WithImageType(java.AdoptiumImageJRE).
-		TrySpecificVersion(globals.DefaultJavaVersion)
+	javaRunner := newAnalyzerJavaRunner()
 	if _, err := javaRunner.EnsureJava(); err != nil {
-		out.Fatalf("Failed to resolve Java: %s", err)
+		out.Fatalf("Failed to resolve Java for analyzer: %s", err)
 	}
 
 	cmdErr, err := scanProject(builder, javaRunner)
 	if err != nil {
 		out.Fatalf("%s failed: %s", opts.label, err)
 	}
-	analyzerFail := classifyAnalyzerError(cmdErr)
+	analyzerFail := analyzer.Classify(cmdErr)
+	if analyzerFail != nil {
+		out.Error(analyzerFail.Message)
+	}
 
 	// Always print output paths so the agent can inspect partial results
+	resultPath := filepath.Join(outputDir, "test-result.json")
 	fmt.Printf("Results directory: %s\n", outputDir)
-	fmt.Printf("Test results:     %s\n", filepath.Join(outputDir, "test-result.json"))
+	fmt.Printf("Test results:     %s\n", resultPath)
 
 	if analyzerFail != nil {
-		os.Exit(analyzerFail.exitCode)
+		os.Exit(analyzerFail.ExitCode)
+	}
+
+	// The analyzer exits 0 even when samples fail; the verdict is in test-result.json.
+	tr, err := analyzer.LoadTestResult(resultPath)
+	if err != nil {
+		out.Fatalf("%s produced no readable test-result.json: %s", opts.label, err)
+	}
+	fmt.Printf("Passed: %d, failed: %d (false negatives: %d, false positives: %d, skipped: %d), disabled: %d\n",
+		len(tr.Success), tr.Failed(), len(tr.FalseNegative), len(tr.FalsePositive), len(tr.Skipped), len(tr.Disabled))
+	if tr.Failed() > 0 {
+		out.Error(fmt.Sprintf("%s failed", opts.label))
+		os.Exit(2)
 	}
 
 	fmt.Printf("%s completed successfully\n", opts.label)
@@ -170,10 +185,7 @@ func init() {
 	testRuleCmd.AddCommand(testRuleRunCmd)
 
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Ruleset file or directory to test (repeatable)")
-	testRuleRunCmd.Flags().StringVarP(&testRulesOutputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
-	testRuleRunCmd.Flags().DurationVar(&testRulesTimeout, "timeout", 600*time.Second, "Analysis timeout")
-	testRuleRunCmd.Flags().StringVar(&testRulesMaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g., 8G)")
+	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesDataflow, "dataflow-approximations", nil, "Dataflow approximation class directory or Java source directory (repeatable)")
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
 }

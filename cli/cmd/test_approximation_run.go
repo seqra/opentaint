@@ -23,13 +23,7 @@ var testApproximationRunCmd = &cobra.Command{
 A built-in source-to-sink harness rule is applied automatically; positive samples reference it as
 ` + "`@PositiveRuleSample(value = \"approximation-rule.yaml\", id = \"approximation-rule\")`" + `.
 
-Exit codes:
-  0    All approximation tests passed
-  1    General failure (configuration or infrastructure error)
-  252  Unhandled analyzer exception
-  253  Out of memory (try increasing --max-memory)
-  254  Analysis timed out (try increasing --timeout)
-  255  Project configuration error`,
+` + testExitCodesHelp("All approximation tests passed"),
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ruleDir, err := os.MkdirTemp("", "opentaint-approx-rule-*")
@@ -54,9 +48,5 @@ Exit codes:
 
 func init() {
 	testApproximationCmd.AddCommand(testApproximationRunCmd)
-
-	testApproximationRunCmd.Flags().StringVarP(&testApproxOutputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
-	testApproximationRunCmd.Flags().DurationVar(&testApproxTimeout, "timeout", 600*time.Second, "Analysis timeout")
-	testApproximationRunCmd.Flags().StringVar(&testApproxMaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g., 8G)")
-	testApproximationRunCmd.Flags().StringArrayVar(&testApproxDataflow, "dataflow-approximations", nil, "Dataflow approximation class directory or Java source directory (repeatable)")
+	addTestRunFlags(testApproximationRunCmd, &testApproxOutputDir, &testApproxTimeout, &testApproxMaxMemory, &testApproxDataflow)
 }

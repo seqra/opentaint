@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 )
 
@@ -27,4 +29,26 @@ func init() {
 	rootCmd.AddCommand(testCmd)
 	testCmd.AddCommand(testRuleCmd)
 	testCmd.AddCommand(testApproximationCmd)
+}
+
+// testExitCodesHelp documents the exit codes shared by `test rule run` and
+// `test approximation run`. Codes 252-255 mirror internal/analyzer.
+func testExitCodesHelp(passedLine string) string {
+	return `Exit codes:
+  0    ` + passedLine + `
+  1    General failure (configuration or infrastructure error)
+  2    One or more tests failed (false negatives/positives or skipped samples)
+  252  Unhandled analyzer exception
+  253  Out of memory (try increasing --max-memory)
+  254  Analysis timed out (try increasing --timeout)
+  255  Project configuration error`
+}
+
+// addTestRunFlags registers the flags shared by `test rule run` and
+// `test approximation run`.
+func addTestRunFlags(cmd *cobra.Command, outputDir *string, timeout *time.Duration, maxMemory *string, dataflow *[]string) {
+	cmd.Flags().StringVarP(outputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
+	cmd.Flags().DurationVar(timeout, "timeout", 600*time.Second, "Analysis timeout")
+	cmd.Flags().StringVar(maxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g., 8G)")
+	cmd.Flags().StringArrayVar(dataflow, "dataflow-approximations", nil, "Dataflow approximation class directory or Java source directory (repeatable)")
 }
