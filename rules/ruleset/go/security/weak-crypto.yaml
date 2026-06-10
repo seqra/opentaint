@@ -1,0 +1,18 @@
+rules:
+  - id: go-weak-crypto-cwe-327
+    languages: [go]
+    severity: ERROR
+    message: Use of a broken or risky cryptographic algorithm
+    metadata:
+      cwe: CWE-327
+      short-description: Broken or risky crypto algorithm
+    mode: search
+    pattern-either:
+      - pattern: des.NewCipher(...)
+      - pattern: des.NewTripleDESCipher(...)
+      - pattern: rc4.NewCipher(...)
+      - pattern: md4.New(...)
+      - pattern: cipher.NewECBEncrypter(...)
+      - pattern: cipher.NewECBDecrypter(...)
+      - pattern: NewECBEncrypter(...)
+      - pattern: NewECBDecrypter(...)

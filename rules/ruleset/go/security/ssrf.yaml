@@ -1,0 +1,17 @@
+rules:
+  - id: go-ssrf
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input flows into a server-side HTTP request (SSRF)
+    metadata:
+      cwe: CWE-918
+      short-description: Server-side request forgery
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#go-http-sources
+          as: src
+        - rule: go/lib/go-ssrf-sinks.yaml#go-ssrf-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

@@ -1,0 +1,20 @@
+rules:
+  - id: go-command-injection
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input reaches OS command execution (command injection)
+    metadata:
+      cwe: CWE-78
+      short-description: Command injection
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#go-http-sources
+          as: src
+        - rule: go/lib/http-sources-header-index.yaml#go-http-sources-header-index
+          as: extra_header
+        - rule: go/lib/go-cmdi-sinks.yaml#go-cmdi-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'extra_header.$UNTRUSTED -> sink.$UNTRUSTED'
