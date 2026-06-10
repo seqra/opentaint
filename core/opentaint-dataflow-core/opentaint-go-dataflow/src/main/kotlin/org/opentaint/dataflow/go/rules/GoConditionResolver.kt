@@ -11,6 +11,7 @@ import org.opentaint.dataflow.configuration.mkOr
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.go.GoFunctionSignature
+import org.opentaint.ir.go.api.GoIRNamedType
 import org.opentaint.ir.go.type.GoIRArrayType
 import org.opentaint.ir.go.type.GoIRMapType
 import org.opentaint.ir.go.type.GoIRNamedTypeRef
@@ -175,6 +176,13 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
     val accessors = mutableListOf<PositionAccessor>()
     for (mod in this) {
         type = type.unwrapPtr()
+
+        var named: GoIRNamedType? = null
+        if (type is GoIRNamedTypeRef) {
+            named = type.namedType
+            type = named.underlying
+        }
+
         when (mod) {
             is PositionModifier.ArrayElement -> {
                 accessors += PositionAccessor.ElementAccessor
@@ -203,7 +211,7 @@ private fun List<PositionModifier>.resolveWithType(baseType: GoIRType): List<Pos
                 if (type !is GoIRStructType) return null
                 val field = type.fields.firstOrNull { it.name == mod.fieldName } ?: return null
 
-                val structName = type.namedType?.fullName ?: return null
+                val structName = named?.fullName ?: type.namedType?.fullName ?: return null
                 accessors += PositionAccessor.FieldAccessor(structName, field.name, field.type.typeName)
 
                 type = field.type
@@ -219,6 +227,5 @@ private val tupleFieldNamePattern = Regex("tuple\\$(\\d+)")
 
 private fun GoIRType.unwrapPtr(): GoIRType = when (this) {
     is GoIRPointerType -> elem.unwrapPtr()
-    is GoIRNamedTypeRef -> namedType.underlying.unwrapPtr()
     else -> this
 }
