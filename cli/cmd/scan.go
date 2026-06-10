@@ -15,7 +15,6 @@ import (
 
 	"github.com/seqra/opentaint/internal/utils/project"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
@@ -130,7 +129,7 @@ func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 
 func init() {
 	rootCmd.AddCommand(scanCmd)
-	addScanFlags(scanCmd, true)
+	addScanFlags(scanCmd)
 	addRuleIDFlag(scanCmd)
 }
 
@@ -142,33 +141,21 @@ func addRuleIDFlag(cmd *cobra.Command) {
 }
 
 // addScanFlags registers the flags shared by `scan` and `test rule
-// reachability`. Only the canonical `scan` command binds them to viper config
-// keys (bindViper); the reachability alias shares the same scanFlags target but
-// must not re-bind the global "scan.*" keys, or the last init() to run would
-// silently steal config precedence from the command the user actually invoked.
-func addScanFlags(cmd *cobra.Command, bindViper bool) {
+// reachability`. The matching scan.* viper keys are bound to the executing
+// command's flag instances at startup (bindScanFlags in root.go), so explicit
+// flags keep precedence over config/env regardless of which command the user
+// invoked.
+func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Timeout for analysis")
-	if bindViper {
-		_ = viper.BindPFlag("scan.timeout", cmd.Flags().Lookup("timeout"))
-	}
 
 	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "YAML rules file, directory of YAML rules files ending in .yml or .yaml, or `builtin` to scan with built-in rules")
-	if bindViper {
-		_ = viper.BindPFlag("scan.ruleset", cmd.Flags().Lookup("ruleset"))
-	}
 
 	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep compatible ruleId")
 	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF-report output file")
 
 	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Report findings only from rules matching the supplied severity level. By default only warning and error rules are run (note, warning, error)")
 	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 1024m, 8G, 81920k, 83886080)")
-	if bindViper {
-		_ = viper.BindPFlag("scan.max_memory", cmd.Flags().Lookup("max-memory"))
-	}
 	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows to include in the report (0 = unlimited)")
-	if bindViper {
-		_ = viper.BindPFlag("scan.code_flow_limit", cmd.Flags().Lookup("code-flow-limit"))
-	}
 	cmd.Flags().BoolVar(&scanFlags.DryRun, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
 	cmd.Flags().BoolVar(&scanFlags.Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
 	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")

@@ -58,7 +58,7 @@ func reachabilityScanConfig(base ScanConfig, ruleID, entryPoint string) ScanConf
 
 func init() {
 	testRuleCmd.AddCommand(testRuleReachabilityCmd)
-	addScanFlags(testRuleReachabilityCmd, false)
+	addScanFlags(testRuleReachabilityCmd)
 	testRuleReachabilityCmd.Flags().StringVar(&reachabilityEntryPoint, "entry-points", "",
 		"Start from '*' or a fully qualified method such as com.example.Class#method")
 }
