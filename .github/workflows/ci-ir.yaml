@@ -131,7 +131,7 @@ jobs:
         if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-reports-lifecycle
+          name: gradle-reports-go-ir-tests
           path: '**/build/reports/'
           retention-days: 1
 
@@ -165,7 +165,7 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'main' }}
 
-      - name: Run round-trip tests
+      - name: Run benchmark tests
         run: ./gradlew opentaint-ir:go:go-ir-tests:benchmarkTest
         working-directory: core
 
@@ -173,6 +173,6 @@ jobs:
         if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-reports-lifecycle
+          name: gradle-reports-go-ir-benchmark
           path: '**/build/reports/'
           retention-days: 1
