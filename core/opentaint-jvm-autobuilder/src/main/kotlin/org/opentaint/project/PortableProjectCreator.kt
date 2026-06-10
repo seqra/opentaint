@@ -13,8 +13,7 @@ import kotlin.io.path.name
 import kotlin.io.path.relativeTo
 
 class PortableProjectCreator(
-    private val portableProjectRootPath: Path,
-    private val topLevelProject: Project
+    private val portableProjectRootPath: Path
 ) {
     sealed interface PortAction {
         data class Copy(val dst: Path) : PortAction
@@ -65,7 +64,7 @@ class PortableProjectCreator(
         }
     }
 
-    fun create() {
+    fun create(topLevelProject: Project) {
         val portableJava = topLevelProject.javaProjects.mapIndexed { index, project ->
             val projectPath = portableProjectRootPath.resolve("java_$index")
             createJava(project, projectPath) ?: return
@@ -84,7 +83,14 @@ class PortableProjectCreator(
         portableProject.dump(portableProjectRootPath.resolve("project.yaml"))
     }
 
-    fun createGo(rootProject: GoProject, portableProjectPath: Path): GoProject? {
+    fun create(javaOnlyProject: JavaProject) {
+        val portableJava = createJava(javaOnlyProject, portableProjectRootPath)
+            ?: return
+
+        portableJava.dump(portableProjectRootPath.resolve("project.yaml"))
+    }
+
+    private fun createGo(rootProject: GoProject, portableProjectPath: Path): GoProject? {
         logger.info { "Start portable project creation" }
 
         if (portableProjectPath.exists()) {
@@ -103,7 +109,7 @@ class PortableProjectCreator(
         return relativeProject
     }
 
-    fun createJava(rootProject: JavaProject, portableProjectPath: Path): JavaProject? {
+    private fun createJava(rootProject: JavaProject, portableProjectPath: Path): JavaProject? {
         logger.info { "Start portable project creation" }
 
         if (portableProjectPath.exists()) {
