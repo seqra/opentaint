@@ -104,6 +104,7 @@ jobs:
             "opentaint-jvm-sast-dataflow/"
             "opentaint-jvm-sast-project/"
             "opentaint-jvm-sast-se-api/"
+            "opentaint-go-querylang/"
             "opentaint-java-querylang/"
             "opentaint-config/"
             "opentaint-configuration-rules/"
