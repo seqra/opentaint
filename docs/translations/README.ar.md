@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**التثبيت عبر npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**أو شغّله فورًا عبر npx — دون الحاجة إلى التثبيت (يتطلب Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **فحص مشروعك:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 لمزيد من الخيارات، راجع [التثبيت](../../docs/README.md#installation) و[الاستخدام](../../docs/README.md#usage).
+
+---
+
+## سير عمل وكلاء الذكاء الاصطناعي
+
+يتضمن OpenTaint مهارات وكلاء تحوّل التحليل الساكن إلى سير عمل متكامل لأمن التطبيقات. ثبّتها باستخدام:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+تنسّق مهارة `appsec-agent` تقييمًا كاملًا للمشروع: بناء المشروع، تشغيل OpenTaint، اكتشاف سطح الهجوم، إضافة قواعد موجّهة، نمذجة تدفقات بيانات المكتبات المفقودة، فرز النتائج، وبشكل اختياري توليد فحوصات ديناميكية لإثبات المفهوم للثغرات المؤكدة.
+
+تغطي المهارات المضمّنة حلقة التحليل الأمني الشائعة:
+
+- **الفحص والفرز:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **توسيع التغطية:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **نمذجة تدفق البيانات:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

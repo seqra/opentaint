@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**ติดตั้งผ่าน npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**หรือรันได้ทันทีด้วย npx — ไม่ต้องติดตั้ง (ต้องมี Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **สแกนโปรเจกต์ของคุณ:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 สำหรับตัวเลือกเพิ่มเติม ดู [การติดตั้ง](../../docs/README.md#installation) และ [การใช้งาน](../../docs/README.md#usage)
+
+---
+
+## เวิร์กโฟลว์ AI Agent
+
+OpenTaint มาพร้อม agent skill ที่เปลี่ยนการวิเคราะห์แบบสแตติกให้กลายเป็นเวิร์กโฟลว์ความปลอดภัยของแอปพลิเคชันแบบครบวงจร ติดตั้งได้ด้วย:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+สกิล `appsec-agent` ทำหน้าที่ประสานการประเมินโปรเจกต์แบบเต็มรูปแบบ: บิลด์โปรเจกต์ รัน OpenTaint ค้นหา attack surface เพิ่มกฎแบบเจาะจง สร้างแบบจำลอง data flow ของไลบรารีที่ขาดหายไป คัดแยกผลการค้นพบ และสร้างการตรวจสอบ proof-of-concept แบบไดนามิกสำหรับช่องโหว่ที่ยืนยันแล้วได้ตามต้องการ
+
+สกิลที่รวมมาให้ครอบคลุมวงจรการวิเคราะห์ความปลอดภัยที่ใช้กันทั่วไป:
+
+- **สแกนและคัดแยก:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **ขยายการครอบคลุม:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **การสร้างแบบจำลอง dataflow:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

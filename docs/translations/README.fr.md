@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Installation via npm (Linux/macOS/Windows) :**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Ou exécutez instantanément avec npx — sans installation requise (nécessite Node.js) :**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Analysez votre projet :**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 Pour plus d'options, consultez [Installation](../../docs/README.md#installation) et [Utilisation](../../docs/README.md#usage).
+
+---
+
+## Workflows d'agents IA
+
+OpenTaint inclut des skills d'agents qui transforment l'analyse statique en un workflow de sécurité applicative de bout en bout. Installez-les avec :
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Le skill `appsec-agent` orchestre une évaluation complète du projet : compiler le projet, exécuter OpenTaint, découvrir la surface d'attaque, ajouter des règles ciblées, modéliser les flux de données manquants des bibliothèques, trier les résultats, et éventuellement générer des vérifications dynamiques de preuve de concept pour les vulnérabilités confirmées.
+
+Les skills inclus couvrent le cycle habituel d'analyse de sécurité :
+
+- **Analyse et triage :** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Extension de la couverture :** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Modélisation des flux de données :** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

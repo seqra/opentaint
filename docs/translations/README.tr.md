@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**npm ile kurulum (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Veya npx ile anında çalıştırın — kurulum gerekmez (Node.js gerektirir):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Projenizi tarayın:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 Daha fazla seçenek için [Kurulum](../../docs/README.md#installation) ve [Kullanım](../../docs/README.md#usage) bölümlerine bakın.
+
+---
+
+## Yapay Zeka Ajan İş Akışları
+
+OpenTaint, statik analizi uçtan uca bir uygulama güvenliği iş akışına dönüştüren ajan becerileri içerir. Bunları şu komutla kurun:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` becerisi, eksiksiz bir proje değerlendirmesini yönetir: projeyi derleyin, OpenTaint'i çalıştırın, saldırı yüzeyini keşfedin, hedefli kurallar ekleyin, eksik kütüphane veri akışlarını modelleyin, bulguları önceliklendirin ve isteğe bağlı olarak doğrulanmış güvenlik açıkları için dinamik kavram kanıtı (proof-of-concept) kontrolleri oluşturun.
+
+İçerilen beceriler, yaygın güvenlik analizi döngüsünü kapsar:
+
+- **Tarama ve önceliklendirme:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Kapsam genişletme:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Veri akışı modelleme:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

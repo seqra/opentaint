@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**通过 npm 安装 (Linux/macOS/Windows)：**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**或使用 npx 即时运行——无需安装（需要 Node.js）：**
+```bash
+npx @seqra/opentaint scan
+```
+
 **扫描你的项目：**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 更多选项请参阅[安装指南](../../docs/README.md#installation)和[使用方法](../../docs/README.md#usage)。
+
+---
+
+## AI 代理工作流
+
+OpenTaint 包含代理技能（agent skills），可将静态分析转变为端到端的应用安全工作流。使用以下命令安装：
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` 技能可编排完整的项目评估：构建项目、运行 OpenTaint、发现攻击面、添加针对性规则、为缺失的库数据流建模、对发现结果进行分诊，并可选地为已确认的漏洞生成动态概念验证检查。
+
+内置技能覆盖了常见的安全分析循环：
+
+- **扫描与分诊：** `build-project`、`run-scan`、`analyze-findings`、`generate-poc`
+- **覆盖范围扩展：** `triage-dependencies`、`discover-attack-surface`、`create-test-project`、`create-rule`、`assemble-lib-rules`
+- **数据流建模：** `analyze-external-methods`、`create-pass-through-approximation`、`create-dataflow-approximation`、`debug-rule`、`report-analyzer-issue`
 
 ---
 

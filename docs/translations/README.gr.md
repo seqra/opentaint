@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Εγκατάσταση μέσω npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Ή εκτελέστε άμεσα με npx — χωρίς εγκατάσταση (απαιτεί Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Σαρώστε το έργο σας:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 Για περισσότερες επιλογές, δείτε [Εγκατάσταση](../../docs/README.md#installation) και [Χρήση](../../docs/README.md#usage).
+
+---
+
+## Ροές εργασίας πρακτόρων AI
+
+Το OpenTaint περιλαμβάνει δεξιότητες πρακτόρων που μετατρέπουν τη στατική ανάλυση σε μια ολοκληρωμένη ροή εργασίας ασφάλειας εφαρμογών. Εγκαταστήστε τις με:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Η δεξιότητα `appsec-agent` ενορχηστρώνει μια πλήρη αξιολόγηση του έργου: κατασκευή του έργου, εκτέλεση του OpenTaint, ανακάλυψη της επιφάνειας επίθεσης, προσθήκη στοχευμένων κανόνων, μοντελοποίηση ελλειπουσών ροών δεδομένων βιβλιοθηκών, διαλογή ευρημάτων και προαιρετικά δημιουργία δυναμικών ελέγχων proof-of-concept για επιβεβαιωμένες ευπάθειες.
+
+Οι περιλαμβανόμενες δεξιότητες καλύπτουν τον συνήθη κύκλο ανάλυσης ασφαλείας:
+
+- **Σάρωση και διαλογή:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Επέκταση κάλυψης:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Μοντελοποίηση ροής δεδομένων:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**npm을 통한 설치 (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**또는 npx로 즉시 실행 — 설치 불필요 (Node.js 필요):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **프로젝트 스캔:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 더 많은 옵션은 [설치](../../docs/README.md#installation) 및 [사용법](../../docs/README.md#usage)을 참조하세요.
+
+---
+
+## AI 에이전트 워크플로우
+
+OpenTaint에는 정적 분석을 종단 간 애플리케이션 보안 워크플로우로 전환하는 에이전트 스킬이 포함되어 있습니다. 다음 명령으로 설치하세요:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` 스킬은 전체 프로젝트 평가를 조율합니다: 프로젝트 빌드, OpenTaint 실행, 공격 표면 탐색, 맞춤 규칙 추가, 누락된 라이브러리 데이터 흐름 모델링, 발견 사항 분류, 그리고 선택적으로 확인된 취약점에 대한 동적 개념 증명(proof-of-concept) 검증 생성까지 수행합니다.
+
+포함된 스킬은 일반적인 보안 분석 루프를 다룹니다:
+
+- **스캔 및 분류:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **커버리지 확장:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **데이터플로우 모델링:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

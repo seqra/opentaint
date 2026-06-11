@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**npm দিয়ে ইনস্টল (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**অথবা npx দিয়ে সাথে সাথে চালান — ইনস্টলের প্রয়োজন নেই (Node.js প্রয়োজন):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **আপনার প্রোজেক্ট স্ক্যান করুন:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 আরও বিকল্পের জন্য দেখুন [ইনস্টলেশন](../../docs/README.md#installation) এবং [ব্যবহার](../../docs/README.md#usage)।
+
+---
+
+## AI এজেন্ট ওয়ার্কফ্লো
+
+OpenTaint-এ এজেন্ট স্কিল অন্তর্ভুক্ত রয়েছে যা স্ট্যাটিক বিশ্লেষণকে একটি এন্ড-টু-এন্ড অ্যাপ্লিকেশন-নিরাপত্তা ওয়ার্কফ্লোতে পরিণত করে। সেগুলো ইনস্টল করুন:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` স্কিল একটি সম্পূর্ণ প্রোজেক্ট মূল্যায়ন পরিচালনা করে: প্রোজেক্ট বিল্ড করা, OpenTaint চালানো, অ্যাটাক সারফেস আবিষ্কার করা, লক্ষ্যভিত্তিক নিয়ম যোগ করা, অনুপস্থিত লাইব্রেরি ডেটা ফ্লো মডেল করা, ফলাফল ট্রায়াজ করা, এবং ঐচ্ছিকভাবে নিশ্চিত দুর্বলতার জন্য ডায়নামিক প্রুফ-অফ-কনসেপ্ট পরীক্ষা তৈরি করা।
+
+অন্তর্ভুক্ত স্কিলগুলো সাধারণ নিরাপত্তা-বিশ্লেষণ লুপ কভার করে:
+
+- **স্ক্যান ও ট্রায়াজ:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **কভারেজ সম্প্রসারণ:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **ডেটাফ্লো মডেলিং:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

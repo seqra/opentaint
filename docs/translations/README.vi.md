@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Cài đặt qua npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Hoặc chạy ngay lập tức với npx — không cần cài đặt (yêu cầu Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Quét dự án của bạn:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 Để biết thêm tùy chọn, xem [Cài đặt](../../docs/README.md#installation) và [Cách sử dụng](../../docs/README.md#usage).
+
+---
+
+## Quy trình làm việc với tác tử AI
+
+OpenTaint bao gồm các kỹ năng tác tử biến phân tích tĩnh thành quy trình bảo mật ứng dụng đầu cuối. Cài đặt chúng với:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Kỹ năng `appsec-agent` điều phối một đánh giá dự án toàn diện: xây dựng dự án, chạy OpenTaint, khám phá bề mặt tấn công, thêm các quy tắc có mục tiêu, mô hình hóa các luồng dữ liệu thư viện còn thiếu, phân loại các phát hiện, và tùy chọn tạo các kiểm tra proof-of-concept động cho các lỗ hổng đã được xác nhận.
+
+Các kỹ năng đi kèm bao phủ vòng lặp phân tích bảo mật thông dụng:
+
+- **Quét và phân loại:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Mở rộng phạm vi bao phủ:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Mô hình hóa luồng dữ liệu:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

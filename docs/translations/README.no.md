@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Installer via npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Eller kjør umiddelbart med npx — ingen installasjon nødvendig (krever Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Skann prosjektet ditt:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 For flere alternativer, se [Installasjon](../../docs/README.md#installation) og [Bruk](../../docs/README.md#usage).
+
+---
+
+## Arbeidsflyter for AI-agenter
+
+OpenTaint inkluderer agentferdigheter som gjør statisk analyse om til en helhetlig arbeidsflyt for applikasjonssikkerhet. Installer dem med:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Ferdigheten `appsec-agent` orkestrerer en fullstendig prosjektvurdering: bygg prosjektet, kjør OpenTaint, kartlegg angrepsflaten, legg til målrettede regler, modeller manglende dataflyter i biblioteker, triager funn, og generer eventuelt dynamiske proof-of-concept-sjekker for bekreftede sårbarheter.
+
+De inkluderte ferdighetene dekker den vanlige sikkerhetsanalysesyklusen:
+
+- **Skanning og triagering:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Utvidet dekning:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Dataflytmodellering:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**npm でインストール (Linux/macOS/Windows)：**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**または npx で即座に実行——インストール不要 (Node.js が必要)：**
+```bash
+npx @seqra/opentaint scan
+```
+
 **プロジェクトをスキャン：**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 その他のオプションについては、[インストール](../../docs/README.md#installation)と[使い方](../../docs/README.md#usage)をご覧ください。
+
+---
+
+## AI エージェントワークフロー
+
+OpenTaint には、静的解析をエンドツーエンドのアプリケーションセキュリティワークフローへと変えるエージェントスキルが含まれています。以下のコマンドでインストールできます：
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` スキルは、プロジェクト評価の全体をオーケストレーションします：プロジェクトのビルド、OpenTaint の実行、攻撃対象領域の発見、対象を絞ったルールの追加、不足しているライブラリのデータフローのモデリング、検出結果のトリアージ、さらにオプションで、確認された脆弱性に対する動的な概念実証チェックの生成までを行います。
+
+含まれるスキルは、一般的なセキュリティ解析のループをカバーします：
+
+- **スキャンとトリアージ：** `build-project`、`run-scan`、`analyze-findings`、`generate-poc`
+- **カバレッジ拡張：** `triage-dependencies`、`discover-attack-surface`、`create-test-project`、`create-rule`、`assemble-lib-rules`
+- **データフローモデリング：** `analyze-external-methods`、`create-pass-through-approximation`、`create-dataflow-approximation`、`debug-rule`、`report-analyzer-issue`
 
 ---
 

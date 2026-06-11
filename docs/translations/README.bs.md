@@ -125,6 +125,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Instalacija putem npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Ili pokrenite odmah pomoću npx — bez instalacije (potreban Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Skenirajte svoj projekat:**
 ```bash
 opentaint scan
@@ -138,6 +148,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 ```
 
 Za više opcija, pogledajte [Instalacija](../../docs/README.md#installation) i [Korištenje](../../docs/README.md#usage).
+
+---
+
+## Tokovi rada AI agenata
+
+OpenTaint uključuje agentske vještine koje pretvaraju statičku analizu u cjelovit tok rada za sigurnost aplikacija. Instalirajte ih pomoću:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Vještina `appsec-agent` orkestrira potpunu procjenu projekta: izgradnju projekta, pokretanje OpenTaint-a, otkrivanje površine napada, dodavanje ciljanih pravila, modeliranje nedostajućih tokova podataka biblioteka, trijažu nalaza i opcionalno generisanje dinamičkih proof-of-concept provjera za potvrđene ranjivosti.
+
+Uključene vještine pokrivaju uobičajenu petlju sigurnosne analize:
+
+- **Skeniranje i trijaža:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Proširenje pokrivenosti:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Modeliranje toka podataka:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 
