@@ -1,13 +1,18 @@
 package org.opentaint.jvm.sast.project
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
 import mu.KLogging
 import org.opentaint.common.sast.ProjectAnalysisStatus
-import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.rules.loadSemgrepRules
+import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
+import org.opentaint.common.sast.sarif.SarifGenerator
+import org.opentaint.common.sast.test.ProjectAnalysisTestResults
+import org.opentaint.common.sast.test.RuleInfo
+import org.opentaint.common.sast.test.TestProjectAnalyzerBase
+import org.opentaint.common.sast.test.TestResult
+import org.opentaint.common.sast.test.TestSampleInfo
 import org.opentaint.common.sast.toProjectStatus
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -16,71 +21,71 @@ import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
+import org.opentaint.jvm.sast.project.TestProjectAnalyzer.JavaTestSampleInfo
+import org.opentaint.jvm.sast.project.TestProjectAnalyzer.RuleSelectResult.Rule
 import org.opentaint.jvm.sast.project.rules.analysisConfig
-import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.jvm.sast.project.rules.semgrepRulesWithDefaultConfig
 import org.opentaint.jvm.sast.project.rules.withApproximationConfigs
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
+import org.opentaint.jvm.sast.sarif.JirDebugFactReachabilitySarifGenerator
 import org.opentaint.jvm.sast.sarif.JirSarifGenerator
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
+import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
-import java.nio.file.Path
-import kotlin.io.path.div
 import kotlin.io.path.inputStream
-import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
+import kotlin.reflect.KClass
 
 class TestProjectAnalyzer(
     project: JavaProject,
-    private val resultDir: Path,
-    providedOptions: ProjectAnalysisOptions,
+    results: ProjectAnalysisTestResults,
+    javaOptions: ProjectAnalysisOptions,
+): TestProjectAnalyzerBase<JavaTestSampleInfo, ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
+    project,
+    results,
+    javaOptions.common.copy(storeSummaries = false)
 ) {
-    private val options = with(providedOptions) { copy(common = common.copy(storeSummaries = false)) }
-    private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, options)
-    private val loadedRules = options.common.loadSemgrepRules(JavaLanguageStrategy())
+    private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, javaOptions)
+    private val loadedRules = options.loadSemgrepRules(JavaLanguageStrategy())
 
     private val approximationConfigs: List<SerializedTaintConfig> =
-        options.common.customApproximationConfig.map { cfg ->
+        options.customApproximationConfig.map { cfg ->
             cfg.inputStream().use { loadSerializedTaintConfig(it) }
         }
 
     @Serializable
-    data class RuleInfo(val rulePath: String, val ruleId: String?)
-
-    @Serializable
-    data class TestSampleInfo(
+    data class JavaTestSampleInfo(
         val className: String,
         val methodName: String?,
-        val rule: RuleInfo
-    )
+        val rule: RuleInfo,
+        override val language: String,
+        override val testSetName: String,
+    ) : TestSampleInfo
 
-    @Serializable
-    data class TestResult(
-        val success: List<TestSampleInfo>,
-        val falseNegative: List<TestSampleInfo>,
-        val falsePositive: List<TestSampleInfo>,
-        val skipped: List<TestSampleInfo>,
-        val disabled: List<TestSampleInfo>,
-    )
+    override fun testInfoCls(): KClass<JavaTestSampleInfo> = JavaTestSampleInfo::class
+    override fun testInfoSerializer() = JavaTestSampleInfo.serializer()
 
     private var status: ProjectAnalysisStatus = ProjectAnalysisStatus.OK
 
-    fun analyze(): ProjectAnalysisStatus {
+    override fun analyze(): ProjectAnalysisStatus {
         val results = projectAnalysisContexts.map { (module, ctx) ->
             val testSetName = ctx.project.sourceRoot?.let { srcRoot ->
                 module.moduleSourceRoot?.relativeTo(srcRoot)?.toString()
             }.orEmpty().replace('/', '-')
 
             val testSamples = ctx.allProjectTestSamples(testSetName)
-            ctx.analyzeTestSamples(testSamples, testSetName)
+            ctx.analyzeTestSamples(testSamples)
         }
 
-        writeTestResult(results.joinResults())
+        results.mapTo(this.results.testResults) {
+            project to it
+        }
 
         return status
     }
@@ -92,13 +97,13 @@ class TestProjectAnalyzer(
             .filterNotTo(mutableListOf()) { it.isAbstract || it.isInterface || it.isAnonymous }
 
         classes.mapNotNullTo(samples) { cls ->
-            val sample = cls.findSampleAnnotation() ?: return@mapNotNullTo null
+            val sample = cls.findSampleAnnotation(testSetName) ?: return@mapNotNullTo null
             ClassTestSample(cls, cls.declaredMethods, sample)
         }
 
         classes.flatMapTo(mutableListOf()) { it.declaredMethods }
             .mapNotNullTo(samples) {
-                val sample = it.findSampleAnnotation() ?: return@mapNotNullTo null
+                val sample = it.findSampleAnnotation(testSetName) ?: return@mapNotNullTo null
                 MethodTestSample(it, sample)
             }
 
@@ -115,13 +120,13 @@ class TestProjectAnalyzer(
         return samples.map { SpringTestSample(springEp, it) }
     }
 
-    private fun ProjectAnalysisContext.analyzeTestSamples(testSamples: List<TestSample>, testSetName: String): TestResult {
+    private fun ProjectAnalysisContext.analyzeTestSamples(testSamples: List<TestSample>): TestResult<JavaTestSampleInfo> {
         val skipped = mutableListOf<TestSample>()
         val disabled = mutableListOf<TestSample>()
 
-        logger.info { "Select test analysis rules" }
+        logger.info { "Select test analysis rule" }
 
-        val testWithRule = mutableListOf<Pair<TestSample, List<TaintRuleFromSemgrep<SerializedItem>>>>()
+        val testWithRule = mutableListOf<Pair<TestSample, Rule>>()
         val testGroups = testSamples.groupBy { it.info.rule }
         for ((ruleInfo, testGroup) in testGroups) {
             val rules = when (val result = selectRules(ruleInfo)) {
@@ -134,7 +139,7 @@ class TestProjectAnalyzer(
                     disabled += testGroup
                     continue
                 }
-                is RuleSelectResult.Rules -> result.rules
+                is Rule -> result
             }
 
             testGroup.mapTo(testWithRule) { it to rules }
@@ -142,21 +147,23 @@ class TestProjectAnalyzer(
 
         logger.info { "Start test analysis" }
 
-        val results = mutableListOf<Pair<TestSample, List<VulnerabilityWithTrace>>>()
-        for ((sample, rules) in testWithRule) {
-            val (analysisResult, analysisStatus) = analyzeTestSample(rules, sample)
+        val results = mutableListOf<Triple<TestSample, Rule, AnalysisResult>>()
+        for ((sample, rule) in testWithRule) {
+            val analysisResult = analyzeTestSample(listOf(rule.rule), sample)
 
-            status = maxOf(status, analysisStatus.toProjectStatus())
-            results += sample to analysisResult
+            status = maxOf(status, analysisResult.status.toProjectStatus())
+            results += Triple(sample, rule, analysisResult)
         }
 
-        generateSarif(results.flatMap { it.second }, testSetName)
+        for ((_, rule, result) in results) {
+            generateReportFromAnalysisResult(result, listOf(rule.meta))
+        }
 
         return generateTestResult(skipped, disabled, results)
     }
 
     private sealed interface RuleSelectResult {
-        data class Rules(val rules: List<TaintRuleFromSemgrep<SerializedItem>>): RuleSelectResult
+        data class Rule(val rule: TaintRuleFromSemgrep<SerializedItem>, val meta: RuleMetadata): RuleSelectResult
         data object MultipleRules: RuleSelectResult
         data object NoRules: RuleSelectResult
         data object RuleDisabled: RuleSelectResult
@@ -177,8 +184,13 @@ class TestProjectAnalyzer(
 
         return when (relevantRules.size) {
             1 -> {
+                val rule = relevantRules.first()
+
                 @Suppress("UNCHECKED_CAST")
-                RuleSelectResult.Rules(relevantRules.map { it.first as TaintRuleFromSemgrep<SerializedItem> })
+                Rule(
+                    rule.first as TaintRuleFromSemgrep<SerializedItem>,
+                    rule.second
+                )
             }
 
             0 -> {
@@ -201,40 +213,37 @@ class TestProjectAnalyzer(
     private fun ProjectAnalysisContext.analyzeTestSample(
         rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         sample: TestSample
-    ): Pair<List<VulnerabilityWithTrace>, TaintAnalyzer.Status> {
+    ): AnalysisResult {
         val loadedConfig = rules.semgrepRulesWithDefaultConfig(cp)
             .withApproximationConfigs(cp, approximationConfigs)
         val config = analysisConfig(loadedConfig)
 
-        JIRTaintAnalyzer(
+        val analyzer = JIRTaintAnalyzer(
             cp, config,
             projectClasses = projectClasses.locationChecker(),
-            options = options.common.taintAnalyzerOptions(),
-        ).use { analyzer ->
-            logger.info { "Start IFDS analysis for test: $sample" }
-            val traces = analyzer.analyzeWithIfds(sample.methods)
-            logger.info { "Finish IFDS analysis for test: $sample" }
-            return traces
-        }
+            options = options.taintAnalyzerOptions(),
+        )
+
+        return runAnalyzerWithTraceResolver(analyzer, sample.methods)
     }
 
     private fun generateTestResult(
         skipped: List<TestSample>, disabled: List<TestSample>,
-        results: List<Pair<TestSample, List<VulnerabilityWithTrace>>>
-    ): TestResult {
+        results: List<Triple<TestSample, Rule, AnalysisResult>>
+    ): TestResult<JavaTestSampleInfo> {
         val success = mutableListOf<TestSample>()
         val falseNegative = mutableListOf<TestSample>()
         val falsePositive = mutableListOf<TestSample>()
 
-        for ((test, testResult) in results) {
+        for ((test, _, testResult) in results) {
             when (test.info.kind) {
-                SampleKind.POSITIVE -> if (testResult.isEmpty()) {
+                SampleKind.POSITIVE -> if (testResult.traces.isEmpty()) {
                     falseNegative += test
                 } else {
                     success += test
                 }
 
-                SampleKind.NEGATIVE -> if (testResult.isNotEmpty()) {
+                SampleKind.NEGATIVE -> if (testResult.traces.isNotEmpty()) {
                     falsePositive += test
                 } else {
                     success += test
@@ -251,51 +260,24 @@ class TestProjectAnalyzer(
         )
     }
 
-    private fun ProjectAnalysisContext.generateSarif(traces: List<VulnerabilityWithTrace>, testSetName: String) {
-        val sourcesResolver = project.sourceResolver(projectClasses)
-        val generator = JirSarifGenerator(
-            options.common.sarifGenerationOptions, project.sourceRoot,
-            sourcesResolver, JIRSarifTraits(cp)
-        )
-        (resultDir / (testSetName + options.common.sarifGenerationOptions.sarifFileName)).outputStream().use { out ->
-            generator.generateSarif(out, traces.asSequence(), loadedRules.rulesWithMeta.map { it.second })
-        }
-    }
-
-    private fun List<TestResult>.joinResults(): TestResult = TestResult(
-        success = flatMap { it.success },
-        falseNegative = flatMap { it.falseNegative },
-        falsePositive = flatMap { it.falsePositive },
-        skipped = flatMap { it.skipped },
-        disabled = flatMap { it.disabled },
-    )
-
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun writeTestResult(testResult: TestResult) {
-        val json = Json { prettyPrint = true }
-        (resultDir / "test-result.json").outputStream().use { out ->
-            json.encodeToStream(testResult, out)
-        }
-    }
-
     private enum class SampleKind {
         POSITIVE, NEGATIVE
     }
 
-    private data class SampleInfo(val kind: SampleKind, val rule: RuleInfo)
+    private data class SampleInfo(val kind: SampleKind, val rule: RuleInfo, val testSet: String)
 
     private sealed interface TestSample {
         val info: SampleInfo
         val methods: List<JIRMethod>
 
-        fun toTestInfo(): TestSampleInfo
+        fun toTestInfo(): JavaTestSampleInfo
     }
 
     private data class MethodTestSample(val method: JIRMethod, override val info: SampleInfo) : TestSample {
         override val methods: List<JIRMethod> get() = listOf(method)
 
-        override fun toTestInfo(): TestSampleInfo = TestSampleInfo(
-            method.enclosingClass.name, method.name, info.rule
+        override fun toTestInfo(): JavaTestSampleInfo = JavaTestSampleInfo(
+            method.enclosingClass.name, method.name, info.rule, language = "java", info.testSet
         )
     }
 
@@ -304,8 +286,8 @@ class TestProjectAnalyzer(
         override val methods: List<JIRMethod>,
         override val info: SampleInfo
     ) : TestSample {
-        override fun toTestInfo(): TestSampleInfo = TestSampleInfo(
-            cls.name, methodName = null, info.rule
+        override fun toTestInfo(): JavaTestSampleInfo = JavaTestSampleInfo(
+            cls.name, methodName = null, info.rule, language = "java", info.testSet
         )
     }
 
@@ -314,10 +296,10 @@ class TestProjectAnalyzer(
         val original: TestSample,
     ) : TestSample {
         override val info: SampleInfo get() = original.info
-        override fun toTestInfo(): TestSampleInfo = original.toTestInfo()
+        override fun toTestInfo(): JavaTestSampleInfo = original.toTestInfo()
     }
 
-    private fun JIRAnnotated.findSampleAnnotation(): SampleInfo? {
+    private fun JIRAnnotated.findSampleAnnotation(testSetName: String): SampleInfo? {
         val positive = annotations.filter { it.name == POSITIVE_SAMPLE_ANNOTATION_NAME }
         val negative = annotations.filter { it.name == NEGATIVE_SAMPLE_ANNOTATION_NAME }
         val sampleAnnotations = positive + negative
@@ -326,10 +308,10 @@ class TestProjectAnalyzer(
             logger.error { "Multiple sample annotations: $this" }
             return null
         }
-        return sampleAnnotations.first().toSampleInfo()
+        return sampleAnnotations.first().toSampleInfo(testSetName)
     }
 
-    private fun JIRAnnotation.toSampleInfo(): SampleInfo? {
+    private fun JIRAnnotation.toSampleInfo(testSetName: String): SampleInfo? {
         val kind = when (name) {
             POSITIVE_SAMPLE_ANNOTATION_NAME -> SampleKind.POSITIVE
             NEGATIVE_SAMPLE_ANNOTATION_NAME -> SampleKind.NEGATIVE
@@ -344,7 +326,30 @@ class TestProjectAnalyzer(
             return null
         }
 
-        return SampleInfo(kind, RuleInfo(rulePath, ruleId))
+        return SampleInfo(kind, RuleInfo(rulePath, ruleId), testSetName)
+    }
+
+    override fun ProjectAnalysisContext.runSeAnalyzer(
+        engine: TaintAnalysisUnitRunnerManager,
+        traces: List<VulnerabilityWithTrace>
+    ): List<VulnerabilityWithTrace> {
+        TODO("Not yet implemented")
+    }
+
+    override fun ProjectAnalysisContext.sarifGenerator(): SarifGenerator<*> {
+        val sourcesResolver = project.sourceResolver(projectClasses)
+        return JirSarifGenerator(
+            options.sarifGenerationOptions, project.sourceRoot,
+            sourcesResolver, JIRSarifTraits(cp)
+        )
+    }
+
+    override fun ProjectAnalysisContext.debugSarifGenerator(): DebugFactReachabilitySarifGenerator<*> {
+        val sourcesResolver = project.sourceResolver(projectClasses)
+        return JirDebugFactReachabilitySarifGenerator(
+            options.sarifGenerationOptions,
+            sourcesResolver, JIRSarifTraits(cp)
+        )
     }
 
     companion object {

@@ -1,9 +1,11 @@
 package org.opentaint.jvm.sast.project
 
+import org.opentaint.common.sast.ProjectAnalysisResults
+import org.opentaint.common.sast.ProjectAnalysisStatus
 import org.opentaint.common.sast.ProjectAnalyzer
-import org.opentaint.common.sast.sarif.SarifGenerator
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
+import org.opentaint.common.sast.sarif.SarifGenerator
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
@@ -29,15 +31,19 @@ import org.opentaint.project.JavaProject
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.semgrep.pattern.createTaintConfig
 import java.io.InputStream
-import java.nio.file.Path
 
 class JirProjectAnalyzer(
     project: JavaProject,
-    resultDir: Path,
+    results: ProjectAnalysisResults,
     private val jirOptions: ProjectAnalysisOptions,
 ): ProjectAnalyzer<ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
-    project, resultDir, jirOptions.common
+    project, results, jirOptions.common
 ) {
+    override fun analyze(): ProjectAnalysisStatus {
+        if (project.modules.isEmpty()) return ProjectAnalysisStatus.OK
+        return super.analyze()
+    }
+
     override fun initializeProjectAnalysisContext() =
         initializeProjectAnalysisContext(project, jirOptions)
 

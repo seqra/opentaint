@@ -1,6 +1,7 @@
 package org.opentaint.go.sast.project
 
 import mu.KLogging
+import org.opentaint.common.sast.ProjectAnalysisResults
 import org.opentaint.common.sast.ProjectAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
@@ -19,15 +20,14 @@ import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.project.GoProject
 import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import java.io.InputStream
-import java.nio.file.Path
 
 class GoProjectAnalyzer(
     project: GoProject,
-    resultDir: Path,
+    results: ProjectAnalysisResults,
     goOptions: GoProjectAnalysisOptions = GoProjectAnalysisOptions(),
 ) : ProjectAnalyzer<AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
     project,
-    resultDir,
+    results,
     goOptions.common
 ) {
     override fun initializeProjectAnalysisContext(): AnalysisCtx {

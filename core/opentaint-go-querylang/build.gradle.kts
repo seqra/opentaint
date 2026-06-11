@@ -42,17 +42,20 @@ val antlrPkgPath = antlrPkg.replace('.', '/')
 
 val grammarUpstreamDir = layout.buildDirectory.dir("grammar/upstream")
 val grammarPatchedDir = layout.buildDirectory.dir("grammar/patched")
-val grammarJavaDir = layout.buildDirectory.dir("grammar/java/$antlrPkgPath")
+val grammarUpstreamJavaDir = layout.buildDirectory.dir("grammar/upstream-java")
+val grammarPatchedJavaDir = layout.buildDirectory.dir("grammar/patched-java/")
+
 // Pinned to a specific commit so the patch keeps applying cleanly.
 val grammarCommitSha = "284602b3f23ca54dc30778204ab7ae9e969145e9"
 val grammarBaseUrl = "https://raw.githubusercontent.com/antlr/grammars-v4/$grammarCommitSha/golang"
 val grammarPatchFile = layout.projectDirectory.file("grammar/semgrep-extensions.patch")
+val parserPatchFile = layout.projectDirectory.file("grammar/parser-fix.patch")
 
 val downloadGoGrammar by tasks.registering {
     inputs.property("commitSha", grammarCommitSha)
     inputs.property("baseUrl", grammarBaseUrl)
     outputs.dir(grammarUpstreamDir)
-    outputs.dir(grammarJavaDir)
+    outputs.dir(grammarUpstreamJavaDir)
     doLast {
         val upstream = grammarUpstreamDir.get().asFile.apply { mkdirs() }
         listOf("GoLexer.g4", "GoParser.g4").forEach { f ->
@@ -61,7 +64,7 @@ val downloadGoGrammar by tasks.registering {
                 target.outputStream().use { input.copyTo(it) }
             }
         }
-        val javaDir = grammarJavaDir.get().asFile.apply { mkdirs() }
+        val javaDir = grammarUpstreamJavaDir.get().asFile.apply { mkdirs() }
         val baseFile = javaDir.resolve("GoParserBase.java")
         val content = uri("$grammarBaseUrl/Java/GoParserBase.java").toURL().readText()
         baseFile.writeText("package $antlrPkg;\n$content")
@@ -71,35 +74,53 @@ val downloadGoGrammar by tasks.registering {
 val patchGoGrammar by tasks.registering {
     dependsOn(downloadGoGrammar)
     inputs.dir(grammarUpstreamDir)
+    inputs.dir(grammarUpstreamJavaDir)
     inputs.file(grammarPatchFile)
+    inputs.file(parserPatchFile)
     outputs.dir(grammarPatchedDir)
+    outputs.dir(grammarPatchedJavaDir)
     doLast {
-        val patched = grammarPatchedDir.get().asFile
-        val upstream = grammarUpstreamDir.get().asFile
-        patched.deleteRecursively()
-        patched.mkdirs()
-        listOf("GoLexer.g4", "GoParser.g4").forEach { f ->
-            upstream.resolve(f).copyTo(patched.resolve(f), overwrite = true)
-        }
-        val result = exec {
-            workingDir = patched
-            commandLine(
-                "patch",
-                "--no-backup-if-mismatch",
-                "-p1",
-                "-i", grammarPatchFile.asFile.absolutePath,
-            )
-            isIgnoreExitValue = true
-        }
-        if (result.exitValue != 0) {
-            throw GradleException("Failed to apply ${grammarPatchFile.asFile} (exit ${result.exitValue})")
-        }
+        applyPatch(
+            upstream = grammarUpstreamDir.get().asFile,
+            patched = grammarPatchedDir.get().asFile,
+            files = listOf("GoLexer.g4", "GoParser.g4"),
+            patchFile = grammarPatchFile.asFile
+        )
+
+        applyPatch(
+            upstream = grammarUpstreamJavaDir.get().asFile,
+            patched = grammarPatchedJavaDir.get().asFile.resolve(antlrPkgPath),
+            files = listOf("GoParserBase.java"),
+            patchFile = parserPatchFile.asFile
+        )
     }
 }
 
+fun applyPatch(upstream: File, patched: File, files: List<String>, patchFile: File) {
+    patched.deleteRecursively()
+    patched.mkdirs()
+    files.forEach { f ->
+        upstream.resolve(f).copyTo(patched.resolve(f), overwrite = true)
+    }
+    val result = exec {
+        workingDir = patched
+        commandLine(
+            "patch",
+            "--no-backup-if-mismatch",
+            "-p1",
+            "-i", patchFile.absolutePath,
+        )
+        isIgnoreExitValue = true
+    }
+    if (result.exitValue != 0) {
+        throw GradleException("Failed to apply $patchFile (exit ${result.exitValue})")
+    }
+}
+
+
 sourceSets {
     main {
-        java.srcDir(layout.buildDirectory.dir("grammar/java"))
+        java.srcDir(grammarPatchedJavaDir)
         antlr.setSrcDirs(listOf(grammarPatchedDir))
     }
 }

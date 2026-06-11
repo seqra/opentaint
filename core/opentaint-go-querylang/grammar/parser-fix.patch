@@ -1,0 +1,15 @@
+--- a/GoParserBase.java
++++ b/GoParserBase.java
+@@ -16,9 +16,9 @@ public abstract class GoParserBase extends Parser
+
+     protected GoParserBase(TokenStream input) {
+         super(input);
+-	String cmdLine = System.getProperty("sun.java.command");
+-	String[] args = cmdLine != null ? cmdLine.split("\\s+") : new String[0];
+-	debug = hasArg(args, "--debug");
++	//String cmdLine = System.getProperty("sun.java.command");
++	//String[] args = cmdLine != null ? cmdLine.split("\\s+") : new String[0];
++	//debug = hasArg(args, "--debug");
+     }
+
+     private static boolean hasArg(String[] args, String arg) {

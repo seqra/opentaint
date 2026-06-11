@@ -2,42 +2,57 @@ package org.opentaint.go.sast.project
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.decodeFromStream
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
 import mu.KLogging
 import org.opentaint.common.sast.ProjectAnalysisStatus
 import org.opentaint.common.sast.ProjectAnalyzer
-import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.rules.loadSemgrepRules
+import org.opentaint.common.sast.test.ProjectAnalysisTestResults
+import org.opentaint.common.sast.test.TestProjectAnalyzerBase
+import org.opentaint.common.sast.test.TestResult
+import org.opentaint.common.sast.test.TestSampleInfo
 import org.opentaint.common.sast.toProjectStatus
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
 import org.opentaint.go.sast.dataflow.GoTaintAnalyzer
 import org.opentaint.go.sast.dataflow.GoUnitResolver
+import org.opentaint.go.sast.project.GoTestProjectAnalyzer.GoTestSampleInfo
+import org.opentaint.go.sast.project.GoTestProjectAnalyzer.RuleSelectResult.Rule
+import org.opentaint.go.sast.sarif.GoDebugFactReachabilitySarifGenerator
 import org.opentaint.go.sast.sarif.GoSarifGenerator
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.client.GoIRClient
+import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.util.io.inputStream
 import org.opentaint.project.GoProject
 import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import java.nio.file.Path
-import kotlin.io.path.div
 import kotlin.io.path.exists
-import kotlin.io.path.outputStream
+import kotlin.reflect.KClass
 
 class GoTestProjectAnalyzer(
-    val project: GoProject,
-    private val resultDir: Path,
+    project: GoProject,
+    results: ProjectAnalysisTestResults,
     providedOptions: GoProjectAnalysisOptions,
+) : TestProjectAnalyzerBase<GoTestSampleInfo, AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
+    project, results, providedOptions.common.copy(storeSummaries = false),
 ) {
-    private val options = with(providedOptions) { copy(common = common.copy(storeSummaries = false)) }
-    private val loadedRules = options.common.loadSemgrepRules(GoLanguageStrategy())
+    private val loadedRules = options.loadSemgrepRules(GoLanguageStrategy())
 
+    @Serializable
+    data class GoTestSampleInfo(
+        val function: String,
+        val ruleId: String,
+        override val language: String,
+        override val testSetName: String,
+    ) : TestSampleInfo
+
+    override fun testInfoCls(): KClass<GoTestSampleInfo> = GoTestSampleInfo::class
+    override fun testInfoSerializer() = GoTestSampleInfo.serializer()
 
     @Serializable
     data class RuleTests(
@@ -52,15 +67,6 @@ class GoTestProjectAnalyzer(
         val negative: List<String> = emptyList(),
     )
 
-    @Serializable
-    data class TestResult(
-        val success: List<RuleTest>,
-        val falseNegative: List<RuleTest>,
-        val falsePositive: List<RuleTest>,
-        val skipped: List<RuleTest>,
-        val disabled: List<RuleTest>,
-    )
-
     private data class RuleTestSample(
         val ruleId: String,
         val kind: SampleKind,
@@ -69,7 +75,7 @@ class GoTestProjectAnalyzer(
 
     private var status: ProjectAnalysisStatus = ProjectAnalysisStatus.OK
 
-    fun analyze(): ProjectAnalysisStatus {
+    override fun analyze(): ProjectAnalysisStatus {
         val ruleTestsFile = project.projectDir.resolve("rule-test.yaml")
         if (!ruleTestsFile.exists()) {
             logger.error("No test file in ${project.projectDir}")
@@ -85,18 +91,18 @@ class GoTestProjectAnalyzer(
         val results = ctx.analyzeTestSamples(ruleTests.tests)
             ?: return ProjectAnalysisStatus.EXCEPTION
 
-        writeTestResult(results)
+        this.results.testResults += project to results
 
         return status
     }
 
-    private fun AnalysisCtx.analyzeTestSamples(tests: List<RuleTest>): TestResult? {
+    private fun AnalysisCtx.analyzeTestSamples(tests: List<RuleTest>): TestResult<GoTestSampleInfo>? {
         val skipped = mutableListOf<RuleTest>()
         val disabled = mutableListOf<RuleTest>()
 
         logger.info { "Select test analysis rules" }
 
-        val testWithRule = mutableListOf<Pair<RuleTestSample, List<TaintRuleFromSemgrep<GoSerializedItem>>>>()
+        val testWithRule = mutableListOf<Pair<RuleTestSample, Rule>>()
         val testGroups = tests.groupBy { it.ruleId }
         for ((ruleInfo, testGroup) in testGroups) {
             val rules = when (val result = selectRules(ruleInfo)) {
@@ -110,7 +116,7 @@ class GoTestProjectAnalyzer(
                     continue
                 }
 
-                is RuleSelectResult.Rules -> result.rules
+                is Rule -> result
             }
 
             val samples = mutableListOf<RuleTestSample>()
@@ -130,15 +136,17 @@ class GoTestProjectAnalyzer(
 
         logger.info { "Start test analysis" }
 
-        val results = mutableListOf<Pair<RuleTestSample, List<VulnerabilityWithTrace>>>()
-        for ((sample, rules) in testWithRule) {
-            val (analysisResult, analysisStatus) = analyzeTestSample(rules, sample)
+        val results = mutableListOf<Triple<RuleTestSample, AnalysisResult, Rule>>()
+        for ((sample, rule) in testWithRule) {
+            val analysisResult = analyzeTestSample(listOf(rule.rule), sample)
 
-            status = maxOf(status, analysisStatus.toProjectStatus())
-            results += sample to analysisResult
+            status = maxOf(status, analysisResult.status.toProjectStatus())
+            results += Triple(sample, analysisResult, rule)
         }
 
-        generateSarif(results.flatMap { it.second })
+        for ((_, result, rule) in results) {
+            generateReportFromAnalysisResult(result, listOf(rule.meta))
+        }
 
         return generateTestResult(skipped, disabled, results)
     }
@@ -147,7 +155,11 @@ class GoTestProjectAnalyzer(
         cp.allFunctions().firstOrNull { it.fullName == name }
 
     private sealed interface RuleSelectResult {
-        data class Rules(val rules: List<TaintRuleFromSemgrep<GoSerializedItem>>) : RuleSelectResult
+        data class Rule(
+            val rule: TaintRuleFromSemgrep<GoSerializedItem>,
+            val meta: RuleMetadata,
+        ) : RuleSelectResult
+
         data object MultipleRules : RuleSelectResult
         data object NoRules : RuleSelectResult
         data object RuleDisabled : RuleSelectResult
@@ -159,7 +171,12 @@ class GoTestProjectAnalyzer(
         val relevantRules = loadedRules.rulesWithMeta.filter { it.first.ruleId == loadedRuleId }
         return when (relevantRules.size) {
             1 -> {
-                @Suppress("UNCHECKED_CAST") RuleSelectResult.Rules(relevantRules.map { it.first as TaintRuleFromSemgrep<GoSerializedItem> })
+                val relevantRule = relevantRules.first()
+                @Suppress("UNCHECKED_CAST")
+                Rule(
+                    relevantRule.first as TaintRuleFromSemgrep<GoSerializedItem>,
+                    relevantRule.second
+                )
             }
 
             0 -> {
@@ -181,23 +198,19 @@ class GoTestProjectAnalyzer(
 
     private fun AnalysisCtx.analyzeTestSample(
         rules: List<TaintRuleFromSemgrep<GoSerializedItem>>, sample: RuleTestSample
-    ): Pair<List<VulnerabilityWithTrace>, TaintAnalyzer.Status> {
+    ): AnalysisResult {
         val rulesProvider = ProjectAnalyzer.PreloadedRules(
             rules,
             customApproximationConfig = emptyList<GoSerializedTaintConfig>()
         ).loadRules()
 
-        GoTaintAnalyzer(
+        val analyzer = GoTaintAnalyzer(
             cp,
             rulesProvider,
             GoUnitResolver(),
-            options.common.taintAnalyzerOptions(),
-        ).use { analyzer ->
-            logger.info { "Start IFDS analysis for test: $sample" }
-            val traces = analyzer.analyzeWithIfds(listOf(sample.entryPoint))
-            logger.info { "Finish IFDS analysis for test: $sample" }
-            return traces
-        }
+            options.taintAnalyzerOptions(),
+        )
+        return runAnalyzerWithTraceResolver(analyzer, listOf(sample.entryPoint))
     }
 
     private enum class SampleKind {
@@ -206,21 +219,21 @@ class GoTestProjectAnalyzer(
 
     private fun generateTestResult(
         skipped: List<RuleTest>, disabled: List<RuleTest>,
-        results: List<Pair<RuleTestSample, List<VulnerabilityWithTrace>>>
-    ): TestResult {
+        results: List<Triple<RuleTestSample, AnalysisResult, Rule>>
+    ): TestResult<GoTestSampleInfo> {
         val success = mutableListOf<RuleTestSample>()
         val falseNegative = mutableListOf<RuleTestSample>()
         val falsePositive = mutableListOf<RuleTestSample>()
 
-        for ((test, testResult) in results) {
+        for ((test, testResult, _) in results) {
             when (test.kind) {
-                SampleKind.POSITIVE -> if (testResult.isEmpty()) {
+                SampleKind.POSITIVE -> if (testResult.traces.isEmpty()) {
                     falseNegative += test
                 } else {
                     success += test
                 }
 
-                SampleKind.NEGATIVE -> if (testResult.isNotEmpty()) {
+                SampleKind.NEGATIVE -> if (testResult.traces.isNotEmpty()) {
                     falsePositive += test
                 } else {
                     success += test
@@ -232,41 +245,31 @@ class GoTestProjectAnalyzer(
             success = success.toRuleTest(),
             falseNegative = falseNegative.toRuleTest(),
             falsePositive = falsePositive.toRuleTest(),
-            skipped = skipped,
-            disabled = disabled,
+            skipped = skipped.flatMap { it.toTestInfo() },
+            disabled = disabled.flatMap { it.toTestInfo() },
         )
     }
 
-    private fun List<RuleTestSample>.toRuleTest() =
-        groupBy { it.ruleId }.mapValues { (ruleId, tests) -> tests.toRuleTest(ruleId) }.values.toList()
-
-    private fun List<RuleTestSample>.toRuleTest(ruleId: String): RuleTest {
-        val positive = mutableListOf<String>()
-        val negative = mutableListOf<String>()
-        forEach { sample ->
-            val name = sample.entryPoint.fullName
-            val collection = when (sample.kind) {
-                SampleKind.POSITIVE -> positive
-                SampleKind.NEGATIVE -> negative
-            }
-            collection += name
-        }
-        return RuleTest(ruleId, positive, negative)
+    private fun List<RuleTestSample>.toRuleTest() = sortedBy { it.ruleId }.map {
+        GoTestSampleInfo(it.entryPoint.fullName, it.ruleId, language = "go", testSetName = "default")
     }
 
-    private fun generateSarif(traces: List<VulnerabilityWithTrace>) {
-        val generator = GoSarifGenerator(options.common.sarifGenerationOptions, project.sourceRoot())
-        (resultDir / options.common.sarifGenerationOptions.sarifFileName).outputStream().use { out ->
-            generator.generateSarif(out, traces.asSequence(), loadedRules.rulesWithMeta.map { it.second })
-        }
+    private fun RuleTest.toTestInfo(): List<GoTestSampleInfo> {
+        val allSamples = positive + negative
+        return allSamples.map { GoTestSampleInfo(it, ruleId, language = "go", testSetName = "default") }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun writeTestResult(testResult: TestResult) {
-        val json = Json { prettyPrint = true }
-        (resultDir / "test-result.json").outputStream().use { out ->
-            json.encodeToStream(testResult, out)
-        }
+    override fun AnalysisCtx.sarifGenerator() =
+        GoSarifGenerator(options.sarifGenerationOptions, project.sourceRoot())
+
+    override fun AnalysisCtx.debugSarifGenerator() =
+        GoDebugFactReachabilitySarifGenerator(options.sarifGenerationOptions, project.sourceRoot())
+
+    override fun AnalysisCtx.runSeAnalyzer(
+        engine: TaintAnalysisUnitRunnerManager,
+        traces: List<VulnerabilityWithTrace>
+    ): List<VulnerabilityWithTrace> {
+        TODO("Not yet implemented")
     }
 
     companion object {

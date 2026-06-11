@@ -6,16 +6,12 @@ import io.github.detekt.sarif4k.Level
 import io.github.detekt.sarif4k.Message
 import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.ThreadFlow
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.semgrep.pattern.RuleMetadata
-import java.io.OutputStream
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.Arrays
@@ -38,24 +34,10 @@ abstract class SarifGenerator<IL>(
 
     val traceGenerationStats = TraceGenerationStats()
 
-    private val json = Json {
-        prettyPrint = true
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    fun generateSarif(
-        output: OutputStream,
-        traces: Sequence<VulnerabilityWithTrace>,
-        metadatas: List<RuleMetadata>
-    ) {
-        val sarifReport = generateSarif(traces, metadatas)
-        json.encodeToStream(sarifReport, output)
-    }
-
     fun generateSarif(
         traces: Sequence<VulnerabilityWithTrace>,
         metadatas: List<RuleMetadata>
-    ): LazySarifReport {
+    ): LazyToolRunReport {
         val sarifResults = traces.mapNotNull { generateSarifResult(it.vulnerability, it.trace) }
 
         val uriBase = options.uriBase ?: sourceRoot?.absolutePathString()
@@ -66,11 +48,10 @@ abstract class SarifGenerator<IL>(
         val run = LazyToolRunReport(
             tool = generateSarifAnalyzerToolDescription(metadatas, options),
             originalURIBaseIDS = sourceUri,
-            results = sarifResults,
+            results = sarifResults.toList().asSequence(),
         )
 
-        val sarifReport = LazySarifReport.fromRuns(listOf(run))
-        return sarifReport
+        return run
     }
 
     open fun postProcessSarif(
