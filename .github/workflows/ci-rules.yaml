@@ -48,7 +48,7 @@ jobs:
           repository: ${{ github.repository }}
           token: ${{ secrets.SEQRA_GITHUB_TOKEN }}
           tag: go-server/latest
-          fileName: opentaint-go-server
+          fileName: go-ssa-server_linux_amd64
           out-file-path: opentaint-go-server
 
       - name: Set up JDK 17
@@ -80,7 +80,7 @@ jobs:
 
       - name: Run OpenTaint analyzer
         env:
-          GOIR_SERVER_BINARY: opentaint-go-server/opentaint-go-server
+          GOIR_SERVER_BINARY: opentaint-go-server/go-ssa-server_linux_amd64
         run: |
           java -Xmx8G -Djdk.util.jar.enableMultiRelease=false -Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000 \
                -jar opentaint-analyzer/opentaint-project-analyzer.jar \
