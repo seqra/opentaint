@@ -34,7 +34,7 @@ abstract class AbstractSarifGeneratorTest: AnalysisTest() {
 
         val sarif = generator.generateSarif(traces.asSequence(), emptyList())
 
-        val results = sarif.runs.flatMap { it.results }
+        val results = sarif.results.toList()
         val resultLocations = results.flatMap { it.locations.orEmpty() }
         val threadFlowLocations = results
             .flatMap { it.codeFlows.orEmpty() }
