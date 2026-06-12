@@ -127,6 +127,7 @@ jobs:
           SCOPE_PATHS[core]="^(core/|\.github/workflows/(pr-title|((ci|publish)-analyzer)|ci-analyzer-owasp|((ci|publish)-autobuilder)|ci-(dataflow|ir))\.)"
 
           DOCS_PATTERNS=(
+            "public/"
             "docs/"
             "skills/"
             "scripts/"
