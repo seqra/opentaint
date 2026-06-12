@@ -28,9 +28,9 @@
 <a href="http://opentaint.org/">
 <a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="OpenTaint opsummeret output">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-light.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-dark.gif">
+  <img src="../../public/opentaint-demo-dark.gif" alt="OpenTaint opsummeret output">
 </picture>
 </a>
 </a>
@@ -68,6 +68,13 @@
       <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
       <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
       <img src="../../public/opentaint-frame-dark-1.png" alt="OpenTaint scanningsoutput">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
+      <img src="../../public/opentaint-frame-dark-2.png" alt="OpenTaint opsummeret output">
     </picture>
   </p>
   <p align="center">
