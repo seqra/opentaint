@@ -50,6 +50,9 @@ jobs:
           tag: go-server/latest
           fileName: go-ssa-server_linux_amd64
           out-file-path: opentaint-go-server
+          
+      - name: Mark go-ssa-server executable
+        run: chmod +x opentaint-go-server/go-ssa-server_linux_amd64
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
