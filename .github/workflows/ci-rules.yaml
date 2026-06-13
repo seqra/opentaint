@@ -72,6 +72,11 @@ jobs:
           SEQRA_GITHUB_ACTOR: ${{ secrets.SEQRA_GITHUB_ACTOR }}
           SEQRA_GITHUB_TOKEN: ${{ secrets.SEQRA_GITHUB_TOKEN }}
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
       - name: OpenTaint compile test project
         run: |
           java -jar opentaint-autobuilder/opentaint-project-auto-builder.jar \
