@@ -5,8 +5,11 @@ import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 
 /** TODO: Python concrete type representation for metavar/type constraints. */
 sealed interface PythonConcreteType : LanguageConcreteType {
+    /** [name] may be a dotted path, e.g. `flask.views.View`. */
     data class Named(val name: String) : PythonConcreteType
 }
+
+fun pythonNamed(name: String) = TypeConstraint.Concrete(PythonConcreteType.Named(name))
 
 /** TODO: type unification / constraint matching for Python. */
 object PythonTypeOps : LanguageTypeOps {
