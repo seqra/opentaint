@@ -1,17 +1,29 @@
 package org.opentaint.semgrep.pattern.conversion
 
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintCleanAction
 import org.opentaint.semgrep.pattern.Mark
+import org.opentaint.semgrep.pattern.TaintRuleMatchAnything
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy.SinkDiscardMode
+import org.opentaint.semgrep.pattern.conversion.python.ANY_PYTHON_FUNCTION
+import org.opentaint.semgrep.pattern.conversion.python.PythonTaintRuleGenerationCtx
+import org.opentaint.semgrep.pattern.conversion.python.PYTHON_FALSE
+import org.opentaint.semgrep.pattern.conversion.python.PYTHON_TRUE
+import org.opentaint.semgrep.pattern.conversion.python.emitPythonTaintRules
+import org.opentaint.semgrep.pattern.conversion.python.mkPythonAssignMark
+import org.opentaint.semgrep.pattern.conversion.python.mkPythonCleanMark
+import org.opentaint.semgrep.pattern.conversion.python.mkPythonContainsMark
+import org.opentaint.semgrep.pattern.conversion.python.pythonAnd
+import org.opentaint.semgrep.pattern.conversion.python.pythonOr
 import org.opentaint.semgrep.pattern.conversion.taint.MarkConditionBuilder
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleGenerationCtx
 
-/** TODO: emit Python taint config rules from converted patterns. */
 data object PythonTaintStrategy :
     TaintRuleStrategy<SerializedPythonRule, SerializedPythonCondition, SerializedPythonTaintAssignAction, SerializedPythonTaintCleanAction> {
 
@@ -19,17 +31,36 @@ data object PythonTaintStrategy :
         ctx: TaintRuleGenerationCtx<SerializedPythonRule, *, *, *>,
         ruleCtx: RuleConversionCtx,
         sinkDiscardMode: SinkDiscardMode,
-    ): List<SerializedPythonRule> = TODO("Python taint rule generation not implemented")
+    ): List<SerializedPythonRule> {
+        val rules = ctx.pythonCtx().emitPythonTaintRules(ruleCtx)
+        if (sinkDiscardMode == SinkDiscardMode.NONE) return rules
+
+        return rules.filter { r ->
+            if (r !is SerializedPythonSink) return@filter true
+            // A trivially-true sink condition is normalized to null at emission.
+            if (r.condition != null) return@filter true
+
+            if (sinkDiscardMode == SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION) {
+                val function = (r.target as? PythonTarget.Function)?.function
+                if (function != ANY_PYTHON_FUNCTION) return@filter true
+            }
+
+            ruleCtx.trace.error(TaintRuleMatchAnything())
+            false
+        }
+    }
 
     data object PythonMarkConditionBuilder : MarkConditionBuilder<SerializedPythonCondition> {
         override fun checkTaintMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): SerializedPythonCondition =
-            TODO("not implemented")
+            mark.mkPythonContainsMark(pos)
 
-        override fun negate(cond: SerializedPythonCondition): SerializedPythonCondition = TODO("not implemented")
-        override fun and(args: List<SerializedPythonCondition>): SerializedPythonCondition = TODO("not implemented")
-        override fun or(args: List<SerializedPythonCondition>): SerializedPythonCondition = TODO("not implemented")
-        override fun mkTrue(): SerializedPythonCondition = TODO("not implemented")
-        override fun mkFalse(): SerializedPythonCondition = TODO("not implemented")
+        override fun negate(cond: SerializedPythonCondition): SerializedPythonCondition =
+            SerializedPythonCondition.Not(cond)
+
+        override fun and(args: List<SerializedPythonCondition>): SerializedPythonCondition = pythonAnd(args)
+        override fun or(args: List<SerializedPythonCondition>): SerializedPythonCondition = pythonOr(args)
+        override fun mkTrue(): SerializedPythonCondition = PYTHON_TRUE
+        override fun mkFalse(): SerializedPythonCondition = PYTHON_FALSE
     }
 
     override val conditionBuilder = PythonMarkConditionBuilder
@@ -37,17 +68,21 @@ data object PythonTaintStrategy :
     override fun posContainsAnyMark(
         pos: PositionBaseWithModifiers,
         marks: Set<Mark.GeneratedMark>,
-    ): SerializedPythonCondition = TODO("not implemented")
+    ): SerializedPythonCondition = pythonOr(marks.map { it.mkPythonContainsMark(pos) })
 
     override fun createCleanAction(
         mark: Mark.GeneratedMark,
         pos: PositionBaseWithModifiers,
-    ): SerializedPythonTaintCleanAction = TODO("not implemented")
+    ): SerializedPythonTaintCleanAction = mark.mkPythonCleanMark(pos)
 
     override fun createAssignMark(
         mark: Mark.GeneratedMark,
         pos: PositionBaseWithModifiers,
-    ): SerializedPythonTaintAssignAction = TODO("not implemented")
+    ): SerializedPythonTaintAssignAction = mark.mkPythonAssignMark(pos)
 
-    override fun assignedMark(assign: SerializedPythonTaintAssignAction): Mark.GeneratedMark = TODO("not implemented")
+    override fun assignedMark(assign: SerializedPythonTaintAssignAction): Mark.GeneratedMark = Mark.parseMark(assign.kind)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun TaintRuleGenerationCtx<SerializedPythonRule, *, *, *>.pythonCtx(): PythonTaintRuleGenerationCtx =
+        this as PythonTaintRuleGenerationCtx
 }
