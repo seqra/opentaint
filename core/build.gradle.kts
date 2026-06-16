@@ -53,6 +53,8 @@ dependencies {
     implementation(KotlinDependency.Libs.kotlin_logging)
     implementation(KotlinDependency.Libs.kaml)
 
+    implementation(Libs.fastutil)
+
     implementation(Libs.sarif4k)
     implementation(Libs.clikt)
     implementation(Libs.zt_exec)
