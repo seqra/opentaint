@@ -159,7 +159,7 @@ abstract class SarifGenerator<IL>(
             return null
         }
 
-        val generatedTracePaths = generateTracePath(trace)
+        val generatedTracePaths = generateTracePath(trace, options.sarifCodeFlowLimit)
         val paths = when (generatedTracePaths) {
             TracePathGenerationResult.Failure -> {
                 traceGenerationStats.generationFailed++
