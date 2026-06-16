@@ -245,11 +245,16 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	uriBase := fmt.Sprintf("%s%s", sourceRoot, string(filepath.Separator))
 
+	ruleLoadTraceDir, err := utils.GetProjectLogPath(absUserProjectRoot)
+	if err != nil {
+		out.Fatalf("Failed to resolve rule load trace directory: %v", err)
+	}
+
 	var absSemgrepRuleLoadTracePath string
 	if cfg.DryRun {
-		absSemgrepRuleLoadTracePath = filepath.Join(os.TempDir(), dryRunRuleLoadTraceFileName)
+		absSemgrepRuleLoadTracePath = filepath.Join(ruleLoadTraceDir, dryRunRuleLoadTraceFileName)
 	} else {
-		absSemgrepRuleLoadTracePath = setupSemgrepRuleLoadTrace()
+		absSemgrepRuleLoadTracePath = setupSemgrepRuleLoadTrace(ruleLoadTraceDir)
 	}
 
 	// Display scan information in tree format
@@ -564,8 +569,8 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 	sb.Render()
 }
 
-func setupSemgrepRuleLoadTrace() string {
-	absSemgrepRuleLoadTracePath, err := load_trace.GenerateSemgrepRuleLoadTraceFilePath()
+func setupSemgrepRuleLoadTrace(traceDir string) string {
+	absSemgrepRuleLoadTracePath, err := load_trace.RuleLoadTracePathIn(traceDir)
 	if err != nil {
 		out.Fatalf("Failed to generate rule load trace file path: \"%s\": %v", absSemgrepRuleLoadTracePath, err)
 	}
