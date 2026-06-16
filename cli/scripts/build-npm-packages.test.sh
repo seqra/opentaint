@@ -42,6 +42,7 @@ node -e "const p=require('$WP/package.json');
 
 MP="$OUT/opentaint"
 [ -f "$MP/bin/opentaint.js" ] || fail "launcher missing from main package"
+[ -f "$MP/README.md" ] || fail "README.md missing from main package"
 node -e "const p=require('$MP/package.json');
   if(p.name!=='@seqra/opentaint')process.exit(31);
   if(p.version!=='$VERSION')process.exit(32);

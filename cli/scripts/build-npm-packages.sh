@@ -71,6 +71,7 @@ main_dir="$OUT_DIR/opentaint"
 mkdir -p "$main_dir/bin"
 cp "$NPM_SRC/bin/opentaint.js" "$main_dir/bin/opentaint.js"
 chmod +x "$main_dir/bin/opentaint.js"
+cp "$NPM_SRC/README.md" "$main_dir/README.md"
 
 dep_args=()
 for dep in "${DEPS[@]}"; do
