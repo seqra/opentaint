@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@seqra/opentaint"><img src="https://img.shields.io/npm/v/@seqra/opentaint.svg" alt="npm version"></a>
-  <a href="https://github.com/seqra/opentaint/blob/main/cli/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://github.com/seqra/opentaint/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
   <a href="https://discord.gg/6BXDfbP4p9"><img src="https://img.shields.io/discord/1403357427176575036?logo=discord&label=Discord" alt="Discord"></a>
 </p>
 
