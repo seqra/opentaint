@@ -2,7 +2,9 @@ package org.opentaint.dataflow.python.rules
 
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.mkOr
 import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.configuration.python.AllArguments
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ClassRef
@@ -82,7 +84,7 @@ internal object MethodTaintConfigurationResolver {
     ): List<TaintSink> = resolveFunctionTargeted(serialized, method) { rule, fn ->
         TaintSink(
             target = Target.Function(method),
-            condition = convertCondition(rule.condition),
+            condition = resolveCondition(rule.condition, method.argumentIndices()),
             id = "function:${fn.function}",
             meta = sinkMeta(rule),
         )
@@ -92,10 +94,11 @@ internal object MethodTaintConfigurationResolver {
         serialized: List<SerializedPythonPassThrough>,
         method: PIRFunction,
     ): List<TaintPassThrough> = resolveFunctionTargeted(serialized, method) { rule, _ ->
+        val argIndices = method.argumentIndices()
         TaintPassThrough(
             target = Target.Function(method),
-            condition = convertCondition(rule.condition),
-            copy = rule.copy.map(::convertPassAction),
+            condition = resolveCondition(rule.condition, argIndices),
+            copy = rule.copy.flatMap { convertPassActions(it, argIndices) },
         )
     }
 
@@ -103,10 +106,11 @@ internal object MethodTaintConfigurationResolver {
         serialized: List<SerializedPythonCleaner>,
         method: PIRFunction,
     ): List<TaintCleaner> = resolveFunctionTargeted(serialized, method) { rule, _ ->
+        val argIndices = method.argumentIndices()
         TaintCleaner(
             target = Target.Function(method),
-            condition = convertCondition(rule.condition),
-            cleans = rule.cleans.map(::convertCleanAction),
+            condition = resolveCondition(rule.condition, argIndices),
+            cleans = rule.cleans.flatMap { convertCleanActions(it, argIndices) },
             forCategory = rule.`for`,
         )
     }
@@ -122,8 +126,8 @@ internal object MethodTaintConfigurationResolver {
         rule.taint.forEach { it.requireNoMethodScope(name) }
         TaintSource(
             target = Target.Attribute(name),
-            condition = convertCondition(rule.condition),
-            taint = rule.taint.map(::convertAssignAction),
+            condition = resolveCondition(rule.condition, emptyList()),
+            taint = rule.taint.flatMap { convertAssignActions(it, emptyList()) },
         )
     }
 
@@ -133,7 +137,7 @@ internal object MethodTaintConfigurationResolver {
     ): List<TaintSink> = resolveAttributeTargeted(serialized, name) { rule ->
         TaintSink(
             target = Target.Attribute(name),
-            condition = convertCondition(rule.condition),
+            condition = resolveCondition(rule.condition, emptyList()),
             id = "attribute:$name",
             meta = sinkMeta(rule),
         )
@@ -145,8 +149,8 @@ internal object MethodTaintConfigurationResolver {
     ): List<TaintPassThrough> = resolveAttributeTargeted(serialized, name) { rule ->
         TaintPassThrough(
             target = Target.Attribute(name),
-            condition = convertCondition(rule.condition),
-            copy = rule.copy.map(::convertPassAction),
+            condition = resolveCondition(rule.condition, emptyList()),
+            copy = rule.copy.flatMap { convertPassActions(it, emptyList()) },
         )
     }
 
@@ -156,8 +160,8 @@ internal object MethodTaintConfigurationResolver {
     ): List<TaintCleaner> = resolveAttributeTargeted(serialized, name) { rule ->
         TaintCleaner(
             target = Target.Attribute(name),
-            condition = convertCondition(rule.condition),
-            cleans = rule.cleans.map(::convertCleanAction),
+            condition = resolveCondition(rule.condition, emptyList()),
+            cleans = rule.cleans.flatMap { convertCleanActions(it, emptyList()) },
             forCategory = rule.`for`,
         )
     }
@@ -177,13 +181,14 @@ internal object MethodTaintConfigurationResolver {
         val fn = rule.target as? PythonTarget.Function ?: return@flatMap emptyList()
         if (!fn.matches(method)) return@flatMap emptyList()
 
-        val baseCondition = convertCondition(rule.condition)
+        val argIndices = method.argumentIndices()
+        val baseCondition = resolveCondition(rule.condition, argIndices)
         rule.taint.groupBy { it.decoratedWith to it.baseClass }
             .mapNotNull { (scope, actions) ->
                 val (decoratedWith, baseClass) = scope
                 if (decoratedWith != null && !method.hasDecorator(decoratedWith)) return@mapNotNull null
                 if (baseClass != null && !method.hasBaseClass(baseClass)) return@mapNotNull null
-                build(baseCondition, actions.map(::convertAssignAction))
+                build(baseCondition, actions.flatMap { convertAssignActions(it, argIndices) })
             }
     }
 
@@ -260,6 +265,13 @@ internal object MethodTaintConfigurationResolver {
         else -> if (parameters.isEmpty()) parameters else parameters.drop(1)
     }
 
+    /**
+     * Positional-argument index space of a call to this method, receiver excluded —
+     * aligned with `PIRCall.args` (so `arg(*)` expands to exactly these). Drops the
+     * implicit `self` / `cls` slot via [declaredParameters].
+     */
+    private fun PIRFunction.argumentIndices(): List<Int> = declaredParameters().indices.toList()
+
     private fun PIRFunction.hasDecorator(fqn: String): Boolean =
         decorators.any { it.qualifiedName == fqn }
 
@@ -270,18 +282,38 @@ internal object MethodTaintConfigurationResolver {
 
     // region Position + condition + action conversion
 
-    private fun convertAssignAction(a: SerializedPythonTaintAssignAction): TaintAssignAction =
-        TaintAssignAction(mark = TaintMark(a.kind), pos = convertPosition(a.pos))
+    private fun convertAssignActions(a: SerializedPythonTaintAssignAction, argIndices: List<Int>): List<TaintAssignAction> =
+        expandPositions(a.pos, argIndices).map { TaintAssignAction(mark = TaintMark(a.kind), pos = it) }
 
-    private fun convertCleanAction(a: SerializedPythonTaintCleanAction): TaintCleanAction =
-        TaintCleanAction(mark = a.taintKind?.let(::TaintMark), pos = convertPosition(a.pos))
+    private fun convertCleanActions(a: SerializedPythonTaintCleanAction, argIndices: List<Int>): List<TaintCleanAction> =
+        expandPositions(a.pos, argIndices).map { TaintCleanAction(mark = a.taintKind?.let(::TaintMark), pos = it) }
 
-    private fun convertPassAction(a: SerializedPythonTaintPassAction): TaintPassAction =
-        TaintPassAction(
-            mark = a.taintKind?.let(::TaintMark),
-            from = convertPosition(a.from),
-            to = convertPosition(a.to),
-        )
+    private fun convertPassActions(a: SerializedPythonTaintPassAction, argIndices: List<Int>): List<TaintPassAction> {
+        val mark = a.taintKind?.let(::TaintMark)
+        val froms = expandPositions(a.from, argIndices)
+        val tos = expandPositions(a.to, argIndices)
+        return froms.flatMap { from -> tos.map { to -> TaintPassAction(mark, from, to) } }
+    }
+
+    /**
+     * Resolve a serialized position to one or more runtime positions. `arg(*)`
+     * ([PythonPositionBase.Argument] with a null index) has no single access path, so it is
+     * expanded against the matched method's positional arguments into one concrete `arg(i)` per
+     * argument; every other base resolves to exactly one position.
+     */
+    private fun expandPositions(p: PythonPosition, argIndices: List<Int>): List<Position> {
+        val base = p.base
+        // TODO kw-params
+        if (base is PythonPositionBase.Argument && base.idx == null) {
+            return argIndices.map { convertPosition(p.withBase(PythonPositionBase.Argument(it))) }
+        }
+        return listOf(convertPosition(p))
+    }
+
+    private fun PythonPosition.withBase(newBase: PythonPositionBase): PythonPosition = when (this) {
+        is PythonPosition.BaseOnly -> PythonPosition.BaseOnly(newBase)
+        is PythonPosition.WithModifiers -> PythonPosition.WithModifiers(newBase, modifiers)
+    }
 
     private fun convertPosition(p: PythonPosition): Position = when (p) {
         is PythonPosition.BaseOnly -> convertBase(p.base)
@@ -303,16 +335,20 @@ internal object MethodTaintConfigurationResolver {
         is PythonPositionModifier.Field -> PositionAccessor.FieldAccessor(m.name)
     }
 
-    private fun convertCondition(c: SerializedPythonCondition?): PIRCondition = when (c) {
+    private fun resolveCondition(c: SerializedPythonCondition?, argIndices: List<Int>): PIRCondition =
+        convertCondition(c, argIndices).simplify()
+
+    private fun convertCondition(c: SerializedPythonCondition?, argIndices: List<Int>): PIRCondition = when (c) {
         null -> mkTrue()
-        is SerializedPythonCondition.Or -> CommonCondition.Or(c.anyOf.map(::convertCondition))
-        is SerializedPythonCondition.And -> CommonCondition.And(c.allOf.map(::convertCondition))
-        is SerializedPythonCondition.Not -> CommonCondition.Not(convertCondition(c.not))
-        is SerializedPythonCondition.ContainsMark -> CommonCondition.Atom(ContainsMark(
-            mark = TaintMark(c.tainted),
-            pos = convertPosition(c.pos),
-        ))
+        is SerializedPythonCondition.Or -> CommonCondition.Or(c.anyOf.map { convertCondition(it, argIndices) })
+        is SerializedPythonCondition.And -> CommonCondition.And(c.allOf.map { convertCondition(it, argIndices) })
+        is SerializedPythonCondition.Not -> CommonCondition.Not(convertCondition(c.not, argIndices))
+        is SerializedPythonCondition.ContainsMark -> containsMarkCondition(c, argIndices)
     }
+
+    /** `ContainsMark` over `arg(*)` means "the mark is on some argument" — an [CommonCondition.Or] of per-arg atoms. */
+    private fun containsMarkCondition(c: SerializedPythonCondition.ContainsMark, argIndices: List<Int>): PIRCondition =
+        mkOr(expandPositions(c.pos, argIndices).map { CommonCondition.Atom(ContainsMark(mark = TaintMark(c.tainted), pos = it)) })
 
     // endregion
 

@@ -2,7 +2,7 @@ package org.opentaint.dataflow.python.rules
 
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
-import org.opentaint.dataflow.configuration.python.AllArguments
+import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ClassRef
 import org.opentaint.dataflow.configuration.python.Result
 import org.opentaint.dataflow.configuration.python.Target
@@ -50,13 +50,14 @@ class PIRTaintConfigurationTest {
         val decorated = stubMethod(
             qualifiedName = "myapp.views.index",
             shortName = "index",
+            parameters = listOf(stubParam("arg", index = 0)),
             decorators = listOf(stubDecorator("flask.Flask.route")),
         )
         val flaskEntries = config.entryPointSourcesForMethod(decorated)
         assertTrue(flaskEntries.isNotEmpty(), "expected flask.Flask.route entry-point to match")
         val first = flaskEntries.first()
         assertEquals(Target.Function(decorated), first.target)
-        assertTrue(first.taint.any { it.pos === AllArguments })
+        assertTrue(first.taint.any { (it.pos as? Argument)?.index == 0 })
         assertTrue(first.taint.any { it.pos is ClassRef })
 
         val bare = stubMethod(qualifiedName = "myapp.helpers.helper", shortName = "helper")

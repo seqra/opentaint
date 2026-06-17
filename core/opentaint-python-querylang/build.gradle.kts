@@ -1,5 +1,9 @@
+import OpentaintIrDependency.opentaint_ir_api_python
+import OpentaintIrDependency.opentaint_ir_core_python
+import OpentaintUtilDependency.opentaintUtilJvm
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
+import org.opentaint.common.resolveIncludedProjectTask
 
 plugins {
     id("kotlin-conventions")
@@ -22,6 +26,10 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(JunitDependencies.Libs.junit_jupiter)
     testImplementation(JunitDependencies.Libs.junit_jupiter_params)
+    testImplementation(opentaint_ir_api_python)
+    testImplementation(opentaint_ir_core_python)
+    testImplementation(opentaintUtilJvm)
+    testImplementation("org.opentaint.sast:dataflow")
     testRuntimeOnly(Libs.logback)
 }
 
@@ -123,5 +131,41 @@ tasks.compileTestKotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    jvmArgs = listOf("-Xmx4g")
+    maxHeapSize = "8g"
+    maxParallelForks = 1
+
+    systemProperty("PY_SAMPLES_DIR", layout.projectDirectory.dir("samples-py").asFile.absolutePath)
+    ensurePirEnvInitialized()
+    doFirst {
+        pirEnvironment().forEach { (key, value) -> environment(key, value) }
+    }
+}
+
+// ─── PIR environment ────────────────────────────────────────────────
+// Mirror of core/build.gradle.kts: wire this module's tests to the PIR env
+// initializer so PIRClasspathLoader can spawn the pir_server (PIR_SERVER_PYTHON).
+
+val opentaintPirEnvKey = "opentaint.pir.env"
+
+fun pirEnvironment(): Map<String, Any> {
+    val pirEnv = mutableMapOf<String, Any>()
+    setupOpentaintPirEnvironment(pirEnv)
+    return pirEnv
+}
+
+@Suppress("UNCHECKED_CAST")
+fun setupOpentaintPirEnvironment(pirEnv: MutableMap<String, Any>) {
+    val initializer = findOpentaintPirEnvInitializer() ?: return
+    val env = initializer.extra.get(opentaintPirEnvKey) as Map<String, Any>
+    pirEnv += env
+}
+
+fun Task.ensurePirEnvInitialized() {
+    val initializer = findOpentaintPirEnvInitializer() ?: return
+    dependsOn(initializer)
+}
+
+fun findOpentaintPirEnvInitializer(): Task? {
+    val irProject = gradle.includedBuilds.find { it.name == "opentaint-ir" } ?: return null
+    return irProject.resolveIncludedProjectTask(":python:setupPirEnvironment")
 }
