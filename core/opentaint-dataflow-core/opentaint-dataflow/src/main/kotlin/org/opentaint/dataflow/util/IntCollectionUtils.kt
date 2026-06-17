@@ -43,3 +43,14 @@ inline fun <D : IntCollection> IntCollection.mapIntTo(dst: D, mapper: (Int) -> I
     forEachInt { dst.add(mapper(it)) }
     return dst
 }
+
+inline fun <R> IntList.foldRightInt(initial: R, operation: (Int, acc: R) -> R): R {
+    var accumulator = initial
+    if (!isEmpty()) {
+        val iterator = listIterator(size)
+        while (iterator.hasPrevious()) {
+            accumulator = operation(iterator.previousInt(), accumulator)
+        }
+    }
+    return accumulator
+}

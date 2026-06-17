@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isF
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
+import org.opentaint.dataflow.util.foldRightInt
 import org.opentaint.dataflow.util.reversedForEachInt
 
 class AccessPath(
@@ -151,7 +152,7 @@ class AccessPath(
                 if (otherNode.isAbstract) {
                     val filteredNode = node.filter(other.exclusions) ?: return emptyList()
 
-                    val matchedAccessNode = accessorsOnPath.foldRight(null as AccessNode?) { accessor, prevNode ->
+                    val matchedAccessNode = accessorsOnPath.foldRightInt(null as AccessNode?) { accessor, prevNode ->
                         AccessNode(apManager, accessor, prevNode)
                     }
                     val matchedFact = AccessPath(apManager, base, matchedAccessNode, exclusions)
