@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithrealinsidesequence
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithRealInsideSequence (Python port, ObjectMapper-like sequence)
+    mode: taint
+    pattern-sources:
+      - pattern: enable_default_typing($OM)
+    pattern-sinks:
+      - pattern: read_value($X)

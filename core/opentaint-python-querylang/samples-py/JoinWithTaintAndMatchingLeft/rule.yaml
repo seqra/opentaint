@@ -1,0 +1,19 @@
+rules:
+  - id: join-with-taint-and-matching-left
+    languages: [python]
+    severity: ERROR
+    message: match example/JoinWithTaintAndMatchingLeft (Python port, recast as taint chain)
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $X = get_untrusted_input()
+          - focus-metavariable: $X
+    pattern-propagators:
+      - pattern: $Y = process_input($X)
+        from: $X
+        to: $Y
+      - pattern: $Y = transform_data($X)
+        from: $X
+        to: $Y
+    pattern-sinks:
+      - pattern: execute_dangerous($X)

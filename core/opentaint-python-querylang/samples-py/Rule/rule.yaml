@@ -1,0 +1,12 @@
+rules:
+  - id: example-rule
+    languages: [python]
+    severity: ERROR
+    message: match example/Rule (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: clean($X)
+    pattern-sinks:
+      - pattern: sink($X)

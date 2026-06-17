@@ -1,0 +1,10 @@
+rules:
+  - id: example-r3
+    languages: [python]
+    severity: ERROR
+    message: match example/R3 (Python port, recast as bar($X) source-sink)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sinks:
+      - pattern: bar($X)

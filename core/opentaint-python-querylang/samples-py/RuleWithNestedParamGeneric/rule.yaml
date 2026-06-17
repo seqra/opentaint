@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithnestedparamgeneric
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithNestedParamGeneric (Python port)
+    patterns:
+      - pattern: sink($A)
+      - pattern-inside: |
+          def $METHOD($X: List[Dict[str, int]], ..., $A: str, ...) -> $RET:
+              ...

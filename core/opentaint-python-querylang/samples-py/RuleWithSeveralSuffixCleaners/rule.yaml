@@ -1,0 +1,13 @@
+rules:
+  - id: example-rulewithseveralsuffixcleaners
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithSeveralSuffixCleaners (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: clean1($X)
+      - pattern: clean2($X)
+    pattern-sinks:
+      - pattern: f($X)

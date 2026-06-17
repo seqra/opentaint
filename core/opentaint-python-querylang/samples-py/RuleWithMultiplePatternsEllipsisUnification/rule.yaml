@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithmultiplepatternsellipsisunification
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithMultiplePatternsEllipsisUnification (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: mk_type2($X)
+    pattern-sinks:
+      - pattern: mk_type1_from_type3($X)

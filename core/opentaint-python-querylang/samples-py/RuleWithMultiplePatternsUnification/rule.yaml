@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithmultiplepatternsunification
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithMultiplePatternsUnification (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: mk_type2($SOURCE)
+    pattern-sinks:
+      - pattern: new_type3($SOURCE)

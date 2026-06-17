@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulecookie
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleCookie (Python port, cookie without set_secure)
+    mode: taint
+    pattern-sources:
+      - pattern: new_cookie(...)
+    pattern-sanitizers:
+      - pattern: set_secure($C)
+    pattern-sinks:
+      - pattern: add_cookie($C)

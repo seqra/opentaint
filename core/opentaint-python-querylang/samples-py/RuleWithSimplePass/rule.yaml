@@ -1,0 +1,14 @@
+rules:
+  - id: example-rulewithsimplepass
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithSimplePass (Python port, propagator)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sinks:
+      - pattern: sink($X)
+    pattern-propagators:
+      - pattern: $OUT = pass_through($IN)
+        from: $IN
+        to: $OUT

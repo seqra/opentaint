@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulereturn5
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleReturn5 (Python port, return with cleaner)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: clean($X)
+    pattern-sinks:
+      - pattern: sink($X)

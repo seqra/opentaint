@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulewithnotinsideprefix
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithNotInsidePrefix (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: prefix_clean($X)
+    pattern-sinks:
+      - pattern: sink($X)

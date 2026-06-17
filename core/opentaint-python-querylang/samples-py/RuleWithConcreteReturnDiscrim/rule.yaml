@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithconcretereturndiscrim
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithConcreteReturnDiscrim (Python port)
+    patterns:
+      - pattern: sink($DATA)
+      - pattern-inside: |
+          def $METHOD($A: str, $DATA: str) -> str:
+              ...

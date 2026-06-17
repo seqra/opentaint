@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulereturnnotinside
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleReturnNotInside (Python port, recast as call-based)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: sanitize($X)
+    pattern-sinks:
+      - pattern: sink($X)

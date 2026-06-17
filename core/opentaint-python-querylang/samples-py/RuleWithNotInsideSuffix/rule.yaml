@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulewithnotinsidesuffix
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithNotInsideSuffix (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: suffix_clean($X)
+    pattern-sinks:
+      - pattern: sink($X)

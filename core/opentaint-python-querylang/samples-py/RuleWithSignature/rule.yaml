@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulewithsignature
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithSignature (Python port, recast as either-sink)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sinks:
+      - pattern-either:
+          - pattern: sink1($X)
+          - pattern: sink2($X)

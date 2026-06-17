@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithparamconcreteliststring
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithParamConcreteListString (Python port)
+    patterns:
+      - pattern: sink($DATA)
+      - pattern-inside: |
+          def $METHOD($A: List[str], $DATA: str) -> $RET:
+              ...

@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithoutpattern
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithoutPattern (Python port)
+    patterns:
+      - pattern: sink($X)
+      - pattern-inside: |
+          def $METHOD(..., $A: str, ...) -> $RET:
+              ...

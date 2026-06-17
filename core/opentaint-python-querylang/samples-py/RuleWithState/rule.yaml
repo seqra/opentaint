@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithstate
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithState (Python port, sequence via state token)
+    mode: taint
+    pattern-sources:
+      - pattern: f()
+    pattern-sinks:
+      - pattern: g($X)

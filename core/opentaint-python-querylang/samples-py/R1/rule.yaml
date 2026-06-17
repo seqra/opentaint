@@ -1,0 +1,13 @@
+rules:
+  - id: example-r1
+    languages: [python]
+    severity: ERROR
+    message: match example/R1 (Python port)
+    patterns:
+      - pattern: return $X
+      - pattern-inside: |
+          $X = foo($ARG)
+          ...
+      - pattern-not-inside: |
+          def $FUN($ARG: object, ...) -> $RT:
+              ...

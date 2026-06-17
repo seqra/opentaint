@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithtype
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithType (Python port, distinct foo per receiver type)
+    mode: taint
+    pattern-sources:
+      - pattern: make_simple()
+    pattern-sinks:
+      - pattern: foo_simple($X)

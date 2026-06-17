@@ -1,0 +1,10 @@
+rules:
+  - id: example-rulewithnestedmaplistreturn
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithNestedMapListReturn (Python port)
+    patterns:
+      - pattern: sink($A)
+      - pattern-inside: |
+          def $METHOD(..., $A: str, ...) -> Dict[str, List[int]]:
+              ...

@@ -1,0 +1,12 @@
+rules:
+  - id: example-cleaneraftersink1
+    languages: [python]
+    severity: ERROR
+    message: match example/CleanerAfterSink1 (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sanitizers:
+      - pattern: clean($X)
+    pattern-sinks:
+      - pattern: sink($X)

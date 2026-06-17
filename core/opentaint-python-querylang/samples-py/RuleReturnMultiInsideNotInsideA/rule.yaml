@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulereturnmultiinsidenotinsidea
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleReturnMultiInsideNotInsideA (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: mk_type2($X)
+    pattern-sanitizers:
+      - pattern: sanitize_a($X)
+    pattern-sinks:
+      - pattern: mk_type3($X)

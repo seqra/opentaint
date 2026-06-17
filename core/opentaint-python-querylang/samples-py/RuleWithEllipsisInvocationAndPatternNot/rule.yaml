@@ -1,0 +1,12 @@
+rules:
+  - id: example-rulewithellipsisinvocationandpatternnot
+    languages: [python]
+    severity: ERROR
+    message: match example/RuleWithEllipsisInvocationAndPatternNot (Python port)
+    mode: taint
+    pattern-sources:
+      - pattern: src()
+    pattern-sanitizers:
+      - pattern: get_obj_bad($X)
+    pattern-sinks:
+      - pattern: sink($X)
