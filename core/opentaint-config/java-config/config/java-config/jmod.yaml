@@ -1441,13 +1441,9 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
+    - .java.util.Map#MapValue#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
     to: result
 - function: javax.script.Bindings#put
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
@@ -1455,11 +1451,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
+    - .java.util.Map#MapValue#java.lang.Object
   - from: arg(1)
     to: this
 - function: javax.script.Bindings#put
@@ -1468,24 +1460,12 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
+    - .java.util.Map#MapValue#java.lang.Object
   - from: arg(1)
     to: this
 - function: javax.script.Bindings#putAll
   signature: (java.util.Map) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.script.Bindings#remove
@@ -1493,13 +1473,9 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
+    - .java.util.Map#MapValue#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
     to: result
 - function: javax.script.ScriptContext#getAttribute
   signature: (java.lang.String) java.lang.Object
@@ -1607,37 +1583,8 @@ passThrough:
   - from: arg(0)
     to: this
 - function: javax.script.SimpleBindings#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.SimpleBindings#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-- function: javax.script.SimpleBindings#<init>
   signature: (java.util.Map) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.SimpleBindings#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.sql.RowSetInternal#getOriginal

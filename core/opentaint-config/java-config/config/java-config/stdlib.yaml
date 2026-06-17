@@ -17059,9 +17059,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .java.util.Map#MapValue#java.lang.Object
     to: result
 - function: java.util.Map#computeIfAbsent
   signature: (java.lang.Object, java.util.function.Function) java.lang.Object
@@ -17075,9 +17073,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .java.util.Map#MapValue#java.lang.Object
     to: result
 - function: java.util.Map#copyOf
   signature: (java.util.Map) java.util.Map
@@ -17145,10 +17141,6 @@ passThrough:
     to: result
 - function: java.util.Map#<init>
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.util.Map#keySet
@@ -18185,10 +18177,8 @@ passThrough:
   signature: (java.lang.Object, java.lang.Object) boolean
   copy:
   - from:
-    - this
-    - .java.util.Map#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+      - this
+      - .java.util.Map#MapValue#java.lang.Object
     to: result
 - function: java.util.Map#replace
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
