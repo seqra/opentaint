@@ -70,7 +70,7 @@ class JIRAnalysisManager(
         jIRDowncast<JIRUnitResolver>(unitResolver)
 
         val jIRCallResolver = JIRCallResolver(cp, unitResolver)
-        return JIRMethodCallResolver(jIRCallResolver, runner)
+        return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker)
     }
 
     override fun getMethodAnalysisContext(

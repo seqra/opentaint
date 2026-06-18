@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallResolutionResult
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.call.tryExtractCallTypeInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
@@ -34,6 +35,7 @@ import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 class JIRMethodCallResolver(
     val callResolver: JIRCallResolver,
     val runner: TaintAnalysisUnitRunner,
+    val externalMethodTracker: ExternalMethodTracker?
 ) : MethodCallResolver {
     override fun resolveMethodCall(
         callerContext: MethodAnalysisContext,
@@ -124,6 +126,12 @@ class JIRMethodCallResolver(
             if (lambdaImpl == null) {
                 logger.debug { "Lambda class $cls has no lambda method $lambdaMethod" }
                 return@tryExtractCallTypeInfo
+            }
+
+            externalMethodTracker?.apply {
+                val methodName = "${lambdaMethod.enclosingClass.name}#${lambdaMethod.name}"
+                val methodDesc = lambdaMethod.description
+                untrackMethod(methodName, methodDesc)
             }
 
             lambdaResolver.addLambda(cls)

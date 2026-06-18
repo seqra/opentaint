@@ -169,6 +169,8 @@ class SpringRuleProvider(
     private fun RepositoryMethodInfo.actions(): List<CopyAllMarks>? {
         val actions = mutableListOf<CopyAllMarks>()
         val repoPos = PositionWithAccess(This, repositoryContent)
+        actions += CopyAllMarks(This, This)
+
         when (kind) {
             SpringRepoQueryKind.SAVE -> {
                 val entityPos = Argument(0)
