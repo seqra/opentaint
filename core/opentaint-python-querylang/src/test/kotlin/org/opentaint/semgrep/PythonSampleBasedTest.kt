@@ -78,6 +78,8 @@ class PythonSampleBasedTest {
     @Test fun cleanerAfterSink0() = runSample("CleanerAfterSink0")
     @Test fun cleanerAfterSink1() = runSample("CleanerAfterSink1")
     @Test fun cleanerAfterSink2() = runSample("CleanerAfterSink2")
+    @Test fun multiArgSink() = runSample("MultiArgSink")
+    @Test fun complexSourceSink() = runSample("ComplexSourceSink")
     @Test fun joinWithTaintAndMatchingLeft() = runSample("JoinWithTaintAndMatchingLeft")
     @Test fun ndRule() = runSample("NDRule")
     @Test fun objectMapperPatternNotEllipsis() = runSample("ObjectMapperPatternNotEllipsis")
