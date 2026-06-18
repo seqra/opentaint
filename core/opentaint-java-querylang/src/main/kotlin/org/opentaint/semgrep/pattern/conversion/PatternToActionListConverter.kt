@@ -577,13 +577,15 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
         for ((i, param) in params.withIndex()) {
             when (param) {
                 is FormalArgument -> {
-                    val paramName = (param.name as? MetavarName)?.metavarName
-                        ?: transformationFailed("MethodDeclaration_param_name_not_metavar")
-
                     val position = if (idxIsConcrete) {
                         ParamPosition.Concrete(i)
                     } else {
-                        ParamPosition.Any(paramClassifier = paramName)
+                        val positionName = when (val name = param.name) {
+                            is ConcreteName -> name.name
+                            is MetavarName -> name.metavarName
+                            is AnonymousName -> "*"
+                        }
+                        ParamPosition.Any(paramClassifier = positionName)
                     }
 
                     val paramModifiers = param.modifiers.map { transformModifier(it) }
@@ -591,7 +593,16 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
                         ParamPattern(position, ParamCondition.ParamModifier(modifier))
                     }
 
-                    paramConditions += ParamPattern(position, IsMetavar(MetavarAtom.create(paramName)))
+                    when(val name = param.name){
+                        is MetavarName -> {
+                            paramConditions += ParamPattern(
+                                position,
+                                IsMetavar(MetavarAtom.create(name.metavarName))
+                            )
+                        }
+                        is AnonymousName -> {}
+                        is ConcreteName -> transformationFailed("MethodDeclaration_param_name_not_metavar")
+                    }
 
                     val paramType = transformTypeName(param.type)
                     paramConditions += ParamPattern(position, ParamCondition.TypeIs(paramType))
