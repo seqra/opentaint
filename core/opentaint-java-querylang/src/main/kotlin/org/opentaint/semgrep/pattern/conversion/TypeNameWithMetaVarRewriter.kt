@@ -1,5 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion
 
+import org.opentaint.semgrep.pattern.AnonymousName
 import org.opentaint.semgrep.pattern.ConcreteName
 import org.opentaint.semgrep.pattern.MetaVarConstraint
 import org.opentaint.semgrep.pattern.MetaVarConstraintFormula
@@ -98,5 +99,7 @@ private fun MetaVarConstraintFormula<List<String>>.transformNext(
                 }
             }
         }
+
+        is AnonymousName ->  TODO("TypeName metavar is anonymous")
     }
 }

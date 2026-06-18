@@ -2,6 +2,8 @@ package org.opentaint.semgrep.pattern.conversion
 
 import org.opentaint.semgrep.pattern.AddExpr
 import org.opentaint.semgrep.pattern.Annotation
+import org.opentaint.semgrep.pattern.AnonymousMetavar
+import org.opentaint.semgrep.pattern.AnonymousName
 import org.opentaint.semgrep.pattern.ArrayAccess
 import org.opentaint.semgrep.pattern.BoolConstant
 import org.opentaint.semgrep.pattern.CatchStatement
@@ -116,6 +118,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
             is CatchStatement,
             is DeepExpr,
             is EllipsisMetavar,
+            is AnonymousMetavar,
             is IntLiteral -> {
                 val messagePrefix = if (isRootPattern) "Root pattern is: " else ""
                 transformationFailed("$messagePrefix${pattern::class.java.simpleName}")
@@ -131,6 +134,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
             is StringLiteral -> when (val value = pattern.content) {
                 is ConcreteName -> SpecificStringValue(value.name)
                 is MetavarName -> StringValueMetaVar(MetavarAtom.create(value.metavarName))
+                is AnonymousName -> ParamCondition.AnyStringLiteral
             }
 
             is StringEllipsis -> {
@@ -139,6 +143,10 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
 
             is Metavar -> {
                 IsMetavar(MetavarAtom.create(pattern.name))
+            }
+
+            is AnonymousMetavar -> {
+                ParamCondition.True
             }
 
             is TypedMetavar -> {
@@ -163,7 +171,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
                         ParamCondition.SpecificStaticFieldValue(fn.name, type)
                     }
 
-                    is MetavarName -> {
+                    is MetavarName, is AnonymousName -> {
                         transformationFailed("Static field name is metavar")
                     }
                 }
@@ -317,6 +325,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
         val methodName = when (val name = pattern.methodName) {
             is ConcreteName -> SignatureName.Concrete(name.name)
             is MetavarName -> SignatureName.MetaVar(name.metavarName)
+            is AnonymousName -> transformationFailed("Method name is anonymous")
         }
 
         val actionList = mutableListOf<SemgrepPatternAction>()
@@ -557,6 +566,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
         val methodName = when (val name = pattern.name) {
             is ConcreteName -> SignatureName.Concrete(name.name)
             is MetavarName -> SignatureName.MetaVar(name.metavarName)
+            is AnonymousName -> transformationFailed("Method name is anonymous")
         }
 
         val returnTypePattern: TypeConstraint? = pattern.returnType?.let { transformTypeName(it) }
@@ -658,6 +668,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
                 }
 
                 is ConcreteName -> SignatureModifierValue.StringValue(paramName, value.name)
+                is AnonymousName -> SignatureModifierValue.AnyValue
             }
         }
 

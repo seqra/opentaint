@@ -123,7 +123,7 @@ class SemgrepJavaPatternParser {
 
 private fun IdentifierContext.parseName(): Name = withRule {
     tryRule(IdentifierContext::METAVAR) { return MetavarName(it.text) }
-    tryRule(IdentifierContext::ANONYMOUS_METAVAR) { this@parseName.todo() }
+    tryRule(IdentifierContext::ANONYMOUS_METAVAR) { return AnonymousName }
     return ConcreteName(text)
 }
 
@@ -644,6 +644,7 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
         return when (name) {
             is ConcreteName -> Identifier(name.name)
             is MetavarName -> Metavar(name.metavarName)
+            is AnonymousName -> AnonymousMetavar
         }
     }
 

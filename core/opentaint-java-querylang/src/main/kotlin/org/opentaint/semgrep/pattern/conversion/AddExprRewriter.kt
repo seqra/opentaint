@@ -1,5 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion
 
+import org.opentaint.semgrep.pattern.AnonymousName
 import org.opentaint.semgrep.pattern.ConcreteName
 import org.opentaint.semgrep.pattern.MetavarName
 import org.opentaint.semgrep.pattern.MethodInvocation
@@ -38,7 +39,8 @@ private fun flatStringConcat(pattern: SemgrepJavaPattern): List<SemgrepJavaPatte
             }
         }
 
-        is MetavarName -> {}
+        is MetavarName,
+        is AnonymousName -> {}
     }
 
     return listOf(pattern)

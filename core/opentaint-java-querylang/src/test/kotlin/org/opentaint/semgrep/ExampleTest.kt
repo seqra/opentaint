@@ -204,6 +204,9 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test object mapper pattern-not ellipsis`() = runTest<example.ObjectMapperPatternNotEllipsis>()
 
+    @Test
+    fun `test concrete placeholder`() = runTest<example.RuleWithConcretePlaceholder>()
+
     @AfterAll
     fun close() {
         closeRunner()

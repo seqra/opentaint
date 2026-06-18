@@ -212,7 +212,7 @@ LINE_COMMENT : '//' ~[\r\n]*    -> channel(HIDDEN);
 
 IDENTIFIER: LetterNoDollar LetterOrDigit*;
 
-METAVAR: [$] MetavarLetter+;
+METAVAR: [$] MetavarFirstLetter MetavarLetter*;
 
 ANONYMOUS_METAVAR: [$] '_';
 
@@ -252,4 +252,5 @@ fragment LetterNoDollar:
     | [\uD800-\uDBFF] [\uDC00-\uDFFF] // covers UTF-16 surrogate pairs encodings for U+10000 to U+10FFFF
 ;
 
+fragment MetavarFirstLetter: [A-Z] | [0-9];
 fragment MetavarLetter: [A-Z_] | [0-9];

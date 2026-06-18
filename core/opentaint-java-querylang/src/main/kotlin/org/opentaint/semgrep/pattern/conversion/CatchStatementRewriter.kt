@@ -1,5 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion
 
+import org.opentaint.semgrep.pattern.AnonymousName
 import org.opentaint.semgrep.pattern.ConcreteName
 import org.opentaint.semgrep.pattern.Ellipsis
 import org.opentaint.semgrep.pattern.Metavar
@@ -19,7 +20,8 @@ fun rewriteCatchStatement(rule: NormalizedSemgrepRule<SemgrepJavaPattern>): List
             handlerBlock: SemgrepJavaPattern
         ): List<SemgrepJavaPattern> {
             val exceptionMetaVarName = when (exceptionVariable) {
-                is ConcreteName -> return super.createCatchStatement(exceptionTypes, exceptionVariable, handlerBlock)
+                is ConcreteName,
+                is AnonymousName -> return super.createCatchStatement(exceptionTypes, exceptionVariable, handlerBlock)
                 is MetavarName -> exceptionVariable.metavarName
             }
 

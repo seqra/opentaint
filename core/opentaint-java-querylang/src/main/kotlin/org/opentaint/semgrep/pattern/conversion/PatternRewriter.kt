@@ -2,6 +2,7 @@ package org.opentaint.semgrep.pattern.conversion
 
 import org.opentaint.semgrep.pattern.AddExpr
 import org.opentaint.semgrep.pattern.Annotation
+import org.opentaint.semgrep.pattern.AnonymousMetavar
 import org.opentaint.semgrep.pattern.ArrayAccess
 import org.opentaint.semgrep.pattern.BoolConstant
 import org.opentaint.semgrep.pattern.CatchStatement
@@ -75,6 +76,7 @@ interface PatternRewriter {
         is CatchStatement -> rewriteCatchStatement()
         is DeepExpr -> rewriteDeepExpr()
         is EllipsisMetavar -> rewriteEllipsisMetavar()
+        is AnonymousMetavar -> rewriteAnonymousMetavar()
     }
 
     fun AddExpr.rewriteAddExpr(): List<SemgrepJavaPattern> {
@@ -254,6 +256,7 @@ interface PatternRewriter {
     fun Identifier.rewriteIdentifier(): List<SemgrepJavaPattern> = listOf(this)
     fun Metavar.rewriteMetavar(): List<SemgrepJavaPattern> = listOf(this)
     fun EllipsisMetavar.rewriteEllipsisMetavar(): List<SemgrepJavaPattern> = listOf(this)
+    fun AnonymousMetavar.rewriteAnonymousMetavar(): List<SemgrepJavaPattern> = listOf(this)
     fun rewriteEllipsis(): List<SemgrepJavaPattern> = listOf(Ellipsis)
     fun rewriteStringEllipsis(): List<SemgrepJavaPattern> = listOf(StringEllipsis)
     fun rewriteThisExpr(): List<SemgrepJavaPattern> = listOf(ThisExpr)
