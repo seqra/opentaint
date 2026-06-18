@@ -3,6 +3,7 @@ package org.opentaint.semgrep
 import org.opentaint.semgrep.pattern.SemgrepErrorEntry
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -10,7 +11,7 @@ import kotlin.test.assertTrue
 class MetavarPatternBothReproTest {
     private fun blockingErrors(ruleText: String): List<String> {
         val trace = SemgrepLoadTrace()
-        val loader = SemgrepRuleLoader()
+        val loader = SemgrepRuleLoader(listOf(JavaLanguageStrategy()))
         loader.registerRuleSet(ruleText, Path("repro.yaml"), Path("."), trace)
         loader.loadRules()
         return buildList {
