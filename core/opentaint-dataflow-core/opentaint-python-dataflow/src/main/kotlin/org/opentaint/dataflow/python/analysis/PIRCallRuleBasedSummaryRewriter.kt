@@ -41,7 +41,7 @@ class PIRCallRuleBasedSummaryRewriter(
     )
 
     private val userRuleDefinedActions: List<UserRuleDefinedAction> by lazy {
-        val conditionRewriter = PIRConditionRewriter
+        val conditionRewriter = PIRConditionRewriter(callInst)
 
         val result = mutableListOf<UserRuleDefinedAction>()
         for (sourceRule in resolvedMethods.flatMap { config.sourcesForMethod(it) }) {

@@ -85,5 +85,8 @@ class PythonRuleEmitTest {
         is SerializedPythonCondition.And -> allOf.flatMap { it.markPositions() }
         is SerializedPythonCondition.Or -> anyOf.flatMap { it.markPositions() }
         is SerializedPythonCondition.Not -> not.markPositions()
+        is SerializedPythonCondition.NumberOfArgs,
+        is SerializedPythonCondition.ConstantCmp,
+        is SerializedPythonCondition.ConstantMatches -> emptyList()
     }
 }

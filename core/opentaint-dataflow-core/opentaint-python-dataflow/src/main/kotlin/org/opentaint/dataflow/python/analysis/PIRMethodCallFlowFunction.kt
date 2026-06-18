@@ -141,7 +141,7 @@ class PIRMethodCallFlowFunction(
         }
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
-        val conditionRewriter = PIRConditionRewriter
+        val conditionRewriter = PIRConditionRewriter(callInst)
 
         taintUtil.applySourceRules(
             sourceRules = sourceRules,
@@ -163,7 +163,7 @@ class PIRMethodCallFlowFunction(
         }
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
-        val conditionRewriter = PIRConditionRewriter
+        val conditionRewriter = PIRConditionRewriter(callInst)
 
         taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyFieldResolver = null)
     }

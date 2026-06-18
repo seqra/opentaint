@@ -1,11 +1,62 @@
 package org.opentaint.dataflow.configuration.python.serialized
 
+import com.charleskorn.kaml.Yaml
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class SerializedPythonTaintConfigTest {
+
+    @Test
+    fun `NumberOfArgs condition round-trips and dispatches on n`() {
+        val yaml = Yaml.default
+
+        // Round-trip the standalone predicate.
+        val original: SerializedPythonCondition = SerializedPythonCondition.NumberOfArgs(2)
+        val encoded = yaml.encodeToString(original)
+        val decoded = yaml.decodeFromString<SerializedPythonCondition>(encoded)
+        assertEquals(original, decoded)
+
+        // The polymorphic serializer dispatches on the `n` key, including when nested.
+        val nested = yaml.decodeFromString<SerializedPythonCondition>(
+            """
+            allOf:
+              - n: 1
+              - tainted: cmdi
+                pos: arg(0)
+            """.trimIndent()
+        )
+        assertTrue(nested is SerializedPythonCondition.And)
+        val args = nested.allOf
+        assertEquals(SerializedPythonCondition.NumberOfArgs(1), args[0])
+        assertTrue(args[1] is SerializedPythonCondition.ContainsMark)
+    }
+
+    @Test
+    fun `constant conditions round-trip and dispatch on cmp and pattern`() {
+        val yaml = Yaml.default
+
+        val cmp: SerializedPythonCondition = SerializedPythonCondition.ConstantCmp(
+            pos = PythonPosition.BaseOnly(PythonPositionBase.Argument(0)),
+            value = SerializedPythonCondition.ConstantValue(SerializedPythonCondition.ConstantType.Str, "ok"),
+            cmp = SerializedPythonCondition.ConstantCmpType.Eq,
+        )
+        assertEquals(cmp, yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(cmp)))
+
+        val matches: SerializedPythonCondition = SerializedPythonCondition.ConstantMatches(
+            pos = PythonPosition.BaseOnly(PythonPositionBase.Argument(0)),
+            pattern = ".*",
+        )
+        assertEquals(matches, yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(matches)))
+
+        // `not: { ... cmp: Eq }` must dispatch the inner node to ConstantCmp (via the `cmp` key).
+        val negated = yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(SerializedPythonCondition.Not(cmp)))
+        assertTrue(negated is SerializedPythonCondition.Not)
+        assertTrue(negated.not is SerializedPythonCondition.ConstantCmp)
+    }
 
     @Test
     fun `parses the shipped python config yaml end to end`() {
@@ -48,8 +99,8 @@ class SerializedPythonTaintConfigTest {
         }
         val parseArgsFn = parseArgs.target as PythonTarget.Function
         assertNotNull(parseArgsFn.signature)
-        assertEquals(emptyList(), parseArgsFn.signature!!.args)
-        assertEquals("*", parseArgsFn.signature!!.`return`)
+        assertEquals(emptyList(), parseArgsFn.signature.args)
+        assertEquals("*", parseArgsFn.signature.`return`)
 
         // Sink: condition.anyOf + meta(cwe, note).
         val zipExtract = config.sink.single {
@@ -57,7 +108,7 @@ class SerializedPythonTaintConfigTest {
         }
         val cond = zipExtract.condition
         assertTrue(cond is SerializedPythonCondition.Or)
-        assertTrue((cond as SerializedPythonCondition.Or).anyOf.all { it is SerializedPythonCondition.ContainsMark })
+        assertTrue(cond.anyOf.all { it is SerializedPythonCondition.ContainsMark })
         assertEquals(listOf(22), zipExtract.meta?.cwe)
         assertEquals("path-injection", zipExtract.meta?.note)
 
@@ -102,6 +153,5 @@ class SerializedPythonTaintConfigTest {
         // Cleaner: `for:` is preserved.
         val cleaner = config.cleaner.first { it.`for` == "url-redirection" }
         assertTrue(cleaner.cleans.isNotEmpty())
-        assertTrue(cleaner.cleans.all { it.taintKind != null })
     }
 }

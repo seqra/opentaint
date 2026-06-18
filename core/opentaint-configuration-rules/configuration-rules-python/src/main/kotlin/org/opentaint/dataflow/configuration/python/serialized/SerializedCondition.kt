@@ -30,6 +30,32 @@ sealed interface SerializedPythonCondition {
         val tainted: String,
         val pos: PythonPosition,
     ) : SerializedPythonCondition
+
+    /** Call-arity predicate: the matched call passes exactly `n` positional arguments. */
+    @Serializable
+    data class NumberOfArgs(val n: Int) : SerializedPythonCondition
+
+    /** The argument at [pos] is a constant literal comparing [cmp] to [value]. */
+    @Serializable
+    data class ConstantCmp(
+        val pos: PythonPosition,
+        val value: ConstantValue,
+        val cmp: ConstantCmpType,
+    ) : SerializedPythonCondition
+
+    /** The argument at [pos] is a string constant matching the regex [pattern]. */
+    @Serializable
+    data class ConstantMatches(
+        val pos: PythonPosition,
+        val pattern: String,
+    ) : SerializedPythonCondition
+
+    @Serializable
+    data class ConstantValue(val type: ConstantType, val value: String)
+
+    enum class ConstantCmpType { Eq, Lt, Gt }
+
+    enum class ConstantType { Bool, Int, Str }
 }
 
 class SerializedPythonConditionSerializer :
@@ -48,6 +74,9 @@ class SerializedPythonConditionSerializer :
             "allOf" to SerializedPythonCondition.And.serializer(),
             "not" to SerializedPythonCondition.Not.serializer(),
             "tainted" to SerializedPythonCondition.ContainsMark.serializer(),
+            "n" to SerializedPythonCondition.NumberOfArgs.serializer(),
+            "cmp" to SerializedPythonCondition.ConstantCmp.serializer(),
+            "pattern" to SerializedPythonCondition.ConstantMatches.serializer(),
         )
     }
 }

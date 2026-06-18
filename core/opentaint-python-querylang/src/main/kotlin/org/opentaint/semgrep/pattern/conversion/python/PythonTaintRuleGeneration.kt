@@ -237,8 +237,8 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
             val cond = evaluatePythonParamCondition(edgeState, constraint.position.toAbstractPosition(), constraint, trace)
             if (cond != PYTHON_TRUE) conditions += cond
         }
-        // Arity and class/method modifier (annotation) predicates have no Python mark-condition form.
-        is NumberOfArgsConstraint,
+        is NumberOfArgsConstraint -> conditions += SerializedPythonCondition.NumberOfArgs(constraint.num) // TODO kw-args are not supported
+        // Class/method modifier (annotation) predicates have no Python mark-condition form.
         is ClassModifierConstraint,
         is MethodModifierConstraint -> {}
     }
@@ -256,17 +256,32 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
         }
         containsMarkWithAnyStateBefore(edgeState, condition.metavar, position.baseOnly())
     }
-    // Type / constant / static-field / annotation predicates have no Python-condition representation.
+    // `$X = "..."` etc. — the argument must be a specific constant literal.
+    is SpecificStringValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Str, condition.value)
+    is SpecificIntValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Int, condition.value.toString())
+    is SpecificBoolValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Bool, condition.value.toString())
+    // Any string literal — the argument must be a string constant (mirrors Go's `ConstantMatches(".*")`).
+    // `(?s)` so the match also covers multi-line string literals (`.` skips `\n` otherwise).
+    ParamCondition.AnyStringLiteral ->
+        SerializedPythonCondition.ConstantMatches(position.baseOnly().toPythonPosition(), "(?s).*")
+
+    // Type / string-metavar / static-field / annotation / null predicates have no Python representation yet.
     is ParamCondition.TypeIs,
-    ParamCondition.AnyStringLiteral,
     is ParamCondition.StringValueMetaVar,
     is ParamCondition.ParamModifier,
     is ParamCondition.SpecificStaticFieldValue,
-    is SpecificBoolValue,
-    is SpecificIntValue,
-    is SpecificStringValue,
     SpecificNullValue -> PYTHON_TRUE
 }
+
+private fun mkConstantCmp(
+    position: PositionBase,
+    type: SerializedPythonCondition.ConstantType,
+    value: String,
+): SerializedPythonCondition.ConstantCmp = SerializedPythonCondition.ConstantCmp(
+    pos = position.baseOnly().toPythonPosition(),
+    value = SerializedPythonCondition.ConstantValue(type, value),
+    cmp = SerializedPythonCondition.ConstantCmpType.Eq,
+)
 
 private fun findPythonMetaVarPosition(
     constraint: MethodConstraint?,

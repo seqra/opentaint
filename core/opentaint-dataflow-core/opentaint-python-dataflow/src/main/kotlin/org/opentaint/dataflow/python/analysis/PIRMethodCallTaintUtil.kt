@@ -8,8 +8,8 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
-import org.opentaint.dataflow.configuration.python.ContainsMark
 import org.opentaint.dataflow.configuration.python.PIRCondition
+import org.opentaint.dataflow.configuration.python.PythonRuleCondition
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.python.TaintSink
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
@@ -28,7 +28,7 @@ class PIRMethodCallTaintUtil(
     val statement: PIRInstruction,
     val callExpr: PIRCallExprAdapter,
     apManager: ApManager
-) : TaintUtil<ContainsMark, TaintConfigurationSource, TaintSink, TraceInfo>(apManager) {
+) : TaintUtil<PythonRuleCondition, TaintConfigurationSource, TaintSink, TraceInfo>(apManager) {
     val callFactMapper get() = context.methodCallFactMapper
 
     override fun TaintConfigurationSource.srcCondition(): PIRCondition = condition
