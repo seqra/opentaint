@@ -68,6 +68,10 @@ rules:
                   - pattern-either:
                       - pattern: |
                           return ResponseEntity.ok($UNTRUSTED);
+                      - pattern: |
+                            return new ResponseEntity($UNTRUSTED, (HttpStatusCode $STATUS));
+                      - pattern: |
+                            return new ResponseEntity($UNTRUSTED, (HttpStatus $STATUS));
                       - patterns:
                           - patterns:
                               - pattern-not-inside: | 
