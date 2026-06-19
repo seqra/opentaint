@@ -53,9 +53,10 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
 
             val target = PythonTarget.Function(condition.ruleCondition.function)
             val cond = condition.ruleCondition.condition.nullIfTrue()
+            val info = edgeRuleInfo(ruleEdge).toPython()
             when (ruleEdge.edgeKind) {
-                TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonSource(target, cond, actions)
-                TaintRuleEdge.Kind.MethodEnter -> rules += SerializedPythonEntryPointSource(target, cond, actions)
+                TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonSource(target, cond, actions, info)
+                TaintRuleEdge.Kind.MethodEnter -> rules += SerializedPythonEntryPointSource(target, cond, actions, info)
                 TaintRuleEdge.Kind.MethodExit ->
                     ctx.trace.error(FailedToCreateTaintRules("Method-exit sources are not supported yet"))
             }
@@ -91,6 +92,7 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
                     target = PythonTarget.Function(condition.ruleCondition.function),
                     condition = condition.ruleCondition.condition.nullIfTrue(),
                     cleans = actions,
+                    info = edgeRuleInfo(ruleEdge).toPython(),
                 )
             }
         }

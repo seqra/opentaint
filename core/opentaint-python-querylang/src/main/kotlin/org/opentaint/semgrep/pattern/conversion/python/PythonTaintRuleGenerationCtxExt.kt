@@ -1,11 +1,13 @@
 package org.opentaint.semgrep.pattern.conversion.python
 
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.configuration.python.serialized.PIRUserDefinedRuleInfo
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintCleanAction
 import org.opentaint.semgrep.pattern.MetaVarConstraint
+import org.opentaint.semgrep.pattern.UserRuleFromSemgrepInfo
 import org.opentaint.semgrep.pattern.PlaceholderMethodName
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
@@ -18,6 +20,13 @@ import org.opentaint.semgrep.pattern.toDNF
 
 typealias PythonTaintRuleGenerationCtx =
     TaintRuleGenerationCtx<SerializedPythonRule, SerializedPythonCondition, SerializedPythonTaintAssignAction, SerializedPythonTaintCleanAction>
+
+data class PythonUserRuleFromSemgrepInfo(
+    val ruleId: String,
+    override val relevantTaintMarks: Set<String>,
+) : PIRUserDefinedRuleInfo
+
+fun UserRuleFromSemgrepInfo.toPython() = PythonUserRuleFromSemgrepInfo(ruleId, relevantTaintMarks)
 
 internal data class PythonRuleConditionData(
     val function: String,

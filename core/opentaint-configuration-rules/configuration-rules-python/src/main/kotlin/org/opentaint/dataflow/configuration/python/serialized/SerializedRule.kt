@@ -20,6 +20,8 @@ data class PythonSinkMetaData(
 sealed interface SerializedPythonRule {
     /** Identifies what the rule fires on — a function call or an attribute access. */
     val target: PythonTarget
+
+    val info: ItemInfo?
 }
 
 /** Rules that emit taint (entry-point parameters or arbitrary calls/attributes). */
@@ -40,6 +42,7 @@ data class SerializedPythonEntryPointSource(
     override val target: PythonTarget,
     override val condition: SerializedPythonCondition? = null,
     override val taint: List<SerializedPythonTaintAssignAction>,
+    override val info: ItemInfo? = null,
 ) : SerializedPythonSourceRule
 
 /** Regular source — taints the result of a call or attribute access. */
@@ -48,6 +51,7 @@ data class SerializedPythonSource(
     override val target: PythonTarget,
     override val condition: SerializedPythonCondition? = null,
     override val taint: List<SerializedPythonTaintAssignAction>,
+    override val info: ItemInfo? = null,
 ) : SerializedPythonSourceRule
 
 @Serializable(with = SerializedPythonSinkSerializer::class)
@@ -55,6 +59,7 @@ data class SerializedPythonSink(
     override val target: PythonTarget,
     val condition: SerializedPythonCondition? = null,
     val meta: PythonSinkMetaData? = null,
+    override val info: ItemInfo? = null,
 ) : SerializedPythonRule
 
 @Serializable(with = SerializedPythonPassThroughSerializer::class)
@@ -62,6 +67,7 @@ data class SerializedPythonPassThrough(
     override val target: PythonTarget,
     val condition: SerializedPythonCondition? = null,
     val copy: List<SerializedPythonTaintPassAction>,
+    override val info: ItemInfo? = null,
 ) : SerializedPythonRule
 
 /**
@@ -74,6 +80,7 @@ data class SerializedPythonCleaner(
     val condition: SerializedPythonCondition? = null,
     val cleans: List<SerializedPythonTaintCleanAction>,
     val `for`: String? = null,
+    override val info: ItemInfo? = null,
 ) : SerializedPythonRule
 
 // region Surrogates

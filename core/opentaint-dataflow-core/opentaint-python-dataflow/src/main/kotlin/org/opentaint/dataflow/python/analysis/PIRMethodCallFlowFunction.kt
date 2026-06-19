@@ -24,6 +24,8 @@ import org.opentaint.dataflow.taint.TaintPassActionEvaluator
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.util.Maybe
+import org.opentaint.util.maybeFlatMap
 import org.opentaint.util.onSome
 import kotlin.collections.plusAssign
 
@@ -38,6 +40,10 @@ class PIRMethodCallFlowFunction(
     private val callExpr = callInst.callExpr ?: error("Unexpected null call expr")
 
     private val resolvedMethods by lazy { callResolver.resolveCall(callInst) } // TODO apply rules separately
+
+    private val summaryRewriter by lazy {
+        PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, resolvedMethods)
+    }
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> {
         val results = mutableSetOf<ZeroCallFact>()
@@ -115,11 +121,15 @@ class PIRMethodCallFlowFunction(
     }
 
     fun unresolvedCallPropagateDefault(
-        reader: FinalFactReader,
+        originalFactReader: FinalFactReader,
         factAp: FinalFactAp,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
     ) {
-        addCallToReturn(reader, factAp, null)
+        summaryRewriter.rewriteSummaryFact(factAp).forEach { (fact, reader) ->
+            originalFactReader.updateRefinement(reader)
+
+            addCallToReturn(reader, fact, null)
+        }
     }
 
     private fun applySourceRules(
@@ -174,20 +184,28 @@ class PIRMethodCallFlowFunction(
             PIRFlowFunctionUtils.DummyPositionTypeResolver
         )
 
-        passRules.forEach { rule ->
-            rule.copy.forEach { action ->
-                val from = action.from.resolveAp() ?: return@forEach
-                val to = action.to.resolveAp() ?: return@forEach
+        val passThroughFacts = passRules.maybeFlatMap { rule ->
+            rule.copy.maybeFlatMap { action ->
+                val from = action.from.resolveAp() ?: return@maybeFlatMap Maybe.none()
+                val to = action.to.resolveAp() ?: return@maybeFlatMap Maybe.none()
 
-                evaluator.propagateData(rule, action, from, to).onSome { facts ->
-                    facts.forEach { fact ->
-                        val traceInfo = TraceInfo.Rule(rule, action)
-                        ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, fact.fact, typeChecker).forEach { mappedFact ->
-                            propagateFact(reader, mappedFact, traceInfo)
+                evaluator.propagateData(rule, action, from, to)
+            }
+        }
 
-                            ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, mappedFact) {
-                                propagateFact(reader, it, traceInfo)
-                            }
+        passThroughFacts.onSome { facts ->
+            facts.forEach { evp ->
+                val traceInfo = TraceInfo.Rule(evp.rule, evp.action)
+                val rewrittenFacts = summaryRewriter.rewriteSummaryFact(evp.fact)
+                for ((unrefinedFact, factRefinement) in rewrittenFacts) {
+                    val fact = factRefinement.refineFact(unrefinedFact)
+                    reader.updateRefinement(factRefinement)
+
+                    ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, fact, typeChecker).forEach { mappedFact ->
+                        propagateFact(reader, mappedFact, traceInfo)
+
+                        ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, mappedFact) {
+                            propagateFact(reader, it, traceInfo)
                         }
                     }
                 }

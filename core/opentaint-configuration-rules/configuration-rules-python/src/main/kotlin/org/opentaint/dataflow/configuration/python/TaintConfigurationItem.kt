@@ -4,6 +4,7 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
+import org.opentaint.dataflow.configuration.python.serialized.ItemInfo
 
 /**
  * Compiled (per-`PIRFunction` / per-attribute-name) Python taint-rule
@@ -20,6 +21,8 @@ sealed interface TaintConfigurationItem : CommonTaintConfigurationItem {
 
     /** [Condition.ConstantTrue] when the rule has no condition. */
     val condition: PIRCondition
+
+    val info: ItemInfo?
 }
 
 sealed interface TaintConfigurationSource : TaintConfigurationItem, CommonTaintConfigurationSource {
@@ -45,12 +48,14 @@ data class TaintEntryPointSource(
     override val target: Target,
     override val condition: PIRCondition,
     override val taint: List<TaintAssignAction>,
+    override val info: ItemInfo? = null,
 ) : TaintConfigurationSource
 
 data class TaintSource(
     override val target: Target,
     override val condition: PIRCondition,
     override val taint: List<TaintAssignAction>,
+    override val info: ItemInfo? = null,
 ) : TaintConfigurationSource
 
 data class TaintSinkMeta(
@@ -65,12 +70,14 @@ data class TaintSink(
     override val condition: PIRCondition,
     override val id: String,
     override val meta: TaintSinkMeta,
+    override val info: ItemInfo? = null,
 ) : TaintConfigurationSink
 
 data class TaintPassThrough(
     override val target: Target,
     override val condition: PIRCondition,
     override val copy: List<TaintPassAction>,
+    override val info: ItemInfo? = null,
 ) : TaintConfigurationPassThrough
 
 data class TaintCleaner(
@@ -78,4 +85,5 @@ data class TaintCleaner(
     override val condition: PIRCondition,
     override val cleans: List<TaintCleanAction>,
     override val forCategory: String?,
+    override val info: ItemInfo? = null,
 ) : TaintConfigurationCleaner

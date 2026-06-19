@@ -25,7 +25,7 @@ data class SerializedPythonTaintAssignAction(
  */
 @Serializable
 data class SerializedPythonTaintCleanAction(
-    val taintKind: String? = null,
+    val taintKind: String,
     val pos: PythonPosition,
 )
 

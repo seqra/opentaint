@@ -25,9 +25,9 @@ data class TaintAssignAction(
     val pos: Position,
 ) : Action, CommonTaintAssignAction
 
-/** `cleans:` entry on cleaner rules. A null [mark] removes all marks at [pos]. */
+/** `cleans:` entry on cleaner rules — removes [mark] at [pos]. */
 data class TaintCleanAction(
-    val mark: TaintMark?,
+    val mark: TaintMark,
     val pos: Position,
 ) : Action
 

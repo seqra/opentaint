@@ -27,6 +27,7 @@ import org.opentaint.dataflow.configuration.python.TaintSinkMeta
 import org.opentaint.dataflow.configuration.python.TaintSource
 import org.opentaint.dataflow.configuration.python.Target
 import org.opentaint.dataflow.configuration.python.This
+import org.opentaint.dataflow.configuration.python.serialized.ItemInfo
 import org.opentaint.dataflow.configuration.python.serialized.PythonPosition
 import org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase
 import org.opentaint.dataflow.configuration.python.serialized.PythonPositionModifier
@@ -67,15 +68,15 @@ internal object MethodTaintConfigurationResolver {
     fun resolveEntryPoints(
         serialized: List<SerializedPythonEntryPointSource>,
         method: PIRFunction,
-    ): List<TaintEntryPointSource> = resolveSourceRule(serialized, method) { condition, actions ->
-        TaintEntryPointSource(Target.Function(method), condition, actions)
+    ): List<TaintEntryPointSource> = resolveSourceRule(serialized, method) { condition, actions, info ->
+        TaintEntryPointSource(Target.Function(method), condition, actions, info)
     }
 
     fun resolveSources(
         serialized: List<SerializedPythonSource>,
         method: PIRFunction,
-    ): List<TaintSource> = resolveSourceRule(serialized, method) { condition, actions ->
-        TaintSource(Target.Function(method), condition, actions)
+    ): List<TaintSource> = resolveSourceRule(serialized, method) { condition, actions, info ->
+        TaintSource(Target.Function(method), condition, actions, info)
     }
 
     fun resolveSinks(
@@ -112,6 +113,7 @@ internal object MethodTaintConfigurationResolver {
             condition = resolveCondition(rule.condition, argIndices),
             cleans = rule.cleans.flatMap { convertCleanActions(it, argIndices) },
             forCategory = rule.`for`,
+            info = rule.info,
         )
     }
 
@@ -128,6 +130,7 @@ internal object MethodTaintConfigurationResolver {
             target = Target.Attribute(name),
             condition = resolveCondition(rule.condition, emptyList()),
             taint = rule.taint.flatMap { convertAssignActions(it, emptyList()) },
+            info = rule.info,
         )
     }
 
@@ -163,6 +166,7 @@ internal object MethodTaintConfigurationResolver {
             condition = resolveCondition(rule.condition, emptyList()),
             cleans = rule.cleans.flatMap { convertCleanActions(it, emptyList()) },
             forCategory = rule.`for`,
+            info = rule.info,
         )
     }
 
@@ -176,7 +180,7 @@ internal object MethodTaintConfigurationResolver {
     private inline fun <S : SerializedPythonSourceRule, T> resolveSourceRule(
         serialized: List<S>,
         method: PIRFunction,
-        build: (PIRCondition, List<TaintAssignAction>) -> T,
+        build: (PIRCondition, List<TaintAssignAction>, ItemInfo?) -> T,
     ): List<T> = serialized.flatMap { rule ->
         val fn = rule.target as? PythonTarget.Function ?: return@flatMap emptyList()
         if (!fn.matches(method)) return@flatMap emptyList()
@@ -188,7 +192,7 @@ internal object MethodTaintConfigurationResolver {
                 val (decoratedWith, baseClass) = scope
                 if (decoratedWith != null && !method.hasDecorator(decoratedWith)) return@mapNotNull null
                 if (baseClass != null && !method.hasBaseClass(baseClass)) return@mapNotNull null
-                build(baseCondition, actions.flatMap { convertAssignActions(it, argIndices) })
+                build(baseCondition, actions.flatMap { convertAssignActions(it, argIndices) }, rule.info)
             }
     }
 
@@ -286,7 +290,7 @@ internal object MethodTaintConfigurationResolver {
         expandPositions(a.pos, argIndices).map { TaintAssignAction(mark = TaintMark(a.kind), pos = it) }
 
     private fun convertCleanActions(a: SerializedPythonTaintCleanAction, argIndices: List<Int>): List<TaintCleanAction> =
-        expandPositions(a.pos, argIndices).map { TaintCleanAction(mark = a.taintKind?.let(::TaintMark), pos = it) }
+        expandPositions(a.pos, argIndices).map { TaintCleanAction(mark = TaintMark(a.taintKind), pos = it) }
 
     private fun convertPassActions(a: SerializedPythonTaintPassAction, argIndices: List<Int>): List<TaintPassAction> {
         val mark = a.taintKind?.let(::TaintMark)

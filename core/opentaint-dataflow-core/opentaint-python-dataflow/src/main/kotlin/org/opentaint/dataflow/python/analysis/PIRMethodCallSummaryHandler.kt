@@ -1,8 +1,10 @@
 package org.opentaint.dataflow.python.analysis
 
+import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
+import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
@@ -15,11 +17,38 @@ import kotlin.collections.plusAssign
 class PIRMethodCallSummaryHandler(
     private val callInst: PIRCall,
     private val ctx: PIRMethodAnalysisContext,
-    private val callResolver: PIRCallResolver, // TODO make call resolver free
+    private val callResolver: PIRCallResolver, // TODO remove call resolver
+    private val apManager: ApManager,
     override val factTypeChecker: FactTypeChecker,
 ) : MethodCallSummaryHandler {
-
     private val factMapper get() = ctx.methodCallFactMapper
+
+    private val resolvedMethods by lazy { callResolver.resolveCall(callInst) }
+
+    private val summaryRewriter by lazy {
+        PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, resolvedMethods)
+    }
+
+    override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> =
+        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+            Edge.FactToFact(
+                summaryEdge.methodEntryPoint,
+                refinement.refineFact(summaryEdge.initialFactAp),
+                summaryEdge.statement,
+                refinement.refineFact(resultFact),
+            )
+        }
+
+    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> =
+        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+            check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
+            Edge.NDFactToFact(
+                summaryEdge.methodEntryPoint,
+                summaryEdge.initialFacts,
+                summaryEdge.statement,
+                resultFact,
+            )
+        }
 
     /**
      * Translates a callee-frame exit fact into the caller's frame.
@@ -32,7 +61,7 @@ class PIRMethodCallSummaryHandler(
      * caller's call-site values.
      */
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> {
-        val callee = callResolver.resolveCall(callInst).firstOrNull() ?: return emptyList()
+        val callee = resolvedMethods.firstOrNull() ?: return emptyList()
         val offsetFreeBase = factMapper.offsetExit(callInst, callee, fact.base) ?: return emptyList()
         return factMapper.mapMethodExitToReturnFlowFact(callInst, fact.rebase(offsetFreeBase), factTypeChecker)
     }
