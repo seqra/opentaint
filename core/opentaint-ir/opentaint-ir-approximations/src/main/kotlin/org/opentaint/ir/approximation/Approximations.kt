@@ -1,5 +1,6 @@
 package org.opentaint.ir.approximation
 
+import mu.KLogging
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.opentaint.ir.api.jvm.ByteCodeIndexer
@@ -388,17 +389,24 @@ private class ApproximationIndexer(
         val approximationClassName = classNode.name.className.toApproximationName()
 
         // Ensure that each approximation has one and only one
-        require(originalToApproximation.getOrDefault(originalClassName, approximationClassName) == approximationClassName) {
-            "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
-                    "as an approximation for `$originalClassName`, but the target class is already " +
-                    "associated with approximation `${originalToApproximation[originalClassName]}`. " +
-                    "Only bijection between classes is allowed."
+        if (originalToApproximation.getOrDefault(originalClassName, approximationClassName) != approximationClassName) {
+            logger.error {
+                "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
+                        "as an approximation for `$originalClassName`, but the target class is already " +
+                        "associated with approximation `${originalToApproximation[originalClassName]}`. " +
+                        "Only bijection between classes is allowed."
+            }
+            return
         }
-        require(approximationToOriginal.getOrDefault(approximationClassName, originalClassName) == originalClassName) {
-            "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
-                    "as an approximation for `$originalClassName`, but this approximation is already used for " +
-                    "`${approximationToOriginal[approximationClassName]}`. " +
-                    "Only bijection between classes is allowed."
+
+        if (approximationToOriginal.getOrDefault(approximationClassName, originalClassName) != originalClassName) {
+            logger.error {
+                "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
+                        "as an approximation for `$originalClassName`, but this approximation is already used for " +
+                        "`${approximationToOriginal[approximationClassName]}`. " +
+                        "Only bijection between classes is allowed."
+            }
+            return
         }
 
         originalToApproximation[originalClassName] = approximationClassName
@@ -407,6 +415,10 @@ private class ApproximationIndexer(
 
     override fun flush(context: StorageContext) {
         // do nothing
+    }
+
+    companion object {
+        private val logger = object : KLogging() {}.logger
     }
 }
 
