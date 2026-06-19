@@ -32,6 +32,7 @@ class PIRMethodSequentFlowFunction(
     private val apManager: ApManager,
     private val callResolver: PIRCallResolver,
 ) : MethodSequentFlowFunction {
+    private val rulesProvider get() = ctx.taint.taintConfig
 
     private val resolvedNames by lazy { callResolver.resolveNames(instruction) }
 
@@ -40,7 +41,7 @@ class PIRMethodSequentFlowFunction(
 
         if (instruction !is PIRLoadAttr) return@buildSet
 
-        val sourceRules = resolvedNames.flatMap { ctx.taintRules.sourcesForAttribute(it) }
+        val sourceRules = resolvedNames.flatMap { rulesProvider.sourcesForAttribute(it) }
         val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
 
         sourceRules.forEach { rule ->
@@ -92,7 +93,17 @@ class PIRMethodSequentFlowFunction(
     override fun propagateNDFactToFact(
         initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
-    ): Set<Sequent> = setOf(Sequent.Unchanged)
+    ): Set<Sequent> = buildSet {
+        propagateFact(
+            currentFactAp = currentFactAp,
+            unchanged = { this += Sequent.Unchanged },
+            propagateFact = { this += Sequent.NDFactToFact(initialFacts, it, null) },
+            propagateFactWithAccessorExclude = { _, _ -> error("NDF2F edge can't be refined: $currentFactAp") },
+            addSideEffectRequirement = { reader ->
+                check(!reader.hasRefinement) { "NDF2F edge can't be refined: $currentFactAp" }
+            },
+        )
+    }
 
     /**
      * Shared dispatch over the instruction kind. Results are collected by the caller's
@@ -276,7 +287,7 @@ class PIRMethodSequentFlowFunction(
     ) {
         val reader = FinalFactReader(mappedFact, apManager)
 
-        val rules = resolvedNames.flatMap { ctx.taintRules.passThroughForAttribute(it) }
+        val rules = resolvedNames.flatMap { rulesProvider.passThroughForAttribute(it) }
         val typeChecker = FactTypeChecker.Dummy
         val evaluator = TaintPassActionEvaluator(
             apManager, typeChecker, reader,

@@ -21,11 +21,12 @@ class PIRMethodStartFlowFunction(
     private val ctx: PIRMethodAnalysisContext,
     private val apManager: ApManager,
 ) : MethodStartFlowFunction {
+    private val rulesProvider get() = ctx.taint.taintConfig
 
     override fun propagateZero(): List<StartFact> = buildList {
         this += StartFact.Zero
 
-        val rules = ctx.taintRules.entryPointSourcesForMethod(ctx.method)
+        val rules = rulesProvider.entryPointSourcesForMethod(ctx.method)
         val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
 
         rules.forEach { rule ->

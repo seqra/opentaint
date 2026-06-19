@@ -59,7 +59,7 @@ class PIRAnalysisManager(
         contextForEmptyMethod: MethodAnalysisContext?,
     ): MethodAnalysisContext {
         val method = methodEntryPoint.method as PIRFunction
-        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker)
+        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintRules)
 
         val aliasAnalysis = if (aliasParams.useAliasAnalysis) {
             (contextForEmptyMethod as? PIRMethodAnalysisContext)?.aliasAnalysis
@@ -71,7 +71,7 @@ class PIRAnalysisManager(
             null
         }
 
-        return PIRMethodAnalysisContext(methodEntryPoint, method, taintCtx, taintRules, aliasAnalysis)
+        return PIRMethodAnalysisContext(methodEntryPoint, method, taintCtx, aliasAnalysis)
     }
 
     override fun getMethodInstGraph(

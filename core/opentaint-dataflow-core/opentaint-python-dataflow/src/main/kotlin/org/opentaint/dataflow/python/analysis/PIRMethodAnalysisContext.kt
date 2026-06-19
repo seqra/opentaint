@@ -11,7 +11,6 @@ class PIRMethodAnalysisContext(
     override val methodEntryPoint: MethodEntryPoint,
     val method: PIRFunction,
     val taint: PIRTaintAnalysisContext,
-    val taintRules: PIRTaintRulesProvider,
     val aliasAnalysis: PIRLocalAliasAnalysis?,
 ) : MethodAnalysisContext {
 

@@ -32,7 +32,7 @@ class PIRCallRuleBasedSummaryRewriter(
     private val apManager: ApManager,
     private val resolvedMethods: Set<PIRFunction>,
 ) {
-    private val config get() = ctx.taintRules
+    private val config get() = ctx.taint.taintConfig
 
     private data class UserRuleDefinedAction(
         val rule: TaintConfigurationItem,

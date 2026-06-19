@@ -7,6 +7,8 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnNonDistributiveFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
@@ -37,6 +39,8 @@ class PIRMethodCallFlowFunction(
     private val returnValue: CommonValue?,
     private val callResolver: PIRCallResolver,
 ) : MethodCallFlowFunction.Default {
+    private val rulesProvider get() = ctx.taint.taintConfig
+
     private val callExpr = callInst.callExpr ?: error("Unexpected null call expr")
 
     private val resolvedMethods by lazy { callResolver.resolveCall(callInst) } // TODO apply rules separately
@@ -46,17 +50,25 @@ class PIRMethodCallFlowFunction(
     }
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> {
-        val results = mutableSetOf<ZeroCallFact>()
+        val result = mutableSetOf<ZeroCallFact>()
 
-        results.add(CallToReturnZeroFact)
+        result.add(CallToReturnZeroFact)
 
-        applySourceRules(ExclusionSet.Universe) { fact, traceInfo ->
-            results += CallToReturnZFact(fact, traceInfo)
-        }
+        applySourceRules(emptySet(), null, ExclusionSet.Universe,
+            createFinalFact = { it, trace ->
+                result += CallToReturnZFact(factAp = it, trace)
+            },
+            createEdge = { initial, it, trace ->
+                result += CallToReturnFFact(initial, it, trace)
+            },
+            createNDEdge = { initial, it, trace ->
+                result += CallToReturnNonDistributiveFact(initial, it, trace)
+            }
+        )
 
-        results.add(CallToStartZeroFact)
+        result.add(CallToStartZeroFact)
 
-        return results
+        return result
     }
 
 
@@ -87,6 +99,19 @@ class PIRMethodCallFlowFunction(
         val reader = FinalFactReader(factAp, apManager)
         applySinkRules(reader)
 
+        applySourceRules(
+            initialFacts, reader, exclusion,
+            createFinalFact = { it, trace ->
+                addCallToReturn(reader, it, trace)
+            },
+            createEdge = { initial, it, trace ->
+                addUnchecked(CallToReturnFFact(initial, it, trace))
+            },
+            createNDEdge = { initial, it, trace ->
+                addUnchecked(CallToReturnNonDistributiveFact(initial, it, trace))
+            }
+        )
+
         ctx.methodCallFactMapper.mapMethodCallToStartFlowFact(
             callInst,
             callInst.location.method,
@@ -113,7 +138,7 @@ class PIRMethodCallFlowFunction(
 
         unresolvedCallPropagateDefault(factReader, factAp, addCallToReturn)
 
-        applyPassRules(factReader, factAp.rebase(startFactBase), addCallToReturn)
+        applyPassRules(factAp, factReader, factAp.rebase(startFactBase), addCallToReturn)
 
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
@@ -133,11 +158,15 @@ class PIRMethodCallFlowFunction(
     }
 
     private fun applySourceRules(
+        initialFacts: Set<InitialFactAp>,
+        factReader: FinalFactReader?,
         exclusionSet: ExclusionSet,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
+        createEdge: (InitialFactAp, FinalFactAp, TraceInfo) -> Unit,
+        createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
     ) {
         val sourceRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
-            ctx.taintRules.sourcesForMethod(method)
+            rulesProvider.sourcesForMethod(method)
         }
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
@@ -145,13 +174,25 @@ class PIRMethodCallFlowFunction(
 
         taintUtil.applySourceRules(
             sourceRules = sourceRules,
-            initialFacts = emptySet(),
+            initialFacts = initialFacts,
             conditionRewriter = conditionRewriter,
-            factReader = null,
+            factReader = factReader,
             exclusion = exclusionSet,
-            createFinalFact = createFinalFact,
-            createEdge = { _, _, _ -> error("Unexpected") },
-            createNDEdge = { _, _, _ -> error("Unexpected") },
+            createFinalFact = { srcF, trace ->
+                srcF.forEachSourceFactWithAliases {
+                    createFinalFact(it, trace)
+                }
+            },
+            createEdge = { initial, srcF, trace ->
+                srcF.forEachSourceFactWithAliases {
+                    createEdge(initial, it, trace)
+                }
+            },
+            createNDEdge = { initial, srcF, trace ->
+                srcF.forEachSourceFactWithAliases {
+                    createNDEdge(initial, it, trace)
+                }
+            },
         )
     }
 
@@ -159,7 +200,7 @@ class PIRMethodCallFlowFunction(
         factReader: FinalFactReader,
     ) {
         val sinkRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
-            ctx.taintRules.sinksForMethod(method)
+            rulesProvider.sinksForMethod(method)
         }
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
@@ -169,13 +210,14 @@ class PIRMethodCallFlowFunction(
     }
 
     private fun applyPassRules(
+        originalFact: FinalFactAp,
         originalFactReader: FinalFactReader,
         mappedFact: FinalFactAp,
         propagateFact: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
     ) {
         val typeChecker = FactTypeChecker.Dummy
         val passRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
-            ctx.taintRules.passThroughForMethod(method)
+            rulesProvider.passThroughForMethod(method)
         }
 
         val reader = FinalFactReader(mappedFact, apManager)
@@ -202,16 +244,27 @@ class PIRMethodCallFlowFunction(
                     reader.updateRefinement(factRefinement)
 
                     ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, fact, typeChecker).forEach { mappedFact ->
-                        propagateFact(reader, mappedFact, traceInfo)
-
-                        ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, mappedFact) {
-                            propagateFact(reader, it, traceInfo)
-                        }
+                        mappedFact.forEachFactWithAliases(originalFact) { propagateFact(reader, it, traceInfo) }
                     }
                 }
             }
         }
 
         originalFactReader.updateRefinement(reader)
+    }
+
+    private inline fun FinalFactAp.forEachSourceFactWithAliases(crossinline body: (FinalFactAp) -> Unit) =
+        forEachFactWithAliases(originalFact = null, body)
+
+    private inline fun FinalFactAp.forEachFactWithAliases(originalFact: FinalFactAp?,  crossinline body: (FinalFactAp) -> Unit) {
+        body(this)
+
+        if (originalFact != null && originalFact == this) {
+            return
+        }
+
+        ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, this) { aliased ->
+            body(aliased)
+        }
     }
 }

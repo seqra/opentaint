@@ -29,7 +29,8 @@ class PIRMethodCallTaintUtil(
     val callExpr: PIRCallExprAdapter,
     apManager: ApManager
 ) : TaintUtil<PythonRuleCondition, TaintConfigurationSource, TaintSink, TraceInfo>(apManager) {
-    val callFactMapper get() = context.methodCallFactMapper
+    private val callFactMapper get() = context.methodCallFactMapper
+    private val sinkTracker get() = context.taint.taintSinkTracker
 
     override fun TaintConfigurationSource.srcCondition(): PIRCondition = condition
 
@@ -41,12 +42,16 @@ class PIRMethodCallTaintUtil(
                 rule: TaintConfigurationSource,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) {
-                TODO("Not yet implemented")
+                sinkTracker.addSourceRuleAssumptions(rule, statement, assumptions)
             }
 
-            override fun currentAssumptions(rule: TaintConfigurationSource): Set<InitialFactAp> {
-                TODO("Not yet implemented")
-            }
+            override fun currentAssumptions(rule: TaintConfigurationSource): Set<InitialFactAp> =
+                sinkTracker.currentSourceRuleAssumptions(rule, statement)
+
+            override fun currentAssumptionPreconditions(
+                rule: TaintConfigurationSource,
+                assumptions: List<InitialFactAp>
+            ) = sinkTracker.currentSourceRuleAssumptionsPreconditions(rule, statement, assumptions)
         }
 
     override fun sinkAssumptionsManager(): RuleAssumptionsManager<TaintSink> =
@@ -55,12 +60,11 @@ class PIRMethodCallTaintUtil(
                 rule: TaintSink,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) {
-                TODO("Not yet implemented")
+                sinkTracker.addSinkRuleAssumptions(rule, statement, assumptions)
             }
 
-            override fun currentAssumptions(rule: TaintSink): Set<InitialFactAp> {
-                TODO("Not yet implemented")
-            }
+            override fun currentAssumptions(rule: TaintSink): Set<InitialFactAp> =
+                sinkTracker.currentSinkRuleAssumptions(rule, statement)
         }
 
     override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> = buildList {
@@ -100,11 +104,12 @@ class PIRMethodCallTaintUtil(
     ) {
         rule.taint.forEach { action ->
             val pos = action.pos.resolveAp() ?: return@forEach
+            val trace = TraceInfo.Rule(rule, action)
             val mark = TaintMarkAccessor(action.mark.name)
             sourceEvaluator.evaluate(rule, action, pos, mark).onSome { facts ->
                 facts.forEach { fact ->
                     val callerFacts = callFactMapper.mapMethodExitToReturnFlowFact(statement, fact, FactTypeChecker.Dummy)
-                    callerFacts.forEach { createFinalFact(it, TraceInfo.Flow) }
+                    callerFacts.forEach { createFinalFact(it, trace) }
                 }
             }
         }
