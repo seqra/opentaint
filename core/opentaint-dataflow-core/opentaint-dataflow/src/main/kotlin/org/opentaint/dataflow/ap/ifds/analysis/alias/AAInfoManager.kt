@@ -47,9 +47,12 @@ class AAInfoManager(
         getElementUncheck(index) as? HeapAlias
             ?: error("Heap alias expected")
 
+    fun replaceHeapInstance(element: HeapAlias, newInstance: Int): HeapAlias =
+        element.copy(instance = newInstance)
+
     fun replaceHeapInstance(index: Int, newInstance: Int): Int {
         val element = getHeapRefUnchecked(index)
-        val newElement = element.copy(instance = newInstance)
+        val newElement = replaceHeapInstance(element, newInstance)
         return getOrAdd(newElement)
     }
 

@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
+import org.opentaint.dataflow.ap.ifds.analysis.alias.DsuMergeStrategy
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,7 +9,7 @@ import kotlin.test.assertEquals
 class DSUAliasAnalysisStateTest {
 
     private val manager = AAInfoManager()
-    private val strategy = DSUAliasAnalysis.DsuMergeStrategy(manager)
+    private val strategy = DsuMergeStrategy(manager)
 
     private inline fun buildState(body: StateBuilder.() -> Unit): State =
         fillState(body).build()
@@ -834,6 +835,34 @@ class DSUAliasAnalysisStateTest {
         }
 
         assertEquals(set1, set2)
+    }
+
+    @Test
+    fun removeUnsafeOnDeepHeapChainRewritesSurvivingAliases() {
+        val set1 = buildState {
+            val root = alloc(0)
+            val l0 = local(3)
+            val l1 = local(6)
+            val l2 = local(7)
+            merge(setOf(root, l0))
+            val fMetadata = fieldAlias(l0, "metadata", isImmutable = true)
+            merge(setOf(l1, fMetadata))
+            val fPageDims = fieldAlias(l1, "pageDimensions", isImmutable = false)
+            merge(setOf(l2, fPageDims))
+            remove(setOf(l1, root))
+        }
+
+        val set2 = buildState {
+            val l0 = local(3)
+            val l2 = local(7)
+            val fMetadata = fieldAlias(l0, "metadata", isImmutable = true)
+            val fPageDims = fieldAlias(fMetadata, "pageDimensions", isImmutable = false)
+            merge(setOf(l0))
+            merge(setOf(fMetadata))
+            merge(setOf(l2, fPageDims))
+        }
+
+        assertEquals(set2, set1)
     }
 
     @Test

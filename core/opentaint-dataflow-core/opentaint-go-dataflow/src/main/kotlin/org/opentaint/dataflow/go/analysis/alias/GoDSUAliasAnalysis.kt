@@ -7,10 +7,11 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.AAHeapAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.DsuMergeStrategy
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
-import org.opentaint.dataflow.ap.ifds.analysis.alias.IntDisjointSets
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
@@ -67,18 +68,7 @@ class GoDSUAliasAnalysis(
     val aliasManager = AAInfoManager()
     val dsuMergeStrategy = DsuMergeStrategy(aliasManager)
 
-    class DsuMergeStrategy(private val manager: AAInfoManager) : IntDisjointSets.RankStrategy {
-        override fun compare(a: Int, b: Int): Int =
-            manager.getElementUncheck(a).compareTo(manager.getElementUncheck(b))
-    }
-
     data class ConnectedAliases(val aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>)
-
-    class AnalysisResult(
-        val manager: AAInfoManager,
-        val statesBeforeStmt: Array<ImmutableState?>,
-        val statesAfterStmt: Array<ImmutableState?>,
-    )
 
     class GraphAnalysisState(size: Int, val ctx: ContextInfo, val function: GoIRFunction) {
         val stateBeforeStmt = arrayOfNulls<ImmutableState>(size)

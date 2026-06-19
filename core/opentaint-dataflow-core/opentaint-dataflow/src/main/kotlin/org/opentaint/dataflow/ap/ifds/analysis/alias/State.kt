@@ -1,9 +1,11 @@
 package org.opentaint.dataflow.ap.ifds.analysis.alias
 
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair
 import it.unimi.dsi.fastutil.ints.IntIntMutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import org.opentaint.dataflow.ap.ifds.analysis.alias.IntDisjointSets.RankStrategy
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.util.mapIntTo
 
@@ -31,6 +33,8 @@ class State private constructor(
          * */
         return aliasGroups == other.aliasGroups
     }
+
+    fun isEmpty(): Boolean = aliasGroups.isEmpty()
 
     fun asImmutable(): ImmutableState = this
 
@@ -114,8 +118,39 @@ class State private constructor(
             ensureHeapElementCorrect(it, aliasGroups, manager)
         }
 
+    fun translate(newManager: AAInfoManager, newStrategy: RankStrategy): State {
+        val translationCache = Int2IntOpenHashMap().apply { defaultReturnValue(NO_VALUE) }
+        val translatedAliasGroups = aliasGroups.translate(newStrategy) {
+            translateElement(it, translationCache, newManager)
+        }
+        return State(newManager, translatedAliasGroups)
+    }
+
+    private fun translateElement(element: Int, cache: Int2IntOpenHashMap, newManager: AAInfoManager): Int {
+        val current = cache.putIfAbsent(element, TRANSLATION_STARTED)
+        if (current != NO_VALUE) {
+            if (current == TRANSLATION_STARTED) {
+                TODO("AA: recursive element translation")
+            }
+            return current
+        }
+
+        var currentInfo = manager.getElementUncheck(element)
+        if (currentInfo is HeapAlias) {
+            val translatedInstance = translateElement(currentInfo.instance, cache, newManager)
+            currentInfo = manager.replaceHeapInstance(currentInfo, translatedInstance)
+        }
+        val result =  newManager.getOrAdd(currentInfo)
+
+        cache.put(element, result)
+        return result
+    }
+
     companion object {
-        fun empty(manager: AAInfoManager, strategy: IntDisjointSets.RankStrategy): State =
+        private const val TRANSLATION_STARTED = Int.MAX_VALUE
+        private const val NO_VALUE = Int.MIN_VALUE
+
+        fun empty(manager: AAInfoManager, strategy: RankStrategy): State =
             State(manager, IntDisjointSets(strategy))
 
         private fun restoreHeapInvariant(
@@ -144,17 +179,31 @@ class State private constructor(
             }
         }
 
-        private fun ensureHeapElementCorrect(element: Int, state: IntDisjointSets, manager: AAInfoManager): Int {
+        private fun ensureHeapElementCorrect(
+            element: Int,
+            state: IntDisjointSets,
+            manager: AAInfoManager,
+            visitedElements: IntOpenHashSet? = null
+        ): Int {
             if (!manager.isHeapAlias(element)) return element
+
+            if (visitedElements != null && !visitedElements.add(element)) {
+                // todo: consider another recursion break mechanism
+                return element
+            }
 
             val heapElement = manager.getHeapRefUnchecked(element)
             val heapInstanceRepr = state.find(heapElement.instance)
-            if (heapInstanceRepr == heapElement.instance) return element
 
-            return manager.replaceHeapInstance(element, heapInstanceRepr)
+            val nextVisited = visitedElements ?: IntOpenHashSet()
+            val correctInstance = ensureHeapElementCorrect(heapInstanceRepr, state, manager, nextVisited)
+
+            if (correctInstance == heapElement.instance) return element
+
+            return manager.replaceHeapInstance(element, correctInstance)
         }
 
-        fun merge(manager: AAInfoManager, strategy: IntDisjointSets.RankStrategy, states: List<ImmutableState>): State {
+        fun merge(manager: AAInfoManager, strategy: RankStrategy, states: List<ImmutableState>): State {
             val allElementParentRelations = mutableListOf<IntIntMutablePair>()
             states.forEach { s ->
                 val stateDsu = (s as State).aliasGroups

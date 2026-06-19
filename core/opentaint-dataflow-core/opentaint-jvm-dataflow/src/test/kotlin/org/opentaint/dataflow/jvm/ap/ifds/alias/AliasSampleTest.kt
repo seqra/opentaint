@@ -23,6 +23,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -557,7 +558,7 @@ class AliasSampleTest : BasicTestUtils() {
 
         val aa = aaForMethod(method)
         val sink = method.findSinkCall("sinkOneValue")
-        assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
+        assertTrue { aa.sinkArgAliases(sink).isNotEmpty() }
     }
 
     @Test
@@ -596,10 +597,13 @@ class AliasSampleTest : BasicTestUtils() {
     private fun JIRLocalAliasAnalysis.sinkArgApAliases(sink: JIRCallInst): List<AliasApInfo> =
         valueApAliases(sink.callExpr.args[0], sink)
 
+    private fun JIRLocalAliasAnalysis.sinkArgAliases(sink: JIRCallInst): List<AliasInfo> =
+        valueAliases(sink.callExpr.args[0], sink)
+
     private fun JIRLocalAliasAnalysis.valueAliases(
         value: JIRValue,
         stmt: JIRInst
-    ): List<JIRLocalAliasAnalysis.AliasInfo> {
+    ): List<AliasInfo> {
         check(value is JIRLocalVar) { "Only local var aliases supported" }
         return findAlias(AccessPathBase.LocalVar(value.index), stmt).orEmpty()
     }

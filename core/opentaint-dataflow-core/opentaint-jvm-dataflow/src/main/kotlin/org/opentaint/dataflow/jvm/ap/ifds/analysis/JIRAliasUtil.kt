@@ -22,12 +22,26 @@ fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: Fina
         .forEach { alias -> applyAlias(fact, alias, body) }
 }
 
-fun JIRLocalAliasAnalysis.forEachAliasAfterStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
+fun JIRLocalAliasAnalysis.forEachAliasBeforeCallStatement(
+    statement: JIRInst,
+    fact: FinalFactAp,
+    body: (FinalFactAp) -> Unit
+) {
     val base = fact.base as? AccessPathBase.LocalVar ?: return
-    val aliases = findAliasAfterStatement(base, statement) ?: return
-    aliases.filterIsInstance<AliasApInfo>()
-        .filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { alias -> applyAlias(fact, alias, body) }
+    forEachHeapAlias(base, statement, fact, { f ->
+        val next = mutableListOf<Pair<AliasAccessor, FinalFactAp>>()
+        val accessors = f.getStartAccessors()
+        for (accessor in accessors) {
+            val aa = accessor.aliasAccessor() ?: continue
+            val nexFact = f.readAccessor(accessor) ?: continue
+            next.add(aa to nexFact)
+        }
+        next
+    }) { alias, f ->
+        if (alias is AliasApInfo && alias.base !is AccessPathBase.Constant) {
+            applyAlias(f, alias, body)
+        }
+    }
 }
 
 fun JIRLocalAliasAnalysis.forEachAliasAfterCallStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
@@ -99,4 +113,11 @@ fun AliasAccessor.apAccessor(): Accessor = when (this) {
     is AliasAccessor.Array -> ElementAccessor
     is AliasAccessor.Field -> FieldAccessor(className, fieldName, fieldType)
     is AliasAccessor.Static -> ClassStaticAccessor(typeName)
+}
+
+fun Accessor.aliasAccessor(): AliasAccessor? = when (this) {
+    is ElementAccessor -> AliasAccessor.Array
+    is FieldAccessor -> AliasAccessor.Field(className, fieldName, fieldType)
+    is ClassStaticAccessor -> AliasAccessor.Static(typeName)
+    else -> null
 }

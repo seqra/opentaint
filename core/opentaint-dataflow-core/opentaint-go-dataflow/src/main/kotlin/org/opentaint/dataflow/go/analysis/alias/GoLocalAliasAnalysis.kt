@@ -7,18 +7,17 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
-import org.opentaint.dataflow.go.analysis.alias.GoDSUAliasAnalysis.AnalysisResult
 import org.opentaint.dataflow.go.analysis.alias.GoDSUAliasAnalysis.ConnectedAliases
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.inst.GoIRInst
-import kotlin.collections.plus
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 

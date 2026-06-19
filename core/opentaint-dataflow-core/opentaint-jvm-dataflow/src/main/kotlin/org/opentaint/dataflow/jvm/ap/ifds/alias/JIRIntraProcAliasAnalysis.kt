@@ -1,12 +1,17 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.DsuMergeStrategy
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
+import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
 import org.opentaint.dataflow.graph.CompactGraph
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -18,12 +23,14 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAllocInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.ConnectedAliases
+import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.Convert.compress
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue.Local
 import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRNullConstant
 import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
@@ -68,7 +75,7 @@ class JIRIntraProcAliasAnalysis(
 
     fun compute(
         localVariableReachability: JIRLocalVariableReachability
-    ): JIRLocalAliasAnalysis.MethodAliasInfo =
+    ): AnalysisResult? =
         withAnalysisCancellation(
             timeLimit = params.aliasAnalysisTimeLimit,
             parentCancellation = rootCancellation,
@@ -78,218 +85,171 @@ class JIRIntraProcAliasAnalysis(
                     "Alias analysis for ${entryPoint.location.method} exceed ${params.aliasAnalysisTimeLimit}"
                 }
 
-                JIRLocalAliasAnalysis.MethodAliasInfo(
-                    aliasBeforeStatement = null,
-                    aliasAfterStatement = null,
-                    unboundBeforeStatement = null,
-                )
+                null
             }
         )
 
     private fun compute(
         cancellation: AnalysisCancellation,
         localVariableReachability: JIRLocalVariableReachability
-    ): JIRLocalAliasAnalysis.MethodAliasInfo {
+    ): AnalysisResult {
         val jig = getJIG(entryPoint)
-        val daa = DSUAliasAnalysis(CallResolver(), localVariableReachability, cancellation).analyze(jig)
+        val analyzer = DSUAliasAnalysis(CallResolver(), localVariableReachability, cancellation)
+        val result = analyzer.analyze(jig)
+        return result.compress(localVariableReachability)
+    }
 
-        val aliasBeforeStatement = Array(jig.statements.size) { Int2ObjectOpenHashMap<List<AliasInfo>>() }
-        val aliasAfterStatement = Array(jig.statements.size) { Int2ObjectOpenHashMap<List<AliasInfo>>() }
+    object Convert {
+        fun AAInfo.convertToAliasInfo(
+            depth: Int,
+            cancellation: AnalysisCancellation?,
+            resolveHeapInstance: (Int) -> List<AliasInfo>
+        ): List<AliasInfo> {
+            if (this !is HeapAlias) {
+                val base = convertBaseAccessor(this)
+                return listOfNotNull(base)
+            }
 
-        val unboundAliasBeforeStatement = Array(jig.statements.size) { mutableListOf<List<AliasInfo>>() }
-        val unboundAliasAfterStatement = Array(jig.statements.size) { mutableListOf<List<AliasInfo>>() }
+            if (depth > HEAP_CHAIN_LIMIT) {
+                return emptyList()
+            }
 
-        for (i in jig.statements.indices) {
-            resolveLocalVar(
-                daa.statesBeforeStmt[i], localVariableReachability,
-                aliasBeforeStatement[i], unboundAliasBeforeStatement[i],
-                i, cancellation
+            cancellation?.checkpoint()
+
+            val instances = resolveHeapInstance(instance)
+            val accessor = when (val a = this.heapAccessor) {
+                is ArrayAlias -> AliasAccessor.Array
+                is FieldAlias -> a.field
+                else -> error("Impossible")
+            }
+
+            return instances.mapNotNull {
+                when (it) {
+                    is AliasAllocInfo -> return@mapNotNull null
+                    is AliasApInfo -> AliasApInfo(it.base, it.accessors + accessor)
+                }
+            }
+        }
+
+        fun convertBaseAccessor(cur: AAInfo): AliasInfo? {
+            if (cur.ctx != ContextInfo.rootContext) return null
+
+            val base = when (cur) {
+                is LocalAlias.SimpleLoc -> when (val loc = cur.loc) {
+                    is Local -> AccessPathBase.LocalVar(loc.idx)
+                    is RefValue.Arg -> AccessPathBase.Argument(loc.idx)
+                    is RefValue.This -> AccessPathBase.This
+                    is RefValue.Static -> {
+                        val staticAccessors = listOf(AliasAccessor.Static(loc.type))
+                        return AliasApInfo(AccessPathBase.ClassStatic, staticAccessors)
+                    }
+                }
+
+                is LocalAlias.Alloc -> {
+                    val assignedExpr = cur.stmt.assignedExpr()
+                        ?: return null
+
+                    val const = assignedExpr as? SimpleValue.RefConst
+                    val expr = const?.expr
+
+                    if (expr is JIRNullConstant) return null
+
+                    val stringConst = expr as? JIRStringConstant
+                        ?: return AliasAllocInfo(cur.stmt.originalIdx)
+
+                    AccessPathBase.Constant("java.lang.String", stringConst.value)
+                }
+
+                is CallReturn,
+                is Unknown -> return null
+
+                is HeapAlias -> error("unreachable")
+                else -> error("Impossible aa-info")
+            }
+
+            return AliasApInfo(base, emptyList())
+        }
+
+        private fun Stmt.assignedExpr(): Expr? = when (this) {
+            is Stmt.Assign -> expr
+            is Stmt.FieldStore -> value as? Expr
+            is Stmt.ArrayStore -> value as? Expr
+            is Stmt.WriteStatic -> value as? Expr
+            else -> null
+        }
+
+        fun AnalysisResult.compress(reachableLocals: JIRLocalVariableReachability): AnalysisResult {
+            val compressed = AnalysisResult(
+                AAInfoManager(),
+                arrayOfNulls(statesBeforeStmt.size),
+                arrayOfNulls(statesBeforeStmt.size)
             )
+            val compressedStrategy = DsuMergeStrategy(compressed.manager)
 
-            resolveLocalVar(
-                daa.statesAfterStmt[i], localVariableReachability,
-                aliasAfterStatement[i], unboundAliasAfterStatement[i],
-                i, cancellation
-            )
-        }
-
-        return compressAliasInfo(aliasBeforeStatement, aliasAfterStatement, unboundAliasBeforeStatement)
-    }
-
-    private fun compressAliasInfo(
-        aliasBeforeStatement: Array<Int2ObjectOpenHashMap<List<AliasInfo>>>,
-        aliasAfterStatement: Array<Int2ObjectOpenHashMap<List<AliasInfo>>>,
-        unboundBeforeStatement: Array<MutableList<List<AliasInfo>>>,
-    ): JIRLocalAliasAnalysis.MethodAliasInfo {
-        val compressedBefore = arrayOfNulls<Int2ObjectOpenHashMap<Array<Any>>>(aliasBeforeStatement.size)
-        val compressedAfter = arrayOfNulls<Int2ObjectOpenHashMap<Array<Any>>>(aliasAfterStatement.size)
-
-        compress(aliasBeforeStatement, compressedBefore, reference = null, referenceCompressed = null)
-        compress(aliasAfterStatement, compressedAfter, aliasBeforeStatement, compressedBefore)
-
-        val compressedUnbound = compressUnboundAliases(unboundBeforeStatement)
-        return JIRLocalAliasAnalysis.MethodAliasInfo(compressedBefore, compressedAfter, compressedUnbound)
-    }
-
-    private fun compressUnboundAliases(
-        statementInfo: Array<MutableList<List<AliasInfo>>>
-    ): Array<Array<Array<Any>>?>? {
-        if (statementInfo.all { it.isEmpty() }) return null
-
-        val compressed = arrayOfNulls<Array<Array<Any>>>(statementInfo.size)
-        for (i in statementInfo.indices) {
-            val current = statementInfo[i]
-            if (current.isEmpty()) continue
-
-            if (i > 0 && statementInfo[i - 1] == current) {
-                compressed[i] = compressed[i - 1]
-                continue
-            }
-
-            val unwrapped = Array(current.size) { i ->
-                JIRLocalAliasAnalysis.unwrapAliasSet(current[i])
-            }
-            compressed[i] = unwrapped
-        }
-        return compressed
-    }
-
-    private fun compress(
-        statementInfo: Array<Int2ObjectOpenHashMap<List<AliasInfo>>>,
-        compressed: Array<Int2ObjectOpenHashMap<Array<Any>>?>,
-        reference: Array<Int2ObjectOpenHashMap<List<AliasInfo>>>?,
-        referenceCompressed: Array<Int2ObjectOpenHashMap<Array<Any>>?>?
-    ) {
-        for (i in statementInfo.indices) {
-            val current = statementInfo[i]
-            if (current.isEmpty()) continue
-
-            if (i > 0 && statementInfo[i - 1] == current) {
-                compressed[i] = compressed[i - 1]
-                continue
-            }
-
-            if (reference != null) {
-                if (reference[i] == current) {
-                    compressed[i] = referenceCompressed!![i]
+            for (i in statesBeforeStmt.indices) {
+                compressed.statesBeforeStmt[i] = statesBeforeStmt[i]?.let {
+                    compress(
+                        it, reachableLocals, i,
+                        manager, compressed.manager, compressedStrategy,
+                        compressed.statesBeforeStmt, compressed.statesAfterStmt
+                    )
                 }
 
-                if (i > 0 && reference[i - 1] == current) {
-                    compressed[i] = referenceCompressed!![i - 1]
-                    continue
+                compressed.statesAfterStmt[i] = statesAfterStmt[i]?.let {
+                    compress(
+                        it, reachableLocals, i,
+                        manager, compressed.manager, compressedStrategy,
+                        compressed.statesBeforeStmt, compressed.statesAfterStmt
+                    )
                 }
             }
 
-            val unwrapped = JIRLocalAliasAnalysis.unwrapAllInfo(current)
-            compressed[i] = unwrapped
-        }
-    }
-
-    private fun resolveLocalVar(
-        daa: ConnectedAliases,
-        reachableLocals: JIRLocalVariableReachability,
-        result: Int2ObjectOpenHashMap<List<AliasInfo>>,
-        unboundAliases: MutableList<List<AliasInfo>>,
-        instIdx: Int,
-        cancellation: AnalysisCancellation,
-    ) {
-        daa.aliasGroups.forEach { (_, group) ->
-            val converted = group
-                .flatMap { it.convertToAliasInfo(daa.aliasGroups, depth = 0, cancellation) }
-                .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
-                .distinct()
-
-            // size == 1 means only local was converted to AliasInfo; not really meaningful
-            if (converted.size <= 1) return@forEach
-
-            val locals = converted.filterIsInstance<AliasApInfo>()
-                .filter { it.accessors.isEmpty() }
-                .mapNotNull { it.base as? AccessPathBase.LocalVar }
-
-            if (locals.isEmpty()) {
-                unboundAliases += converted
-                return@forEach
-            }
-
-            locals.forEach { local ->
-                result[local.idx] = converted
-            }
-        }
-    }
-
-    private fun AAInfo.convertToAliasInfo(
-        aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>,
-        depth: Int,
-        cancellation: AnalysisCancellation,
-    ): List<AliasInfo> {
-        if (this !is HeapAlias) {
-            val base = convertBaseAccessor(this)
-            return listOfNotNull(base)
+            return compressed
         }
 
-        if (depth > HEAP_CHAIN_LIMIT) {
-            return emptyList()
-        }
+        private fun compress(
+            originalState: ImmutableState,
+            reachability: JIRLocalVariableReachability,
+            idx: Int,
+            currentManager: AAInfoManager,
+            newManager: AAInfoManager,
+            newStrategy: DsuMergeStrategy,
+            ref0: Array<ImmutableState?>,
+            ref1: Array<ImmutableState?>,
+        ): ImmutableState? {
+            val state = originalState.mutableCopy()
 
-        cancellation.checkpoint()
+            val unreachableElements = IntOpenHashSet()
+            state.allElements().forEachInt { element ->
+                val elementInfo = currentManager.getElementUncheck(element)
+                if (elementInfo is HeapAlias) return@forEachInt
 
-        val instanceGroup = aliasGroups[instance] ?: return emptyList()
-        val instances = instanceGroup.flatMap { it.convertToAliasInfo(aliasGroups, depth + 1, cancellation) }
-        val accessor = when (val a = this.heapAccessor) {
-            is ArrayAlias -> AliasAccessor.Array
-            is FieldAlias -> a.field
-            else -> error("Impossible")
-        }
+                val baseInfo = convertBaseAccessor(elementInfo)
+                if (baseInfo == null) {
+                    unreachableElements.add(element)
+                    return@forEachInt
+                }
 
-        return instances.mapNotNull {
-            when (it) {
-                is AliasAllocInfo -> return@mapNotNull null
-                is AliasApInfo -> AliasApInfo(it.base, it.accessors + accessor)
-            }
-        }
-    }
-
-    private fun convertBaseAccessor(cur: AAInfo): AliasInfo? {
-        if (cur.ctx != ContextInfo.rootContext) return null
-
-        val base = when (cur) {
-            is LocalAlias.SimpleLoc -> when (val loc = cur.loc) {
-                is Local -> AccessPathBase.LocalVar(loc.idx)
-                is RefValue.Arg -> AccessPathBase.Argument(loc.idx)
-                is RefValue.This -> AccessPathBase.This
-                is RefValue.Static -> {
-                    val staticAccessors = listOf(AliasAccessor.Static(loc.type))
-                    return AliasApInfo(AccessPathBase.ClassStatic, staticAccessors)
+                if (baseInfo is AliasApInfo) {
+                    if (!reachability.isReachable(baseInfo.base, idx)) {
+                        unreachableElements.add(element)
+                        return@forEachInt
+                    }
                 }
             }
 
-            is LocalAlias.Alloc -> {
-                val assignedExpr = cur.stmt.assignedExpr()
-                    ?: return null
-
-                val const = assignedExpr as? SimpleValue.RefConst
-
-                val stringConst = const?.expr as? JIRStringConstant
-                    ?: return AliasAllocInfo(cur.stmt.originalIdx)
-
-                AccessPathBase.Constant("java.lang.String", stringConst.value)
+            val cleanState = state.removeUnsafe(unreachableElements)
+            if (cleanState.isEmpty()) {
+                return null
             }
 
-            is CallReturn,
-            is Unknown -> return null
+            val compressedState = cleanState.translate(newManager, newStrategy)
 
-            is HeapAlias -> error("unreachable")
-            else -> error("Impossible aa-info")
+            if (idx == 0) return compressedState
+
+            if (compressedState == ref0[idx - 1]) return ref0[idx - 1]
+            if (compressedState == ref1[idx - 1]) return ref1[idx - 1]
+            return compressedState
         }
-
-        return AliasApInfo(base, emptyList())
-    }
-
-    private fun Stmt.assignedExpr(): Expr? = when (this) {
-        is Stmt.Assign -> expr
-        is Stmt.FieldStore -> value as? Expr
-        is Stmt.ArrayStore -> value as? Expr
-        is Stmt.WriteStatic -> value as? Expr
-        else -> null
     }
 }

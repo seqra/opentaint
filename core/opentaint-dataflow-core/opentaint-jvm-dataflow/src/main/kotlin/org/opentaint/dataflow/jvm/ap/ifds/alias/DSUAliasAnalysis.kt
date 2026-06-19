@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntCollection
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
@@ -9,9 +8,9 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.DsuMergeStrategy
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
-import org.opentaint.dataflow.ap.ifds.analysis.alias.IntDisjointSets
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
@@ -20,11 +19,11 @@ import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.JIRIns
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue.Local
 import org.opentaint.dataflow.util.firstInt
 import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.forEachIntEntry
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
 
 class DSUAliasAnalysis(
     val methodCallResolver: CallResolver,
@@ -48,23 +47,6 @@ class DSUAliasAnalysis(
         }
     }
 
-    class DsuMergeStrategy(
-        private val manager: AAInfoManager
-    ) : IntDisjointSets.RankStrategy {
-        override fun compare(a: Int, b: Int): Int {
-            val aImpl = manager.getElementUncheck(a)
-            val bImpl = manager.getElementUncheck(b)
-            return aImpl.compareTo(bImpl)
-        }
-    }
-
-    data class ConnectedAliases(val aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>)
-
-    data class AnalysisResult(
-        val statesBeforeStmt: List<ConnectedAliases>,
-        val statesAfterStmt: List<ConnectedAliases>
-    )
-
     class GraphAnalysisState(size: Int, val call: CallTreeNode) {
         val stateBeforeStmt = arrayOfNulls<ImmutableState>(size)
         val stateAfterStmt = arrayOfNulls<ImmutableState>(size)
@@ -85,41 +67,12 @@ class DSUAliasAnalysis(
         return aliasManager.getOrAdd(this)
     }
 
-    private fun getConnectedAliases(states: Array<ImmutableState?>): List<ConnectedAliases> =
-        List(states.size) { stmt ->
-            val state = states[stmt]?.mutableCopy()
-                ?: return@List ConnectedAliases(Int2ObjectOpenHashMap())
-
-            val groupsElements = Int2ObjectOpenHashMap<IntOpenHashSet>()
-
-            state.allElements().forEach { element ->
-                val groupId = state.aliasGroupId(element)
-                val group = groupsElements.get(groupId)
-                    ?: IntOpenHashSet().also { groupsElements.put(groupId, it) }
-                group.add(element)
-            }
-
-            val groups = Int2ObjectOpenHashMap<List<AAInfo>>()
-            groupsElements.forEachIntEntry { key, groupElements ->
-                val elements = mutableListOf<AAInfo>()
-                groupElements.forEachInt {
-                    elements += aliasManager.getElementUncheck(it)
-                }
-                groups.put(key, elements)
-            }
-
-            ConnectedAliases(groups)
-        }
-
     fun analyze(jig: JIRInstGraph): AnalysisResult {
         val initialState = State.empty(aliasManager, dsuMergeStrategy)
         val rootCall = CallTreeNode(ContextInfo.rootContext, instEvalCtx = RootInstEvalContext)
         val analysisState = GraphAnalysisState(jig.statements.size, rootCall)
         val (stateBeforeStmt, stateAfterStmt) = analyze(jig, initialState, analysisState)
-        return AnalysisResult(
-            getConnectedAliases(stateBeforeStmt),
-            getConnectedAliases(stateAfterStmt)
-        )
+        return AnalysisResult(aliasManager, stateBeforeStmt, stateAfterStmt)
     }
 
     private fun analyze(

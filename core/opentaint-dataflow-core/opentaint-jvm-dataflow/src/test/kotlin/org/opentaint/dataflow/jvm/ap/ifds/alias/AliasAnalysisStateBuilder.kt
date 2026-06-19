@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.DsuMergeStrategy
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor.Field
@@ -12,7 +13,7 @@ import java.util.IdentityHashMap
 
 internal class StateBuilder(
     private val manager: AAInfoManager,
-    private val strategy: DSUAliasAnalysis.DsuMergeStrategy
+    private val strategy: DsuMergeStrategy
 ) {
     private var state = State.empty(manager, strategy)
 
@@ -32,6 +33,10 @@ internal class StateBuilder(
 
     fun unknown(originalIdx: Int): Unknown = create(
         Unknown(Stmt.Return(value = null, originalIdx = originalIdx), ContextInfo.rootContext)
+    )
+
+    fun alloc(originalIdx: Int): LocalAlias = create(
+        LocalAlias.Alloc(Stmt.Return(value = null, originalIdx = originalIdx), ContextInfo.rootContext)
     )
 
     fun arrayAlias(instanceInfo: AAInfo): HeapAlias =

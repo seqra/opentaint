@@ -1,8 +1,19 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
+import org.opentaint.dataflow.ap.ifds.analysis.alias.State
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ArrayAlias
+import org.opentaint.dataflow.jvm.ap.ifds.alias.FieldAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis
+import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.Convert.convertToAliasInfo
+import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias
+import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -25,50 +36,133 @@ class JIRLocalAliasAnalysis(
         val aliasAnalysisTimeLimit: Duration = 10.seconds,
     )
 
-    private val aliasInfo by lazy { compute() }
+    private val aliasInfo: AnalysisResult? by lazy { compute() }
 
-    class MethodAliasInfo(
-        val aliasBeforeStatement: Array<Int2ObjectOpenHashMap<Array<Any>>?>?,
-        val aliasAfterStatement: Array<Int2ObjectOpenHashMap<Array<Any>>?>?,
-        val unboundBeforeStatement: Array<Array<Array<Any>>?>?,
-    )
+    fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
+        stateBeforeStatement(statement)?.run { findLocalAlias(manager, base.idx) }
 
-    private fun getLocalVarAliases(
-        alias: Array<Int2ObjectOpenHashMap<Array<Any>>?>,
-        instIdx: Int, base: AccessPathBase.LocalVar
-    ): List<AliasInfo>? =
-        alias[instIdx]?.getOrDefault(base.idx, null)?.filter {
-            it !is AliasApInfo || it.accessors.isNotEmpty() || it.base != base
-        }?.map { it.wrapAliasInfo() }
+    fun findAliasAfterStatement(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
+        stateAfterStatement(statement)?.run { findLocalAlias(manager, base.idx) }
 
-    fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
-        val aliasBefore = aliasInfo.aliasBeforeStatement ?: return null
-        val idx = languageManager.getInstIndex(statement)
-        return getLocalVarAliases(aliasBefore, idx, base)
+    fun getAllAliasAtStatement(statement: CommonInst): List<List<AliasInfo>> =
+        stateBeforeStatement(statement)?.run {
+            convertAllAliasSets(manager)
+        }.orEmpty()
+
+    fun <F> forEachHeapAlias(
+        base: AccessPathBase.LocalVar,
+        statement: CommonInst,
+        fact: F,
+        next: (F) -> List<Pair<AliasAccessor, F>>,
+        handle: (AliasInfo, F) -> Unit,
+    ) {
+        stateBeforeStatement(statement)?.apply {
+            findHeapAlias(manager, base.idx, fact, next, handle)
+        }
     }
 
-    fun getAllAliasAtStatement(statement: CommonInst): List<List<AliasInfo>> {
-        val result = mutableListOf<List<AliasInfo>>()
+    private fun stateBeforeStatement(statement: CommonInst): State? =
+        getStatementState(statement) { statesBeforeStmt }
+
+    private fun stateAfterStatement(statement: CommonInst): State? =
+        getStatementState(statement) { statesAfterStmt }
+
+    private inline fun getStatementState(
+        statement: CommonInst,
+        states: AnalysisResult.() -> Array<ImmutableState?>
+    ): State? {
+        val res = aliasInfo ?: return null
+
         val idx = languageManager.getInstIndex(statement)
+        val state = res.states().getOrNull(idx)
+            ?: return null
 
-        aliasInfo.aliasBeforeStatement?.let { aliasBefore ->
-            aliasBefore[idx]?.let { wrapAllInfo(it) }?.let { result.addAll(it.values) }
+        return state.unsafeState()
+    }
+
+    private fun <F> State.findHeapAlias(
+        manager: AAInfoManager,
+        localIdx: Int,
+        fact: F,
+        next: (F) -> List<Pair<AliasAccessor, F>>,
+        handle: (AliasInfo, F) -> Unit,
+    ) {
+        val localInfo = LocalAlias.SimpleLoc(RefValue.Local(localIdx, ContextInfo.rootContext))
+        val localInfoIdx = manager.find(localInfo) ?: return
+
+        findHeapAlias(manager, hashSetOf(), localInfoIdx, fact, next, handle)
+    }
+
+    private fun <F> State.findHeapAlias(
+        manager: AAInfoManager,
+        visited: MutableSet<F>,
+        factInfo: Int,
+        fact: F,
+        next: (F) -> List<Pair<AliasAccessor, F>>,
+        handle: (AliasInfo, F) -> Unit,
+    ) {
+        if (!visited.add(fact)) return
+
+        convertAllAliases(factInfo, manager).forEach { handle(it, fact) }
+
+        val instance = aliasGroupId(factInfo)
+        for ((accessor, nextFact) in next(fact)) {
+            val heapAccessors = when (accessor) {
+                is AliasAccessor.Array -> listOf(ArrayAlias)
+                is AliasAccessor.Field -> listOf(FieldAlias(accessor, false), FieldAlias(accessor, true))
+                is AliasAccessor.Static -> continue
+            }
+
+            for (ha in heapAccessors) {
+                val info = HeapAlias(instance, ha)
+                val heapIdx = manager.find(info) ?: continue
+                findHeapAlias(manager, visited, heapIdx, nextFact, next, handle)
+            }
         }
+    }
 
-        aliasInfo.unboundBeforeStatement?.let { unboundBefore ->
-            unboundBefore[idx]?.let { aliases -> aliases.map { wrapAliasSet(it) } }?.let { result.addAll(it) }
+    private fun State.findLocalAlias(manager: AAInfoManager, localIdx: Int): List<AliasInfo>? {
+        val localInfo = LocalAlias.SimpleLoc(RefValue.Local(localIdx, ContextInfo.rootContext))
+        val localInfoIdx = manager.find(localInfo) ?: return null
+        return convertAllAliases(localInfoIdx, manager)
+    }
+
+    private fun State.convertAllAliases(
+        infoIdx: Int,
+        manager: AAInfoManager
+    ): List<AliasInfo> {
+        val result = mutableListOf<AliasInfo>()
+        forEachAliasInSet(infoIdx) { aliasIdx ->
+            if (aliasIdx != infoIdx) {
+                result += convert(aliasIdx, manager, depth = 0)
+            }
         }
-
         return result
     }
 
-    fun findAliasAfterStatement(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
-        val aliasAfter = aliasInfo.aliasAfterStatement ?: return null
-        val idx = languageManager.getInstIndex(statement)
-        return getLocalVarAliases(aliasAfter, idx, base)
+    private fun State.convertAllAliasSets(
+        manager: AAInfoManager
+    ): List<List<AliasInfo>> = allAliasSets().map { aliasSet ->
+        val result = mutableListOf<AliasInfo>()
+        aliasSet.forEach {
+            result += convert(it, manager, depth = 0)
+        }
+        result
     }
 
-    private fun compute(): MethodAliasInfo {
+    private fun State.convert(infoIdx: Int, manager: AAInfoManager, depth: Int): List<AliasInfo> =
+        convert(manager.getElementUncheck(infoIdx), manager, depth)
+
+    private fun State.convert(info: AAInfo, manager: AAInfoManager, depth: Int): List<AliasInfo> =
+        info.convertToAliasInfo(depth, null) { instance ->
+            val instances = mutableListOf<AliasInfo>()
+            forEachAliasInSet(instance) {
+                instances += convert(it, manager, depth + 1)
+            }
+            instances
+        }
+
+    private fun compute(): AnalysisResult? {
         val analysis = JIRIntraProcAliasAnalysis(entryPoint, graph, callResolver, languageManager, cancellation, params)
         return analysis.compute(localVariableReachability)
     }
@@ -82,43 +176,4 @@ class JIRLocalAliasAnalysis(
     sealed interface AliasInfo
     data class AliasApInfo(val base: AccessPathBase, val accessors: List<AliasAccessor>): AliasInfo
     data class AliasAllocInfo(val allocInst: Int): AliasInfo
-
-    companion object {
-        fun AliasInfo.unwrap(): Any = when (this) {
-            is AliasAllocInfo -> allocInst
-            is AliasApInfo -> if (accessors.isEmpty()) base else this
-        }
-
-        fun Any.wrapAliasInfo(): AliasInfo = when (this) {
-            is AccessPathBase -> AliasApInfo(this, emptyList())
-            is AliasInfo -> this
-            is Int -> AliasAllocInfo(this)
-            else -> error("Impossible")
-        }
-
-        fun wrapAllInfo(info: Int2ObjectOpenHashMap<Array<Any>>): Int2ObjectOpenHashMap<List<AliasInfo>> {
-            val result = Int2ObjectOpenHashMap<List<AliasInfo>>()
-            for ((key, aliases) in info) {
-                result.put(key, wrapAliasSet(aliases))
-            }
-            return result
-        }
-
-        fun wrapAliasSet(aliases: Array<Any>): List<AliasInfo> =
-            List(aliases.size) { aliases[it].wrapAliasInfo() }
-
-        fun unwrapAllInfo(info: Int2ObjectOpenHashMap<List<AliasInfo>>): Int2ObjectOpenHashMap<Array<Any>> {
-            val result = Int2ObjectOpenHashMap<Array<Any>>(info.size, 0.99f)
-            val iter = info.int2ObjectEntrySet().fastIterator()
-            while (iter.hasNext()) {
-                val entry = iter.next()
-                val unwrapped = unwrapAliasSet(entry.value)
-                result.put(entry.intKey, unwrapped)
-            }
-            return result
-        }
-
-        fun unwrapAliasSet(aliases: List<AliasInfo>): Array<Any> =
-            Array(aliases.size) { aliases[it].unwrap() }
-    }
 }
