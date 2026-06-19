@@ -70,6 +70,12 @@ public class HeapAliasSample extends BaseSample  {
         sinkOneValue(cur);
     }
 
+    static void aliasFieldWrite(Box2 box2, Object a) {
+        box2.field1 = box2.field2;
+        box2.field1.value = a;
+        sinkOneValue(box2.field2.value);
+    }
+
     static void nodeTraversalData(Node node) {
         Node cur = node;
         while (cur.next != null) {

@@ -184,7 +184,7 @@ class NormalMethodAnalyzer(
     private var pendingSideEffectRequirements = arrayListOf<InitialFactAp>()
     private var pendingSideEffectSummaries = arrayListOf<SideEffectSummary>()
 
-    private val analysisContext: MethodAnalysisContext = analysisManager.getMethodAnalysisContext(
+    val analysisContext: MethodAnalysisContext = analysisManager.getMethodAnalysisContext(
         methodEntryPoint, runner.graph, runner.methodCallResolver,
         (emptyContextAnalyzer as? NormalMethodAnalyzer)?.analysisContext
     )

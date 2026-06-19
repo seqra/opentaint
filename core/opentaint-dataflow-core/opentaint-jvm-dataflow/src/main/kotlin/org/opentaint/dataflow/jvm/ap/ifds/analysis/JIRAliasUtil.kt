@@ -7,7 +7,6 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.aliasesApplied
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
@@ -68,7 +67,7 @@ fun JIRLocalAliasAnalysis.forEachMustAliasAfterCallStatement(statement: JIRInst,
         .forEach { alias -> applyAlias(fact, alias, body) }
 }
 
-private fun applyAlias(fact: FinalFactAp, alias: AliasApInfo, body: (FinalFactAp) -> Unit) {
+private fun JIRLocalAliasAnalysis.applyAlias(fact: FinalFactAp, alias: AliasApInfo, body: (FinalFactAp) -> Unit) {
     val result = alias.accessors.foldRight(fact.rebase(alias.base)) { accessor, f ->
         val apAccessor = accessor.apAccessor()
         f.prependAccessor(apAccessor)

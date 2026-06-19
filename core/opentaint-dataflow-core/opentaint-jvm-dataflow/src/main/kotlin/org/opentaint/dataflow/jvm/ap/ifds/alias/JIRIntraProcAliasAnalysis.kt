@@ -14,9 +14,9 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAllocInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
-import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.ConnectedAliases
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue.Local
 import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -95,15 +95,17 @@ class JIRIntraProcAliasAnalysis(
         val unboundAliasBeforeStatement = Array(jig.statements.size) { mutableListOf<List<AliasInfo>>() }
         val unboundAliasAfterStatement = Array(jig.statements.size) { mutableListOf<List<AliasInfo>>() }
 
+        val manager = daa.manager
+
         for (i in jig.statements.indices) {
             resolveLocalVar(
-                daa.statesBeforeStmt[i], localVariableReachability,
+                daa.statesBeforeStmt[i] as State, manager, localVariableReachability,
                 aliasBeforeStatement[i], unboundAliasBeforeStatement[i],
                 i, cancellation
             )
 
             resolveLocalVar(
-                daa.statesAfterStmt[i], localVariableReachability,
+                daa.statesAfterStmt[i] as State, manager, localVariableReachability,
                 aliasAfterStatement[i], unboundAliasAfterStatement[i],
                 i, cancellation
             )
@@ -145,15 +147,17 @@ class JIRIntraProcAliasAnalysis(
         val unboundAliasBeforeStatement = Array(jig.statements.size) { mutableListOf<List<AliasInfo>>() }
         val unboundAliasAfterStatement = Array(jig.statements.size) { mutableListOf<List<AliasInfo>>() }
 
+        val manager = daa.manager
+
         for (i in jig.statements.indices) {
             resolveAccessPathBase(
-                daa.statesBeforeStmt[i], localVariableReachability,
+                daa.statesBeforeStmt[i] as State, manager, localVariableReachability,
                 aliasBeforeStatement[i], unboundAliasBeforeStatement[i],
                 i, cancellation
             )
 
             resolveAccessPathBase(
-                daa.statesAfterStmt[i], localVariableReachability,
+                daa.statesAfterStmt[i] as State, manager, localVariableReachability,
                 aliasAfterStatement[i], unboundAliasAfterStatement[i],
                 i, cancellation
             )
@@ -277,75 +281,111 @@ class JIRIntraProcAliasAnalysis(
         }
     }
 
+    private fun State.getAliasesFor(root: Int, manager: AAInfoManager): List<AAInfo> {
+        val aliases = mutableListOf<AAInfo>()
+        forEachAliasInSet(root) {
+            if (!it.isLValue()) {
+                aliases.add(manager.getElementUncheck(root))
+            }
+        }
+        return aliases
+    }
+
+    private inline fun saveConvertedAliases(
+        root: Int,
+        state: State,
+        manager: AAInfoManager,
+        reachableLocals: JIRLocalVariableReachability,
+        instIdx: Int,
+        cancellation: AnalysisCancellation,
+        bound: HashSet<Int>,
+        save: (List<AliasInfo>) -> Unit
+    ) {
+        val aliases = state.getAliasesFor(root, manager)
+        aliases.forEach { bound.add(manager.getOrAdd(it)) }
+        val converted = aliases.flatMap { it.convertToAliasInfo(state, manager, depth = 0, cancellation) }
+            .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
+            .distinct()
+        // size == 1 means only root was converted to AliasInfo; not really meaningful
+        if (converted.size <= 1) return
+        save(converted)
+    }
+
     private fun resolveLocalVar(
-        daa: ConnectedAliases,
+        state: State,
+        manager: AAInfoManager,
         reachableLocals: JIRLocalVariableReachability,
         result: Int2ObjectOpenHashMap<List<AliasInfo>>,
         unboundAliases: MutableList<List<AliasInfo>>,
         instIdx: Int,
         cancellation: AnalysisCancellation,
     ) {
-        daa.aliasGroups.forEach { (_, group) ->
-            val converted = group
-                .flatMap { it.convertToAliasInfo(daa.aliasGroups, depth = 0, cancellation) }
-                .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
-                .distinct()
+        val bound = HashSet<Int>()
 
-            // size == 1 means only local was converted to AliasInfo; not really meaningful
-            if (converted.size <= 1) return@forEach
+        val allElements = state.allNonLValueElements()
 
-            val locals = converted.filterIsInstance<AliasApInfo>()
-                .filter { it.accessors.isEmpty() }
-                .mapNotNull { it.base as? AccessPathBase.LocalVar }
+        allElements.forEachInt { infoIndex ->
+            if (infoIndex.isLValue()) return@forEachInt
 
-            if (locals.isEmpty()) {
-                unboundAliases += converted
-                return@forEach
+            val root = manager.getElementUncheck(infoIndex)
+            if (root !is LocalAlias.SimpleLoc || root.loc !is Local || reachableLocals.isReachable(root.loc.idx, instIdx))
+                return@forEachInt
+
+            saveConvertedAliases(infoIndex, state, manager, reachableLocals, instIdx, cancellation, bound) {
+                result[root.loc.idx] = it
             }
+        }
 
-            locals.forEach { local ->
-                result[local.idx] = converted
+        allElements.forEachInt { infoIndex ->
+            if (infoIndex.isLValue() || infoIndex in bound) return@forEachInt
+
+            saveConvertedAliases(infoIndex, state, manager, reachableLocals, instIdx, cancellation, bound) {
+                unboundAliases += it
             }
         }
     }
 
-    private fun AccessPathBase.isMustRelevantBase() =
-        this is AccessPathBase.LocalVar || this is AccessPathBase.Argument || this is AccessPathBase.This
+    private fun AAInfo.isMustRelevant() =
+        this is LocalAlias.SimpleLoc && this.loc !is RefValue.Static
 
     private fun resolveAccessPathBase(
-        daa: ConnectedAliases,
+        state: State,
+        manager: AAInfoManager,
         reachableLocals: JIRLocalVariableReachability,
         result: Object2ObjectOpenHashMap<AccessPathBase, List<AliasInfo>>,
         unboundAliases: MutableList<List<AliasInfo>>,
         instIdx: Int,
         cancellation: AnalysisCancellation,
     ) {
-        daa.aliasGroups.forEach { (_, group) ->
-            val converted = group
-                .flatMap { it.convertToAliasInfo(daa.aliasGroups, depth = 0, cancellation) }
-                .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
-                .distinct()
+        val bound = HashSet<Int>()
 
-            // size == 1 means only local was converted to AliasInfo; not really meaningful
-            if (converted.size <= 1) return@forEach
+        val allElements = state.allNonLValueElements()
 
-            val bases = converted.filterIsInstance<AliasApInfo>()
-                .filter { it.base.isMustRelevantBase() && it.accessors.isEmpty() }
-                .map { it.base }
+        allElements.forEachInt { infoIndex ->
+            if (infoIndex.isLValue()) return@forEachInt
 
-            if (bases.isEmpty()) {
-                unboundAliases += converted
-                return@forEach
+            val root = manager.getElementUncheck(infoIndex)
+            if (root.isMustRelevant())
+                return@forEachInt
+
+            val rootBase = (convertBaseAccessor(root)!! as AliasApInfo).base
+            saveConvertedAliases(infoIndex, state, manager, reachableLocals, instIdx, cancellation, bound) {
+                result[rootBase] = it
             }
+        }
 
-            bases.forEach { base ->
-                result[base] = converted
+        allElements.forEachInt { infoIndex ->
+            if (infoIndex.isLValue() || infoIndex in bound) return@forEachInt
+
+            saveConvertedAliases(infoIndex, state, manager, reachableLocals, instIdx, cancellation, bound) {
+                unboundAliases += it
             }
         }
     }
 
     private fun AAInfo.convertToAliasInfo(
-        aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>,
+        state: State,
+        manager: AAInfoManager,
         depth: Int,
         cancellation: AnalysisCancellation,
     ): List<AliasInfo> {
@@ -360,8 +400,10 @@ class JIRIntraProcAliasAnalysis(
 
         cancellation.checkpoint()
 
-        val instanceGroup = aliasGroups[instance] ?: return emptyList()
-        val instances = instanceGroup.flatMap { it.convertToAliasInfo(aliasGroups, depth + 1, cancellation) }
+        val instanceGroup = state.getAliasesFor(instance, manager)
+        if (instanceGroup.isEmpty()) return emptyList()
+
+        val instances = instanceGroup.flatMap { it.convertToAliasInfo(state, manager, depth + 1, cancellation) }
         val accessor = when (val a = this.heapAccessor) {
             is ArrayAlias -> AliasAccessor.Array
             is FieldAlias -> a.field
@@ -404,6 +446,7 @@ class JIRIntraProcAliasAnalysis(
             is CallReturn,
             is Unknown -> return null
 
+            is LValue,
             is HeapAlias -> error("unreachable")
         }
 

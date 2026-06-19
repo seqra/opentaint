@@ -14,7 +14,7 @@ interface ImmutableState {
     fun mutableCopy(): State
 }
 
-enum class MergeType{
+enum class MergeType {
     May, Must
 }
 
@@ -94,12 +94,6 @@ class State private constructor(
         return State(manager, result)
     }
 
-    fun forEachAliasInSet(info: Int, body: (Int) -> Unit) = forEachAliasInSetWithBreak(info, body)
-
-    fun forEachAliasInSetWithBreak(info: Int, body: (Int) -> Unit?) {
-        aliasGroups.forEachElementInSet(info, body)
-    }
-
     fun allAliasSets(): Collection<IntOpenHashSet> = aliasGroups.allSets()
 
     fun allSetElements(): IntOpenHashSet = aliasGroups.allElements()
@@ -138,6 +132,7 @@ class State private constructor(
                     if (fixedHeap == elementIdx) return@forEachInt
 
                     replacements += IntIntImmutablePair(elementIdx, fixedHeap)
+                    replacements += IntIntImmutablePair(elementIdx.inv(), fixedHeap.inv())
                 }
 
                 if (replacements.isEmpty()) return
@@ -150,13 +145,16 @@ class State private constructor(
         }
 
         private fun ensureHeapElementCorrect(element: Int, state: IntDisjointSets, manager: AAInfoManager): Int {
-            if (!manager.isHeapAlias(element)) return element
+            val nonLValueElement = element.ensureNonLValue()
+            if (!manager.isHeapAlias(nonLValueElement)) return element
 
-            val heapElement = manager.getHeapRefUnchecked(element)
+            val heapElement = manager.getHeapRefUnchecked(nonLValueElement)
             val heapInstanceRepr = state.find(heapElement.instance)
             if (heapInstanceRepr == heapElement.instance) return element
 
-            return manager.replaceHeapInstance(element, heapInstanceRepr)
+            val replacement = manager.replaceHeapInstance(nonLValueElement, heapInstanceRepr)
+            if (element.isLValue()) return replacement.inv()
+            return replacement
         }
 
         fun merge(manager: AAInfoManager, strategy: DsuMergeStrategy, states: List<ImmutableState>, mergeType: MergeType): State {

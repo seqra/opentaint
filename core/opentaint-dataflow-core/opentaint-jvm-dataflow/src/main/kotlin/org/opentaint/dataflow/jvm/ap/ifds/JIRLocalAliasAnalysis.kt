@@ -20,6 +20,8 @@ class JIRLocalAliasAnalysis(
     private val languageManager: JIRLanguageManager,
     private val params: Params,
 ) {
+    var aliasesApplied = 0L
+
     data class Params(
         val useAliasAnalysis: Boolean = true,
         val aliasAnalysisInterProcCallDepth: Int = 0,

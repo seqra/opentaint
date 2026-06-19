@@ -27,7 +27,7 @@ data class Unknown(val stmt: Stmt, override val ctx: ContextInfo) : AAInfo {
 }
 
 data class CallReturn(val stmt: Stmt.Call, override val ctx: ContextInfo) : AAInfo {
-    override val infoKind: Int = 1
+    override val infoKind: Int get() = 1
 
     override fun compareInfo(other: AAInfo): Int = compare(other as CallReturn)
     fun compare(other: CallReturn): Int = stmt.compareTo(other.stmt)

@@ -18,6 +18,11 @@ public class BaseSample {
         public void touchHeap() { }
     }
 
+    public static class Box2 {
+        public Box field1;
+        public Box field2;
+    }
+
     public static Object readValue(Box box) {
         return box.value;
     }

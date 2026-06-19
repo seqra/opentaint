@@ -10,7 +10,7 @@ class MethodAnalyzerStorage(
     private val taintRulesStatsSamplingPeriod: Int?
 ) {
     private val entryPoints = object2IntMap<MethodEntryPoint>()
-    private val analyzers = arrayListOf<MethodAnalyzer?>()
+    val analyzers = arrayListOf<MethodAnalyzer?>()
 
     fun add(runner: TaintAnalysisUnitRunner, methodEntryPoint: MethodEntryPoint): Boolean {
         entryPoints.getOrCreateIndex(methodEntryPoint) { analyzerIdx ->

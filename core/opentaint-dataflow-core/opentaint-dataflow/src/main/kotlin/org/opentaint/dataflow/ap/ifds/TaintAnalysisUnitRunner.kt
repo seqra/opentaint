@@ -71,7 +71,7 @@ class TaintAnalysisUnitRunner(
     private val workList: Channel<Any> = Channel(Channel.UNLIMITED)
 
     private val analyzers = mutableListOf<MethodAnalyzerStorage>()
-    private val methodAnalyzers = hashMapOf<CommonMethod, MethodAnalyzerStorage>()
+    val methodAnalyzers = hashMapOf<CommonMethod, MethodAnalyzerStorage>()
     private val loadedSummaries = hashMapOf<MethodEntryPoint, Pair<List<Edge>, List<InitialFactAp>>>()
     private var delayedMethodAnalyzers = mutableListOf<MethodAnalyzer>()
 

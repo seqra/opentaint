@@ -50,7 +50,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
-var aliasesApplied = 0L
+var invalidateMayAliasOnUnkCall = true
 
 class TaintAnalysisUnitRunnerManager(
     private val analysisManager: TaintAnalysisManager,
@@ -73,7 +73,7 @@ class TaintAnalysisUnitRunnerManager(
         this.status.compareAndSet(Status.OK, status)
     }
 
-    private val runnerForUnit = ConcurrentHashMap<UnitType, TaintAnalysisUnitRunner>()
+    val runnerForUnit = ConcurrentHashMap<UnitType, TaintAnalysisUnitRunner>()
     private val unitStorage = ConcurrentHashMap<UnitType, TaintAnalysisUnitStorage>()
     private val methodDependencies = ConcurrentHashMap<CommonMethod, MutableSet<UnitType>>()
 
@@ -174,7 +174,6 @@ class TaintAnalysisUnitRunnerManager(
                 }
 
                 reportRunnerProgress(currentProgress)
-                logger.info { "Total aliases applied: $aliasesApplied" }
                 logger.info { "Analysis done in ${timeStart.elapsedNow()}" }
             }
         }
