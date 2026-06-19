@@ -115,7 +115,7 @@ class IssuesTest : SampleBasedTest() {
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
 
     @Test
-    @Disabled // todo: implement alias calculation for field chains
+    // todo: trace resolution
     fun `issue 98 deep`() = runTest<issue98_deep>()
 
     @AfterAll

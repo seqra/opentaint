@@ -8,4 +8,4 @@ rules:
       - pattern: |
           $A = badString();
           ...
-          return $A;
+          sink($A);
