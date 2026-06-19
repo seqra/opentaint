@@ -20,6 +20,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevant
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachAliasAtStatement
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
@@ -55,6 +56,11 @@ class JIRMethodCallPrecondition(
             ?: CallPrecondition.Unchanged
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
+            preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }
+        }
+
+        // todo: do we need to explore all accessors?
+        analysisContext.aliasAnalysis?.forEachAliasAtStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }
         }
 
