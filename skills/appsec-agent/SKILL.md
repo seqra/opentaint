@@ -23,12 +23,10 @@ macOS / Linux — try in order:
 
 1. Homebrew — `brew install --cask seqra/tap/opentaint`
 2. npm — `npm install -g @seqra/opentaint`
-3. shell script — `curl -fsSL https://opentaint.org/install.sh | bash`
 
-Windows — try in order:
+Windows:
 
 1. npm — `npm install -g @seqra/opentaint`
-2. PowerShell script — `irm https://opentaint.org/install.ps1 | iex`
 
 After installing, run `opentaint health` to confirm the autobuilder/analyzer/rules/runtime resolve.
 
