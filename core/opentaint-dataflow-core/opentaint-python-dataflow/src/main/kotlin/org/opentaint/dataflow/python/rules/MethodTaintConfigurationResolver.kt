@@ -332,9 +332,9 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         val base = p.base
         // TODO kw-params
         if (base is PythonPositionBase.Argument && base.idx == null) {
-            return argIndices.map { convertPosition(p.withBase(PythonPositionBase.Argument(it))) }
+            return argIndices.mapNotNull { convertPosition(p.withBase(PythonPositionBase.Argument(it))) }
         }
-        return listOf(convertPosition(p))
+        return listOfNotNull(convertPosition(p))
     }
 
     private fun PythonPosition.withBase(newBase: PythonPositionBase): PythonPosition = when (this) {
@@ -342,20 +342,29 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         is PythonPosition.WithModifiers -> PythonPosition.WithModifiers(newBase, modifiers)
     }
 
-    private fun convertPosition(p: PythonPosition): Position = when (p) {
-        is PythonPosition.BaseOnly -> convertBase(p.base)
-        is PythonPosition.WithModifiers -> p.modifiers.fold(convertBase(p.base)) { acc, mod ->
-            PositionWithAccess(acc, convertAccessor(mod))
+    private fun convertPosition(p: PythonPosition): Position? {
+        val base = convertBase(p.base) ?: return null
+        return when (p) {
+            is PythonPosition.BaseOnly -> base
+            is PythonPosition.WithModifiers -> p.modifiers.fold(base) { acc, mod ->
+                PositionWithAccess(acc, convertAccessor(mod))
+            }
         }
     }
 
-    private fun convertBase(base: PythonPositionBase): Position = when (base) {
-        is PythonPositionBase.Argument -> base.idx?.let(::Argument) ?: AllArguments
+    private fun convertBase(base: PythonPositionBase): Position? = when (base) {
+        is PythonPositionBase.Argument -> {
+            val idx = base.idx ?: return AllArguments
+
+            Argument(idx).takeIf { isValidArgIndex(idx) }
+        }
         is PythonPositionBase.KwArgument -> KwArgument(base.name)
         PythonPositionBase.This -> This
         PythonPositionBase.Result -> Result
         is PythonPositionBase.ClassRef -> ClassRef(base.fqn)
     }
+
+    private fun isValidArgIndex(idx: Int): Boolean = method is PIRUnknownFunction || idx in argIndices
 
     private fun convertAccessor(m: PythonPositionModifier): PositionAccessor = when (m) {
         PythonPositionModifier.ArrayElement -> PositionAccessor.ElementAccessor
