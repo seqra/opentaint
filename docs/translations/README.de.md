@@ -109,12 +109,12 @@ TL;DR: OpenTaint ist eine Open-Source-Alternative zu *Semgrep Pro* und *CodeQL* 
 
 KI generiert Produktionscode schneller, als Sicherheitsteams mithalten konnen, und die beiden Arten von Werkzeugen, die entwickelt wurden, um die dabei entstehenden Fehler zu finden, erzwingen jeweils einen schlechten Kompromiss:
 
-- **Pattern-Matcher** (Semgrep OSS, ast-grep, Linter) sind kostenlos und schnell, aber sie gleichen Syntax ab, nicht Datenfluss — nicht vertrauenswurdige Eingaben, die eine Funktionsgrenze oder eine Persistenzschicht uberschreiten, rutschen einfach durch. Die tiefere, interprozedurale Analyse, die sie *doch* findet, war lange in proprietaren Werkzeugen eingeschlossen.
+- **AST-Pattern-Matcher** (Semgrep OSS, ast-grep, Linter) sind kostenlos und schnell, aber sie gleichen Syntax ab, nicht Datenfluss — nicht vertrauenswurdige Eingaben, die eine Funktionsgrenze oder eine Persistenzschicht uberschreiten, rutschen einfach durch. Die tiefere, interprozedurale Analyse, die sie *doch* findet, war lange in proprietaren Werkzeugen eingeschlossen.
 - **LLM-Sicherheitsagenten** finden, was Pattern-Matcher ubersehen, aber sie lesen Ihren Code bei jedem Lauf erneut. Die Tokens summieren sich mit jeder Datei, jedem Commit, jedem CI-Build — und ein probabilistisches Modell kann trotzdem nicht versprechen, dass es alles erfasst hat.
 
 OpenTaint gibt Ihnen die Tiefe eines LLM-Agenten zum Preis eines statischen Analyzers:
 
-- **Findet, was Pattern-Matcher ubersehen.** Eine formale interprozedurale Dataflow-Engine verfolgt nicht vertrauenswurdige Daten uber Funktionsgrenzen, Persistenzschichten, Aliase und asynchronen Code hinweg.
+- **Findet, was AST-Pattern-Matcher ubersehen.** Eine formale interprozedurale Dataflow-Engine verfolgt nicht vertrauenswurdige Daten uber Funktionsgrenzen, Persistenzschichten, Aliase und asynchronen Code hinweg.
 - **Zahlen Sie das Modell einmal, nicht bei jedem Scan.** Lassen Sie einen Agenten einen einzelnen Fund zu einer Taint-Regel destillieren. Die deterministische Engine wendet diese Regel dann auf die gesamte Codebasis an — und auf jeden Commit danach — in wenigen CPU-Minuten, zu null Token-Kosten.
 - **Open Source, alles inklusive.** Engine, Regeln und CI-Integrationen kommen als ein Stack unter Apache 2.0 und MIT.
 

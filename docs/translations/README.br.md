@@ -109,12 +109,12 @@ TL;DR: O OpenTaint é uma alternativa de código aberto ao *Semgrep Pro* e ao *C
 
 A IA gera código de produção mais rápido do que as equipes de segurança conseguem acompanhar, e os dois tipos de ferramenta criados para capturar o que ela erra impõem, cada um, um mau compromisso:
 
-- **Os correspondentes de padrões** (Semgrep OSS, ast-grep, linters) são gratuitos e rápidos, mas correspondem à sintaxe, não ao fluxo de dados — entradas não confiáveis que cruzam a fronteira de uma função ou uma camada de persistência passam direto. A análise mais profunda e interprocedural que *de fato* as captura ficou por muito tempo trancada dentro de ferramentas proprietárias.
+- **Os correspondentes de padrões AST** (Semgrep OSS, ast-grep, linters) são gratuitos e rápidos, mas correspondem à sintaxe, não ao fluxo de dados — entradas não confiáveis que cruzam a fronteira de uma função ou uma camada de persistência passam direto. A análise mais profunda e interprocedural que *de fato* as captura ficou por muito tempo trancada dentro de ferramentas proprietárias.
 - **Os agentes de segurança LLM** encontram o que os correspondentes de padrões deixam passar, mas releem seu código a cada execução. Os tokens se acumulam a cada arquivo, a cada commit, a cada build de CI — e um modelo probabilístico ainda assim não pode prometer que capturou tudo.
 
 O OpenTaint oferece a profundidade de um agente LLM ao custo de um analisador estático:
 
-- **Encontre o que os correspondentes de padrões deixam passar.** Um motor de análise de fluxo de dados formal e interprocedural rastreia dados não confiáveis através de fronteiras de funções, camadas de persistência, aliases e código assíncrono.
+- **Encontre o que os correspondentes de padrões AST deixam passar.** Um motor de análise de fluxo de dados formal e interprocedural rastreia dados não confiáveis através de fronteiras de funções, camadas de persistência, aliases e código assíncrono.
 - **Pague pelo modelo uma vez, não a cada varredura.** Deixe um agente destilar uma única descoberta em uma regra de taint. O motor determinístico então reaplica essa regra em toda a base de código — e em cada commit seguinte — em minutos de CPU, com custo zero de tokens.
 - **Código aberto, com tudo incluso.** Motor, regras e integrações de CI vêm como uma única stack sob as licenças Apache 2.0 e MIT.
 

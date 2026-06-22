@@ -109,12 +109,12 @@ TL;DR: OpenTaint er et open source-alternativ til *Semgrep Pro* og *CodeQL* — 
 
 AI genererer produktionskode hurtigere end sikkerhedsteams kan følge med, og de to slags værktøjer, der er bygget til at fange dens fejl, tvinger hver især til en dårlig afvejning:
 
-- **Mønstergenkendere** (Semgrep OSS, ast-grep, linters) er gratis og hurtige, men de matcher syntaks, ikke dataflow — utroværdigt input, der krydser en funktionsgrænse eller et persistenslag, glider lige forbi. Den dybere, inter-procedurale analyse, der *faktisk* fanger det, har længe været låst inde i proprietære værktøjer.
+- **AST-mønstergenkendere** (Semgrep OSS, ast-grep, linters) er gratis og hurtige, men de matcher syntaks, ikke dataflow — utroværdigt input, der krydser en funktionsgrænse eller et persistenslag, glider lige forbi. Den dybere, inter-procedurale analyse, der *faktisk* fanger det, har længe været låst inde i proprietære værktøjer.
 - **LLM-sikkerhedsagenter** finder det, mønstergenkendere overser, men de genlæser din kode ved hver kørsel. Tokens hober sig op med hver fil, hver commit, hvert CI-build — og en probabilistisk model kan stadig ikke love, at den fangede alt.
 
 OpenTaint giver dig en LLM-agents dybde til en statisk analysators pris:
 
-- **Find det, mønstergenkendere overser.** En formel inter-procedural dataflow-motor sporer utroværdige data på tværs af funktionsgrænser, persistenslag, aliasser og asynkron kode.
+- **Find det, AST-mønstergenkendere overser.** En formel inter-procedural dataflow-motor sporer utroværdige data på tværs af funktionsgrænser, persistenslag, aliasser og asynkron kode.
 - **Betal modellen én gang, ikke ved hver scanning.** Lad en agent destillere ét enkelt fund til en taint-regel. Den deterministiske motor afspiller derefter den regel på tværs af hele kodebasen — og hver commit efter den — på få minutters CPU-tid, til nul token-omkostning.
 - **Open source, alt inkluderet.** Motor, regler og CI-integrationer kommer som én stak under Apache 2.0 og MIT.
 

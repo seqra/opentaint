@@ -109,12 +109,12 @@ TL;DR: OpenTaint er et åpen kildekode-alternativ til *Semgrep Pro* og *CodeQL* 
 
 AI genererer produksjonskode raskere enn sikkerhetsteam klarer å holde følge med, og de to typene verktøy som er laget for å fange det den gjør feil, tvinger hver sin dårlige avveining på deg:
 
-- **Mønstergjenkjennere** (Semgrep OSS, ast-grep, lintere) er gratis og raske, men de matcher syntaks, ikke dataflyt — upålitelig input som krysser en funksjonsgrense eller et persistenslag glipper rett forbi. Den dypere, inter-prosedyrelle analysen som *faktisk* fanger den, har lenge vært innelåst i proprietære verktøy.
+- **AST-mønstergjenkjennere** (Semgrep OSS, ast-grep, lintere) er gratis og raske, men de matcher syntaks, ikke dataflyt — upålitelig input som krysser en funksjonsgrense eller et persistenslag glipper rett forbi. Den dypere, inter-prosedyrelle analysen som *faktisk* fanger den, har lenge vært innelåst i proprietære verktøy.
 - **LLM-sikkerhetsagenter** finner det mønstergjenkjennere overser, men de leser koden din på nytt ved hver kjøring. Tokens hoper seg opp for hver fil, hver commit, hver CI-bygging — og en probabilistisk modell kan fremdeles ikke love at den fanget opp alt.
 
 OpenTaint gir deg dybden til en LLM-agent til prisen av en statisk analysator:
 
-- **Finn det mønstergjenkjennere overser.** En formell inter-prosedyrell dataflytmotor sporer upålitelige data på tvers av funksjonsgrenser, persistenslag, aliaser og asynkron kode.
+- **Finn det AST-mønstergjenkjennere overser.** En formell inter-prosedyrell dataflytmotor sporer upålitelige data på tvers av funksjonsgrenser, persistenslag, aliaser og asynkron kode.
 - **Betal for modellen én gang, ikke ved hver skanning.** La en agent destillere et enkelt funn til en taint-regel. Den deterministiske motoren spiller deretter regelen om igjen over hele kodebasen — og hver commit etterpå — på minutter med CPU, helt uten tokenkostnad.
 - **Åpen kildekode, alt inkludert.** Motor, regler og CI-integrasjoner kommer som én stakk under Apache 2.0 og MIT.
 

@@ -109,12 +109,12 @@ TL;DR: OpenTaint est une alternative open source à *Semgrep Pro* et *CodeQL* �
 
 L'IA génère du code de production plus vite que les équipes de sécurité ne peuvent suivre, et les deux types d'outils conçus pour rattraper ses erreurs imposent chacun un mauvais compromis :
 
-- **Les moteurs de correspondance de motifs** (Semgrep OSS, ast-grep, linters) sont gratuits et rapides, mais ils font correspondre la syntaxe, pas le flux de données — une entrée non fiable qui traverse une frontière de fonction ou une couche de persistance passe sans encombre. L'analyse plus profonde, inter-procédurale, qui *parvient* à la détecter est longtemps restée enfermée dans des outils propriétaires.
+- **Les moteurs de correspondance de motifs AST** (Semgrep OSS, ast-grep, linters) sont gratuits et rapides, mais ils font correspondre la syntaxe, pas le flux de données — une entrée non fiable qui traverse une frontière de fonction ou une couche de persistance passe sans encombre. L'analyse plus profonde, inter-procédurale, qui *parvient* à la détecter est longtemps restée enfermée dans des outils propriétaires.
 - **Les agents de sécurité LLM** trouvent ce que les moteurs de correspondance de motifs manquent, mais ils relisent votre code à chaque exécution. Les tokens s'accumulent avec chaque fichier, chaque commit, chaque build CI — et un modèle probabiliste ne peut toujours pas promettre qu'il a tout détecté.
 
 OpenTaint vous offre la profondeur d'un agent LLM au coût d'un analyseur statique :
 
-- **Trouvez ce que les moteurs de correspondance de motifs manquent.** Un moteur de flux de données inter-procédural formel suit les données non fiables à travers les frontières de fonctions, les couches de persistance, les alias et le code asynchrone.
+- **Trouvez ce que les moteurs de correspondance de motifs AST manquent.** Un moteur de flux de données inter-procédural formel suit les données non fiables à travers les frontières de fonctions, les couches de persistance, les alias et le code asynchrone.
 - **Payez le modèle une fois, pas à chaque analyse.** Laissez un agent distiller une seule découverte en une règle de taint. Le moteur déterministe rejoue ensuite cette règle sur l'ensemble de la base de code — et sur chaque commit qui suit — en quelques minutes de CPU, à coût de token nul.
 - **Open source, tout inclus.** Moteur, règles et intégrations CI forment une seule pile sous Apache 2.0 et MIT.
 

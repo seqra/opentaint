@@ -109,12 +109,12 @@ TL;DR: OpenTaint je alternativa otvorenog koda za *Semgrep Pro* i *CodeQL* — f
 
 AI generiše produkcijski kod brže nego što sigurnosni timovi mogu pratiti, a obje vrste alata izgrađene da uhvate ono što on pogriješi nameću loš kompromis:
 
-- **Mehanizmi za podudaranje obrazaca** (Semgrep OSS, ast-grep, linteri) su besplatni i brzi, ali oni podudaraju sintaksu, a ne tok podataka — nepouzdani unos koji prelazi granicu funkcije ili sloj persistencije prošulja se pored njih. Dublja, inter-proceduralna analiza koja ga *zaista* hvata već dugo je zaključana unutar vlasničkih alata.
+- **Mehanizmi za podudaranje AST-obrazaca** (Semgrep OSS, ast-grep, linteri) su besplatni i brzi, ali oni podudaraju sintaksu, a ne tok podataka — nepouzdani unos koji prelazi granicu funkcije ili sloj persistencije prošulja se pored njih. Dublja, inter-proceduralna analiza koja ga *zaista* hvata već dugo je zaključana unutar vlasničkih alata.
 - **LLM sigurnosni agenti** pronalaze ono što mehanizmi za podudaranje obrazaca propuste, ali iznova čitaju vaš kod pri svakom pokretanju. Tokeni se gomilaju sa svakim fajlom, svakim commitom, svakom CI izgradnjom — a probabilistički model i dalje ne može obećati da je uhvatio sve.
 
 OpenTaint vam daje dubinu LLM agenta po cijeni statičkog analizatora:
 
-- **Pronađite ono što mehanizmi za podudaranje obrazaca propuštaju.** Formalni inter-proceduralni mehanizam za tok podataka prati nepouzdane podatke preko granica funkcija, slojeva persistencije, aliasa i asinhronog koda.
+- **Pronađite ono što mehanizmi za podudaranje AST-obrazaca propuštaju.** Formalni inter-proceduralni mehanizam za tok podataka prati nepouzdane podatke preko granica funkcija, slojeva persistencije, aliasa i asinhronog koda.
 - **Platite model jednom, a ne pri svakom skeniranju.** Pustite agenta da destilira jedan nalaz u taint pravilo. Deterministički mehanizam zatim ponavlja to pravilo kroz cijelu bazu koda — i kroz svaki naredni commit — za nekoliko minuta CPU vremena, uz nulti trošak tokena.
 - **Otvoreni kod, sve uključeno.** Mehanizam, pravila i CI integracije dolaze kao jedan stek pod Apache 2.0 i MIT licencom.
 

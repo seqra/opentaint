@@ -109,12 +109,12 @@ TL;DR: OpenTaint là một giải pháp thay thế mã nguồn mở cho *Semgrep
 
 AI tạo mã sản xuất nhanh hơn khả năng theo kịp của các đội bảo mật, và hai loại công cụ được tạo ra để bắt những gì AI làm sai đều buộc bạn vào một sự đánh đổi tồi tệ:
 
-- **Công cụ khớp mẫu** (Semgrep OSS, ast-grep, các linter) thì miễn phí và nhanh, nhưng chúng khớp cú pháp chứ không phải luồng dữ liệu — dữ liệu đầu vào không đáng tin cậy vượt qua ranh giới hàm hay tầng lưu trữ sẽ lọt qua dễ dàng. Phân tích liên thủ tục sâu hơn *thực sự* bắt được nó từ lâu đã bị khóa kín bên trong các công cụ độc quyền.
+- **Công cụ khớp mẫu AST** (Semgrep OSS, ast-grep, các linter) thì miễn phí và nhanh, nhưng chúng khớp cú pháp chứ không phải luồng dữ liệu — dữ liệu đầu vào không đáng tin cậy vượt qua ranh giới hàm hay tầng lưu trữ sẽ lọt qua dễ dàng. Phân tích liên thủ tục sâu hơn *thực sự* bắt được nó từ lâu đã bị khóa kín bên trong các công cụ độc quyền.
 - **Các tác tử bảo mật LLM** phát hiện những gì công cụ khớp mẫu bỏ sót, nhưng chúng đọc lại mã của bạn trong mỗi lần chạy. Token cộng dồn theo từng tệp, từng commit, từng lần build CI — và một mô hình xác suất vẫn không thể đảm bảo nó đã bắt được mọi thứ.
 
 OpenTaint mang lại cho bạn chiều sâu của một tác tử LLM với chi phí của một công cụ phân tích tĩnh:
 
-- **Phát hiện những gì công cụ khớp mẫu bỏ sót.** Một công cụ luồng dữ liệu liên thủ tục chính quy theo dõi dữ liệu không đáng tin cậy xuyên qua ranh giới hàm, tầng lưu trữ, bí danh và mã bất đồng bộ.
+- **Phát hiện những gì công cụ khớp mẫu AST bỏ sót.** Một công cụ luồng dữ liệu liên thủ tục chính quy theo dõi dữ liệu không đáng tin cậy xuyên qua ranh giới hàm, tầng lưu trữ, bí danh và mã bất đồng bộ.
 - **Trả phí cho mô hình một lần, không phải mỗi lần quét.** Hãy để một tác tử chắt lọc một phát hiện duy nhất thành một quy tắc taint. Sau đó công cụ xác định sẽ phát lại quy tắc đó trên toàn bộ cơ sở mã — và mọi commit sau đó — trong vài phút CPU, không tốn token nào.
 - **Mã nguồn mở, đầy đủ tính năng.** Công cụ, quy tắc và tích hợp CI đến cùng nhau như một ngăn xếp duy nhất theo giấy phép Apache 2.0 và MIT.
 

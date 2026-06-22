@@ -109,12 +109,12 @@ TL;DR: OpenTaint è un'alternativa open source a *Semgrep Pro* e *CodeQL* — un
 
 L'IA genera codice di produzione più velocemente di quanto i team di sicurezza riescano a tenere il passo, e i due tipi di strumenti nati per intercettare i suoi errori impongono entrambi un brutto compromesso:
 
-- **I pattern matcher** (Semgrep OSS, ast-grep, linter) sono gratuiti e veloci, ma confrontano la sintassi, non il flusso dei dati — un input non attendibile che attraversa il confine di una funzione o un livello di persistenza sfugge senza problemi. L'analisi più profonda e inter-procedurale che invece *lo* intercetta è rimasta a lungo chiusa dentro strumenti proprietari.
+- **Gli AST-pattern matcher** (Semgrep OSS, ast-grep, linter) sono gratuiti e veloci, ma confrontano la sintassi, non il flusso dei dati — un input non attendibile che attraversa il confine di una funzione o un livello di persistenza sfugge senza problemi. L'analisi più profonda e inter-procedurale che invece *lo* intercetta è rimasta a lungo chiusa dentro strumenti proprietari.
 - **Gli agenti di sicurezza LLM** trovano ciò che i pattern matcher non rilevano, ma rileggono il tuo codice a ogni esecuzione. I token si accumulano a ogni file, a ogni commit, a ogni build di CI — e un modello probabilistico comunque non può promettere di aver intercettato tutto.
 
 OpenTaint ti offre la profondità di un agente LLM al costo di un analizzatore statico:
 
-- **Trova ciò che i pattern matcher non rilevano.** Un motore di dataflow formale e inter-procedurale traccia i dati non attendibili attraverso i confini delle funzioni, i livelli di persistenza, gli alias e il codice asincrono.
+- **Trova ciò che gli AST-pattern matcher non rilevano.** Un motore di dataflow formale e inter-procedurale traccia i dati non attendibili attraverso i confini delle funzioni, i livelli di persistenza, gli alias e il codice asincrono.
 - **Paga il modello una volta sola, non a ogni scansione.** Lascia che un agente distilli una singola scoperta in una regola di taint. Il motore deterministico riapplica poi quella regola sull'intera codebase — e su ogni commit successivo — in pochi minuti di CPU, a costo zero di token.
 - **Open source, tutto incluso.** Motore, regole e integrazioni CI arrivano come un unico stack sotto Apache 2.0 e MIT.
 
