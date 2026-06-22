@@ -13,6 +13,7 @@ VERSION="${2:?Usage: $0 <dist-dir> <version>}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NPM_SRC="$(cd "$SCRIPT_DIR/../npm" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OUT_DIR="${OPENTAINT_NPM_OUT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)/dist-npm}"
 SCOPE="@seqra"
 
@@ -72,7 +73,7 @@ mkdir -p "$main_dir/bin"
 cp "$NPM_SRC/bin/opentaint.js" "$main_dir/bin/opentaint.js"
 chmod +x "$main_dir/bin/opentaint.js"
 cp "$NPM_SRC/README.md" "$main_dir/README.md"
-cp "$NPM_SRC/LICENSE" "$main_dir/LICENSE"
+cp "$REPO_ROOT/LICENSE.md" "$main_dir/LICENSE.md"
 
 dep_args=()
 for dep in "${DEPS[@]}"; do
