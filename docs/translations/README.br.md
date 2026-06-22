@@ -186,6 +186,16 @@ Guias completos — instalação, uso, configuração, integração com CI/CD: *
 - **Comunidade:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-mail:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Histórico de Estrelas
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## Licença
 
 O [motor de análise principal](../../core/) é disponibilizado sob a [Licença Apache 2.0](../../LICENSE.md). O [CLI](../../cli/), [GitHub Action](../../github/), [template GitLab CI](../../gitlab/) e as [regras](../../rules/) são disponibilizados sob a [Licença MIT](../../cli/LICENSE).

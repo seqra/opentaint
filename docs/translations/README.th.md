@@ -186,6 +186,16 @@ npx skills add https://github.com/seqra/opentaint
 - **ชุมชน:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **อีเมล:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## ประวัติดาว
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## สัญญาอนุญาต
 
 [เอนจินวิเคราะห์หลัก](../../core/) เผยแพร่ภายใต้ [สัญญาอนุญาต Apache 2.0](../../LICENSE.md) [CLI](../../cli/), [GitHub Action](../../github/), [เทมเพลต GitLab CI](../../gitlab/) และ [กฎ](../../rules/) เผยแพร่ภายใต้ [สัญญาอนุญาต MIT](../../cli/LICENSE)

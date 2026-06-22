@@ -186,6 +186,16 @@ Komplette guider — installation, brug, konfiguration, CI/CD-integration: **[Do
 - **Fællesskab:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-mail:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Stjernehistorik
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## Licens
 
 Den [centrale analysemotor](../../core/) er udgivet under [Apache 2.0-licensen](../../LICENSE.md). [CLI](../../cli/), [GitHub Action](../../github/), [GitLab CI-skabelon](../../gitlab/) og [regler](../../rules/) er udgivet under [MIT-licensen](../../cli/LICENSE).

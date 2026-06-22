@@ -186,6 +186,16 @@ npx skills add https://github.com/seqra/opentaint
 - **Спільнота:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **Електронна пошта:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Історія зірок
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## Ліцензія
 
 [Ядро аналітичного рушія](../../core/) випущено під [ліцензією Apache 2.0](../../LICENSE.md). [CLI](../../cli/), [GitHub Action](../../github/), [шаблон GitLab CI](../../gitlab/) та [правила](../../rules/) випущені під [ліцензією MIT](../../cli/LICENSE).

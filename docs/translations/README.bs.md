@@ -186,6 +186,16 @@ Kompletni vodiči — instalacija, korištenje, konfiguracija, CI/CD integracija
 - **Zajednica:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-pošta:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Historija zvjezdica
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## Licenca
 
 [Jezgro mehanizma za analizu](../../core/) je objavljeno pod [Apache 2.0 licencom](../../LICENSE.md). [CLI](../../cli/), [GitHub Action](../../github/), [GitLab CI šablon](../../gitlab/) i [pravila](../../rules/) su objavljeni pod [MIT licencom](../../cli/LICENSE).

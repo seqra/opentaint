@@ -186,6 +186,16 @@ npx skills add https://github.com/seqra/opentaint
 - **社群：** [Discord](https://discord.gg/6BXDfbP4p9)
 - **電子郵件：** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Star 歷史
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## 授權條款
 
 [核心分析引擎](../../core/)基於 [Apache 2.0 授權條款](../../LICENSE.md)發布。[CLI](../../cli/)、[GitHub Action](../../github/)、[GitLab CI 範本](../../gitlab/)和[規則](../../rules/)基於 [MIT 授權條款](../../cli/LICENSE)發布。

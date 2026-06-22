@@ -186,6 +186,16 @@ npx skills add https://github.com/seqra/opentaint
 - **Κοινότητα:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **Email:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Ιστορικό αστεριών
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## Άδεια χρήσης
 
 Η [βασική μηχανή ανάλυσης](../../core/) κυκλοφορεί υπό την [Άδεια Apache 2.0](../../LICENSE.md). Το [CLI](../../cli/), το [GitHub Action](../../github/), το [πρότυπο GitLab CI](../../gitlab/) και οι [κανόνες](../../rules/) κυκλοφορούν υπό την [Άδεια MIT](../../cli/LICENSE).

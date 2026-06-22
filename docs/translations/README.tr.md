@@ -186,6 +186,16 @@ Tam kılavuzlar — kurulum, kullanım, yapılandırma, CI/CD entegrasyonu: **[D
 - **Topluluk:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-posta:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## Yıldız Geçmişi
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## Lisans
 
 [Çekirdek analiz motoru](../../core/), [Apache 2.0 Lisansı](../../LICENSE.md) altında yayınlanmıştır. [CLI](../../cli/), [GitHub Action](../../github/), [GitLab CI şablonu](../../gitlab/) ve [kurallar](../../rules/), [MIT Lisansı](../../cli/LICENSE) altında yayınlanmıştır.

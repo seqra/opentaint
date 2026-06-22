@@ -186,6 +186,16 @@ npx skills add https://github.com/seqra/opentaint
 - **커뮤니티:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **이메일:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## 스타 히스토리
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## 라이선스
 
 [핵심 분석 엔진](../../core/)은 [Apache 2.0 라이선스](../../LICENSE.md)로 배포됩니다. [CLI](../../cli/), [GitHub Action](../../github/), [GitLab CI 템플릿](../../gitlab/), [규칙](../../rules/)은 [MIT 라이선스](../../cli/LICENSE)로 배포됩니다.

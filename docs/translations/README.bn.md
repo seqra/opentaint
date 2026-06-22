@@ -186,6 +186,16 @@ npx skills add https://github.com/seqra/opentaint
 - **কমিউনিটি:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **ইমেইল:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
 
+## তারকা ইতিহাস
+
+<a href="https://www.star-history.com/#seqra/opentaint&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=seqra/opentaint&type=Date" />
+  </picture>
+</a>
+
 ## লাইসেন্স
 
 [কোর বিশ্লেষণ ইঞ্জিন](../../core/) [Apache 2.0 লাইসেন্সের](../../LICENSE.md) অধীনে প্রকাশিত। [CLI](../../cli/), [GitHub Action](../../github/), [GitLab CI টেমপ্লেট](../../gitlab/) এবং [নিয়ম](../../rules/) [MIT লাইসেন্সের](../../cli/LICENSE) অধীনে প্রকাশিত।
