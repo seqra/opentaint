@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.ap.ifds.analysis.alias
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.util.getOrCreate
+import org.opentaint.dataflow.util.int2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
@@ -12,6 +14,8 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
     abstract fun compute(): AnalysisResult?
 
     val aliasInfo: AnalysisResult? by lazy { compute() }
+
+    val convertedAliases = int2ObjectMap<List<AliasInfo>>()
 
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
         stateBeforeStatement(statement)?.run { findLocalAlias(manager, base.idx) }
@@ -132,7 +136,9 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
     abstract fun convert(info: AAInfo, depth: Int, convertInstance: (Int) -> List<AliasInfo>): List<AliasInfo>
 
     private fun State.convert(infoIdx: Int, manager: AAInfoManager, depth: Int): List<AliasInfo> =
-        convert(manager.getElementUncheck(infoIdx), manager, depth)
+        convertedAliases.getOrCreate(infoIdx) {
+            convert(manager.getElementUncheck(infoIdx), manager, depth)
+        }
 
     private fun State.convert(info: AAInfo, manager: AAInfoManager, depth: Int): List<AliasInfo> =
         convert(info, depth) { instance ->
