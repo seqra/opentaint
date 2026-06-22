@@ -1032,11 +1032,13 @@ class NormalMethodAnalyzer(
                 apManager, analysisContext, sub.currentEdge.statement
             )
 
+            val summariesToApply = applicableSummaries.flatMap { handler.prepareFactToFactSummary(it) }
+
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
                 methodInitialFactBase = sub.methodInitialFactBase,
-                methodSummaries = applicableSummaries,
+                methodSummaries = summariesToApply,
                 handleSummaryEdge = { currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge ->
                     handler.handleFactToFact(sub.currentEdge.initialFactAp, currentFactAp, summaryEffect, summaryEdge)
                 }
@@ -1069,11 +1071,13 @@ class NormalMethodAnalyzer(
                 apManager, analysisContext, sub.currentEdge.statement
             )
 
+            val summariesToApply = applicableSummaries.flatMap { handler.prepareFactToFactSummary(it) }
+
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
                 methodInitialFactBase = sub.methodInitialFactBase,
-                methodSummaries = applicableSummaries,
+                methodSummaries = summariesToApply,
                 handleSummaryEdge = { currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge ->
                     handler.handleNDFactToFact(sub.currentEdge.initialFacts, currentFactAp, summaryEffect, summaryEdge)
                 }

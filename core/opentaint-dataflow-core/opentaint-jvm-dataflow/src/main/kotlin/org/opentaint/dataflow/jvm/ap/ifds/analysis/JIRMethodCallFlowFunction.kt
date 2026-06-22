@@ -276,7 +276,7 @@ class JIRMethodCallFlowFunction(
     ) {
         val factReader = FinalFactReader(factAp, apManager)
 
-        unresolvedCallDefaultFactPropagation(factReader, factAp, addCallToReturn)
+        unresolvedCallDefaultFactPropagation(factAp, addCallToReturn)
 
         val method = callExpr.callee
         val conditionRewriter = JIRMarkAwareConditionRewriter(
@@ -349,11 +349,14 @@ class JIRMethodCallFlowFunction(
     }
 
     private fun unresolvedCallDefaultFactPropagation(
-        factReader: FinalFactReader,
         factAp: FinalFactAp,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
     ) {
-        addCallToReturn(factReader, factAp, null)
+        val rewrittenFacts = summaryRewriter.rewriteSummaryFact(factAp)
+        for ((unrefinedFact, factRefinement) in rewrittenFacts) {
+            val fact = factRefinement.refineFact(unrefinedFact)
+            addCallToReturn(factRefinement, fact, null)
+        }
     }
 
     private fun FinalFactAp.mapExitToReturnFact(): FinalFactAp? =
