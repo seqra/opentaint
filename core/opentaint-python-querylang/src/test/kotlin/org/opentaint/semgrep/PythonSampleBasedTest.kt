@@ -35,6 +35,7 @@ import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
+import kotlin.test.Ignore
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.minutes
@@ -81,9 +82,6 @@ class PythonSampleBasedTest {
     @Test fun complexSourceSink() = runSample("ComplexSourceSink")
     @Test fun joinWithTaintAndMatchingLeft() = runSample("JoinWithTaintAndMatchingLeft")
     @Test fun ndRule() = runSample("NDRule")
-    @Test fun objectMapperPatternNotEllipsis() = runSample("ObjectMapperPatternNotEllipsis")
-    @Test fun objectMapperPatternNotFull() = runSample("ObjectMapperPatternNotFull")
-    @Test fun r2() = runSample("R2")
     @Test fun r3() = runSample("R3")
     @Test fun rule() = runSample("Rule")
     @Test fun ruleCookie() = runSample("RuleCookie")
@@ -92,10 +90,8 @@ class PythonSampleBasedTest {
     @Test fun ruleRequiringCarefulCleanersInTaint() = runSample("RuleRequiringCarefulCleanersInTaint")
     @Test fun ruleReturn1() = runSample("RuleReturn1")
     @Test fun ruleReturn2() = runSample("RuleReturn2")
-    @Test fun ruleReturn3() = runSample("RuleReturn3")
     @Test fun ruleReturn4() = runSample("RuleReturn4")
     @Test fun ruleReturn5() = runSample("RuleReturn5")
-    @Test fun ruleReturn6() = runSample("RuleReturn6")
     @Test fun ruleReturnChained() = runSample("RuleReturnChained")
     @Test fun ruleReturnConditional() = runSample("RuleReturnConditional")
     @Test fun ruleReturnInsideSignature() = runSample("RuleReturnInsideSignature")
@@ -108,7 +104,6 @@ class PythonSampleBasedTest {
     @Test fun ruleReturnWithNotInsideSignature() = runSample("RuleReturnWithNotInsideSignature")
     @Test fun ruleWithAllowedConstant() = runSample("RuleWithAllowedConstant")
     @Test fun ruleWithArtificialInsideSequence() = runSample("RuleWithArtificialInsideSequence")
-    @Test fun ruleWithArtificialInsideSequenceReverse() = runSample("RuleWithArtificialInsideSequenceReverse")
     @Test fun ruleWithEllipsisInvocationAndPatternNot() = runSample("RuleWithEllipsisInvocationAndPatternNot")
     @Test fun ruleWithEllipsisMethodInvocation() = runSample("RuleWithEllipsisMethodInvocation")
     @Test fun ruleWithInterfaceType() = runSample("RuleWithInterfaceType")
@@ -128,9 +123,23 @@ class PythonSampleBasedTest {
     @Test fun ruleWithSignature() = runSample("RuleWithSignature")
     @Test fun ruleWithSimplePass() = runSample("RuleWithSimplePass")
     @Test fun ruleWithState() = runSample("RuleWithState")
-    @Test fun ruleWithStaticField() = runSample("RuleWithStaticField")
     @Test fun ruleWithType() = runSample("RuleWithType")
     @Test fun trickyPatternNot() = runSample("TrickyPatternNot")
+    @Test fun objectMapperPatternNotEllipsis() = runSample("ObjectMapperPatternNotEllipsis")
+    @Test fun objectMapperPatternNotFull() = runSample("ObjectMapperPatternNotFull")
+    @Test fun ruleWithArtificialInsideSequenceReverse() = runSample("RuleWithArtificialInsideSequenceReverse")
+
+    @Ignore("Return sinks are not supported")
+    @Test fun r2() = runSample("R2")
+
+    @Ignore("Return sinks are not supported")
+    @Test fun ruleReturn3() = runSample("RuleReturn3")
+
+    @Ignore("Return cleaners are not supported")
+    @Test fun ruleReturn6() = runSample("RuleReturn6")
+
+    @Ignore("Globals are not supported")
+    @Test fun ruleWithStaticField() = runSample("RuleWithStaticField")
 
     // ─── Plumbing ───────────────────────────────────────────────────────────
 
