@@ -103,17 +103,20 @@
 
 ---
 
-## Dlaczego OpenTaint
+## Dlaczego OpenTaint?
 
-AI generuje kod produkcyjny szybciej, niż dzisiejsze narzędzia bezpieczeństwa są w stanie nadążyć.
+TL;DR: OpenTaint to alternatywa o otwartym kodzie źródłowym dla *Semgrep Pro* i *CodeQL* — formalny, międzyproceduralny silnik analizy taint, który możesz dostosować i hostować samodzielnie, zbudowany tak, by to agenci AI prowadzili Twoją analizę bezpieczeństwa, nie spalając tokenów przy każdym skanowaniu.
 
-Agenci bezpieczeństwa LLM znajdują luki, które umykają ludziom, zużywają tokeny na każdy plik i wciąż nie mogą zagwarantować, że wykryją wszystko.
+AI generuje kod produkcyjny szybciej, niż zespoły bezpieczeństwa są w stanie nadążyć, a dwa rodzaje narzędzi stworzonych do wychwytywania jej błędów wymuszają niekorzystny kompromis:
 
-Im więcej kodu pisze AI, tym bardziej potrzebujesz metod formalnych u podstaw.
+- **Narzędzia dopasowywania wzorców** (Semgrep OSS, ast-grep, lintery) są darmowe i szybkie, ale dopasowują składnię, a nie przepływ danych — niezaufane dane wejściowe, które przekraczają granicę funkcji lub warstwę persystencji, przechodzą niezauważone. Głębsza, międzyproceduralna analiza, która *to* wychwytuje, długo była zamknięta wewnątrz narzędzi własnościowych.
+- **Agenci bezpieczeństwa LLM** znajdują to, co pomijają narzędzia dopasowywania wzorców, ale przy każdym uruchomieniu ponownie czytają Twój kod. Tokeny się sumują z każdym plikiem, każdym commitem, każdym buildem CI — a model probabilistyczny i tak nie może obiecać, że wychwycił wszystko.
 
-- **Znajdź to, co pomijają silniki dopasowywania wzorców AST.** Międzyproceduralny silnik analizy przepływu danych śledzi niezaufane dane przez granice funkcji, warstwy persystencji, aliasy i kod asynchroniczny.
-- **Jedno wykrycie to pełne pokrycie.** Reguły wzorców AST pozwalają przekształcić każdą odkrytą lukę w regułę, którą silnik zastosuje do całej bazy kodu, deterministycznie, w minuty czasu procesora.
-- **Otwarty kod źródłowy, wszystko w zestawie.** Silnik, reguły, integracje CI — cały stos jest udostępniony na licencjach Apache 2.0 i MIT. Brak płatnego poziomu do odblokowania śledzenia taint, brak ograniczeń w pisaniu własnych reguł.
+OpenTaint daje Ci głębię agenta LLM w cenie analizatora statycznego:
+
+- **Znajdź to, co pomijają narzędzia dopasowywania wzorców.** Formalny, międzyproceduralny silnik analizy przepływu danych śledzi niezaufane dane przez granice funkcji, warstwy persystencji, aliasy i kod asynchroniczny.
+- **Zapłać za model raz, a nie przy każdym skanowaniu.** Pozwól agentowi przekształcić pojedyncze wykrycie w regułę taint. Deterministyczny silnik następnie odtwarza tę regułę na całej bazie kodu — i na każdym kolejnym commicie — w minuty czasu procesora, przy zerowym koszcie tokenów.
+- **Otwarty kod źródłowy, wszystko w zestawie.** Silnik, reguły i integracje CI tworzą jeden stos na licencjach Apache 2.0 i MIT.
 
 ## Szybki start
 

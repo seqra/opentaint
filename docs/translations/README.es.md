@@ -103,17 +103,20 @@
 
 ---
 
-## Por que OpenTaint
+## Por que OpenTaint?
 
-La IA genera codigo de produccion mas rapido de lo que las herramientas de seguridad actuales pueden seguir.
+TL;DR: OpenTaint es una alternativa de codigo abierto a *Semgrep Pro* y *CodeQL* — un motor de taint interprocedimental formal que puedes personalizar y autoalojar, creado para que los agentes de IA dirijan tu analisis de seguridad sin quemar tokens en cada escaneo.
 
-Los agentes de seguridad LLM encuentran vulnerabilidades que los humanos pasan por alto, consumen tokens en cada archivo y aun asi no pueden garantizar que lo detecten todo.
+La IA genera codigo de produccion mas rapido de lo que los equipos de seguridad pueden seguir, y los dos tipos de herramientas creadas para atrapar lo que falla cada una impone un mal compromiso:
 
-Cuanto mas codigo escribe la IA, mas se necesitan metodos formales como base.
+- **Los motores de coincidencia de patrones** (Semgrep OSS, ast-grep, linters) son gratuitos y rapidos, pero coinciden con la sintaxis, no con el flujo de datos — la entrada no confiable que cruza un limite de funcion o una capa de persistencia pasa de largo. El analisis mas profundo e interprocedimental que *si* lo atrapa lleva mucho tiempo encerrado en herramientas propietarias.
+- **Los agentes de seguridad LLM** encuentran lo que los motores de coincidencia de patrones pasan por alto, pero releen tu codigo en cada ejecucion. Los tokens se acumulan con cada archivo, cada commit, cada build de CI — y un modelo probabilistico aun no puede prometer que lo haya detectado todo.
 
-- **Encuentra lo que los motores de coincidencia de patrones AST pasan por alto.** El motor de flujo de datos interprocedimental rastrea datos no confiables a traves de limites de funciones, capas de persistencia, alias y codigo asincrono.
-- **Un hallazgo se convierte en cobertura total.** Las reglas de patrones AST permiten convertir cada vulnerabilidad descubierta en una regla, y el motor la aplica de forma determinista en toda la base de codigo en minutos de CPU.
-- **Codigo abierto, con todo incluido.** Motor, reglas, integraciones de CI — toda la pila se distribuye bajo Apache 2.0 y MIT. Sin nivel de pago para desbloquear el rastreo de taint, sin restricciones para escribir tus propias reglas.
+OpenTaint te da la profundidad de un agente LLM al costo de un analizador estatico:
+
+- **Encuentra lo que los motores de coincidencia de patrones pasan por alto.** Un motor de flujo de datos interprocedimental formal rastrea datos no confiables a traves de limites de funciones, capas de persistencia, alias y codigo asincrono.
+- **Paga el modelo una vez, no en cada escaneo.** Deja que un agente destile un solo hallazgo en una regla de taint. El motor determinista luego reproduce esa regla en toda la base de codigo — y en cada commit posterior — en minutos de CPU, con cero costo de tokens.
+- **Codigo abierto, con todo incluido.** Motor, reglas e integraciones de CI vienen como una sola pila bajo Apache 2.0 y MIT.
 
 ## Inicio rapido
 

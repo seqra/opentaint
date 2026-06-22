@@ -103,17 +103,20 @@
 
 ---
 
-## Zašto OpenTaint
+## Zašto OpenTaint?
 
-AI generiše produkcijski kod brže nego što današnji sigurnosni alati mogu pratiti.
+TL;DR: OpenTaint je alternativa otvorenog koda za *Semgrep Pro* i *CodeQL* — formalni inter-proceduralni mehanizam za taint analizu koji možete prilagoditi i sami hostovati, izgrađen tako da AI agenti vode vašu sigurnosnu analizu bez trošenja tokena na svako skeniranje.
 
-LLM sigurnosni agenti pronalaze ranjivosti koje ljudi propuštaju, troše tokene na svaki fajl, i još uvijek ne mogu garantovati da uhvate sve.
+AI generiše produkcijski kod brže nego što sigurnosni timovi mogu pratiti, a obje vrste alata izgrađene da uhvate ono što on pogriješi nameću loš kompromis:
 
-Što više AI piše kod, to više trebate formalne metode u osnovi.
+- **Mehanizmi za podudaranje obrazaca** (Semgrep OSS, ast-grep, linteri) su besplatni i brzi, ali oni podudaraju sintaksu, a ne tok podataka — nepouzdani unos koji prelazi granicu funkcije ili sloj persistencije prošulja se pored njih. Dublja, inter-proceduralna analiza koja ga *zaista* hvata već dugo je zaključana unutar vlasničkih alata.
+- **LLM sigurnosni agenti** pronalaze ono što mehanizmi za podudaranje obrazaca propuste, ali iznova čitaju vaš kod pri svakom pokretanju. Tokeni se gomilaju sa svakim fajlom, svakim commitom, svakom CI izgradnjom — a probabilistički model i dalje ne može obećati da je uhvatio sve.
 
-- **Pronađite ono što mehanizmi za podudaranje AST-obrazaca propuštaju.** Inter-proceduralni mehanizam za tok podataka prati nepouzdane podatke preko granica funkcija, slojeva persistencije, aliasa i asinhronog koda.
-- **Jedan nalaz postaje potpuna pokrivenost.** Pravila AST-obrazaca omogućavaju vam da svaku otkrivenu ranjivost pretvorite u pravilo, a mehanizam ga primjenjuje na cijelu bazu koda, deterministički, za nekoliko minuta CPU vremena.
-- **Otvoreni kod, sve uključeno.** Mehanizam, pravila, CI integracije — cijeli stek se isporučuje pod Apache 2.0 i MIT licencom. Nema plaćenog nivoa za otključavanje taint praćenja, nema prepreka za pisanje vlastitih pravila.
+OpenTaint vam daje dubinu LLM agenta po cijeni statičkog analizatora:
+
+- **Pronađite ono što mehanizmi za podudaranje obrazaca propuštaju.** Formalni inter-proceduralni mehanizam za tok podataka prati nepouzdane podatke preko granica funkcija, slojeva persistencije, aliasa i asinhronog koda.
+- **Platite model jednom, a ne pri svakom skeniranju.** Pustite agenta da destilira jedan nalaz u taint pravilo. Deterministički mehanizam zatim ponavlja to pravilo kroz cijelu bazu koda — i kroz svaki naredni commit — za nekoliko minuta CPU vremena, uz nulti trošak tokena.
+- **Otvoreni kod, sve uključeno.** Mehanizam, pravila i CI integracije dolaze kao jedan stek pod Apache 2.0 i MIT licencom.
 
 ## Brzi početak
 

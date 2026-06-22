@@ -103,17 +103,20 @@
 
 ---
 
-## Hvorfor OpenTaint
+## Hvorfor OpenTaint?
 
-AI genererer produktionskode hurtigere end nutidens sikkerhedsværktøjer kan følge med.
+TL;DR: OpenTaint er et open source-alternativ til *Semgrep Pro* og *CodeQL* — en formel inter-procedural taint-motor, du kan tilpasse og selv hoste, bygget så AI-agenter driver din sikkerhedsanalyse uden at brænde tokens af på hver eneste scanning.
 
-LLM-sikkerhedsagenter finder sårbarheder mennesker overser, bruger tokens på hver fil og kan stadig ikke garantere at de fanger alt.
+AI genererer produktionskode hurtigere end sikkerhedsteams kan følge med, og de to slags værktøjer, der er bygget til at fange dens fejl, tvinger hver især til en dårlig afvejning:
 
-Jo mere AI skriver kode, desto mere har du brug for formelle metoder som fundament.
+- **Mønstergenkendere** (Semgrep OSS, ast-grep, linters) er gratis og hurtige, men de matcher syntaks, ikke dataflow — utroværdigt input, der krydser en funktionsgrænse eller et persistenslag, glider lige forbi. Den dybere, inter-procedurale analyse, der *faktisk* fanger det, har længe været låst inde i proprietære værktøjer.
+- **LLM-sikkerhedsagenter** finder det, mønstergenkendere overser, men de genlæser din kode ved hver kørsel. Tokens hober sig op med hver fil, hver commit, hvert CI-build — og en probabilistisk model kan stadig ikke love, at den fangede alt.
 
-- **Find det AST-mønstergenkendelsesmotorer overser.** Den inter-procedurale dataflow-motor sporer utroværdige data på tværs af funktionsgrænser, persistenslag, aliasser og asynkron kode.
-- **Ét fund bliver til total dækning.** AST-mønsterregler lader dig håndhæve enhver afdækket sårbarhed som en regel, hvor motoren anvender den på tværs af hele kodebasen, deterministisk, på få minutters CPU-tid.
-- **Open source, alt inkluderet.** Motor, regler, CI-integrationer — hele stakken leveres under Apache 2.0 og MIT. Ingen betalt plan for at låse op for taint-sporing, ingen begrænsninger på at skrive dine egne regler.
+OpenTaint giver dig en LLM-agents dybde til en statisk analysators pris:
+
+- **Find det, mønstergenkendere overser.** En formel inter-procedural dataflow-motor sporer utroværdige data på tværs af funktionsgrænser, persistenslag, aliasser og asynkron kode.
+- **Betal modellen én gang, ikke ved hver scanning.** Lad en agent destillere ét enkelt fund til en taint-regel. Den deterministiske motor afspiller derefter den regel på tværs af hele kodebasen — og hver commit efter den — på få minutters CPU-tid, til nul token-omkostning.
+- **Open source, alt inkluderet.** Motor, regler og CI-integrationer kommer som én stak under Apache 2.0 og MIT.
 
 ## Hurtig start
 

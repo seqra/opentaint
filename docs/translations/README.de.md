@@ -103,17 +103,20 @@
 
 ---
 
-## Warum OpenTaint
+## Warum OpenTaint?
 
-KI generiert Produktionscode schneller, als heutige Sicherheitswerkzeuge mithalten konnen.
+TL;DR: OpenTaint ist eine Open-Source-Alternative zu *Semgrep Pro* und *CodeQL* — eine formale interprozedurale Taint-Engine, die Sie anpassen und selbst hosten konnen, gebaut dafur, dass KI-Agenten Ihre Sicherheitsanalyse steuern, ohne bei jedem Scan Tokens zu verbrennen.
 
-LLM-Sicherheitsagenten finden Schwachstellen, die Menschen ubersehen, verbrauchen bei jeder Datei Tokens und konnen dennoch nicht garantieren, dass sie alles erkennen.
+KI generiert Produktionscode schneller, als Sicherheitsteams mithalten konnen, und die beiden Arten von Werkzeugen, die entwickelt wurden, um die dabei entstehenden Fehler zu finden, erzwingen jeweils einen schlechten Kompromiss:
 
-Je mehr KI Code schreibt, desto mehr braucht man formale Methoden als Grundlage.
+- **Pattern-Matcher** (Semgrep OSS, ast-grep, Linter) sind kostenlos und schnell, aber sie gleichen Syntax ab, nicht Datenfluss — nicht vertrauenswurdige Eingaben, die eine Funktionsgrenze oder eine Persistenzschicht uberschreiten, rutschen einfach durch. Die tiefere, interprozedurale Analyse, die sie *doch* findet, war lange in proprietaren Werkzeugen eingeschlossen.
+- **LLM-Sicherheitsagenten** finden, was Pattern-Matcher ubersehen, aber sie lesen Ihren Code bei jedem Lauf erneut. Die Tokens summieren sich mit jeder Datei, jedem Commit, jedem CI-Build — und ein probabilistisches Modell kann trotzdem nicht versprechen, dass es alles erfasst hat.
 
-- **Findet, was AST-Pattern-Matching-Engines ubersehen.** Die interprozedurale Dataflow-Engine verfolgt nicht vertrauenswurdige Daten uber Funktionsgrenzen, Persistenzschichten, Aliase und asynchronen Code hinweg.
-- **Ein Fund wird zur vollstandigen Abdeckung.** AST-Pattern-Regeln ermoglichen es, jede entdeckte Schwachstelle als Regel umzusetzen, wobei die Engine sie deterministisch in wenigen CPU-Minuten auf die gesamte Codebasis anwendet.
-- **Open Source, alles inklusive.** Engine, Regeln, CI-Integrationen — der gesamte Stack wird unter Apache 2.0 und MIT ausgeliefert. Kein kostenpflichtiges Tier zum Freischalten der Taint-Verfolgung, keine Einschrankungen beim Erstellen eigener Regeln.
+OpenTaint gibt Ihnen die Tiefe eines LLM-Agenten zum Preis eines statischen Analyzers:
+
+- **Findet, was Pattern-Matcher ubersehen.** Eine formale interprozedurale Dataflow-Engine verfolgt nicht vertrauenswurdige Daten uber Funktionsgrenzen, Persistenzschichten, Aliase und asynchronen Code hinweg.
+- **Zahlen Sie das Modell einmal, nicht bei jedem Scan.** Lassen Sie einen Agenten einen einzelnen Fund zu einer Taint-Regel destillieren. Die deterministische Engine wendet diese Regel dann auf die gesamte Codebasis an — und auf jeden Commit danach — in wenigen CPU-Minuten, zu null Token-Kosten.
+- **Open Source, alles inklusive.** Engine, Regeln und CI-Integrationen kommen als ein Stack unter Apache 2.0 und MIT.
 
 ## Schnellstart
 

@@ -103,17 +103,20 @@
 
 ---
 
-## Neden OpenTaint
+## Neden OpenTaint?
 
-Yapay zeka, üretim kodunu günümüzün güvenlik araçlarının takip edemeyeceği hızda üretiyor.
+TL;DR: OpenTaint, *Semgrep Pro* ve *CodeQL*'e açık kaynaklı bir alternatiftir — özelleştirebileceğiniz ve kendi sunucunuzda barındırabileceğiniz, formal prosedürler arası bir taint motorudur; yapay zeka ajanlarının her taramada token harcamadan güvenlik analizinizi yürütmesi için tasarlanmıştır.
 
-LLM güvenlik ajanları insanların kaçırdığı güvenlik açıklarını buluyor, her dosya için token harcıyor ve yine de her şeyi yakaladıklarını garanti edemiyor.
+Yapay zeka, üretim kodunu güvenlik ekiplerinin takip edebileceğinden daha hızlı üretiyor ve onun hatalarını yakalamak için geliştirilen iki tür araç da kötü bir takastan kaçınamıyor:
 
-Yapay zeka ne kadar çok kod yazarsa, altında formal yöntemlere o kadar çok ihtiyaç duyarsınız.
+- **Kalıp eşleyiciler** (Semgrep OSS, ast-grep, linter'lar) ücretsiz ve hızlıdır, ancak veri akışını değil söz dizimini eşleştirir — bir fonksiyon sınırını veya bir kalıcılık katmanını aşan güvenilmeyen girdi doğrudan gözden kaçar. Bunu yakalayan daha derin, prosedürler arası analiz ise uzun süredir tescilli araçların içine kilitlenmiş durumda.
+- **LLM güvenlik ajanları** kalıp eşleyicilerin kaçırdığını bulur, ancak her çalıştırmada kodunuzu yeniden okur. Token'lar her dosyada, her commit'te, her CI derlemesinde birikir — ve olasılıksal bir model yine de her şeyi yakaladığına söz veremez.
 
-- **AST kalıp eşleme motorlarının kaçırdığını bulun.** Prosedürler arası veri akışı motoru, güvenilmeyen verileri fonksiyon sınırları, kalıcılık katmanları, takma adlar ve asenkron kod boyunca takip eder.
-- **Bir bulgu toplam kapsama dönüşür.** AST kalıp kuralları, keşfedilen her güvenlik açığını bir kural olarak tanımlamanıza olanak tanır; motor bunu tüm kod tabanına deterministik olarak, dakikalar içinde uygular.
-- **Açık kaynak, her şey dahil.** Motor, kurallar, CI entegrasyonları — tüm yığın Apache 2.0 ve MIT altında dağıtılır. Taint takibini açmak için ücretli katman yok, kendi kurallarınızı yazmak için engel yok.
+OpenTaint, bir LLM ajanının derinliğini bir statik analizörün maliyetiyle sunar:
+
+- **Kalıp eşleyicilerin kaçırdığını bulun.** Formal, prosedürler arası bir veri akışı motoru, güvenilmeyen verileri fonksiyon sınırları, kalıcılık katmanları, takma adlar ve asenkron kod boyunca takip eder.
+- **Modelin bedelini bir kez ödeyin, her taramada değil.** Bir ajanın tek bir bulguyu bir taint kuralına dönüştürmesine izin verin. Deterministik motor bu kuralı ardından tüm kod tabanında — ve ondan sonraki her commit'te — dakikalar süren CPU işlemiyle, sıfır token maliyetiyle yeniden uygular.
+- **Açık kaynak, her şey dahil.** Motor, kurallar ve CI entegrasyonları, Apache 2.0 ve MIT altında tek bir yığın olarak gelir.
 
 ## Hızlı Başlangıç
 
