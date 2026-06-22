@@ -207,6 +207,12 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test concrete placeholder`() = runTest<example.RuleWithConcretePlaceholder>()
 
+    @Test
+    fun `test rule with primitive`() = runTest<example.RuleWithPrimitive>()
+
+    @Test
+    fun `test rule no primitive`() = runTest<example.RuleNoPrimitive>()
+
     @AfterAll
     fun close() {
         closeRunner()

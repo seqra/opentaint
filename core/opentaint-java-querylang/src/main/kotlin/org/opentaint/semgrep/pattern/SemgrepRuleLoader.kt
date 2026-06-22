@@ -3,6 +3,7 @@ package org.opentaint.semgrep.pattern
 import com.charleskorn.kaml.YamlMap
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
+import org.opentaint.dataflow.jvm.ap.ifds.taint.PrimitiveTaintExt
 import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
@@ -139,6 +140,7 @@ class SemgrepRuleLoader(
         val ruleId: String,
         val shortRuleId: String,
         val language: String?,
+        val primitiveTracking: Boolean,
         val overridesRuleId: String?,
         val isLibraryRule: Boolean,
         val isDisabled: Boolean,
@@ -303,7 +305,7 @@ class SemgrepRuleLoader(
         val strategy = strategyFor(rule.info) ?: return null
         val typeOps = strategy.typeOps
         return runCatching {
-            val ctx = RuleConversionCtx(rule.info.ruleId, rule.info.sinkMeta, a2trTrace, typeOps)
+            val ctx = RuleConversionCtx(rule.info.ruleId, rule.modeModifier(), rule.info.sinkMeta, a2trTrace, typeOps)
             val rules = convertNormalRuleWithStrategy(strategy, ctx, rule.rule)
             rules to rule.info.metadata
         }.onFailure { ex ->
@@ -330,7 +332,7 @@ class SemgrepRuleLoader(
         val strategy = strategyFor(rule.info) ?: return null
         val typeOps = strategy.typeOps
         return runCatching {
-            val ctx = RuleConversionCtx(rule.info.ruleId, rule.info.sinkMeta, a2trTrace, typeOps)
+            val ctx = RuleConversionCtx(rule.info.ruleId, rule.modeModifier(), rule.info.sinkMeta, a2trTrace, typeOps)
             val rules = convertJoinRuleWithStrategy(strategy, ctx, taintAutomata)
                 ?: return null
             rules to rule.info.metadata
@@ -448,9 +450,11 @@ class SemgrepRuleLoader(
         val metadata = RuleMetadata(rule.ruleId, semgrepRule.id, semgrepRule.message, severity, semgrepRule.metadata)
         val overrides = semgrepRule.overrides(rule.pathInfo.ruleRelativePath)
         val language = strategyFor(semgrepRule)?.language
+        val primitiveTracking = semgrepRule.primitiveTrackingEnabled()
         return RuleInfo(
             rule.ruleId, semgrepRule.id,
             language = language,
+            primitiveTracking = primitiveTracking,
             overridesRuleId = overrides,
             isLibraryRule = forceLibraryMode || semgrepRule.isLibraryRule(),
             isDisabled = semgrepRule.isDisabled(),
@@ -470,6 +474,9 @@ class SemgrepRuleLoader(
         val overrides = options?.getScalar("overrides") ?: return null
         return resolveRefRuleId(overrides.content, ruleRelativePath)
     }
+
+    private fun SemgrepYamlRule.primitiveTrackingEnabled(): Boolean =
+        options?.getBoolKeyOrFalse("primitive-tracking") ?: false
 
     private fun SemgrepYamlRule.cweInfo(): List<Int>? {
         val rawCwes = metadata?.readStrings("cwe") ?: return null
@@ -503,6 +510,11 @@ class SemgrepRuleLoader(
 
     private fun ruleIdAllow(rule: Rule<*>, ruleIdFilter: List<String>): Boolean =
         ruleIdFilter.isEmpty() || rule.info.ruleId in ruleIdFilter
+
+    private fun Rule<*>.modeModifier(): String? {
+        if (!info.primitiveTracking) return null
+        return PrimitiveTaintExt.PRIMITIVE_TRACKING_ENABLED_MODE
+    }
 
     companion object {
         private val cweRegex = Regex("CWE-(\\d+).*", RegexOption.IGNORE_CASE)

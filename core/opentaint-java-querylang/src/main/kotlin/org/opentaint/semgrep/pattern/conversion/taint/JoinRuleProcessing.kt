@@ -97,7 +97,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
         val leftItem = rule.items.getValue(leftItemRef.itemId)
         val leftAutomata = leftItem.rule
 
-        val leftCtx = RuleConversionCtx("$ruleId#${leftItemRef.itemId}", meta, trace, typeOps)
+        val leftCtx = RuleConversionCtx("$ruleId#${leftItemRef.itemId}", modeModifier, meta, trace, typeOps)
         val (leftRules, leftFinalMarks) = leftCtx.convertCompositionLeftRule(
             strategy, leftAutomata, leftItemRef.metaVar
         ) ?: return null
@@ -153,7 +153,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
             edgesToFinalAccept = emptyList()
         )
         TaintRuleGenerationCtx(
-            RuleUniqueMarkPrefix(ruleId, idx),
+            RuleUniqueMarkPrefix(ruleId, modeModifier, idx),
             taintEdgesWithAssign,
             compositionStrategy = null,
             strategy,
@@ -217,7 +217,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.composeRuleJoinRight(
     idx: Int
 ): TaintRuleGenerationCtx<Item, Cond, Assign, Clean> {
     val composition = JoinRightCompositionStrategy(r, initialVar, leftFinalMarks, taintStrategy)
-    return TaintRuleGenerationCtx(RuleUniqueMarkPrefix(ruleId, idx), r, composition, taintStrategy)
+    return TaintRuleGenerationCtx(RuleUniqueMarkPrefix(ruleId, modeModifier, idx), r, composition, taintStrategy)
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRightTaintRule(

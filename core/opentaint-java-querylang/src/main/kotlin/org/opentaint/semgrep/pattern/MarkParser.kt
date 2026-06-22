@@ -15,6 +15,7 @@ sealed interface Mark {
 
     data class RuleUniqueMarkPrefix(
         val ruleId: String,
+        val modeModifier: String?,
         val idx: Int,
         val classifier: String? = null,
     ) {
@@ -22,13 +23,13 @@ sealed interface Mark {
         private val ruleClassifier = "${classifierPrefix}$idx"
 
         fun metaVarState(metaVar: MetavarAtom, state: Int): GeneratedMark =
-            GeneratedMark(ruleId, ruleClassifier, metaVarStr(metaVar), "$state")
+            GeneratedMark(ruleId, ruleClassifier, metaVarStr(metaVar), "$state", modeModifier)
 
         fun artificialState(state: String): GeneratedMark =
-            GeneratedMark(ruleId, ruleClassifier, StateName, state)
+            GeneratedMark(ruleId, ruleClassifier, StateName, state, modeModifier)
 
         fun createTaintMark(label: String): GeneratedMark =
-            GeneratedMark(ruleId, ruleClassifier, TaintName, label)
+            GeneratedMark(ruleId, ruleClassifier, TaintName, label, modeModifier)
     }
 
     data class GeneratedMark(
@@ -36,6 +37,7 @@ sealed interface Mark {
         val ruleClassifier: String,
         val variablesStr: String,
         val value: String,
+        val modeModifier: String?,
     ) {
         fun taintMarkStr(): String = markToStr(this)
     }
@@ -53,7 +55,7 @@ sealed interface Mark {
             MetavarAtom.create(str.split(MetaVarSeparator).map { MetavarAtom.create(it) })
 
         private fun markToStr(mark: GeneratedMark): String =
-            listOf(mark.ruleId, mark.ruleClassifier, mark.variablesStr, mark.value)
+            listOfNotNull(mark.ruleId, mark.ruleClassifier, mark.variablesStr, mark.value, mark.modeModifier)
                 .joinToString(GeneratedMarkPartSeparator)
 
         fun parseMark(markStr: String): GeneratedMark =
@@ -62,9 +64,19 @@ sealed interface Mark {
 
         private fun tryParseMark(markStr: String): GeneratedMark? {
             val parts = markStr.split(GeneratedMarkPartSeparator)
-            if (parts.size != 4) return null
-            val (rid, rc, vs, v) = parts
-            return GeneratedMark(rid, rc, vs, v)
+            return when (parts.size) {
+                4 -> {
+                    val (rid, rc, vs, v) = parts
+                    GeneratedMark(rid, rc, vs, v, modeModifier = null)
+                }
+
+                5 -> {
+                    val (rid, rc, vs, v, mm) = parts
+                    GeneratedMark(rid, rc, vs, v, mm)
+                }
+
+                else -> null
+            }
         }
 
         fun getMarkFromString(rawMark: String): Mark {
