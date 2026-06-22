@@ -103,17 +103,20 @@
 
 ---
 
-## Why OpenTaint
+## Why OpenTaint?
 
-AI generates production code faster than today's security tooling can keep up with.
+TL;DR: OpenTaint is an open-source alternative to *Semgrep Pro* and *CodeQL* — a formal inter-procedural taint engine you can customize and self-host, built so AI agents drive your security analysis without burning tokens on every scan.
 
-LLM security agents find vulnerabilities humans miss, burn tokens on every file, and still can't guarantee they catch everything.
+AI generates production code faster than security teams can keep up with, and the two kinds of tooling built to catch what it gets wrong each force a bad trade-off:
 
-The more AI writes code, the more you need formal methods underneath.
+- **Pattern matchers** (Semgrep OSS, ast-grep, linters) are free and fast, but they match syntax, not data flow — untrusted input that crosses a function boundary or a persistence layer slips right past. The deeper, inter-procedural analysis that *does* catch it has long been locked inside proprietary tools.
+- **LLM security agents** find what pattern matchers miss, but they re-read your code on every run. The tokens add up with every file, every commit, every CI build — and a probabilistic model still can't promise it caught everything.
 
-- **Find what AST-pattern matchers miss.** The inter-procedural dataflow engine tracks untrusted data across function boundaries, persistence layers, aliases, and async code.
-- **One finding becomes total coverage.** AST-pattern rules let you enact every uncovered vulnerability as a rule with the engine applying it across the entire codebase, deterministically, in minutes of CPU.
-- **Open source, batteries included.** Engine, rules, CI integrations — the entire stack ships under Apache 2.0 and MIT. No paid tier to unlock taint tracking, no gates on writing your own rules.
+OpenTaint gives you the depth of an LLM agent at the cost of a static analyzer:
+
+- **Find what pattern matchers miss.** A formal inter-procedural dataflow engine tracks untrusted data across function boundaries, persistence layers, aliases, and async code.
+- **Pay the model once, not on every scan.** Let an agent distill a single finding into a taint rule. The deterministic engine then replays that rule across the entire codebase — and every commit after it — in minutes of CPU, at zero token cost.
+- **Open source, batteries included.** Engine, rules, and CI integrations come as one stack under Apache 2.0 and MIT.
 
 ## Quick Start
 
