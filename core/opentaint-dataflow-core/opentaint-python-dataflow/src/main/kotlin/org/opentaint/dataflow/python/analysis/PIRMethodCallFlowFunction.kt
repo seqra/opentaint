@@ -15,17 +15,24 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStar
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
+import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
+import org.opentaint.dataflow.configuration.python.serialized.PIRUserDefinedRuleInfo
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
+import org.opentaint.dataflow.python.PIRSimpleFactAwareConditionEvaluator
 import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.python.alias.forEachAliasAfterCallStatement
+import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
+import org.opentaint.dataflow.taint.applyCleanerActions
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
 import org.opentaint.util.onSome
@@ -54,7 +61,9 @@ class PIRMethodCallFlowFunction(
 
         result.add(CallToReturnZeroFact)
 
+        val conditionRewriter = PIRConditionRewriter(callInst)
         applySourceRules(emptySet(), null, ExclusionSet.Universe,
+            conditionRewriter,
             createFinalFact = { it, trace ->
                 result += CallToReturnZFact(factAp = it, trace)
             },
@@ -96,11 +105,13 @@ class PIRMethodCallFlowFunction(
             return
         }
 
+        val conditionRewriter = PIRConditionRewriter(callInst)
         val reader = FinalFactReader(factAp, apManager)
-        applySinkRules(reader)
+
+        applySinkRules(reader, conditionRewriter)
 
         applySourceRules(
-            initialFacts, reader, exclusion,
+            initialFacts, reader, exclusion, conditionRewriter,
             createFinalFact = { it, trace ->
                 addCallToReturn(reader, it, trace)
             },
@@ -119,13 +130,98 @@ class PIRMethodCallFlowFunction(
             returnValue,
             factAp,
             FactTypeChecker.Dummy,
-        ) { fact, startBase ->
-            addCallToStart(reader, fact, startBase, TraceInfo.Flow)
+        ) { callerFact, startFactBase ->
+            applyCleanersOrCallToStart(
+                conditionRewriter,
+                reader,
+                callerFact,
+                startFactBase,
+                addCallToReturn,
+                addCallToStart,
+                addUnchecked,
+            )
         }
 
         if (reader.hasRefinement) {
             addSideEffectRequirement(reader)
         }
+    }
+
+    private fun applyCleanersOrCallToStart(
+        conditionRewriter: PIRConditionRewriter,
+        originalFactReader: FinalFactReader,
+        unmappedCallerFactAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
+        addCallToReturnUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+    ) {
+        val callerFact = unmappedCallerFactAp.rebase(startFactBase)
+        val conditionFactReader = FinalFactReader(callerFact, apManager)
+
+        val conditionEvaluator = TaintFactAwareConditionEvaluator(
+            listOf(conditionFactReader),
+            markAfterAnyAccessorResolver = null
+        )
+
+        val simpleConditionEvaluator = PIRSimpleFactAwareConditionEvaluator(conditionRewriter, conditionEvaluator)
+        val cleaner = PIRTaintCleanActionEvaluator()
+
+        val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
+        val cleanerResults = applyCleaner(factReaderBeforeCleaner, simpleConditionEvaluator, cleaner)
+
+        originalFactReader.updateRefinement(conditionFactReader)
+
+        for (cleanerResult in cleanerResults) {
+            val factReaderAfterCleaner = cleanerResult.fact
+            if (factReaderAfterCleaner == null) {
+                val trace = cleanerResult.action
+                    ?.takeIf { (it.rule as? TaintConfigurationItem)?.info is PIRUserDefinedRuleInfo }
+                    ?.let { TraceInfo.Rule(it.rule, it.action) }
+                addCallToReturnUnchecked(MethodCallFlowFunction.Drop(trace))
+                continue
+            }
+
+            propagateCleanedFact(
+                factReaderAfterCleaner,
+                originalFactReader,
+                startFactBase,
+                addCallToStart
+            )
+        }
+    }
+
+    private fun propagateCleanedFact(
+        factReaderAfterCleaner: FinalFactReader,
+        originalFactReader: FinalFactReader,
+        startFactBase: AccessPathBase,
+        addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
+    ) {
+        originalFactReader.updateRefinement(factReaderAfterCleaner)
+
+        val cleanedFact = factReaderAfterCleaner.factAp
+        check(cleanedFact.base == startFactBase)
+
+        val unmappedFact = cleanedFact.rebase(originalFactReader.factAp.base)
+
+        addCallToStart(originalFactReader, unmappedFact, startFactBase, TraceInfo.Flow)
+    }
+
+    private fun applyCleaner(
+        initialFact: FinalFactReader,
+        conditionEvaluator: PIRSimpleFactAwareConditionEvaluator,
+        cleanEvaluator: PIRTaintCleanActionEvaluator,
+    ): List<EvaluatedCleanAction> {
+        val rules = resolvedMethods
+            .flatMap { rulesProvider.cleanersForMethod(it) }
+            .filter { conditionEvaluator.eval(it.condition) }
+
+        return rules.applyCleanerActions(
+            evalAction = { fact, rule, action -> cleanEvaluator.evaluate(fact, rule, action) },
+            itemRule = { it },
+            itemActions = { it.cleans },
+            initial = EvaluatedCleanAction.initial(initialFact),
+        )
     }
 
     override fun propagateUnresolvedCallFact(
@@ -161,6 +257,7 @@ class PIRMethodCallFlowFunction(
         initialFacts: Set<InitialFactAp>,
         factReader: FinalFactReader?,
         exclusionSet: ExclusionSet,
+        conditionRewriter: PIRConditionRewriter,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
         createEdge: (InitialFactAp, FinalFactAp, TraceInfo) -> Unit,
         createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
@@ -170,7 +267,6 @@ class PIRMethodCallFlowFunction(
         }
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
-        val conditionRewriter = PIRConditionRewriter(callInst)
 
         taintUtil.applySourceRules(
             sourceRules = sourceRules,
@@ -198,13 +294,13 @@ class PIRMethodCallFlowFunction(
 
     private fun applySinkRules(
         factReader: FinalFactReader,
+        conditionRewriter: PIRConditionRewriter,
     ) {
         val sinkRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
             rulesProvider.sinksForMethod(method)
         }
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
-        val conditionRewriter = PIRConditionRewriter(callInst)
 
         taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyFieldResolver = null)
     }
