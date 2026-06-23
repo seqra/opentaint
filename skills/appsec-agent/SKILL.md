@@ -110,9 +110,9 @@ Append one entry to `tracking/history.yaml` when a fresh run starts (model commi
 
 On start, and after any compaction or re-invocation, reconstruct position from the artifacts on disk before doing anything. Read `state.yaml` and the `tracking/` tree, then tell two situations apart by the phase statuses:
 
-- Resuming an interrupted run — a phase is `in_progress` or left pending mid-pipeline. Skip the phases already `done` and continue from the stop point, reusing their artifacts as-is: `project.yaml` → build; `coverage.yaml` with every entry `done` → discover; a lib unit's `tests_passing: done` → that package's lib rules, and a `rules/join/<class>.yaml` per vuln class → joins assembled; `report.sarif` → scan; an approximation unit's `artifact` (plus `tests_passing` for dataflow) → that unit; a finding with `verdict` set → triaged; with `poc` set → PoC'd
+- Resuming an interrupted run — a phase is `in_progress` or left pending mid-pipeline. Skip the phases already `done` and continue from the stop point, reusing their artifacts as-is: `project.yaml` → build; `coverage.yaml` with every entry `done` → discover; a lib unit's `tests_passing: done` → that package's lib rules, and a `rules/join/<class>.yaml` per vuln class → joins assembled; `report.sarif` → scan; an approximation unit with an empty `methods` (every FQN moved to `done`) → that unit built, a non-empty `methods` → its pending FQNs still to build; a finding with `verdict` set → triaged; with `poc` set → PoC'd
 - Re-invoking a completed run — every phase the chosen levels cover was already `done` (a re-run over evolved code, or a new level pair over a prior run's output, e.g. lite after deep). Do NOT skip the pipeline because last run's artifacts exist — re-enter build, scan and triage in reuse mode: build reuses or rebuilds the model (references/build.md); scan re-runs applying every existing rule and approximation (references/scan.md); triage re-runs and reconciles verdicts (references/triage.md). Set each covered phase back to `pending` as you re-enter it, and apply Reuse over regeneration (below) to every code-coupled artifact
-- detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; methods in `dropped-external-methods.yaml` not yet in any approximation unit → approximations
+- detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; `check-coverage.py` reporting any UNCOVERED method (dropped, not yet in a unit or `skipped.yaml`) → approximations
 
 ### Reuse over regeneration
 
@@ -137,7 +137,7 @@ The single source of truth for the tracking schema; each skill writes only its o
   rules/join/<class>.yaml                 # per-vuln-class security join (assemble-lib-rules writes; main scan verifies) (deep)
   approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
   approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
-  approximations/skipped.yaml             # methods the engine asks for but that carry no taint
+  approximations/skipped.yaml             # methods left to the engine's default — non-carriers, toString, app-internal, escalated-unmodelable
   poc-servers.yaml                        # generate-poc — instances it started; you reap them at end of PoC phase
   history.yaml                            # you only — one entry per run (commit + levels)
 ```
@@ -238,19 +238,20 @@ notes: >
   free-form
 ```
 
-approximations/<package-kebab>-<kind>.yaml — created by analyze-external-methods (`description` + `methods`); `<package-kebab>` = the dotted package with `.` -> `-` (the YAML `package:` field keeps the real dotted name). The stages differ by kind:
+approximations/<package-kebab>-<kind>.yaml — created by analyze-external-methods (`type` + `description` + `methods`); `<package-kebab>` = the dotted package with `.` -> `-` (the YAML `package:` field keeps the real dotted name). `type` is the file's single kind; `methods` is the pending FQN list and `done` the built ones — the build skill moves each FQN `methods`→`done` only on a clean finish. `stages` track the `methods` (pending) batch only, and differ by kind:
 
 ```yaml
 package: com.foo
+type: passthrough       # passthrough | dataflow — the file's single kind
 artifact: null          # added once the file exists
 stages:
   description: done
   written: pending      # passthrough only (write-only, scan-verified)
   # test_project / tests_passing  # dataflow only (built and tested)
 # dependencies: [...]   # dataflow only — the GAVs its test project needs
-methods:
-  - target: "com.foo.Wrapper#getValue"
-    type: passthrough   # passthrough | dataflow (matches the file kind)
+methods:                # FQN only (overload detail lives in notes)
+  - "com.foo.Wrapper#getValue"
+done: []                # FQNs the build skill has cleanly finished
 notes: >
   free-form
 ```
@@ -258,7 +259,7 @@ notes: >
 approximations/skipped.yaml:
 
 ```yaml
-methods:                # engine asks to approximate these, but they carry no taint
+methods:                # left to the engine's default — non-carriers, toString, app-internal, escalated-unmodelable
   - "org.slf4j.Logger#info"
 ```
 

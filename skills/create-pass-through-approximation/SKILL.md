@@ -15,18 +15,18 @@ Write passThrough propagation rules for external library methods
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Methods to model `<methods>` — the target method(s) and what each propagates, from the tracking file's `methods` (all `type: passthrough`)
+- Methods to model `<methods>` — the target methods and what each propagates, from the tracking file's `methods`. Overload/signature detail is in the unit's `notes`
 - Tracking file `<tracking-file>` — the passThrough approximation unit. Default: `.opentaint/tracking/approximations/<name>.yaml`
 - Config output `<config-file>` — where to write the passThrough approximation. Default: `.opentaint/pass-through/<name>.yaml`
 - Test model `<test-model>` (optional) — any compiled model to dry-run the config against for a load/parse check. Default: `.opentaint/project` if it exists, else any `.opentaint/test-compiled/*` model
 
 ## Workflow
 
-A unit already `done` (its `written` stage done and `artifact` present) is trusted — if re-dispatched without a specific fix to make, leave the config as-is. Only write when the unit isn't done, or when the caller hands you a concrete drift to fix (a method still dropped, a load error, a broken channel). Add new methods to the existing config rather than rewriting it.
+Work the unit's `methods`; the `done` list is already built and trusted — leave its entries and their config as-is unless the caller hands you a concrete drift to fix. Add new pending methods to the existing config rather than rewriting it.
 
 ### 1. Write the passThrough config
 
-Write `passThrough:` copies into `<config-file>`. When an object carries taint between calls — a setter stores it and a getter returns it later, or a builder holds it — route through a virtual slot, an access path `[<base>, .<DeclaringClass>#<slot>#java.lang.Object]`:
+Write `passThrough` copies into `<config-file>`. When an object carries taint between calls — a setter stores it and a getter returns it later, or a builder holds it — route through a virtual slot, an access path `[<base>, .<DeclaringClass>#<slot>#java.lang.Object]`:
 - the slot name is nominal — the engine never resolves it, so it need not be a real field
 - type it `java.lang.Object` — a concrete type can fail the read-out type-check and drop the taint
 - the writer and reader must name the identical `Class#slot#java.lang.Object` triple, or the taint drops
@@ -121,7 +121,7 @@ passThrough:
     - .com.example.lib.Parser#parsed#java.lang.Object
 ```
 
-Full config — every function in one top-level `passThrough:` list (quote `[*]` — unquoted it parses as a YAML alias):
+Full config — every function in one top-level `passThrough` list (quote `[*]` — unquoted it parses as a YAML alias):
 ```yaml
 passThrough:
 - function: org.springframework.beans.MutablePropertyValues#add
@@ -177,20 +177,23 @@ After ~2 fix re-invocations without a clearer cause — matcher fields and `from
 ## Output
 
 - The passThrough config at `<config-file>`
-- Tracking updated: `written` + `artifact` (per Tracking)
+- Tracking updated: `artifact`, `written`, and the written methods moved `methods`→`done` (per Tracking)
 - Report the config path and the methods modeled
 
 ## Tracking
 
-In `<tracking-file>`, once the config is written:
+In `<tracking-file>`, once a method's copy is cleanly written, set `artifact` + `written: done` and move that method from `methods` to `done`:
 
 ```yaml
 artifact: .opentaint/pass-through/<name>.yaml
 stages:
   written: done
+methods: []
+done:
+  - "com.foo.Wrapper#getValue"
 ```
 
-Do not touch other stages or fields
+Move a method to `done` only on a clean write — one that errored, failed to load, or still needs a fix (including a method you reported as non-converging) stays in `methods` so the loop comes back to it. Do not touch other stages or fields, or any entry already in `done`
 
 ## Reference
 
@@ -212,7 +215,7 @@ Overrides
 
 Conditions (the only keys that load from YAML)
 - take a `pos: <position>`: `typeIs`, `constantMatches`, `constantEq`, `tainted`
-- take the position directly, no `pos:` field: `isConstant`, `isNull` — adding `pos:` fails to load
+- take the position directly, no `pos` field: `isConstant`, `isNull` — adding `pos` fails to load
 - nest other conditions: `anyOf`, `allOf`, `not`
 - `constantGt` / `constantLt` load but crash the scan when actually evaluated against a constant (their string-typed bound fails an engine type-check) — avoid until fixed
 
@@ -222,4 +225,4 @@ Conditions (the only keys that load from YAML)
 - The approximation merges with built-ins at the rule level — a provided rule overrides a built-in only if it matches one. Don't redefine a method already in `approximated-external-methods.yaml` unless debug-rule shows the built-in isn't propagating taint here, then override deliberately
 - A wrong argument position copies the wrong value — point `from`/`to` at the tainted one
 - In doubt about how a method moves taint — which argument or field reaches the result — read the library's source rather than guessing
-- Model one function per rule — don't use a regex/wildcard `pattern:` matcher (e.g. `name: get.*`, `class: .*`) or `arg(*)` to cover many functions at once; it over-models, copying taint through methods you never vetted and manufacturing false positives. Write an explicit `function:` per method
+- Model one function per rule — don't use a regex/wildcard `pattern` matcher (e.g. `name: get.*`, `class: .*`) or `arg(*)` to cover many functions at once; it over-models, copying taint through methods you never vetted and manufacturing false positives. Write an explicit `function` per method

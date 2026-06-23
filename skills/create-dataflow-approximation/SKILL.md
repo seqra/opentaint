@@ -15,14 +15,14 @@ Write a code-based approximation for a library method whose taint propagation de
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Methods to model `<methods>` — the target method(s) and how taint flows through them, from the tracking file's `methods` (all `type: dataflow`)
+- Methods to model `<methods>` — the target method(s) and how taint flows through them, from the tracking file's `methods:` (the pending FQNs; the file's top-level `type` is `dataflow`). Exact overload signatures to match are in the unit's `notes:`
 - Tracking file `<tracking-file>` — the dataflow approximation unit (`<package-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`). Default: `.opentaint/tracking/approximations/<name>.yaml`
 - Approximation sources `<approx-src>` — this package's own directory for the `.java` approximation files. Default: `.opentaint/dataflow/<name>`
 - Compiled test project `<test-compiled>` — the per-package compiled model to test against. Default: `.opentaint/test-compiled/<name>`
 
 ## Workflow
 
-A unit already `done` (its `tests_passing` stage done and `artifact` present) is trusted — a working model needs no re-validation; if re-dispatched without a specific fix, leave the source as-is. Only write when the unit isn't done, or when the caller hands you a concrete drift to fix. Add new methods/overloads to the existing source rather than rewriting it.
+Work the unit's `methods:` (the pending FQNs); the `done:` list is already built and verified — a working model needs no re-validation, so leave its entries and their source as-is unless the caller hands you a concrete drift to fix. Add new pending methods/overloads to the existing source rather than rewriting it.
 
 ### 1. Write the approximation source
 
@@ -105,20 +105,23 @@ After ~2 fix attempts without a clearer cause — `@Approximate` target matches 
 ## Output
 
 - The approximation source(s) under `<approx-src>`
-- Tracking updated: `artifact` and `stages.tests_passing` (per Tracking)
+- Tracking updated: `artifact`, `stages.tests_passing`, and the passing methods moved `methods:`→`done:` (per Tracking)
 - Report the source path, a one-line test summary, and the exact `test approximation run` command used
 
 ## Tracking
 
-In `<tracking-file>`, once the source exists and its sample passes:
+In `<tracking-file>`, once the source exists and a method's sample passes, set `artifact` + `tests_passing: done` and move that method from `methods:` to `done:`:
 
 ```yaml
 artifact: .opentaint/dataflow/<name>/com/example/approximations/ReactiveProcessor.java
 stages:
   tests_passing: done
+methods: []
+done:
+  - "com.foo.Reactor#flatMap"
 ```
 
-Do not touch other stages or fields
+Move a method to `done:` only once its sample passes — a method still `falseNegative`, or one you reported as non-converging, stays in `methods:` so the loop comes back to it. Do not touch other stages or fields, or any entry already in `done:`
 
 ## Constraints
 
