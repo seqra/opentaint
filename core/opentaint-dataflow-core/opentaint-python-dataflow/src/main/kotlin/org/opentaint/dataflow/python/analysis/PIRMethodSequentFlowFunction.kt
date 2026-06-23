@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
@@ -45,6 +46,8 @@ class PIRMethodSequentFlowFunction(
         val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
 
         sourceRules.forEach { rule ->
+            check(rule.condition.isTrue()) { "Unexpected attribute source condition: ${rule.condition}" }
+
             rule.taint.forEach { action ->
                 val pos = action.pos.resolveAp() ?: return@forEach
                 val mark = TaintMarkAccessor(action.mark.name)
@@ -295,6 +298,8 @@ class PIRMethodSequentFlowFunction(
         )
 
         rules.forEach { rule ->
+            check(rule.condition.isTrue()) { "Unexpected attribute pass rule condition: ${rule.condition}" }
+
             rule.copy.forEach { action ->
                 val from = action.from.resolveAp() ?: return@forEach
                 val to = action.to.resolveAp() ?: return@forEach

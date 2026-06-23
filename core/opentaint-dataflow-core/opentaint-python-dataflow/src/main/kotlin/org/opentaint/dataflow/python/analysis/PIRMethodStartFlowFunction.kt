@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction.StartFact
+import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.util.onSome
@@ -30,6 +31,8 @@ class PIRMethodStartFlowFunction(
         val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
 
         rules.forEach { rule ->
+            check(rule.condition.isTrue()) { "Unexpected entry point rule condition: ${rule.condition}" }
+
             rule.taint.forEach { action ->
                 val pos = action.pos.resolveAp() ?: return@forEach
                 val mark = TaintMarkAccessor(action.mark.name)

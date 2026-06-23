@@ -322,7 +322,12 @@ class PIRMethodCallFlowFunction(
             PIRFlowFunctionUtils.DummyPositionTypeResolver
         )
 
+        val conditionRewriter = PIRConditionRewriter(callInst)
+        val simpleConditionEvaluator = PIRSimpleFactAwareConditionEvaluator(conditionRewriter, null)
+
         val passThroughFacts = passRules.maybeFlatMap { rule ->
+            if (!simpleConditionEvaluator.eval(rule.condition)) return@maybeFlatMap Maybe.none()
+
             rule.copy.maybeFlatMap { action ->
                 val from = action.from.resolveAp() ?: return@maybeFlatMap Maybe.none()
                 val to = action.to.resolveAp() ?: return@maybeFlatMap Maybe.none()
