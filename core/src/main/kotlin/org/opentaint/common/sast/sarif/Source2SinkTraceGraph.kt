@@ -93,8 +93,8 @@ private fun Source2SinkTraceGraph.traverseStart2Source(
 
         val successorIdx = getOrCreateNodeIdx(successor)
 
-        root2SourceFwd.computeIfAbsent(nodeIdx, ::IntOpenHashSet).add(successorIdx)
-        root2SourceBwd.computeIfAbsent(successorIdx, ::IntOpenHashSet).add(nodeIdx)
+        root2SourceFwd.computeIfAbsent(nodeIdx) { IntOpenHashSet() }.add(successorIdx)
+        root2SourceBwd.computeIfAbsent(successorIdx) { IntOpenHashSet() }.add(nodeIdx)
 
         traverseStart2Source(trace, visited, successorIdx, successor)
     }
@@ -128,8 +128,8 @@ private fun Source2SinkTraceGraph.traverseStartToSink(
     sinkSuccessors.map { it.node }.forEachNodeOrdered { successor ->
         val successorIdx = getOrCreateNodeIdx(successor)
 
-        root2SinkFwd.computeIfAbsent(nodeIdx, ::IntOpenHashSet).add(successorIdx)
-        root2SinkBwd.computeIfAbsent(successorIdx, ::IntOpenHashSet).add(nodeIdx)
+        root2SinkFwd.computeIfAbsent(nodeIdx) { IntOpenHashSet() }.add(successorIdx)
+        root2SinkBwd.computeIfAbsent(successorIdx) { IntOpenHashSet() }.add(nodeIdx)
 
         traverseStartToSink(trace, visited, successorIdx, successor)
     }
@@ -183,12 +183,12 @@ private object FullNodeComparator : Comparator<InterProceduralFullTraceNode> {
 
 private object MethodComparator : Comparator<MethodEntryPoint> {
     override fun compare(a: MethodEntryPoint, b: MethodEntryPoint): Int =
-        a.toString().compareTo(b.toString())
+        a.hashCode().compareTo(b.hashCode())
 }
 
 private object FinalEntryComparator : Comparator<TraceEntry.Final> {
     override fun compare(a: TraceEntry.Final, b: TraceEntry.Final): Int =
-        a.toString().compareTo(b.toString())
+        a.edges.hashCode().compareTo(b.edges.hashCode())
 }
 
 private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
@@ -197,7 +197,7 @@ private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
             is SourceStartEntry -> when (b) {
                 is SourceStartEntry -> {
                     a.priority().compareTo(b.priority()).let { if (it != 0) return it }
-                    a.toString().compareTo(b.toString())
+                    a.hashCode().compareTo(b.hashCode())
                 }
 
                 is TraceEntry.MethodEntry -> -1
@@ -205,7 +205,7 @@ private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
 
             is TraceEntry.MethodEntry -> when (b) {
                 is SourceStartEntry -> 1
-                is TraceEntry.MethodEntry -> a.facts.toString().compareTo(b.facts.toString())
+                is TraceEntry.MethodEntry -> a.facts.hashCode().compareTo(b.facts.hashCode())
             }
         }
     }

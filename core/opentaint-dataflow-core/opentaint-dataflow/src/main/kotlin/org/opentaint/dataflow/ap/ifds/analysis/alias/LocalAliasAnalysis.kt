@@ -136,8 +136,10 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
     abstract fun convert(info: AAInfo, depth: Int, convertInstance: (Int) -> List<AliasInfo>): List<AliasInfo>
 
     private fun State.convert(infoIdx: Int, manager: AAInfoManager, depth: Int): List<AliasInfo> =
-        convertedAliases.getOrCreate(infoIdx) {
-            convert(manager.getElementUncheck(infoIdx), manager, depth)
+        synchronized(this@LocalAliasAnalysis) {
+            convertedAliases.getOrCreate(infoIdx) {
+                convert(manager.getElementUncheck(infoIdx), manager, depth)
+            }
         }
 
     private fun State.convert(info: AAInfo, manager: AAInfoManager, depth: Int): List<AliasInfo> =
