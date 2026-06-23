@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.analysis.alias
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
@@ -134,8 +135,8 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
     abstract fun convert(info: AAInfo, depth: Int, convertInstance: (Int) -> List<AliasInfo>): List<AliasInfo>
 
     private fun State.convert(stateId: Int, infoIdx: Int, depth: Int): List<AliasInfo> =
-        synchronized(this@LocalAliasAnalysis) {
-            convertedAliases.computeIfAbsent(pair(infoIdx, stateId)) {
+        synchronized(convertedAliases) {
+            convertedAliases.getOrCreate(pair(infoIdx, stateId)) {
                 convert(stateId, manager.getElementUncheck(infoIdx), depth)
             }
         }

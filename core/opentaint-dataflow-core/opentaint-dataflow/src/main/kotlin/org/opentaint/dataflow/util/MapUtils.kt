@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.util
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 
 fun <V> int2ObjectMap() = ConcurrentReadSafeInt2ObjectMap<V>()
 
@@ -32,6 +33,11 @@ inline fun <V> ConcurrentReadSafeInt2ObjectMap<V>.forEachEntry(body: (Int, V) ->
 }
 
 inline fun <V> Int2ObjectOpenHashMap<V>.getOrCreate(key: Int, body: () -> V): V {
+    get(key)?.let { return it }
+    return body().also { put(key, it) }
+}
+
+inline fun <V> Long2ObjectOpenHashMap<V>.getOrCreate(key: Long, body: () -> V): V {
     get(key)?.let { return it }
     return body().also { put(key, it) }
 }
