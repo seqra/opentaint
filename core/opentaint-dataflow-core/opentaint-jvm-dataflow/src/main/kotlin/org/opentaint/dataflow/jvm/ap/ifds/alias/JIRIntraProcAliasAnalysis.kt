@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
@@ -281,14 +282,14 @@ class JIRIntraProcAliasAnalysis(
         }
     }
 
-    private fun State.getAliasesFor(root: Int, manager: AAInfoManager): List<AAInfo> {
-        val aliases = mutableListOf<AAInfo>()
-        forEachAliasInSet(root) {
-            if (!it.isLValue()) {
-                aliases.add(manager.getElementUncheck(root))
-            }
-        }
+    private fun State.getAliasIndexesFor(root: Int): IntOpenHashSet {
+        val aliases = IntOpenHashSet()
+        forEachAliasInSet(root) { aliases.add(it.ensureNonLValue()) }
         return aliases
+    }
+
+    private fun State.getAliasesFor(root: Int, manager: AAInfoManager): List<AAInfo> {
+        return getAliasIndexesFor(root).map { manager.getElementUncheck(it) }
     }
 
     private inline fun saveConvertedAliases(
@@ -301,13 +302,14 @@ class JIRIntraProcAliasAnalysis(
         bound: HashSet<Int>,
         save: (List<AliasInfo>) -> Unit
     ) {
-        val aliases = state.getAliasesFor(root, manager)
-        aliases.forEach { bound.add(manager.getOrAdd(it)) }
-        val converted = aliases.flatMap { it.convertToAliasInfo(state, manager, depth = 0, cancellation) }
+        val aliases = state.getAliasIndexesFor(root)
+        val converted = aliases.map { manager.getElementUncheck(it) }
+            .flatMap { it.convertToAliasInfo(state, manager, depth = 0, cancellation) }
             .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
             .distinct()
         // size == 1 means only root was converted to AliasInfo; not really meaningful
         if (converted.size <= 1) return
+        aliases.forEach { bound.add(it) }
         save(converted)
     }
 
@@ -328,7 +330,17 @@ class JIRIntraProcAliasAnalysis(
             if (infoIndex.isLValue()) return@forEachInt
 
             val root = manager.getElementUncheck(infoIndex)
-            if (root !is LocalAlias.SimpleLoc || root.loc !is Local || reachableLocals.isReachable(root.loc.idx, instIdx))
+
+            val aliases = state.getAliasIndexesFor(infoIndex)
+            val converted = aliases.map { manager.getElementUncheck(it) }
+                .flatMap { it.convertToAliasInfo(state, manager, depth = 0, cancellation) }
+                .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
+                .distinct()
+            // size == 1 means only root was converted to AliasInfo; not really meaningful
+            if (converted.size <= 1) return@forEachInt
+            aliases.forEach { bound.add(it) }
+
+            if (root !is LocalAlias.SimpleLoc || root.loc !is Local || !reachableLocals.isReachable(root.loc.idx, instIdx))
                 return@forEachInt
 
             saveConvertedAliases(infoIndex, state, manager, reachableLocals, instIdx, cancellation, bound) {

@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntCollection
+import it.unimi.dsi.fastutil.ints.IntIntImmutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
@@ -144,6 +145,7 @@ class DSUAliasAnalysis(
         if (reachabilityInfo == null) return this
 
         val unreachableLocals = IntOpenHashSet()
+        val restoreBridges = mutableListOf<IntIntImmutablePair>()
         allNonLValueElements().forEachInt {
             val element = manager.getElementUncheck(it)
             if (element !is LocalAlias.SimpleLoc) return@forEachInt
@@ -156,9 +158,23 @@ class DSUAliasAnalysis(
 
             unreachableLocals.add(it)
             unreachableLocals.add(it.inv())
+
+            // keeping aliases in situations like:
+            // L(a) = b
+            // L(c) = a
+            // where simple removal would destroy c -> b relationship
+
+            val aliasBridge = IntOpenHashSet()
+            aliasGroups.forEachElementInSet(it.inv()) { bridged ->
+                if (!bridged.isLValue())
+                    aliasBridge.add(bridged)
+                Unit
+            }
+            aliasBridge.forEachInt { bridged -> restoreBridges += IntIntImmutablePair(it, bridged) }
         }
 
-        return removeUnsafe(unreachableLocals)
+        val connectedBridges = restoreBridges.fold(this) { s, b -> s.mergeWith(b.firstInt(), b.secondInt()) }
+        return connectedBridges.removeUnsafe(unreachableLocals)
     }
 
     private fun eval(inst: JIRInst, state: ImmutableState, callFrame: CallTreeNode): ImmutableState {
@@ -431,7 +447,7 @@ class DSUAliasAnalysis(
             resultState = resultState.remove(heapAlias)
         }
 
-        resultState = resultState.mergeWith(value.repr.inv(), heapAlias)
+        resultState = resultState.mergeWith(heapAlias.inv(), value.repr)
 
         return resultState
     }
@@ -605,7 +621,7 @@ fun State.forEachAliasInSetWithBreak(info: Int, body: (Int) -> Unit?) {
 
     fun Int.considerAlias(alias: Int): Unit? {
         // only allowing L(a) = b as a valid alias
-        if (alias xor this >= 0) return Unit
+        if ((alias xor this) >= 0) return Unit
         if (aliases.add(alias)) {
             if (body(alias) == null) {
                 stoppage = true
@@ -622,7 +638,9 @@ fun State.forEachAliasInSetWithBreak(info: Int, body: (Int) -> Unit?) {
         val cur = queue.removeFirst()
         aliasGroups.forEachElementInSet(cur) { cur.considerAlias(it) }
         if (stoppage) return
-        aliasGroups.forEachElementInSet(cur.inv()) { cur.considerAlias(it) }
+
+        val curLValue = cur.inv()
+        aliasGroups.forEachElementInSet(curLValue) { curLValue.considerAlias(it) }
         if (stoppage) return
     }
 }
