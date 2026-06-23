@@ -3,8 +3,9 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleWithPatternInside (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern-inside: |
+          $A = src()
+          ...
+      - pattern: |
+          sink($A)

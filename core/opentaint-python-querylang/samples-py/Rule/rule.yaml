@@ -3,10 +3,14 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/Rule (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sanitizers:
-      - pattern: clean($X)
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern: |
+          $A = src()
+          ...
+          sink($A)
+      - pattern-not: |
+          $A = src()
+          ...
+          clean($A)
+          ...
+          sink($A)

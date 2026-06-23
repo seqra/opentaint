@@ -26,3 +26,9 @@ def Negative_temp_in_sink():
     x = src(a)
     b = sink_init()
     sink(x, b)          # source taint in arg index 0 ($B position) -> should NOT fire
+
+
+def Negative_no_src():
+    a = src_init()
+    b = sink_init()
+    sink(b, a)          # no src() taint; a is plain src_init data -> should NOT fire

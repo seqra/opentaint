@@ -1,27 +1,31 @@
-def src() -> str:
-    return "x"
+class Inner:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def get_obj_good(self):
+        return self.obj
+
+    def get_obj_bad(self):
+        return self.obj
 
 
-def get_obj_good(x: str) -> str:
-    return x
+def src():
+    return Inner(object())
 
 
-def get_obj_bad(x: str) -> str:
-    return x
-
-
-def sink(data) -> None:
+def sink(data):
     pass
 
 
 def Positive_simple():
-    a = src()
-    b = get_obj_good(a)
-    sink(b)
+    data = src()
+    s = data.get_obj_bad()
+    s = data.get_obj_good()
+    sink(s)
 
 
 def Negative_bad():
-    a = src()
-    b = get_obj_good(a)
-    b = get_obj_bad(a)
-    sink(b)
+    data = src()
+    s = data.get_obj_good()
+    s = data.get_obj_bad()
+    sink(s)

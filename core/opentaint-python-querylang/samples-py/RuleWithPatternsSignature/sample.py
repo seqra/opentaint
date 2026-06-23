@@ -1,24 +1,27 @@
-def source() -> str:
-    return "tainted"
-
-
-def sink(data) -> None:
+def sink(data):
     pass
 
 
-def other(s: str) -> None:
-    pass
+def other(data):
+    return "other"
 
 
-def Positive_simple():
-    src = source()
+def positive_simple_method(src):
     sink(src)
 
 
-def Negative_other_sink():
-    src = source()
+def Positive_simple():
+    positive_simple_method("data")
+
+
+def negative_simple1_method(src):
     other(src)
 
 
-def Negative_no_source():
-    sink("safe")
+def Negative_simple1():
+    negative_simple1_method("data")
+
+
+def Negative_simple2():
+    src = other("other")
+    sink(src)

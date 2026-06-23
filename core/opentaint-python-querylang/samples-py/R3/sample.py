@@ -1,15 +1,16 @@
-def source() -> str:
-    return "tainted"
+def foo(data):
+    return None
 
 
-def bar(data: str) -> str:
-    return data
+def bar(data):
+    return None
+
+
+def method(arg):
+    x = foo(arg)
+    y = bar(x)
+    return y
 
 
 def Positive_simple():
-    x = source()
-    _ = bar(x)
-
-
-def Negative_no_source():
-    _ = bar("safe")
+    method("data")

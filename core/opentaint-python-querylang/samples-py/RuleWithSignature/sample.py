@@ -1,24 +1,29 @@
-def source() -> str:
-    return "tainted"
-
-
-def sink1(s: str) -> None:
+def sink1(data):
     pass
 
 
-def sink2(s: str) -> None:
+def sink2(data):
     pass
 
 
-def Positive_sink1():
-    data = source()
+def method_with_specific_signature1(x, data):
     sink1(data)
 
 
-def Positive_sink2():
-    data = source()
+def method_with_specific_signature2(data):
     sink2(data)
 
 
+def Positive_simple1():
+    data = "aaa"
+    method_with_specific_signature1(1, data)
+
+
+def Positive_simple2():
+    data = "aaa"
+    method_with_specific_signature2(data)
+
+
 def Negative_no_source():
-    sink1("safe")
+    data = "aaa"
+    sink1(data)

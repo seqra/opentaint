@@ -1,21 +1,30 @@
-def source() -> str:
-    return "tainted"
-
-
-def sink(data) -> None:
+def sink(data):
     pass
 
 
-def suffix_clean(s: str) -> str:
-    return s
+def suffix_clean(data):
+    pass
 
 
 def Positive_simple():
-    data = source()
+    data = ""
     sink(data)
 
 
-def Negative_clean_first():
-    data = source()
-    cleaned = suffix_clean(data)
-    sink(cleaned)
+def Positive_clean_first():
+    data = ""
+    suffix_clean(data)
+    sink(data)
+
+
+def Positive_clean_on_other_data():
+    data = ""
+    data1 = ""
+    sink(data)
+    suffix_clean(data1)
+
+
+def Negative_clean_second():
+    data = ""
+    sink(data)
+    suffix_clean(data)

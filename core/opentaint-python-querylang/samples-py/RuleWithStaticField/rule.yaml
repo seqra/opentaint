@@ -2,9 +2,9 @@ rules:
   - id: example-rulewithstaticfield
     languages: [python]
     severity: ERROR
-    message: match example/RuleWithStaticField (Python port, discriminating class attribute)
-    mode: taint
-    pattern-sources:
-      - pattern: StaticConstantStorage.FIRST
-    pattern-sinks:
-      - pattern: sink($X)
+    message: match example/RuleWithStaticField (Python port)
+    patterns:
+      - pattern: |-
+          sink(StaticConstantStorage.FIRST)
+      - pattern-not: |-
+          sink(StaticConstantStorage.SECOND)

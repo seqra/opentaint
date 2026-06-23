@@ -1,34 +1,109 @@
-def source() -> str:
-    return "tainted"
+def src():
+    return object()
 
 
-def copy(s: str) -> str:
-    return s
+def copy(o):
+    return object()
 
 
-def sink(a, b) -> None:
+def sink(a, b):
     pass
 
 
-def clean(a: str, b: str) -> str:
-    return a + b
+def clean(a, b):
+    pass
 
 
 def Positive_simple():
-    a = source()
+    a = src()
     b = copy(a)
     sink(a, b)
 
 
-def Positive_clean_after_sink():
-    a = source()
+def Negative_simple():
+    a = src()
     b = copy(a)
     sink(a, b)
-    _ = clean(a, b)
+    clean(a, b)
 
 
-def Negative_clean_before_sink():
-    a = source()
+def _multiple_functions_nested_src():
+    return src()
+
+
+def _multiple_functions_nested_sink(a, b):
+    sink(a, b)
+
+
+def Positive_multiple_functions():
+    a = _multiple_functions_nested_src()
     b = copy(a)
-    cleaned = clean(a, b)
-    _ = cleaned
+    _multiple_functions_nested_sink(a, b)
+
+
+def _negative_multiple_functions_nested_src():
+    return src()
+
+
+def _negative_multiple_functions_nested_sink(a, b):
+    sink(a, b)
+
+
+def _negative_multiple_functions_nested_clean(a, b):
+    clean(a, b)
+
+
+def Negative_multiple_functions():
+    a = _negative_multiple_functions_nested_src()
+    b = copy(a)
+    _negative_multiple_functions_nested_sink(a, b)
+    _negative_multiple_functions_nested_clean(a, b)
+
+
+apply_clean = False
+
+
+def _positive_branch_nested_src():
+    return src()
+
+
+def _positive_branch_nested_sink(a, b):
+    sink(a, b)
+
+
+def _positive_branch_nested_clean(a, b):
+    if apply_clean:
+        clean(a, b)
+
+
+def Positive_branch():
+    a = _positive_branch_nested_src()
+    b = copy(a)
+    _positive_branch_nested_sink(a, b)
+    _positive_branch_nested_clean(a, b)
+
+
+def _negative_branch_nested_src():
+    return src()
+
+
+def _negative_branch_nested_sink(a, b):
+    sink(a, b)
+
+
+def _negative_branch_other_clean(a, b):
+    clean(a, b)
+
+
+def _negative_branch_nested_clean(a, b):
+    if apply_clean:
+        clean(a, b)
+    else:
+        _negative_branch_other_clean(a, b)
+
+
+def Negative_branch():
+    a = _negative_branch_nested_src()
+    b = copy(a)
+    _negative_branch_nested_sink(a, b)
+    _negative_branch_nested_clean(a, b)

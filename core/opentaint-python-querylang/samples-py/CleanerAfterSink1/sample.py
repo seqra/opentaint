@@ -1,40 +1,99 @@
-def source() -> str:
+def src():
     return "tainted"
 
 
-def sink(data) -> None:
+def sink(o):
     pass
 
 
-def clean(data: str) -> str:
-    return data
-
-
-def _nested_src() -> str:
-    return source()
-
-
-def _nested_sink(o: str) -> None:
-    sink(o)
+def clean(o):
+    pass
 
 
 def Positive_simple():
-    o = source()
+    o = src()
     sink(o)
 
 
-def Positive_clean_after_sink():
-    o = source()
+def Negative_simple():
+    o = src()
     sink(o)
-    _ = clean(o)
+    clean(o)
+
+
+def _multiple_functions_nested_src():
+    return src()
+
+
+def _multiple_functions_nested_sink(o):
+    sink(o)
 
 
 def Positive_multiple_functions():
-    o = _nested_src()
-    _nested_sink(o)
+    o = _multiple_functions_nested_src()
+    _multiple_functions_nested_sink(o)
 
 
-def Negative_clean_before_sink():
-    o = source()
-    cleaned = clean(o)
-    sink(cleaned)
+def _negative_multiple_functions_nested_src():
+    return src()
+
+
+def _negative_multiple_functions_nested_sink(o):
+    sink(o)
+
+
+def _negative_multiple_functions_nested_clean(o):
+    clean(o)
+
+
+def Negative_multiple_functions():
+    o = _negative_multiple_functions_nested_src()
+    _negative_multiple_functions_nested_sink(o)
+    _negative_multiple_functions_nested_clean(o)
+
+
+apply_clean = False
+
+
+def _positive_branch_nested_src():
+    return src()
+
+
+def _positive_branch_nested_sink(o):
+    sink(o)
+
+
+def _positive_branch_nested_clean(o):
+    if apply_clean:
+        clean(o)
+
+
+def Positive_branch():
+    o = _positive_branch_nested_src()
+    _positive_branch_nested_sink(o)
+    _positive_branch_nested_clean(o)
+
+
+def _negative_branch_nested_src():
+    return src()
+
+
+def _negative_branch_nested_sink(o):
+    sink(o)
+
+
+def _negative_branch_other_clean(o):
+    clean(o)
+
+
+def _negative_branch_nested_clean(o):
+    if apply_clean:
+        clean(o)
+    else:
+        _negative_branch_other_clean(o)
+
+
+def Negative_branch():
+    o = _negative_branch_nested_src()
+    _negative_branch_nested_sink(o)
+    _negative_branch_nested_clean(o)

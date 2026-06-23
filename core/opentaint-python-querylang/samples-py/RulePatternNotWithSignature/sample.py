@@ -1,21 +1,27 @@
-def source() -> str:
-    return "tainted"
+def f(data):
+    pass
 
 
-def clean(data: str) -> str:
-    return data
-
-
-def f(data: str) -> None:
+def clean(data):
     pass
 
 
 def Positive_simple():
-    data = source()
+    data = ""
     f(data)
 
 
+def Negative_no_f():
+    print("Hello!")
+
+
 def Negative_clean_first():
-    data = source()
-    cleaned = clean(data)
-    f(cleaned)
+    data = ""
+    clean(data)
+    f(data)
+
+
+def Negative_clean_second():
+    data = ""
+    f(data)
+    clean(data)

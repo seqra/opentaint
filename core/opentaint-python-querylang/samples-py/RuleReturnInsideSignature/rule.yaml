@@ -3,8 +3,11 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleReturnInsideSignature (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: src($X)
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern: |
+          $X = src($ARG)
+          ...
+          return $X
+      - pattern-inside: |
+          def $METHOD($ARG):
+              ...

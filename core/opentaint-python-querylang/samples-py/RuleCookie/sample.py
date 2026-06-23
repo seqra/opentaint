@@ -1,22 +1,26 @@
-def new_cookie(name: str, value: str) -> dict:
-    return {"name": name, "value": value}
+class Cookie:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+        self.secure = False
+
+    def set_secure(self, flag):
+        self.secure = flag
 
 
-def set_secure(cookie: dict) -> dict:
-    cookie["secure"] = True
-    return cookie
+class HttpServletResponse:
+    def add_cookie(self, cookie):
+        pass
 
 
-def add_cookie(cookie: dict) -> None:
-    pass
+def Positive_simple():
+    resp = HttpServletResponse()
+    c = Cookie("sid", "abc")
+    resp.add_cookie(c)
 
 
-def Positive_insecure_cookie():
-    c = new_cookie("sid", "abc")
-    add_cookie(c)
-
-
-def Negative_secure_cookie():
-    c = new_cookie("sid", "abc")
-    c = set_secure(c)
-    add_cookie(c)
+def Negative_simple():
+    resp = HttpServletResponse()
+    c = Cookie("sid", "abc")
+    c.set_secure(True)
+    resp.add_cookie(c)

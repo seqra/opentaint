@@ -3,10 +3,14 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RulePatternNotWithSignature (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sanitizers:
-      - pattern: clean($X)
-    pattern-sinks:
-      - pattern: f($X)
+    patterns:
+      - pattern: |
+          def $METHOD(...):
+              ...
+              f($ARG)
+              ...
+      - pattern-not: |
+          def $METHOD(...):
+              ...
+              clean($ARG)
+              ...

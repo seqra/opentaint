@@ -1,26 +1,29 @@
-def src() -> str:
-    return "tainted"
+class Inner:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def get_obj_good(self):
+        return self.obj
+
+    def get_obj_bad(self):
+        return self.obj
 
 
-def get_obj_good(x: str) -> str:
-    return x
+def src():
+    return Inner(object())
 
 
-def get_obj_bad(x: str) -> str:
-    return x
-
-
-def sink(data) -> None:
+def sink(data):
     pass
 
 
-def Positive_simple():
-    d = src()
-    s = get_obj_good(d)
-    sink(s)
+def Positive_():
+    data = src()
+    str = data.get_obj_good().to_string()
+    sink(str)
 
 
-def Negative_bad_path():
-    d = src()
-    s = get_obj_bad(d)
-    sink(s)
+def Negative_():
+    data = src()
+    str = data.get_obj_bad().to_string()
+    sink(str)

@@ -1,19 +1,19 @@
-def f() -> str:
-    return "fstate"
+def f():
+    pass
 
 
-def g(x: str) -> None:
+def g():
     pass
 
 
 def Positive_simple():
-    t = f()
-    g(t)
+    f()
+    g()
 
 
-def Negative_only_f():
-    _ = f()
+def Negative_simple1():
+    f()
 
 
-def Negative_only_g():
-    g("safe")
+def Negative_simple2():
+    g()

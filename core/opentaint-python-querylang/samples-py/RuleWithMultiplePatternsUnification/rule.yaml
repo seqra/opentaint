@@ -1,10 +1,22 @@
 rules:
-  - id: example-rulewithmultiplepatternsunification
+  - id: java.spring.xss-updated
     languages: [python]
     severity: ERROR
-    message: match example/RuleWithMultiplePatternsUnification (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: mk_type2($SOURCE)
-    pattern-sinks:
-      - pattern: new_type3($SOURCE)
+    message: Return a untrusted file path
+    metadata:
+      cwe: CWE-79
+      license: MIT
+      shortDescription: Return a untrusted file path
+    patterns:
+      - pattern: |
+          ...
+          $V2 = $SOURCE.$F()
+          ...
+      - pattern: |
+          ...
+          $SINK = CustomType3($SOURCE, ...)
+          ...
+      - pattern-inside: |
+          def $METHOD(..., $SOURCE, ...):
+              ...
+              return $SINK

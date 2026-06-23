@@ -3,8 +3,12 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleReturnConditional (Python port, recast as call-based)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern: |
+          ...
+          $RET = $SOURCE.mk_type2()
+          ...
+      - pattern-inside: |
+          def $METHOD(..., $SOURCE, ...):
+              ...
+              return $RET

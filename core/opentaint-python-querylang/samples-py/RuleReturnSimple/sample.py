@@ -1,24 +1,20 @@
-def source() -> str:
-    return "tainted"
-
-
-def sink(data) -> None:
+class CustomType1:
     pass
 
 
-def _returned() -> str:
-    a = source()
-    return a
-
-
-def _const_returned() -> str:
-    _ = source()
-    return "safe"
+def _positive_simple(src):
+    ret = src
+    return ret
 
 
 def Positive_simple():
-    sink(_returned())
+    _positive_simple(CustomType1())
 
 
-def Negative_constant_return():
-    sink(_const_returned())
+def _negative_simple(src):
+    safe = CustomType1()
+    return safe
+
+
+def Negative_simple():
+    _negative_simple(CustomType1())

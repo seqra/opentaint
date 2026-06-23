@@ -1,15 +1,15 @@
 class StaticConstantStorage:
-    FIRST = "first"
-    SECOND = "second"
+    FIRST = "FIRST"
+    SECOND = "SECOND"
 
 
-def sink(data) -> None:
+def sink(condition):
     pass
 
 
-def Positive_first():
+def Positive_simple():
     sink(StaticConstantStorage.FIRST)
 
 
-def Negative_second():
+def Negative_simple():
     sink(StaticConstantStorage.SECOND)

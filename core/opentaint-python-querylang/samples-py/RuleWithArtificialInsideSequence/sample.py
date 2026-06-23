@@ -21,9 +21,30 @@ def Positive_both_g_and_h():
     f(x)
 
 
+def Positive_reverse_inside():
+    x = "data"
+    h(x)
+    g(x)
+    f(x)
+
+
+def Positive_clean_last():
+    x = "data"
+    g(x)
+    h(x)
+    f(x)
+    clean(x)
+
+
 def Negative_only_g():
     x = "data"
     g(x)
+    f(x)
+
+
+def Negative_no_g():
+    x = "data"
+    h(x)
     f(x)
 
 

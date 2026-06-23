@@ -3,8 +3,8 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleReturnSimple (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern: |
+          def $METHOD(..., $SOURCE, ...):
+            ...
+            return $SOURCE

@@ -3,12 +3,20 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleWithSimplePass (Python port, propagator)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sinks:
-      - pattern: sink($X)
-    pattern-propagators:
-      - pattern: $OUT = pass_through($IN)
-        from: $IN
-        to: $OUT
+    patterns:
+      - pattern-either:
+          - pattern: |-
+              $A = src()
+              ...
+              do_pass($A, $B)
+              ...
+              sink($B)
+          - pattern: |-
+              $A = src()
+              $B = src()
+              sink($A, $B)
+          - pattern: |-
+              $A = src()
+              $B = src()
+              sink($A)
+              sink($B)

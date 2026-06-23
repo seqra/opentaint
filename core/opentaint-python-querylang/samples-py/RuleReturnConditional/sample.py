@@ -1,27 +1,30 @@
-def source() -> str:
-    return "tainted"
+class CustomType1:
+    def mk_type2(self):
+        return CustomType2()
 
 
-def sink(data) -> None:
+class CustomType2:
     pass
 
 
-def _conditional_helper(src: str) -> str:
-    if src != "":
+def positive_src_else_derived_simple(src):
+    if src is not None:
         ret = src
     else:
-        ret = "fallback"
-    return ret
+        ret = CustomType1()
+    return ret.mk_type2()
 
 
-def _always_safe_helper(src: str) -> str:
-    _ = src
-    return "safe"
+def Positive_src_else_derived():
+    positive_src_else_derived_simple(CustomType1())
 
 
-def Positive_returns_source_or_derived():
-    sink(_conditional_helper(source()))
+def negative_always_safe_simple(src):
+    safe = CustomType1()
+    if True:
+        safe = CustomType1()
+    return safe.mk_type2()
 
 
 def Negative_always_safe():
-    sink(_always_safe_helper(source()))
+    negative_always_safe_simple(CustomType1())

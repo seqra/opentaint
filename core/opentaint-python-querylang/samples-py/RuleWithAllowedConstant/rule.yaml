@@ -3,10 +3,8 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleWithAllowedConstant (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sinks:
-      - patterns:
-          - pattern: sink($X)
-          - pattern-not: sink("...")
+    patterns:
+      - pattern: |-
+          sink(...)
+      - pattern-not: |-
+          sink("...")

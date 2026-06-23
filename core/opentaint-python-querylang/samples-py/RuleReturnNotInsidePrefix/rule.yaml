@@ -3,10 +3,13 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleReturnNotInsidePrefix (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: mk_type2($X)
-    pattern-sanitizers:
-      - pattern: clean($X)
-    pattern-sinks:
-      - pattern: mk_type1($X)
+    patterns:
+      - pattern: |
+          $S = $SOURCE.mk_type2()
+      - pattern-not-inside: |
+          ...
+          $S.clean()
+      - pattern-inside: |
+          def $METHOD(..., $SOURCE, ...):
+              ...
+              return $S.mk_type3().mk_type1()

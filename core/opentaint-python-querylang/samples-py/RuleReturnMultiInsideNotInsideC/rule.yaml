@@ -3,10 +3,18 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleReturnMultiInsideNotInsideC (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: mk_type2($X)
-    pattern-sanitizers:
-      - pattern: sanitize_c($X)
-    pattern-sinks:
-      - pattern: mk_type3($X)
+    patterns:
+      - pattern: |
+          $T1 = $SOURCE.mk_type2()
+          ...
+          $SINK = $T1.mk_type3()
+      - pattern-not-inside: |
+          ...
+          sanitize_c($T1)
+      - pattern-not-inside: |
+          ...
+          sanitize_c($SINK)
+      - pattern-inside: |
+          def $METHOD(..., $SOURCE, ...):
+              ...
+              return $SINK

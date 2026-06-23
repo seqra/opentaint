@@ -1,12 +1,17 @@
 rules:
-  - id: example-trickypatternnot
+  - id: xss
     languages: [python]
     severity: ERROR
-    message: match example/TrickyPatternNot (Python port, return with cleaner)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sanitizers:
-      - pattern: clean($X)
-    pattern-sinks:
-      - pattern: sink($X)
+    message: Return an untrusted data from a file
+    patterns:
+      - patterns:
+          - pattern: |-
+              $SINK = src()
+          - pattern-not-inside: |-
+              $NAME = src()
+              ...
+              $SINK = clean($NAME)
+      - pattern-inside: |
+          def $METHOD(...):
+              ...
+              return $SINK

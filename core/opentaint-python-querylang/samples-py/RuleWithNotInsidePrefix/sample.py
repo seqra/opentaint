@@ -1,21 +1,30 @@
-def source() -> str:
-    return "tainted"
-
-
-def sink(data) -> None:
+def sink(data):
     pass
 
 
-def prefix_clean(s: str) -> str:
-    return s
+def prefix_clean(data):
+    pass
 
 
 def Positive_simple():
-    data = source()
+    data = ""
+    sink(data)
+
+
+def Positive_clean_second():
+    data = ""
+    sink(data)
+    prefix_clean(data)
+
+
+def Positive_clean_on_other_data():
+    data = ""
+    data1 = "aaa"
+    prefix_clean(data1)
     sink(data)
 
 
 def Negative_clean_first():
-    data = source()
-    cleaned = prefix_clean(data)
-    sink(cleaned)
+    data = ""
+    prefix_clean(data)
+    sink(data)

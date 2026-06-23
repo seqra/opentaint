@@ -1,30 +1,32 @@
-class DataObj:
-    def to_str(self) -> str:
-        return "data"
+class Inner:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def get_obj_good(self):
+        return self.obj
 
 
-def source() -> DataObj:
-    return DataObj()
+def src():
+    return Inner(object())
 
 
-def sink(data: str) -> None:
+def sink(data):
     pass
 
 
-def Positive_direct_chain():
-    a = source()
-    b = a.to_str()
-    sink(b)
+def Positive_one_call():
+    data = src()
+    str = data.get_obj_good().to_string()
+    sink(str)
 
 
-def Positive_intermediate_chain():
-    a = source()
-    obj = a
-    b = obj.to_str()
-    sink(b)
+def Positive_zero_calls():
+    data = src()
+    str = data.to_string()
+    sink(str)
 
 
-def Negative_no_source():
-    a = DataObj()
-    b = a.to_str()
-    sink(b)
+def Negative_two_calls():
+    data = src()
+    str = data.get_obj_good().get_class().to_string()
+    sink(str)

@@ -1,15 +1,20 @@
-def src(s: str) -> str:
-    return s
+def src(data):
+    return "tainted"
 
 
-def sink(data) -> None:
-    pass
+def positive_returned(s):
+    a = src(s)
+    return a
 
 
 def Positive_simple():
-    a = src("data")
-    sink(a)
+    positive_returned("tainted")
 
 
-def Negative_no_src():
-    sink("safe")
+def negative_returned(s):
+    a = src("safe")
+    return a
+
+
+def Negative_simple():
+    negative_returned("tainted")

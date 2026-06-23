@@ -1,24 +1,28 @@
-def source() -> str:
+def src():
     return "tainted"
 
 
-def sink(data) -> None:
+def clean(s):
     pass
 
 
-def _returned() -> str:
-    a = source()
+def sink(s):
+    pass
+
+
+def _positive_returned():
+    a = src()
     return a
 
 
-def _const_returned() -> str:
-    _ = source()
+def Positive_simple():
+    res = _positive_returned()
+
+
+def _negative_returned():
+    a = src()
     return "safe"
 
 
-def Positive_simple():
-    sink(_returned())
-
-
-def Negative_constant_return():
-    sink(_const_returned())
+def Negative_simple():
+    res = _negative_returned()

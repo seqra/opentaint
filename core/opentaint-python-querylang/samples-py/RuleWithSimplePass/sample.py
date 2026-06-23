@@ -1,22 +1,27 @@
-def source() -> str:
-    return "tainted"
+def src():
+    return "tainted string"
 
 
-def sink(data) -> None:
+def clean(data):
     pass
 
 
-def pass_through(value: str) -> str:
-    return value
+def do_pass(data, other):
+    pass
+
+
+def sink(*data):
+    pass
 
 
 def Positive_simple():
-    data = source()
-    other = pass_through(data)
+    data = src()
+    other = "other"
+    do_pass(data, other)
     sink(other)
 
 
-def Negative_no_pass():
-    data = source()
-    _ = data
-    sink("constant")
+def Positive_simple2():
+    data1 = src()
+    data2 = src()
+    sink(data1, data2)

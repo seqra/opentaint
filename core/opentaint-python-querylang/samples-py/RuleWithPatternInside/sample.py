@@ -1,31 +1,40 @@
-def source() -> str:
-    return "tainted"
+def src():
+    return "tainted string"
 
 
-def source1() -> str:
-    return "untainted"
+def src1():
+    return "not tainted string"
 
 
-def sink(data) -> None:
+def sink(data):
     pass
 
 
 def Positive_simple():
-    data = source()
+    data = src()
     sink(data)
 
 
 def Positive_with_ellipsis():
-    data = source()
-    _ = data + "x"
+    data = src()
+    print(data)
     sink(data)
 
 
+def sink_wrapper(data):
+    print(data)
+    sink(data)
+
+
+def Positive_iter_proc():
+    data = src()
+    sink_wrapper(data)
+
+
 def Negative_no_sink():
-    data = source()
-    _ = data
+    data = src()
 
 
 def Negative_no_source():
-    data = source1()
+    data = src1()
     sink(data)

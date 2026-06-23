@@ -1,28 +1,24 @@
-def source() -> str:
-    return "tainted"
+def entry_point(f):
+    return f
 
 
-def sink(data) -> None:
-    pass
+def clean(o):
+    return o
 
 
-def clean(data: str) -> str:
-    return data
+@entry_point
+def positive_method(o):
+    return o
 
 
-def _returned() -> str:
-    a = source()
-    return a
+def Positive_entrypoint():
+    positive_method("data")
 
 
-def _cleaned_returned() -> str:
-    a = source()
-    return clean(a)
+@entry_point
+def negative_method(o):
+    return clean(o)
 
 
-def Positive_simple():
-    sink(_returned())
-
-
-def Negative_cleaned():
-    sink(_cleaned_returned())
+def Negative_entrypoint():
+    negative_method("data")

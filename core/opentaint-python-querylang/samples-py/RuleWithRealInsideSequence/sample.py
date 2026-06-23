@@ -1,21 +1,18 @@
-def new_object_mapper() -> str:
-    return "om"
+class ObjectMapper:
+    def enable_default_typing(self):
+        pass
 
-
-def enable_default_typing(om: str) -> str:
-    return om
-
-
-def read_value(om: str) -> None:
-    pass
+    def read_value(self, json):
+        return ""
 
 
 def Positive_simple():
-    om = new_object_mapper()
-    tainted = enable_default_typing(om)
-    read_value(tainted)
+    om = ObjectMapper()
+    om.enable_default_typing()
+    om.read_value("")
 
 
-def Negative_no_enable():
-    om = new_object_mapper()
-    read_value(om)
+def Negative_simple():
+    om = ObjectMapper()
+    om.read_value("{}")
+    om.enable_default_typing()

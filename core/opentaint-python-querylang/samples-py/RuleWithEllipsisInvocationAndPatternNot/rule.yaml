@@ -3,10 +3,12 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleWithEllipsisInvocationAndPatternNot (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: src()
-    pattern-sanitizers:
-      - pattern: get_obj_bad($X)
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern: |-
+          $A = src()
+          $B = $A. ... .to_string()
+          sink($B)
+      - pattern-not: |-
+          $A = src()
+          $B = $A.get_obj_bad().to_string()
+          sink($B)

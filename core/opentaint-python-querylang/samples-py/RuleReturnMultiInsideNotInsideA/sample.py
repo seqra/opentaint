@@ -1,21 +1,38 @@
-def mk_type2(x: str) -> str:
-    return x
+class CustomType1:
+    def mk_type2(self):
+        return CustomType2()
 
 
-def mk_type3(x: str) -> str:
-    return x
+class CustomType2:
+    def mk_type3(self):
+        return CustomType3()
 
 
-def sanitize_a(x: str) -> str:
-    return x
+class CustomType3:
+    def mk_type1(self):
+        return CustomType1()
 
 
-def Positive_simple() -> str:
-    v2 = mk_type2("x")
-    return mk_type3(v2)
+def Positive_entrypoint():
+    simple_positive(CustomType1())
 
 
-def Negative_with_sanitize() -> str:
-    v2 = mk_type2("x")
-    cleaned = sanitize_a(v2)
-    return mk_type3(cleaned)
+def simple_positive(src):
+    v2 = src.mk_type2()
+    sink = v2.mk_type3()
+    return sink
+
+
+def Negative_entrypoint():
+    simple_negative(CustomType1())
+
+
+def simple_negative(src):
+    v2 = src.mk_type2()
+    sink = v2.mk_type3()
+    sanitize_a(sink)
+    return sink
+
+
+def sanitize_a(t):
+    pass

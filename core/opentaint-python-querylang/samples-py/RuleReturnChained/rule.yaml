@@ -3,8 +3,15 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleReturnChained (Python port, chained calls)
-    mode: taint
-    pattern-sources:
-      - pattern: mk_type2($X)
-    pattern-sinks:
-      - pattern: mk_type1($X)
+    patterns:
+      - pattern: |
+          $V = $SOURCE.mk_type2().mk_type3()
+          ...
+      - pattern: |
+          ...
+          $SINK = $V.mk_type1()
+          ...
+      - pattern-inside: |
+          def $METHOD(..., $SOURCE, ...):
+              ...
+              return $SINK

@@ -16,6 +16,7 @@ def sink(data) -> None:
 
 def Positive_simple():
     a = src()
+    b = get_obj_bad(a)
     b = get_obj_good(a)
     sink(b)
 

@@ -1,27 +1,71 @@
-def source() -> str:
-    return "tainted"
+def src() -> str:
+    return "tainted string"
 
 
-def sink(data) -> None:
+def clean(data: str) -> None:
     pass
 
 
-def clean(data: str) -> str:
-    return data
+def sink(data: str) -> None:
+    pass
+
+
+class StringContainer:
+    def __init__(self) -> None:
+        self.value = ""
+
+    def get_value(self) -> str:
+        return self.value
+
+    def set_value(self, value: str) -> None:
+        self.value = value
+
+
+def sink_wrapper(data: str) -> None:
+    sink(data)
+
+
+def clean_sink_wrapper(data: str) -> None:
+    clean(data)
+    sink(data)
 
 
 def Positive_simple():
-    data = source()
+    data = src()
     sink(data)
+
+
+def Positive_simple_with_container():
+    data = src()
+    container = StringContainer()
+    container.set_value(data)
+    sink(container.get_value())
 
 
 def Positive_with_ellipsis():
-    data = source()
-    _ = data + " noop"
+    data = src()
+    print(data)
     sink(data)
 
 
-def Negative_cleaned():
-    data = source()
-    data = clean(data)
+def Positive_iter_proc():
+    data = src()
+    sink_wrapper(data)
+
+
+def Negative_simple():
+    data = src()
+    clean(data)
     sink(data)
+
+
+def Negative_with_ellipsis():
+    data = src()
+    print(data)
+    clean(data)
+    sink(data)
+
+
+def Negative_iter_proc():
+    data = src()
+    clean_sink_wrapper(data)

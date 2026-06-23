@@ -1,25 +1,35 @@
-def mk_type2(x: str) -> str:
-    return x
+class CustomType1:
+    def mk_type2(self):
+        return CustomType2()
 
 
-def mk_type3(x: str) -> str:
-    return x
+class CustomType2:
+    def mk_type3(self):
+        return CustomType3()
+
+    def clean(self):
+        pass
 
 
-def mk_type1(x: str) -> str:
-    return x
+class CustomType3:
+    def mk_type1(self):
+        return CustomType1()
 
 
-def clean(x: str) -> str:
-    return x
+def Positive_entrypoint():
+    simple_positive(CustomType1())
 
 
-def Positive_simple() -> str:
-    s = mk_type2("x")
-    return mk_type1(mk_type3(s))
+def simple_positive(src):
+    s = src.mk_type2()
+    return s.mk_type3().mk_type1()
 
 
-def Negative_with_clean() -> str:
-    s = mk_type2("x")
-    cleaned = clean(s)
-    return mk_type1(mk_type3(cleaned))
+def Negative_entrypoint():
+    simple_negative(CustomType1())
+
+
+def simple_negative(src):
+    s = src.mk_type2()
+    s.clean()
+    return s.mk_type3().mk_type1()

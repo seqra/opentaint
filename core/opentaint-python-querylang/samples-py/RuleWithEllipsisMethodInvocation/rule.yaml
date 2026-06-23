@@ -3,12 +3,8 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/RuleWithEllipsisMethodInvocation (Python port)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-propagators:
-      - pattern: $OUT = $IN.to_str()
-        from: $IN
-        to: $OUT
-    pattern-sinks:
-      - pattern: sink($X)
+    patterns:
+      - pattern: |-
+          $A = src()
+          $B = $A. ... .to_string()
+          sink($B)

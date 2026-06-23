@@ -2,11 +2,17 @@ rules:
   - id: example-rulewithsignature
     languages: [python]
     severity: ERROR
-    message: match example/RuleWithSignature (Python port, recast as either-sink)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sinks:
+    message: match example/RuleWithSignature
+    patterns:
       - pattern-either:
-          - pattern: sink1($X)
-          - pattern: sink2($X)
+          - pattern: |
+              ...
+              sink1($A)
+              ...
+          - pattern: |
+              ...
+              sink2($A)
+              ...
+      - pattern-inside: |
+          def $METHOD(..., $A, ...):
+              ...

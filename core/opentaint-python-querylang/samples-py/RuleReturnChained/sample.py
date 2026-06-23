@@ -1,21 +1,39 @@
-def mk_type2(s: str) -> str:
-    return s
+class CustomType1:
+    def mk_type2(self):
+        return CustomType2()
 
 
-def mk_type3(s: str) -> str:
-    return s
+class CustomType2:
+    def mk_type3(self):
+        return CustomType3()
 
 
-def mk_type1(s: str) -> str:
-    return s
+class CustomType3:
+    def mk_type1(self):
+        return CustomType1()
 
 
-def Positive_simple() -> str:
-    src = "x"
-    v3 = mk_type3(mk_type2(src))
-    out = mk_type1(v3)
-    return out
+def positive_simple(src):
+    v3 = src.mk_type2().mk_type3()
+    sink = v3.mk_type1()
+    return sink
 
 
-def Negative_no_mk_type1() -> str:
-    return mk_type3(mk_type2("x"))
+def Positive():
+    positive_simple(CustomType1())
+
+
+def positive_one_line_simple(src):
+    return src.mk_type2().mk_type3().mk_type1()
+
+
+def Positive_one_line():
+    positive_one_line_simple(CustomType1())
+
+
+def negative_simple(src):
+    return src.mk_type2().mk_type3()
+
+
+def Negative():
+    negative_simple(CustomType1())

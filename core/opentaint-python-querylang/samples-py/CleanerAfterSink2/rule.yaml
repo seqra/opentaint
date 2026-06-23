@@ -3,10 +3,18 @@ rules:
     languages: [python]
     severity: ERROR
     message: match example/CleanerAfterSink2 (Python port, two-arg sink/clean)
-    mode: taint
-    pattern-sources:
-      - pattern: source()
-    pattern-sanitizers:
-      - pattern: clean($X, $Y)
-    pattern-sinks:
-      - pattern: sink($X, $Y)
+    patterns:
+      - pattern: |
+          $A = src()
+          ...
+          $B = copy($A)
+          ...
+          sink($A, $B)
+      - pattern-not-inside: |
+          $A = src()
+          ...
+          $B = copy($A)
+          ...
+          sink($A, $B)
+          ...
+          clean($A, $B)
