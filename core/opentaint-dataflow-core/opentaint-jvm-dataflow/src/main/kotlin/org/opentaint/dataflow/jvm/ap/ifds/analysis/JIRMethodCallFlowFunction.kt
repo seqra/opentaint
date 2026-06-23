@@ -26,6 +26,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRMethodCallTaintUtil
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
+import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FactWithMarkAfterAnyAccessorResolver
@@ -315,6 +316,8 @@ class JIRMethodCallFlowFunction(
 
             if (startFactBase !is AccessPathBase.ClassStatic) {
                 analysisContext.taint.externalMethodTracker?.let { tracker ->
+                    if (JIRCallResolver.alwaysIgnoreMethod(method)) return@let
+
                     val methodName = "${method.enclosingClass.name}#${method.name}"
                     val methodDesc = method.description
                     val factPosition = startFactBase.toString()

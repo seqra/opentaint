@@ -37,6 +37,7 @@ import org.opentaint.ir.api.jvm.ext.ifArrayGetElementType
 import org.opentaint.ir.api.jvm.ext.isAssignable
 import org.opentaint.ir.api.jvm.ext.isSubClassOf
 import org.opentaint.ir.api.jvm.ext.objectType
+import org.opentaint.ir.api.jvm.ext.unboxIfNeeded
 import org.opentaint.ir.impl.features.classpaths.JIRUnknownType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.LongAdder
@@ -83,16 +84,17 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         private fun checkAccessor(accessor: Accessor): FilterResult {
             when (accessor) {
                 is FinalAccessor, is AnyAccessor, is ClassStaticAccessor -> {
-                    if (actualType is JIRPrimitiveType) return FilterResult.Reject
+                    if (actualType.unboxIfNeeded() is JIRPrimitiveType) return FilterResult.Reject
                     return FilterResult.Accept
                 }
 
                 is TaintMarkAccessor -> {
-                    if (actualType is JIRPrimitiveType) {
+                    if (actualType.unboxIfNeeded() is JIRPrimitiveType) {
                         if (!accessor.mark.endsWith(PrimitiveTaintExt.PRIMITIVE_TRACKING_ENABLED_MODE)) {
                             return FilterResult.Reject
                         }
                     }
+
                     return FilterResult.Accept
                 }
 
