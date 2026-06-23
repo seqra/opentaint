@@ -75,6 +75,8 @@ class PIRMethodCallFlowFunction(
             }
         )
 
+        applySinkRules(factReader = null, conditionRewriter)
+
         result.add(CallToStartZeroFact)
 
         return result
@@ -293,7 +295,7 @@ class PIRMethodCallFlowFunction(
     }
 
     private fun applySinkRules(
-        factReader: FinalFactReader,
+        factReader: FinalFactReader?,
         conditionRewriter: PIRConditionRewriter,
     ) {
         val sinkRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
