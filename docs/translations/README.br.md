@@ -105,7 +105,7 @@
 
 ## Por que OpenTaint?
 
-> TL;DR: O OpenTaint é uma alternativa de código aberto ao *Semgrep Pro* e ao *CodeQL* — um motor de taint formal e interprocedural que você pode personalizar e hospedar por conta própria, criado para que agentes de IA conduzam sua análise de segurança sem queimar tokens a cada varredura.
+> O OpenTaint é uma alternativa de código aberto ao *Semgrep Pro* e ao *CodeQL* — um motor de taint formal e interprocedural que você pode personalizar e hospedar por conta própria, criado para que agentes de IA conduzam sua análise de segurança sem queimar tokens a cada varredura.
 
 A IA gera código de produção mais rápido do que as equipes de segurança conseguem acompanhar, e os dois tipos de ferramenta criados para capturar o que ela erra impõem, cada um, um mau compromisso:
 

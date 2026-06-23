@@ -105,7 +105,7 @@
 
 ## Neden OpenTaint?
 
-> TL;DR: OpenTaint, *Semgrep Pro* ve *CodeQL*'e açık kaynaklı bir alternatiftir — özelleştirebileceğiniz ve kendi sunucunuzda barındırabileceğiniz, formal prosedürler arası bir taint motorudur; yapay zeka ajanlarının her taramada token harcamadan güvenlik analizinizi yürütmesi için tasarlanmıştır.
+> OpenTaint, *Semgrep Pro* ve *CodeQL*'e açık kaynaklı bir alternatiftir — özelleştirebileceğiniz ve kendi sunucunuzda barındırabileceğiniz, formal prosedürler arası bir taint motorudur; yapay zeka ajanlarının her taramada token harcamadan güvenlik analizinizi yürütmesi için tasarlanmıştır.
 
 Yapay zeka, üretim kodunu güvenlik ekiplerinin takip edebileceğinden daha hızlı üretiyor ve onun hatalarını yakalamak için geliştirilen iki tür araç da kötü bir takastan kaçınamıyor:
 

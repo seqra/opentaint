@@ -105,7 +105,7 @@
 
 ## Tại sao chọn OpenTaint?
 
-> TL;DR: OpenTaint là một giải pháp thay thế mã nguồn mở cho *Semgrep Pro* và *CodeQL* — một công cụ phân tích taint liên thủ tục chính quy mà bạn có thể tùy chỉnh và tự lưu trữ, được xây dựng để các tác tử AI dẫn dắt việc phân tích bảo mật của bạn mà không tiêu tốn token cho mỗi lần quét.
+> OpenTaint là một giải pháp thay thế mã nguồn mở cho *Semgrep Pro* và *CodeQL* — một công cụ phân tích taint liên thủ tục chính quy mà bạn có thể tùy chỉnh và tự lưu trữ, được xây dựng để các tác tử AI dẫn dắt việc phân tích bảo mật của bạn mà không tiêu tốn token cho mỗi lần quét.
 
 AI tạo mã sản xuất nhanh hơn khả năng theo kịp của các đội bảo mật, và hai loại công cụ được tạo ra để bắt những gì AI làm sai đều buộc bạn vào một sự đánh đổi tồi tệ:
 
