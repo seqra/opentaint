@@ -34,6 +34,7 @@ import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
+import org.opentaint.ir.api.jvm.cfg.JIRBinaryExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
 import org.opentaint.ir.api.jvm.cfg.JIRExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
@@ -255,6 +256,12 @@ class JIRMethodSequentFlowFunction(
                 ?.apply { fact = filterFactBaseType(assignFrom.instance?.type, fact) ?: return }
                 ?.apply { fact = filterFactBaseType(assignFrom.field.enclosingType, fact) ?: return }
                 ?: return
+
+            is JIRBinaryExpr -> {
+                sequentFlowAssign(assignFrom.lhv, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+                sequentFlowAssign(assignFrom.rhv, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+                return
+            }
 
             else -> null
         }
