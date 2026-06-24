@@ -876,6 +876,8 @@ rules:
     languages:
       - java
       - kt
+    options:
+      primitive-tracking: true
     pattern: |-
       $X $METHOD(...) {
         ...
