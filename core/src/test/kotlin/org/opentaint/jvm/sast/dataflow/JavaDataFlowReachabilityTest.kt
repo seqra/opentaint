@@ -41,6 +41,40 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
     }
 
     @Test
+    fun `field flow - source to sink through single field`() {
+        val testCls = "$SAMPLE_PACKAGE.FieldFlowSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", "field-flow-rule", listOf(Argument(0) to TAINT_MARK)))
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "fieldWriteFlow",
+            ruleId = "field-flow-rule",
+            testName = "field write flow"
+        )
+    }
+
+    @Test
+    fun `field flow - fact is killed by field read`() {
+        val testCls = "$SAMPLE_PACKAGE.FieldFlowSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", "field-flow-rule", listOf(Argument(0) to TAINT_MARK)))
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "fieldReadKillFlow",
+            ruleId = "field-flow-rule",
+            testName = "field read kill flow"
+        )
+    }
+
+    @Test
     fun `interprocedural flow - source to sink through chained methods`() {
         val testCls = "$SAMPLE_PACKAGE.InterproceduralDataFlowSample"
         val config = SerializedTaintConfig(
