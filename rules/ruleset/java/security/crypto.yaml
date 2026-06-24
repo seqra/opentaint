@@ -883,7 +883,7 @@ rules:
         ...
         $DIGEST = $MD.digest(...);
         ...
-        Integer.toHexString($DIGEST[$IDX]);
+        Integer.toHexString($DIGEST[...]);
       }
 
   - id: insecure-smtp
