@@ -1,4 +1,5 @@
 analyzer: "analyzer/2026.07.03.c8de580"
 autobuilder: "autobuilder/2026.06.18.e9476cf"
 rules: "rules/v0.2.2"
+go-server: "go-server/2026.06.05.d30859e"
 java: 21
