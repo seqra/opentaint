@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor.Field
 import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias.SimpleLoc
+import org.opentaint.dataflow.util.forEachInt
 import java.util.IdentityHashMap
 
 internal class StateBuilder(
@@ -52,7 +53,10 @@ internal class StateBuilder(
 
     fun merge(set: Set<AAInfo>) {
         val setIds = checkedInfoIds(set)
-        state = state.mergeAliasSets(setIds)
+        // forcing aliasing of every variable
+        val setLValues = IntOpenHashSet()
+        setIds.forEachInt { setLValues.add(it.inv()) }
+        state = state.mergeAliasSets(setLValues)
     }
 
     fun remove(set: Set<AAInfo>) {
@@ -80,7 +84,7 @@ internal class StateBuilder(
     }
 
     private fun checkedInfoId(info: AAInfo): Int {
-        check(created.containsKey(info)) { "$info doesn't belongs to the current state" }
+        check(created.containsKey(info)) { "$info doesn't belong to the current state" }
         return manager.getOrAdd(info)
     }
 

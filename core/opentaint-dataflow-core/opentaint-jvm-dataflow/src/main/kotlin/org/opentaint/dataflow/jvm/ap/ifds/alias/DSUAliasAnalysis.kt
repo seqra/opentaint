@@ -239,11 +239,14 @@ class DSUAliasAnalysis(
 
         startInvalidAliases.forEachInt { id ->
             invalidAliasRepr.add(aliasGroupRepr(id))
+            invalidAliasRepr.add(aliasGroupRepr(id.inv()))
         }
 
         allAliasSets.forEach { group ->
             if (groupContainsSimpleOuterAlias(group)) {
-                invalidAliasRepr.add(aliasGroupRepr(group.firstInt()))
+                val repr = aliasGroupRepr(group.firstInt())
+                invalidAliasRepr.add(repr)
+                invalidAliasRepr.add(repr.inv())
             }
         }
 
