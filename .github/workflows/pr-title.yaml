@@ -119,7 +119,6 @@ jobs:
             "settings\.gradle\.kts"
             "buildSrc/"
             "src/"
-            "samples/"
             "opentaint-sast-test-util/"
           )
           ANALYZER_PATTERN=$(IFS="|"; echo "${ANALYZER_MODULES[*]}")
