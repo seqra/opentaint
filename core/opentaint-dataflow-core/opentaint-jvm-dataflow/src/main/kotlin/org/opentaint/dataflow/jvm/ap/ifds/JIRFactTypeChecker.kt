@@ -83,10 +83,7 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
         private fun checkAccessor(accessor: Accessor): FilterResult {
             when (accessor) {
-                is FinalAccessor, is AnyAccessor, is ClassStaticAccessor -> {
-                    if (actualType.unboxIfNeeded() is JIRPrimitiveType) return FilterResult.Reject
-                    return FilterResult.Accept
-                }
+                is FinalAccessor, is AnyAccessor, is ClassStaticAccessor -> return FilterResult.Accept
 
                 is TaintMarkAccessor -> {
                     if (actualType.unboxIfNeeded() is JIRPrimitiveType) {
