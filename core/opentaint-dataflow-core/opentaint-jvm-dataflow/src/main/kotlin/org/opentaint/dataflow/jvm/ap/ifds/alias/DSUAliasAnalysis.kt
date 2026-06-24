@@ -620,8 +620,8 @@ fun State.forEachAliasInSetWithBreak(info: Int, body: (Int) -> Unit?) {
     var stoppage = false
 
     fun Int.considerAlias(alias: Int): Unit? {
-        // only allowing L(a) = b as a valid alias
-        if ((alias xor this) >= 0) return Unit
+        // disallowing `L(a) = b; L(a) = c` from aliasing b and c
+        if ((alias or this) >= 0) return Unit
         if (aliases.add(alias)) {
             if (body(alias) == null) {
                 stoppage = true

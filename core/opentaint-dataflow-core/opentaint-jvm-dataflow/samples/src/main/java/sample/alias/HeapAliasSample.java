@@ -76,6 +76,12 @@ public class HeapAliasSample extends BaseSample  {
         sinkOneValue(box2.field2.value);
     }
 
+    static void aliasArrayWrite(BoxArray2 box2, Object a) {
+        box2.array1 = box2.array2;
+        box2.array1[0].value = a;
+        sinkOneValue(box2.array2[0].value);
+    }
+
     static void nodeTraversalData(Node node) {
         Node cur = node;
         while (cur.next != null) {

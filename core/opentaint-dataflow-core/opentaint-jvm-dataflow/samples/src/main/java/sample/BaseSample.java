@@ -23,6 +23,11 @@ public class BaseSample {
         public Box field2;
     }
 
+    public static class BoxArray2 {
+        public Box[] array1;
+        public Box[] array2;
+    }
+
     public static Object readValue(Box box) {
         return box.value;
     }

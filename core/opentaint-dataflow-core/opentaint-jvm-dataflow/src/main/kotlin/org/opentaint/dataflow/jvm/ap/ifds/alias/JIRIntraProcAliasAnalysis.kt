@@ -282,9 +282,13 @@ class JIRIntraProcAliasAnalysis(
         }
     }
 
+    private fun State.getAliasIndexesFor(root: Int, storage: IntOpenHashSet) {
+        forEachAliasInSet(root) { storage.add(it.ensureNonLValue()) }
+    }
+
     private fun State.getAliasIndexesFor(root: Int): IntOpenHashSet {
         val aliases = IntOpenHashSet()
-        forEachAliasInSet(root) { aliases.add(it.ensureNonLValue()) }
+        getAliasIndexesFor(root, aliases)
         return aliases
     }
 
@@ -330,16 +334,6 @@ class JIRIntraProcAliasAnalysis(
             if (infoIndex.isLValue()) return@forEachInt
 
             val root = manager.getElementUncheck(infoIndex)
-
-            val aliases = state.getAliasIndexesFor(infoIndex)
-            val converted = aliases.map { manager.getElementUncheck(it) }
-                .flatMap { it.convertToAliasInfo(state, manager, depth = 0, cancellation) }
-                .filter { it !is AliasApInfo || reachableLocals.isReachable(it.base, instIdx) }
-                .distinct()
-            // size == 1 means only root was converted to AliasInfo; not really meaningful
-            if (converted.size <= 1) return@forEachInt
-            aliases.forEach { bound.add(it) }
-
             if (root !is LocalAlias.SimpleLoc || root.loc !is Local || !reachableLocals.isReachable(root.loc.idx, instIdx))
                 return@forEachInt
 
@@ -395,15 +389,41 @@ class JIRIntraProcAliasAnalysis(
         }
     }
 
-    private fun AAInfo.convertToAliasInfo(
+    private fun AAInfo.simpleConvertToAliasInfo(manager: AAInfoManager): AliasInfo? {
+        if (this !is HeapAlias) {
+            return convertBaseAccessor(this)
+        }
+
+        val accessors = mutableListOf<AliasAccessor>()
+        var curInfo = this
+        while (curInfo is HeapAlias) {
+            val accessor = when (val a = curInfo.heapAccessor) {
+                is ArrayAlias -> AliasAccessor.Array
+                is FieldAlias -> a.field
+            }
+            accessors.add(accessor)
+            curInfo = manager.getElementUncheck(curInfo.instance)
+        }
+
+        val instanceSimple = convertBaseAccessor(curInfo)
+        if (instanceSimple !is AliasApInfo) return null
+
+        return AliasApInfo(instanceSimple.base, accessors.reversed())
+    }
+
+    private fun AAInfo.collectAllAliases(
         state: State,
         manager: AAInfoManager,
         depth: Int,
         cancellation: AnalysisCancellation,
-    ): List<AliasInfo> {
+        visited: IntOpenHashSet = IntOpenHashSet(),
+    ): List<AAInfo> {
+        val index = manager.getOrAdd(this)
+        if (!visited.add(index))
+            return listOf(this)
+
         if (this !is HeapAlias) {
-            val base = convertBaseAccessor(this)
-            return listOfNotNull(base)
+            return listOf(this)
         }
 
         if (depth > HEAP_CHAIN_LIMIT) {
@@ -415,19 +435,26 @@ class JIRIntraProcAliasAnalysis(
         val instanceGroup = state.getAliasesFor(instance, manager)
         if (instanceGroup.isEmpty()) return emptyList()
 
-        val instances = instanceGroup.flatMap { it.convertToAliasInfo(state, manager, depth + 1, cancellation) }
-        val accessor = when (val a = this.heapAccessor) {
-            is ArrayAlias -> AliasAccessor.Array
-            is FieldAlias -> a.field
+        val instances = instanceGroup.flatMap { it.collectAllAliases(state, manager, depth + 1, cancellation, visited) }
+
+        val bridgedAliases = instances.flatMap { instance ->
+            val instanceIndex = manager.getOrAdd(instance)
+            val heapInstance = HeapAlias(instanceIndex, this.heapAccessor)
+            val heapIndex = manager.getOrAdd(heapInstance)
+            val heapAliases = state.getAliasesFor(heapIndex, manager)
+            heapAliases.flatMap { it.collectAllAliases(state, manager, depth, cancellation, visited) }
         }
 
-        return instances.mapNotNull {
-            when (it) {
-                is AliasAllocInfo -> return@mapNotNull null
-                is AliasApInfo -> AliasApInfo(it.base, it.accessors + accessor)
-            }
-        }
+        return bridgedAliases
     }
+
+    private fun AAInfo.convertToAliasInfo(
+        state: State,
+        manager: AAInfoManager,
+        depth: Int,
+        cancellation: AnalysisCancellation,
+    ): List<AliasInfo> =
+        collectAllAliases(state, manager, depth, cancellation).mapNotNull { it.simpleConvertToAliasInfo(manager) }
 
     private fun convertBaseAccessor(cur: AAInfo): AliasInfo? {
         if (cur.ctx != ContextInfo.rootContext) return null
