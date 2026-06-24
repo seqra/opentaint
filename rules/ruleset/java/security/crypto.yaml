@@ -881,9 +881,9 @@ rules:
         ...
         MessageDigest $MD = ...;
         ...
-        $MD.digest(...);
+        $DIGEST = $MD.digest(...);
         ...
-        Integer.toHexString(...);
+        Integer.toHexString($DIGEST[$IDX]);
       }
 
   - id: insecure-smtp
