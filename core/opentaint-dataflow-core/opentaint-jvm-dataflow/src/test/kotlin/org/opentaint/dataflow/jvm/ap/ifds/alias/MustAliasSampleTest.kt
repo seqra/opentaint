@@ -382,6 +382,28 @@ class MustAliasSampleTest : BasicTestUtils() {
     }
 
     @Test
+    fun `test field aliasing with write`() {
+        val method = findMethod(HEAP_SAMPLE, "aliasFieldWrite")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+    }
+
+    @Test
+    fun `test array aliasing with write`() {
+        val method = findMethod(HEAP_SAMPLE, "aliasArrayWrite")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(1)) } }
+    }
+
+    @Test
     fun `test aliased receiver field write`() {
         val method = findMethod(HEAP_SAMPLE, "aliasedReceiverFieldWrite")
         val aa = aaForMethod(method)

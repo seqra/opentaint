@@ -371,7 +371,7 @@ class JIRIntraProcAliasAnalysis(
             if (infoIndex.isLValue()) return@forEachInt
 
             val root = manager.getElementUncheck(infoIndex)
-            if (root.isMustRelevant())
+            if (!root.isMustRelevant())
                 return@forEachInt
 
             val rootBase = (convertBaseAccessor(root)!! as AliasApInfo).base

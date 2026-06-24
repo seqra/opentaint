@@ -48,6 +48,26 @@ class State private constructor(
         val normalizedInfos = fixHeapElementInstance(infos)
         val result = aliasGroups.mutableCopy()
 
+        val bridgesToRestore = mutableListOf<IntIntMutablePair>()
+
+        normalizedInfos.forEachInt { info ->
+            if (info.isLValue()) return@forEachInt
+
+            // keeping aliases in situations like:
+            // L(a) = b
+            // L(c) = a
+            // where simple removal would destroy c -> b relationship
+
+            val aliasBridge = IntOpenHashSet()
+            aliasGroups.forEachElementInSet(info.inv()) { bridged ->
+                if (!bridged.isLValue())
+                    aliasBridge.add(bridged)
+                Unit
+            }
+            aliasBridge.forEachInt { bridged -> bridgesToRestore += IntIntMutablePair(info, bridged) }
+        }
+        mergeUnionRelations(bridgesToRestore, result, manager)
+
         val removedInstances = IntOpenHashSet()
         result.prepareRemoveAll(normalizedInfos, removedInstances)
 
@@ -108,10 +128,15 @@ class State private constructor(
         }
     }
 
-    private fun fixHeapElementInstance(elements: IntOpenHashSet) =
-        elements.mapIntTo(IntOpenHashSet(elements.size)) {
-            ensureHeapElementCorrect(it, aliasGroups, manager)
+    private fun fixHeapElementInstance(elements: IntOpenHashSet): IntOpenHashSet {
+        val result = IntOpenHashSet()
+        elements.forEach {
+            val new = ensureHeapElementCorrect(it, aliasGroups, manager)
+            result.add(new)
+            result.add(new.inv())
         }
+        return result
+    }
 
     companion object {
         fun empty(manager: AAInfoManager, strategy: DsuMergeStrategy): State =

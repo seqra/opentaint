@@ -145,7 +145,6 @@ class DSUAliasAnalysis(
         if (reachabilityInfo == null) return this
 
         val unreachableLocals = IntOpenHashSet()
-        val restoreBridges = mutableListOf<IntIntImmutablePair>()
         allNonLValueElements().forEachInt {
             val element = manager.getElementUncheck(it)
             if (element !is LocalAlias.SimpleLoc) return@forEachInt
@@ -157,24 +156,9 @@ class DSUAliasAnalysis(
             if (reachabilityInfo.isReachable(loc.idx, instIdx)) return@forEachInt
 
             unreachableLocals.add(it)
-            unreachableLocals.add(it.inv())
-
-            // keeping aliases in situations like:
-            // L(a) = b
-            // L(c) = a
-            // where simple removal would destroy c -> b relationship
-
-            val aliasBridge = IntOpenHashSet()
-            aliasGroups.forEachElementInSet(it.inv()) { bridged ->
-                if (!bridged.isLValue())
-                    aliasBridge.add(bridged)
-                Unit
-            }
-            aliasBridge.forEachInt { bridged -> restoreBridges += IntIntImmutablePair(it, bridged) }
         }
 
-        val connectedBridges = restoreBridges.fold(this) { s, b -> s.mergeWith(b.firstInt(), b.secondInt()) }
-        return connectedBridges.removeUnsafe(unreachableLocals)
+        return removeUnsafe(unreachableLocals)
     }
 
     private fun eval(inst: JIRInst, state: ImmutableState, callFrame: CallTreeNode): ImmutableState {
@@ -289,7 +273,6 @@ class DSUAliasAnalysis(
                     children.forEach {
                         val child = it.index()
                         heapAliasToRemove.add(child)
-                        heapAliasToRemove.add(child.inv())
                         invalidAliasRepr.add(aliasGroupRepr(child))
                     }
                 }
@@ -551,7 +534,6 @@ class DSUAliasAnalysis(
             val element = aliasManager.getElementUncheck(info)
             if (element.isCallLocal(level)) {
                 aaInfoToRemove.add(info)
-                aaInfoToRemove.add(info.inv())
             }
         }
 
@@ -583,7 +565,7 @@ class DSUAliasAnalysis(
         val info = aliasManager.getElementUncheck(element)
         if (info is Unknown) return this
 
-        return removeUnsafe(IntOpenHashSet.of(element, element.inv()))
+        return removeUnsafe(IntOpenHashSet.of(element))
     }
 
     private fun State.removeOldAndMergeWith(info: AAInfo, other: AAInfo): State =

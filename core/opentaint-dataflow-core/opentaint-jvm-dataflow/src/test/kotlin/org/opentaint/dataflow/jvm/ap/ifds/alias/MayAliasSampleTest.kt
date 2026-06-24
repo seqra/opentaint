@@ -385,7 +385,7 @@ class MayAliasSampleTest : BasicTestUtils() {
     }
 
     @Test
-    fun `test `() {
+    fun `test field aliasing with write`() {
         val method = findMethod(HEAP_SAMPLE, "aliasFieldWrite")
         val aa = aaForMethod(method)
 
@@ -396,7 +396,7 @@ class MayAliasSampleTest : BasicTestUtils() {
     }
 
     @Test
-    fun `test 2`() {
+    fun `test array aliasing with write`() {
         val method = findMethod(HEAP_SAMPLE, "aliasArrayWrite")
         val aa = aaForMethod(method)
 
