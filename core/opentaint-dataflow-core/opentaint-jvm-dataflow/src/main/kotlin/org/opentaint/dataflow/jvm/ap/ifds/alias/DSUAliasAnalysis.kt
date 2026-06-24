@@ -254,7 +254,7 @@ class DSUAliasAnalysis(
                 group.forEachInt { id ->
                     if (id in heapAliasToRemove) return@forEachInt
 
-                    val info = aliasManager.getElementUncheck(id)
+                    val info = aliasManager.getElementUncheck(id.ensureNonLValue())
                     val children = mutableListOf<AAInfo>()
                     var curInfo = info
 
@@ -274,6 +274,7 @@ class DSUAliasAnalysis(
                         val child = it.index()
                         heapAliasToRemove.add(child)
                         invalidAliasRepr.add(aliasGroupRepr(child))
+                        invalidAliasRepr.add(aliasGroupRepr(child.inv()))
                     }
                 }
             }

@@ -16,7 +16,7 @@ class DSUAliasAnalysisInvalidateOuterHeapAliasesTest {
             override fun buildMethodGraph(method: JIRMethod): JIRInstGraph? = null
         },
         rootMethodReachabilityInfo = null,
-        mergeType = MergeType.May,
+        mergeType = MergeType.Must,
         cancellation = AnalysisCancellation(timeLimit = Duration.INFINITE, parentCancellation = null),
     )
     private val manager = analysis.aliasManager
@@ -26,7 +26,7 @@ class DSUAliasAnalysisInvalidateOuterHeapAliasesTest {
         fillState(body).build()
 
     private inline fun fillState(body: StateBuilder.() -> Unit): StateBuilder {
-        val builder = StateBuilder(manager, strategy, MergeType.May)
+        val builder = StateBuilder(manager, strategy, MergeType.Must)
         builder.body()
         return builder
     }
