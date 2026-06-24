@@ -65,11 +65,10 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             sink = listOf(sinkRule(testCls, "sink", "field-flow-rule", listOf(Argument(0) to TAINT_MARK)))
         )
 
-        assertReachable(
+        assertNotReachable(
             config = config,
             testCls = testCls,
             entryPointName = "fieldReadKillFlow",
-            ruleId = "field-flow-rule",
             testName = "field read kill flow"
         )
     }
