@@ -412,9 +412,17 @@ class JIRMethodSequentFlowFunction(
         propagateFact: (FinalFactAp) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
+        // Assign can't overwrite fact
+        if (assignTo != factAp.base) {
+            if (accessor !is ElementAccessor) {
+                unchanged(factAp)
+            } else {
+                propagateFact(factAp)
+            }
+        }
+
         if (!factAp.mayReadAccessor(instance, accessor)) {
             // Fact is irrelevant to current reading
-            unchanged(factAp)
             return
         }
 
@@ -436,15 +444,6 @@ class JIRMethodSequentFlowFunction(
 
         val newAp = factAp.readAccessorTo(newBase = assignTo, accessor = accessor)
         propagateFact(newAp)
-
-        // Assign can't overwrite fact
-        if (assignTo != factAp.base) {
-            if (accessor !is ElementAccessor) {
-                unchanged(factAp)
-            } else {
-                propagateFact(factAp)
-            }
-        }
     }
 
     private fun fieldWrite(
