@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.python.AllArguments
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ClassRef
@@ -55,6 +56,12 @@ object PIRFlowFunctionUtils {
     private fun PositionAccessor.resolve(): Accessor = when (this) {
         PositionAccessor.ElementAccessor -> ElementAccessor
         is PositionAccessor.FieldAccessor -> mkFieldAccessor(name)
+    }
+
+    fun FinalFactAp.mayReadAccessor(base: AccessPathBase, accessor: Accessor): Boolean = when {
+        this.base != base -> false
+        startsWithAccessor(accessor) -> true
+        else -> isAbstract() && accessor !in exclusions
     }
 
     /**

@@ -16,6 +16,7 @@ import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
+import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mayReadAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.alias.forEachAliasAfterStatement
@@ -232,53 +233,37 @@ class PIRMethodSequentFlowFunction(
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
     ) {
+        applyLoadAttrPassRules(inst, currentFactAp, propagateFact, addSideEffectRequirement)
+
         val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target) ?: return unchanged()
-
-        val passRulesReader = FinalFactReader(currentFactAp, apManager)
-        ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, currentFactAp) { fact, newBase ->
-            val mappedFact = fact.rebase(newBase)
-            applyLoadAttrPassRules(inst, passRulesReader, mappedFact) {
-                propagateFact(it)
-            }
-        }
-
-        if (passRulesReader.hasRefinement) {
-            addSideEffectRequirement(passRulesReader)
-        }
-
         val objBase = PIRFlowFunctionUtils.accessPathBase(inst.obj) ?: run {
             if (currentFactAp.base != assignTo) unchanged()
             return
         }
         val accessor = mkFieldAccessor(inst.attribute)
 
-        if (currentFactAp.base == objBase) {
-            propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR))
+        handleAccessorRead(assignTo, objBase, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
 
-            if (currentFactAp.startsWithAccessor(accessor)) {
-                // Concrete: strip the field accessor and rebase
-                currentFactAp.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
-                // Original fact on obj survives (field read is non-destructive)
-                if (assignTo != objBase) {
-                    unchanged()
-                }
-            } else if (currentFactAp.isAbstract() && accessor !in currentFactAp.exclusions) {
-                // Abstract: field might be behind *.
-                // Materialize: remove abstraction and try concrete read
-                val nonAbstract = currentFactAp.removeAbstraction()
-                if (nonAbstract != null && nonAbstract.startsWithAccessor(accessor)) {
-                    nonAbstract.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
-                }
-                // Propagate abstract fact with field excluded on both edge ends
-                propagateFactWithAccessorExclude(currentFactAp, accessor)
-            } else {
-                // Fact on obj but field doesn't match — pass through
-                unchanged()
-            }
-        } else if (currentFactAp.base == assignTo) {
-            // Strong update: kill taint on overwritten target
-        } else {
-            unchanged()
+        if (currentFactAp.base == objBase) {
+            // method self binding
+            propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR))
+        }
+    }
+
+    private fun applyLoadAttrPassRules(
+        inst: PIRLoadAttr,
+        factAp: FinalFactAp,
+        propagateFact: (FinalFactAp) -> Unit,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+    ) {
+        val passRulesReader = FinalFactReader(factAp, apManager)
+        ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, factAp) { fact, newBase ->
+            val mappedFact = fact.rebase(newBase)
+            applyLoadAttrPassRules(inst, passRulesReader, mappedFact, propagateFact)
+        }
+
+        if (passRulesReader.hasRefinement) {
+            addSideEffectRequirement(passRulesReader)
         }
     }
 
@@ -332,35 +317,51 @@ class PIRMethodSequentFlowFunction(
         propagateFact: (FinalFactAp) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
     ) {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: run {
-            if (currentFactAp.base != assignTo) unchanged()
-            return
-        }
+        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: return unchanged()
         val accessor = ElementAccessor
 
-        if (currentFactAp.base == objBase) {
-            if (currentFactAp.startsWithAccessor(accessor)) {
-                // Concrete: strip element accessor and rebase
-                currentFactAp.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
-                if (assignTo != objBase) {
-                    unchanged()
-                }
-            } else if (currentFactAp.isAbstract() && accessor !in currentFactAp.exclusions) {
-                // Abstract: element might be behind *
-                val nonAbstract = currentFactAp.removeAbstraction()
-                if (nonAbstract != null && nonAbstract.startsWithAccessor(accessor)) {
-                    nonAbstract.readAccessor(accessor)?.rebase(assignTo)?.let { propagateFact(it) }
-                }
-                // Propagate abstract fact with element excluded on both edge ends
-                propagateFactWithAccessorExclude(currentFactAp, accessor)
-            } else {
+        handleAccessorRead(assignTo, objBase, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+    }
+
+    private fun handleAccessorRead(
+        assignTo: AccessPathBase,
+        instance: AccessPathBase?,
+        accessor: Accessor,
+        factAp: FinalFactAp,
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
+    ) {
+        if (assignTo != factAp.base) {
+            if (accessor !is ElementAccessor) {
                 unchanged()
+            } else {
+                propagateFact(factAp)
             }
-        } else if (currentFactAp.base == assignTo) {
-            // Strong update: kill taint on overwritten target
-        } else {
-            unchanged()
         }
+
+        if (instance == null || !factAp.mayReadAccessor(instance, accessor)) {
+            return
+        }
+
+        if (factAp.isAbstract() && accessor !in factAp.exclusions) {
+            val nonAbstractAp = factAp.removeAbstraction()
+            if (nonAbstractAp != null) {
+                handleAccessorRead(
+                    assignTo, instance, accessor, nonAbstractAp,
+                    unchanged, propagateFact, propagateFactWithAccessorExclude
+                )
+            }
+
+            propagateFactWithAccessorExclude(factAp, accessor)
+
+            return
+        }
+
+        check(factAp.startsWithAccessor(accessor))
+
+        val newAp = factAp.readAccessor(accessor)?.rebase(assignTo) ?: error("Impossible")
+        propagateFact(newAp)
     }
 
     // ==========================================================================
