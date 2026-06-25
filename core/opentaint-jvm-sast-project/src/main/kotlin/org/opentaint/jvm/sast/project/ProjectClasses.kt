@@ -73,7 +73,7 @@ fun ProjectClasses.allProjectClasses(): Sequence<JIRClassOrInterface> =
 
 fun ProjectClasses.projectPublicClasses(): Sequence<JIRClassOrInterface> =
     allProjectClasses()
-        .filterNot { it.isAbstract || it.isInterface || it.isAnonymous }
+        .filterNot { it.isAnonymous }
         .filter { it.outerClass == null }
 
 fun ProjectClasses.projectAllAnalyzableClasses(): Sequence<JIRClassOrInterface> =
@@ -93,11 +93,6 @@ fun JIRClassOrInterface.allAnalyzableMethods(): Sequence<JIRMethod> =
     declaredMethods
         .asSequence()
         .filterNot { it.isNative || it.isClassInitializer }
-
-fun JIRClassOrInterface.getMethodFromLineNumber(lineNumber: Int): JIRMethod? =
-    declaredMethods.firstOrNull { md ->
-        md.rawInstList.filterIsInstance<JIRRawLineNumberInst>().any { it.lineNumber == lineNumber }
-    }
 
 private fun JIRMethod.isJulietGeneratedRunner(): Boolean {
     if (!isStatic || name != "main") return false
