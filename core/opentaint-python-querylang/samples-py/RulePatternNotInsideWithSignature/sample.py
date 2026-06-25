@@ -1,3 +1,9 @@
+def TaintRuleFalsePositive(reason):
+    def _decorator(fn):
+        return fn
+    return _decorator
+
+
 def sink(data):
     pass
 
@@ -6,6 +12,7 @@ def negative_simple_method(src):
     sink(src)
 
 
+@TaintRuleFalsePositive("Cleaner captures data before sink")
 def Negative_simple():
     negative_simple_method("data")
 

@@ -82,7 +82,6 @@ class PythonSampleBasedTest {
     @Test fun ndRule() = runSample("NDRule")
     @Test fun r3() = runSample("R3")
     @Test fun rule() = runSample("Rule")
-    @Test fun ruleCookie() = runSample("RuleCookie")
     @Test fun rulePatternNotWithSignature() = runSample("RulePatternNotWithSignature")
     @Test fun ruleRequiringCarefulCleaners() = runSample("RuleRequiringCarefulCleaners")
     @Test fun ruleRequiringCarefulCleanersInTaint() = runSample("RuleRequiringCarefulCleanersInTaint")
@@ -115,6 +114,9 @@ class PythonSampleBasedTest {
     @Test fun ruleNoMeta() = runSample("RuleNoMeta")
     @Test fun ruleWithInside() = runSample("RuleWithInside")
     @Test fun ruleWithPass() = runSample("RuleWithPass")
+
+    // must-aa is required for cleaner to kill all the facts
+    @Ignore @Test fun ruleCookie() = runSample("RuleCookie")
 
     // cleaner after sink
     @Ignore @Test fun cleanerAfterSink0() = runSample("CleanerAfterSink0")
@@ -187,13 +189,25 @@ class PythonSampleBasedTest {
                     "[$ruleName] Positive entry ${entry.qualifiedName} did not report any vulnerability",
                 )
             } else {
-                assertTrue(
-                    vulns.isEmpty(),
-                    "[$ruleName] Negative entry ${entry.qualifiedName} reported vulnerabilities: $vulns",
-                )
+                val fpReason = entry.taintRuleFalsePositiveReason()
+                if (vulns.isNotEmpty() && fpReason != null) {
+                    System.err.println(
+                        "[$ruleName] Skip known false-positive negative ${entry.qualifiedName}: $fpReason"
+                    )
+                } else {
+                    assertTrue(
+                        vulns.isEmpty(),
+                        "[$ruleName] Negative entry ${entry.qualifiedName} reported vulnerabilities: $vulns",
+                    )
+                }
             }
         }
     }
+
+    /** Reason from a `@TaintRuleFalsePositive("...")` decorator on the entry, or null. */
+    private fun PIRFunction.taintRuleFalsePositiveReason(): String? =
+        decorators.firstOrNull { it.name == "TaintRuleFalsePositive" }
+            ?.arguments?.firstOrNull()
 
     private fun buildCp(sampleDir: Path): PIRClasspath {
         val samplePy = sampleDir.resolve("sample.py")

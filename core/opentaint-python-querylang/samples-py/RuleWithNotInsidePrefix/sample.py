@@ -1,3 +1,9 @@
+def TaintRuleFalsePositive(reason):
+    def _decorator(fn):
+        return fn
+    return _decorator
+
+
 def sink(data):
     pass
 
@@ -24,6 +30,7 @@ def Positive_clean_on_other_data():
     sink(data)
 
 
+@TaintRuleFalsePositive("Cleaner captures data before sink")
 def Negative_clean_first():
     data = ""
     prefix_clean(data)

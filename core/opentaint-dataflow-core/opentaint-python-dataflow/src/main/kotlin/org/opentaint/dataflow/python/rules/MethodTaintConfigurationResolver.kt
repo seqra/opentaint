@@ -87,7 +87,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
     private val argIndices: List<Int> by lazy {
         when (val m = method) {
             is PIRUnknownFunction -> m.positionalArgIndices
-            null -> emptyList()
+            null -> error("function-targeted resolution requires a method")
             else -> m.argumentIndices()
         }
     }
