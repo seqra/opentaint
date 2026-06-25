@@ -56,7 +56,7 @@ class JIRCombinedTaintRulesProvider(
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
-        statement: CommonInst,
+        statement: CommonInst?,
         fact: FactAp?,
         allRelevant: Boolean
     ) = combine(combinationOptions.passThrough, { condition }) { passTroughRulesForMethod(method, statement, fact, allRelevant) }

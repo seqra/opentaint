@@ -19,6 +19,7 @@ class DSUAliasAnalysisInvalidateOuterHeapAliasesTest {
         methodCallResolver = object : CallResolver {
             override fun resolveMethodCall(callStmt: Stmt.Call, level: Int): List<JIRMethod>? = null
             override fun buildMethodGraph(method: JIRMethod): JIRInstGraph? = null
+            override fun externalCallModel(method: JIRMethod): List<ExternalCallModelProvider.ExternalAssign> = emptyList()
         },
         rootMethodReachabilityInfo = null,
         cancellation = AnalysisCancellation(timeLimit = Duration.INFINITE, parentCancellation = null),

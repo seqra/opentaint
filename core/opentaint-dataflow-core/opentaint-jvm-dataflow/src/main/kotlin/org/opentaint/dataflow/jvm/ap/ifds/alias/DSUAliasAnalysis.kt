@@ -24,6 +24,9 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalAssign
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalObject
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.Position
 
 class DSUAliasAnalysis(
     val methodCallResolver: CallResolver,
@@ -153,10 +156,17 @@ class DSUAliasAnalysis(
             if (result != null) return result
         }
 
-        val resultState = if (stmt.lValue != null) {
+        var resultState = state
+        if (stmt.lValue != null) {
             val info = aliasSetFromInfo(CallReturn(stmt, callFrame.ctx))
-            state.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
-        } else state
+            resultState = resultState.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
+        }
+
+        val externalModel = methodCallResolver.externalCallModel(stmt.method)
+        resultState = externalModel.fold(resultState) { s, model ->
+            model.evalExternalCallModel(stmt, s)
+        }
+
         if (stmt.cantMutateAliasedHeap()) return resultState
 
         val argAliases = IntOpenHashSet()
@@ -166,6 +176,28 @@ class DSUAliasAnalysis(
             resultState.forEachAliasInSet(infoIndex) { argAliases.add(it) }
         }
         return resultState.invalidateOuterHeapAliases(argAliases)
+    }
+
+    private fun ExternalAssign.evalExternalCallModel(stmt: Stmt.Call, state: State): State {
+        val fromInfo = from.eval(state, stmt) ?: return state
+        val toInfo = to.eval(state, stmt) ?: return state
+        return state.mergeWith(
+            aliasManager.getOrAdd(fromInfo),
+            aliasManager.getOrAdd(toInfo),
+        )
+    }
+
+    private fun ExternalObject.eval(state: State, stmt: Stmt.Call): AAInfo? {
+        val baseValue = pos.resolveValue(stmt)?.aliasInfo() ?: return null
+        return accessors.fold(baseValue) { instanceInfo, accessor ->
+            HeapAlias(state.heapObj(instanceInfo), accessor)
+        }
+    }
+
+    private fun Position.resolveValue(stmt: Stmt.Call): Value? = when (this) {
+        is Position.Arg -> stmt.args.getOrNull(idx)
+        is Position.RetVal -> stmt.lValue
+        is Position.This -> stmt.instance
     }
 
     private fun evalCall(

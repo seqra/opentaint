@@ -178,7 +178,7 @@ private fun createTestConfig(
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
-        statement: CommonInst,
+        statement: CommonInst?,
         fact: FactAp?,
         allRelevant: Boolean
     ) = getRules(method) {

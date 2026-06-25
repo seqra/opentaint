@@ -6,6 +6,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.GraphAnalysisState
 import org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysis.ResolvedCallMethod
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalAssign
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.JIRInstGraph
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue.Local
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -16,11 +17,13 @@ import java.util.BitSet
 interface CallResolver {
     fun resolveMethodCall(callStmt: Stmt.Call, level: Int): List<JIRMethod>?
     fun buildMethodGraph(method: JIRMethod): JIRInstGraph?
+    fun externalCallModel(method: JIRMethod): List<ExternalAssign>
 }
 
 abstract class JirCallResolver(
     val callResolver: JIRCallResolver,
     val graph: JApplicationGraph,
+    val externalCallModel: ExternalCallModelProvider,
     val params: JIRLocalAliasAnalysis.Params
 ): CallResolver {
     abstract fun buildMethodJig(entryPoint: JIRInst): JIRInstGraph
@@ -40,6 +43,13 @@ abstract class JirCallResolver(
 
         return buildMethodJig(entryPoint)
     }
+
+    val externalMethodModels = hashMapOf<JIRMethod, List<ExternalAssign>>()
+
+    override fun externalCallModel(method: JIRMethod): List<ExternalAssign> =
+        externalMethodModels.computeIfAbsent(method) {
+            externalCallModel.provideModel(method)
+        }
 }
 
 class CallTreeNode(val ctx: ContextInfo, val instEvalCtx: InstEvalContext) {

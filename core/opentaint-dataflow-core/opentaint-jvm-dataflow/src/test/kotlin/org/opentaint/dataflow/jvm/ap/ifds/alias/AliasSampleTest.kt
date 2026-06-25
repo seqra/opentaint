@@ -90,7 +90,7 @@ class AliasSampleTest : BasicTestUtils() {
 
         override fun passTroughRulesForMethod(
             method: CommonMethod,
-            statement: CommonInst,
+            statement: CommonInst?,
             fact: FactAp?,
             allRelevant: Boolean
         ): Iterable<TaintPassThrough> = emptyList()
@@ -582,7 +582,7 @@ class AliasSampleTest : BasicTestUtils() {
         val localReachability = JIRLocalVariableReachability(method, graph, manager)
         val cancellation = Cancellation().also { it.activate() }
 
-        return JIRLocalAliasAnalysis(ep, graph, callResolver, localReachability, cancellation, manager, params)
+        return JIRLocalAliasAnalysis(ep, graph, callResolver, noRules, localReachability, cancellation, manager, params)
     }
 
     private fun interProcParams(depth: Int) =

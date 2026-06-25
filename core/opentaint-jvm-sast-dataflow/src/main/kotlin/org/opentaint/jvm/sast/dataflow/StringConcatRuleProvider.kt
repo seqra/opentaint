@@ -31,7 +31,7 @@ class StringConcatRuleProvider(private val base: TaintRulesProvider) : TaintRule
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
-        statement: CommonInst,
+        statement: CommonInst?,
         fact: FactAp?,
         allRelevant: Boolean
     ): Iterable<TaintPassThrough> {

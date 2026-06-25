@@ -149,7 +149,7 @@ class SpringRuleProvider(
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
-        statement: CommonInst,
+        statement: CommonInst?,
         fact: FactAp?,
         allRelevant: Boolean
     ): Iterable<TaintPassThrough> {

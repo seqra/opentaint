@@ -39,6 +39,7 @@ class JIRIntraProcAliasAnalysis(
     private val entryPoint: JIRInst,
     private val graph: JApplicationGraph,
     private val callResolver: JIRCallResolver,
+    private val externalCallModelProvider: ExternalCallModelProvider,
     private val languageManager: JIRLanguageManager,
     private val rootCancellation: Cancellation,
     private val params: JIRLocalAliasAnalysis.Params,
@@ -69,7 +70,7 @@ class JIRIntraProcAliasAnalysis(
         )
     }
 
-    private inner class CallResolver: JirCallResolver(callResolver, graph, params) {
+    private inner class CallResolver: JirCallResolver(callResolver, graph, externalCallModelProvider, params) {
         override fun buildMethodJig(entryPoint: JIRInst): JIRInstGraph = getJIG(entryPoint)
     }
 
