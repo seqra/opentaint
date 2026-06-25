@@ -546,36 +546,24 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -584,11 +572,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -597,11 +581,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -610,24 +590,48 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -636,11 +640,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -649,11 +649,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -662,89 +658,133 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.Object) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (long) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -753,78 +793,99 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-- function: java.lang.AbstractStringBuilder#append
-  signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
-    to: result
-- function: java.lang.AbstractStringBuilder#append
-  signature: (java.lang.CharSequence, int, int) java.lang.Appendable
-  copy:
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
-    to: result
-- function: java.lang.AbstractStringBuilder#appendCodePoint
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
-    to: result
-- function: java.lang.AbstractStringBuilder#appendCodePoint
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.AbstractStringBuilder#append
+  signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
+  copy:
+  - from:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+    to: result
+  - from: this
+    to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.AbstractStringBuilder#append
+  signature: (java.lang.CharSequence, int, int) java.lang.Appendable
+  copy:
+  - from:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+    to: result
+  - from: this
+    to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.AbstractStringBuilder#appendCodePoint
+  signature: (int) java.lang.AbstractStringBuilder
+  copy:
+  - from:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+    to: result
+  - from: this
+    to: result
 - function: java.lang.AbstractStringBuilder#charAt
   signature: (int) char
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -833,11 +894,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -846,11 +903,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -859,11 +912,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: arg(2)
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: arg(2)
   - from: this
     to: arg(2)
@@ -872,11 +921,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -885,11 +930,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -898,24 +939,48 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -924,11 +989,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -937,11 +998,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -950,50 +1007,70 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, long) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1002,50 +1079,90 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#replace
   signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(2)
+    to: this
+  - from: arg(2)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(2)
+    to: result
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#reverse
   signature: () java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1055,23 +1172,15 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1080,11 +1189,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1093,11 +1198,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1106,25 +1207,49 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.Appendable#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(0)
+    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
+    to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.Appendable#append
   signature: (char) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2024,8 +2149,7 @@ passThrough:
   - from: arg(*)
     to: result
 - function: java.lang.String#join
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[],
-    int) java.lang.String
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[], int) java.lang.String
   copy:
   - from: arg(*)
     to: result
@@ -2158,1300 +2282,617 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (boolean) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.lang.StringBuffer#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (boolean) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (boolean) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char) java.lang.Appendable
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char[]) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char[]) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char[]) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (char[]) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (double) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (double) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (double) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (float) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (float) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (float) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (float) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (int) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (int) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.AbstractStringBuilder) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (java.lang.AbstractStringBuilder) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.AbstractStringBuilder) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.AbstractStringBuilder) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.CharSequence) java.lang.Appendable
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.CharSequence) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.Object) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.Object) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.Object) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.Object) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.String) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.String) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.String) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
   - from: arg(0)
     to: this
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.StringBuffer) java.lang.StringBuffer
-  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.StringBuffer) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
   - from: arg(0)
     to: this
-- function: java.lang.StringBuffer#append
-  signature: (long) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
-    to: result
-- function: java.lang.StringBuffer#append
-  signature: (long) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
   - from: arg(0)
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuffer#append
+  signature: (long) java.lang.AbstractStringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (long) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (long) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char[], int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char[], int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (char[], int, int) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (char[], int, int) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.CharSequence, int, int) java.lang.Appendable
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#append
-  signature: (java.lang.CharSequence, int, int) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#appendCodePoint
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
-    to: result
-- function: java.lang.StringBuffer#appendCodePoint
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: arg(0)
     to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuffer#appendCodePoint
+  signature: (int) java.lang.AbstractStringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#appendCodePoint
-  signature: (int) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuffer#appendCodePoint
   signature: (int) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#charAt
   signature: (int) char
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3460,15 +2901,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3477,15 +2910,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3494,15 +2919,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3511,15 +2928,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3528,1056 +2937,498 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: arg(2)
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: arg(2)
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: arg(2)
   - from: this
     to: arg(2)
 - function: java.lang.StringBuffer#insert
   signature: (int, boolean) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, boolean) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, boolean) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, boolean) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, char) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, char) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, char[]) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char[]) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
   - from:
     - arg(1)
     - '[*]'
     to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, char[]) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, char[]) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, double) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, double) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
   - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, double) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuffer#insert
+  signature: (int, double) java.lang.AbstractStringBuilder
+  copy:
+  - from:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, double) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, float) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, float) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, float) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, float) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, int) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, int) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.CharSequence) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.Object) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.Object) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.String) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.String) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.String) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, long) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, long) java.lang.AbstractStringBuilder
-  copy:
   - from: arg(1)
     to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuffer#insert
+  signature: (int, long) java.lang.AbstractStringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, long) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, long) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#insert
-  signature: (int, char[], int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char[], int, int) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
   - from:
     - arg(1)
     - '[*]'
     to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, char[], int, int) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, char[], int, int) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
+  - from: arg(1)
+    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
   - from:
     - arg(1)
     - '[*]'
     to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.StringBuffer
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuffer#insert
-  signature: (int, java.lang.CharSequence, int, int) java.lang.StringBuffer
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#replace
   signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(2)
-    to: result
-- function: java.lang.StringBuffer#replace
-  signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(2)
-    to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(2)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(2)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuffer#replace
-  signature: (int, int, java.lang.String) java.lang.StringBuffer
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(2)
     to: result
-- function: java.lang.StringBuffer#replace
-  signature: (int, int, java.lang.String) java.lang.StringBuffer
-  copy:
   - from: arg(2)
     to:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuffer#replace
+  signature: (int, int, java.lang.String) java.lang.StringBuffer
+  copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(2)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(2)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(2)
+    to: result
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#reverse
   signature: () java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -4586,15 +3437,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -4604,31 +3447,15 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -4637,15 +3464,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -4654,15 +3473,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.StringBuffer#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -4672,1252 +3483,575 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (boolean) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.lang.StringBuilder#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (boolean) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (boolean) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char) java.lang.Appendable
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char[]) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char[]) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char[]) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (char[]) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (double) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (double) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (double) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (float) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (float) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (float) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (float) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (int) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (int) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.CharSequence) java.lang.Appendable
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.CharSequence) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.Object) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.Object) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.Object) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.Object) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.String) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.String) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.String) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.StringBuffer) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.StringBuffer) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (long) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
-    to: result
-- function: java.lang.StringBuilder#append
-  signature: (long) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
     to: result
   - from: arg(0)
     to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuilder#append
+  signature: (long) java.lang.AbstractStringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (long) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (long) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char[], int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char[], int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (char[], int, int) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (char[], int, int) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: this
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.CharSequence, int, int) java.lang.Appendable
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#append
-  signature: (java.lang.CharSequence, int, int) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#appendCodePoint
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(0)
-    to: result
-- function: java.lang.StringBuilder#appendCodePoint
-  signature: (int) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
     to: result
   - from: arg(0)
     to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuilder#appendCodePoint
+  signature: (int) java.lang.AbstractStringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#appendCodePoint
-  signature: (int) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.StringBuilder#appendCodePoint
   signature: (int) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#charAt
   signature: (int) char
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5926,15 +4060,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5943,15 +4069,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5960,15 +4078,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5977,15 +4087,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5994,1056 +4096,498 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-    to: arg(2)
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: arg(2)
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: arg(2)
   - from: this
     to: arg(2)
 - function: java.lang.StringBuilder#insert
   signature: (int, boolean) java.lang.AbstractStringBuilder
   copy:
-  - from: arg(1)
-    to: result
-- function: java.lang.StringBuilder#insert
-  signature: (int, boolean) java.lang.AbstractStringBuilder
-  copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, boolean) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, boolean) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, char) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, char) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, char[]) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char[]) java.lang.AbstractStringBuilder
   copy:
   - from:
-    - arg(1)
-    - '[*]'
-    to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, char[]) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
     to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, char[]) java.lang.StringBuilder
   copy:
   - from:
-    - arg(1)
-    - '[*]'
-    to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, double) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
     to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, double) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, double) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, float) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, float) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, float) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, float) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, int) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, int) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.CharSequence) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.Object) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.Object) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.String) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.String) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.String) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, long) java.lang.AbstractStringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
-    to: result
-- function: java.lang.StringBuilder#insert
-  signature: (int, long) java.lang.AbstractStringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
     to: result
   - from: arg(1)
     to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuilder#insert
+  signature: (int, long) java.lang.AbstractStringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, long) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, long) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, char[], int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char[], int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
-    - arg(1)
-    - '[*]'
-    to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, char[], int, int) java.lang.StringBuilder
-  copy:
-  - from: arg(1)
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
     to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, char[], int, int) java.lang.StringBuilder
   copy:
   - from:
-    - arg(1)
-    - '[*]'
-    to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to: this
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
+    to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(1)
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
     to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#insert
-  signature: (int, java.lang.CharSequence, int, int) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#replace
-  signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
-  copy:
-  - from: arg(2)
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(1)
     to: result
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#replace
   signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from: arg(2)
-    to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(2)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(2)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
-- function: java.lang.StringBuilder#replace
-  signature: (int, int, java.lang.String) java.lang.StringBuilder
-  copy:
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(2)
-    to: result
-- function: java.lang.StringBuilder#replace
-  signature: (int, int, java.lang.String) java.lang.StringBuilder
-  copy:
-  - from:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: arg(2)
     to:
-    - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+- function: java.lang.StringBuilder#replace
+  signature: (int, int, java.lang.String) java.lang.StringBuilder
+  copy:
   - from:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
-  - from: arg(2)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(2)
     to:
     - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
+  - from: arg(2)
+    to: result
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#reverse
   signature: () java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -7052,15 +4596,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -7070,31 +4606,15 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -7103,15 +4623,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -7120,15 +4632,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.StringBuilder#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.lang.AbstractStringBuilder#<rule-storage>#java.lang.Object
+    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
     to: result
   - from: this
     to: result
@@ -7757,8 +5261,7 @@ passThrough:
     - this
     - .java.net.URI#<rule-storage>#java.lang.Object
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String)
-    void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -7767,8 +5270,7 @@ passThrough:
     - this
     - .java.net.URI#<rule-storage>#java.lang.Object
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String,
-    java.lang.String) void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -7777,8 +5279,7 @@ passThrough:
     - this
     - .java.net.URI#<rule-storage>#java.lang.Object
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String,
-    java.lang.String, java.lang.String) void
+  signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -8034,8 +5535,7 @@ passThrough:
     - this
     - .java.net.URL#<rule-storage>#java.lang.Object
 - function: java.net.URL#<init>
-  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.net.URLStreamHandler)
-    void
+  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.net.URLStreamHandler) void
   copy:
   - from: arg(*)
     to: this
@@ -8134,8 +5634,7 @@ passThrough:
     - .java.net.URL#<rule-storage>#java.lang.Object
     to: result
 - function: java.net.URL#set
-  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.lang.String,
-    java.lang.String, java.lang.String, java.lang.String) void
+  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -12400,8 +9899,7 @@ passThrough:
   - from: this
     to: result
 - function: java.nio.file.Files#newBufferedWriter
-  signature: (java.nio.file.Path, java.nio.charset.Charset, java.nio.file.OpenOption[])
-    java.io.BufferedWriter
+  signature: (java.nio.file.Path, java.nio.charset.Charset, java.nio.file.OpenOption[]) java.io.BufferedWriter
   copy:
   - from: this
     to: result
@@ -12411,8 +9909,7 @@ passThrough:
   - from: this
     to: result
 - function: java.nio.file.Files#newByteChannel
-  signature: (java.nio.file.Path, java.util.Set, java.nio.file.attribute.FileAttribute[])
-    java.nio.channels.SeekableByteChannel
+  signature: (java.nio.file.Path, java.util.Set, java.nio.file.attribute.FileAttribute[]) java.nio.channels.SeekableByteChannel
   copy:
   - from: this
     to: result
@@ -14002,8 +11499,7 @@ passThrough:
   - from: this
     to: arg(1)
 - function: java.text.MessageFormat#format
-  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition)
-    java.lang.StringBuffer
+  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
   - from: arg(0)
     to: arg(1)
@@ -14016,8 +11512,7 @@ passThrough:
   - from: arg(2)
     to: arg(1)
 - function: java.text.MessageFormat#format
-  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition)
-    java.lang.StringBuffer
+  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
   - from:
     - this
@@ -16629,9 +14124,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(8)
@@ -16703,8 +14196,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -16724,8 +14216,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -16749,8 +14240,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -16778,8 +14268,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -16811,8 +14300,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -16848,9 +14336,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(8)
@@ -17244,9 +14730,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17330,9 +14814,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17416,10 +14898,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17503,10 +14982,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17590,10 +15066,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17761,11 +15234,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17849,8 +15318,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -17934,8 +15402,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -18019,8 +15486,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -18177,8 +15643,8 @@ passThrough:
   signature: (java.lang.Object, java.lang.Object) boolean
   copy:
   - from:
-      - this
-      - .java.util.Map#MapValue#java.lang.Object
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
     to: result
 - function: java.util.Map#replace
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
@@ -19293,9 +16759,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(8)
@@ -19367,8 +16831,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -19388,8 +16851,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -19413,8 +16875,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -19442,8 +16903,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -19475,8 +16935,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -19512,9 +16971,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(8)
@@ -19832,8 +17289,7 @@ passThrough:
   - from: arg(0)
     to: this
 - function: java.util.StringJoiner#<init>
-  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
-    void
+  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence) void
   copy:
   - from: arg(2)
     to:
@@ -20353,8 +17809,7 @@ passThrough:
     - result
     - .java.util.Enumeration#Element#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#reduce
-  signature: (long, java.util.function.BiFunction, java.util.function.BiFunction)
-    java.lang.Object
+  signature: (long, java.util.function.BiFunction, java.util.function.BiFunction) java.lang.Object
   copy:
   - from: this
     to: result
@@ -20955,8 +18410,7 @@ passThrough:
     - result
     - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.stream.DoubleStream#collect
-  signature: (java.util.function.Supplier, java.util.function.ObjDoubleConsumer, java.util.function.BiConsumer)
-    java.lang.Object
+  signature: (java.util.function.Supplier, java.util.function.ObjDoubleConsumer, java.util.function.BiConsumer) java.lang.Object
   copy:
   - from: this
     to: result
@@ -20986,8 +18440,7 @@ passThrough:
   - from: this
     to: result
 - function: java.util.stream.IntStream#collect
-  signature: (java.util.function.Supplier, java.util.function.ObjIntConsumer, java.util.function.BiConsumer)
-    java.lang.Object
+  signature: (java.util.function.Supplier, java.util.function.ObjIntConsumer, java.util.function.BiConsumer) java.lang.Object
   copy:
   - from: this
     to: result
@@ -21017,8 +18470,7 @@ passThrough:
   - from: this
     to: result
 - function: java.util.stream.LongStream#collect
-  signature: (java.util.function.Supplier, java.util.function.ObjLongConsumer, java.util.function.BiConsumer)
-    java.lang.Object
+  signature: (java.util.function.Supplier, java.util.function.ObjLongConsumer, java.util.function.BiConsumer) java.lang.Object
   copy:
   - from: this
     to: result
@@ -21050,27 +18502,26 @@ passThrough:
 - function: java.util.stream.Stream#collect
   signature: (java.util.stream.Collector) java.lang.Object
   copy:
-    - from: this
-      to: result
+  - from: this
+    to: result
 
-    - from:
-        - this
-        - .java.util.stream.BaseStream#Element#java.lang.Object
-      to:
-        - result
-        - .java.lang.Iterable#Element#java.lang.Object
+  - from:
+    - this
+    - .java.util.stream.BaseStream#Element#java.lang.Object
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.stream.Stream#collect
-  signature: (java.util.function.Supplier, java.util.function.BiConsumer, java.util.function.BiConsumer)
-    java.lang.Object
+  signature: (java.util.function.Supplier, java.util.function.BiConsumer, java.util.function.BiConsumer) java.lang.Object
   copy:
   - from: this
     to: result
   - from:
-      - this
-      - .java.util.stream.BaseStream#Element#java.lang.Object
+    - this
+    - .java.util.stream.BaseStream#Element#java.lang.Object
     to:
-      - result
-      - .java.lang.Iterable#Element#java.lang.Object
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.stream.Stream#concat
   signature: (java.util.stream.Stream, java.util.stream.Stream) java.util.stream.Stream
   copy:
@@ -21144,8 +18595,7 @@ passThrough:
     - result
     - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.stream.Stream#iterate
-  signature: (java.lang.Object, java.util.function.Predicate, java.util.function.UnaryOperator)
-    java.util.stream.Stream
+  signature: (java.lang.Object, java.util.function.Predicate, java.util.function.UnaryOperator) java.util.stream.Stream
   copy:
   - from: arg(0)
     to:
@@ -21231,8 +18681,7 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.stream.Stream#reduce
-  signature: (java.lang.Object, java.util.function.BiFunction, java.util.function.BinaryOperator)
-    java.lang.Object
+  signature: (java.lang.Object, java.util.function.BiFunction, java.util.function.BinaryOperator) java.lang.Object
   copy:
   - from: arg(0)
     to: result
