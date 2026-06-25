@@ -2,7 +2,6 @@ package org.opentaint.dataflow.python.graph
 
 import org.opentaint.ir.api.python.PIRAnyType
 import org.opentaint.ir.api.python.PIRCFG
-import org.opentaint.ir.api.python.PIRCallArgKind
 import org.opentaint.ir.api.python.PIRClass
 import org.opentaint.ir.api.python.PIRDecorator
 import org.opentaint.ir.api.python.PIRDiagnostic
@@ -13,8 +12,6 @@ import org.opentaint.ir.api.python.PIRModule
 import org.opentaint.ir.api.python.PIRParameter
 import org.opentaint.ir.api.python.PIRType
 import org.opentaint.ir.impl.python.PIRCFGImpl
-
-data class StrippedCallArg(val kind: PIRCallArgKind, val keyword: String?)
 
 /**
  * Synthetic [PIRFunction]s produced by [org.opentaint.dataflow.python.PIRCallResolver] when a call's callee
@@ -32,10 +29,6 @@ data class StrippedCallArg(val kind: PIRCallArgKind, val keyword: String?)
  * supertype.
  */
 sealed interface PIRUnknownFunction : PIRFunction {
-    val callArgs: List<StrippedCallArg>
-    val hasVarPositionalArg: Boolean get() = callArgs.any { it.kind == PIRCallArgKind.STAR }
-    val positionalArgIndices: List<Int> get() = callArgs.indices.filter { callArgs[it].kind == PIRCallArgKind.POSITIONAL }
-
     override val parameters: List<PIRParameter> get() = emptyList()
     override val returnType: PIRType get() = PIRAnyType
     override val cfg: PIRCFG get() = PIRCFGImpl.EMPTY_CFG
@@ -52,15 +45,13 @@ sealed interface PIRUnknownFunction : PIRFunction {
 
 data class PIRQualifiedUnknownFunction(
     override val qualifiedName: String,
-    override val callArgs: List<StrippedCallArg>,
 ) : PIRUnknownFunction {
-    override val name: String get() = qualifiedName.substringAfterLast('.')
+    override val name: String = qualifiedName.substringAfterLast('.')
     override val module: PIRModule = SimpleNameSyntheticModule(qualifiedName.substringBeforeLast('.'))
 }
 
 data class PIRSimpleNameUnknownFunction(
     override val name: String,
-    override val callArgs: List<StrippedCallArg>,
 ) : PIRUnknownFunction {
     override val qualifiedName: String get() = name
     override val module: PIRModule = SimpleNameSyntheticModule("")

@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.python
 
+import org.opentaint.dataflow.configuration.python.AnyArgument
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.BoolConstantValue
 import org.opentaint.dataflow.configuration.python.ConstantCmp
@@ -8,6 +9,7 @@ import org.opentaint.dataflow.configuration.python.ConstantMatches
 import org.opentaint.dataflow.configuration.python.ContainsMark
 import org.opentaint.dataflow.configuration.python.IntConstantValue
 import org.opentaint.dataflow.configuration.python.KwArgument
+import org.opentaint.dataflow.configuration.python.NumberOfArgs
 import org.opentaint.dataflow.configuration.python.PIRConditionVisitor
 import org.opentaint.dataflow.configuration.python.Position
 import org.opentaint.dataflow.configuration.python.StrConstantValue
@@ -27,6 +29,14 @@ class PIRBasicAtomEvaluator(private val call: PIRCall) : PIRConditionVisitor<Boo
 
     override fun visit(c: ContainsMark): Boolean =
         error("ContainsMark is a taint-fact atom; handle it in PIRConditionRewriter, not the evaluator")
+
+    override fun visit(c: NumberOfArgs): Boolean {
+        val positional = call.args.count { it.kind == PIRCallArgKind.POSITIONAL }
+        val hasStar = call.args.any { it.kind == PIRCallArgKind.STAR }
+        val max = if (hasStar) Int.MAX_VALUE else positional
+
+        return c.n in positional..max
+    }
 
     override fun visit(c: ConstantCmp): Boolean {
         val v = valueAt(c.pos) ?: return false
@@ -57,6 +67,7 @@ class PIRBasicAtomEvaluator(private val call: PIRCall) : PIRConditionVisitor<Boo
     private fun valueAt(pos: Position): PIRValue? = when (pos) {
         is Argument -> call.args.getOrNull(pos.index)?.value
         is KwArgument -> call.args.firstOrNull { it.kind == PIRCallArgKind.KEYWORD && it.keyword == pos.name }?.value
-        else -> null // This/Result/AllArguments/PositionWithAccess: not a foldable constant argument
+        AnyArgument -> error("AnyArgument is only supported for ContainsMark")
+        else -> null // This/Result/PositionWithAccess: not a foldable constant argument
     }
 }

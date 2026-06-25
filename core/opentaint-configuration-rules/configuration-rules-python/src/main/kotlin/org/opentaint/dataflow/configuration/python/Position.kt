@@ -12,7 +12,7 @@ package org.opentaint.dataflow.configuration.python
  * Distinct from the serialized
  * [org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase]:
  * the serialized form encodes `arg(*)` as `Argument(idx = null)`, which is
- * split out here into [AllArguments] so callers can rely on [Argument.index]
+ * split out here into [AnyArgument] so callers can rely on [Argument.index]
  * being a concrete index.
  */
 sealed interface Position
@@ -20,8 +20,13 @@ sealed interface Position
 /** `arg(N)` — a specific positional argument. */
 data class Argument(val index: Int) : Position
 
-/** `arg(*)` — every positional argument. */
-data object AllArguments : Position
+/**
+ * `arg(*)` — every positional argument. Ordinary (call-site) rules carry this
+ * un-expanded; the call-site rewriter unpacks it against the concrete call's
+ * positional arguments, and only for `ContainsMark`. Entry-point rules expand
+ * it eagerly against the signature.
+ */
+data object AnyArgument : Position
 
 /** `kwarg(name)` — a keyword argument by name. */
 data class KwArgument(val name: String) : Position

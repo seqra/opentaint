@@ -6,7 +6,7 @@ import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.configuration.python.AllArguments
+import org.opentaint.dataflow.configuration.python.AnyArgument
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ClassRef
 import org.opentaint.dataflow.configuration.python.KwArgument
@@ -39,7 +39,7 @@ object PIRFlowFunctionUtils {
             PositionAccess.Complex(base, accessor)
         }
 
-        AllArguments -> null // should be resolved during rule compilation
+        AnyArgument -> anyArgumentUnsupported()
     }
 
     fun Position.resolveBaseAp(): AccessPathBase? = when (this) {
@@ -49,9 +49,12 @@ object PIRFlowFunctionUtils {
         This -> AccessPathBase.This
         is PositionWithAccess -> base.resolveBaseAp()
 
-        is KwArgument,
-        AllArguments -> null
+        is KwArgument -> null
+        AnyArgument -> anyArgumentUnsupported()
     }
+
+    private fun anyArgumentUnsupported(): Nothing =
+        error("Unexpected any argument position")
 
     private fun PositionAccessor.resolve(): Accessor = when (this) {
         PositionAccessor.ElementAccessor -> ElementAccessor

@@ -18,6 +18,11 @@ data class ContainsMark(val mark: TaintMark, val pos: Position) : PythonRuleCond
     override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
 }
 
+/** The matched call passes exactly [n] positional arguments — decided against the concrete call. */
+data class NumberOfArgs(val n: Int) : PythonRuleCondition {
+    override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
+}
+
 /** The value at [pos] is a constant literal comparing [cmp] to [value]. */
 data class ConstantCmp(val pos: Position, val value: ConstantValue, val cmp: ConstantCmpType) : PythonRuleCondition {
     override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
@@ -37,6 +42,7 @@ enum class ConstantCmpType { Eq, Lt, Gt }
 
 interface PIRConditionVisitor<out R> {
     fun visit(c: ContainsMark): R
+    fun visit(c: NumberOfArgs): R
     fun visit(c: ConstantCmp): R
     fun visit(c: ConstantMatches): R
 }
