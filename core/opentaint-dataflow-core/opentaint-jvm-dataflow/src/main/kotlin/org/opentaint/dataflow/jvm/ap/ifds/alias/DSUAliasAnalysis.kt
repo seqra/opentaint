@@ -244,9 +244,9 @@ class DSUAliasAnalysis(
 
         allAliasSets.forEach { group ->
             if (groupContainsSimpleOuterAlias(group)) {
-                val repr = aliasGroupRepr(group.firstInt())
-                invalidAliasRepr.add(repr)
-                invalidAliasRepr.add(repr.inv())
+                val repr = group.firstInt()
+                invalidAliasRepr.add(aliasGroupRepr(repr))
+                invalidAliasRepr.add(aliasGroupRepr(repr.inv()))
             }
         }
 
@@ -266,7 +266,9 @@ class DSUAliasAnalysis(
                         children.add(curInfo)
 
                         val parentRepr = aliasGroupRepr(curInfo.instance)
-                        if (parentRepr in invalidAliasRepr || parentRepr.aliasInfoIsSimpleOuter())
+                        val parentReprInv = aliasGroupRepr(curInfo.instance.inv())
+                        val isParentMarked = parentRepr in invalidAliasRepr || parentReprInv in invalidAliasRepr
+                        if (isParentMarked || parentRepr.aliasInfoIsSimpleOuter())
                             break
 
                         curInfo = aliasManager.getElementUncheck(parentRepr)
