@@ -14,6 +14,7 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
         private const val TAINT_MARK = "tainted"
         private const val COLLECTION_RULE_ID = "collection-flow-rule"
         private const val STRING_RULE_ID = "string-flow-rule"
+        private const val STRING_BUILDER_RULE_ID = "string-builder-flow-rule"
         private const val LAMBDA_RULE_ID = "lambda-flow-rule"
         private const val OPTIONAL_RULE_ID = "optional-flow-rule"
         private const val STREAM_RULE_ID = "stream-flow-rule"
@@ -218,6 +219,83 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             testName = "replace flow"
         )
     }
+
+    // region StringBuilder chained-append taint reconciliation (issue.md)
+    // The chain `sb.append(A).append(B)` mutates `sb` at runtime (append returns `this`), so a later
+    // `sb.toString()` must observe `B`. The 5 flows below mirror the issue's table. `chainedAppend`
+    // and `namedReturn` currently DROP the taint and these two assertions fail until the engine
+    // reconciles the discarded intermediate `append` return with the mutated receiver.
+
+    @Test
+    fun `string builder flow - two appends on original receiver`() {
+        val testCls = "$SAMPLE_PACKAGE.StringBuilderChainDataFlowSample"
+        val config = stringBuilderConfig(testCls)
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "unchained",
+            ruleId = STRING_BUILDER_RULE_ID,
+            testName = "string builder unchained flow"
+        )
+    }
+
+    @Test
+    fun `string builder flow - tainted value is the first append in the chain`() {
+        val testCls = "$SAMPLE_PACKAGE.StringBuilderChainDataFlowSample"
+        val config = stringBuilderConfig(testCls)
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "chainTaintFirst",
+            ruleId = STRING_BUILDER_RULE_ID,
+            testName = "string builder chain-taint-first flow"
+        )
+    }
+
+    @Test
+    fun `string builder flow - tainted value is the second append in a discarded chain`() {
+        val testCls = "$SAMPLE_PACKAGE.StringBuilderChainDataFlowSample"
+        val config = stringBuilderConfig(testCls)
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "chainedAppend",
+            ruleId = STRING_BUILDER_RULE_ID,
+            testName = "string builder chained-append flow"
+        )
+    }
+
+    @Test
+    fun `string builder flow - intermediate append return named and appended to`() {
+        val testCls = "$SAMPLE_PACKAGE.StringBuilderChainDataFlowSample"
+        val config = stringBuilderConfig(testCls)
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "namedReturn",
+            ruleId = STRING_BUILDER_RULE_ID,
+            testName = "string builder named-return flow"
+        )
+    }
+
+    @Test
+    fun `string builder flow - sink reads the chain-end result`() {
+        val testCls = "$SAMPLE_PACKAGE.StringBuilderChainDataFlowSample"
+        val config = stringBuilderConfig(testCls)
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "sinkChainResult",
+            ruleId = STRING_BUILDER_RULE_ID,
+            testName = "string builder sink-chain-result flow"
+        )
+    }
+    // endregion
 
     @Test
     fun `lambda flow - taint tracked through identity lambda virtual dispatch`() {
@@ -522,6 +600,11 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
     private fun stringConfig(testCls: String) = SerializedTaintConfig(
         source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
         sink = listOf(sinkRule(testCls, "sink", STRING_RULE_ID, listOf(Argument(0) to TAINT_MARK)))
+    )
+
+    private fun stringBuilderConfig(testCls: String) = SerializedTaintConfig(
+        source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+        sink = listOf(sinkRule(testCls, "sink", STRING_BUILDER_RULE_ID, listOf(Argument(0) to TAINT_MARK)))
     )
 
     private fun lambdaConfig(testCls: String) = SerializedTaintConfig(
