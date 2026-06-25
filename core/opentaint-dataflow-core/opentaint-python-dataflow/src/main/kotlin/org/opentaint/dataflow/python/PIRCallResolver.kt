@@ -3,6 +3,7 @@ package org.opentaint.dataflow.python
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.graph.PIRQualifiedUnknownFunction
 import org.opentaint.dataflow.python.graph.PIRSimpleNameUnknownFunction
+import org.opentaint.dataflow.python.graph.StrippedCallArg
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRFunction
@@ -40,8 +41,8 @@ class PIRCallResolver(
 
     private val perMethodNames: MutableMap<PIRFunction, Map<PIRInstruction, Set<String>>> = hashMapOf()
     private val perMethodSimpleNames: MutableMap<PIRFunction, Map<PIRCall, Set<String>>> = hashMapOf()
-    private val qualifiedSyntheticByName: MutableMap<String, PIRQualifiedUnknownFunction> = hashMapOf()
-    private val simpleNameSyntheticByName: MutableMap<String, PIRSimpleNameUnknownFunction> = hashMapOf()
+    private val qualifiedSyntheticByName: MutableMap<Pair<String, List<StrippedCallArg>>, PIRQualifiedUnknownFunction> = hashMapOf()
+    private val simpleNameSyntheticByName: MutableMap<Pair<String, List<StrippedCallArg>>, PIRSimpleNameUnknownFunction> = hashMapOf()
 
     private fun namesFor(method: PIRFunction): Map<PIRInstruction, Set<String>> =
         perMethodNames.getOrPut(method) {
@@ -64,19 +65,25 @@ class PIRCallResolver(
         val qfNames = resolveNames(call)
         if (qfNames.isNotEmpty()) {
             return qfNames.mapTo(hashSetOf()) {
-                cp.findFunctionOrNull(it) ?: qualifiedSyntheticFor(it)
+                cp.findFunctionOrNull(it) ?: qualifiedSyntheticFor(it, call)
             }
         }
         return simpleNamesFor(call).mapTo(hashSetOf()) {
-            cp.findFunctionOrNull(it) ?: simpleNameSyntheticFor(it)
+            cp.findFunctionOrNull(it) ?: simpleNameSyntheticFor(it, call)
         }
     }
 
-    private fun qualifiedSyntheticFor(qualifiedName: String): PIRQualifiedUnknownFunction =
-        qualifiedSyntheticByName.getOrPut(qualifiedName) {
-            PIRQualifiedUnknownFunction(qualifiedName)
+    private fun qualifiedSyntheticFor(qualifiedName: String, call: PIRCall): PIRQualifiedUnknownFunction {
+        val shape = call.args.map { StrippedCallArg(it.kind, it.keyword) }
+        return qualifiedSyntheticByName.getOrPut(qualifiedName to shape) {
+            PIRQualifiedUnknownFunction(qualifiedName, shape)
         }
+    }
 
-    private fun simpleNameSyntheticFor(name: String): PIRSimpleNameUnknownFunction =
-        simpleNameSyntheticByName.getOrPut(name) { PIRSimpleNameUnknownFunction(name) }
+    private fun simpleNameSyntheticFor(name: String, call: PIRCall): PIRSimpleNameUnknownFunction {
+        val shape = call.args.map { StrippedCallArg(it.kind, it.keyword) }
+        return simpleNameSyntheticByName.getOrPut(name to shape) {
+            PIRSimpleNameUnknownFunction(name, shape)
+        }
+    }
 }

@@ -75,18 +75,22 @@ import kotlin.contracts.contract
  * runtime [PIRCondition] AST attached to compiled rules carries only
  * value-level predicates (`ConstantTrue | Not | And | Or | ContainsMark |
  * ConstantCmp | ConstantMatches`). Arity (`NumberOfArgs`) is folded to a
- * constant against the signature here and never reaches the runtime AST.
+ * constant against the signature here and never reaches the runtime AST; an
+ * unknown callee carries a synthetic signature derived from its captured call
+ * shape ([PIRUnknownFunction.callArgs]), so the same folding applies.
  *
  * [method] is null for attribute-targeted resolution (an attribute access has
  * no enclosing call, hence no positional arguments or call arity).
  */
 internal class MethodTaintConfigurationResolver(private val method: PIRFunction?) {
 
-    /**
-     * Positional-argument index space of a call to [method], receiver excluded — aligned with
-     * `PIRCall.args` (so `arg(*)` expands to exactly these). Empty for attribute targets.
-     */
-    private val argIndices: List<Int> by lazy { method?.argumentIndices().orEmpty() }
+    private val argIndices: List<Int> by lazy {
+        when (val m = method) {
+            is PIRUnknownFunction -> m.positionalArgIndices
+            null -> emptyList()
+            else -> m.argumentIndices()
+        }
+    }
 
     // region Function-targeted resolution
 
@@ -254,13 +258,15 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
 
         val qn = method.qualifiedName
         val ctorQn = if (method.enclosingClass != null) qn.removeSuffix(".${PythonNames.INIT_METHOD}") else qn
+        val ctorName = if (ctorQn != qn) ctorQn.substringAfterLast('.') else method.name
+
         return when {
             hasRegexMetaChar(name) -> {
                 val rx = Regex(name)
                 rx.matches(qn) || (ctorQn != qn && rx.matches(ctorQn))
             }
             '.' in name -> qn == name || ctorQn == name
-            else -> method.name == name
+            else -> method.name == name || ctorName == name
         }
     }
 
@@ -364,7 +370,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         is PythonPositionBase.ClassRef -> ClassRef(base.fqn)
     }
 
-    private fun isValidArgIndex(idx: Int): Boolean = method is PIRUnknownFunction || idx in argIndices
+    private fun isValidArgIndex(idx: Int): Boolean = idx in argIndices
 
     private fun convertAccessor(m: PythonPositionModifier): PositionAccessor = when (m) {
         PythonPositionModifier.ArrayElement -> PositionAccessor.ElementAccessor
@@ -417,11 +423,16 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
      * or `...` fall through to a different constraint and never produce it. So this is purely a
      * positional-slot question: only positional-capable params bound the range — keyword-only and
      * `**kwargs` params can never receive a positional argument, so they are irrelevant. Defaults
-     * lower the minimum; `*args` removes the upper bound. An unknown callee carries no signature,
-     * so it accepts any arity (keeping library sinks matching).
+     * lower the minimum; `*args` removes the upper bound. An unknown callee has no real signature,
+     * so the captured call shape stands in: the concrete positional count bounds the range, and a
+     * spread (`*args` at the call) removes the upper bound.
      */
     private fun PIRFunction.acceptsPositionalArity(n: Int): Boolean {
-        if (this is PIRUnknownFunction) return true
+        if (this is PIRUnknownFunction) {
+            val positional = positionalArgIndices.size
+            val max = if (hasVarPositionalArg) Int.MAX_VALUE else positional
+            return n in positional..max
+        }
         val positional = declaredParameters().filter {
             it.kind == PIRParameterKind.POSITIONAL_ONLY || it.kind == PIRParameterKind.POSITIONAL_OR_KEYWORD
         }
