@@ -3,7 +3,6 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntCollection
-import it.unimi.dsi.fastutil.ints.IntIntImmutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability

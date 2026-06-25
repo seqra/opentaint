@@ -9,13 +9,9 @@ import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
-import org.opentaint.dataflow.ap.ifds.NormalMethodAnalyzer
-import org.opentaint.dataflow.ap.ifds.invalidateMayAliasOnUnkCall
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.jvm.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
+import org.opentaint.jvm.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.project.CommonAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectAnalysisStatus
@@ -124,39 +120,8 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         )
 
         return if (!debugOptions.runRuleTests) {
-            invalidateMayAliasOnUnkCall = true
-            val projectAnalyzerInv = ProjectAnalyzer(project, analyzerOutputDir, options)
-            var res = projectAnalyzerInv.analyze()
-            val ifdsInv = projectAnalyzerInv.ifds!!
-
-            val aliasesInv = hashMapOf<CommonMethod, Long>()
-            ifdsInv.runnerForUnit.forEach {
-                it.value.methodAnalyzers.forEach { (md, analyzers) ->
-                    val na = analyzers.analyzers.find { it is NormalMethodAnalyzer } ?: return@forEach
-                    val aa = ((na as NormalMethodAnalyzer).analysisContext as JIRMethodAnalysisContext).aliasAnalysis
-                    if (aa != null) {
-                        aliasesInv[md] = aa.aliasesApplied
-                    }
-                }
-            }
-
-            invalidateMayAliasOnUnkCall = false
-            val projectAnalyzerNonInv = ProjectAnalyzer(project, analyzerOutputDir, options)
-            res = projectAnalyzerNonInv.analyze()
-            val ifdsNonInv = projectAnalyzerNonInv.ifds!!
-
-            val aliasesNonInv = hashMapOf<CommonMethod, Long>()
-            ifdsNonInv.runnerForUnit.forEach {
-                it.value.methodAnalyzers.forEach { (md, analyzers) ->
-                    val na = analyzers.analyzers.find { it is NormalMethodAnalyzer } ?: return@forEach
-                    val aa = ((na as NormalMethodAnalyzer).analysisContext as JIRMethodAnalysisContext).aliasAnalysis
-                    if (aa != null) {
-                        aliasesNonInv[md] = aa.aliasesApplied
-                    }
-                }
-            }
-
-            res
+            val projectAnalyzer = ProjectAnalyzer(project, analyzerOutputDir, options)
+            projectAnalyzer.analyze()
         } else {
             val testAnalyzer = TestProjectAnalyzer(project, analyzerOutputDir, options)
             testAnalyzer.analyze()

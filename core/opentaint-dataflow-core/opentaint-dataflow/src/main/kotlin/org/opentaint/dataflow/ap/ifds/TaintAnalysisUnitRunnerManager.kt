@@ -50,8 +50,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
-var invalidateMayAliasOnUnkCall = true
-
 class TaintAnalysisUnitRunnerManager(
     private val analysisManager: TaintAnalysisManager,
     val graph: ApplicationGraph<CommonMethod, CommonInst>,
@@ -73,7 +71,7 @@ class TaintAnalysisUnitRunnerManager(
         this.status.compareAndSet(Status.OK, status)
     }
 
-    val runnerForUnit = ConcurrentHashMap<UnitType, TaintAnalysisUnitRunner>()
+    private val runnerForUnit = ConcurrentHashMap<UnitType, TaintAnalysisUnitRunner>()
     private val unitStorage = ConcurrentHashMap<UnitType, TaintAnalysisUnitStorage>()
     private val methodDependencies = ConcurrentHashMap<CommonMethod, MutableSet<UnitType>>()
 

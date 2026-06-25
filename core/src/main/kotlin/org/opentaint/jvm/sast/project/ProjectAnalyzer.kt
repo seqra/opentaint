@@ -51,8 +51,6 @@ class ProjectAnalyzer(
 ) {
     private val ruleMetadatas = mutableListOf<RuleMetadata>()
 
-    var ifds: TaintAnalysisUnitRunnerManager? = null
-
     fun analyze(): ProjectAnalysisStatus {
         val rules = preloadRules()
         val projectAnalysisContext = initializeProjectAnalysisContext(project, options)
@@ -142,8 +140,6 @@ class ProjectAnalyzer(
             logger.info { "Start IFDS analysis for project: ${project.sourceRoot}" }
             val (traces, status) = analyzer.analyzeWithIfds(entryPoints)
             logger.info { "Finish IFDS analysis for project: ${project.sourceRoot}" }
-
-            ifds = analyzer.ifdsEngine
 
             var result = AnalysisResult(status, traces)
 
