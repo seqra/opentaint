@@ -7,6 +7,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
+import kotlin.collections.toList
 
 class JIRCombinedTaintRulesProvider(
     private val base: TaintRulesProvider,
@@ -26,20 +27,20 @@ class JIRCombinedTaintRulesProvider(
     )
 
     override fun entryPointRulesForMethod(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.entryPoint) { entryPointRulesForMethod(method, fact, allRelevant) }
+        combine(combinationOptions.entryPoint, { condition }) { entryPointRulesForMethod(method, fact, allRelevant) }
 
     override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.source) { sourceRulesForMethod(method, statement, fact, allRelevant) }
+        combine(combinationOptions.source, { condition }) { sourceRulesForMethod(method, statement, fact, allRelevant) }
 
     override fun exitSourceRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = combine(combinationOptions.source) { exitSourceRulesForMethod(method, statement, fact, allRelevant) }
+    ) = combine(combinationOptions.source, { condition }) { exitSourceRulesForMethod(method, statement, fact, allRelevant) }
 
     override fun sinkRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.sink) { sinkRulesForMethod(method, statement, fact, allRelevant) }
+        combine(combinationOptions.sink, { condition }) { sinkRulesForMethod(method, statement, fact, allRelevant) }
 
     override fun sinkRulesForMethodExit(
         method: CommonMethod,
@@ -48,26 +49,27 @@ class JIRCombinedTaintRulesProvider(
         initialFacts: Set<InitialFactAp>?,
         allRelevant: Boolean
     ): Iterable<TaintMethodExitSink> =
-        combine(combinationOptions.sink) { sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant) }
+        combine(combinationOptions.sink, { condition }) { sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant) }
 
     override fun sinkRulesForMethodEntry(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.sink) { sinkRulesForMethodEntry(method, fact, allRelevant) }
+        combine(combinationOptions.sink, { condition }) { sinkRulesForMethodEntry(method, fact, allRelevant) }
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = combine(combinationOptions.passThrough) { passTroughRulesForMethod(method, statement, fact, allRelevant) }
+    ) = combine(combinationOptions.passThrough, { condition }) { passTroughRulesForMethod(method, statement, fact, allRelevant) }
 
     override fun cleanerRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.cleaner) { cleanerRulesForMethod(method, statement, fact, allRelevant) }
+        combine(combinationOptions.cleaner, { condition }) { cleanerRulesForMethod(method, statement, fact, allRelevant) }
 
     override fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.source) { sourceRulesForStaticField(field, statement, fact, allRelevant) }
+        combine(combinationOptions.source, { condition }) { sourceRulesForStaticField(field, statement, fact, allRelevant) }
 
     private inline fun <T> combine(
         mode: CombinationMode,
+        condition: T.() -> Any?,
         rules: TaintRulesProvider.() -> Iterable<T>,
     ): Iterable<T> {
         val baseRules = base.rules()
@@ -75,7 +77,17 @@ class JIRCombinedTaintRulesProvider(
 
         return when (mode) {
             CombinationMode.EXTEND -> baseRules + combinedRules
-            CombinationMode.OVERRIDE -> combinedRules.takeIf { it.isNotEmpty() } ?: baseRules
+            CombinationMode.OVERRIDE -> {
+                if (combinedRules.isEmpty()) return baseRules
+
+                val baseRulesList = baseRules.toList()
+                if (baseRulesList.isEmpty()) return combinedRules
+
+                val combinedConditions = combinedRules.mapTo(hashSetOf()) { it.condition() }
+                val nonOverriddenBase = baseRulesList.filterNot { it.condition() in combinedConditions }
+
+                combinedRules + nonOverriddenBase
+            }
             CombinationMode.IGNORE -> baseRules
         }
     }
