@@ -10,6 +10,8 @@
 
 Put samples under `src/main/java/test/`, each a public method annotated with the fixed rule. A positive sends `Taint.source()` through the approximated method into `Taint.sink(...)`; it stays a `falseNegative` until the approximation propagates the taint, then flips to `success`. One positive per method being approximated
 
+Start every sample with `String tainted = Taint.source();`. When the approximated method takes a non-String input, cast the tainted string to that type so the taint fact reaches the method as the right type — the analyzer tracks the fact, not the runtime value.
+
 ```java
 package test;
 

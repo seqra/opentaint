@@ -41,7 +41,7 @@ This catches only bytecode invocations, so it misses members reached through ann
 - **sources** — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution): a method that *returns* attacker-controlled data — HTTP/RPC request data, a message-broker payload. NOT a method that merely passes data it was handed along — that's a propagator the engine already handles, not a source. General, not class-tagged
 - **sinks** — dangerous operations (query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection); tag each with its vuln class (`ssrf`, `sqli`, `path-traversal`, …)
 
-Verify each is real before recording: a source genuinely attacker-controlled, a sink genuinely dangerous with tainted input. Don't trace a flow between them — the analyzer pairs them at scan time
+Better safe than sorry — when in doubt, record a borderline source or sink rather than drop it: a false positive is filtered out later at the scan and triage stages, but a real one dropped here is a false negative the run can never recover. Note the doubt, and verify in the package jar when it's quick
 
 ### 3. Write the package's rule plan
 

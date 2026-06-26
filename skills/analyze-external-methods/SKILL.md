@@ -38,6 +38,7 @@ Group by package AND kind — one tracking file per (package, kind): `<package-k
 
 A method is a carrier when taint on its receiver or an argument reaches its result, an output argument, or the receiver — model it. Skip (list in `skipped.yaml`) only methods that move no taint at all: boolean/int predicates and inspectors, void side-effects (e.g. loggers), one-way non-injectable transforms (e.g. hashes). Judge each on its intrinsic behavior, and when unsure, model it — over-approximating an inert method is cheap, skipping a real carrier hides findings. Skip an FQN only when every overload is a non-carrier; if any overload carries taint, model the FQN — the passThrough matcher and dataflow `@Approximate` cover all overloads by name.
 
+A method that takes a function, lambda, or callback parameter is always a dataflow carrier — model it as dataflow, never skip it, even when its own propagation looks inert
 Always to `skipped.yaml` goes any `toString()` (unless it overrides default `toString()` for Object)
 
 ### 3. Verify coverage
@@ -50,6 +51,10 @@ python scripts/check-coverage.py
 
 It lists every dropped method not yet classified into any bucket — `dropped − pending(methods:) − done − skipped`. Classify each one it prints and re-run until it reports `0 UNCOVERED`. Don't return while anything is uncovered — an unclassified method is a silent taint kill.
 
+### 4. Re-verify the skips
+
+Before returning, open each method in `skipped.yaml` and confirm from the library source or its dependency jar that it truly moves no taint — the name is not good enough evidence. Move any method that on inspection touches its input into a passthrough or dataflow unit. A good result is a small, source-verified skip list: keep only methods proven non-carriers by their code, not by their name.
+
 ## Output
 
 - One `<tracking-dir>/approximations/<package>-<kind>.yaml` per (package, kind), with top-level `type`, `stages.description: done`, and its `methods`; a dataflow unit also carries `dependencies`
@@ -59,7 +64,7 @@ It lists every dropped method not yet classified into any bucket — `dropped �
 
 ## Tracking
 
-Create one file per (package, kind); fill only the discovery-stage fields. The kind is one top-level `type` (the file is single-kind), `methods` is a plain FQN list — put any overload/signature detail in `notes`. The two kinds differ: passThrough is written and verified by the scan, dataflow is built and tested on a test project:
+Create one file per (package, kind); fill only the discovery-stage fields. The kind is one top-level `type` (the file is single-kind), `methods` is a plain FQN list — put any overload/signature detail in `notes`; when a method's overloads propagate differently, record each overload's signature there so the passThrough author can target them with a per-`signature` entry. The two kinds differ: passThrough is written and verified by the scan, dataflow is built and tested on a test project:
 
 ```yaml
 # <package-kebab>-passthrough.yaml — simple copies, no test project

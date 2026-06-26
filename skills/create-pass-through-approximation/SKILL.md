@@ -121,6 +121,31 @@ passThrough:
     - .com.example.lib.Parser#parsed#java.lang.Object
 ```
 
+Overloaded method — `function` matches every overload by name; when two overloads propagate differently, add `signature` to target one. Write the parameter types as FQNs:
+```yaml
+passThrough:
+- function: org.springframework.beans.MutablePropertyValues#addPropertyValue
+  signature: (org.springframework.beans.PropertyValue) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
+- function: org.springframework.beans.MutablePropertyValues#addPropertyValue
+  signature: (java.lang.String, java.lang.Object) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
+    - .org.springframework.beans.PropertyValue#Value#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
+    - .org.springframework.beans.PropertyValue#Key#java.lang.Object
+```
+
 Full config — every function in one top-level `passThrough` list (quote `[*]` — unquoted it parses as a YAML alias):
 ```yaml
 passThrough:
@@ -208,6 +233,7 @@ Access-path modifiers (list form `[<base>, <modifier>]`)
 Function matching
 - Simple: `package.Class#method`
 - Complex: `{package, class, name}` — for one hard-to-name function, not for matching many at once (see Gotchas)
+- Overloads: add `signature: (<ParamType>, …) <Return>` to target one overload when others propagate differently; omit it to match every overload by name
 
 Overrides
 - `overrides: true` (default): applies to the class and all subclasses
