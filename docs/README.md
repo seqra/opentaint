@@ -41,7 +41,7 @@ Models Spring data flow and the full Boot ecosystem, analyzing Java and Kotlin a
 
 ### One finding becomes total coverage
 
-LLM security agents find things — but at token cost per file, with results that shift each run, and no guarantee of complete coverage. AST-pattern rules turn their findings into leverage. Every vulnerability an agent uncovers can be enacted as a rule — a source, a sink, and the data flow between them — which the agent can write itself. The engine applies that rule across the entire codebase, deterministically, in minutes of CPU. When a finding is a false positive, a sanitizer can be added to the rule — the refinement propagates to every match, permanently. One discovery compounds across the entire codebase.
+LLM security agents find things — but at token cost per file, with results that shift each run, and no guarantee of complete coverage. AST-pattern rules turn their findings into leverage. For every vulnerability an agent uncovers, it can enact a rule — a source, a sink, and the data flow between them — which the agent can write itself. The engine applies that rule across the entire codebase, deterministically, in minutes of CPU. When a finding is a false positive, a sanitizer can be added to the rule — the refinement propagates to every match, permanently. One discovery compounds across the entire codebase.
 
 The entire system is designed to work with AI agents. Formal analysis produces reproducible results agents can act on without introducing uncertainty. Rules read like code, not a proprietary DSL — so agents write and tune them the same way humans do.
 

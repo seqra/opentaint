@@ -9,7 +9,7 @@
 <h3 align="center">The open source taint analysis engine for the AI era</h3>
 
 <p align="center">
-  Formal taint analysis for application security — finds what AST-pattern matchers miss, lets LLM agents enact vulnerabilities as rules, scales where neither can alone.
+  Formal taint analysis for application security — finds what AST-pattern matchers miss, lets LLM agents enact rules from vulnerabilities, scales where neither can alone.
 </p>
 
 <p align="center">
