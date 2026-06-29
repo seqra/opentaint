@@ -12,8 +12,12 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.configuration.isTrue
+import org.opentaint.dataflow.python.PIRAttrLoadAtomEvaluator
+import org.opentaint.dataflow.python.PIRAttrLoadAnyArgumentResolver
 import org.opentaint.dataflow.python.PIRCallResolver
+import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mayReadAccessor
@@ -43,34 +47,28 @@ class PIRMethodSequentFlowFunction(
 
         if (instruction !is PIRLoadAttr) return@buildSet
 
-        val sourceRules = resolvedNames.flatMap { rulesProvider.sourcesForAttribute(it) }
-        val evaluator = TaintSourceActionEvaluator(apManager, ExclusionSet.Universe)
-
-        sourceRules.forEach { rule ->
-            check(rule.condition.isTrue()) { "Unexpected attribute source condition: ${rule.condition}" }
-
-            rule.taint.forEach { action ->
-                val pos = action.pos.resolveAp() ?: return@forEach
-                val mark = TaintMarkAccessor(action.mark.name)
-
-                evaluator.evaluate(rule, action, pos, mark).onSome { facts ->
-                    facts.forEach { fact ->
-                        ctx.methodCallFactMapper.mapLoadAttributeFactToReturn(instruction, fact)?.let {
-                            this += Sequent.ZeroToFact(it, traceInfo = null)
-                        }
-                    }
-                }
+        applySourceRules(instruction, emptySet(), null, ExclusionSet.Universe,
+            createFinalFact = { it, trace ->
+                this += Sequent.ZeroToFact(factAp = it, trace)
+            },
+            createEdge = { initial, it, trace ->
+                this += Sequent.FactToFact(initial, it, trace)
+            },
+            createNDEdge = { initial, it, trace ->
+                this += Sequent.NDFactToFact(initial, it, trace)
             }
-        }
+        )
     }
 
     override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> = buildSet {
         propagateFact(
+            initialFacts = emptySet(),
             currentFactAp = currentFactAp,
             unchanged = { this += Sequent.Unchanged },
-            propagateFact = { this += Sequent.ZeroToFact(it, null) },
+            propagateFact = { it, traceInfo -> this += Sequent.ZeroToFact(it, traceInfo) },
             propagateFactWithAccessorExclude = { _, _ -> error("Zero fact can't carry an accessor exclusion") },
             addSideEffectRequirement = { error("Can't refine Zero fact") },
+            addUnchecked = { this += it }
         )
     }
 
@@ -79,9 +77,10 @@ class PIRMethodSequentFlowFunction(
         currentFactAp: FinalFactAp,
     ): Set<Sequent> = buildSet {
         propagateFact(
+            initialFacts = setOf(initialFactAp),
             currentFactAp = currentFactAp,
             unchanged = { this += Sequent.Unchanged },
-            propagateFact = { this += Sequent.FactToFact(initialFactAp, it, null) },
+            propagateFact = { it, traceInfo -> this += Sequent.FactToFact(initialFactAp, it, traceInfo) },
             propagateFactWithAccessorExclude = { fact, accessor ->
                 // Exclude the accessor on BOTH edge ends so the edge stays well-formed.
                 this += Sequent.FactToFact(initialFactAp.exclude(accessor), fact.exclude(accessor), null)
@@ -91,6 +90,7 @@ class PIRMethodSequentFlowFunction(
                     reader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty))
                 )
             },
+            addUnchecked = { this += it }
         )
     }
 
@@ -99,13 +99,15 @@ class PIRMethodSequentFlowFunction(
         currentFactAp: FinalFactAp,
     ): Set<Sequent> = buildSet {
         propagateFact(
+            initialFacts = initialFacts,
             currentFactAp = currentFactAp,
             unchanged = { this += Sequent.Unchanged },
-            propagateFact = { this += Sequent.NDFactToFact(initialFacts, it, null) },
+            propagateFact = { it, traceInfo -> this += Sequent.NDFactToFact(initialFacts, it, traceInfo) },
             propagateFactWithAccessorExclude = { _, _ -> error("NDF2F edge can't be refined: $currentFactAp") },
             addSideEffectRequirement = { reader ->
                 check(!reader.hasRefinement) { "NDF2F edge can't be refined: $currentFactAp" }
             },
+            addUnchecked = { this += it }
         )
     }
 
@@ -114,11 +116,13 @@ class PIRMethodSequentFlowFunction(
      * Unit-returning lambdas (mirrors [PIRMethodCallFlowFunction.propagateFact]).
      */
     private fun propagateFact(
+        initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addUnchecked: (Sequent) -> Unit
     ) {
         when (instruction) {
             is PIRAssign -> handleAssign(
@@ -130,11 +134,13 @@ class PIRMethodSequentFlowFunction(
             )
             is PIRLoadAttr -> handleAttrRead(
                 inst = instruction,
+                initialFacts = initialFacts,
                 currentFactAp = currentFactAp,
                 unchanged = unchanged,
                 propagateFact = propagateFact,
                 propagateFactWithAccessorExclude = propagateFactWithAccessorExclude,
                 addSideEffectRequirement = addSideEffectRequirement,
+                addUnchecked = addUnchecked,
             )
             is PIRReturn -> handleReturn(instruction, currentFactAp, unchanged, propagateFact)
             is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact)
@@ -158,7 +164,7 @@ class PIRMethodSequentFlowFunction(
         assign: PIRAssign,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
     ) {
         val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target) ?: return unchanged()
@@ -169,7 +175,7 @@ class PIRMethodSequentFlowFunction(
             val assignFrom = PIRFlowFunctionUtils.accessPathBase(expr)
             if (assignFrom != null) {
                 if (currentFactAp.base == assignFrom) {
-                    propagateFact(currentFactAp.rebase(assignTo))
+                    propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
                     unchanged() // keep on source too
                 } else if (currentFactAp.base == assignTo) {
                     // Strong update: kill fact on overwritten target
@@ -227,13 +233,33 @@ class PIRMethodSequentFlowFunction(
      */
     private fun handleAttrRead(
         inst: PIRLoadAttr,
+        initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addUnchecked: (Sequent) -> Unit
     ) {
-        applyLoadAttrPassRules(inst, currentFactAp, propagateFact, addSideEffectRequirement)
+        val factReader = FinalFactReader(currentFactAp, apManager)
+        applyLoadAttrPassRules(inst, factReader, propagateFact)
+
+        applySourceRules(
+            inst, initialFacts, factReader, currentFactAp.exclusions,
+            createFinalFact = { it, trace ->
+                propagateFact(it, trace)
+            },
+            createEdge = { initial, it, trace ->
+                addUnchecked(Sequent.FactToFact(initial, it, trace))
+            },
+            createNDEdge = { initial, it, trace ->
+                addUnchecked(Sequent.NDFactToFact(initial, it, trace))
+            }
+        )
+
+        if (factReader.hasRefinement) {
+            addSideEffectRequirement(factReader)
+        }
 
         val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target) ?: return unchanged()
         val objBase = PIRFlowFunctionUtils.accessPathBase(inst.obj) ?: run {
@@ -246,61 +272,80 @@ class PIRMethodSequentFlowFunction(
 
         if (currentFactAp.base == objBase) {
             // method self binding
-            propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR))
+            propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR), TraceInfo.Flow)
         }
     }
 
-    private fun applyLoadAttrPassRules(
+    private fun applySourceRules(
         inst: PIRLoadAttr,
-        factAp: FinalFactAp,
-        propagateFact: (FinalFactAp) -> Unit,
-        addSideEffectRequirement: (FinalFactReader) -> Unit,
+        initialFacts: Set<InitialFactAp>,
+        factReader: FinalFactReader?,
+        exclusionSet: ExclusionSet,
+        createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
+        createEdge: (InitialFactAp, FinalFactAp, TraceInfo) -> Unit,
+        createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
     ) {
-        val passRulesReader = FinalFactReader(factAp, apManager)
-        ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, factAp) { fact, newBase ->
-            val mappedFact = fact.rebase(newBase)
-            applyLoadAttrPassRules(inst, passRulesReader, mappedFact, propagateFact)
+        val sourceRules = resolvedNames.flatMapTo(mutableListOf()) { attr ->
+            rulesProvider.sourcesForAttribute(attr)
         }
+        val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, PIRAttrLoadAtomEvaluator)
 
-        if (passRulesReader.hasRefinement) {
-            addSideEffectRequirement(passRulesReader)
-        }
+        val taintUtil = PIRAttributeLoadTaintUtil(ctx, inst, apManager)
+        taintUtil.applySourceRules(
+            sourceRules = sourceRules,
+            initialFacts = initialFacts,
+            conditionRewriter = conditionRewriter,
+            factReader = factReader,
+            exclusion = exclusionSet,
+            createFinalFact = { srcF, trace ->
+                createFinalFact(srcF, trace)
+            },
+            createEdge = { initial, srcF, trace ->
+                createEdge(initial, srcF, trace)
+            },
+            createNDEdge = { initial, srcF, trace ->
+                createNDEdge(initial, srcF, trace)
+            },
+        )
     }
 
     private fun applyLoadAttrPassRules(
         inst: PIRLoadAttr,
         originalFactReader: FinalFactReader,
-        mappedFact: FinalFactAp,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        val reader = FinalFactReader(mappedFact, apManager)
+        ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, originalFactReader.factAp) { fact, newBase ->
+            val mappedFact = fact.rebase(newBase)
+            val reader = FinalFactReader(mappedFact, apManager)
 
-        val rules = resolvedNames.flatMap { rulesProvider.passThroughForAttribute(it) }
-        val typeChecker = FactTypeChecker.Dummy
-        val evaluator = TaintPassActionEvaluator(
-            apManager, typeChecker, reader,
-            DummyPositionTypeResolver
-        )
+            val rules = resolvedNames.flatMap { rulesProvider.passThroughForAttribute(it) }
+            val typeChecker = FactTypeChecker.Dummy
+            val evaluator = TaintPassActionEvaluator(
+                apManager, typeChecker, reader,
+                DummyPositionTypeResolver
+            )
 
-        rules.forEach { rule ->
-            check(rule.condition.isTrue()) { "Unexpected attribute pass rule condition: ${rule.condition}" }
+            rules.forEach { rule ->
+                check(rule.condition.isTrue()) { "Unexpected attribute pass rule condition: ${rule.condition}" }
 
-            rule.copy.forEach { action ->
-                val from = action.from.resolveAp() ?: return@forEach
-                val to = action.to.resolveAp() ?: return@forEach
+                rule.copy.forEach { action ->
+                    val from = action.from.resolveAp() ?: return@forEach
+                    val to = action.to.resolveAp() ?: return@forEach
+                    val traceInfo = TraceInfo.Rule(rule, action)
 
-                evaluator.propagateData(rule, action, from, to).onSome { facts ->
-                    facts.forEach { fact ->
-                        ctx.methodCallFactMapper.mapLoadAttributeFactToReturn(inst, fact.fact)?.let { mappedFact ->
-                            propagateFact(mappedFact)
+                    evaluator.propagateData(rule, action, from, to).onSome { facts ->
+                        facts.forEach { fact ->
+                            ctx.methodCallFactMapper.mapLoadAttributeFactToReturn(inst, fact.fact)?.let { mappedFact ->
+                                propagateFact(mappedFact, traceInfo)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (reader.hasRefinement) {
-            originalFactReader.updateRefinement(reader)
+            if (reader.hasRefinement) {
+                originalFactReader.updateRefinement(reader)
+            }
         }
     }
 
@@ -314,7 +359,7 @@ class PIRMethodSequentFlowFunction(
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
     ) {
         val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: return unchanged()
@@ -329,14 +374,14 @@ class PIRMethodSequentFlowFunction(
         accessor: Accessor,
         factAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
         if (assignTo != factAp.base) {
             if (accessor !is ElementAccessor) {
                 unchanged()
             } else {
-                propagateFact(factAp)
+                propagateFact(factAp, TraceInfo.Flow)
             }
         }
 
@@ -361,7 +406,7 @@ class PIRMethodSequentFlowFunction(
         check(factAp.startsWithAccessor(accessor))
 
         val newAp = factAp.readAccessor(accessor)?.rebase(assignTo) ?: error("Impossible")
-        propagateFact(newAp)
+        propagateFact(newAp, TraceInfo.Flow)
     }
 
     // ==========================================================================
@@ -377,7 +422,7 @@ class PIRMethodSequentFlowFunction(
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         val valueExpressions: List<PIRValue> = when (expr) {
             is PIRDictExpr -> expr.values
@@ -393,7 +438,7 @@ class PIRMethodSequentFlowFunction(
                 // Element-level taint (precise)
                 val elementFact = currentFactAp.rebase(assignTo)
                     .prependAccessor(ElementAccessor)
-                propagateFact(elementFact)
+                propagateFact(elementFact, TraceInfo.Flow)
                 unchanged()  // value keeps its taint
                 return
             }
@@ -416,7 +461,7 @@ class PIRMethodSequentFlowFunction(
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         val leftBase = PIRFlowFunctionUtils.accessPathBase(expr.left)
         val rightBase = PIRFlowFunctionUtils.accessPathBase(expr.right)
@@ -424,7 +469,7 @@ class PIRMethodSequentFlowFunction(
         if ((leftBase != null && currentFactAp.base == leftBase) ||
             (rightBase != null && currentFactAp.base == rightBase)
         ) {
-            propagateFact(currentFactAp.rebase(assignTo))
+            propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
             unchanged()
             return
         }
@@ -445,12 +490,12 @@ class PIRMethodSequentFlowFunction(
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         for (part in expr.parts) {
             val partBase = PIRFlowFunctionUtils.accessPathBase(part) ?: continue
             if (currentFactAp.base == partBase) {
-                propagateFact(currentFactAp.rebase(assignTo))
+                propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
                 unchanged()
                 return
             }
@@ -468,13 +513,13 @@ class PIRMethodSequentFlowFunction(
         ret: PIRReturn,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         unchanged()
         val retVal = ret.value ?: return
         val retBase = PIRFlowFunctionUtils.accessPathBase(retVal) ?: return
         if (currentFactAp.base == retBase) {
-            propagateFact(currentFactAp.rebase(AccessPathBase.Return))
+            propagateFact(currentFactAp.rebase(AccessPathBase.Return), TraceInfo.Flow)
         }
     }
 
@@ -490,7 +535,7 @@ class PIRMethodSequentFlowFunction(
         store: PIRStoreAttr,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged()
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
@@ -498,8 +543,8 @@ class PIRMethodSequentFlowFunction(
         if (valueBase != null && currentFactAp.base == valueBase) {
             val accessor = mkFieldAccessor(store.attribute)
             val newFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
-            propagateFact(newFact)
-            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, newFact) { propagateFact(it) }
+            propagateFact(newFact, TraceInfo.Flow)
+            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, newFact) { propagateFact(it, TraceInfo.Flow) }
             unchanged()
             return
         }
@@ -533,7 +578,7 @@ class PIRMethodSequentFlowFunction(
         store: PIRStoreSubscript,
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged()
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
@@ -542,14 +587,14 @@ class PIRMethodSequentFlowFunction(
 
         if (valueBase != null && currentFactAp.base == valueBase) {
             val elementFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
-            propagateFact(elementFact)
-            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, elementFact) { propagateFact(it) }
+            propagateFact(elementFact, TraceInfo.Flow)
+            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, elementFact) { propagateFact(it, TraceInfo.Flow) }
             unchanged()
             return
         }
 
         if (currentFactAp.base == objBase && currentFactAp.startsWithAccessor(accessor)) {
-            propagateFact(currentFactAp)
+            propagateFact(currentFactAp, TraceInfo.Flow)
             return
         }
 

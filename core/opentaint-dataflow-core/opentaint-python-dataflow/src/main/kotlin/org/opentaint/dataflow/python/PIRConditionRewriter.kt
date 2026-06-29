@@ -24,9 +24,10 @@ import org.opentaint.ir.api.python.PIRCallArgKind
  * for Python varargs). Every other (basic) atom is decided to a constant true/false by
  * [PIRBasicAtomEvaluator]. Mirrors `GoRuleConditionRewriter`.
  */
-class PIRConditionRewriter(private val call: PIRCall) : RuleConditionRewriter<PythonRuleCondition> {
-    private val atomEvaluator = PIRBasicAtomEvaluator(call)
-
+class PIRConditionRewriter(
+    private val anyArgumentResolver: AnyArgumentResolver,
+    private val atomEvaluator: PIRBasicAtomEvaluator,
+) : RuleConditionRewriter<PythonRuleCondition> {
     override fun rewriteAtom(atom: PythonRuleCondition, negated: Boolean): ExprOrConstant {
         if (!negated) {
             return rewriteAtom(atom)
@@ -49,10 +50,12 @@ class PIRConditionRewriter(private val call: PIRCall) : RuleConditionRewriter<Py
 
     /** `ContainsMark` over `arg(*)` = mark on some positional argument of the concrete call. */
     private fun expandAnyArgument(atom: ContainsMark): ExprOrConstant {
-        val perArg = call.args.indices
-            .filter { call.args[it].kind == PIRCallArgKind.POSITIONAL }
-            .map { CommonCondition.Atom<PythonRuleCondition>(ContainsMark(atom.mark, atom.pos.replaceRoot(Argument(it)))) }
-        return rewriteOrCondition(perArg)
+        val expandedArgs = anyArgumentResolver.resolve(AnyArgument)
+        val expandedAtom = expandedArgs.map {
+            CommonCondition.Atom<PythonRuleCondition>(ContainsMark(atom.mark, atom.pos.replaceRoot(it)))
+        }
+
+        return rewriteOrCondition(expandedAtom)
     }
 
     private fun Position.rootBase(): Position = when (this) {
@@ -63,5 +66,24 @@ class PIRConditionRewriter(private val call: PIRCall) : RuleConditionRewriter<Py
     private fun Position.replaceRoot(newRoot: Position): Position = when (this) {
         is PositionWithAccess -> PositionWithAccess(base.replaceRoot(newRoot), access)
         else -> newRoot
+    }
+}
+
+interface AnyArgumentResolver {
+    fun resolve(position: AnyArgument): List<Position>
+}
+
+class PIRCallAnyArgumentResolver(val call: PIRCall) : AnyArgumentResolver {
+    override fun resolve(position: AnyArgument): List<Position> =
+        call.args.indices.mapNotNull { argIdx ->
+            if (call.args[argIdx].kind != PIRCallArgKind.POSITIONAL) return@mapNotNull null
+
+            Argument(argIdx)
+        }
+}
+
+object PIRAttrLoadAnyArgumentResolver : AnyArgumentResolver {
+    override fun resolve(position: AnyArgument): List<Position> {
+        error("Unexpected attribute load rule position: $position")
     }
 }

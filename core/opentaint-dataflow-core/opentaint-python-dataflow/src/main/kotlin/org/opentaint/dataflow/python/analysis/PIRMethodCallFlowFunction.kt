@@ -17,6 +17,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.serialized.PIRUserDefinedRuleInfo
+import org.opentaint.dataflow.python.PIRCallAnyArgumentResolver
+import org.opentaint.dataflow.python.PIRCallAtomEvaluator
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils
@@ -32,7 +34,6 @@ import org.opentaint.dataflow.taint.applyCleanerActions
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
-import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
 import org.opentaint.util.onSome
@@ -61,7 +62,7 @@ class PIRMethodCallFlowFunction(
 
         result.add(CallToReturnZeroFact)
 
-        val conditionRewriter = PIRConditionRewriter(callInst)
+        val conditionRewriter = callConditionRewriter(callInst)
         applySourceRules(emptySet(), null, ExclusionSet.Universe,
             conditionRewriter,
             createFinalFact = { it, trace ->
@@ -107,7 +108,7 @@ class PIRMethodCallFlowFunction(
             return
         }
 
-        val conditionRewriter = PIRConditionRewriter(callInst)
+        val conditionRewriter = callConditionRewriter(callInst)
         val reader = FinalFactReader(factAp, apManager)
 
         applySinkRules(reader, conditionRewriter)
@@ -268,7 +269,7 @@ class PIRMethodCallFlowFunction(
             rulesProvider.sourcesForMethod(method)
         }
 
-        val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
+        val taintUtil = PIRMethodCallTaintUtil(callExpr, ctx, callInst, apManager)
 
         taintUtil.applySourceRules(
             sourceRules = sourceRules,
@@ -302,7 +303,7 @@ class PIRMethodCallFlowFunction(
             rulesProvider.sinksForMethod(method)
         }
 
-        val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, callExpr, apManager)
+        val taintUtil = PIRMethodCallTaintUtil(callExpr, ctx, callInst, apManager)
 
         taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyFieldResolver = null)
     }
@@ -324,7 +325,7 @@ class PIRMethodCallFlowFunction(
             PIRFlowFunctionUtils.DummyPositionTypeResolver
         )
 
-        val conditionRewriter = PIRConditionRewriter(callInst)
+        val conditionRewriter = callConditionRewriter(callInst)
         val simpleConditionEvaluator = PIRSimpleFactAwareConditionEvaluator(conditionRewriter, null)
 
         val passThroughFacts = passRules.maybeFlatMap { rule ->
@@ -370,4 +371,8 @@ class PIRMethodCallFlowFunction(
             body(aliased)
         }
     }
+
+    private fun callConditionRewriter(call: PIRCall) = PIRConditionRewriter(
+        PIRCallAnyArgumentResolver(call), PIRCallAtomEvaluator(call)
+    )
 }

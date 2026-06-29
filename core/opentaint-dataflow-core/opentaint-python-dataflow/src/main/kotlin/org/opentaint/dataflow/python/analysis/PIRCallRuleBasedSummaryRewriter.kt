@@ -8,6 +8,8 @@ import org.opentaint.dataflow.configuration.python.TaintCleanAction
 import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.TaintMark
 import org.opentaint.dataflow.configuration.python.serialized.PIRUserDefinedRuleInfo
+import org.opentaint.dataflow.python.PIRCallAnyArgumentResolver
+import org.opentaint.dataflow.python.PIRCallAtomEvaluator
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
@@ -41,7 +43,9 @@ class PIRCallRuleBasedSummaryRewriter(
     )
 
     private val userRuleDefinedActions: List<UserRuleDefinedAction> by lazy {
-        val conditionRewriter = PIRConditionRewriter(callInst)
+        val conditionRewriter = PIRConditionRewriter(
+            PIRCallAnyArgumentResolver(callInst), PIRCallAtomEvaluator(callInst)
+        )
 
         val result = mutableListOf<UserRuleDefinedAction>()
         for (sourceRule in resolvedMethods.flatMap { config.sourcesForMethod(it) }) {
