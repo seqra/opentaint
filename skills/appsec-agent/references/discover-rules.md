@@ -1,5 +1,7 @@
 # Discover + new rules
 
+**Go:** this whole phase is **deferred** — discover-attack-surface-go (project-used member extraction) is not yet available, so a Go `deep` run executes the normal pipeline plus a logged note that lib-rule discovery is pending, and skips this reference entirely. The steps below are Java/Kotlin only. (triage-dependencies has a Go branch, but Go does not run the discover/lib-rules steps yet.)
+
 ## Triage dependencies
 
 Delegate triage-dependencies. Inputs: `<project-root>`, model-dir `.opentaint/project`, tracking-dir `.opentaint/tracking`. It reads `project.yaml`'s dependency list and writes `tracking/coverage.yaml` (`package` / `status` / `notes`) — one `status: pending` entry per library that could introduce a source or sink, dismissals summarised — returning one line per flagged library. Don't ask for the full list back.

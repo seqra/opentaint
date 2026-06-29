@@ -1,6 +1,6 @@
 ---
 name: appsec-agent
-description: Run an end-to-end application-security analysis on a JVM project with OpenTaint — build, scan, model missing library methods, triage, and confirm vulnerabilities. Use when the user asks to find vulnerabilities, run SAST, or scan a Java/Kotlin app for security issues
+description: Run an end-to-end application-security analysis on a JVM or Go project with OpenTaint — build, scan, model missing library methods, triage, and confirm vulnerabilities. Use when the user asks to find vulnerabilities, run SAST, or scan a Java/Kotlin or Go app for security issues
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,7 +9,9 @@ metadata:
 
 # AppSec Agent
 
-Orchestrate an end-to-end OpenTaint analysis of a JVM project: run the workflow the user picks by dispatching each step to a subagent that loads one leaf skill, verifying the artifact it returns, and tracking progress. The leaf work is never done here. OpenTaint is a dataflow (taint) SAST analyzer; the goal is real, confirmed vulnerabilities.
+Orchestrate an end-to-end OpenTaint analysis of a JVM or Go project: run the workflow the user picks by dispatching each step to a subagent that loads one leaf skill, verifying the artifact it returns, and tracking progress. The leaf work is never done here. OpenTaint is a dataflow (taint) SAST analyzer; the goal is real, confirmed vulnerabilities.
+
+The pipeline is the same for both languages; the project's **language** picks which leaf skill each step dispatches (see § Language). Determine it once, up front, and record it in `state.yaml`.
 
 The run is one pipeline of a few steps, each gated by the chosen workflow; a step's detail lives in a reference loaded when you reach it, while what every workflow shares stays in this file. Default to the current directory when no target is named.
 
@@ -29,6 +31,40 @@ Windows:
 1. npm — `npm install -g @seqra/opentaint`
 
 After installing, run `opentaint health` to confirm the autobuilder/analyzer/rules/runtime resolve.
+
+## Language
+
+Right after setup, determine the project language and record it in `state.yaml` as
+`language: java | go`:
+
+- detect from build markers under the target — `go.mod` ⇒ Go; `pom.xml`/`build.gradle(.kts)` ⇒ Java/Kotlin. If both are present (a polyglot repo) or it's ambiguous, ask the user which to analyze
+- for Go, also confirm `go` is on PATH (`command -v go`) — a Go scan hard-fails without the toolchain. Tell the user and stop if it's missing
+
+The language selects each step's leaf skill; the pipeline, delegation, resource, and state
+discipline below are otherwise identical:
+
+| Step | Java/Kotlin skill | Go skill |
+|---|---|---|
+| build | build-project | build-project-go |
+| discover (deep) | triage-dependencies → discover-attack-surface | triage-dependencies (Go branch) → *(discovery deferred)* |
+| lib rules (deep) | create-test-project + create-rule + assemble-lib-rules | create-test-project-go + create-rule-go + assemble-lib-rules-go |
+| scan | run-scan | run-scan-go |
+| approximations | analyze-external-methods + create-pass-through-approximation + (create-test-project + create-dataflow-approximation) | analyze-external-methods-go + create-pass-through-approximation-go |
+| triage | analyze-findings (shared) | analyze-findings (shared) |
+| PoC | generate-poc (shared) | generate-poc (shared) |
+| debug / escalate | debug-rule (shared) | debug-rule (Go branch) |
+
+Go-specific gating (everything else is unchanged):
+
+- **Approximations are passThrough-only.** Go has no dataflow approximation, so the
+  approximation loop never spawns a dataflow unit, a test project for it, or
+  create-dataflow-approximation. A passThrough that genuinely can't express a method's
+  propagation is an engine issue (debug-rule → report-analyzer-issue), not a dataflow fallback
+- **Deep tier == normal for now.** Go project-used lib-rule discovery (discover-attack-surface-go)
+  is not yet available, so a Go `deep` run executes the normal pipeline plus a logged note that
+  lib-rule discovery is pending; it does not run the discover/lib-rules steps
+- **Heavy-agent set** drops create-dataflow-approximation for Go; build-project-go / run-scan-go /
+  create-rule-go carry the JVM-equivalent RAM weight
 
 ## Choose a workflow
 
@@ -90,7 +126,7 @@ Orchestration practices:
 Two limits apply to every fan-out — a global one against rate-limiting, and a tighter one against memory:
 
 - Global cap of 7 — never dispatch more than 7 subagents at once, of any kind. Bursting more reliably trips transient rate-limiting. It binds light and heavy agents alike. Treat 7 as a starting ceiling: each time a subagent comes back rate-limited, drop the cap by 1 for the rest of the run
-- RAM-heavy agents each spawn a heavy `opentaint` JVM, so they take a tighter memory bound on top of the global cap. The heavy set is exactly `build-project`, `run-scan`, `create-rule`, `create-dataflow-approximation`, and sometimes `debug-rule` (when it traces a real scan). Compute the bound at run start and never dispatch more than this many heavy subagents at once:
+- RAM-heavy agents each spawn a heavy `opentaint` JVM, so they take a tighter memory bound on top of the global cap. The heavy set is exactly `build-project`, `run-scan`, `create-rule`, `create-dataflow-approximation`, and sometimes `debug-rule` (when it traces a real scan) — for Go, the heavy set is the `-go` equivalents (`build-project-go`, `run-scan-go`, `create-rule-go`, and `debug-rule` tracing a scan); there is no `create-dataflow-approximation`. Compute the bound at run start and never dispatch more than this many heavy subagents at once:
   - cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
   - free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
   - `cap_heavy = max(1, min(cores, floor(free_GB / 2), 7))` — budget ~2 GB per concurrent JVM
@@ -129,12 +165,13 @@ The single source of truth for the tracking schema; each skill writes only its o
 state.yaml:
 
 ```yaml
+language: java          # java | go (decides each step's leaf skill)
 scan_level: deep        # lite | normal | deep
 triage_level: dynamic   # static | dynamic
 phases:                 # pending | in_progress | done
   build: done
-  discover: done        # deep only
-  rules: done           # deep only; fixed first
+  discover: done        # deep only; Java only (Go discovery deferred)
+  rules: done           # deep only; fixed first; Java only
   scan: done
   approximations: in_progress  # normal/deep; iterative, rescans within
   triage: pending
@@ -240,11 +277,12 @@ methods:                # engine asks to approximate these, but they carry no ta
 ```
 <project-root>/.opentaint/
   project/                      # built project model (project.yaml)
-  rules/java/{lib/generic,lib/spring,security}/   # custom rules
-  pass-through/<name>.yaml      # passThrough approximation configs
-  dataflow/<name>/              # code-based (dataflow) approximation sources, per unit
-  test-projects/<name>/         # per-unit test project sources; a rule unit holds sinks/ and sources/ sub-projects, each with a test-rules/ (the generic markers + that side's test join — test-only, never loaded by the main scan)
-  test-compiled/<name>/         # per-unit compiled test model (a rule unit: sinks/ and sources/ models); delete once the unit's tests pass — large and unused after
+  rules/java/{lib/generic,lib/spring,security}/   # custom rules (Java)
+  rules/go/{lib,security}/      # custom rules (Go)
+  pass-through/<name>.yaml      # passThrough approximation configs (both languages)
+  dataflow/<name>/              # code-based (dataflow) approximation sources, per unit — Java only (Go has none)
+  test-projects/<name>/         # Java: per-unit test project (sinks/ and sources/ sub-projects, each with a test-rules/). Go: one shared module test-projects/go/ (samples + rule-test.yaml), no sub-projects
+  test-compiled/<name>/         # compiled test model; Go: test-compiled/go (one model); delete once tests pass — large and unused after
   test-results/<name>/          # per-unit test outputs
   results/
     report.sarif

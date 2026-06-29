@@ -24,7 +24,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 ### 1. Start the app
 
-Reuse `<base-url>` if given. Otherwise build and start the app the way the project expects (`spring-boot:run`, `java -jar`, `docker compose`, …), wait until it's listening, and note the base URL. The PoC must hit a live instance
+Reuse `<base-url>` if given. Otherwise build and start the app the way the project expects (`spring-boot:run`, `java -jar`, `docker compose`, … for JVM; `go run ./...` or `go build -o app . && ./app` for Go), wait until it's listening, and note the base URL. The PoC must hit a live instance
 
 When the app needs backing services (DB, broker, cache, …), bring them all up with one `docker compose` on a shared network rather than starting each by hand, and register it as a single `compose` entry
 
