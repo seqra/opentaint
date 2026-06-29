@@ -14,6 +14,9 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.TraceResolutionResult.
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 class TraceResolver(
     private val entryPointMethods: Set<CommonMethod>,
@@ -170,7 +173,8 @@ class TraceResolver(
                 }
 
                 ProcessingKind.PROCESS -> {
-                    state.builder.process(limit = 100)
+                    val timeLimit = TimeSource.Monotonic.markNow() + 100.milliseconds
+                    state.builder.process(stepLimit = 100, timeLimit)
 
                     if (!state.builder.isEmpty()) {
                         return TraceResolutionResult.InProgress(state)
@@ -364,9 +368,9 @@ class TraceResolver(
         fun isEmpty(): Boolean =
             unprocessedCall2Sink.isEmpty() && unprocessedCall2Source.isEmpty() && unprocessedInner.isEmpty()
 
-        fun process(limit: Int) {
+        fun process(stepLimit: Int, timeLimit: TimeMark) {
             var steps = 0
-            while (cancellation.isActive() && ++steps < limit) {
+            while (cancellation.isActive() && ++steps < stepLimit && timeLimit.hasNotPassedNow()) {
                 val event = pollUnprocessedEvent() ?: break
                 val resolvedNodes = resolveNode(event.trace, event.kind, event.depth)
 

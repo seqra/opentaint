@@ -565,7 +565,7 @@ class TaintAnalysisUnitRunnerManager(
     companion object {
         private val logger = KotlinLogging.logger {}
 
-        private const val OOM_DETECTION_THRESHOLD = 0.97
+        private const val OOM_DETECTION_THRESHOLD = 0.90
         private const val TRACE_GENERATION_MEMORY_THRESHOLD = 0.99
     }
 }

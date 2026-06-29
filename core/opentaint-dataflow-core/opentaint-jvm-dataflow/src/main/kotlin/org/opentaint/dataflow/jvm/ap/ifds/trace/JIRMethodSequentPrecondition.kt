@@ -47,6 +47,10 @@ class JIRMethodSequentPrecondition(
     override fun factPrecondition(
         fact: InitialFactAp,
     ): Set<SequentPrecondition> {
+        if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
+            return setOf(SequentPrecondition.Unchanged)
+        }
+
         val results = mutableSetOf<SequentPrecondition>()
         results.computeFactPrecondition(fact, applyExitSourceRules = true)
         return results

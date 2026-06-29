@@ -109,7 +109,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     ): Pair<List<VulnerabilityWithTrace>, Status> {
         val analysisStart = TimeSource.Monotonic.markNow()
 
-        val analysisTimeout = options.ifdsTimeout * 0.90 // Reserve 10% of time for trace generation and report creation
+        val analysisTimeout = options.ifdsTimeout * 0.80 // Reserve 20% of time for trace generation and report creation
         val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
         runCatching { ifdsEngine.runAnalysis(startMethods, timeout = analysisTimeout, cancellationTimeout = 30.seconds) }
             .onFailure { logger.error(it) { "Ifds engine failed" } }

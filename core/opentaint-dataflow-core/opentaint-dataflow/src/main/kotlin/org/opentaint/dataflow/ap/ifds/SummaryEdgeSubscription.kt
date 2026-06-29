@@ -858,6 +858,10 @@ class SummaryEdgeStorageWithSubscribers(
 
         val summariesStorage = taintedFactSummaryEdges
 
+        val initialFacts = mutableListOf<InitialFactAp>()
+        edges.forEach { initialFacts.add(it.initialFactAp) }
+        sideEffectRequirement(initialFacts)
+
         synchronized(summariesStorage) {
             val addedEdgeBuilders = mutableListOf<FactToFactEdgeBuilder>()
             summariesStorage.add(edges, addedEdgeBuilders)

@@ -3,6 +3,7 @@ package org.opentaint.dataflow.ap.ifds.trace
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
+import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
@@ -307,6 +308,7 @@ class MethodTraceResolver(
     private class EntryManager {
         private val entries = arrayListOf<TraceEntry>()
         private val entryId = Object2IntOpenHashMap<TraceEntry>().apply { defaultReturnValue(NO_ENTRY) }
+        private var actionEntries = 0
 
         fun entryId(entry: TraceEntry): Int {
             val currentId = entryId.getInt(entry)
@@ -315,8 +317,15 @@ class MethodTraceResolver(
             val id = entries.size
             entries.add(entry)
             entryId.put(entry, id)
+
+            if (entry is TraceEntry.Action) {
+                actionEntries++
+            }
+
             return id
         }
+
+        fun actions(): Int = actionEntries
 
         fun entryById(id: Int): TraceEntry = entries[id]
 
@@ -599,6 +608,11 @@ class MethodTraceResolver(
 
     private fun TraceBuilder.resolveTrace(traceKind: TraceKind) {
         while (unprocessedEntryIds.isNotEmpty() && cancellation.isActive()) {
+            if (entryManager.actions() > TRACE_RESOLUTION_ACTION_HARD_LIMIT && !startEntryIds.isEmpty) {
+                logger.warn { "Trace resolution stopped for $methodEntryPoint: hard limit" }
+                return
+            }
+
             val entryId = unprocessedEntryIds.removeInt(unprocessedEntryIds.lastIndex)
             val entry = entryManager.entryById(entryId)
             processTraceEntry(entry, traceKind)
@@ -1467,17 +1481,6 @@ class MethodTraceResolver(
         }
     }
 
-    private val emptyDelta by lazy { apManager.emptyDelta() }
-
-    private fun ApManager.emptyDelta(): InitialFactAp.Delta {
-        val fap = mostAbstractFinalAp(AccessPathBase.This)
-        val iap = mostAbstractInitialAp(AccessPathBase.This)
-        return iap.splitDelta(fap)
-            .map { it.second }
-            .firstOrNull { it.isEmpty }
-            ?: error("Empty delta expected")
-    }
-
     private fun MutableList<CallSummary>.resolveCallSourceSummary(
         currentEdge: TraceEdge.SourceTraceEdge,
         callee: MethodEntryPoint,
@@ -1619,5 +1622,10 @@ class MethodTraceResolver(
         successors.putAll(additionalSuccessors)
 
         return FullTrace(methodEntryPoint, fakeStartEntry, finalEntry, successors, TraceKind.TraceToFact)
+    }
+
+    companion object {
+        private val logger = object : KLogging() {}.logger
+        private const val TRACE_RESOLUTION_ACTION_HARD_LIMIT = 10_000
     }
 }

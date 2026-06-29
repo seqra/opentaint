@@ -37,6 +37,11 @@ inline fun <V> Int2ObjectOpenHashMap<V>.getOrCreate(key: Int, body: () -> V): V 
     return body().also { put(key, it) }
 }
 
+inline fun <V> Int2ObjectOpenHashMap<V?>.getOrCreateNullable(key: Int, body: () -> V): V {
+    get(key)?.let { return it }
+    return body().also { put(key, it) }
+}
+
 inline fun <V> Long2ObjectOpenHashMap<V>.getOrCreate(key: Long, body: () -> V): V {
     get(key)?.let { return it }
     return body().also { put(key, it) }

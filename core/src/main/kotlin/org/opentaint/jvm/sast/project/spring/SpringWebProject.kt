@@ -214,6 +214,30 @@ class SpringWebProjectContext(
 
 private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<JIRMethod>): JIRMethod {
     val initMethod = generateComponentInitializer()
+
+    val controllerDispatchers = controllerWrappers
+        .groupBy { it.enclosingClass.name }
+        .mapValues { (controllerName, methods) ->
+            ndMethodDispatch(
+                dispatcherName = GeneratedSpringControllerDispatcherDispatchMethod + controllerName,
+                prepareMethod = null,
+                methods = methods,
+            )
+        }
+
+    val dispatcher = ndMethodDispatch(
+        GeneratedSpringControllerDispatcherDispatchMethod,
+        initMethod,
+        controllerDispatchers.values.toList()
+    )
+    return dispatcher
+}
+
+private fun SpringWebProjectContext.ndMethodDispatch(
+    dispatcherName: String,
+    prepareMethod: JIRMethod?,
+    methods: List<JIRMethod>
+): JIRMethod {
     val cleanupMethod = generateCleanup()
     val selectMethod = generateSelect()
     val cp = controllerDispatcher.classpath
@@ -223,7 +247,7 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
 
     val returnType = PredefinedPrimitives.Void.typeName()
     val dispatcher = SpringGeneratedMethod(
-        name = GeneratedSpringControllerDispatcherDispatchMethod,
+        name = dispatcherName,
         returnType = returnType,
         description = methodDescription(emptyList(), returnType),
         parameters = emptyList(),
@@ -233,9 +257,11 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
         it.bind(controllerDispatcher)
     }
 
-    instructions.addInstWithLocation(dispatcher) { loc ->
-        val initCall = JIRStaticCallExpr(initMethod.staticMethodRef(), emptyList())
-        JIRCallInst(loc, initCall)
+    if (prepareMethod != null) {
+        instructions.addInstWithLocation(dispatcher) { loc ->
+            val initCall = JIRStaticCallExpr(prepareMethod.staticMethodRef(), emptyList())
+            JIRCallInst(loc, initCall)
+        }
     }
 
     val selectValue = JIRLocalVar(index = 0, "%sel", cp.int)
@@ -253,7 +279,7 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
         JIRAssignInst(loc, selectValue, selectValue) // nop
     }
 
-    val blocks = controllerWrappers.map { cwm ->
+    val blocks = methods.map { cwm ->
         val blockStart: JIRInstLocation
         val blockEnd: JIRInstLocation
 

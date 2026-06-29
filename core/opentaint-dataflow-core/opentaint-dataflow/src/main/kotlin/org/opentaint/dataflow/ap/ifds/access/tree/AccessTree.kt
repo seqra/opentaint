@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import it.unimi.dsi.fastutil.ints.IntList
 import it.unimi.dsi.fastutil.ints.IntObjectImmutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
@@ -29,6 +30,7 @@ import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.util.forEachIntEntry
 import org.opentaint.dataflow.util.getOrCreate
+import org.opentaint.dataflow.util.reversedForEachInt
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.IdentityHashMap
@@ -102,18 +104,7 @@ class AccessTree(
 
         if (base != factAp.base) return false
 
-        val otherAccess = factAp.access
-
-        if (otherAccess == null) {
-            return access.isAbstract
-        }
-
-        var node = access
-        otherAccess.toList().forEachInt { accessor ->
-            if (accessor == FINAL_ACCESSOR_IDX) return node.isFinal
-            node = node.getChild(accessor) ?: return false
-        }
-        return node.isAbstract
+        return access.contains(factAp.access)
     }
 
     override fun equalTo(factAp: InitialFactAp): Boolean {
@@ -121,22 +112,7 @@ class AccessTree(
 
         if (base != factAp.base) return false
 
-        val otherAccess = factAp.access
-        if (otherAccess == null) {
-            return access.isEmptyAbstract
-        }
-
-        var node = access
-        otherAccess.toList().forEachInt { accessor ->
-            if (accessor == FINAL_ACCESSOR_IDX) {
-                return node.isFinal && node.accessors == null
-            }
-
-            if (node.accessors?.size != 1) return false
-            node = node.getChild(accessor) ?: return false
-        }
-
-        return node.isEmptyAbstract
+        return access.equalTo(factAp.access)
     }
 
     private sealed interface AccessTreeDelta : FinalFactAp.Delta
@@ -453,6 +429,95 @@ class AccessTree(
 
                 else -> error("Unsupported accessor: $accessor")
             }
+        }
+
+        fun equalTo(otherAccess: AccessPath.AccessNode?): Boolean {
+            if (otherAccess == null) {
+                return isEmptyAbstract
+            }
+
+            var node = this
+            otherAccess.toList().forEachInt { accessor ->
+                if (accessor == FINAL_ACCESSOR_IDX) {
+                    return node.isFinal && node.accessors == null
+                }
+
+                if (node.accessors?.size != 1) return false
+                node = node.getChild(accessor) ?: return false
+            }
+
+            return node.isEmptyAbstract
+        }
+
+        fun contains(otherAccess: AccessPath.AccessNode?): Boolean {
+            if (otherAccess == null) {
+                return isAbstract
+            }
+
+            var node = this
+            otherAccess.toList().forEachInt { accessor ->
+                if (accessor == FINAL_ACCESSOR_IDX) return node.isFinal
+                node = node.getChild(accessor) ?: return false
+            }
+            return node.isAbstract
+        }
+
+        sealed interface MatchResult {
+            data object NotMatched : MatchResult
+            data class MatchedWithRemainder(val remainder: AccessNode?) : MatchResult
+        }
+
+        fun splitOnMatching(otherAccess: AccessPath.AccessNode?): MatchResult  {
+            if (otherAccess == null) {
+                if (!isAbstract) return MatchResult.NotMatched
+
+                val remainder = removeAbstraction().takeIf { !it.isEmpty }
+                return MatchResult.MatchedWithRemainder(remainder)
+            }
+
+            val accessorsOnPath = otherAccess.toList()
+
+            var node = this
+            accessorsOnPath.forEachInt { accessor ->
+                if (accessor == FINAL_ACCESSOR_IDX) {
+                    if (!node.isFinal) return MatchResult.NotMatched
+
+                    val remainder = this.reconstructRemainder(accessorsOnPath, idx = 0)
+                    return MatchResult.MatchedWithRemainder(remainder)
+                }
+
+                node = node.getNodeByAccessor(accessor)
+                    ?: return MatchResult.NotMatched
+            }
+
+            if (!node.isAbstract) return MatchResult.NotMatched
+
+            val remainder = this.reconstructRemainder(accessorsOnPath, idx = 0)
+            return MatchResult.MatchedWithRemainder(remainder)
+        }
+
+        private fun reconstructRemainder(accessors: IntList, idx: Int): AccessNode? {
+            if (idx == accessors.size) {
+                return removeAbstraction().takeIf { !it.isEmpty }
+            }
+
+            val accessor = accessors.getInt(idx)
+
+            val levelRemainder = clearChild(accessor)
+                .takeIf { !it.isEmpty }
+
+            if (accessor == FINAL_ACCESSOR_IDX) {
+                return levelRemainder
+            }
+
+            val childRemainder = getNodeByAccessor(accessor)
+                ?.reconstructRemainder(accessors, idx + 1)
+                ?.takeIf { !it.isEmpty }
+                ?.let { create(accessor, it) }
+
+            if (levelRemainder == null) return childRemainder
+            if (childRemainder == null) return levelRemainder
+            return levelRemainder.mergeAdd(childRemainder)
         }
 
         fun addParent(accessor: AccessorIdx): AccessNode =
@@ -1570,6 +1635,19 @@ class AccessTree(
                         else -> create(accessor, node)
                     }
                 }
+
+            @JvmStatic
+            fun TreeApManager.createAbstractNodeFromAccessors(accessors: IntList): AccessNode {
+                var result = abstractNode
+                accessors.reversedForEachInt { accessor ->
+                    result = when (accessor) {
+                        FINAL_ACCESSOR_IDX -> finalNode
+                        else -> create(accessor, result)
+                    }
+                }
+
+                return result
+            }
 
             private fun <K, V: Any> Object2ObjectOpenHashMap<K, V>.getComputedResult(key: K): V =
                 get(key) ?: error("Result for $key was not computed")
