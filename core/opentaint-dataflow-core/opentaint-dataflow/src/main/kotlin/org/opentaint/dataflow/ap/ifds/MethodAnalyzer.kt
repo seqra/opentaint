@@ -679,6 +679,8 @@ class NormalMethodAnalyzer(
     private fun tryEmmitSummaryEdge(edge: Edge) {
         if (!methodInstGraph.isExitPoint(analysisManager, edge.statement)) return
 
+        if (!isApplicableExitToReturnEdge(edge)) return
+
         val isValidSummaryEdge = when (edge) {
             is ZeroToZero -> true
             is ZeroToFact -> analysisManager.isValidMethodExitFact(apManager, analysisContext, edge.factAp)
