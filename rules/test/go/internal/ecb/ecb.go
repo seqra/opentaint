@@ -1,4 +1,4 @@
-package weakcipher
+package ecb
 
 type blockMode struct{}
 
