@@ -85,7 +85,7 @@ private open class MethodTaintedSummariesIdStorage(
         val node = storageNode.getOrCreateCurrent(initialAccess)
         if (!node.add(exclusion)) return null
 
-        val nodeExclusion = current?.exclusion ?: return node
+        val nodeExclusion = node.exclusion ?: return node
         storageNode.removeChildren { accessor, _ ->
             val accessorInstance = with(manager) { accessor.accessor }
             !nodeExclusion.contains(accessorInstance)
