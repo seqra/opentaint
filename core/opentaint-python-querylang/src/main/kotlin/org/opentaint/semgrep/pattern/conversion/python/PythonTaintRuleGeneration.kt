@@ -20,6 +20,7 @@ import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
+import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.SpecificBoolValue
 import org.opentaint.semgrep.pattern.conversion.SpecificIntValue
 import org.opentaint.semgrep.pattern.conversion.SpecificNullValue
@@ -51,7 +52,7 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
             val actions = buildPythonStateAssignActions(ruleEdge.stateTo, condition)
             if (actions.isEmpty()) continue
 
-            val target = PythonTarget.Function(condition.ruleCondition.function)
+            val target = pythonTargetFor(condition.ruleCondition.function)
             val cond = condition.ruleCondition.condition.nullIfTrue()
             val info = edgeRuleInfo(ruleEdge).toPython()
             when (ruleEdge.edgeKind) {
@@ -67,7 +68,7 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
         for (condition in evaluateWithStateCheck(ruleEdge, ruleEdge.stateFrom)) {
             when (ruleEdge.edgeKind) {
                 TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonSink(
-                    target = PythonTarget.Function(condition.ruleCondition.function),
+                    target = pythonTargetFor(condition.ruleCondition.function),
                     condition = condition.ruleCondition.condition.nullIfTrue(),
                     meta = ctx.meta.toPythonSinkMeta(),
                 )
@@ -89,7 +90,7 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
                 TaintRuleEdge.Kind.MethodExit -> ctx.trace.error(NonMethodCallCleaner())
 
                 TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonCleaner(
-                    target = PythonTarget.Function(condition.ruleCondition.function),
+                    target = pythonTargetFor(condition.ruleCondition.function),
                     condition = condition.ruleCondition.condition.nullIfTrue(),
                     cleans = actions,
                     info = edgeRuleInfo(ruleEdge).toPython(),
@@ -100,6 +101,13 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
 
     return rules
 }
+
+// The converter encodes an attribute read as a synthetic method name carrying
+// PythonLanguageStrategy.ATTR_READ_AUX_FN_PREFIX; recover the attribute target from it.
+private fun pythonTargetFor(function: String): PythonTarget =
+    PythonLanguageStrategy.attrReadAttrOrNull(function)
+        ?.let { PythonTarget.Attribute(it) }
+        ?: PythonTarget.Function(function)
 
 private fun SinkMetaData.toPythonSinkMeta(): PythonSinkMetaData = PythonSinkMetaData(cwe = cwe, note = note)
 

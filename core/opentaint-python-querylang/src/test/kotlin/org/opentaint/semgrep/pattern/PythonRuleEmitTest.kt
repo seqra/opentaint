@@ -29,6 +29,8 @@ class PythonRuleEmitTest {
 
     private fun SerializedPythonRule.functionTarget(): String? = (target as? PythonTarget.Function)?.function
 
+    private fun SerializedPythonRule.attributeTarget(): String? = (target as? PythonTarget.Attribute)?.attribute
+
     @Test fun `qualified source taints the call result`() {
         val source = emit("python-rules/source-sink.yaml")
             .filterIsInstance<SerializedPythonSource>()
@@ -78,6 +80,17 @@ class PythonRuleEmitTest {
 
         assertEquals(".*", entryPoint.functionTarget())
         assertTrue(entryPoint.taint.isNotEmpty(), "entry-point taints at least one parameter position")
+    }
+
+    @Test fun `qualified attribute read becomes an attribute-fqn source`() {
+        // `flask.request`: concrete receiver folds ahead of the synthetic name, so the unpacked
+        // attribute target must keep the qualifier (`flask.request`), not collapse to `request`.
+        val source = emit("python-rules/attribute-source.yaml")
+            .filterIsInstance<SerializedPythonSource>()
+            .single { it.attributeTarget() == "flask.request" }
+
+        assertTrue(source.taint.isNotEmpty(), "expected a taint action")
+        assertTrue(source.taint.all { it.pos.base == PythonPositionBase.Result }, "attribute read taints the result")
     }
 
     private fun SerializedPythonCondition.markPositions(): List<PythonPosition> = when (this) {

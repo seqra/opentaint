@@ -9,6 +9,15 @@ import org.opentaint.semgrep.pattern.SemgrepPythonPatternParser
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 
 class PythonLanguageStrategy : LanguageStrategy<SemgrepPythonPattern, SerializedPythonRule> {
+    companion object {
+        const val ATTR_READ_AUX_FN_PREFIX = "$$<attrread>$$"
+
+        fun attrReadAuxFnName(attr: String) = "$ATTR_READ_AUX_FN_PREFIX$attr"
+
+        fun attrReadAttrOrNull(name: String): String? =
+            if (name.contains(ATTR_READ_AUX_FN_PREFIX)) name.replace(ATTR_READ_AUX_FN_PREFIX, "") else null
+    }
+
     override val language = "python"
     override val parser = SemgrepPythonPatternParser()
     override val rewriter = PythonRuleRewriter()

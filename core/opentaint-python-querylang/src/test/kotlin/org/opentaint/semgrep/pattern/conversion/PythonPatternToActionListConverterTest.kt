@@ -103,10 +103,30 @@ class PythonPatternToActionListConverterTest {
         assertEquals(ParamConstraint.Partial(emptyList()), call.params)
     }
 
-    @Test fun bareAttributeReadIsUnsupported() {
-        val (r, failures) = convert("\$X.attr")
-        assertNull(r)
-        assertTrue(failures.isNotEmpty(), "expected a recorded failure reason, got $failures")
+    @Test fun bareAttributeReadConvertsToSyntheticCall() {
+        val a = convertOk("\$X.attr")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete(PythonLanguageStrategy.attrReadAuxFnName("attr")), call.methodName)
+        assertEquals(IsMetavar(MetavarAtom.create("\$X")), call.obj)
+        assertEquals(null, call.enclosingClassName)
+        assertEquals(null, call.result)
+        assertEquals(ParamConstraint.Concrete(emptyList()), call.params)
+    }
+
+    @Test fun attributeReadOnConcreteReceiver() {
+        val a = convertOk("flask.request")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete(PythonLanguageStrategy.attrReadAuxFnName("request")), call.methodName)
+        assertEquals(pythonNamed("flask"), call.enclosingClassName)
+        assertEquals(ParamCondition.True, call.obj)
+    }
+
+    @Test fun attributeReadBindsAssignResult() {
+        val a = convertOk("\$Y = \$X.attr")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete(PythonLanguageStrategy.attrReadAuxFnName("attr")), call.methodName)
+        assertEquals(IsMetavar(MetavarAtom.create("\$X")), call.obj)
+        assertEquals(IsMetavar(MetavarAtom.create("\$Y")), call.result)
     }
 
     @Test fun attributeStoreIsUnsupported() {

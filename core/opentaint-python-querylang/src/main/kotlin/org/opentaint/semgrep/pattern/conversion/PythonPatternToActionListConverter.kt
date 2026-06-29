@@ -76,6 +76,7 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         is Ellipsis, is EllipsisStmt ->
             SemgrepPatternActionList(emptyList(), hasEllipsisInTheBeginning = true, hasEllipsisInTheEnd = true)
         is Call -> transformMethodInvocation(pattern)
+        is Attribute -> transformAttributeRead(pattern)
         is Assign -> transformAssignment(pattern)
         is ReturnStmt -> transformReturn(pattern)
         is FunctionDef -> transformFunctionDef(pattern)
@@ -149,6 +150,43 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         val (argActions, params) = generateParamConditions(call.args)
         return SemgrepPatternActionList(
             argActions + MethodCall(methodName = methodName, result = null, params = params, obj = obj, enclosingClassName = enclosing),
+            hasEllipsisInTheBeginning = false,
+            hasEllipsisInTheEnd = false,
+        )
+    }
+
+    /**
+     * Bare attribute read `recv.attr` modeled as a synthetic, zero-arg method call whose name
+     * carries [PythonLanguageStrategy.ATTR_READ_AUX_FN_PREFIX]; rule generation unpacks it into
+     * an attribute target. The result is left unbound here — an enclosing assignment binds it.
+     */
+    private fun transformAttributeRead(attr: Attribute): SemgrepPatternActionList {
+        val attrName = (attr.name as? ConcreteName)?.name
+            ?: transformationFailed("AttributeRead_name_metavar")
+        val methodName = SignatureName.Concrete(PythonLanguageStrategy.attrReadAuxFnName(attrName))
+
+        val obj: ParamCondition
+        var enclosing: TypeConstraint? = null
+        val recv = attr.obj
+        if (recv is Metavar) {
+            obj = IsMetavar(MetavarAtom.create(recv.name))
+        } else {
+            enclosing = pythonNamed(
+                concreteDottedNameOrNull(recv) ?: transformationFailed("AttributeRead_receiver_unsupported"),
+            )
+            obj = ParamCondition.True
+        }
+
+        return SemgrepPatternActionList(
+            listOf(
+                MethodCall(
+                    methodName = methodName,
+                    result = null,
+                    params = ParamConstraint.Concrete(emptyList()),
+                    obj = obj,
+                    enclosingClassName = enclosing,
+                ),
+            ),
             hasEllipsisInTheBeginning = false,
             hasEllipsisInTheEnd = false,
         )
