@@ -201,7 +201,7 @@ class NormalMethodAnalyzer(
     override var analyzerSteps: Long = 0
         private set
 
-    private val stepsForTaintMark: MutableMap<String, Long> = hashMapOf()
+    private val stepsForTaintMark: MutableMap<String, Long>? = taintRulesStatsSamplingPeriod?.let { hashMapOf() }
 
     private var summaryEdgesHandled: Long = 0
     private var traceResolverSteps: Long = 0
@@ -241,7 +241,7 @@ class NormalMethodAnalyzer(
             traceResolverSteps += this@NormalMethodAnalyzer.traceResolverSteps
             unprocessedEdges += this@NormalMethodAnalyzer.unprocessedEdges.size
             coveredInstructions.or(edges.reachedStatements())
-            this@NormalMethodAnalyzer.stepsForTaintMark.forEach { (mark, count) ->
+            this@NormalMethodAnalyzer.stepsForTaintMark?.forEach { (mark, count) ->
                 stepsForTaintMark.compute(mark) { _, prev ->
                     prev?.let { it + count } ?: count
                 }
@@ -1380,7 +1380,7 @@ class NormalMethodAnalyzer(
 
         val taintMarks = finalEdgeFact.collectTaintMarks()
         taintMarks.forEach { taintMark ->
-            stepsForTaintMark.compute(taintMark) { _, prev ->
+            stepsForTaintMark?.compute(taintMark) { _, prev ->
                 prev?.let { it + 1 } ?: 1
             }
         }
