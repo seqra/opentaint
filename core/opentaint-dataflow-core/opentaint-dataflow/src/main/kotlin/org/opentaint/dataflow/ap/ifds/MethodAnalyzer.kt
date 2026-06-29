@@ -149,6 +149,8 @@ interface MethodAnalyzer {
 
     fun allIntraProceduralFacts(): Map<CommonInst, Set<FinalFactAp>>
 
+    fun cleanup()
+
     sealed interface MethodCallHandler {
         data class ZeroToZeroHandler(val currentEdge: ZeroToZero) : MethodCallHandler
         data class ZeroToFactHandler(val currentEdge: ZeroToFact, val startFactBase: AccessPathBase) : MethodCallHandler
@@ -178,7 +180,7 @@ class NormalMethodAnalyzer(
     private val cancellation: Cancellation = runner.manager.cancellation
 
     private var zeroInitialFactProcessed: Boolean = false
-    private val initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
+    private var initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
     private val edges = MethodAnalyzerEdges(apManager, methodEntryPoint, analysisManager)
     private var pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
     private var pendingSideEffectRequirements = arrayListOf<InitialFactAp>()
@@ -815,7 +817,7 @@ class NormalMethodAnalyzer(
         }
     }
 
-    private val methodEntryPointsCache = hashMapOf<MethodWithContext, Array<CommonInst>>()
+    private var methodEntryPointsCache = hashMapOf<MethodWithContext, Array<CommonInst>>()
 
     private fun methodEntryPoints(method: MethodWithContext): List<MethodEntryPoint> {
         val methodEntryPoints = methodEntryPointsCache.getOrPut(method) {
@@ -1389,6 +1391,21 @@ class NormalMethodAnalyzer(
     private fun FactToFact.summaryEdge() = SummaryEdge.F2F(initialFactAp, factAp)
     private fun NDFactToFact.summaryEdge() = SummaryEdge.NdF2F(initialFacts, factAp)
 
+    override fun cleanup() {
+        methodEntryPointsCache = hashMapOf()
+
+        unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
+
+        pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        pendingSideEffectRequirements = arrayListOf()
+        pendingSideEffectSummaries = arrayListOf()
+        delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+
+        initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
+        delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+    }
+
     companion object {
         const val INITIAL_ALLOWED_FACT_DEPTH = 3
         const val DEBUG_ANALYSIS_TIME = false
@@ -1400,7 +1417,7 @@ class EmptyMethodAnalyzer(
     override val methodEntryPoint: MethodEntryPoint
 ) : MethodAnalyzer {
     private var zeroInitialFactProcessed: Boolean = false
-    private val taintedInitialFacts = hashSetOf<AccessPathBase>()
+    private var taintedInitialFacts = hashSetOf<AccessPathBase>()
     private val apManager: ApManager get() = runner.apManager
 
     override fun addInitialZeroFact() {
@@ -1431,6 +1448,10 @@ class EmptyMethodAnalyzer(
             methodEntryPoint,
             listOf(FactToFact(methodEntryPoint, initialFactAp, methodEntryPoint.statement, factAp))
         )
+    }
+
+    override fun cleanup() {
+        taintedInitialFacts = hashSetOf()
     }
 
     override val analyzerSteps: Long = 0
@@ -1902,6 +1923,10 @@ class TimedMethodAnalyzer(
         addToTotalTime = false,
     ) {
         base.allIntraProceduralFacts()
+    }
+
+    override fun cleanup() {
+        base.cleanup()
     }
 }
 

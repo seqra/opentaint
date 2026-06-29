@@ -33,6 +33,10 @@ class SummaryEdgeSubscriptionManager(
             }
         }
 
+    fun cleanup() {
+        methodSummarySubscriptions.values.forEach { it.cleanup() }
+    }
+
     data class MethodEntryPointCaller(val callerEp: MethodEntryPoint, val statement: CommonInst)
 
     fun methodEntryPointCallers(
@@ -181,6 +185,10 @@ class SummaryEdgeSubscriptionManager(
         private val zeroFactSubscriptions = MethodZeroFactSubscription()
         private val taintedFactSubscriptions = MethodTaintedFactSubscription(apManager)
 
+        fun cleanup() {
+            taintedFactSubscriptions.cleanup()
+        }
+
         fun addZeroToZero(callerPathEdge: Edge.ZeroToZero): Boolean =
             zeroFactSubscriptions.add(callerPathEdge)
 
@@ -268,7 +276,7 @@ class SummaryEdgeSubscriptionManager(
         private val apManager: ApManager
     ) {
         private val subscriptions =
-            Object2ObjectOpenHashMap<MethodEntryPoint, MutableMap<CommonInst, MethodAccessPathSubscription>>()
+            Object2ObjectOpenHashMap<MethodEntryPoint, MutableMap<CommonInst, MethodAccessPathSubscription?>>()
 
         fun addZeroToFact(
             calleeInitialFactBase: AccessPathBase,
@@ -280,7 +288,7 @@ class SummaryEdgeSubscriptionManager(
                 Object2ObjectOpenHashMap()
             }.getOrPut(callerExitStatement) {
                 apManager.accessPathSubscription()
-            }.addZeroToFact(callerEntryPoint.statement, calleeInitialFactBase, callerFactAp)
+            }?.addZeroToFact(callerEntryPoint.statement, calleeInitialFactBase, callerFactAp)
                 ?.setStatements(callerEntryPoint, callerExitStatement)
 
         fun addFactToFact(
@@ -291,7 +299,7 @@ class SummaryEdgeSubscriptionManager(
                 Object2ObjectOpenHashMap()
             }.getOrPut(callerPathEdge.statement) {
                 apManager.accessPathSubscription()
-            }.addFactToFact(
+            }?.addFactToFact(
                 callerPathEdge.methodEntryPoint.statement,
                 calleeInitialFactBase, callerPathEdge.initialFactAp, callerPathEdge.factAp
             )?.setStatements(callerPathEdge.methodEntryPoint, callerPathEdge.statement)
@@ -304,7 +312,7 @@ class SummaryEdgeSubscriptionManager(
                 Object2ObjectOpenHashMap()
             }.getOrPut(callerPathEdge.statement) {
                 apManager.accessPathSubscription()
-            }.addNDFactToFact(
+            }?.addNDFactToFact(
                 callerPathEdge.methodEntryPoint.statement,
                 calleeInitialFactBase, callerPathEdge.initialFacts, callerPathEdge.factAp
             )?.setStatements(callerPathEdge.methodEntryPoint, callerPathEdge.statement)
@@ -319,7 +327,7 @@ class SummaryEdgeSubscriptionManager(
                 for ((exitStmt, subs) in storage) {
                     collectToListWithPostProcess(
                         collectedSubs,
-                        { subs.collectFactEdge(it, summaryInitialFactAp, emptyDeltaRequired) },
+                        { subs?.collectFactEdge(it, summaryInitialFactAp, emptyDeltaRequired) },
                         { it.setStatements(initialStmt, exitStmt) }
                     )
                 }
@@ -340,7 +348,7 @@ class SummaryEdgeSubscriptionManager(
                 for ((exitStmt, subs) in storage) {
                     collectToListWithPostProcess(
                         collectedSubs,
-                        { subs.collectFactNDEdge(it, summaryInitialFactAp, emptyDeltaRequired) },
+                        { subs?.collectFactNDEdge(it, summaryInitialFactAp, emptyDeltaRequired) },
                         { it.setStatements(initialStmt, exitStmt) }
                     )
                 }
@@ -360,7 +368,7 @@ class SummaryEdgeSubscriptionManager(
                 for ((exitStmt, subs) in storage) {
                     collectToListWithPostProcess(
                         collectedSubs,
-                        { subs.collectZeroEdge(it, summaryInitialFactAp) },
+                        { subs?.collectZeroEdge(it, summaryInitialFactAp) },
                         { it.setStatements(initialStmt, exitStmt) }
                     )
                 }
@@ -371,6 +379,13 @@ class SummaryEdgeSubscriptionManager(
         fun collectCallers(callers: MutableSet<MethodEntryPointCaller>) {
             subscriptions.forEach { (methodEp, sub) ->
                 sub.keys.forEach { callers += MethodEntryPointCaller(methodEp, it) }
+            }
+        }
+
+        fun cleanup() {
+            subscriptions.forEach { (_, sub) ->
+                val keys = sub.keys.toList()
+                keys.forEach { sub[it] = null }
             }
         }
     }
@@ -747,6 +762,10 @@ class SummaryEdgeStorageWithSubscribers(
 
     private val factSideEffectSummariesStorage by lazy {
         apManager.factSideEffectSummariesApStorage(methodEntryPoint.statement)
+    }
+
+    fun cleanup() {
+        subscribers.clear()
     }
 
     fun addEdges(edges: List<Edge>) {

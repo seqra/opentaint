@@ -127,6 +127,8 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             ifdsEngine.storeSummaries()
         }
 
+        ifdsEngine.cleanup()
+
         val allVulnerabilities = ifdsEngine.getVulnerabilities()
 
         logger.info { "Start vulnerability confirmation" }

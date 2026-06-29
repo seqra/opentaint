@@ -13,6 +13,10 @@ open class MethodSummariesUnitStorage(
 ) {
     private val methodSummaries = ConcurrentHashMap<MethodEntryPoint, SummaryEdgeStorageWithSubscribers>()
 
+    fun cleanup() {
+        methodSummaries.elements().asSequence().forEach { it.cleanup() }
+    }
+
     fun storeSummaries(serializationContext: SummarySerializationContext) {
         val serializer = MethodSummariesSerializer(serializationContext, languageManager, apManager)
 

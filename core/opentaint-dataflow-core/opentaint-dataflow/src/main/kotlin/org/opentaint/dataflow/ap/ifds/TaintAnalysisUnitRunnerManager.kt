@@ -177,6 +177,11 @@ class TaintAnalysisUnitRunnerManager(
         }
     }
 
+    fun cleanup() {
+        runnerForUnit.elements().asSequence().forEach { it.cleanup() }
+        unitStorage.elements().asSequence().forEach { it.cleanup() }
+    }
+
     fun getVulnerabilities(): List<TaintVulnerability> {
         // Extract found vulnerabilities (sinks):
         val vulnerabilities = mutableListOf<TaintVulnerability>()

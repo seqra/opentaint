@@ -67,8 +67,8 @@ class TaintAnalysisUnitRunner(
 
     }
 
-    private val eventPriorityQueue = PriorityQueue(EventComparator)
-    private val workList: Channel<Any> = Channel(Channel.UNLIMITED)
+    private var eventPriorityQueue = PriorityQueue(EventComparator)
+    private var workList: Channel<Any> = Channel(Channel.UNLIMITED)
 
     private val analyzers = mutableListOf<MethodAnalyzerStorage>()
     private val methodAnalyzers = hashMapOf<CommonMethod, MethodAnalyzerStorage>()
@@ -77,6 +77,17 @@ class TaintAnalysisUnitRunner(
 
     private val internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
     private val externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
+
+    override fun cleanup() {
+        internalMethodSummarySubscriptions.cleanup()
+        externalMethodSummarySubscriptions.cleanup()
+        delayedMethodAnalyzers = mutableListOf()
+        eventPriorityQueue = PriorityQueue(EventComparator)
+        workList = Channel(Channel.UNLIMITED)
+        analyzers.forEach { storage ->
+            storage.forEachAnalyzer { it.cleanup() }
+        }
+    }
 
     private val eventsProcessed = LongAdder()
     private val eventsEnqueued = LongAdder()
