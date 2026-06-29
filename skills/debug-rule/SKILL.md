@@ -73,6 +73,14 @@ The killing instruction decides who owns the fix:
 - For an engine issue, the fact-reachability trace from `debug-ifds-fact-reachability.sarif` up to the last reachable fact — report-analyzer-issue's input
 - The exact debug command(s) used and the model they ran against
 
+## Go projects
+
+The fact-reachability flow is identical, with three differences:
+
+- The reachability command takes the same shape — `opentaint test rule reachability <full-id> --project-model <model-dir> -o <results-dir>/report.sarif --ruleset builtin --ruleset <rules-dir>` — and emits the same `debug-ifds-fact-reachability.sarif` sibling. To force analysis onto an entry point, `--entry-points` takes a Go function full name (`package.FunctionName`), not the JVM `Class#method` form
+- There is **no dataflow-approximation branch**. A taint kill at an external Go function is either a missing/wrong **passThrough** (route to analyze-external-methods-go + create-pass-through-approximation-go) or, if only a dataflow shape could express the propagation, an **engine issue** (route to report-analyzer-issue) — Go has no dataflow approximation to fall back to
+- Approximations are applied with `--passthrough-approximations` only; there is no `--dataflow-approximations` for Go
+
 ## Tracking
 
 None — diagnostic, writes no tracking file

@@ -53,7 +53,7 @@ Editing an existing finding touches only `verdict` and `notes`. A split also cre
 ```yaml
 finding_name: <new-slug>              # a fresh docker-like name for the split-off vuln
 sarif_hashes: [<moved hash>, ...]     # hashes matching this logical vulnerability
-rule_id: java/security/sqli.yaml:sqli # same rule as the bundle it came from
+rule_id: java/security/sqli.yaml:sqli # same rule as the bundle it came from (Go: go/security/sql-injection.yaml:go-sql-injection)
 verdict: TP                           # pending | TP | FP
 notes: >
   <analyzer report for these results — moved from the bundle>
