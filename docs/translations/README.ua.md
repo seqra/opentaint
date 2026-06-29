@@ -26,13 +26,11 @@
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-light.gif">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-dark.gif">
-  <img src="../../public/opentaint-demo-dark.gif" alt="Підсумковий вивід OpenTaint">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="Підсумковий вивід OpenTaint">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,37 +63,37 @@
   <summary><b>Більше скриншотів</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="Вивід сканування OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="Вивід сканування OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-      <img src="../../public/opentaint-frame-dark-2.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
 </details>
