@@ -22,7 +22,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 ### 0. Reconcile before judging
 
-A finding whose `notes` open with a `reconcile:` line is a rescan result under a rule whose other findings are already triaged — most often the same vulnerability with a shifted hash, not a new one. Before judging it fresh, read the rule's already-triaged finding files and compare flows (source → sink, same essential path): if one matches, move this finding's `sarif_hashes` into that finding, drop this file, and let the inherited verdict stand — don't re-judge a flow already triaged. Only when no triaged finding matches do you treat it as new and continue below.
+A finding whose `notes` open with a `reconcile` line is a rescan result under a rule whose other findings are already triaged — most often the same vulnerability with a shifted hash, not a new one. Before judging it fresh, read the rule's already-triaged finding files and compare flows (source → sink, same essential path): if one matches, move this finding's `sarif_hashes` into that finding, drop this file, and let the inherited verdict stand — don't re-judge a flow already triaged. Only when no triaged finding matches do you treat it as new and continue below.
 
 ### 1. One result at a time — STOP checklist
 

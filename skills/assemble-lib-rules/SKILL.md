@@ -23,7 +23,7 @@ Built-in rules are available at `opentaint health --rules`
 
 ## Workflow
 
-When join files already exist from a prior run, reuse them as the baseline — re-assemble to fold in any new lib rules (a new source widens the `on:` of every join for its vuln class; a new sink adds a join), and leave a `verified` join untouched when no new rule touches its wiring. Don't rewrite joins that already hold.
+When join files already exist from a prior run, reuse them as the baseline — re-assemble to fold in any new lib rules (a new source widens the `on` of every join for its vuln class; a new sink adds a join), and leave a `verified` join untouched when no new rule touches its wiring. Don't rewrite joins that already hold.
 
 ### 1. Read the created lib rules and the built-ins
 
@@ -33,7 +33,7 @@ Read every per-package lib unit in `<lib-units>` (the source/sink `rule_id`s cre
 
 A join references exactly ONE right-hand (sink) rule — you cannot merge several sinks into one join. So a vuln class with more than one relevant sink becomes several joins: one per sink rule, each refing all the relevant sources on the left. Sources are many; the sink is always one.
 
-For each vuln class, and within it each sink rule that needs new wiring, write `<rules-dir>/java/security/<class>-<sink>-lib-ext.yaml` with `mode: join`, refing the relevant sources + that one sink, wiring only new-end combinations in `on:`:
+For each vuln class, and within it each sink rule that needs new wiring, write `<rules-dir>/java/security/<class>-<sink>-lib-ext.yaml` with `mode: join`, refing the relevant sources + that one sink, wiring only new-end combinations in `on`:
 
 - a created (new) sink ← from every relevant source (built-in + created)
 - a built-in sink ← from created sources only (built-in source → built-in sink is already covered by the built-in join — repeating it double-reports)
@@ -41,7 +41,7 @@ For each vuln class, and within it each sink rule that needs new wiring, write `
 Two rules that bite here:
 
 - Unique id — use `id: <class>-<sink>-lib-ext`, never the bare class name; a custom join named `ssrf`/`xxe`/`path-traversal` collides silently with the built-in join of that id and is dropped with no error (only the scan's rule statistics reveal it)
-- Same metavariable both sides — every `on:` clause connects the metavariable both lib rules bind (`$UNTRUSTED` by convention) as `source.$UNTRUSTED -> sink.$UNTRUSTED`; don't invent a new name on either end, or the join won't connect
+- Same metavariable both sides — every `on` clause connects the metavariable both lib rules bind (`$UNTRUSTED` by convention) as `source.$UNTRUSTED -> sink.$UNTRUSTED`; don't invent a new name on either end, or the join won't connect
 
 ```yaml
 # java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml

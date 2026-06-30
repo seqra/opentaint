@@ -39,7 +39,7 @@ Begin by asking the user both things in a single AskUserQuestion call — two qu
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan with existing rules
    - normal — + approximation iteration
-   - deep — + discover-attack-surface for project-used dependency members + new rules (fixed first)
+   - deep — + discover project-used sources, sinks from the taint frontier, and new lib rules
    - recommend by what's on disk: a cold start (no usable `.opentaint` artifacts) → deep, to build full coverage; a prior run's artifacts already present (model, rules, approximations) → lite, to reuse that coverage
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
@@ -48,15 +48,16 @@ Begin by asking the user both things in a single AskUserQuestion call — two qu
 The run is one fixed pipeline; the two levels decide which steps execute. Walk it top to bottom — when you reach a step your levels include, load its reference and do it; skip the bracketed steps your levels omit. Don't load a step's reference until you reach it.
 
 ```
-build                                    → references/build.md           every run
-[deep] discover project-used lib rules   → references/discover-rules.md  deep scan
-scan                                     → references/scan.md            every run
-[normal/deep] approximation iteration    → references/approximations.md  normal, deep scan
-triage (generate findings + classify)    → references/triage.md          every run
-[dynamic] PoC + assemble vulnerabilities → references/poc.md             dynamic triage
+build → references/build.md | every run
+discover sources + source rules → references/source-rules.md | deep scan
+scan → references/scan.md | every run
+approximation iteration → references/approximations.md | normal, deep scan
+author sinks + assemble + rescan  → references/sink-rules.md | deep scan
+triage (generate findings + classify) → references/triage.md | every run
+PoC + assemble vulnerabilities → references/poc.md | dynamic triage
 ```
 
-From inside any step, when a rule or approximation won't behave, load references/escalation.md. Only the approximation iteration loops (it re-scans internally); new rules are fixed before it.
+From inside any step, when a rule or approximation won't behave, load references/escalation.md
 
 ## Delegation
 
@@ -104,7 +105,7 @@ It's machine state, not run state — recompute on resume, don't track it. PoC i
 
 ## State and resumption
 
-You are the only writer of `.opentaint/tracking/state.yaml` — it records the chosen levels, the commit the current project model was built from, and every phase's status, written after each fan-out join. When the chosen levels differ from the recorded ones, rewrite the `phases:` map from scratch for the new levels — don't carry the prior type's entries over; a phase the new levels don't include must be absent, not left `done`.
+You are the only writer of `.opentaint/tracking/state.yaml` — it records the chosen levels, the commit the current project model was built from, and every phase's status, written after each fan-out join. When the chosen levels differ from the recorded ones, rewrite the `phases` map from scratch for the new levels — don't carry the prior type's entries over; a phase the new levels don't include must be absent, not left `done`.
 
 Append one entry to `tracking/history.yaml` when a fresh run starts (model commit + levels), not on resume — a short audit log of what ran.
 
@@ -130,14 +131,15 @@ The single source of truth for the tracking schema; each skill writes only its o
 ```
 .opentaint/tracking/
   state.yaml                              # you only — levels + phase status
-  coverage.yaml                           # triage-dependencies seeds, discover-attack-surface flips — one entry per dependency package weighed (deep)
-  usage/<package-kebab>.yaml              # discover-attack-surface writes project-used package members (deep)
+  coverage.yaml                           # triage-dependencies seeds, you flip — one entry per dependency package weighed (deep)
+  rules/plans/<id>.yaml                   # discover fan-out plan + its source/safe verdict ledger (source by agents, safe by mark-safe) (deep)
+  approximations/plans/<id>.yaml          # analyze fan-out plan — one package per plan, methods carry signature/factPositions (normal/deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
-  rules/lib/<package-kebab>.yaml          # per-package project-used rule plan — new source/sink lib rules (discover plans; create-* build + test vs the marker) (deep)
+  rules/lib/<package-kebab>.yaml          # per-package rule plan — source rules (discover) + frontier sinks (analyze); create-* build + test (deep)
   rules/join/<class>.yaml                 # per-vuln-class security join (assemble-lib-rules writes; main scan verifies) (deep)
-  approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
-  approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
-  approximations/skipped.yaml             # methods left to the engine's default — non-carriers, toString, app-internal, escalated-unmodelable
+  approximations/<scope-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
+  approximations/<scope-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
+  approximations/skipped.yaml                     # non-carriers (methods) + engine-unmodelable (engine_issues); you merge it from the analyze agents' transient per-scope skip files
   poc-servers.yaml                        # generate-poc — instances it started; you reap them at end of PoC phase
   history.yaml                            # you only — one entry per run (commit + levels)
 ```
@@ -161,19 +163,21 @@ max_memory: null        # 16G once an OOM forces it (references/scan.md)
 phases:                 # pending | in_progress | done
   build: done
   discover: done        # deep only
-  rules: done           # deep only; fixed first
+  source_rules: done    # deep only
   scan: done
-  approximations: in_progress  # normal/deep; iterative, rescans within
+  approximations: in_progress  # normal/deep
+  sink_rules: pending   # deep only
   triage: pending
-  poc: pending          # dynamic triage
+  poc: pending          # dynamic triage only
 ```
 
-coverage.yaml — seeded by triage-dependencies and flipped by discover-attack-surface (deep): one entry per dependency package weighed, so you can see which libraries were drilled and which were dismissed. A `pending` entry is a flagged library awaiting its depth pass; the rule plan lives in `rules/lib/<package-kebab>.yaml`, not here:
+coverage.yaml — seeded by triage-dependencies and updated by you (deep): one entry per dependency package weighed, so you can see which libraries were drilled and which were dismissed. A `pending` entry is a flagged library still feeding the discover partition; flip it to `done` once the partition leaves it no unverdicted members. Set each package's `coverage` (full/partial/none) from the discover agent's returned verdict. The rule plan lives in `rules/lib/<package-kebab>.yaml`:
 
 ```yaml
 packages:
-  - package: org.springframework.web.reactive.function
+  - package: org.springframework.web.socket
     status: done          # pending (flagged, awaiting depth) | done (drilled or dismissed)
+    coverage: partial     # full | partial | none — built-in source coverage, from the discover agent's verdict
     notes: >
       free-form — what was found and why
 ```
@@ -191,22 +195,19 @@ poc: pending            # pending | confirmed | failed
 poc_script: null        # path under .opentaint/pocs/ once generate-poc writes one
 ```
 
-rules/lib/<package-kebab>.yaml — per-package rule plan for project-used sources/sinks only; `description` fields + `sources`/`sinks` by discover-attack-surface, `test_project` by create-test-project, `tests_passing` + `rule_id`s + `artifact` by create-rule. `coverage: new` ⇒ write a pattern, `expand` ⇒ ref the built-in plus the missing used methods:
+rules/lib/<package-kebab>.yaml — per-package rule plan; `sources` by discover-attack-surface, `sinks` appended by analyze-external-methods from the taint frontier; `test_project` by create-test-project, `tests_passing` + `rule_id`s + `artifact` by create-rule. An entry's `builtin: null` ⇒ write a fresh pattern; a built-in ref ⇒ reference it plus the missing used methods. Package-level built-in coverage lives in `coverage.yaml`:
 
 ```yaml
 package: org.springframework.web.reactive.function.client
 dependencies: [org.springframework:spring-webflux:6.1.0]
-builtin_coverage: partial   # partial | none
 artifact: null              # create-rule
 sources:
   - idea: ServerRequest body/params — untrusted request data
-    coverage: new           # new | expand
-    builtin: null
+    builtin: null           # null = fresh; a built-in ref = extend it
     rule_id: null
 sinks:
   - vuln_class: ssrf
     idea: WebClient.post/put().uri($UNTRUSTED)
-    coverage: expand
     builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
     rule_id: null
 stages:                 # pending | in_progress | done
@@ -217,7 +218,7 @@ notes: >
   free-form
 ```
 
-rules/join/<class>.yaml — one file per vuln class, written by assemble-lib-rules after the lib rules exist and verified by the main scan. A join references exactly ONE sink rule, so a class with several sinks holds several joins — one entry under `joins:` per sink rule, each its own file/id:
+rules/join/<class>.yaml — one file per vuln class, written by assemble-lib-rules after the lib rules exist and verified by the main scan. A join references exactly ONE sink rule, so a class with several sinks holds several joins — one entry under `joins` per sink rule, each its own file/id:
 
 ```yaml
 name: ssrf
@@ -238,7 +239,7 @@ notes: >
   free-form
 ```
 
-approximations/<package-kebab>-<kind>.yaml — created by analyze-external-methods (`type` + `description` + `methods`); `<package-kebab>` = the dotted package with `.` -> `-` (the YAML `package:` field keeps the real dotted name). `type` is the file's single kind; `methods` is the pending FQN list and `done` the built ones — the build skill moves each FQN `methods`→`done` only on a clean finish. `stages` track the `methods` (pending) batch only, and differ by kind:
+approximations/<scope-kebab>-<kind>.yaml — created by analyze-external-methods (`type` + `description` + `methods`); `<scope-kebab>` is the plan's scope key (a package, or a sub-package/class when split) with `.` -> `-` (the YAML `package` field keeps the real dotted name). `type` is the file's single kind; `methods` is the pending FQN list and `done` the built ones — the build skill moves each FQN `methods`→`done` only on a clean finish. `stages` track the `methods` (pending) batch only, and differ by kind:
 
 ```yaml
 package: com.foo
@@ -256,11 +257,12 @@ notes: >
   free-form
 ```
 
-approximations/skipped.yaml:
+approximations/skipped.yaml — you merge each analyze agent's `<scope-kebab>-skipped.yaml` into this single file (union `methods` and `engine_issues`), then delete the per-scope files:
 
 ```yaml
-methods:                # left to the engine's default — non-carriers, toString, app-internal, escalated-unmodelable
+methods:                # non-carriers left to the engine's default — predicates, void side-effects, toString
   - "org.slf4j.Logger#info"
+engine_issues: []       # carriers the engine can't model (escalated) — kept apart, filed with report-analyzer-issue
 ```
 
 ## Working directory layout

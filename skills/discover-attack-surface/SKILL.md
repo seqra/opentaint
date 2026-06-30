@@ -1,6 +1,6 @@
 ---
 name: discover-attack-surface
-description: Analyze project-used members of a dependency package for potential sources and sinks not covered by the built-in rules. Use for the depth pass of attack-surface discovery, one package at a time, after triage-dependencies flags it
+description: Analyze project-used members of dependency packages for potential taint sources not covered by the built-in rules. Use for the depth pass of source discovery, working a balanced plan of project-used members, after triage-dependencies flags the libraries
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,88 +9,75 @@ metadata:
 
 # Skill: Discover Attack Surface
 
-Take one library the triage flagged, settle what the built-in rules already cover for the package members this project uses, and write that project-used rule plan — the untrusted-data sources and dangerous sinks actually relevant to this project — for the next phase to build
+Take one library the triage flagged, settle what the built-in source rules already cover for the package members this project uses, and write that project-used source plan — the untrusted-data sources actually relevant to this project — for the next phase to build. Sinks are not your job; they're found later from the taint frontier
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Package `<package>` — the flagged library to drill (a `pending` entry in `coverage.yaml`)
+- Plan `<plan>` — a partition plan (`tracking/rules/plans/<id>.yaml`) assigning the project-used members this agent classifies, grouped by scope; each member's owning package is its FQN's package
 - Dependency jars `<deps-dir>` — the project's resolved dependency jars, one per library. Default: `.opentaint/project/dependencies`
 - Project model `<model-dir>` — the built model. Default: `.opentaint/project`
 - Tracking directory `<tracking-dir>` — where the coverage record and the per-package lib units live. Default: `.opentaint/tracking`
 
 ## Workflow
 
-When this package already has a rule plan (`rules/lib/<package-kebab>.yaml`) and usage snapshot from a prior run, reuse them as the baseline rather than planning from scratch. Re-run `package-usages.sh` only if the model changed since the snapshot; then diff the current project-used members against the plan — keep the members it already covers, and add or `expand` only the newly-used ones. If nothing changed, leave the unit and its `done` coverage entry untouched. The steps below apply to the new or changed surface.
+The `<plan>` holds only members not classified in a prior run. Where a package already has a `rules/lib/<package-kebab>.yaml`, add to it rather than rewriting it, leave its existing entries and their `done` coverage as-is.
 
 ### 1. Settle built-in coverage first
 
-Before planning anything, see what the built-ins already match for this package's project-used members — read the lib rules (`opentaint health --rules`) plus `.opentaint/rules`. Decide one of:
+Before planning anything, for each package the plan touches see what the built-in source rules already match for its members — browse the rules dir (`opentaint health --rules` prints its path) plus `.opentaint/rules`. Decide one of, and report it to the caller as the package's `coverage`:
 
-- **full** — the built-ins already match the project-used package sources/sinks → write no lib unit, flip the `coverage.yaml` entry to `done` with a `builtin_coverage: full` note, and stop. Don't drill further
-- **partial** — built-ins match some project-used methods/overloads/classes but miss others → plan only the missing used members (`coverage: expand`, ref the built-in for the rest)
-- **none** — plan the package's project-used surface from scratch
+- **full** — existing rules already match the project-used package sources → write no lib unit and stop. Don't drill further
+- **partial** — existing rules match some project-used sources but miss others → plan only the missing used members
+- **none** — plan the package's project-used sources from scratch
 
-### 2. Scope project-used sources and sinks
+### 2. Classify the plan's members
 
-Find the package's jar in `<deps-dir>` only to confirm the dependency identity and inspect signatures/docs for members already in scope (match the artifact from the dependency GAV; `unzip -l <jar> | grep <package-as-path>` confirms it owns the package). To get the bytecode-derived list of package methods the project statically references, run this skill's bundled `scripts/package-usages.sh <model-dir> <package>` (Windows: `scripts/package-usages.ps1`; the scripts live in the skill directory, not the project) and save its output to `<tracking-dir>/usage/<package-kebab>.yaml` (create `usage/` if needed). It reads `moduleClasses`/`packages:` from `project.yaml` and disassembles the project's **own** compiled classes only — a model's `moduleClasses` can mix project + dependency jars/dirs, so when the modules carry a `packages:` list only classes under those roots are scanned, otherwise `moduleClasses` is already project-only — then prints the deduped `// Method`/`// InterfaceMethod` call sites whose owner is in `<package>`.
+The plan's members are the FQNs under its `scopes` map, the project-used scope already extracted — don't re-enumerate the package API. Find each package's jar in `<deps-dir>` to confirm the dependency identity and inspect signatures/docs while classifying (`unzip -l <jar> | grep <package-as-path>` confirms it owns the package). The bytecode list misses members reached through annotations, class literals, casts, reflection, dynamic proxies, framework dispatch, config strings, or generated code — inspect app source, dependency API/source, and framework config to classify the listed members and to add indirectly-reached ones the list can't show. Never disassemble the analyzer jar.
 
-This catches only bytecode invocations, so it misses members reached through annotations, class literals, casts, reflection, dynamic proxies, framework/container dispatch, config strings, or generated code absent from the model. Treat the output as the main used-in-project scope, then inspect app source, dependency API/source, and framework configuration only to classify those used members and to add indirectly reached members the bytecode list cannot show. Do not enumerate the whole package API. Never disassemble the analyzer jar — only the project's own classes
+Find the **sources** among them — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution and more): a method that *returns* attacker-controlled data. NOT a method that merely passes data it was handed along — that's a propagator the engine already handles, not a source. General, not class-tagged
 
-- **sources** — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution): a method that *returns* attacker-controlled data — HTTP/RPC request data, a message-broker payload. NOT a method that merely passes data it was handed along — that's a propagator the engine already handles, not a source. General, not class-tagged
-- **sinks** — dangerous operations (query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection); tag each with its vuln class (`ssrf`, `sqli`, `path-traversal`, …)
+Better safe than sorry — when in doubt, record a borderline source rather than drop it: a false positive is filtered out later at the scan and triage stages, but a real one dropped here is a false negative the run can never recover. Note the doubt, and verify in the package jar when it's quick
 
-Better safe than sorry — when in doubt, record a borderline source or sink rather than drop it: a false positive is filtered out later at the scan and triage stages, but a real one dropped here is a false negative the run can never recover. Note the doubt, and verify in the package jar when it's quick
+Record every source you find under the `<plan>`'s `source` list — that's the only thing you write to the plan. The rest you leave: once all discover agents finish, the orchestrator's `mark-safe` script marks every member no agent flagged a source as `safe`. That `safe` ledger is only what the next run's source partition excludes, never affects sink discovery
 
-### 3. Write the package's rule plan
+### 3. Write the rule plans
 
-Write `<tracking-dir>/rules/lib/<package-kebab>.yaml` — only the project-used new sources and sinks, grouped by `vuln_class`, the dependency GAV, `stages.description: done`, and each `coverage: new` or `expand`. Then flip the package's `coverage.yaml` entry to `status: done`. `<package-kebab>` is the dotted package with `.` → `-`; the `package:` field keeps the real dotted name
+For each package the plan touches, write its new sources into `<tracking-dir>/rules/lib/<package-kebab>.yaml` — the dependency GAV, `stages.description: done`, and each source's `builtin` ref (`null` for a fresh source, the built-in to extend otherwise). `<package-kebab>` is the dotted package with `.` → `-`; the `package` field keeps the real dotted name. Leave the unit's `sinks` section empty — analyze-external-methods appends frontier sinks there later. The `coverage.yaml` tally is the orchestrator's — leave it to the caller
 
 ## Output
 
-- A `<tracking-dir>/rules/lib/<package-kebab>.yaml` rule plan for project-used members only (or, for `full` coverage, none — just the coverage note)
-- A `<tracking-dir>/usage/<package-kebab>.yaml` package usage snapshot from `package-usages.sh`
-- The package's `coverage.yaml` entry set `status: done` with a one-line `notes`
-- A brief summary to the caller: the sources and sinks planned (one line each, marked `new` / `expand`). The unit holds the detail — don't paste it back
+- A `<tracking-dir>/rules/lib/<package-kebab>.yaml` source plan per package the plan touched (for `full` coverage, none)
+- The `<plan>` with every source you found recorded under `source` (the orchestrator fills `safe` afterwards)
+- A brief summary to the caller: each package's built-in `coverage` verdict (`full` / `partial` / `none`) and the sources planned (one line each, noting fresh vs extending a built-in). The unit holds the detail — don't paste it back
 
 ## Tracking
 
-`<tracking-dir>/coverage.yaml` — flip this package's entry when done:
+`<plan>` — read your assigned members from the `scopes` map the partition wrote; record the sources you find under a top-level `source` list. The orchestrator's `mark-safe` script fills `safe` (members − sources) after all discover agents finish:
 
 ```yaml
-  - package: org.springframework.web.reactive.function.client
-    status: done
-    notes: WebClient request methods — SSRF sink; built-ins cover get(), expand with post()/put(); no new source
+id: lib-001
+scopes:                        # members partition assigned you, grouped by scope — read these
+  org-springframework-web-socket:
+    - "org.springframework.web.socket.TextMessage#getPayload"
+    - "org.springframework.web.socket.WebSocketSession#getId"
+source:                        # the sources you found — the only thing you write to the plan
+  - "org.springframework.web.socket.TextMessage#getPayload"
+# safe: filled by the orchestrator (mark-safe) — examined, not a source
 ```
 
-`<tracking-dir>/usage/<package-kebab>.yaml` — temporary-but-persisted project-used scope. Keep it next to the rule plans so resumed agents can reuse it instead of rerunning extraction:
+`<tracking-dir>/rules/lib/<package-kebab>.yaml` — the source plan; fill only the discovery-stage fields (create-test-project and create-rule fill the rest):
 
 ```yaml
-functions:
-  - function: "org.springframework.web.reactive.function.client.WebClient#get()Lorg/springframework/web/reactive/function/client/WebClient$RequestHeadersUriSpec;"
-classes:
-  - class: "org.springframework.web.reactive.function.client.WebClient"
-```
-
-`<tracking-dir>/rules/lib/<package-kebab>.yaml` — the rule plan; fill only the discovery-stage fields (create-test-project and create-rule fill the rest):
-
-```yaml
-package: org.springframework.web.reactive.function.client
+package: org.springframework.web.socket
 dependencies:
-  - org.springframework:spring-webflux:6.1.0
-builtin_coverage: partial      # partial | none
-sources:                       # general, not class-tagged
-  - idea: ServerRequest body/params/headers — untrusted request data
-    coverage: new              # new | expand
-    builtin: null
+  - org.springframework:spring-websocket:6.1.0
+sources:                       # general, not class-tagged — the only side you write
+  - idea: TextMessage.getPayload — untrusted WebSocket frame data
+    builtin: null              # null = fresh source; a built-in ref = extend it with the missing methods
     rule_id: null
-sinks:                         # grouped by vuln class
-  - vuln_class: ssrf
-    idea: WebClient.get/post/put().uri($UNTRUSTED)
-    coverage: expand
-    builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
-    rule_id: null
+sinks: []                      # left empty — analyze-external-methods appends frontier sinks here later
 stages:
   description: done
   test_project: pending
@@ -101,12 +88,12 @@ notes: >
 
 ## Engine notes
 
-- Spring projects: the analyzer auto-discovers Spring endpoints, so `network` inbound sources are largely ones the built-ins already see — focus on the sinks
 - Generic projects: the analyzer treats all public/protected methods of public classes as entry points
 - Stored / second-order injection (data persisted then read back) is modeled by the engine on its own — don't plan a source for the read-back or a propagator for the store→read path
 
 ## Gotchas
 
-- Plan, don't write — record source/sink ideas only; the lib rules are written and tested in the next phase
-- Don't re-declare a source or sink a built-in already matches — `coverage: expand` with only the missing used methods, or fold it into `full` coverage
-- Don't add unused package APIs just because they look security-relevant — this phase scopes rules to what the project uses or reaches indirectly
+- Plan, don't write — record source ideas only; the lib rules are written and tested in the next phase
+- Don't re-declare a source a built-in already matches — set its `builtin` ref and list only the missing used methods, or fold it into the package's `full` coverage
+- Classify only the plan's members — they are already the project-used scope; don't enumerate the rest of the package API
+- Record only the sources; don't hand-list `safe` — the orchestrator's mark-safe script marks every member you didn't flag a source

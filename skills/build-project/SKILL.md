@@ -61,7 +61,7 @@ Multi-module: repeat `--classpath` and `--package` per module
 
 ### 3. Verify
 
-`<model-out>/project.yaml` exists, is non-empty, and its `packages:` list includes every root the project's classes declare
+`<model-out>/project.yaml` exists, is non-empty, and its `packages` list includes every root the project's classes declare
 
 ## Output
 
@@ -69,6 +69,7 @@ The project model directory containing `project.yaml` (default `.opentaint/proje
 
 ## Gotchas
 
+- Modules disabled (commented out in `settings.gradle` / the parent `pom.xml`'s `<modules>`, or behind an inactive profile) → re-enable all of them and rebuild, so their app code lands in the model instead of surfacing later as dropped external methods. Enabling modules widens coverage; the build is still the project's real build, so the model still represents the current commit
 - Analysis hangs → `--package` was omitted in `opentaint project`; the analyzer is processing third-party libraries. Re-run with `--package`
 - Build tool not found → use the wrapper (`./gradlew`, `./mvnw`) or install the tool
 - Compilation errors → check the autobuilder log, fix the build, retry; if it can't be fixed, fall back to 2b

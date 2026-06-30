@@ -1,6 +1,6 @@
 ---
 name: triage-dependencies
-description: Mark which of a project's dependency libraries could introduce taint sources or sinks. Use to start attack-surface discovery
+description: Mark which of a project's dependency libraries could introduce taint sources not already covered by the built-in rules. Use to start source discovery
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Triage Dependencies
 
-Read the project's dependency libraries and mark which ones touch a trust boundary — a place untrusted data can enter (source) or a dangerous operation it can reach (sink) — so depth analysis runs only on the libraries that can matter
+Read the project's dependency libraries and mark which ones can introduce a taint source — a place untrusted data enters — that the built-in rules don't already cover, so source discovery runs only on the libraries that can matter. Sinks are found later from the taint frontier, not here
 
 ## Inputs
 
@@ -23,23 +23,23 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 ### 1. List the dependencies
 
-Read `<model-dir>/project.yaml` — its `dependencies:` is every jar on the classpath. Resolve each to the library it is. Most of a large project's jars are transitive infrastructure
+Read `<model-dir>/project.yaml` — its `dependencies` is every jar on the classpath. Resolve each to the library it is. Most of a large project's jars are transitive infrastructure
 
 ### 2. Mark each library
 
-For each library decide: could it introduce an attacker-controlled source (e.g. HTTP/RPC request data, message-broker payloads and so on) or a dangerous sink (e.g. query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection and so on)?
+For each library decide: could it introduce an attacker-controlled source — a method returning untrusted data (HTTP/RPC request data, message-broker payloads, deserialized untrusted input and so on) — that the built-in source rules don't already cover? Consult the built-ins with `opentaint health --rules`; a library whose source surface they already match is dismissed, not flagged
 
-- clearly irrelevant — build/Gradle plugins, logging, annotations, bytecode tooling (ASM, byte-buddy), test libraries, pure data structures: dismiss
-- clearly relevant — web frameworks, query/ORM libraries, HTTP clients, deserializers, template engines, LDAP/JNDI, scripting: flag
+- clearly irrelevant — build/Gradle plugins, logging, annotations, bytecode tooling (ASM, byte-buddy), test libraries, pure data structures, and pure sink libraries with no source surface: dismiss
+- clearly relevant — web/RPC frameworks, message brokers, deserializers, request clients returning response bodies: flag, unless a built-in source already covers that surface
 - unsure — do a brief peek: grep `<project-root>` sources for the library's package imports or call sites. If the app never references it and nothing transitive exposes it to untrusted data, dismiss; otherwise flag
 
-A library the app references only for safe, constant, or framework-internal use is not a flag — flag where untrusted data plausibly enters or a dangerous call is plausibly reachable
+A library the app references only for safe, constant, or framework-internal use is not a flag — flag where untrusted data plausibly enters and no built-in source already names it
 
 ### 3. Record coverage
 
 Write `<tracking-dir>/coverage.yaml` (schema below). One `pending` entry per flagged library — these are the depth work-list. Record dismissals as a single bulk entry summarising the categories ruled out, not one row per jar; add an individual `done` row only for a library a reader might expect to be flagged but isn't, with a one-line reason
 
-When `coverage.yaml` already exists from a prior run, reconcile rather than overwrite: keep every existing entry and its `status`/`notes` (a `done` flip and its findings from the depth pass are not yours to reset), and add a `pending` entry only for a dependency that is newly on the classpath and not already weighed. An entry whose library is unchanged stays exactly as it is
+When `coverage.yaml` already exists from a prior run, reconcile rather than overwrite: keep every existing entry and its `notes`, and add a `pending` entry for any newly-classpath dependency. For each library already `done`, peek its `rules/lib/<package-kebab>.yaml` verdict and the app's current usage — if there's any suspicion the usage has shifted since that verdict (new call sites, a version bump, changed imports), re-mark it `pending`. Over-marking only costs a re-examined library the later stages filter out; leaving a genuinely-changed library `done` silently loses its sources, so when unsure, re-open it
 
 ## Output
 
@@ -52,17 +52,20 @@ When `coverage.yaml` already exists from a prior run, reconcile rather than over
 
 ```yaml
 packages:
-  - package: org.springframework.web.reactive.function   # flagged → depth work-list
+  - package: org.springframework.web.socket               # flagged → depth work-list
     status: pending                                       # pending | done
-    notes: WebFlux functional routing — ServerRequest request data (source); WebClient (SSRF sink)
-  - package: org.springframework.data.r2dbc
+    coverage: null                                        # full | partial | none — set by the orchestrator after discover
+    notes: WebSocket frame data — untrusted source
+  - package: org.springframework.kafka                     # flagged → depth work-list
     status: pending
-    notes: reactive DB access — check for string-built query sinks
+    coverage: null
+    notes: message-broker payloads — untrusted source
   - package: <infrastructure>
     status: done                                          # bulk dismissal
+    coverage: null
     notes: >
       logging (logback/slf4j), build plugins, annotations, ASM/byte-buddy, test libs,
-      data structures — no source/sink surface
+      data structures — no source surface
 ```
 
 ## Gotchas

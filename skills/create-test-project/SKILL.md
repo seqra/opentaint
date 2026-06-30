@@ -22,7 +22,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Compiled output `<test-compiled>` — the model. Default: `.opentaint/test-compiled/<name>` (one model per sub-project: `<name>/sinks`, `<name>/sources`)
 - Dependencies — exact Maven coordinates the samples need; default: the `dependencies` list in `<tracking-file>`; with no tracking file, derive them from the project's `build.gradle`/`pom.xml`
 
-`<name>` is the package (`<package-kebab>`) for a rule, or the dataflow approximation unit (`<package-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`) for an approximation; the two never share a folder
+`<name>` is the package (`<package-kebab>`) for a rule, or the dataflow approximation unit (`<scope-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`) for an approximation; the two never share a folder
 
 ## Workflow
 
@@ -33,7 +33,7 @@ When re-invoked over an existing `<name>` project whose surface grew (a new sour
 Pick the scaffold by shape, then pass each coordinate from the tracking file's `dependencies` as a `--dependency`:
 
 - a rule → `test rule init` — scaffolds a `sinks/` and a `sources/` sub-project under `<test-project>`, each with `Taint.java` (the generic `source()`/`sink()`) and the generic marker lib rules in its `test-rules/`. Pass `--sinks-only` / `--sources-only` for a package with only one side, so you get a single sub-project
-- a dataflow approximation → `test approximation init` (Gradle build + the test-util jar, plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies)
+- a dataflow approximation → `test approximation init` (Gradle build + the test-util jar, plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies). Pass each lib at the exact pinned version from the unit's `dependencies`: this Gradle build is the approximation's own compile environment, so it must still recompile from these pins even after the main project drops that dependency
 
 ```bash
 # rule test projects — both sides (this package has new sinks and new sources)

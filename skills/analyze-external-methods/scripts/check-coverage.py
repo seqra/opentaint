@@ -1,92 +1,94 @@
-#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["pyyaml==6.0.3"]
+# ///
 """
-check-coverage.py — report dropped methods not yet classified.
-
-UNCOVERED = dropped - methods: - done: - skipped, FQN-level (a `(params)`
-overload suffix is stripped on both sides). Zero args, run from the project root:
-reads .opentaint/results/dropped-external-methods.yaml and every *.yaml under
-.opentaint/tracking/approximations/. Exit 1 if any UNCOVERED, 0 if none, 2 if the
-dropped file is missing.
+Report dropped external methods not yet classified (run with uv from the project root).
+UNCOVERED = dropped - methods: - done: - engine_issues:, matched FQN-level.
+With `--plan <id>` it checks one plan's methods instead — the per-agent done check.
 """
+import argparse
 import glob
-import re
 import sys
 from pathlib import Path
 
-DROPPED = ".opentaint/results/dropped-external-methods.yaml"
-APPROX_DIR = ".opentaint/tracking/approximations"
+import yaml
 
-# a dropped entry's identity line: `- method: "FQN"` (quotes optional)
-METHOD_RE = re.compile(r'^\s*-?\s*method:\s*"?([^"\n]+?)"?\s*$')
-# a top-level key at column 0 (resets the section); captures any inline value
-KEY_RE = re.compile(r'^([A-Za-z_][\w-]*):\s*(.*)$')
-# a block list item under a key: `  - "FQN"`, `  - FQN`, or legacy `  - target: "FQN"`
-ITEM_RE = re.compile(r'^\s*-\s*(?:target:\s*)?"?([^"\n]+?)"?\s*$')
-# items inside an inline list: methods: ["a", "b"]
-INLINE_RE = re.compile(r'"?([^",\[\]]+?)"?(?:,|$)')
+DROPPED = Path(".opentaint/results/dropped-external-methods.yaml")
+APPROX_DIR = Path(".opentaint/tracking/approximations")
+
+CLASSIFIED_KEYS = {"methods", "done", "engine_issues"}
 
 
 def fqn(s):
-    """Bare FQN: drop quotes, whitespace, and any (params) overload suffix."""
-    s = s.strip().strip('"').strip("'")
+    s = str(s).strip().strip('"').strip("'")
     i = s.find("(")
     if i != -1:
         s = s[:i]
     return s.strip()
 
 
-def dropped_methods(path):
+def dropped_methods():
+    doc = yaml.safe_load(DROPPED.read_text(encoding="utf-8")) or []
+    return {fqn(e["method"]) for e in doc if isinstance(e, dict) and e.get("method")}
+
+
+def classified_methods():
+    # every FQN under a methods/done/engine_issues key across all unit and skip files
     out = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        m = METHOD_RE.match(line)
-        if m:
-            out.add(fqn(m.group(1)))
+    for p in sorted(glob.glob(str(APPROX_DIR / "*.yaml"))):
+        doc = yaml.safe_load(Path(p).read_text(encoding="utf-8")) or {}
+        for key in CLASSIFIED_KEYS:
+            for item in doc.get(key, []) or []:
+                if str(item).strip():
+                    out.add(fqn(item))
     return out
 
 
-CLASSIFIED_KEYS = {"methods", "done"}
+def plan_methods(plan_arg):
+    # the FQNs a plan assigned (each scope's rows carry `method`); id or path, None if missing
+    p = Path(plan_arg)
+    if not p.is_file():
+        p = APPROX_DIR / "plans" / f"{plan_arg}.yaml"
+    if not p.is_file():
+        return None
+    doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    return {fqn(m["method"] if isinstance(m, dict) else m)
+            for members in (doc.get("scopes") or {}).values() for m in members}
 
 
-def classified_methods(approx_dir):
-    """Every FQN under a `methods:` or `done:` key across all files — units'
-    pending and built methods, plus skipped.yaml's skips (its skips live under
-    `methods:`)."""
-    out = set()
-    for p in sorted(glob.glob(str(approx_dir / "*.yaml"))):
-        section = None
-        for line in Path(p).read_text(encoding="utf-8").splitlines():
-            key = KEY_RE.match(line)
-            if key:
-                section, inline = key.group(1), key.group(2).strip()
-                if section in CLASSIFIED_KEYS and inline.startswith("["):
-                    out.update(fqn(x) for x in INLINE_RE.findall(inline[1:-1]) if x.strip())
-                continue
-            if section in CLASSIFIED_KEYS:
-                item = ITEM_RE.match(line)
-                if item:
-                    out.add(fqn(item.group(1)))
-    return out
-
-
-def main():
-    dropped_path = Path(DROPPED)
-    if not dropped_path.is_file():
-        print(f"no dropped file at {DROPPED} — nothing to check")
-        return 2
-
-    dropped = dropped_methods(dropped_path)
-    classified = classified_methods(Path(APPROX_DIR))
-    uncovered = sorted(dropped - classified)
-
-    covered = len(dropped) - len(uncovered)
-    print(f"coverage: {covered}/{len(dropped)} dropped methods classified, "
-          f"{len(uncovered)} UNCOVERED")
+def report(label, total, uncovered, tail):
+    covered = total - len(uncovered)
+    print(f"{label}: {covered}/{total} classified, {len(uncovered)} UNCOVERED")
     if uncovered:
-        print("\nUNCOVERED — classify each (model or skip) before the phase is done:")
+        print(f"\nUNCOVERED — classify each (model or skip) {tail}:")
         for m in uncovered:
             print(f"  {m}")
         return 1
     return 0
+
+
+def main():
+    ap = argparse.ArgumentParser(description="report dropped methods not yet classified")
+    ap.add_argument("--plan", help="check one plan's methods (id or path) — the per-agent done check")
+    args = ap.parse_args()
+
+    classified = classified_methods()
+
+    if args.plan:
+        methods = plan_methods(args.plan)
+        if methods is None:
+            print(f"no plan at {args.plan}")
+            return 2
+        return report(f"plan {args.plan}", len(methods),
+                      sorted(methods - classified), "before returning")
+
+    if not DROPPED.is_file():
+        print(f"no dropped file at {DROPPED} — nothing to check")
+        return 2
+    dropped = dropped_methods()
+    return report("coverage", len(dropped), sorted(dropped - classified),
+                  "before the phase is done")
 
 
 if __name__ == "__main__":

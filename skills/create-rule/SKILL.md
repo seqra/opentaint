@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Create Rule
 
-Per package, author the new source/sink lib rules the requirements name, wire each to the generic `Taint` marker in a test join, and verify against the package's marker test projects until every sample passes
+Per package, author the new source and/or sink lib rules the requirements name, wire each to the generic `Taint` marker in a test join, and verify against the package's marker test projects until every sample passes. Author only the side the unit has — a sources-only or sinks-only unit yields just that side's rules, joins, and test sub-project (the deep workflow authors sources first, then sinks once the taint frontier has named them)
 
 Two roles: the **main** one authors a package's lib rules (above); a **fix** narrows or broadens a created rule the main scan later flags. The cross-package security joins are written by assemble-lib-rules, not here
 
@@ -173,10 +173,10 @@ stages:
 - Library rules MUST have `options.lib: true` and `severity: NOTE`
 - Security rules (the joins) MUST have `metadata.cwe` and `metadata.short-description`
 - Source/sink metavariable names must match across `refs` and `on` clauses, or the join won't connect; bind the tainted value as `$UNTRUSTED` in every lib source/sink rule, so the security joins assemble-lib-rules writes later reference one consistent name
-- The `rule:` path in `refs` is relative to the ruleset root — a marker ref resolves under the test project's `test-rules`, a lib ref under `<rules-dir>`
+- The `rule` path in `refs` is relative to the ruleset root — a marker ref resolves under the test project's `test-rules`, a lib ref under `<rules-dir>`
 - Rule IDs must be globally unique
 - The only `opentaint scan` you run is the step-5 diagnostic over your own `<test-compiled>` model — never scan the main project model
-- For simple structural patterns (no dataflow), omit `mode:` (uses default mode)
+- For simple structural patterns (no dataflow), omit `mode` (uses default mode)
 - Custom library rules go under `<rules-dir>/java/lib/generic/` or `<rules-dir>/java/lib/spring/` (for Spring-specific), mirroring the built-in layout — never directly under `java/lib/`; the test joins go in the test project's `test-rules/java/security/`, never `<rules-dir>`
 
 

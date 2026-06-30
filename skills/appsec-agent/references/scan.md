@@ -4,6 +4,8 @@ Delegate run-scan. Inputs: model-dir `.opentaint/project`, ruleset `builtin` + `
 
 Normal/deep runs iterate approximations: pass `--track-external-methods` so `dropped-external-methods.yaml` is emitted, and have the agent report that it was written, plus — on a verify rescan — any method it modeled that's still listed and any config load error. A lite run has no approximation work — omit `--track-external-methods`; the SARIF and finding counts are all triage needs.
 
+On a deep run, this first scan carries the new source rules wired to the built-in sinks; it drives the taint frontier that the approximation loop and sink discovery consume.
+
 Pass `<max-memory>` when `state.yaml`'s `max_memory` is set. If a subagent reports it only succeeded after retrying at `--max-memory 16G`, record `max_memory: 16G` and pass it to every later run-scan subagent so they start there.
 
 A scan that produced a SARIF — even with a timeout or OOM message — is done; take it as-is. Only when no valid SARIF comes out even at 16G: stop the workflow (nothing to triage) and document it — dispatch report-analyzer-issue with the setup (ruleset, approximation dirs, model, the 16G reached) and commit hash.
