@@ -84,7 +84,7 @@ class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
 
 object PIRAttrLoadAtomEvaluator : PIRBasicAtomEvaluator {
     override fun visit(c: NumberOfArgs): Boolean {
-        error("Unexpected atom for attribute load rule: $c")
+        return c.n == 0
     }
 
     override fun visit(c: ConstantCmp): Boolean {

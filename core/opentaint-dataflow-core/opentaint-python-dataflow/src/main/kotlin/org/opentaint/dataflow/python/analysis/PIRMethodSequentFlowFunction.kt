@@ -6,7 +6,6 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -14,8 +13,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.configuration.isTrue
-import org.opentaint.dataflow.python.PIRAttrLoadAtomEvaluator
 import org.opentaint.dataflow.python.PIRAttrLoadAnyArgumentResolver
+import org.opentaint.dataflow.python.PIRAttrLoadAtomEvaluator
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
@@ -27,10 +26,22 @@ import org.opentaint.dataflow.python.alias.forEachAliasAfterStatement
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
-import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRAssign
+import org.opentaint.ir.api.python.PIRBinaryExpr
+import org.opentaint.ir.api.python.PIRDictExpr
+import org.opentaint.ir.api.python.PIRExpr
+import org.opentaint.ir.api.python.PIRInstruction
+import org.opentaint.ir.api.python.PIRListExpr
+import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRReturn
+import org.opentaint.ir.api.python.PIRSetExpr
+import org.opentaint.ir.api.python.PIRStoreAttr
+import org.opentaint.ir.api.python.PIRStoreSubscript
+import org.opentaint.ir.api.python.PIRStringExpr
+import org.opentaint.ir.api.python.PIRSubscriptExpr
+import org.opentaint.ir.api.python.PIRTupleExpr
+import org.opentaint.ir.api.python.PIRValue
 import org.opentaint.util.onSome
-import kotlin.collections.plusAssign
 
 class PIRMethodSequentFlowFunction(
     private val instruction: PIRInstruction,
@@ -40,7 +51,10 @@ class PIRMethodSequentFlowFunction(
 ) : MethodSequentFlowFunction {
     private val rulesProvider get() = ctx.taint.taintConfig
 
-    private val resolvedNames by lazy { callResolver.resolveNames(instruction) }
+    private val resolvedNames by lazy {
+        check(instruction is PIRLoadAttr) { "Unexpected resolvedNames access on inst: $instruction" }
+        callResolver.resolveAttribute(instruction)
+    }
 
     override fun propagateZeroToZero(): Set<Sequent> = buildSet {
         this += Sequent.ZeroToZero

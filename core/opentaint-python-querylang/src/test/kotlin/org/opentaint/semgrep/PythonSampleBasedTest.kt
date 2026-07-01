@@ -102,6 +102,7 @@ class PythonSampleBasedTest {
     @Test fun objectMapperPatternNotEllipsis() = runSample("ObjectMapperPatternNotEllipsis")
     @Test fun objectMapperPatternNotFull() = runSample("ObjectMapperPatternNotFull")
     @Test fun ruleWithArtificialInsideSequenceReverse() = runSample("RuleWithArtificialInsideSequenceReverse")
+    @Test fun simpleAttributeLoad() = runSample("SimpleAttributeLoad")
 
     @Test fun rulePatternNotInsideWithSignature() = runSample("RulePatternNotInsideWithSignature")
     @Test fun taintRule() = runSample("TaintRule")

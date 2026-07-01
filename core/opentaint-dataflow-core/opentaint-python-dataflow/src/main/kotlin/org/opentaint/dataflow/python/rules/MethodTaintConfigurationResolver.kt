@@ -232,19 +232,29 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         build: (S) -> T,
     ): List<T> = serialized.mapNotNull { rule ->
         val attr = rule.target as? PythonTarget.Attribute ?: return@mapNotNull null
-        if (attr.attribute != name) return@mapNotNull null
+        if (!matchesName(attr, name)) return@mapNotNull null
+
         build(rule)
     }
 
     // region Matching
 
     private fun PythonTarget.Function.matches(method: PIRFunction): Boolean {
-        if (!matchesName(function, method)) return false
+        if (!matchesName(this, method)) return false
         signature?.let { if (!matchesSignature(it, method)) return false }
         return true
     }
 
-    private fun matchesName(name: String, method: PIRFunction): Boolean {
+    private fun matchesName(target: PythonTarget.Attribute, attribute: String): Boolean =
+        if ("." in target.attribute && "." in attribute) {
+            target.attribute == attribute
+        } else {
+            target.attribute.substringAfterLast('.') == attribute.substringAfterLast('.')
+        }
+
+    private fun matchesName(target: PythonTarget.Function, method: PIRFunction): Boolean {
+        val name = target.function
+
         if (method is PIRSimpleNameUnknownFunction) return name.substringAfterLast('.') == method.name
 
         val qn = method.qualifiedName

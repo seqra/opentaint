@@ -7,7 +7,7 @@ import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
-import org.opentaint.ir.impl.python.PIRUnknownModule
+import org.opentaint.ir.api.python.PIRLoadAttr
 
 /**
  * Resolves PIRCall instructions to concrete PIRFunction callees.
@@ -48,16 +48,26 @@ class PIRCallResolver(
             PIRMethodQFNameReconstructor.compute(method, applicationGraph)
         }
 
-    private fun namesFor(method: PIRFunction, call: PIRInstruction) =
-        namesFor(method).getOrDefault(call, emptySet())
+    private fun simpleNamesFor(method: PIRFunction): Map<PIRCall, Set<String>> =
+        perMethodSimpleNames.getOrPut(method) {
+            PIRMethodSimpleNameReconstructor.compute(method, applicationGraph)
+        }
 
-    fun resolveNames(loadAttr: PIRInstruction) = namesFor(loadAttr.location.method, loadAttr)
+    private fun resolveNames(inst: PIRInstruction): Set<String> {
+        val method = inst.location.method
+        return namesFor(method).getOrDefault(inst, emptySet())
+    }
 
-    private fun simpleNamesFor(call: PIRCall): Set<String> {
+    private fun resolveSimpleNames(call: PIRInstruction): Set<String> {
         val method = call.location.method
-        return perMethodSimpleNames
-            .getOrPut(method) { PIRMethodSimpleNameReconstructor.compute(method, applicationGraph) }
-            .getOrDefault(call, emptySet())
+        return simpleNamesFor(method).getOrDefault(call, emptySet())
+    }
+
+    fun resolveAttribute(inst: PIRLoadAttr): Set<String> {
+        val qfNames = resolveNames(inst)
+        if (qfNames.isNotEmpty()) return qfNames
+
+        return setOf(inst.attribute)
     }
 
     fun resolveCall(call: PIRCall): Set<PIRFunction> {
@@ -67,7 +77,7 @@ class PIRCallResolver(
                 cp.findFunctionOrNull(it) ?: qualifiedSyntheticFor(it)
             }
         }
-        return simpleNamesFor(call).mapTo(hashSetOf()) {
+        return resolveSimpleNames(call).mapTo(hashSetOf()) {
             cp.findFunctionOrNull(it) ?: simpleNameSyntheticFor(it)
         }
     }
