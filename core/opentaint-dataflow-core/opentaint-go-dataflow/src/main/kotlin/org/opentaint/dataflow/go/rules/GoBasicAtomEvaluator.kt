@@ -50,7 +50,7 @@ class GoBasicAtomEvaluator(
         val value = resolveValue(c.position) ?: return false
         val constValue = (value as? GoIRConstValue)?.value ?: return false
         if (constValue !is GoIRConstantValue.StringConst) return false
-        return c.pattern.matches(constValue.value)
+        return c.pattern.containsMatchIn(constValue.value)
     }
 
     private fun resolveValue(pos: Position.Simple): GoIRValue? = when (pos) {

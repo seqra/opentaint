@@ -1,0 +1,22 @@
+rules:
+  - id: xss-template-sanitizer
+    languages: [go]
+    severity: ERROR
+    message: Tainted value reaches sink without template escaping
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - pattern: XssTemplateSanitizer.Sink($X)
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  import template "html/template"
+                  ...
+              - pattern-inside: |
+                  import template "text/template"
+                  ...
+          - pattern-either:
+              - pattern: "template.HTMLEscapeString($X)"
+              - pattern: "template.JSEscapeString($X)"

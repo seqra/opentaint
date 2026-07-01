@@ -127,25 +127,37 @@ fun PositionBaseWithModifiers.resolve(signature: GoFunctionSignature): List<Posi
     }
 
     return base.mapNotNull {
-        val type = signature.positionType(it)
-            ?: return@mapNotNull null
+        val types = signature.positionType(it)
 
-        val accessors = modifiers.resolveWithType(type)
-            ?: return@mapNotNull null
+        val accessors = types.firstNotNullOfOrNull { type ->
+            modifiers.resolveWithType(type)
+        }
+
+        if (accessors == null) return@mapNotNull null
 
         mkPosition(it, accessors)
     }
 }
 
-private fun GoFunctionSignature.positionType(pos: Position.Simple): GoIRType? = when (pos) {
-    is Position.Argument -> paramTypes.getOrNull(pos.index)
-    is Position.Result -> resultType
-    is Position.This -> receiverType
+private fun GoFunctionSignature.positionType(pos: Position.Simple): List<GoIRType> = when (pos) {
+    is Position.Argument -> listOfNotNull(paramTypes.getOrNull(pos.index))
+    is Position.Result -> {
+        val types = mutableListOf(resultType)
+        if (resultType is GoIRTupleType) {
+            // note: function return types are always represented as a tuple
+            val elements = resultType.elements
+            if (elements.size == 1) {
+                types += elements.first()
+            }
+        }
+        types
+    }
+    is Position.This -> listOfNotNull(receiverType)
 }
 
 private fun resolveIsType(signature: GoFunctionSignature, pos: Position.Simple, typeName: String): Boolean {
-    val positionType = signature.positionType(pos) ?: return false
-    return matchesType(positionType, typeName)
+    val positionTypes = signature.positionType(pos)
+    return positionTypes.any { matchesType(it, typeName) }
 }
 
 private fun mkPosition(

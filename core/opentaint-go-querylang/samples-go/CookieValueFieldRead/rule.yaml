@@ -1,0 +1,12 @@
+rules:
+  - id: cookie-value-field-read
+    languages: [go]
+    severity: WARNING
+    message: "Field-read of a tainted struct pointer reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: "CookieValueFieldRead.Source().Value"
+          - pattern: "CookieValueFieldRead.SourceSlice()[$I].Value"
+    pattern-sinks:
+      - pattern: "CookieValueFieldRead.Sink($X)"

@@ -1,0 +1,10 @@
+rules:
+  - id: field-read-sink
+    languages: [go]
+    severity: WARNING
+    message: "Tainted data reaches a field-read sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "FieldReadSink.Source(...)"
+    pattern-sinks:
+      - pattern: "$H.Field"

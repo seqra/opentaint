@@ -7,6 +7,7 @@ data class GoFunctionSignature(
     val receiverType: GoIRType?,
     val paramTypes: List<GoIRType>,
     val resultType: GoIRType,
+    val pkgName: String? = null,
 ) {
     val arity: Int get() = paramTypes.size
     val hasReceiver: Boolean get() = receiverType != null
@@ -14,7 +15,8 @@ data class GoFunctionSignature(
 
 data class GoFieldSignature(
     val name: String,
-    val type: GoIRType
+    val type: GoIRType,
+    val receiverType: GoIRType? = null,
 )
 
 data class GoGlobalFieldSignature(

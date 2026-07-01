@@ -1,0 +1,16 @@
+rules:
+  - id: weak-random-two-import-repro
+    languages: [go]
+    mode: search
+    severity: ERROR
+    message: Use of a weak (non-cryptographic) random number generator
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              import "math/rand"
+              ...
+          - pattern-inside: |
+              import "math/rand/v2"
+              ...
+      - pattern-either:
+          - pattern: "rand.Read(...)"

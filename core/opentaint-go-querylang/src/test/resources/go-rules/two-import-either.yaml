@@ -1,0 +1,19 @@
+rules:
+  - id: two-import-either
+    languages: [go]
+    mode: taint
+    message: m
+    severity: ERROR
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  import t "html/template"
+                  ...
+              - pattern-inside: |
+                  import t "text/template"
+                  ...
+          - pattern-either:
+              - pattern: "t.HTMLEscapeString($X)"

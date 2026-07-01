@@ -1,0 +1,18 @@
+rules:
+  - id: go-import-inside-rule
+    languages: [go]
+    mode: taint
+    message: "Tainted data flows to sink"
+    severity: ERROR
+    pattern-sources:
+      - pattern: "util.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              import ex "os/exec"
+              import "syscall"
+              ...
+          - pattern-either:
+              - pattern: "ex.Command($CMD, ...)"
+              - pattern: "ex.CommandContext($CTX, $CMD, ...)"
+              - pattern: "syscall.Exec($CMD, ...)"

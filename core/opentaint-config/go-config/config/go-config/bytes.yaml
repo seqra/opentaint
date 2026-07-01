@@ -313,6 +313,62 @@ passThrough:
     to: result(0)
 - function:
     package: bytes
+    type: Buffer
+    name: String
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: bytes
+    type: Buffer
+    name: Write
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: bytes
+    type: Buffer
+    name: WriteString
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: bytes
+    type: Buffer
+    name: WriteByte
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: bytes
+    type: Buffer
+    name: WriteRune
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: bytes
+    type: Buffer
+    name: ReadFrom
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: bytes
+    type: Buffer
+    name: WriteTo
+    receiver: true
+  copy:
+  - from: this
+    to: arg(0)
+- function:
+    package: bytes
     type: Reader
     name: Reset
     receiver: true

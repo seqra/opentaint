@@ -35,6 +35,7 @@ import org.opentaint.semgrep.go.pattern.NilLiteral
 import org.opentaint.semgrep.go.pattern.NoArgs
 import org.opentaint.semgrep.go.pattern.PointerType
 import org.opentaint.semgrep.go.pattern.QualifiedType
+import org.opentaint.semgrep.go.pattern.RemovedImportDecl
 import org.opentaint.semgrep.go.pattern.ReturnStmt
 import org.opentaint.semgrep.go.pattern.SelectorExpr
 import org.opentaint.semgrep.go.pattern.SemgrepGoPattern
@@ -156,6 +157,9 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
                 hasEllipsisInTheEnd = false,
             )
         }
+
+        is RemovedImportDecl -> transformSequence(emptyList())
+
         // Cases added in later tasks.
         else -> {
             val prefix = if (isRoot) "Root pattern is: " else ""

@@ -1,0 +1,9 @@
+rules:
+  - id: weak-rand-v2
+    languages: [go]
+    severity: ERROR
+    message: "Use of a weak (non-cryptographic) random number generator"
+    mode: search
+    pattern-either:
+      - pattern: rand.Float64()
+      - pattern: rand.IntN(...)

@@ -151,7 +151,7 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
 
     private fun parseImportDecl(ctx: GoParser.ImportDeclContext): ImportDecl {
         val specs = ctx.importSpec().map { parseImportSpec(it) }
-        return ImportDecl(specs, hasEllipsis = ctx.ELLIPSIS().isNotEmpty())
+        return ParsedImportDecl(specs, hasEllipsis = ctx.ELLIPSIS().isNotEmpty())
     }
 
     private fun parseImportSpec(ctx: GoParser.ImportSpecContext): ImportSpec {

@@ -1,0 +1,12 @@
+rules:
+  - id: typed-arg-sink
+    languages: [go]
+    severity: WARNING
+    message: "Tainted data passed to fmt.Fprint on an io.Writer"
+    mode: taint
+    pattern-sources:
+      - pattern: "TypedArgSink.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern: "fmt.Fprint(($W : io.Writer), $A)"
+          - focus-metavariable: $A

@@ -1,0 +1,10 @@
+rules:
+  - id: typed-field-read-source
+    languages: [go]
+    severity: WARNING
+    message: "Typed field-read source reaches Sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "($R : *http.Request).URL.Path"
+    pattern-sinks:
+      - pattern: "TypedFieldReadSource.Sink($X)"

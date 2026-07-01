@@ -1,0 +1,7 @@
+rules:
+  - id: insecure-cookie-literal
+    languages: [go]
+    severity: WARNING
+    message: "Cookie literal created without the Secure flag"
+    mode: search
+    pattern: "http.Cookie{..., Secure: false, ...}"

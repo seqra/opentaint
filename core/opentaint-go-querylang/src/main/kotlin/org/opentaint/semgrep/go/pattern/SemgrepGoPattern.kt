@@ -355,11 +355,17 @@ data class ImportSpec(
     override val children: List<SemgrepGoPattern> get() = listOf(path)
 }
 
-data class ImportDecl(
+sealed interface ImportDecl: SemgrepGoPattern
+
+data class ParsedImportDecl(
     val specs: List<ImportSpec>,
     val hasEllipsis: Boolean = false,
-) : SemgrepGoPattern {
+) : ImportDecl {
     override val children: List<SemgrepGoPattern> get() = specs
+}
+
+data object RemovedImportDecl : ImportDecl {
+    override val children: List<SemgrepGoPattern> get() = emptyList()
 }
 
 data class ValueSpec(

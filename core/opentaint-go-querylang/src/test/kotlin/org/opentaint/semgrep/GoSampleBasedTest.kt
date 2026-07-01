@@ -55,12 +55,48 @@ class GoSampleBasedTest: GoSampleBasedTestBase("GO_SAMPLES_DIR") {
 
     @Test fun cmdInjEnvSink() = runSample("CmdInjEnvSink", useDefaultConfig = true)
 
-    // Not actually an FN: Ctx.Input.Query source is matched and reported. Left enabled.
+    @Test fun cmdTypedReceiverSink() = runSample("CmdTypedReceiverSink", useDefaultConfig = true)
+
+    @Test fun importInsideSink() = runSample("ImportInsideSink")
+
+    @Test fun cmdStringShellSink() = runSample("CmdStringShellSink")
+
+    @Test fun qualifiedFieldSources() = runSample("QualifiedFieldSources")
+
+    @Test fun xssTemplateSanitizer() = runSample("XssTemplateSanitizer")
+
+    @Disabled // todo: two pattern-inside imports leave rand.Read bare on the v2 branch (math/rand/v2 selector = "v2")
+    @Test fun weakRandomTwoImportRepro() = runSample("WeakRandomTwoImportRepro")
+
     @Test fun sourceBeegoCtxInput() = runSample("SourceBeegoCtxInput")
 
     @Test fun sourceBeegoCtxInputHeader() = runSample("SourceBeegoCtxInputHeader")
 
     @Test fun sourceBeegoInputParamsRange() = runSample("SourceBeegoInputParamsRange")
+
+    @Test fun typedFieldReadSource() = runSample("TypedFieldReadSource")
+
+    @Test fun interfaceImplSink() = runSample("InterfaceImplSink")
+
+    @Test fun typedArgSink() = runSample("TypedArgSink")
+
+    @Disabled // todo: support field-read sinks (issues.md #4)
+    @Test fun fieldReadSink() = runSample("FieldReadSink")
+
+    @Test fun mapValueToReceiver() = runSample("MapValueToReceiver")
+
+    @Test fun cookieValueFieldRead() = runSample("CookieValueFieldRead")
+
+    @Disabled // todo: support struct-literal field matching (issues.md #8)
+    @Test fun insecureCookieLiteral() = runSample("InsecureCookieLiteral")
+
+    @Test fun shellExecArgConstraint() = runSample("ShellExecArgConstraint")
+
+    @Test fun sqlSinkReceiverArg() = runSample("SqlSinkReceiverArg", useDefaultConfig = true)
+
+    @Test fun weakRandV2() = runSample("WeakRandV2")
+
+    @Test fun importQualifiedRewrite() = runSample("ImportQualifiedRewrite")
 
     // ─── Ports of example.* Java sample tests ───────────────────────────────
 

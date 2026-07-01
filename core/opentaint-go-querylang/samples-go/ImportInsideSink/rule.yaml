@@ -1,0 +1,17 @@
+rules:
+  - id: import-inside-sink
+    languages: [go]
+    severity: ERROR
+    message: Tainted user input reaches OS command execution
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              import "os/exec"
+              ...
+          - pattern-either:
+              - pattern: exec.Command($NAME, ...)
+              - pattern: exec.CommandContext($CTX, $NAME, ...)
+          - focus-metavariable: $NAME
