@@ -162,20 +162,22 @@ class DSUAliasAnalysis(
             resultState = resultState.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
         }
 
+        if (!stmt.cantMutateAliasedHeap()) {
+            val argAliases = IntOpenHashSet()
+            stmt.args.forEach { arg ->
+                val info = arg.aliasInfo() ?: return@forEach
+                val infoIndex = aliasManager.getOrAdd(info)
+                resultState.forEachAliasInSet(infoIndex) { argAliases.add(it) }
+            }
+            resultState = resultState.invalidateOuterHeapAliases(argAliases)
+        }
+
         val externalModel = methodCallResolver.externalCallModel(stmt.method)
         resultState = externalModel.fold(resultState) { s, model ->
             model.evalExternalCallModel(stmt, s)
         }
 
-        if (stmt.cantMutateAliasedHeap()) return resultState
-
-        val argAliases = IntOpenHashSet()
-        stmt.args.forEach { arg ->
-            val info = arg.aliasInfo() ?: return@forEach
-            val infoIndex = aliasManager.getOrAdd(info)
-            resultState.forEachAliasInSet(infoIndex) { argAliases.add(it) }
-        }
-        return resultState.invalidateOuterHeapAliases(argAliases)
+        return resultState
     }
 
     private fun ExternalAssign.evalExternalCallModel(stmt: Stmt.Call, state: State): State {

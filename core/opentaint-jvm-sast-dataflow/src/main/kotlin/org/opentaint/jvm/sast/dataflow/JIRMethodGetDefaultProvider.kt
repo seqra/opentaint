@@ -28,6 +28,9 @@ class JIRMethodGetDefaultProvider(
     ): Iterable<TaintPassThrough> {
         val baseRules = base.passTroughRulesForMethod(method, statement, fact, allRelevant)
 
+        // note: hack to disable default get provide in Alias Analysis
+        if (statement == null) return baseRules
+
         if (method !is JIRMethod || method.isStatic) return baseRules
 
         if (!method.name.startsWith("get")) return baseRules
