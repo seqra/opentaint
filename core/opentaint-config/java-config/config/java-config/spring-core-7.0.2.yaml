@@ -819,8 +819,7 @@ passThrough:
     - .java.io.File#uri#java.net.URI
     - .java.net.URI#value#java.lang.String
 - function: org.springframework.util.AutoPopulatingList#<init>
-  signature: (java.util.List, org.springframework.util.AutoPopulatingList$ElementFactory)
-    *
+  signature: (java.util.List, org.springframework.util.AutoPopulatingList$ElementFactory) *
   overrides: false
   copy:
   - from:

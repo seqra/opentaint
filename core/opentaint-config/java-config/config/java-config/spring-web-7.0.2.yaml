@@ -1037,3 +1037,21 @@ passThrough:
     to:
     - this
     - .org.springframework.http.HttpHeaders#allow#org.springframework.http.HttpMethod
+- function: org.springframework.web.context.request.async.DeferredResult#setResult
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.web.context.request.async.DeferredResult#Result#java.lang.Object
+- function: org.springframework.web.context.request.async.DeferredResult#setErrorResult
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.web.context.request.async.DeferredResult#Result#java.lang.Object
+- function: org.springframework.web.context.request.async.DeferredResult#getResult
+  copy:
+  - from:
+    - this
+    - .org.springframework.web.context.request.async.DeferredResult#Result#java.lang.Object
+    to: result
