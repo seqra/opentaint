@@ -5,11 +5,12 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRGlobalNameRef
 import org.opentaint.ir.api.python.PIRLocalVar
-import org.opentaint.ir.api.python.PIRReadName
+import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.test.python.PIRTestBase
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -71,12 +72,12 @@ def cse_capturing(x):
     @Test
     fun `bind site is a constructor call on the adapter class`() {
         val outer = cp.modules.flatMap { it.functions }.first { it.name == "cse_capturing" }
-        // Build a map: localVar.index → qualifiedName for every PIRReadName(GlobalNameRef).
+        // Build a map: localVar.index → qualifiedName for every PIRReadNameExpr(GlobalNameRef).
         val nameByLocal = outer.instList
-            .filterIsInstance<PIRReadName>()
-            .mapNotNull { r ->
-                val ref = r.ref as? PIRGlobalNameRef ?: return@mapNotNull null
-                r.target.index to ref.qualifiedName
+            .filterIsInstance<PIRAssign>()
+            .mapNotNull { a ->
+                val ref = (a.expr as? PIRReadNameExpr)?.ref as? PIRGlobalNameRef ?: return@mapNotNull null
+                a.target.index to ref.qualifiedName
             }
             .toMap()
 

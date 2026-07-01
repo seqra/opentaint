@@ -154,27 +154,16 @@ data class PIRBindFunctionExpr(val function: PIRGlobalNameRef) : PIRExpr
 // ─── Name Resolution (read) ─────────────────────────────────
 
 /**
- * Resolves a name reference ([PIRGlobalNameRef] / [PIRModuleNameRef]) and
- * stores the resulting value into [target]. The single instruction kind
- * for "read a global" and "read a module" — the discriminator is the
- * [ref]'s subtype.
+ * Resolves a name reference ([PIRGlobalNameRef] / [PIRModuleNameRef]) to its
+ * runtime value. Materialized as the RHS of a [PIRAssign] by the Flat → PIR
+ * converter wherever Flat IR carries a raw name. The discriminator between a
+ * global read and a module read is the [ref]'s subtype.
  *
- * Materialized by the Flat → PIR converter wherever Flat IR carries a
- * raw name (FlatGlobalRef, FlatModuleRef, FlatLoadGlobal). After this
- * lowering, no operand position in any PIR instruction holds a name
- * reference: every use of a global / module goes through a temp filled
- * by a `PIRReadName`.
+ * The [ref] is a structural name reference, not a value — like
+ * [PIRBindFunctionExpr], it identifies a name to resolve rather than denoting
+ * an operand read of a function-local slot.
  */
-data class PIRReadName(
-    val target: PIRLocalVar,
-    val ref: PIRNameRef,
-    override val location: PIRLocation,
-    override val physicalLocation: PIRPhysicalLocation? = null,
-) : PIRInstruction {
-    override fun equals(other: Any?) = this === other
-    override fun hashCode() = System.identityHashCode(this)
-    override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitReadName(this)
-}
+data class PIRReadNameExpr(val ref: PIRNameRef) : PIRExpr
 
 // ─── Memory Store (side-effecting, no result) ───────────────
 

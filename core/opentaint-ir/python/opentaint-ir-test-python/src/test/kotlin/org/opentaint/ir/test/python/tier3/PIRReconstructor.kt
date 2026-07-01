@@ -129,10 +129,10 @@ class PIRReconstructor {
             // Walk the adapter's __call__ to find the impl function it forwards to.
             for (method in cls.methods) {
                 val readNames = method.cfg.instList
-                    .filterIsInstance<PIRReadName>()
-                    .mapNotNull { r ->
-                        val ref = r.ref as? PIRGlobalNameRef ?: return@mapNotNull null
-                        r.target.index to ref.qualifiedName
+                    .filterIsInstance<PIRAssign>()
+                    .mapNotNull { a ->
+                        val ref = (a.expr as? PIRReadNameExpr)?.ref as? PIRGlobalNameRef ?: return@mapNotNull null
+                        a.target.index to ref.qualifiedName
                     }.toMap()
                 for (inst in method.cfg.instList) {
                     if (inst is PIRCall) {
@@ -331,7 +331,7 @@ def _closure_class(f):
 
     /**
      * Collect all lambda or nested function references emitted by [func].
-     * Sources are (a) `PIRReadName` instructions with a [PIRGlobalNameRef]
+     * Sources are (a) `PIRReadNameExpr` reads with a [PIRGlobalNameRef]
      * pointing at the same module / a lambda, and (b) `PIRBindFunctionExpr`
      * references to lifted functions.
      */
@@ -344,15 +344,10 @@ def _closure_class(f):
             else if (module == moduleName) refs.add(short)
         }
         for (inst in func.instList) {
-            when (inst) {
-                is PIRReadName -> {
-                    val ref = inst.ref
-                    if (ref is PIRGlobalNameRef) addQn(ref.qualifiedName)
-                }
-                is PIRAssign -> {
-                    val expr = inst.expr
-                    if (expr is PIRBindFunctionExpr) addQn(expr.function.qualifiedName)
-                }
+            if (inst !is PIRAssign) continue
+            when (val expr = inst.expr) {
+                is PIRReadNameExpr -> (expr.ref as? PIRGlobalNameRef)?.let { addQn(it.qualifiedName) }
+                is PIRBindFunctionExpr -> addQn(expr.function.qualifiedName)
                 else -> {}
             }
         }
@@ -435,13 +430,6 @@ def _closure_class(f):
             is PIRDeleteAttr -> listOf("del ${val_(inst.obj)}.${inst.attribute}")
             is PIRDeleteSubscript -> listOf("del ${val_(inst.obj)}[${val_(inst.index)}]")
             is PIRDeleteGlobal -> listOf("del ${inst.ref.qualifiedName.substringAfterLast('.')}")
-            is PIRReadName -> {
-                val name = when (val ref = inst.ref) {
-                    is PIRGlobalNameRef -> sanitizeFuncName(ref.qualifiedName.substringAfterLast('.'))
-                    is PIRModuleNameRef -> ref.module
-                }
-                listOf("${val_(inst.target)} = $name")
-            }
             is PIRUnreachable -> listOf("raise RuntimeError('unreachable')")
         }
     }
@@ -515,6 +503,13 @@ def _closure_class(f):
                     && fnName in currentEmittedFuncNames
                 if (isSelfAssign) return emptyList()
                 listOf("$target = ${sanitizeFuncName(fnName)}")
+            }
+            is PIRReadNameExpr -> {
+                val name = when (val ref = expr.ref) {
+                    is PIRGlobalNameRef -> sanitizeFuncName(ref.qualifiedName.substringAfterLast('.'))
+                    is PIRModuleNameRef -> ref.module
+                }
+                listOf("$target = $name")
             }
             is PIRValue -> listOf("$target = ${val_(expr)}")
         }
@@ -619,6 +614,7 @@ def _closure_class(f):
                 is PIRIterExpr -> collectLocalFromValue(expr.iterable, locals)
                 is PIRTypeCheckExpr -> collectLocalFromValue(expr.value, locals)
                 is PIRBindFunctionExpr -> {}
+                is PIRReadNameExpr -> {}
                 is PIRValue -> collectLocalFromValue(expr, locals)
             }
         }
@@ -642,7 +638,6 @@ def _closure_class(f):
             is PIRDeleteLocal -> collectLocalFromValue(inst.local, locals)
             is PIRDeleteAttr -> collectLocalFromValue(inst.obj, locals)
             is PIRDeleteSubscript -> { collectLocalFromValue(inst.obj, locals); collectLocalFromValue(inst.index, locals) }
-            is PIRReadName -> collectLocalFromValue(inst.target, locals)
             is PIRGoto, is PIRDeleteGlobal, is PIRUnreachable -> {}
         }
     }

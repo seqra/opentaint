@@ -6,7 +6,7 @@ package org.opentaint.ir.api.python
  * `PIRValue` is exactly `PIRLocal | PIRConst` — a function-local slot
  * (variable, temporary, or parameter) or a literal constant. Name
  * resolution (global / module references) is **not** a value: it is an
- * explicit [PIRReadName] instruction whose result lands in a local.
+ * explicit [PIRReadNameExpr] read whose result lands in a local.
  *
  * Values are also expressions ([PIRExpr]) since they can appear as the
  * right-hand side of [PIRAssign].
@@ -139,14 +139,14 @@ data class PIRComplexConst(val real: Double, val imag: Double) : PIRConst {
 
 /**
  * A structural name that the IR must resolve to a value at runtime.
- * Carried by [PIRReadName] (read), [PIRStoreGlobal] / [PIRDeleteGlobal]
+ * Carried by [PIRReadNameExpr] (read), [PIRStoreGlobal] / [PIRDeleteGlobal]
  * (write/delete of a global), and [PIRBindFunctionExpr] (structural
  * reference to a lifted function).
  *
  * Name refs are deliberately not [PIRValue]: resolution is a
  * side-effecting load, distinct from an operand read. Spilling a name
- * into a local via `PIRReadName(tmp, ref)` makes the resolution an
- * explicit instruction in the CFG.
+ * into a local via `PIRAssign(tmp, PIRReadNameExpr(ref))` makes the
+ * resolution an explicit instruction in the CFG.
  */
 sealed interface PIRNameRef
 
@@ -163,7 +163,7 @@ data class PIRGlobalNameRef(val qualifiedName: String) : PIRNameRef {
  * A reference to a module by its top-level segment (e.g. `os` in
  * `os.getcwd()`). Sub-module access (e.g. `os.path`) is uniformly
  * represented as a [PIRLoadAttr] chain rooted at a local that was
- * filled by `PIRReadName(tmp, PIRModuleNameRef("os"))`.
+ * filled by `PIRAssign(tmp, PIRReadNameExpr(PIRModuleNameRef("os")))`.
  *
  * `module` must be a single segment with no dots.
  */

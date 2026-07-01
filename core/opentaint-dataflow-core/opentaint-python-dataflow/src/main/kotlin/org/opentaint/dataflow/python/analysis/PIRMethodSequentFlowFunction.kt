@@ -33,9 +33,11 @@ import org.opentaint.ir.api.python.PIRExpr
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRListExpr
 import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.api.python.PIRReturn
 import org.opentaint.ir.api.python.PIRSetExpr
 import org.opentaint.ir.api.python.PIRStoreAttr
+import org.opentaint.ir.api.python.PIRStoreGlobal
 import org.opentaint.ir.api.python.PIRStoreSubscript
 import org.opentaint.ir.api.python.PIRStringExpr
 import org.opentaint.ir.api.python.PIRSubscriptExpr
@@ -140,25 +142,16 @@ class PIRMethodSequentFlowFunction(
     ) {
         when (instruction) {
             is PIRAssign -> handleAssign(
-                assign = instruction,
-                currentFactAp = currentFactAp,
-                unchanged = unchanged,
-                propagateFact = propagateFact,
-                propagateFactWithAccessorExclude = propagateFactWithAccessorExclude,
+                instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude,
             )
             is PIRLoadAttr -> handleAttrRead(
-                inst = instruction,
-                initialFacts = initialFacts,
-                currentFactAp = currentFactAp,
-                unchanged = unchanged,
-                propagateFact = propagateFact,
-                propagateFactWithAccessorExclude = propagateFactWithAccessorExclude,
-                addSideEffectRequirement = addSideEffectRequirement,
-                addUnchecked = addUnchecked,
+                instruction, initialFacts, currentFactAp, unchanged, propagateFact,
+                propagateFactWithAccessorExclude, addSideEffectRequirement, addUnchecked
             )
             is PIRReturn -> handleReturn(instruction, currentFactAp, unchanged, propagateFact)
             is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact)
             is PIRStoreSubscript -> handleStoreSubscript(instruction, currentFactAp, unchanged, propagateFact)
+            is PIRStoreGlobal -> TODO()
             else -> unchanged()
         }
     }
@@ -186,20 +179,7 @@ class PIRMethodSequentFlowFunction(
 
         // Case 1: Simple value copy (x = y)
         if (expr is PIRValue) {
-            val assignFrom = PIRFlowFunctionUtils.accessPathBase(expr)
-            if (assignFrom != null) {
-                if (currentFactAp.base == assignFrom) {
-                    propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
-                    unchanged() // keep on source too
-                } else if (currentFactAp.base == assignTo) {
-                    // Strong update: kill fact on overwritten target
-                } else {
-                    unchanged()
-                }
-                return
-            }
-            // Constant or unresolvable value — kill if overwriting target, else pass
-            if (currentFactAp.base != assignTo) unchanged()
+            handleSimpleAssign(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
@@ -227,8 +207,26 @@ class PIRMethodSequentFlowFunction(
             return
         }
 
-        // Case 6: Other compound expression — strong update on target, pass through otherwise
+        // Case 6: Global / module read — read ClassStatic.<name> into the target
+        if (expr is PIRReadNameExpr) {
+            handleReadNameExpr(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            return
+        }
+
+        // Case 7: Other compound expression — strong update on target, pass through otherwise
         if (currentFactAp.base != assignTo) unchanged()
+    }
+
+    private fun handleReadNameExpr(
+        expr: PIRReadNameExpr,
+        assignTo: AccessPathBase,
+        currentFactAp: FinalFactAp,
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+    ) {
+        val (instance, accessor) = PIRFlowFunctionUtils.globalAccess(expr.ref)
+        handleAccessorRead(assignTo, instance, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
     }
 
     // ==========================================================================
@@ -363,6 +361,27 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
+    private fun handleSimpleAssign(
+        value: PIRValue,
+        assignTo: AccessPathBase,
+        currentFactAp: FinalFactAp,
+        unchanged: () -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+    ) {
+        if (currentFactAp.base != assignTo) unchanged()
+
+        val assignFrom = PIRFlowFunctionUtils.accessPathBase(value) ?: return
+
+        if (assignFrom == assignTo) {
+            unchanged()
+            return
+        }
+
+        if (currentFactAp.base == assignFrom) {
+            propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
+        }
+    }
+
     /**
      * Subscript read: target = obj[index]
      *
@@ -438,28 +457,26 @@ class PIRMethodSequentFlowFunction(
         unchanged: () -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
+        if (currentFactAp.base != assignTo) unchanged()
+
         val valueExpressions: List<PIRValue> = when (expr) {
             is PIRDictExpr -> expr.values
             is PIRListExpr -> expr.elements
             is PIRTupleExpr -> expr.elements
             is PIRSetExpr -> expr.elements
-            else -> return unchanged()
+            else -> return
         }
 
-        for (valueExpr in valueExpressions) {
-            val valueBase = PIRFlowFunctionUtils.accessPathBase(valueExpr) ?: continue
-            if (currentFactAp.base == valueBase) {
-                // Element-level taint (precise)
-                val elementFact = currentFactAp.rebase(assignTo)
-                    .prependAccessor(ElementAccessor)
-                propagateFact(elementFact, TraceInfo.Flow)
-                unchanged()  // value keeps its taint
-                return
-            }
-        }
+        for (elem in valueExpressions) {
+            val elemBase = PIRFlowFunctionUtils.accessPathBase(elem)
+            if (currentFactAp.base != elemBase) continue
 
-        // No value matched — strong update if overwriting target, else pass through
-        if (currentFactAp.base != assignTo) unchanged()
+            val elementFact = currentFactAp.rebase(assignTo)
+                .prependAccessor(ElementAccessor)
+
+            propagateFact(elementFact, TraceInfo.Flow)
+            return
+        }
     }
 
     // ==========================================================================
@@ -477,19 +494,14 @@ class PIRMethodSequentFlowFunction(
         unchanged: () -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
+        if (currentFactAp.base != assignTo) unchanged()
+
         val leftBase = PIRFlowFunctionUtils.accessPathBase(expr.left)
         val rightBase = PIRFlowFunctionUtils.accessPathBase(expr.right)
 
-        if ((leftBase != null && currentFactAp.base == leftBase) ||
-            (rightBase != null && currentFactAp.base == rightBase)
-        ) {
+        if (currentFactAp.base == leftBase || currentFactAp.base == rightBase) {
             propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
-            unchanged()
-            return
         }
-
-        // Strong update on overwritten target
-        if (currentFactAp.base != assignTo) unchanged()
     }
 
     // ==========================================================================
@@ -506,17 +518,15 @@ class PIRMethodSequentFlowFunction(
         unchanged: () -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        for (part in expr.parts) {
-            val partBase = PIRFlowFunctionUtils.accessPathBase(part) ?: continue
-            if (currentFactAp.base == partBase) {
-                propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
-                unchanged()
-                return
-            }
-        }
-
-        // Strong update on overwritten target
         if (currentFactAp.base != assignTo) unchanged()
+
+        for (part in expr.parts) {
+            val partBase = PIRFlowFunctionUtils.accessPathBase(part)
+            if (currentFactAp.base != partBase) continue
+
+            propagateFact(currentFactAp.rebase(assignTo), TraceInfo.Flow)
+            return
+        }
     }
 
     // ==========================================================================

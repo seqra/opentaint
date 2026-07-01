@@ -33,7 +33,6 @@ val PIRInstruction.targets: List<PIRLocalVar>
 
 private object TargetExtractor : PIRInstVisitor<List<PIRLocalVar>> {
     override fun visitAssign(inst: PIRAssign)                   = listOf(inst.target)
-    override fun visitReadName(inst: PIRReadName)               = listOf(inst.target)
     override fun visitLoadAttr(inst: PIRLoadAttr)               = listOf(inst.target)
     override fun visitStoreAttr(inst: PIRStoreAttr)             = emptyList<PIRLocalVar>()
     override fun visitStoreSubscript(inst: PIRStoreSubscript)   = emptyList<PIRLocalVar>()

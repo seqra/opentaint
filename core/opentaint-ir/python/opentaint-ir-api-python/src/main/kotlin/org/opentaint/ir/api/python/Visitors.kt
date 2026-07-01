@@ -5,7 +5,6 @@ package org.opentaint.ir.api.python
  */
 interface PIRInstVisitor<out T> {
     fun visitAssign(inst: PIRAssign): T
-    fun visitReadName(inst: PIRReadName): T
     fun visitLoadAttr(inst: PIRLoadAttr): T
     fun visitStoreAttr(inst: PIRStoreAttr): T
     fun visitStoreSubscript(inst: PIRStoreSubscript): T
@@ -35,7 +34,6 @@ interface PIRInstVisitor<out T> {
         fun defaultVisit(inst: PIRInstruction): T
 
         override fun visitAssign(inst: PIRAssign): T = defaultVisit(inst)
-        override fun visitReadName(inst: PIRReadName): T = defaultVisit(inst)
         override fun visitLoadAttr(inst: PIRLoadAttr): T = defaultVisit(inst)
         override fun visitStoreAttr(inst: PIRStoreAttr): T = defaultVisit(inst)
         override fun visitStoreSubscript(inst: PIRStoreSubscript): T = defaultVisit(inst)
@@ -105,6 +103,7 @@ interface PIRExprVisitor<out T> {
     fun visitIterExpr(expr: PIRIterExpr): T
     fun visitTypeCheckExpr(expr: PIRTypeCheckExpr): T
     fun visitBindFunctionExpr(expr: PIRBindFunctionExpr): T
+    fun visitReadNameExpr(expr: PIRReadNameExpr): T
     // Values (also expressions)
     fun visitValue(value: PIRValue): T
 }

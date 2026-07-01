@@ -1,7 +1,8 @@
 package org.opentaint.dataflow.python.util
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.Accessor.*
+import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.ir.api.python.*
 
 /**
@@ -27,14 +28,22 @@ object PIRFlowFunctionUtils {
      *   indices on closure children are already correct.
      * - PIRConst → null (not taint-trackable).
      *
-     * Global / module name references are not [PIRValue]s — they appear
-     * only on [PIRReadName] instructions, whose target is a local that
-     * downstream consumers see in this method.
+     * Global / module name references are not [PIRValue]s — a read of one is a
+     * [PIRReadNameExpr], whose taint routes through [globalAccess]
+     * (`ClassStatic` + a name accessor) onto the assign's target local.
      */
     fun accessPathBase(value: PIRValue): AccessPathBase? = when (value) {
         is PIRLocalVar -> AccessPathBase.LocalVar(value.index)
         is PIRParameterRef -> AccessPathBase.Argument(value.index)
         is PIRConst -> null // Constants are not taint-trackable
+    }
+
+    fun globalAccess(ref: PIRNameRef): Pair<AccessPathBase, Accessor> {
+        val name = when (ref) {
+            is PIRGlobalNameRef -> ref.qualifiedName
+            is PIRModuleNameRef -> ref.module
+        }
+        return AccessPathBase.ClassStatic to ClassStaticAccessor(name)
     }
 
     /**

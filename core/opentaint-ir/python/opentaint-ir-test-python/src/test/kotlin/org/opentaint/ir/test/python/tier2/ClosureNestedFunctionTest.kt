@@ -753,12 +753,12 @@ def cnf_transitive(x):
         val outer = findFunc("cnf_closure_read")
         val insts = outer.instList
 
-        // Build a map: localVar.index → qualifiedName for PIRReadName(GlobalNameRef).
+        // Build a map: localVar.index → qualifiedName for PIRReadNameExpr(GlobalNameRef).
         val nameByLocal = insts
-            .filterIsInstance<PIRReadName>()
-            .mapNotNull { r ->
-                val ref = r.ref as? PIRGlobalNameRef ?: return@mapNotNull null
-                r.target.index to ref.qualifiedName
+            .filterIsInstance<PIRAssign>()
+            .mapNotNull { a ->
+                val ref = (a.expr as? PIRReadNameExpr)?.ref as? PIRGlobalNameRef ?: return@mapNotNull null
+                a.target.index to ref.qualifiedName
             }
             .toMap()
         fun calleeQn(call: PIRCall): String? {

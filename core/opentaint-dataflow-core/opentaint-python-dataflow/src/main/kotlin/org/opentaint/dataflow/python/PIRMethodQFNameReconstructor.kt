@@ -12,7 +12,7 @@ import org.opentaint.ir.api.python.PIRLoadAttr
 import org.opentaint.ir.api.python.PIRLocal
 import org.opentaint.ir.api.python.PIRModuleNameRef
 import org.opentaint.ir.api.python.PIRParameterRef
-import org.opentaint.ir.api.python.PIRReadName
+import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.api.python.PIRType
 import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.api.python.targets
@@ -31,14 +31,6 @@ class PIRMethodQFNameReconstructor private constructor(
 
     override fun initialBinding(inst: PIRInstruction): LocalBinding? {
         return when (inst) {
-            is PIRReadName -> {
-                val name = when (val ref = inst.ref) {
-                    is PIRGlobalNameRef -> NameEntry.GlobalRef(ref.qualifiedName)
-                    is PIRModuleNameRef -> NameEntry.GlobalRef(ref.module)
-                }
-                LocalBinding(inst.target.index, name)
-            }
-
             is PIRAssign -> when (val rhv = inst.expr) {
                 is PIRParameterRef -> {
                     val name = classQnOrNull(rhv.type)?.let { NameEntry.GlobalRef(it) }
@@ -48,6 +40,14 @@ class PIRMethodQFNameReconstructor private constructor(
 
                 is PIRBindFunctionExpr ->
                     LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
+
+                is PIRReadNameExpr -> {
+                    val name = when (val ref = rhv.ref) {
+                        is PIRGlobalNameRef -> NameEntry.GlobalRef(ref.qualifiedName)
+                        is PIRModuleNameRef -> NameEntry.GlobalRef(ref.module)
+                    }
+                    LocalBinding(inst.target.index, name)
+                }
 
                 else -> null
             }

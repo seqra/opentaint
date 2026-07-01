@@ -102,7 +102,7 @@ class CfgConverter private constructor(parameters: List<FlatParameter>, qualifie
         phys: PIRPhysicalLocation?,
     ): PIRInstruction = when (flat) {
         is FlatAssign -> PIRAssign(vLocalVar(flat.target), v(flat.source), loc, phys)
-        is FlatReadName -> PIRReadName(vLocalVar(flat.target), convertNameRef(flat.ref), loc, phys)
+        is FlatReadName -> PIRAssign(vLocalVar(flat.target), PIRReadNameExpr(convertNameRef(flat.ref)), loc, phys)
         is FlatLoadAttr -> PIRLoadAttr(vLocalVar(flat.target), v(flat.obj), flat.attribute, TypeConverter.convert(flat.type), loc, phys)
         is FlatStoreAttr -> PIRStoreAttr(v(flat.obj), flat.attribute, v(flat.value), loc, phys)
         is FlatLoadSubscript -> PIRAssign(vLocalVar(flat.target), PIRSubscriptExpr(v(flat.obj), v(flat.index), TypeConverter.convert(flat.type)), loc, phys)

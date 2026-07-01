@@ -17,7 +17,7 @@ import org.opentaint.ir.api.python.PIRLoadAttr
  * 1. [PIRMethodQFNameReconstructor] produces fully-qualified callee names —
  *    mypy's static `resolvedCallee`, names reconstructed from receiver
  *    types / constructor-typed locals, names propagated through
- *    `PIRReadName` / `PIRBindFunctionExpr` chains.
+ *    `PIRReadNameExpr` / `PIRBindFunctionExpr` chains.
  * 2. [PIRMethodSimpleNameReconstructor] is consulted only when (1) produces
  *    nothing for the call; it yields the trailing attribute segment of the
  *    callee operand (the "simple name"), so taint rules keyed on a bare

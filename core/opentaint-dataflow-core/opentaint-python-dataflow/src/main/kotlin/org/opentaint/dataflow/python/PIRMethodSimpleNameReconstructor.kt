@@ -14,7 +14,7 @@ import org.opentaint.ir.api.python.targets
  * [org.opentaint.ir.api.python.PIRCall] in a method, as a fallback for [PIRMethodQFNameReconstructor].
  *
  * `obj.foo.bar(...)` yields `"bar"`; `foo(...)` where `foo` was bound by a
- * `PIRReadName` yields the last dotted segment of that read-name.
+ * `PIRReadNameExpr` yields the last dotted segment of that read-name.
  *
  * Structurally mirrors [PIRMethodQFNameReconstructor] — the shared
  * worklist/CFG machinery lives in [PIRMethodIntraproceduralWalker]. The
@@ -35,7 +35,7 @@ class PIRMethodSimpleNameReconstructor private constructor(
         return result
     }
 
-    // Only PIRLoadAttr seeds bindings here. A PIRReadName-rooted callee always
+    // Only PIRLoadAttr seeds bindings here. A PIRReadNameExpr-rooted callee always
     // yields a PIRMethodQFNameReconstructor result (the read produces a
     // GlobalRef binding that flattens), so the simple-name fallback is never
     // consulted for those calls.
