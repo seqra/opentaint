@@ -123,33 +123,25 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         val methodName: SignatureName
         var obj: ParamCondition? = null
         var enclosing: TypeConstraint? = null
+        var receiverPrefixActions: List<SemgrepPatternAction> = emptyList()
 
         when (val fn = call.fn) {
             is Identifier -> methodName = signatureName(fn.name)
             is Metavar -> methodName = SignatureName.MetaVar(fn.name)
             is Attribute -> {
                 methodName = signatureName(fn.name)
-                val recv = fn.obj
-                if (recv is Metavar) {
-                    // Instance method call `$X.method(...)`: single dot, receiver is the instance.
-                    obj = IsMetavar(MetavarAtom.create(recv.name))
-                } else {
-                    // No instance: a qualified global function `a.b.c.func(...)`; the call
-                    // resolver matches by the qualified enclosing name. The receiver chain must
-                    // be all-concrete (a metavar in it is unsupported); only the function name
-                    // may be a metavar.
-                    enclosing = pythonNamed(
-                        concreteDottedNameOrNull(recv) ?: transformationFailed("MethodInvocation_receiver_unsupported"),
-                    )
-                    obj = ParamCondition.True
-                }
+                val binding = resolveReceiver(fn.obj)
+                receiverPrefixActions = binding.prefixActions
+                obj = binding.obj
+                enclosing = binding.enclosing
             }
             else -> transformationFailed("MethodInvocation_fn: ${fn::class.simpleName}")
         }
 
         val (argActions, params) = generateParamConditions(call.args)
         return SemgrepPatternActionList(
-            argActions + MethodCall(methodName = methodName, result = null, params = params, obj = obj, enclosingClassName = enclosing),
+            receiverPrefixActions + argActions +
+                MethodCall(methodName = methodName, result = null, params = params, obj = obj, enclosingClassName = enclosing),
             hasEllipsisInTheBeginning = false,
             hasEllipsisInTheEnd = false,
         )
@@ -165,31 +157,45 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
             ?: transformationFailed("AttributeRead_name_metavar")
         val methodName = SignatureName.Concrete(PythonLanguageStrategy.attrReadAuxFnName(attrName))
 
-        val obj: ParamCondition
-        var enclosing: TypeConstraint? = null
-        val recv = attr.obj
-        if (recv is Metavar) {
-            obj = IsMetavar(MetavarAtom.create(recv.name))
-        } else {
-            enclosing = pythonNamed(
-                concreteDottedNameOrNull(recv) ?: transformationFailed("AttributeRead_receiver_unsupported"),
-            )
-            obj = ParamCondition.True
-        }
-
+        val binding = resolveReceiver(attr.obj)
         return SemgrepPatternActionList(
-            listOf(
+            binding.prefixActions +
                 MethodCall(
                     methodName = methodName,
                     result = null,
                     params = ParamConstraint.Concrete(emptyList()),
-                    obj = obj,
-                    enclosingClassName = enclosing,
+                    obj = binding.obj,
+                    enclosingClassName = binding.enclosing,
                 ),
-            ),
             hasEllipsisInTheBeginning = false,
             hasEllipsisInTheEnd = false,
         )
+    }
+
+    private data class ReceiverBinding(
+        val prefixActions: List<SemgrepPatternAction>,
+        val obj: ParamCondition,
+        val enclosing: TypeConstraint?,
+    )
+
+    /**
+     * Lowers a receiver of an attribute read / method call into prefix actions plus the condition
+     * to match it against. A bare metavar or an all-concrete dotted path bind directly; a
+     * metavar-based chain (`$A.attr1.attr2`) is recursively lowered into artificial-metavar-bound
+     * prefix actions so `$A.attr1.attr2.call1()` becomes `$T1 = $A.attr1; $T2 = $T1.attr2; ... $T2.call1()`.
+     */
+    private fun resolveReceiver(recv: SemgrepPythonPattern): ReceiverBinding {
+        if (recv is Metavar) {
+            return ReceiverBinding(emptyList(), IsMetavar(MetavarAtom.create(recv.name)), null)
+        }
+        // Keep the concrete-path check first so `a.b.c.func(...)` stays a qualified enclosing name
+        // rather than being split into chained temporaries.
+        concreteDottedNameOrNull(recv)?.let {
+            return ReceiverBinding(emptyList(), ParamCondition.True, pythonNamed(it))
+        }
+        val (actions, cond) = transformPatternIntoParamConditionWithActions(recv)
+        val obj = cond ?: transformationFailed("Receiver_unsupported")
+        return ReceiverBinding(actions, obj, null)
     }
 
     /** All-concrete dotted path (`os`, `flask.views`) or null. */
