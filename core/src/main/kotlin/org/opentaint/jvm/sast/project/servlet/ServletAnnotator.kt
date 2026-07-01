@@ -1,8 +1,9 @@
 package org.opentaint.jvm.sast.project.servlet
 
 import io.github.detekt.sarif4k.PropertyBag
+import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -13,7 +14,6 @@ import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.ast.AstSpanResolverProvider
 import org.opentaint.jvm.sast.project.SarifWebInfoAnnotator
-import org.opentaint.common.sast.sarif.TracePathNode
 
 class ServletAnnotator(
     sourceFileResolver: JIRSourceFileResolver,
@@ -32,7 +32,7 @@ class ServletAnnotator(
     override fun createControllerInfo(
         controllers: List<JIRMethod>,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>
     ): List<ControllerInfo> {
         val params = relevantServletParams(tracePaths)

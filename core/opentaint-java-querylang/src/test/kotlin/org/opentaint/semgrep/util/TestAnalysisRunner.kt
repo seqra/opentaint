@@ -10,6 +10,8 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
@@ -111,12 +113,19 @@ class TestAnalysisRunner(
                     setOf(ep), allVulnerabilities,
                     timeout = 1.minutes, cancellationTimeout = 10.seconds
                 )
-                val traces = engine.resolveVulnerabilityTraces(
+
+                val interProcTraces = engine.resolveVulnerabilityInterProceduralTraces(
                     setOf(ep), vulnerabilities,
                     resolverParams = TraceResolver.Params(),
                     timeout = 1.minutes, cancellationTimeout = 10.seconds
+                )
+
+                val traces = engine.resolveVulnerabilityTraces(
+                    interProcTraces,
+                    resolverParams = TracePathResolveParams(),
+                    timeout = 1.minutes, cancellationTimeout = 10.seconds
                 ).mapNotNull { trace ->
-                    trace.takeIf { it.trace?.sourceToSinkTrace?.startNodes?.isNotEmpty() ?: false }
+                    trace.takeIf { it.trace !is TracePathGenerationResult.Failure }
                 }
                 
                 sample to traces

@@ -5,9 +5,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
 import mu.KLogging
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.util.analysis.ApplicationGraph
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.MethodEntryPointCaller
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -21,8 +18,10 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.RelevantF
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
-import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.concurrentReadSafeForEach
+import org.opentaint.ir.api.common.CommonMethod
+import org.opentaint.ir.api.common.cfg.CommonInst
+import org.opentaint.util.analysis.ApplicationGraph
 import java.util.PriorityQueue
 import java.util.concurrent.atomic.LongAdder
 import kotlin.math.sign
@@ -457,36 +456,10 @@ class TaintAnalysisUnitRunner(
         }
     }
 
-    fun resolveIntraProceduralTraceSummary(
-        methodEntryPoint: MethodEntryPoint,
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean = false,
-    ): List<MethodTraceResolver.SummaryTrace> {
+    fun methodTraceResolver(methodEntryPoint: MethodEntryPoint): MethodTraceResolver {
         val methodRunners = methodAnalyzers(methodEntryPoint)
         val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.resolveIntraProceduralTraceSummary(statement, facts, includeStatement)
-    }
-
-    fun resolveIntraProceduralTraceSummaryFromCall(
-        methodEntryPoint: MethodEntryPoint,
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace> {
-        val methodRunners = methodAnalyzers(methodEntryPoint)
-        val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.resolveIntraProceduralTraceSummaryFromCall(statement, calleeEntry)
-    }
-
-    fun resolveIntraProceduralFullTrace(
-        methodEntryPoint: MethodEntryPoint,
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> {
-        val methodRunners = methodAnalyzers(methodEntryPoint)
-        val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.resolveIntraProceduralFullTrace(summaryTrace, cancellation, collapseUnchangedNodes)
+        return runner.methodTraceResolver()
     }
 
     fun resolveIntraProceduralForwardFullTrace(

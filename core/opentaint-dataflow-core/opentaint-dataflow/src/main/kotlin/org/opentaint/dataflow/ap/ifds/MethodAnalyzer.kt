@@ -25,6 +25,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.RelevantFactFilter
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.TraceGraph
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolverStats
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.cartesianProductMapTo
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
@@ -118,22 +119,7 @@ interface MethodAnalyzer {
         handler: MethodCallResolutionFailureHandler
     )
 
-    fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean = false,
-    ): List<MethodTraceResolver.SummaryTrace>
-
-    fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace>
-
-    fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace>
+    fun methodTraceResolver(): MethodTraceResolver
 
     fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -206,7 +192,7 @@ class NormalMethodAnalyzer(
     private val stepsForTaintMark: MutableMap<String, Long>? = taintRulesStatsSamplingPeriod?.let { hashMapOf() }
 
     private var summaryEdgesHandled: Long = 0
-    private var traceResolverSteps: Long = 0
+    private val traceResolverStats = TraceResolverStats()
 
     private var factDepthLimit = INITIAL_ALLOWED_FACT_DEPTH
     private var delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
@@ -240,7 +226,7 @@ class NormalMethodAnalyzer(
         stats.stats(methodEntryPoint.method).apply {
             steps += analyzerSteps
             handledSummaries += summaryEdgesHandled
-            traceResolverSteps += this@NormalMethodAnalyzer.traceResolverSteps
+            traceResolverSteps += this@NormalMethodAnalyzer.traceResolverStats.traceResolverSteps
             unprocessedEdges += this@NormalMethodAnalyzer.unprocessedEdges.size
             coveredInstructions.or(edges.reachedStatements())
             this@NormalMethodAnalyzer.stepsForTaintMark?.forEach { (mark, count) ->
@@ -1330,33 +1316,8 @@ class NormalMethodAnalyzer(
         return true
     }
 
-    override fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean
-    ): List<MethodTraceResolver.SummaryTrace> {
-        val resolver = MethodTraceResolver(runner, analysisContext, edges, methodInstGraph)
-        return resolver.resolveIntraProceduralTrace(statement, facts, includeStatement)
-    }
-
-    override fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace> {
-        val resolver = MethodTraceResolver(runner, analysisContext, edges, methodInstGraph)
-        return resolver.resolveIntraProceduralTraceFromCall(statement, calleeEntry)
-    }
-
-    override fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> {
-        val resolver = MethodTraceResolver(runner, analysisContext, edges, methodInstGraph)
-        val (fullTrace, steps) = resolver.resolveIntraProceduralFullTrace(summaryTrace, cancellation, collapseUnchangedNodes)
-        traceResolverSteps += steps
-        return fullTrace
-    }
+    override fun methodTraceResolver(): MethodTraceResolver =
+        MethodTraceResolver(runner, traceResolverStats, analysisContext, edges, methodInstGraph)
 
     override fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -1571,27 +1532,8 @@ class EmptyMethodAnalyzer(
         error("Empty method should not method resolution results")
     }
 
-    override fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean
-    ): List<MethodTraceResolver.SummaryTrace> {
-        TODO("Not yet implemented")
-    }
-
-    override fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> {
-        TODO("Not yet implemented")
-    }
-
-    override fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace> {
-        error("Empty method have no calls")
+    override fun methodTraceResolver(): MethodTraceResolver {
+        error("Empty method has no trace")
     }
 
     override fun resolveIntraProceduralForwardFullTrace(
@@ -1858,40 +1800,7 @@ class TimedMethodAnalyzer(
         base.handleMethodCallResolutionFailure(callExpr, handler)
     }
 
-    override fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean,
-    ): List<MethodTraceResolver.SummaryTrace> = timeOperation(
-        operation = "resolveIntraProceduralTraceSummary",
-        category = OpCategory.TRACE,
-        addToTotalTime = false,
-    ) {
-        base.resolveIntraProceduralTraceSummary(statement, facts, includeStatement)
-    }
-
-    override fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry,
-    ): List<MethodTraceResolver.SummaryTrace> = timeOperation(
-        operation = "resolveIntraProceduralTraceSummaryFromCall",
-        category = OpCategory.TRACE,
-        addToTotalTime = false,
-    ) {
-        base.resolveIntraProceduralTraceSummaryFromCall(statement, calleeEntry)
-    }
-
-    override fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> = timeOperation(
-        operation = "resolveIntraProceduralFullTrace",
-        category = OpCategory.TRACE,
-        addToTotalTime = false,
-    ) {
-        base.resolveIntraProceduralFullTrace(summaryTrace, cancellation, collapseUnchangedNodes)
-    }
+    override fun methodTraceResolver(): MethodTraceResolver = base.methodTraceResolver()
 
     override fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,

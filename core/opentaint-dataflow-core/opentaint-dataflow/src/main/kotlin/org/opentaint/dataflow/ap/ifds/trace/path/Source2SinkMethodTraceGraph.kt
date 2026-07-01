@@ -1,4 +1,4 @@
-package org.opentaint.common.sast.sarif
+package org.opentaint.dataflow.ap.ifds.trace.path
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet

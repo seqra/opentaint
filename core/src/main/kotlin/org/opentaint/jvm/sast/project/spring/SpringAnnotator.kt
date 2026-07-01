@@ -1,11 +1,12 @@
 package org.opentaint.jvm.sast.project.spring
 
 import io.github.detekt.sarif4k.PropertyBag
+import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -14,7 +15,6 @@ import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.ast.AstSpanResolverProvider
 import org.opentaint.jvm.sast.dataflow.matchedAnnotations
 import org.opentaint.jvm.sast.project.SarifWebInfoAnnotator
-import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.jvm.sast.sarif.getMethod
 import org.opentaint.jvm.sast.sarif.isPureEntryPoint
 
@@ -44,7 +44,7 @@ class SpringAnnotator(
     override fun createControllerInfo(
         controllers: List<JIRMethod>,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>
     ): List<ControllerInfo> {
         val tainted = collectTaintedArguments(tracePaths.flatten())

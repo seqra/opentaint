@@ -1,4 +1,4 @@
-package org.opentaint.common.sast.sarif
+package org.opentaint.dataflow.ap.ifds.trace.path
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
@@ -9,7 +9,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry.Sourc
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSink
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSource
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralFullTraceNode
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralStart2FinalTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralSummaryTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.SourceToSinkTrace
@@ -44,7 +44,7 @@ fun createSource2SinkGraph(trace: SourceToSinkTrace): Source2SinkTraceGraph {
         .forEachNodeOrdered { rootNode ->
             val rootIdx = graph.getOrCreateNodeIdx(rootNode)
 
-            if (rootNode !is InterProceduralFullTraceNode) {
+            if (rootNode !is InterProceduralStart2FinalTraceNode) {
                 TODO("Root node is not full")
             }
 
@@ -66,7 +66,7 @@ private fun Source2SinkTraceGraph.traverseStart2Source(
     trace: SourceToSinkTrace,
     visited: IntOpenHashSet,
     nodeIdx: Int,
-    node: InterProceduralFullTraceNode
+    node: InterProceduralStart2FinalTraceNode
 ) {
     if (!visited.add(nodeIdx)) return
 
@@ -87,7 +87,7 @@ private fun Source2SinkTraceGraph.traverseStart2Source(
     }
 
     sourceSuccessors.map { it.node }.forEachNodeOrdered { successor ->
-        if (successor !is InterProceduralFullTraceNode) {
+        if (successor !is InterProceduralStart2FinalTraceNode) {
             TODO("Start-2-source node is not full")
         }
 
@@ -114,7 +114,7 @@ private fun Source2SinkTraceGraph.traverseStartToSink(
     }
 
     val finalEntry = when (node) {
-        is InterProceduralFullTraceNode -> node.trace.final
+        is InterProceduralStart2FinalTraceNode -> node.trace.final
         is InterProceduralSummaryTraceNode -> node.trace.final
     }
 
@@ -146,12 +146,12 @@ private object NodeComparator : Comparator<InterProceduralTraceNode> {
     ): Int = when (a) {
         is InterProceduralSummaryTraceNode -> when (b) {
             is InterProceduralSummaryTraceNode -> SummaryNodeComparator.compare(a, b)
-            is InterProceduralFullTraceNode -> -1
+            is InterProceduralStart2FinalTraceNode -> -1
         }
 
-        is InterProceduralFullTraceNode -> when (b) {
+        is InterProceduralStart2FinalTraceNode -> when (b) {
             is InterProceduralSummaryTraceNode -> 1
-            is InterProceduralFullTraceNode -> FullNodeComparator.compare(a, b)
+            is InterProceduralStart2FinalTraceNode -> FullNodeComparator.compare(a, b)
         }
     }
 }
@@ -168,10 +168,10 @@ private object SummaryNodeComparator : Comparator<InterProceduralSummaryTraceNod
     }
 }
 
-private object FullNodeComparator : Comparator<InterProceduralFullTraceNode> {
+private object FullNodeComparator : Comparator<InterProceduralStart2FinalTraceNode> {
     override fun compare(
-        a: InterProceduralFullTraceNode,
-        b: InterProceduralFullTraceNode
+        a: InterProceduralStart2FinalTraceNode,
+        b: InterProceduralStart2FinalTraceNode
     ): Int {
         MethodComparator.compare(a.trace.method, b.trace.method).let { if (it != 0) return it }
         a.trace.traceKind.compareTo(b.trace.traceKind).let { if (it != 0) return it }

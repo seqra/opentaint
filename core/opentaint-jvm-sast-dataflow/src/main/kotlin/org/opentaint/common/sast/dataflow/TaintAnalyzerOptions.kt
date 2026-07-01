@@ -10,5 +10,6 @@ data class TaintAnalyzerOptions(
     val analysisCwe: Set<Int>?,
     val storeSummaries: Boolean,
     val experimentalAAInterProcCallDepth: Int = 0,
+    val tracePathLimit: Int? = null,
     val debugOptions: DebugOptions?
 )

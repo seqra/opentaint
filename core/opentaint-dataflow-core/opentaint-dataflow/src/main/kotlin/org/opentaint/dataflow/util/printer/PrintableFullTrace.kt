@@ -1,28 +1,32 @@
 package org.opentaint.dataflow.util.printer
 
-import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.FullTrace
+import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.FullStart2FinalTrace
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
 
-fun FullTrace.view() {
+fun FullStart2FinalTrace.view() {
     PrintableFullTrace(this).view(name = "")
 }
 
 private class PrintableFullTrace(
-    private val trace: FullTrace,
-) : PrintableGraph<TraceEntry, Pair<TraceEntry, TraceEntry>> {
-    override fun allNodes(): List<TraceEntry> {
-        val result = mutableSetOf(trace.startEntry, trace.final)
+    private val trace: FullStart2FinalTrace,
+) : PrintableGraph<Int, Pair<Int, Int>> {
+    override fun allNodes(): List<Int> {
+        val result = mutableSetOf(trace.startEntryId, trace.finalId)
         result.addAll(trace.successors.keys)
-        trace.successors.values.forEach { result.addAll(it) }
+        trace.successors.values.forEach { set ->
+            set.forEach { result.add(it) }
+        }
         return result.toList()
     }
 
-    override fun edgeLabel(edge: Pair<TraceEntry, TraceEntry>): String = ""
+    override fun edgeLabel(edge: Pair<Int, Int>): String = ""
 
-    override fun successors(node: TraceEntry): List<Pair<Pair<TraceEntry, TraceEntry>, TraceEntry>> =
-        trace.successors[node].orEmpty().map { (node to it) to it }
+    override fun successors(node: Int): List<Pair<Pair<Int, Int>, Int>> =
+        trace.successors.get(node)?.toSet().orEmpty().map { (node to it) to it }
 
-    override fun nodeLabel(node: TraceEntry): String = when (node) {
+    override fun nodeLabel(node: Int): String = nodeLabel(trace.entries[node])
+
+    fun nodeLabel(node: TraceEntry): String = when (node) {
         is TraceEntry.Action -> "Action{${node.statement}}(${node.nodeEdgesStr()})[${node.actionStr()}]"
         is TraceEntry.Final -> "Final{${node.statement}}(${node.nodeEdgesStr()})"
         is TraceEntry.MethodEntry -> "Entry{${node.statement}}(${node.nodeEdgesStr()})"

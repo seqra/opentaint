@@ -30,7 +30,11 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker.VerifiedVulnerability
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker.VulnerabilityVerificationStatus
+import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithInterproceduralTrace
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
+import org.opentaint.dataflow.ap.ifds.trace.path.generateTracePath
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
@@ -193,12 +197,34 @@ class TaintAnalysisUnitRunnerManager(
     }
 
     fun resolveVulnerabilityTraces(
+        vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
+        resolverParams: TracePathResolveParams,
+        timeout: Duration,
+        cancellationTimeout: Duration
+    ): List<VulnerabilityWithTrace> {
+        if (vulnerabilities.isEmpty()) return emptyList()
+        cancellation.activate()
+
+        val traceResolverMemoryManager = MemoryManager(TRACE_GENERATION_MEMORY_THRESHOLD, apManager.refManager()) {
+            cancellation.cancel()
+            updateFailureStatus(Status.OOM)
+            logger.error { "Running low on memory, stopping trace resolution" }
+        }
+
+        return traceResolverMemoryManager.runWithMemoryManager {
+            resolveVulnerabilityTracesPathWithCancellation(
+                vulnerabilities, resolverParams, timeout, cancellationTimeout
+            )
+        }
+    }
+
+    fun resolveVulnerabilityInterProceduralTraces(
         entryPoints: Set<CommonMethod>,
         vulnerabilities: List<TaintVulnerability>,
         resolverParams: TraceResolver.Params,
         timeout: Duration,
         cancellationTimeout: Duration
-    ): List<VulnerabilityWithTrace> {
+    ): List<VulnerabilityWithInterproceduralTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
         cancellation.activate()
 
@@ -221,14 +247,14 @@ class TaintAnalysisUnitRunnerManager(
         resolverParams: TraceResolver.Params,
         timeout: Duration,
         cancellationTimeout: Duration,
-    ): List<VulnerabilityWithTrace> {
+    ): List<VulnerabilityWithInterproceduralTrace> {
         val traceResolver = TraceResolver(entryPoints, this, resolverParams, cancellation)
 
         val states = vulnerabilities.map { TraceResolver.State.Initial(it) }
-        val traceResolutionContext = object : ParallelProcessingContext<TraceResolver.State, VulnerabilityWithTrace>(
+        val traceResolutionContext = object : ParallelProcessingContext<TraceResolver.State, VulnerabilityWithInterproceduralTrace>(
             analyzerDispatcher, name = "Trace resolution", states
         ) {
-            override fun processItem(item: TraceResolver.State): ProcessingResult<TraceResolver.State, VulnerabilityWithTrace> {
+            override fun processItem(item: TraceResolver.State): ProcessingResult<TraceResolver.State, VulnerabilityWithInterproceduralTrace> {
                 val res = traceResolver.resolveTrace(item)
                 return when (res) {
                     is TraceResolver.TraceResolutionResult.InProgress -> {
@@ -236,17 +262,17 @@ class TaintAnalysisUnitRunnerManager(
                     }
 
                     is TraceResolver.TraceResolutionResult.NoTrace -> {
-                        ProcessingResult.Done(VulnerabilityWithTrace(res.vulnerability, trace = null))
+                        ProcessingResult.Done(VulnerabilityWithInterproceduralTrace(res.vulnerability, trace = null))
                     }
 
                     is TraceResolver.TraceResolutionResult.Resolved -> {
-                        ProcessingResult.Done(VulnerabilityWithTrace(res.vulnerability, res.trace))
+                        ProcessingResult.Done(VulnerabilityWithInterproceduralTrace(res.vulnerability, res.trace))
                     }
                 }
             }
 
-            override fun createUnprocessed(item: TraceResolver.State): VulnerabilityWithTrace =
-                VulnerabilityWithTrace(item.vulnerability, trace = null)
+            override fun createUnprocessed(item: TraceResolver.State): VulnerabilityWithInterproceduralTrace =
+                VulnerabilityWithInterproceduralTrace(item.vulnerability, trace = null)
 
             private var prevStats: MethodStats? = null
 
@@ -272,6 +298,33 @@ class TaintAnalysisUnitRunnerManager(
                         }
                     }
                 }
+            }
+        }
+
+        return traceResolutionContext.processAll(
+            progressScope, timeout, cancellationTimeout, cancellation
+        )
+    }
+
+    private fun resolveVulnerabilityTracesPathWithCancellation(
+        vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
+        resolverParams: TracePathResolveParams,
+        timeout: Duration,
+        cancellationTimeout: Duration,
+    ): List<VulnerabilityWithTrace> {
+        val traceResolutionContext = object : ParallelProcessingContext<VulnerabilityWithInterproceduralTrace, VulnerabilityWithTrace>(
+            analyzerDispatcher, name = "Trace path resolution", vulnerabilities
+        ) {
+            override fun processItem(item: VulnerabilityWithInterproceduralTrace): ProcessingResult<VulnerabilityWithInterproceduralTrace, VulnerabilityWithTrace> {
+                val resolved = generateTracePath(item.trace, resolverParams)
+                return ProcessingResult.Done(VulnerabilityWithTrace(item.vulnerability, resolved))
+            }
+
+            override fun createUnprocessed(item: VulnerabilityWithInterproceduralTrace): VulnerabilityWithTrace =
+                VulnerabilityWithTrace(item.vulnerability, TracePathGenerationResult.Failure)
+
+            override fun reportStats() {
+                logger.info { reportMemoryUsage() }
             }
         }
 

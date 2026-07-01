@@ -1,9 +1,12 @@
-package org.opentaint.common.sast.sarif
+package org.opentaint.dataflow.ap.ifds.trace.path
 
-import io.mockk.mockk
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.junit.jupiter.api.Test
 import org.opentaint.ir.api.common.CommonMethod
+import org.opentaint.ir.api.common.CommonMethodParameter
+import org.opentaint.ir.api.common.CommonTypeName
+import org.opentaint.ir.api.common.cfg.CommonInst
+import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -232,11 +235,19 @@ class MethodTraceSearchTest {
         assertEquals(1, result.size)
     }
 
+    private data class DummyMethod(
+        override val name: String,
+    ) : CommonMethod {
+        override val parameters: List<CommonMethodParameter> = emptyList()
+        override val returnType: CommonTypeName get() = error("Unsupported")
+        override fun flowGraph(): ControlFlowGraph<CommonInst> = error("Unsupported")
+    }
+
     @Test
     fun allMethodTracesProducesACoveringTraceOnRealGraph() {
         val g = Source2SinkMethodTraceGraph()
         // register methods 0..2 densely
-        val m = (0..2).map { g.getOrCreateMethodIdx(mockk<CommonMethod>()) }
+        val m = (0..2).map { g.getOrCreateMethodIdx(DummyMethod("$it")) }
         val sink = m[0]; val root = m[1]; val source = m[2]
 
         g.sinkMethods.add(sink)

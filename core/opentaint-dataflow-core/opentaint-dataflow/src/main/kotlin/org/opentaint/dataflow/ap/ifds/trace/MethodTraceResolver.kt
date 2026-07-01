@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.trace
 
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
@@ -49,6 +50,7 @@ import org.opentaint.dataflow.util.add
 import org.opentaint.dataflow.util.bitSetOf
 import org.opentaint.dataflow.util.cartesianProductMapTo
 import org.opentaint.dataflow.util.collectToListWithPostProcess
+import org.opentaint.dataflow.util.contains
 import org.opentaint.dataflow.util.forEach
 import org.opentaint.dataflow.util.getOrCreateIndex
 import org.opentaint.dataflow.util.object2IntMap
@@ -62,6 +64,7 @@ import java.util.Objects
 
 class MethodTraceResolver(
     private val runner: AnalysisRunner,
+    private val stats: TraceResolverStats,
     private val analysisContext: MethodAnalysisContext,
     private val edges: MethodAnalyzerEdges,
     private val graph: MethodInstGraph,
@@ -81,18 +84,22 @@ class MethodTraceResolver(
         SummaryTrace, // Trace summarizes method behaviour
     }
 
-    data class FullTrace(
+    data class FullStart2FinalTrace(
         val method: MethodEntryPoint,
-        val startEntry: TraceEntry.StartTraceEntry,
-        val final: TraceEntry.Final,
-        val successors: Map<TraceEntry, Set<TraceEntry>>,
+        val entries: Array<TraceEntry>,
+        val startEntryId: Int,
+        val finalId: Int,
+        val successors: Int2ObjectOpenHashMap<CompactIntSet>,
         val traceKind: TraceKind,
     ) {
+        val startEntry: TraceEntry.StartTraceEntry get() = entries[startEntryId] as TraceEntry.StartTraceEntry
+        val final: TraceEntry.Final get() = entries[finalId] as TraceEntry.Final
+
         override fun hashCode(): Int = Objects.hash(method, final)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is FullTrace) return false
+            if (other !is FullStart2FinalTrace) return false
 
             // note: FullTrace is uniquely defined by its start end final entries
             if (method != other.method) return false
@@ -101,6 +108,13 @@ class MethodTraceResolver(
             return startEntry == other.startEntry
         }
     }
+
+    data class Start2FinalTrace(
+        val method: MethodEntryPoint,
+        val startEntry: TraceEntry.StartTraceEntry,
+        val final: TraceEntry.Final,
+        val traceKind: TraceKind,
+    )
 
     @Suppress("EqualsOrHashCode")
     data class SummaryTrace(
@@ -306,7 +320,7 @@ class MethodTraceResolver(
     }
 
     private class EntryManager {
-        private val entries = arrayListOf<TraceEntry>()
+        val entries = arrayListOf<TraceEntry>()
         private val entryId = Object2IntOpenHashMap<TraceEntry>().apply { defaultReturnValue(NO_ENTRY) }
         private var actionEntries = 0
 
@@ -472,21 +486,69 @@ class MethodTraceResolver(
         }
     }
 
-    fun resolveIntraProceduralFullTrace(
+    fun resolveIntraProceduralStart2FinalTrace(
         summaryTrace: SummaryTrace,
         cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): Pair<List<FullTrace>, Int> {
+    ): List<Start2FinalTrace> {
         check(summaryTrace.method == methodEntryPoint) { "Incorrect summary trace" }
 
         val builder = TraceBuilder(entryManager.entryId(summaryTrace.final), cancellation)
         builder.resolveTrace(summaryTrace.traceKind)
+        stats.traceResolverSteps += builder.steps
+
+        val traces = mutableListOf<Start2FinalTrace>()
+        builder.startEntryIds.forEach { startEntryId ->
+            val startEntry = entryManager.entryById(startEntryId) as TraceEntry.StartTraceEntry
+            traces += Start2FinalTrace(methodEntryPoint, startEntry, summaryTrace.final, summaryTrace.traceKind)
+        }
+        return traces
+    }
+
+    fun resolveIntraProceduralFullStart2FinalTrace(
+        summaryTrace: SummaryTrace,
+        cancellation: Cancellation,
+        collapseUnchangedNodes: Boolean
+    ): List<FullStart2FinalTrace> {
+        check(summaryTrace.method == methodEntryPoint) { "Incorrect summary trace" }
+
+        val builder = TraceBuilder(entryManager.entryId(summaryTrace.final), cancellation)
+        builder.resolveTrace(summaryTrace.traceKind)
+        stats.traceResolverSteps += builder.steps
+
         builder.removeUnreachableNodes()
         if (collapseUnchangedNodes) {
             builder.collapseUnchangedNodes()
         }
         val fullTrace = builder.fullTrace(summaryTrace.traceKind)
-        return fullTrace to builder.steps
+        return fullTrace
+    }
+
+    fun resolveIntraProceduralFullStart2FinalTrace(
+        start2FinalTrace: Start2FinalTrace,
+        cancellation: Cancellation,
+        collapseUnchangedNodes: Boolean
+    ): List<FullStart2FinalTrace> {
+        check(start2FinalTrace.method == methodEntryPoint) { "Incorrect summary trace" }
+
+        val builder = TraceBuilder(entryManager.entryId(start2FinalTrace.final), cancellation)
+        builder.resolveTrace(start2FinalTrace.traceKind)
+        stats.traceResolverSteps += builder.steps
+
+        val requiredStartId = entryManager.entryId(start2FinalTrace.startEntry)
+        if (!builder.startEntryIds.contains(requiredStartId)) {
+            logger.warn("Trace start entry to found for: $methodEntryPoint")
+            return emptyList()
+        }
+
+        builder.startEntryIds.clear()
+        builder.startEntryIds.set(requiredStartId)
+
+        builder.removeUnreachableNodes()
+        if (collapseUnchangedNodes) {
+            builder.collapseUnchangedNodes()
+        }
+        val fullTrace = builder.fullTrace(start2FinalTrace.traceKind)
+        return fullTrace
     }
 
     private fun TraceBuilder.removeUnreachableNodes() {
@@ -577,30 +639,65 @@ class MethodTraceResolver(
         }
     }
 
-    private fun TraceBuilder.fullTrace(traceKind: TraceKind): List<FullTrace> {
-        val finalEntry = entryManager.entryById(finalEntryId) as TraceEntry.Final
-        val successors = successors()
+    private class EntryMapper(val manager: EntryManager) {
+        private val mapping = Int2IntOpenHashMap()
+        val entries = mutableListOf<TraceEntry>()
 
-        val result = mutableListOf<FullTrace>()
+        fun translate(id: Int): Int = mapping.computeIfAbsent(id) {
+            val entry = manager.entryById(id)
+            val idx = entries.size
+            entries.add(entry)
+            idx
+        }
+    }
+
+    private fun TraceBuilder.fullTrace(traceKind: TraceKind): List<FullStart2FinalTrace> {
+        val allSuccessors = successors()
+
+        val result = mutableListOf<FullStart2FinalTrace>()
         startEntryIds.forEach { entryId: Int ->
-            val entry = entryManager.entryById(entryId)
-            check(entry is TraceEntry.StartTraceEntry)
-
-            result += FullTrace(methodEntryPoint, entry, finalEntry, successors, traceKind)
+            val mapper = EntryMapper(entryManager)
+            val finalEntry = mapper.translate(finalEntryId)
+            val startEntry = mapper.translate(entryId)
+            val successors = mapper.translateSuccessors(entryId, allSuccessors)
+            val entries = mapper.entries.toTypedArray()
+            result += FullStart2FinalTrace(methodEntryPoint, entries, startEntry, finalEntry, successors, traceKind)
         }
 
         return result
     }
 
-    private fun TraceBuilder.successors(): Map<TraceEntry, Set<TraceEntry>> {
-        val allSuccessors = hashMapOf<TraceEntry, MutableSet<TraceEntry>>()
-        for ((entryId, entryPredecessorIds) in predecessors) {
-            val entry = entryManager.entryById(entryId)
+    private fun EntryMapper.translateSuccessors(
+        start: Int,
+        allSuccessors: Int2ObjectOpenHashMap<CompactIntSet>
+    ): Int2ObjectOpenHashMap<CompactIntSet> {
+        val result = Int2ObjectOpenHashMap<CompactIntSet>()
 
+        val unprocessed = IntArrayList()
+        unprocessed.add(start)
+        while (unprocessed.isNotEmpty()) {
+            val node = unprocessed.removeInt(unprocessed.lastIndex)
+
+            val translatedNode = translate(node)
+            if (result.containsKey(translatedNode)) continue
+
+            val translatedSuccessors = CompactIntSet()
+            allSuccessors.get(node)?.forEach {
+                unprocessed.add(it)
+                translatedSuccessors.add(translate(it))
+            }
+
+            result.put(translatedNode, translatedSuccessors)
+        }
+
+        return result
+    }
+
+    private fun TraceBuilder.successors(): Int2ObjectOpenHashMap<CompactIntSet> {
+        val allSuccessors = Int2ObjectOpenHashMap<CompactIntSet>()
+        for ((entryId, entryPredecessorIds) in predecessors) {
             entryPredecessorIds.forEach { predecessorId: Int ->
-                val predecessor = entryManager.entryById(predecessorId)
-                val successors = allSuccessors.getOrPut(predecessor, ::hashSetOf)
-                successors.add(entry)
+                allSuccessors.computeIfAbsent(predecessorId) { CompactIntSet() }.add(entryId)
             }
         }
         return allSuccessors
@@ -1595,13 +1692,13 @@ class MethodTraceResolver(
         }
     }
 
-    private fun TraceBuilder.debugTrace(): FullTrace {
-        val finalEntry = entryManager.entryById(finalEntryId) as TraceEntry.Final
-        val successors = successors().toMutableMap()
-        val additionalSuccessors = hashMapOf<TraceEntry, MutableSet<TraceEntry>>()
+    private fun TraceBuilder.debugTrace(): FullStart2FinalTrace {
+        val successors = successors()
+        val additionalSuccessors = Int2ObjectOpenHashMap<CompactIntSet>()
 
         val fakeStartEntry = TraceEntry.SourceStartEntry(null, emptySet(), methodEntryPoint.statement)
-        val startSuccessors = hashSetOf<TraceEntry>().also { additionalSuccessors[fakeStartEntry] = it }
+        val fakeStartId = entryManager.entryId(fakeStartEntry)
+        val startSuccessors = CompactIntSet().also { additionalSuccessors.put(fakeStartId, it) }
 
         val allEntries = predecessors.keys.toBitSet { it }
         predecessors.values.forEach { pred ->
@@ -1614,14 +1711,19 @@ class MethodTraceResolver(
             val entry = entryManager.entryById(entryId)
             graph.forEachPredecessor(analysisManager, entry.statement) { p ->
                 val fakePredecessor = TraceEntry.SourceStartEntry(null, emptySet(), p)
-                startSuccessors.add(fakePredecessor)
-                additionalSuccessors.getOrPut(fakePredecessor, ::hashSetOf).add(entry)
+                val fakePredId = entryManager.entryId(fakePredecessor)
+                startSuccessors.add(fakePredId)
+                additionalSuccessors.computeIfAbsent(fakePredId) { CompactIntSet() }.add(entryId)
             }
         }
 
         successors.putAll(additionalSuccessors)
 
-        return FullTrace(methodEntryPoint, fakeStartEntry, finalEntry, successors, TraceKind.TraceToFact)
+        return FullStart2FinalTrace(
+            methodEntryPoint,
+            entryManager.entries.toTypedArray(),
+            fakeStartId, finalEntryId, successors, TraceKind.TraceToFact
+        )
     }
 
     companion object {

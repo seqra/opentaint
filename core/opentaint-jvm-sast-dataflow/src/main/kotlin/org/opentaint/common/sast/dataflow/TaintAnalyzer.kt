@@ -27,9 +27,12 @@ import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
+import org.opentaint.dataflow.ap.ifds.trace.InnerCallTraceResolveStrategy
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction.TraceSummaryEdge
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.util.percentToString
@@ -175,7 +178,9 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val vulnerabilitiesWithTraces = ifdsEngine.generateTraces(entryPoints, vulnerabilities, traceResolutionTimeout)
             .also { logger.info { "Finish trace generation" } }
 
-        val filteredVulnerabilities = vulnerabilitiesWithTraces.filter { it.trace != null }
+        val filteredVulnerabilities = vulnerabilitiesWithTraces.filter {
+            it.trace !is TracePathGenerationResult.Failure
+        }
         if (filteredVulnerabilities.size != vulnerabilitiesWithTraces.size) {
             val delta = vulnerabilitiesWithTraces.size - filteredVulnerabilities.size
             logger.info { "Filter out $delta vulnerabilities without traces" }
@@ -187,7 +192,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         return filteredVulnerabilities to status
     }
 
-    private object InnerCallTraceResolveStrategy : TraceResolver.InnerCallTraceResolveStrategy {
+    private object InnerCallTaintTraceResolveStrategy : InnerCallTraceResolveStrategy {
         override fun innerCallSummaryEdgeIsRelevant(summaryEdge: TraceSummaryEdge): Boolean {
             if (summaryEdge.edge.fact.base is AccessPathBase.ClassStatic) return false
             return super.innerCallSummaryEdgeIsRelevant(summaryEdge)
@@ -200,14 +205,23 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         timeout: Duration,
     ): List<VulnerabilityWithTrace> {
         val entryPointsSet = entryPoints.toHashSet()
-        return resolveVulnerabilityTraces(
+        val interProcTraces = resolveVulnerabilityInterProceduralTraces(
             entryPointsSet, vulnerabilities,
             resolverParams = TraceResolver.Params(
                 resolveEntryPointToStartTrace = options.symbolicExecutionEnabled,
-                sourceToSinkInnerTraceResolutionLimit = 5,
-                innerCallTraceResolveStrategy = InnerCallTraceResolveStrategy
             ),
-            timeout = timeout,
+            timeout = timeout * 0.5,
+            cancellationTimeout = 30.seconds
+        )
+
+        return resolveVulnerabilityTraces(
+            interProcTraces,
+            resolverParams = TracePathResolveParams(
+                limit = options.tracePathLimit,
+                sourceToSinkInnerTraceResolutionLimit = 5,
+                innerCallTraceResolveStrategy = InnerCallTaintTraceResolveStrategy
+            ),
+            timeout = timeout * 0.5,
             cancellationTimeout = 30.seconds
         )
     }

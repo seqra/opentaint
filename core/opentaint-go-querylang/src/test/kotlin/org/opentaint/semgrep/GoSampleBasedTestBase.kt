@@ -13,6 +13,8 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
@@ -163,13 +165,20 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
             eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
 
             val vulns = eng.getVulnerabilities()
-            val traces = eng.resolveVulnerabilityTraces(
+
+            val interProcTraces = eng.resolveVulnerabilityInterProceduralTraces(
                 setOf(entryPoint), vulns,
                 resolverParams = TraceResolver.Params(),
                 timeout = 1.minutes, cancellationTimeout = 10.seconds,
             )
 
-            val resolvedTraces = traces.filter { it.trace != null }
+            val traces = eng.resolveVulnerabilityTraces(
+                interProcTraces,
+                resolverParams = TracePathResolveParams(),
+                timeout = 1.minutes, cancellationTimeout = 10.seconds,
+            )
+
+            val resolvedTraces = traces.filter { it.trace !is TracePathGenerationResult.Failure }
 
             AnalysisResult(vulns.isNotEmpty(), resolvedTraces.isNotEmpty())
         }

@@ -5,14 +5,17 @@ import io.github.detekt.sarif4k.LogicalLocation
 import io.github.detekt.sarif4k.Message
 import io.github.detekt.sarif4k.PropertyBag
 import io.github.detekt.sarif4k.Result
+import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.path.ResolvedInterProceduralTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.ResolvedInterProceduralTraceEntry
+import org.opentaint.dataflow.ap.ifds.trace.path.ResolvedNodeTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.ast.AstSpanResolverProvider
-import org.opentaint.common.sast.sarif.TracePathNode
 
 abstract class SarifWebInfoAnnotator(
     val sourceFileResolver: JIRSourceFileResolver,
@@ -36,7 +39,7 @@ abstract class SarifWebInfoAnnotator(
     abstract fun createControllerInfo(
         controllers: List<JIRMethod>,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>,
     ): List<ControllerInfo>
 
@@ -45,7 +48,7 @@ abstract class SarifWebInfoAnnotator(
     fun annotateSarif(
         result: Result,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>,
         generateStatementLocation: (JIRInst) -> Location?
     ): Result {
@@ -89,42 +92,29 @@ abstract class SarifWebInfoAnnotator(
 
     private fun vulnRelevantMethods(
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?
+        trace: TracePathGenerationResult,
     ): Set<CommonMethod> {
         val methods = hashSetOf<CommonMethod>()
         methods.add(vulnerability.statement.location.method)
 
-        trace?.sourceToSinkTrace?.let { collectRelevantMethods(it, methods) }
-        trace?.entryPointToStart?.let { collectRelevantMethods(it, methods) }
+        if (trace !is TracePathGenerationResult.Path) return methods
+
+        trace.path.forEach {
+            collectRelevantMethods(it, methods)
+        }
 
         return methods
     }
 
-    private fun collectRelevantMethods(
-        e2sTrace: TraceResolver.EntryPointToStartTrace,
-        methods: MutableSet<CommonMethod>
-    ) {
-        e2sTrace.entryPoints.forEach { collectRelevantMethod(it, methods) }
-        e2sTrace.successors.forEach { (k, v) ->
-            collectRelevantMethod(k, methods)
-            v.forEach { collectRelevantMethod(it, methods) }
-        }
+    private fun collectRelevantMethods(trace: ResolvedNodeTrace, methods: MutableSet<CommonMethod>) {
+        trace.root2Source.forEach { collectRelevantMethods(it, methods) }
+        trace.root2SinkNoRoot.forEach { collectRelevantMethods(it, methods) }
     }
 
-    private fun collectRelevantMethods(s2sTrace: TraceResolver.SourceToSinkTrace, methods: MutableSet<CommonMethod>) {
-        s2sTrace.startNodes.forEach { collectRelevantMethod(it, methods) }
-        s2sTrace.sinkNodes.forEach { collectRelevantMethod(it, methods) }
-        for ((node, successors) in s2sTrace.successors) {
-            collectRelevantMethod(node, methods)
-            successors.forEach { collectRelevantMethod(it.node, methods) }
-        }
-    }
-
-    private fun collectRelevantMethod(node: TraceResolver.TraceNode, methods: MutableSet<CommonMethod>) {
-        methods += when (node) {
-            is TraceResolver.CallTraceNode -> node.methodEntryPoint.method
-            is TraceResolver.EntryPointTraceNode -> node.location
-            is TraceResolver.SourceToSinkTraceNode -> node.methodEntryPoint.method
-        }
+    private fun collectRelevantMethods(trace: ResolvedInterProceduralTrace, methods: MutableSet<CommonMethod>) {
+        methods += trace.method.method
+        trace.entries
+            .filterIsInstance<ResolvedInterProceduralTraceEntry.InnerCall>()
+            .forEach { collectRelevantMethods(it.innerTrace, methods) }
     }
 }

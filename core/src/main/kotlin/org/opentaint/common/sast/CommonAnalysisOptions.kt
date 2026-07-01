@@ -35,5 +35,6 @@ data class CommonAnalysisOptions(
         storeSummaries = storeSummaries,
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
         debugOptions = debugOptions,
+        tracePathLimit = sarifGenerationOptions.sarifCodeFlowLimit,
     )
 }

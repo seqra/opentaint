@@ -8,8 +8,8 @@ import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.ThreadFlow
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.semgrep.pattern.RuleMetadata
 import java.nio.file.Path
@@ -57,13 +57,13 @@ abstract class SarifGenerator<IL>(
     open fun postProcessSarif(
         sarif: Result,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>?
     ): Result = sarif
 
     private fun generateSarifResult(
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?
+        trace: TracePathGenerationResult
     ): Result? {
         val vulnerabilityRule = vulnerability.rule
         val ruleId = vulnerabilityRule.id
@@ -151,38 +151,26 @@ abstract class SarifGenerator<IL>(
 
     abstract fun MessageDigest.addLocationFingerprint(loc: IL)
 
-    private fun generateTracePaths(trace: TraceResolver.Trace?): List<List<TracePathNode>>? {
+    private fun generateTracePaths(trace: TracePathGenerationResult): List<List<TracePathNode>>? {
         traceGenerationStats.total++
 
-        if (trace == null) {
-            traceGenerationStats.generationFailed++
-            return null
-        }
-
-        val generatedTracePaths = generateTracePath(trace, options.sarifCodeFlowLimit)
-        val paths = when (generatedTracePaths) {
-            TracePathGenerationResult.Failure -> {
+        when (trace) {
+            is TracePathGenerationResult.Failure -> {
                 traceGenerationStats.generationFailed++
                 return null
             }
 
-            TracePathGenerationResult.Simple -> {
+            is TracePathGenerationResult.Simple -> {
                 traceGenerationStats.simple++
                 return null
             }
 
             is TracePathGenerationResult.Path -> {
+                val generatedTracePaths = generateTracePath(trace, options.sarifCodeFlowLimit)
                 traceGenerationStats.generatedSuccess++
-                generatedTracePaths.path
+                return generatedTracePaths
             }
         }
-
-        var limitedTracePaths = paths
-        if (options.sarifCodeFlowLimit != null) {
-            limitedTracePaths = paths.take(options.sarifCodeFlowLimit)
-        }
-
-        return limitedTracePaths
     }
 
     abstract fun generateThreadFlow(path: List<TracePathNode>, sinkMessage: String): List<IL>
