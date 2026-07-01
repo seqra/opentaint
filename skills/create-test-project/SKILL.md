@@ -15,14 +15,14 @@ Build a minimal compiled test project whose annotated samples reproduce the flow
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- What to test `<spec>` — a rule's requirements, or the package's methods to exercise
+- What to test `<spec>` — a rule side's unit (its `sources` or `sinks`), or the package's methods to exercise
 - Project root `<project-root>` — the real sources the requirements point into. Default: current directory
-- Tracking file `<tracking-file>` — the rule or approximation file this test serves. Default: `.opentaint/tracking/rules/lib/<name>.yaml` or `.opentaint/tracking/approximations/<name>.yaml`
+- Tracking file `<tracking-file>` — the source/sink unit or the batch approximation file this test serves. Default: `.opentaint/tracking/rules/sources/<name>.yaml` (source side) or `.opentaint/tracking/rules/sinks/<name>.yaml` (sink side), or `.opentaint/tracking/approximations/<batch>.yaml`
 - Test project `<test-project>` — sources. Default: `.opentaint/test-projects/<name>` (a rule project holds a `sinks/` and/or `sources/` sub-project under it)
 - Compiled output `<test-compiled>` — the model. Default: `.opentaint/test-compiled/<name>` (one model per sub-project: `<name>/sinks`, `<name>/sources`)
 - Dependencies — exact Maven coordinates the samples need; default: the `dependencies` list in `<tracking-file>`; with no tracking file, derive them from the project's `build.gradle`/`pom.xml`
 
-`<name>` is the package (`<package-kebab>`) for a rule, or the dataflow approximation unit (`<scope-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`) for an approximation; the two never share a folder
+`<name>` is the package (`<package-kebab>`) for a rule, or the target class (`<class-kebab>`) for a dataflow approximation; the two never share a folder
 
 ## Workflow
 
@@ -32,14 +32,14 @@ When re-invoked over an existing `<name>` project whose surface grew (a new sour
 
 Pick the scaffold by shape, then pass each coordinate from the tracking file's `dependencies` as a `--dependency`:
 
-- a rule → `test rule init` — scaffolds a `sinks/` and a `sources/` sub-project under `<test-project>`, each with `Taint.java` (the generic `source()`/`sink()`) and the generic marker lib rules in its `test-rules/`. Pass `--sinks-only` / `--sources-only` for a package with only one side, so you get a single sub-project
+- a rule → `test rule init` with `--sources-only` (for a source unit) or `--sinks-only` (for a sink unit) — scaffolds that one sub-project under `<test-project>` with `Taint.java` (the generic `source()`/`sink()`) and the generic marker lib rules in its `test-rules/`. You're handed one unit per invocation (sources and sinks are separate units built in separate phases), so build only that side
 - a dataflow approximation → `test approximation init` (Gradle build + the test-util jar, plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies). Pass each lib at the exact pinned version from the unit's `dependencies`: this Gradle build is the approximation's own compile environment, so it must still recompile from these pins even after the main project drops that dependency
 
 ```bash
-# rule test projects — both sides (this package has new sinks and new sources)
-opentaint test rule init <test-project> \
+# rule source side (from a rules/sources/<name> unit)
+opentaint test rule init <test-project> --sources-only \
   --dependency "org.springframework:spring-webflux:6.1.0"
-# sink-only package
+# rule sink side (from a rules/sinks/<name> unit)
 opentaint test rule init <test-project> --sinks-only \
   --dependency "org.mybatis:mybatis:3.5.13"
 
@@ -61,12 +61,12 @@ Load and follow `references/rule.md` (for a rule) or `references/approximation.m
 
 ### 3. Compile
 
-Compile each project to its own model — a rule's `sinks/` and `sources/` sub-projects separately; an approximation's single project once:
+Compile the sub-project you built to its own model — the one rule side (`sources/` or `sinks/`); an approximation's single project once:
 
 ```bash
-# rule
-opentaint compile <test-project>/sinks   -o <test-compiled>/sinks
+# rule — the side you built
 opentaint compile <test-project>/sources -o <test-compiled>/sources
+opentaint compile <test-project>/sinks   -o <test-compiled>/sinks
 # approximation
 opentaint compile <test-project> -o <test-compiled>
 ```
@@ -76,15 +76,18 @@ A clean compile is the deliverable. If one won't build, fix that project's sampl
 ## Output
 
 - The compiled model(s) (`<test-compiled>`, per sub-project for a rule) plus their sources (`<test-project>`); report the paths and the exact `compile` command(s) used
-- The tracking file's `test_project` stage marked done (see Tracking)
+- The test-project stage marked done (see Tracking)
 
 ## Tracking
 
-In `<tracking-file>`, set only the test-project stage (`in_progress` while building, `done` once it compiles):
+Set only the test-project stage, `done` once it compiles. For a rule side it's `stages.test_project` in the source or sink unit (`<tracking-file>`); for a dataflow approximation it's the batch file's `build.test_projects`, keyed by the target class:
 
 ```yaml
 stages:
   test_project: done
+build:
+  test_projects:
+    com.foo.Reactor: done
 ```
 
 Do not touch other stages or fields

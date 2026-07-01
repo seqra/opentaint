@@ -4,10 +4,11 @@
 # ///
 """
 Split method-classification work into per-agent plans (run with uv).
-`analyze` writes one plan per dropped-method package, hard-capped at 20 methods (a bigger
-package is split by sub-package/class), each method carrying its signature/factPositions
-so the plan is self-contained. `discover` extracts project-used members of coverage.yaml's
-pending packages and balances them into ~100-member plans. Already-classified items dropped.
+`analyze` groups the dropped methods by library root, packs each root into batches of
+~20 methods (a root over budget is split, never mixed with another root; roots with few
+methods are pooled into one `misc` batch), and writes one self-contained plan per batch.
+`discover` extracts project-used members of coverage.yaml's pending packages and balances
+them into ~50-member plans. Members already verdicted in rules/classification.yaml dropped.
 """
 import argparse
 import glob
@@ -21,8 +22,10 @@ import yaml
 
 ROOT = Path(".opentaint")
 MODEL = Path(".opentaint/project")
-ANALYZE_CAP = 20                          # hard cap: one package per plan, split a package past it
-DISCOVER_TARGET, DISCOVER_BAND = 100, 25  # balanced merge across packages
+ANALYZE_BUDGET = 20                       # methods per batch; a single class over it stays oversized
+ANALYZE_MISC = 6                          # roots with <= this many methods are pooled into one misc batch
+ROOT_DEPTH = 2                            # library root = first 2 dotted segments
+DISCOVER_TARGET, DISCOVER_BAND = 50, 15   # project-used members per discover plan (~50, loose)
 
 
 def class_of(fqn):
@@ -32,18 +35,24 @@ def package_of(fqn):
     cls = class_of(fqn)
     return cls.rsplit(".", 1)[0] if "." in cls else ""
 
+def root_of(fqn, depth=ROOT_DEPTH):
+    segs = class_of(fqn).split(".")
+    return ".".join(segs[:depth]) if len(segs) >= depth else class_of(fqn)
+
 def in_packages(cls, prefixes):
     # dotted-boundary match: `a.b.collect` never matches a sibling `a.b.collectX`
     return any(cls == p or cls.startswith(p + ".") for p in prefixes)
 
 def fqn_base(s):
-    s = s.strip().strip('"').strip("'")
+    s = str(s).strip().strip('"').strip("'")
     i = s.find("(")
     return (s[:i] if i != -1 else s).strip()
 
 
 def atomize(fqns, cap):
-    # split into atomic scopes (prefix, [fqns]) each <= cap; a class over cap stays oversized
+    # split into atomic scopes (prefix, [fqns]); each scope is a whole (sub)package (or a subtree
+    # under cap) — a package is NEVER split across scopes, so it lands in exactly one bin and no two
+    # agents ever share a package's per-package unit (source/sink). A package over cap stays oversized.
     scopes = []
 
     def recurse(prefix, items):
@@ -61,14 +70,9 @@ def atomize(fqns, cap):
                 child = ".".join(segs[: depth + 1])
                 buckets.setdefault(child, []).append(f)
         if leaf:
-            if len(leaf) <= cap or not buckets and len({class_of(f) for f in leaf}) == 1:
-                scopes.append((prefix, leaf))
-            else:
-                by_class = {}
-                for f in leaf:
-                    by_class.setdefault(class_of(f), []).append(f)
-                for cls, cf in by_class.items():
-                    scopes.append((cls, cf))
+            # the methods sitting directly in `prefix` are one whole package — keep them together
+            # whatever the size (an oversized package becomes its own bin in pack), never class-split
+            scopes.append((prefix, leaf))
         for child, cf in buckets.items():
             recurse(child, cf)
 
@@ -82,23 +86,25 @@ def atomize(fqns, cap):
 
 
 def pack(scopes, target, cap):
-    # longest-processing-time: place largest scope into least-loaded plan, grow plan
-    # count only until none exceeds cap; start target-centred so plans land near target
-    items = sorted(scopes, key=lambda s: len(s[1]), reverse=True)
-    if not items:
-        return []
-    total = sum(len(v) for _, v in items)
-    k = max(1, math.ceil(total / cap), round(total / target))
-    while True:
-        loads = [0] * k
-        bins = [{} for _ in range(k)]
-        for prefix, v in items:
-            i = min(range(k), key=lambda j: loads[j])
-            bins[i][prefix] = v
-            loads[i] += len(v)
-        if max(loads) <= cap or k >= len(items):
-            return [b for b in bins if b]
-        k += 1
+    # longest-processing-time bin-packing. An atomic scope larger than cap (a package that can't
+    # be split) gets its own bin instead of forcing the whole set to one-scope-per-bin.
+    plans = [{p: v} for p, v in scopes if len(v) > cap]
+    items = sorted((s for s in scopes if len(s[1]) <= cap), key=lambda s: len(s[1]), reverse=True)
+    if items:
+        total = sum(len(v) for _, v in items)
+        k = max(1, math.ceil(total / cap), round(total / target))
+        while True:
+            loads = [0] * k
+            bins = [{} for _ in range(k)]
+            for prefix, v in items:
+                i = min(range(k), key=lambda j: loads[j])
+                bins[i][prefix] = v
+                loads[i] += len(v)
+            if max(loads) <= cap or k >= len(items):
+                break
+            k += 1
+        plans += [b for b in bins if b]
+    return plans
 
 
 def write_plans(plans, out_dir, prefix_id):
@@ -110,7 +116,7 @@ def write_plans(plans, out_dir, prefix_id):
                 for p, v in sorted(scopes.items())}
         path = out_dir / f"{pid}.yaml"
         path.write_text(
-            yaml.safe_dump({"id": pid, "scopes": norm}, sort_keys=False,
+            yaml.safe_dump({"scopes": norm}, sort_keys=False,
                            default_flow_style=False, allow_unicode=True),
             encoding="utf-8",
         )
@@ -118,28 +124,36 @@ def write_plans(plans, out_dir, prefix_id):
     return paths
 
 
-def fqns_under_keys(path, keys):
-    # every FQN held under any of `keys` (lists of FQN strings)
-    doc = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
-    out = set()
-    for key in keys:
-        for item in doc.get(key, []) or []:
-            out.add(fqn_base(str(item)))
-    return out
+def ledger_verdicted():
+    # FQNs already verdicted in the durable rules ledger (source ∪ safe), skipped next run
+    p = ROOT / "tracking" / "rules" / "classification.yaml"
+    if not p.is_file():
+        return set()
+    doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    return {fqn_base(x) for key in ("source", "safe") for x in (doc.get(key) or [])}
 
 
-def collect_fqns(yaml_dir, keys):
+# a method counts as classified once it sits in any batch file's classification bucket
+# (passthrough/dataflow/skipped), in build.done, or in skipped.yaml (methods/engine_issues)
+CLASSIFIED_KEYS = ("passthrough", "dataflow", "skipped", "methods", "engine_issues")
+
+
+def classified_methods():
     out = set()
-    for p in sorted(glob.glob(str(yaml_dir / "*.yaml"))):
-        out |= fqns_under_keys(p, keys)
+    for p in sorted(glob.glob(str(ROOT / "tracking" / "approximations" / "*.yaml"))):
+        doc = yaml.safe_load(Path(p).read_text(encoding="utf-8")) or {}
+        for key in CLASSIFIED_KEYS:
+            for item in doc.get(key, []) or []:
+                out.add(fqn_base(item["method"] if isinstance(item, dict) else item))
+        for item in (doc.get("build") or {}).get("done", []) or []:
+            out.add(fqn_base(item["method"] if isinstance(item, dict) else item))
     return out
 
 
 def cmd_analyze(args):
     dropped = yaml.safe_load(
         (ROOT / "results" / "dropped-external-methods.yaml").read_text(encoding="utf-8")) or []
-    classified = collect_fqns(ROOT / "tracking" / "approximations",
-                              {"methods", "done", "engine_issues"})
+    classified = classified_methods()
     rows = []
     for e in dropped:
         if not (isinstance(e, dict) and e.get("method")):
@@ -149,26 +163,45 @@ def cmd_analyze(args):
         row = {"method": e["method"]}
         if e.get("signature"):
             row["signature"] = e["signature"]
-        if e.get("factPositions"):
-            row["factPositions"] = e["factPositions"]
         rows.append(row)
     if not rows:
         print("nothing to plan — every dropped method already classified", file=sys.stderr)
         return 0
-    cap = ANALYZE_CAP
-    by_pkg = {}
+
+    # group by library root, pooling roots with few methods into one "misc" batch
+    by_root = {}
     for r in rows:
-        by_pkg.setdefault(package_of(r["method"]), []).append(r)
-    plans = []                                   # one scope per plan — packages never merge
-    for pkg, prows in by_pkg.items():
-        methods = {r["method"] for r in prows}
-        if len(methods) <= cap:
-            plans.append({pkg: prows})
-        else:                                    # split this package until each piece fits
-            for scope, fqns in atomize(sorted(methods), cap):
-                fset = set(fqns)
-                plans.append({scope: [r for r in prows if r["method"] in fset]})
-    for p in write_plans(plans, ROOT / "tracking" / "approximations" / "plans", "ext"):
+        by_root.setdefault(root_of(r["method"]), []).append(r)
+    count = lambda rs: len({fqn_base(r["method"]) for r in rs})
+    misc = []
+    for root in [k for k, rs in by_root.items() if count(rs) <= ANALYZE_MISC]:
+        misc += by_root.pop(root)
+    if misc:
+        by_root["misc"] = misc
+
+    out_dir = ROOT / "tracking" / "approximations" / "plans"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for root in sorted(by_root):
+        by_fqn = {}
+        for r in by_root[root]:
+            by_fqn.setdefault(fqn_base(r["method"]), []).append(r)
+        bins = pack(atomize(sorted(by_fqn), ANALYZE_BUDGET), ANALYZE_BUDGET, ANALYZE_BUDGET)
+        for i, b in enumerate(bins, 1):
+            scopes = {}
+            for f in {f for v in b.values() for f in v}:           # re-group the batch by class
+                scopes.setdefault(class_of(f), []).extend(by_fqn[f])
+            norm = {cls: sorted(v, key=lambda x: (x["method"], x.get("signature", "")))
+                    for cls, v in sorted(scopes.items())}
+            pid = f"{root.replace('.', '-')}-{i:03d}"
+            path = out_dir / f"{pid}.yaml"
+            path.write_text(
+                yaml.safe_dump({"scopes": norm}, sort_keys=False,
+                               default_flow_style=False, allow_unicode=True),
+                encoding="utf-8",
+            )
+            paths.append(str(path))
+    for p in paths:
         print(p)
     return 0
 
@@ -229,9 +262,10 @@ def extract_usages():
 
 
 def pending_packages():
+    # coverage.yaml is a flat flag-list of packages triage flagged to drill; a package is done
+    # implicitly once all its used members are verdicted (ledger_verdicted), so all listed are candidates
     cov = yaml.safe_load((ROOT / "tracking" / "coverage.yaml").read_text(encoding="utf-8")) or {}
-    return tuple(e["package"] for e in cov.get("packages", []) or []
-                 if isinstance(e, dict) and e.get("status") == "pending" and e.get("package"))
+    return tuple(p for p in (cov.get("packages") or []) if isinstance(p, str) and p)
 
 
 def cmd_discover(args):
@@ -240,7 +274,7 @@ def cmd_discover(args):
         print("nothing to plan — no pending package in coverage.yaml", file=sys.stderr)
         return 0
     used = {f for f in extract_usages() if in_packages(class_of(f), packages)}
-    verdicted = collect_fqns(ROOT / "tracking" / "rules" / "plans", {"source", "safe"})
+    verdicted = ledger_verdicted()
     todo = sorted({f for f in used if fqn_base(f) not in verdicted})
     if not todo:
         print("nothing to plan — every used member already verdicted", file=sys.stderr)
@@ -257,7 +291,7 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    a = sub.add_parser("analyze", help="partition dropped external methods, one plan per package")
+    a = sub.add_parser("analyze", help="partition dropped external methods into per-root batches")
     a.set_defaults(func=cmd_analyze)
 
     d = sub.add_parser("discover", help="partition coverage.yaml's pending packages' used members")

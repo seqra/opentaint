@@ -63,19 +63,19 @@ Run it. Confirmation needs observable proof — rows returned, file contents, co
 
 ## Tracking
 
-If you started an instance, append it to `.opentaint/tracking/poc-servers.yaml` (PoCs run one at a time, so the append never races) — the orchestrator reads this to tear instances down (`kind` + `ref` give it the stop command):
+If you started an instance, append it to `.opentaint/tracking/poc-servers.yaml` (PoCs run one at a time, so the append never races) — the orchestrator reads this to tear instances down: `kind` (`process | container | compose`) and the matching `ref` (pid, container id/name, or compose file path) give it the stop command:
 
 ```yaml
 servers:
-  - kind: process                     # process | container | compose
+  - kind: process
     port: 8080
-    ref: "12345"                      # pid | container id/name | compose file path
+    ref: "12345"
 ```
 
 In `<finding>`, set `poc` and `poc_script` and append the result to `notes`:
 
 ```yaml
-poc: confirmed                        # confirmed | failed
+poc: confirmed
 poc_script: .opentaint/pocs/brave-hopper.py
 notes: >
   <existing notes>

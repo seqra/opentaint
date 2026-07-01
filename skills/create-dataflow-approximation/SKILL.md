@@ -1,6 +1,6 @@
 ---
 name: create-dataflow-approximation
-description: Model a library method's taint propagation as code-based dataflow approximation and refine it against a test project until the sample passes. Use for a dropped external method whose propagation a passThrough copy cannot express
+description: Model a method's taint propagation as code-based dataflow approximation and refine it against a test project until the sample passes. Use for a dropped method (library, or application-internal with an opaque body) whose propagation a passThrough copy cannot express
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,20 +9,20 @@ metadata:
 
 # Skill: Create Dataflow Approximation
 
-Write a code-based approximation for a library method whose taint propagation depends on lambdas, callbacks, or async chains, then test it against the prepared test project and fix until the approximation sample passes
+Write a code-based approximation for a method whose taint propagation depends on lambdas, callbacks, or async chains, then test it against the prepared test project and fix until the approximation sample passes
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Methods to model `<methods>` — the target method(s) and how taint flows through them, from the tracking file's `methods` (the pending FQNs; the file's top-level `type` is `dataflow`). Exact overload signatures to match are in the unit's `notes`
-- Tracking file `<tracking-file>` — the dataflow approximation unit (`<scope-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`). Default: `.opentaint/tracking/approximations/<name>.yaml`
-- Approximation sources `<approx-src>` — this package's own directory for the `.java` approximation files. Default: `.opentaint/dataflow/<name>`
-- Compiled test project `<test-compiled>` — the per-package compiled model to test against. Default: `.opentaint/test-compiled/<name>`
+- Methods to model `<methods>` — the target method(s) and how taint flows through them, from the batch file's `dataflow` bucket; each entry's `signature` is the overload to match. All entries target one class (dataflow is one `@Approximate` per class)
+- Tracking file `<tracking-file>` — the batch approximation file whose `build.done` you append to. Default: `.opentaint/tracking/approximations/<batch>.yaml`
+- Approximation sources `<approx-src>` — this class's own directory for the `.java` approximation files. Default: `.opentaint/dataflow/<class-kebab>`
+- Compiled test project `<test-compiled>` — the per-class compiled model to test against. Default: `.opentaint/test-compiled/<class-kebab>`
 
 ## Workflow
 
-Work the unit's `methods` (the pending FQNs); the `done` list is already built and verified — a working model needs no re-validation, so leave its entries and their source as-is unless the caller hands you a concrete drift to fix. Add new pending methods/overloads to the existing source rather than rewriting it.
+Work the dataflow methods you're given; any already in the batch's `build.done` is built and verified — a working model needs no re-validation, so leave it and its source as-is unless handed a concrete drift to fix. Add new methods/overloads to the existing source rather than rewriting it.
 
 ### 1. Write the approximation source
 
@@ -80,18 +80,18 @@ Run `test approximation run` over `<test-compiled>` applying only this package's
 
 ```bash
 opentaint test approximation run <test-compiled> \
-  -o .opentaint/test-results/<name> \
+  -o .opentaint/test-results/<class-kebab> \
   --dataflow-approximations <approx-src>
 ```
 
-`test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. The sample that routes taint through the method is a `falseNegative` until the model propagates it. Read `.opentaint/test-results/<name>/test-result.json`:
+`test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. The sample that routes taint through the method is a `falseNegative` until the model propagates it. Read `.opentaint/test-results/<class-kebab>/test-result.json`:
 
 - still `falseNegative` → the `@Approximate(...)` target class or a method signature doesn't match what the analyzer sees, or the body doesn't route taint from the real source to the modeled result/argument; diagnose the mismatch, don't rationalize a non-result. Most common: target-class mismatch with the dropped FQN — re-target the exact dropped class and match the cast (`(java.util.HashMap) (Object) this`)
 - `falsePositive` (a negative sample fired) → the model is over-broad: it taints a read it shouldn't, e.g. data fetched under a different key/field than it was stored under. Narrow the propagation until the negative stays non-firing while the positive passes
 
 ### 3. When the sample won't pass after a couple of fixes
 
-After ~2 fix attempts without a clearer cause — `@Approximate` target matches the dropped FQN, the body propagates from the modeled source slot to the result/argument, but the sample is still `falseNegative` — don't keep guessing. Leave `tests_passing: pending` and report non-convergence to the caller; the orchestrator escalates to debug-rule for a fact-reachability trace through the approximation point
+After ~2 fix attempts without a clearer cause — `@Approximate` target matches the dropped FQN, the body propagates from the modeled source slot to the result/argument, but the sample is still `falseNegative` — don't keep guessing. Leave the method out of `build.done` and report non-convergence to the caller; the orchestrator escalates to debug-rule for a fact-reachability trace through the approximation point
 
 ## Key patterns
 
@@ -105,23 +105,20 @@ After ~2 fix attempts without a clearer cause — `@Approximate` target matches 
 ## Output
 
 - The approximation source(s) under `<approx-src>`
-- Tracking updated: `artifact`, `stages.tests_passing`, and the passing methods moved `methods`→`done` (per Tracking)
+- The passing methods appended to the batch file's `build.done` (per Tracking)
 - Report the source path, a one-line test summary, and the exact `test approximation run` command used
 
 ## Tracking
 
-In `<tracking-file>`, once the source exists and a method's sample passes, set `artifact` + `tests_passing: done` and move that method from `methods` to `done`:
+In `<tracking-file>` (the batch file), append each method whose sample passes to `build.done` as `{method, signature}`:
 
 ```yaml
-artifact: .opentaint/dataflow/<name>/com/example/approximations/ReactiveProcessor.java
-stages:
-  tests_passing: done
-methods: []
-done:
-  - "com.foo.Reactor#flatMap"
+build:
+  done:
+    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
 ```
 
-Move a method to `done` only once its sample passes — a method still `falseNegative`, or one you reported as non-converging, stays in `methods` so the loop comes back to it. Do not touch other stages or fields, or any entry already in `done`
+Append a method only once its sample passes — a method still `falseNegative`, or one you reported as non-converging, stays out of `build.done` so the loop comes back to it. Don't touch the classification buckets or any entry already in `build.done`
 
 ## Constraints
 

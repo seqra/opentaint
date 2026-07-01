@@ -17,7 +17,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 - Project root `<project-root>` — the project sources and build files. Default: current directory
 - Project model `<model-dir>` — the built model; its `project.yaml` lists every dependency. Default: `.opentaint/project`
-- Tracking directory `<tracking-dir>` — where the coverage record is written. Default: `.opentaint/tracking`
+- Tracking directory `<tracking-dir>` — where the flagged-package list is written. Default: `.opentaint/tracking`
 
 ## Workflow
 
@@ -35,37 +35,25 @@ For each library decide: could it introduce an attacker-controlled source — a 
 
 A library the app references only for safe, constant, or framework-internal use is not a flag — flag where untrusted data plausibly enters and no built-in source already names it
 
-### 3. Record coverage
+### 3. Write the flag list
 
-Write `<tracking-dir>/coverage.yaml` (schema below). One `pending` entry per flagged library — these are the depth work-list. Record dismissals as a single bulk entry summarising the categories ruled out, not one row per jar; add an individual `done` row only for a library a reader might expect to be flagged but isn't, with a one-line reason
+Write `<tracking-dir>/coverage.yaml` (schema below) — a flat list of the flagged libraries' packages, the depth work-list. Only flagged packages go in; dismissed libraries are simply absent. A package needs no status: it stops being drilled implicitly once the discover partition finds all its used members already verdicted in `classification.yaml`
 
-When `coverage.yaml` already exists from a prior run, reconcile rather than overwrite: keep every existing entry and its `notes`, and add a `pending` entry for any newly-classpath dependency. For each library already `done`, peek its `rules/lib/<package-kebab>.yaml` verdict and the app's current usage — if there's any suspicion the usage has shifted since that verdict (new call sites, a version bump, changed imports), re-mark it `pending`. Over-marking only costs a re-examined library the later stages filter out; leaving a genuinely-changed library `done` silently loses its sources, so when unsure, re-open it
+When `coverage.yaml` already exists from a prior run, reconcile rather than overwrite: keep every listed package and add any newly-classpath dependency package that could introduce a source. A flagged package whose usage shifted (new call sites, a version bump) needs no re-open — the discover partition automatically plans any used member not yet verdicted. When unsure whether a package belongs, list it: an over-flag only costs one depth pass, a missed library loses its sources on every later stage
 
 ## Output
 
-- `<tracking-dir>/coverage.yaml` — flagged libraries `status: pending`, dismissals summarised
-- A brief summary to the caller: one line per flagged library (package, why) and the dismissed count. The file holds the detail — don't paste it back
+- `<tracking-dir>/coverage.yaml` — the flat list of flagged packages
+- A brief summary to the caller: one line per flagged package (package, why) and the dismissed count. The file holds only the packages — the reasoning is your summary, not stored
 
 ## Tracking
 
-`<tracking-dir>/coverage.yaml` — one entry per weighed library:
+`<tracking-dir>/coverage.yaml` — a flat list of the packages flagged to drill for sources; nothing else (dismissed libraries are absent, "done" is implicit once discover verdicts all a package's used members):
 
 ```yaml
 packages:
-  - package: org.springframework.web.socket               # flagged → depth work-list
-    status: pending                                       # pending | done
-    coverage: null                                        # full | partial | none — set by the orchestrator after discover
-    notes: WebSocket frame data — untrusted source
-  - package: org.springframework.kafka                     # flagged → depth work-list
-    status: pending
-    coverage: null
-    notes: message-broker payloads — untrusted source
-  - package: <infrastructure>
-    status: done                                          # bulk dismissal
-    coverage: null
-    notes: >
-      logging (logback/slf4j), build plugins, annotations, ASM/byte-buddy, test libs,
-      data structures — no source surface
+  - org.springframework.web.socket
+  - org.springframework.kafka
 ```
 
 ## Gotchas

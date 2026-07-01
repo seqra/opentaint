@@ -4,8 +4,8 @@
 # ///
 """
 Report dropped external methods not yet classified (run with uv from the project root).
-UNCOVERED = dropped - methods: - done: - engine_issues:, matched FQN-level.
-With `--plan <id>` it checks one plan's methods instead — the per-agent done check.
+UNCOVERED = dropped - (classification buckets + build.done + skipped.yaml), matched FQN-level.
+With `--batch <id>` it checks one batch plan's methods instead — the per-agent done check.
 """
 import argparse
 import glob
@@ -17,7 +17,8 @@ import yaml
 DROPPED = Path(".opentaint/results/dropped-external-methods.yaml")
 APPROX_DIR = Path(".opentaint/tracking/approximations")
 
-CLASSIFIED_KEYS = {"methods", "done", "engine_issues"}
+# classification buckets + skipped.yaml lists; build.done is read separately (nested)
+CLASSIFIED_KEYS = {"passthrough", "dataflow", "skipped", "methods", "engine_issues"}
 
 
 def fqn(s):
@@ -28,32 +29,39 @@ def fqn(s):
     return s.strip()
 
 
+def fqn_of(item):
+    return fqn(item["method"] if isinstance(item, dict) else item)
+
+
 def dropped_methods():
     doc = yaml.safe_load(DROPPED.read_text(encoding="utf-8")) or []
     return {fqn(e["method"]) for e in doc if isinstance(e, dict) and e.get("method")}
 
 
 def classified_methods():
-    # every FQN under a methods/done/engine_issues key across all unit and skip files
+    # every FQN in a classification bucket, build.done, or skipped.yaml across the batch files
     out = set()
     for p in sorted(glob.glob(str(APPROX_DIR / "*.yaml"))):
         doc = yaml.safe_load(Path(p).read_text(encoding="utf-8")) or {}
         for key in CLASSIFIED_KEYS:
             for item in doc.get(key, []) or []:
                 if str(item).strip():
-                    out.add(fqn(item))
+                    out.add(fqn_of(item))
+        for item in (doc.get("build") or {}).get("done", []) or []:
+            if str(item).strip():
+                out.add(fqn_of(item))
     return out
 
 
-def plan_methods(plan_arg):
-    # the FQNs a plan assigned (each scope's rows carry `method`); id or path, None if missing
-    p = Path(plan_arg)
+def batch_methods(batch_arg):
+    # the FQNs a batch plan assigned (scopes: {class: [{method, signature}]}); id or path
+    p = Path(batch_arg)
     if not p.is_file():
-        p = APPROX_DIR / "plans" / f"{plan_arg}.yaml"
+        p = APPROX_DIR / "plans" / f"{batch_arg}.yaml"
     if not p.is_file():
         return None
     doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-    return {fqn(m["method"] if isinstance(m, dict) else m)
+    return {fqn_of(m)
             for members in (doc.get("scopes") or {}).values() for m in members}
 
 
@@ -70,17 +78,17 @@ def report(label, total, uncovered, tail):
 
 def main():
     ap = argparse.ArgumentParser(description="report dropped methods not yet classified")
-    ap.add_argument("--plan", help="check one plan's methods (id or path) — the per-agent done check")
+    ap.add_argument("--batch", help="check one batch plan's methods (id or path) — the per-agent done check")
     args = ap.parse_args()
 
     classified = classified_methods()
 
-    if args.plan:
-        methods = plan_methods(args.plan)
+    if args.batch:
+        methods = batch_methods(args.batch)
         if methods is None:
-            print(f"no plan at {args.plan}")
+            print(f"no batch plan at {args.batch}")
             return 2
-        return report(f"plan {args.plan}", len(methods),
+        return report(f"batch {args.batch}", len(methods),
                       sorted(methods - classified), "before returning")
 
     if not DROPPED.is_file():

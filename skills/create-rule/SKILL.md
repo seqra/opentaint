@@ -9,26 +9,28 @@ metadata:
 
 # Skill: Create Rule
 
-Per package, author the new source and/or sink lib rules the requirements name, wire each to the generic `Taint` marker in a test join, and verify against the package's marker test projects until every sample passes. Author only the side the unit has — a sources-only or sinks-only unit yields just that side's rules, joins, and test sub-project (the deep workflow authors sources first, then sinks once the taint frontier has named them)
+Per package, author the new source and/or sink lib rules the unit names, wire each to the generic `Taint` marker in a test join, and verify against the package's marker test projects until every sample passes. Author only the side the unit has — a sources-only or sinks-only unit yields just that side's rules, joins, and test sub-project (the deep workflow authors sources first, then sinks once the taint frontier has named them)
 
-Two roles: the **main** one authors a package's lib rules (above); a **fix** narrows or broadens a created rule the main scan later flags. The cross-package security joins are written by assemble-lib-rules, not here
+Two roles: the **main** one authors a package's lib rules from `<tracking-file>` (above); a **fix** (`<fix-target>` set) narrows or broadens one created rule the main scan later flagged. The cross-package security joins are written by assemble-lib-rules, not here
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Requirements `<requirements>` — the per-package lib unit naming the new sources/sinks (a tracking file), or for a fix the rule to change
+- Tracking file `<tracking-file>` — the source unit `.opentaint/tracking/rules/sources/<name>.yaml` or the sink unit `.opentaint/tracking/rules/sinks/<name>.yaml` (`<name>` = the package-kebab). In the main role this is both the spec (the sources/sinks to author) and where each rule's `rule_id` + `stages` are recorded
 - Compiled test projects `<test-compiled>` — the marker models to verify against. Default: `.opentaint/test-compiled/<name>/sinks` and `.opentaint/test-compiled/<name>/sources` (`<name>` = the package-kebab)
 - Test project `<test-project>` — the sources tree; the test joins go in each side's `<test-project>/<side>/test-rules` (only `test rule run` loads them, never the main scan). Default: `.opentaint/test-projects/<name>`
 - Rules directory `<rules-dir>` — where the lib rules are written. Default: `.opentaint/rules`
-- Tracking file `<tracking-file>` — the lib unit file. Default: `.opentaint/tracking/rules/lib/<name>.yaml`
+- Fix target `<fix-target>` (optional, fix role) — a created rule (`<path>#<id>`) the main scan flagged, plus the false positive/negative to correct; when set, narrow or broaden that one rule instead of authoring from the unit
 - Approximation directories `<config-dir>` / `<approx-dir>` (optional) — apply on a re-dispatch when the test project needs a library model that's now built. Default: none
 
 Built-in rules are available at `opentaint health --rules`
 
 ## Workflow
 
-When this package's lib rules already exist (the tracking file's `artifact` set and `tests_passing: done`), reuse them as the baseline — expand or refine for what the requirements newly name (a new sink, a widened source), never re-author rules that already pass. When the unit is partway (some stages `done`, some not), continue from the first unfinished stage on the artifacts already on disk rather than restarting. Author from scratch only the genuinely new sources/sinks.
+In the fix role (`<fix-target>` set), don't author from the unit — edit only that one flagged rule per step 4's false-positive/negative guidance, re-run its tests, and stop; leave the unit's other entries untouched.
+
+When this package's lib rules already exist (the unit's entries carry `rule_id` and `tests_passing: done`), reuse them as the baseline — expand or refine for what the unit newly names (a new sink, a widened source), never re-author rules that already pass. When the unit is partway (some stages `done`, some not), continue from the first unfinished stage on the artifacts already on disk rather than restarting. Author from scratch only the genuinely new sources/sinks.
 
 ### 1. Check existing coverage
 
@@ -36,7 +38,7 @@ Browse builtin rules at `opentaint health --rules` for source/sink library rules
 
 ### 2. Wire sources and sinks
 
-Prefer referencing built-in source/sink library rules; write a custom one only when no built-in fits. Derive each pattern from the requirements' fully-qualified names and annotations
+Prefer referencing built-in source/sink library rules; write a custom one only when no built-in fits. Derive each pattern from the unit's fully-qualified names and annotations
 
 Reference built-ins:
 
@@ -97,7 +99,6 @@ A lib rule emits nothing alone — to exercise it you need a join. Write one tes
 - `sources/` → `<name>-sources`: ref every new source lib rule + the generic sink, wiring `<source>.$UNTRUSTED -> sink.$VALUE` for each
 
 ```yaml
-# .opentaint/test-projects/<name>/sinks/test-rules/java/security/<name>-sinks.yaml
 rules:
   - id: <name>-sinks
     severity: ERROR
@@ -154,16 +155,17 @@ Read `dropped-external-methods.yaml` next to it; either way leave `tests_passing
 ## Output
 
 - The new lib rule file(s) under `<rules-dir>`, and the test join(s) under each test project's `test-rules/`
-- Tracking updated: the lib rules' `rule_id`s/`artifact`, `stages.tests_passing` (per Tracking)
+- Tracking updated: each entry's `rule_id`, `stages.tests_passing` (per Tracking)
 - Report the lib rule ids, a one-line test summary per sub-project, and the exact `test rule run` command used
 - If blocked (step 5): leave `tests_passing: pending` and report the cause instead
 
 ## Tracking
 
-In `<tracking-file>`, once the lib rules exist and every sub-project's samples pass:
+In `<tracking-file>` (the source or sink unit), once the lib rules exist and every sub-project's samples pass, set each entry's `rule_id` and the stage. No top-level `artifact` — its path is derivable from `rule_id`. `rule_id` is the created lib rule's ref, or a built-in ref when you referenced a built-in instead of authoring:
 
 ```yaml
-artifact: .opentaint/rules/java/lib/generic/my-sink.yaml
+sinks:
+  - { method: "cn.hutool.core.io.FileUtil#writeBytes", vuln_class: path-traversal, note: "writes to an untrusted path", rule_id: "java/lib/generic/cn-hutool-core-io-path-traversal-sink.yaml#cn-hutool-core-io-file-write-path-traversal-sink" }
 stages:
   tests_passing: done
 ```
@@ -185,7 +187,7 @@ stages:
 - A wrong argument position in `(..., $UNTRUSTED, ...)` focuses the wrong parameter — point `focus-metavariable` at the tainted one
 - Refine the rule, never the test project — don't edit or weaken samples here; if one is wrong, hand it back upstream
 - A positive that won't pass because a library method drops taint is not a rule bug — don't broaden the rule to force it; surface it for approximation (step 5)
-- The `#` comments in the examples here are for you — don't copy them into the rule files you write; keep produced YAML comment-free
+- Keep produced rule files comment-free
 - An implicit-receiver pattern `this.method(...)` is unsupported ("Failed to transform pattern: ThisExpr") — match the unqualified call as a bare `method($X)` pattern instead
 - A structural (no-source) sink and a taint-flow sink can't share one join id — the engine forbids one id being both; if a class needs both, split them into separate rules/joins
 - Don't unpack or grep the analyzer JAR for built-in rules — its internals aren't a stable API; read the YAMLs from `opentaint health --rules`

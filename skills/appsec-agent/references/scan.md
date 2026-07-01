@@ -12,4 +12,4 @@ A scan that produced a SARIF — even with a timeout or OOM message — is done;
 
 Set `phases.scan: done`.
 
-On deep runs, if the scan flags an issue with a created rule — a rule that failed to load/parse, a join that should fire but didn't, or an own rule that false-positives — dispatch create-rule to fix that rule, then rescan before continuing.
+On deep runs, if the scan flags an issue with a created rule — a rule that failed to load/parse, a join that should fire but didn't, or an own rule that false-positives — dispatch create-rule with `<fix-target>` = that rule to fix it, then rescan before continuing.

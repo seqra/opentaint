@@ -52,13 +52,13 @@ Set `verdict` and append the reasoning to `notes`, below the analyzer report alr
 
 ## Tracking
 
-Editing an existing finding touches only `verdict` and `notes`. A split also creates a new finding file — give it the full shape, copying `rule_id` from the bundle and moving over the results' `sarif_hashes` and their analyzer report:
+Editing an existing finding touches only `verdict` and `notes`. A split also creates a new finding file — give it a fresh docker-like `finding_name` and the full shape, copying `rule_id` from the bundle and moving over the results' `sarif_hashes` and their analyzer report:
 
 ```yaml
-finding_name: <new-slug>              # a fresh docker-like name for the split-off vuln
-sarif_hashes: [<moved hash>, ...]     # hashes matching this logical vulnerability
-rule_id: java/security/sqli.yaml:sqli # same rule as the bundle it came from
-verdict: TP                           # pending | TP | FP
+finding_name: <new-slug>
+sarif_hashes: [<moved hash>, ...]
+rule_id: java/security/sqli.yaml:sqli
+verdict: TP
 notes: >
   <analyzer report for these results — moved from the bundle>
   triage: @RequestParam orderBy is attacker-controlled; reaches ${} in SelectProvider unsanitized → TP
