@@ -1,5 +1,5 @@
 rules:
-  - id: go-path-traversal
+  - id: path-traversal
     languages: [go]
     severity: ERROR
     message: Tainted user input reaches filesystem path (path traversal)
@@ -9,9 +9,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#go-http-sources
+        - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/go-path-sinks.yaml#go-path-sinks
+        - rule: go/lib/path-sinks.yaml#path-sinks
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

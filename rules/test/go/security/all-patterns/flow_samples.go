@@ -142,7 +142,8 @@ func xssBody(value string) string {
 
 func PositiveXSSHelperReturnFlow() {
 	r := requestForSources()
-	_, _ = responseWriterWithString{}.WriteString(xssBody(r.URL.Query().Get("q")))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(xssBody(r.URL.Query().Get("q"))))
 }
 
 func PositiveXSSChannelFlow() {
@@ -150,7 +151,8 @@ func PositiveXSSChannelFlow() {
 	ch := make(chan string, 1)
 	ch <- r.FormValue("q")
 	value := <-ch
-	_, _ = responseWriterWithString{}.Write([]byte(value))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(value))
 }
 
 func PositiveSSTIBuilderChainFlow() {
@@ -162,6 +164,12 @@ func PositiveSSTIBuilderChainFlow() {
 func NegativeSSTIConstantTemplateTaintedData() {
 	t := template.Must(template.New("x").Parse("hello {{.}}"))
 	_ = t.Execute(&bytes.Buffer{}, envSource())
+}
+
+func PositiveBytesBufferFlow() {
+	var b bytes.Buffer
+	b.WriteString(envSource())
+	sqlSink(b.String())
 }
 
 func PositiveTrustCookiePathFlow() {

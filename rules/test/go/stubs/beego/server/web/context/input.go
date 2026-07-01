@@ -10,6 +10,7 @@ type BeegoInput struct {
 }
 
 func (i *BeegoInput) Param(key string) string    { return "" }
+func (i *BeegoInput) Query(key string) string    { return "" }
 func (i *BeegoInput) Header(key string) string   { return "" }
 func (i *BeegoInput) Params() map[string]string  { return nil }
 func (i *BeegoInput) URI() string                { return "" }

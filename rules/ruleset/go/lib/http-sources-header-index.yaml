@@ -1,5 +1,5 @@
 rules:
-  - id: go-http-sources-header-index
+  - id: http-sources-header-index
     options: {lib: true}
     languages: [go]
     severity: NOTE
@@ -7,4 +7,6 @@ rules:
     mode: taint
     pattern-sources:
       - label: "$UNTRUSTED"
-        pattern: $X.Header($K)
+        pattern: |
+          import context "github.com/beego/beego/v2/server/web/context"
+          ($X : *context.BeegoInput).Header($K)

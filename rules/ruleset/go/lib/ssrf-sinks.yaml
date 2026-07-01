@@ -1,5 +1,5 @@
 rules:
-  - id: go-ssrf-sinks
+  - id: ssrf-sinks
     options: {lib: true}
     languages: [go]
     severity: ERROR
@@ -7,15 +7,18 @@ rules:
     mode: taint
     pattern-sinks:
       - patterns:
+          - pattern-inside: |
+              import "net/http"
+              ...
           - pattern-either:
-              - pattern: http.Get($U)
-              - pattern: http.Head($U)
-              - pattern: http.Post($U, ...)
-              - pattern: http.PostForm($U, ...)
+              - pattern: "http.Get($U)"
+              - pattern: "http.Head($U)"
+              - pattern: "http.Post($U, ...)"
+              - pattern: "http.PostForm($U, ...)"
               - pattern: "($C : *http.Client).Get($U)"
               - pattern: "($C : *http.Client).Head($U)"
               - pattern: "($C : *http.Client).Post($U, ...)"
               - pattern: "($C : *http.Client).PostForm($U, ...)"
-              - pattern: http.NewRequest($M, $U, ...)
-              - pattern: http.NewRequestWithContext($CTX, $M, $U, ...)
+              - pattern: "http.NewRequest($M, $U, ...)"
+              - pattern: "http.NewRequestWithContext($CTX, $M, $U, ...)"
           - focus-metavariable: $U

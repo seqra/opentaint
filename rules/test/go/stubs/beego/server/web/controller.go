@@ -7,7 +7,8 @@ import (
 )
 
 type Controller struct {
-	Ctx *Context
+	Ctx  *Context
+	Data map[interface{}]interface{}
 }
 
 type Context struct {
@@ -35,3 +36,4 @@ func (c *Controller) GetSession(key string) interface{}                    { ret
 func (c *Controller) Input() map[string]string                             { return nil }
 func (c *Controller) ParseForm(ptr interface{}) error                      { return nil }
 func (c *Controller) SetSession(key string, value interface{}) error       { return nil }
+func (c *Controller) ServeJSON(encoding ...bool)                           {}

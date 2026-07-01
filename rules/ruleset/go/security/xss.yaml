@@ -1,5 +1,5 @@
 rules:
-  - id: go-reflected-xss
+  - id: reflected-xss
     languages: [go]
     severity: ERROR
     message: Tainted user input written to HTTP response body (reflected XSS)
@@ -9,9 +9,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#go-http-sources
+        - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/go-xss-sinks.yaml#go-xss-sinks
+        - rule: go/lib/xss-sinks.yaml#xss-sinks
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

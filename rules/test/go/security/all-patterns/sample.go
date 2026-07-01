@@ -2,6 +2,7 @@ package allpatterns
 
 import (
 	"context"
+	"crypto/aes"
 	"crypto/des"
 	"crypto/md5"
 	"crypto/rc4"
@@ -22,11 +23,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/andreburgaud/crypt2go/ecb"
 	"github.com/beego/beego/v2/server/web"
 	beegocontext "github.com/beego/beego/v2/server/web/context"
-
-	md4 "test/internal/md4"
-	cipher "test/internal/weakcipher"
+	"golang.org/x/crypto/md4"
 )
 
 var (
@@ -42,16 +42,7 @@ func (responseWriterWithString) Write(p []byte) (int, error)       { return len(
 func (responseWriterWithString) WriteHeader(statusCode int)        {}
 func (responseWriterWithString) WriteString(s string) (int, error) { return len(s), nil }
 
-type beegoOutput struct{}
-
-func (beegoOutput) Body(body string)                           {}
-func (beegoOutput) JSON(data interface{}, args ...interface{}) {}
-
-type jsonController struct {
-	Data interface{}
-}
-
-func (c *jsonController) ServeJSON() {}
+func xssResponseWriter() http.ResponseWriter { return responseWriterWithString{} }
 
 func requestForSources() *http.Request {
 	r := &http.Request{
@@ -231,6 +222,7 @@ func PositiveSourceBeegoInputParams()      { i := &beegocontext.BeegoInput{}; sq
 func PositiveSourceBeegoInputURI()         { i := &beegocontext.BeegoInput{}; sqlSink(i.URI()) }
 func PositiveSourceBeegoInputURL()         { i := &beegocontext.BeegoInput{}; sqlSink(i.URL()) }
 func PositiveSourceBeegoInputRequestBody() { i := &beegocontext.BeegoInput{}; sqlSink(i.RequestBody) }
+func PositiveSourceBeegoInputQuery()       { i := &beegocontext.BeegoInput{}; sqlSink(i.Query("k")) }
 func UnsupportedPositiveSourceBeegoInputBind() {
 	i := &beegocontext.BeegoInput{}
 	var dst struct{ Q string }
@@ -253,6 +245,10 @@ func PositiveSQLDBExec()            { _, _ = db.Exec("select " + envSource()) }
 func PositiveSQLDBExecContext()     { _, _ = db.ExecContext(ctx, "select "+envSource()) }
 func PositiveSQLDBPrepare()         { _, _ = db.Prepare("select " + envSource()) }
 func PositiveSQLDBPrepareContext()  { _, _ = db.PrepareContext(ctx, "select "+envSource()) }
+func PositiveSQLTxQuery() {
+	tx, _ := db.Begin()
+	_, _ = tx.Query(fmt.Sprintf("select * from users where name = '%s'", envSource()))
+}
 
 func PositiveCmdExecCommand()        { _ = exec.Command(envSource(), "arg") }
 func PositiveCmdExecCommandContext() { _ = exec.CommandContext(ctx, envSource(), "arg") }
@@ -267,6 +263,9 @@ func PositiveCmdSyscallForkExec() {
 func PositiveCmdSyscallStartProcess() {
 	_, _, _ = syscall.StartProcess(envSource(), []string{envSource()}, &syscall.ProcAttr{})
 }
+func PositiveCmdShellLiteral()   { _ = exec.Command("sh", "-c", envSource()) }
+func PositiveCmdBashLiteral()    { _ = exec.Command("bash", "-c", envSource()) }
+func PositiveCmdBinShLiteral()   { _ = exec.Command("/bin/sh", "-c", envSource()) }
 func PositiveCmdCombinedOutput() { _, _ = exec.Command(envSource()).CombinedOutput() }
 func PositiveCmdRun()            { _ = exec.Command(envSource()).Run() }
 func PositiveCmdOutput()         { _, _ = exec.Command(envSource()).Output() }
@@ -334,52 +333,79 @@ func PositiveSSTITemplateMustParse()  { _ = template.Must(template.New("x").Pars
 func PositiveSSTITemplateParseFiles() { _, _ = template.New("x").ParseFiles(envSource()) }
 func PositiveSSTITemplateParseGlob()  { _, _ = template.New("x").ParseGlob(envSource()) }
 
-func PositiveXSSWrite()         { _, _ = responseWriterWithString{}.Write([]byte(envSource())) }
-func PositiveXSSWriteString()   { _, _ = responseWriterWithString{}.WriteString(envSource()) }
-func PositiveXSSBody()          { beegoOutput{}.Body(envSource()) }
-func PositiveXSSFprint()        { _, _ = fmt.Fprint(responseWriterWithString{}, envSource()) }
-func PositiveXSSFprintf()       { _, _ = fmt.Fprintf(responseWriterWithString{}, "%s", envSource()) }
-func PositiveXSSFprintln()      { _, _ = fmt.Fprintln(responseWriterWithString{}, envSource()) }
-func PositiveXSSIOWriteString() { _, _ = io.WriteString(responseWriterWithString{}, envSource()) }
+func PositiveXSSWrite()         { w := xssResponseWriter(); _, _ = w.Write([]byte(envSource())) }
+func PositiveXSSWriteString()   { ctx := &beegocontext.Context{}; ctx.WriteString(envSource()) }
+func PositiveXSSBody()          { out := &beegocontext.BeegoOutput{}; _ = out.Body([]byte(envSource())) }
+func PositiveXSSFprint()        { _, _ = fmt.Fprint(xssResponseWriter(), envSource()) }
+func PositiveXSSFprintf()       { _, _ = fmt.Fprintf(xssResponseWriter(), "%s", envSource()) }
+func PositiveXSSFprintln()      { _, _ = fmt.Fprintln(xssResponseWriter(), envSource()) }
+func PositiveXSSIOWriteString() { _, _ = io.WriteString(xssResponseWriter(), envSource()) }
 func PositiveXSSJSONEncoderEncode() {
-	_ = json.NewEncoder(responseWriterWithString{}).Encode(envSource())
+	_ = json.NewEncoder(xssResponseWriter()).Encode(envSource())
 }
-func PositiveXSSServeJSON()  { c := &jsonController{Data: envSource()}; c.ServeJSON() }
-func PositiveXSSOutputJSON() { beegoOutput{}.JSON(envSource(), 200) }
+func UnsupportedPositiveXSSServeJSON() {
+	c := &web.Controller{Data: map[interface{}]interface{}{"json": envSource()}}
+	c.ServeJSON()
+}
+func PositiveXSSOutputJSON() {
+	out := &beegocontext.BeegoOutput{}
+	_ = out.JSON(envSource(), false, false)
+}
+func PositiveXSSResponseWrite() {
+	resp := &beegocontext.Response{}
+	_, _ = resp.Write([]byte(envSource()))
+}
+func NegativeXSSResponseWrite() {
+	resp := &beegocontext.Response{}
+	_, _ = resp.Write([]byte(html.EscapeString(envSource())))
+}
 
 func NegativeXSSHTMLEscapeString() {
-	_, _ = responseWriterWithString{}.WriteString(template.HTMLEscapeString(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(template.HTMLEscapeString(envSource())))
 }
 func NegativeXSSJSEscapeString() {
-	_, _ = responseWriterWithString{}.WriteString(template.JSEscapeString(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(template.JSEscapeString(envSource())))
 }
 func UnsupportedNegativeXSSURLQueryEscaper() {
-	_, _ = responseWriterWithString{}.WriteString(template.URLQueryEscaper(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(template.URLQueryEscaper(envSource())))
 }
 func UnsupportedNegativeXSSHTMLEscaper() {
-	_, _ = responseWriterWithString{}.WriteString(template.HTMLEscaper(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(template.HTMLEscaper(envSource())))
 }
 func NegativeXSSHTMLEscape() {
-	_, _ = responseWriterWithString{}.WriteString(html.EscapeString(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(html.EscapeString(envSource())))
 }
 func NegativeXSSURLQueryEscape() {
-	_, _ = responseWriterWithString{}.WriteString(url.QueryEscape(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(url.QueryEscape(envSource())))
 }
 func NegativeXSSURLPathEscape() {
-	_, _ = responseWriterWithString{}.WriteString(url.PathEscape(envSource()))
+	w := xssResponseWriter()
+	_, _ = w.Write([]byte(url.PathEscape(envSource())))
 }
 
 func PositiveTrustSetCookie()  { http.SetCookie(responseWriterWithString{}, cookieFrom(envSource())) }
 func PositiveTrustSetSession() { c := &web.Controller{}; _ = c.SetSession("q", envSource()) }
 
-func PositiveWeakCryptoDES()                { _, _ = des.NewCipher([]byte("12345678")) }
-func PositiveWeakCryptoTripleDES()          { _, _ = des.NewTripleDESCipher([]byte("123456789012345678901234")) }
-func PositiveWeakCryptoRC4()                { _, _ = rc4.NewCipher([]byte("secret")) }
-func PositiveWeakCryptoMD4()                { _ = md4.New() }
-func PositiveWeakCryptoCipherECBEncrypter() { _ = cipher.NewECBEncrypter("block") }
-func PositiveWeakCryptoCipherECBDecrypter() { _ = cipher.NewECBDecrypter("block") }
-func PositiveWeakCryptoECBEncrypter()       { _ = NewECBEncrypter("block") }
-func PositiveWeakCryptoECBDecrypter()       { _ = NewECBDecrypter("block") }
+func PositiveWeakCryptoDES()       { _, _ = des.NewCipher([]byte("12345678")) }
+func PositiveWeakCryptoTripleDES() { _, _ = des.NewTripleDESCipher([]byte("123456789012345678901234")) }
+func PositiveWeakCryptoRC4()       { _, _ = rc4.NewCipher([]byte("secret")) }
+func PositiveWeakCryptoMD4()       { _ = md4.New() }
+func PositiveWeakCryptoECBEncrypter() {
+	b, _ := aes.NewCipher([]byte("0123456789abcdef"))
+	_ = ecb.NewECBEncrypter(b)
+}
+func PositiveWeakCryptoECBDecrypter() {
+	b, _ := aes.NewCipher([]byte("0123456789abcdef"))
+	_ = ecb.NewECBDecrypter(b)
+}
+func NegativeWeakCryptoLocalECBEncrypter() { _ = NewECBEncrypter("block") }
+func NegativeWeakCryptoLocalECBDecrypter() { _ = NewECBDecrypter("block") }
 
 func NewECBEncrypter(args ...interface{}) interface{} { return args }
 func NewECBDecrypter(args ...interface{}) interface{} { return args }

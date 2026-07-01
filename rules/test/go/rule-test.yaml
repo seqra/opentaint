@@ -1,5 +1,5 @@
 tests:
-  - rule-id: go/security/sql-injection.yaml#go-sql-injection
+  - rule-id: go/security/sql-injection.yaml#sql-injection
     positive:
       - test/security/all-patterns.PositiveSourceRequestFormValue
       - test/security/all-patterns.PositiveSourceRequestPostFormValue
@@ -47,6 +47,7 @@ tests:
       - test/security/all-patterns.PositiveSourceBeegoInputURI
       - test/security/all-patterns.PositiveSourceBeegoInputURL
       - test/security/all-patterns.PositiveSourceBeegoInputRequestBody
+      - test/security/all-patterns.PositiveSourceBeegoInputQuery
       - test/security/all-patterns.PositiveSourceHeaderMethod
       - test/security/all-patterns.PositiveSQLDBQuery
       - test/security/all-patterns.PositiveSQLDBQueryContext
@@ -56,16 +57,23 @@ tests:
       - test/security/all-patterns.PositiveSQLDBExecContext
       - test/security/all-patterns.PositiveSQLDBPrepare
       - test/security/all-patterns.PositiveSQLDBPrepareContext
+      - test/security/all-patterns.PositiveSQLTxQuery
+      - test/security/all-patterns.PositiveBytesBufferFlow
       - test/security/all-patterns.PositiveSQLHelperReturnFlow
       - test/security/all-patterns.PositiveSQLStructFieldFlow
       - test/security/all-patterns.PositiveSQLInterfaceDispatchFlow
     negative:
       - test/security/all-patterns.NegativeSQLParameterizedArgument
+      - test/security/all-patterns.NegativeSQLConstantQuery
+      - test/security/all-patterns.NegativeSourceUnusedFormValue
 
-  - rule-id: go/security/cmdinj.yaml#go-command-injection
+  - rule-id: go/security/cmdinj.yaml#command-injection
     positive:
       - test/security/all-patterns.PositiveCmdExecCommand
       - test/security/all-patterns.PositiveCmdExecCommandContext
+      - test/security/all-patterns.PositiveCmdShellLiteral
+      - test/security/all-patterns.PositiveCmdBashLiteral
+      - test/security/all-patterns.PositiveCmdBinShLiteral
       - test/security/all-patterns.PositiveCmdExecLookPath
       - test/security/all-patterns.PositiveCmdOSStartProcess
       - test/security/all-patterns.PositiveCmdSyscallExec
@@ -78,8 +86,11 @@ tests:
       - test/security/all-patterns.PositiveCmdHelperReturnFlow
       - test/security/all-patterns.PositiveCmdStructFieldFlow
       - test/security/all-patterns.PositiveCmdInterfaceDispatchFlow
+    negative:
+      - test/security/all-patterns.NegativeCmdConstantCommand
+      - test/security/all-patterns.NegativeCmdSafeArgv
 
-  - rule-id: go/security/path-traversal.yaml#go-path-traversal
+  - rule-id: go/security/path-traversal.yaml#path-traversal
     positive:
       - test/security/all-patterns.PositivePathOSOpen
       - test/security/all-patterns.PositivePathOSOpenFile
@@ -122,8 +133,10 @@ tests:
       - test/security/all-patterns.PositivePathHelperReturnFlow
       - test/security/all-patterns.PositivePathStructFieldFlow
       - test/security/all-patterns.PositivePathInterfaceDispatchFlow
+    negative:
+      - test/security/all-patterns.NegativePathConstantPath
 
-  - rule-id: go/security/ssrf.yaml#go-ssrf
+  - rule-id: go/security/ssrf.yaml#ssrf
     positive:
       - test/security/all-patterns.PositiveSSRFHTTPGet
       - test/security/all-patterns.PositiveSSRFHTTPHead
@@ -137,8 +150,10 @@ tests:
       - test/security/all-patterns.PositiveSSRFNewRequestWithContext
       - test/security/all-patterns.PositiveSSRFHelperReturnFlow
       - test/security/all-patterns.PositiveSSRFChannelFlow
+    negative:
+      - test/security/all-patterns.NegativeSSRFConstantURL
 
-  - rule-id: go/security/ssti.yaml#go-ssti
+  - rule-id: go/security/ssti.yaml#ssti
     positive:
       - test/security/all-patterns.PositiveSSTITemplateParse
       - test/security/all-patterns.PositiveSSTITemplateMustParse
@@ -148,7 +163,7 @@ tests:
     negative:
       - test/security/all-patterns.NegativeSSTIConstantTemplateTaintedData
 
-  - rule-id: go/security/xss.yaml#go-reflected-xss
+  - rule-id: go/security/xss.yaml#reflected-xss
     positive:
       - test/security/all-patterns.PositiveXSSWrite
       - test/security/all-patterns.PositiveXSSWriteString
@@ -158,44 +173,52 @@ tests:
       - test/security/all-patterns.PositiveXSSFprintln
       - test/security/all-patterns.PositiveXSSIOWriteString
       - test/security/all-patterns.PositiveXSSJSONEncoderEncode
-      - test/security/all-patterns.PositiveXSSServeJSON
       - test/security/all-patterns.PositiveXSSOutputJSON
+      - test/security/all-patterns.PositiveXSSResponseWrite
       - test/security/all-patterns.PositiveXSSHelperReturnFlow
       - test/security/all-patterns.PositiveXSSChannelFlow
     negative:
+      - test/security/all-patterns.NegativeXSSResponseWrite
       - test/security/all-patterns.NegativeXSSHTMLEscapeString
       - test/security/all-patterns.NegativeXSSJSEscapeString
       - test/security/all-patterns.NegativeXSSHTMLEscape
       - test/security/all-patterns.NegativeXSSURLQueryEscape
       - test/security/all-patterns.NegativeXSSURLPathEscape
 
-  - rule-id: go/security/trust-boundary.yaml#go-trust-boundary-cwe-501
+  - rule-id: go/security/trust-boundary.yaml#trust-boundary-cwe-501
     positive:
       - test/security/all-patterns.PositiveTrustSetCookie
       - test/security/all-patterns.PositiveTrustSetSession
       - test/security/all-patterns.PositiveTrustSourceBeegoInputHeader
       - test/security/all-patterns.PositiveTrustCookiePathFlow
+    negative:
+      - test/security/all-patterns.NegativeTrustConstantCookie
 
-  - rule-id: go/security/weak-crypto.yaml#go-weak-crypto-cwe-327
+  - rule-id: go/security/weak-crypto.yaml#weak-crypto-cwe-327
     positive:
       - test/security/all-patterns.PositiveWeakCryptoDES
       - test/security/all-patterns.PositiveWeakCryptoTripleDES
       - test/security/all-patterns.PositiveWeakCryptoRC4
       - test/security/all-patterns.PositiveWeakCryptoMD4
-      - test/security/all-patterns.PositiveWeakCryptoCipherECBEncrypter
-      - test/security/all-patterns.PositiveWeakCryptoCipherECBDecrypter
       - test/security/all-patterns.PositiveWeakCryptoECBEncrypter
       - test/security/all-patterns.PositiveWeakCryptoECBDecrypter
+    negative:
+      - test/security/all-patterns.NegativeWeakCryptoLocalECBEncrypter
+      - test/security/all-patterns.NegativeWeakCryptoLocalECBDecrypter
+      - test/security/all-patterns.NegativeWeakCryptoAES
 
-  - rule-id: go/security/weak-hash.yaml#go-weak-hash-cwe-328
+  - rule-id: go/security/weak-hash.yaml#weak-hash-cwe-328
     positive:
       - test/security/all-patterns.PositiveWeakHashMD5New
       - test/security/all-patterns.PositiveWeakHashMD5Sum
       - test/security/all-patterns.PositiveWeakHashSHA1New
       - test/security/all-patterns.PositiveWeakHashSHA1Sum
       - test/security/all-patterns.PositiveWeakHashMD4New
+    negative:
+      - test/security/all-patterns.NegativeWeakHashSHA256New
+      - test/security/all-patterns.NegativeWeakHashSHA256Sum
 
-  - rule-id: go/security/weak-random.yaml#go-weak-random-cwe-330
+  - rule-id: go/security/weak-random.yaml#weak-random-cwe-330
     positive:
       - test/security/all-patterns.PositiveWeakRandomInt
       - test/security/all-patterns.PositiveWeakRandomIntn
@@ -211,3 +234,8 @@ tests:
       - test/security/all-patterns.PositiveWeakRandomUint64
       - test/security/all-patterns.PositiveWeakRandomPerm
       - test/security/all-patterns.PositiveWeakRandomNew
+      - test/security/all-patterns.PositiveWeakRandomV2Float64
+      - test/security/all-patterns.PositiveWeakRandomV2IntN
+    negative:
+      - test/security/all-patterns.NegativeWeakRandomCryptoInt
+      - test/security/all-patterns.NegativeWeakRandomCryptoRead

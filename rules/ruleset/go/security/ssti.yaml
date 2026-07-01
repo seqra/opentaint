@@ -1,5 +1,5 @@
 rules:
-  - id: go-ssti
+  - id: ssti
     languages: [go]
     severity: ERROR
     message: Tainted user input parsed as a template source (server-side template injection)
@@ -9,9 +9,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#go-http-sources
+        - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/go-ssti-sinks.yaml#go-ssti-sinks
+        - rule: go/lib/ssti-sinks.yaml#ssti-sinks
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
