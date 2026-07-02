@@ -6277,3 +6277,15 @@ passThrough:
     to:
     - this
     - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+- function: java.util.Base64$Encoder#encodeToString
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.util.Base64$Encoder#encode
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.util.Base64$Decoder#wrap
+  copy:
+  - from: arg(0)
+    to: result
