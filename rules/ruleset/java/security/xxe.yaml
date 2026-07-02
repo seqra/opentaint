@@ -2,7 +2,7 @@ rules:
   - id: xxe
     severity: ERROR
     message: >-
-      Potential XXE: untrusted input is parsed as an XML with safety flags disabled
+      XXE: untrusted input is parsed as an XML with safety flags disabled
     metadata:
       cwe: CWE-611
       short-description: XML parsing of an untrusted input

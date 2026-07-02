@@ -2,7 +2,7 @@ rules:
   - id: groovy-injection
     severity: ERROR
     message: >-
-      Potential code injection: Groovy invocation with user-controlled input.
+      Code injection: Groovy invocation with user-controlled input.
     metadata:
       cwe:
         - CWE-94
@@ -64,7 +64,7 @@ rules:
   - id: ognl-injection
     severity: ERROR
     message: >-
-      Potential code injection: OGNL expression construction from user-controlled input.
+      Code injection: OGNL expression construction from user-controlled input.
     metadata:
       cwe:
         - CWE-94
@@ -127,7 +127,7 @@ rules:
   - id: script-engine-injection
     severity: ERROR
     message: |
-      Potential code injection: ScriptEngine executes user-controlled code.
+      Code injection: ScriptEngine executes user-controlled code.
     metadata:
       cwe:
         - CWE-94
@@ -199,7 +199,7 @@ rules:
   - id: ssti
     severity: ERROR
     message: >-
-      Potential template injection: unvalidated user data flows into template engine
+      Template injection: unvalidated user data flows into template engine
     metadata:
       cwe:
         - CWE-94
@@ -271,11 +271,11 @@ rules:
   - id: el-injection-in-servlet-app
     severity: ERROR
     message: >-
-      Potential code injection: calling Java Expression Language method directly with user-supplied input may allow an adversary to
+      Code injection: calling Java Expression Language method directly with user-supplied input may allow an adversary to
       execute arbitrary Java code, including OS system commands.
     metadata:
       cwe: CWE-917
-      short-description: Potential expression language injection
+      short-description: Expression language injection
       full-description: |-
         Expression Language (EL) injection in Java occurs when user-controlled input is evaluated as an expression by
         an EL engine (e.g., Java Expression Language, JSP/JSF EL, Spring Expression Language / SpEL).
@@ -375,12 +375,12 @@ rules:
   - id: spring-el-injection
     severity: ERROR
     message: >-
-      Potential code injection: calling Spring Expression Language method directly with user-supplied input
+      Code injection: calling Spring Expression Language method directly with user-supplied input
       may allow an adversary to  read or modify sensitive data, bypass security checks, or, in severe cases,
       execute arbitrary code within the application's context.
     metadata:
       cwe: CWE-917
-      short-description: Potential expression language injection
+      short-description: Expression language injection
       full-description: |-
         Spring Expression Language (SpEL) injection is an expression-language injection vulnerability in Spring-based applications. It occurs when untrusted input is directly embedded into, or used as, a SpEL expression and then evaluated. Because SpEL can access bean methods, system properties, and other internal objects, a successful injection can allow an attacker to read or modify sensitive data, bypass security checks, or, in severe cases, execute arbitrary code within the application's context.
 

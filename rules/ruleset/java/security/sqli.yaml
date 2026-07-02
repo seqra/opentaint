@@ -2,10 +2,10 @@ rules:
   - id: sql-injection
     severity: ERROR
     message: >-
-      Potential SQL injection: detected unescaped input from a user-manipulated data source going into a SQL execution call or statement
+      SQL injection: detected unescaped input from a user-manipulated data source going into a SQL execution call or statement
     metadata:
       cwe: CWE-89
-      short-description: Potential SQL injection
+      short-description: SQL injection
       full-description: |-
         SQL injection happens when untrusted data is embedded into a SQL string that is executed by a SQL execution API.
         This rule focuses on the security-sensitive call itself (for example `Statement.executeQuery(...)`, `JdbcTemplate.query(...)`,

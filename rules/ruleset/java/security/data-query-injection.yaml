@@ -2,7 +2,7 @@ rules:
   - id: xpath-injection
     severity: ERROR
     message: >-
-      Potential XPath injection: detected input from a HTTPServletRequest going into a XPath evaluate or compile command.
+      XPath injection: detected input from a HTTPServletRequest going into a XPath evaluate or compile command.
     metadata:
       cwe: CWE-643
       short-description: XPath Injection
@@ -72,7 +72,7 @@ rules:
   - id: mongodb-injection
     severity: ERROR
     message: >-
-      Potential NoSQL injection: detected untrusted user input going into NoSQL query using the 'where' evaluation operator.
+      NoSQL injection: detected untrusted user input going into NoSQL query using the 'where' evaluation operator.
     metadata:
       cwe: CWE-943
       short-description: MongoDB query injection
