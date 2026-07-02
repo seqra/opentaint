@@ -1,11 +1,50 @@
 rules:
   - id: reflected-xss
-    languages: [go]
     severity: ERROR
-    message: Tainted user input written to HTTP response body (reflected XSS)
+    message: >-
+      Reflected XSS: user-controlled input is written to the HTTP response body
     metadata:
       cwe: CWE-79
-      short-description: Reflected cross-site scripting
+      short-description: User-controlled input reflected in the HTTP response
+      full-description: |-
+        Reflected cross-site scripting (XSS) occurs when untrusted data is written into the
+        HTTP response body without contextual output encoding, through APIs such as
+        `ResponseWriter.Write`, `fmt.Fprintf`, or `io.WriteString`. A browser then executes
+        attacker-supplied markup or script in the victim's session.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            q := r.FormValue("q") // untrusted
+
+            // VULNERABLE: raw input is reflected into HTML
+            fmt.Fprintf(w, "<p>Results for %s</p>", q)
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        // html/template escapes per output context automatically.
+        var page = template.Must(template.New("p").Parse(`<p>Results for {{.}}</p>`))
+
+        func handler(w http.ResponseWriter, r *http.Request) {
+            // SAFE: {{.}} is HTML-escaped before it reaches the response
+            page.Execute(w, r.FormValue("q"))
+        }
+        ```
+
+        Patterns covered include `http.ResponseWriter.Write`, the beego response writers,
+        `fmt.Fprint`/`Fprintf`/`Fprintln`, `io.WriteString`, and `json.NewEncoder(w).Encode`
+        reached by tainted data. Values passed through `html/template`, `text/template`, or
+        the `html`/`net/url` escapers are treated as sanitized.
+      references:
+        - https://owasp.org/www-community/attacks/xss/
+        - https://cwe.mitre.org/data/definitions/79.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: join
     join:
       refs:

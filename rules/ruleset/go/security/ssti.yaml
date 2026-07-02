@@ -1,11 +1,50 @@
 rules:
   - id: ssti
-    languages: [go]
     severity: ERROR
-    message: Tainted user input parsed as a template source (server-side template injection)
+    message: >-
+      Server-side template injection: a template is parsed from user-controlled input
     metadata:
       cwe: CWE-1336
-      short-description: Server-side template injection
+      short-description: Template parsed from user-controlled input
+      full-description: |-
+        Server-side template injection (SSTI) occurs when untrusted data is parsed as the
+        template *source* by `html/template` or `text/template` (`Parse`, `ParseFiles`,
+        `ParseGlob`). Because template source can invoke methods and pipelines, an attacker
+        who controls it can leak data or, with `text/template`, break out of HTML escaping.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            src := r.FormValue("tpl") // untrusted
+
+            // VULNERABLE: user input is compiled as the template body
+            t, _ := template.New("page").Parse(src)
+            t.Execute(w, nil)
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        // Template text is fixed at build time; user input is only *data*.
+        var page = template.Must(template.New("page").Parse(`Hello, {{.Name}}`))
+
+        func handler(w http.ResponseWriter, r *http.Request) {
+            // SAFE: r.FormValue("name") flows into the data model, not the template source
+            page.Execute(w, struct{ Name string }{Name: r.FormValue("name")})
+        }
+        ```
+
+        Patterns covered include `template.New(...).Parse`/`ParseFiles`/`ParseGlob`,
+        `template.Must(...)`, and `(*template.Template).Parse` in both `html/template` and
+        `text/template` reached by a tainted template-source argument.
+      references:
+        - https://portswigger.net/web-security/server-side-template-injection
+        - https://cwe.mitre.org/data/definitions/1336.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: join
     join:
       refs:

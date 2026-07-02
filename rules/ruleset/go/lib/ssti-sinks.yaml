@@ -1,9 +1,14 @@
 rules:
   - id: ssti-sinks
-    options: {lib: true}
-    languages: [go]
-    severity: ERROR
-    message: Template source parse sink
+    options:
+      lib: true
+    severity: NOTE
+    message: Untrusted data reaches a template-source parse API
+    metadata:
+      short-description: Template source parse sink
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: taint
     pattern-sinks:
       - patterns:

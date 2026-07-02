@@ -1,9 +1,14 @@
 rules:
   - id: http-sources-requesturi
-    options: {lib: true}
-    languages: [go]
+    options:
+      lib: true
     severity: NOTE
     message: Untrusted request URI source
+    metadata:
+      short-description: Untrusted request URI source (*http.Request.RequestURI)
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: taint
     pattern-sources:
       - label: "$UNTRUSTED"

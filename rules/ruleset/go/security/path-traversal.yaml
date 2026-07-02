@@ -1,11 +1,55 @@
 rules:
   - id: path-traversal
-    languages: [go]
     severity: ERROR
-    message: Tainted user input reaches filesystem path (path traversal)
+    message: >-
+      Path traversal: a filesystem path is built from user-controlled input
     metadata:
       cwe: CWE-22
-      short-description: Path traversal
+      short-description: Filesystem path built from user-controlled input
+      full-description: |-
+        Path traversal occurs when untrusted data is used to build a filesystem path that
+        is passed to file APIs such as `os.Open(...)`, `os.ReadFile(...)`, or
+        `http.ServeFile(...)`. With `../` sequences or an absolute path, an attacker can
+        read or write files outside the intended directory.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            name := r.FormValue("file") // untrusted
+
+            // VULNERABLE: "../../etc/passwd" escapes the intended directory
+            data, _ := os.ReadFile("/var/app/data/" + name)
+            w.Write(data)
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            const base = "/var/app/data"
+
+            // SAFE: Join cleans the path; confirm the result stays under base
+            full := filepath.Join(base, r.FormValue("file"))
+            if !strings.HasPrefix(full, base+string(os.PathSeparator)) {
+                http.Error(w, "invalid path", http.StatusBadRequest)
+                return
+            }
+            data, _ := os.ReadFile(full)
+            w.Write(data)
+        }
+        ```
+
+        Patterns covered include the `os` and `io/ioutil` file APIs (`Open`, `OpenFile`,
+        `Create`, `ReadFile`, `WriteFile`, `Mkdir`, `Remove`, `Rename`, `Symlink`, ...)
+        and `http.ServeFile` reached by a tainted path argument.
+      references:
+        - https://owasp.org/www-community/attacks/Path_Traversal
+        - https://cwe.mitre.org/data/definitions/22.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: join
     join:
       refs:

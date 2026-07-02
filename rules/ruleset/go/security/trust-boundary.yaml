@@ -1,11 +1,52 @@
 rules:
   - id: trust-boundary-cwe-501
-    languages: [go]
     severity: ERROR
-    message: Tainted user input stored across a trust boundary (cookie/header/session)
+    message: >-
+      Trust boundary violation: user-controlled data is stored in a cookie, header, or session
     metadata:
       cwe: CWE-501
-      short-description: Trust boundary violation
+      short-description: User-controlled data stored across a trust boundary
+      full-description: |-
+        A trust boundary violation happens when user-controlled data is written into a
+        server-side trust store — a cookie, response header, or session — without
+        validation. Code downstream reads it back and treats it as trusted, so the attacker
+        effectively seeds trusted state.
+
+        Vulnerable example:
+
+        ```go
+        func (c *web.Controller) Save() {
+            role := c.GetString("role") // untrusted
+
+            // VULNERABLE: attacker-chosen value becomes trusted session state
+            c.SetSession("role", role)
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        var allowedRoles = map[string]bool{"user": true, "editor": true}
+
+        func (c *web.Controller) Save() {
+            role := c.GetString("role")
+            if !allowedRoles[role] {
+                c.Abort("400")
+                return
+            }
+
+            // SAFE: only a validated, allow-listed value is stored
+            c.SetSession("role", role)
+        }
+        ```
+
+        Patterns covered are `http.SetCookie` and beego's `(*web.Controller).SetSession`
+        reached by request-, environment-, or beego-derived tainted data.
+      references:
+        - https://cwe.mitre.org/data/definitions/501.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: taint
     pattern-sources:
       - label: "$UNTRUSTED"

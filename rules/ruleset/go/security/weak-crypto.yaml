@@ -1,11 +1,43 @@
 rules:
   - id: weak-crypto-cwe-327
-    languages: [go]
     severity: ERROR
-    message: Use of a broken or risky cryptographic algorithm
+    message: >-
+      Broken or risky cryptographic algorithm in use
     metadata:
       cwe: CWE-327
-      short-description: Broken or risky crypto algorithm
+      short-description: Broken or risky cryptographic algorithm
+      full-description: |-
+        DES and Triple DES (small block/key sizes), RC4 (biased keystream), MD4, and the
+        ECB block-cipher mode (which leaks plaintext structure) are considered broken or
+        unsafe. New code should use an authenticated construction such as AES-GCM.
+
+        Vulnerable example:
+
+        ```go
+        // VULNERABLE: DES is obsolete and easily broken
+        block, _ := des.NewCipher(key)
+        _ = block
+        ```
+
+        Safe example:
+
+        ```go
+        // SAFE: AES in an authenticated mode (GCM)
+        block, _ := aes.NewCipher(key) // 16/24/32-byte key
+        aead, _ := cipher.NewGCM(block)
+        ct := aead.Seal(nil, nonce, plaintext, nil)
+        _ = ct
+        ```
+
+        Patterns covered include `des.NewCipher`, `des.NewTripleDESCipher`,
+        `rc4.NewCipher`, `md4.New`, and `ecb.NewECBEncrypter`/`ecb.NewECBDecrypter`.
+      references:
+        - https://owasp.org/Top10/A02_2021-Cryptographic_Failures
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#algorithms
+        - https://cwe.mitre.org/data/definitions/327.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: search
     patterns:
       - pattern-inside: |

@@ -1,9 +1,14 @@
 rules:
   - id: xss-sinks
-    options: {lib: true}
-    languages: [go]
-    severity: ERROR
-    message: HTTP response write sink
+    options:
+      lib: true
+    severity: NOTE
+    message: Untrusted data reaches an HTTP response write API
+    metadata:
+      short-description: HTTP response write sink
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: taint
     pattern-sinks:
       - patterns:

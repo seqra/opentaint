@@ -1,11 +1,55 @@
 rules:
   - id: command-injection
-    languages: [go]
     severity: ERROR
-    message: Tainted user input reaches OS command execution (command injection)
+    message: >-
+      OS command injection: the command line is built from user-controlled input
     metadata:
       cwe: CWE-78
-      short-description: Command injection
+      short-description: OS command built from user-controlled input
+      full-description: |-
+        Command injection occurs when untrusted data reaches process-execution APIs such as
+        `exec.Command(...)`, `exec.CommandContext(...)`, or `syscall.Exec(...)`. When the
+        command name or a shell argument comes from user-controlled input, an attacker can
+        run arbitrary commands on the host.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            cmd := r.FormValue("cmd") // untrusted
+
+            // VULNERABLE: user input is handed to a shell interpreter
+            exec.Command("sh", "-c", cmd).Run()
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        var hostRe = regexp.MustCompile(`^[A-Za-z0-9.-]{1,255}$`)
+
+        func handler(w http.ResponseWriter, r *http.Request) {
+            host := r.FormValue("host")
+            if !hostRe.MatchString(host) {
+                http.Error(w, "invalid host", http.StatusBadRequest)
+                return
+            }
+
+            // SAFE: fixed executable, arguments passed separately (no shell)
+            exec.Command("ping", "-c", "4", host).Run()
+        }
+        ```
+
+        Patterns covered include `exec.Command`/`exec.CommandContext`/`exec.LookPath`,
+        `os.StartProcess`, and `syscall.Exec`/`syscall.ForkExec`/`syscall.StartProcess`
+        with a tainted command name, a tainted argument to a shell interpreter, and
+        execution of an `*exec.Cmd` whose argv or environment already carries taint.
+      references:
+        - https://owasp.org/www-community/attacks/Command_Injection
+        - https://cwe.mitre.org/data/definitions/78.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: join
     join:
       refs:

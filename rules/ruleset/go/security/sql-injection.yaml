@@ -1,11 +1,50 @@
 rules:
   - id: sql-injection
-    languages: [go]
     severity: ERROR
-    message: Tainted user input flows into SQL query (SQL injection)
+    message: >-
+      SQL injection: a query is assembled from user-controlled input
     metadata:
       cwe: CWE-89
-      short-description: SQL injection
+      short-description: SQL query built from user-controlled input
+      full-description: |-
+        SQL injection occurs when untrusted data is concatenated into a query string that
+        is handed to `database/sql` execution APIs such as `Query`, `QueryRow`, `Exec`, or
+        `Prepare`. An attacker who controls part of the query can read, modify, or destroy
+        data, or bypass authentication.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+            name := r.FormValue("name") // untrusted
+
+            // VULNERABLE: user input is concatenated into the query text
+            rows, _ := db.Query("SELECT id FROM users WHERE name = '" + name + "'")
+            _ = rows
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+            name := r.FormValue("name")
+
+            // SAFE: parameterized query; the driver binds the value, never the query text
+            rows, _ := db.Query("SELECT id FROM users WHERE name = ?", name)
+            _ = rows
+        }
+        ```
+
+        Patterns covered include `*sql.DB`, `*sql.Tx`, and `*sql.Conn` query/exec/prepare
+        methods (`Query`, `QueryContext`, `QueryRow`, `Exec`, `Prepare`, ...) reached by a
+        tainted query-string argument.
+      references:
+        - https://owasp.org/www-community/attacks/SQL_Injection
+        - https://cwe.mitre.org/data/definitions/89.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: join
     join:
       refs:
