@@ -11,14 +11,14 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.This
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.go.config.GoConfigLoader
+import org.opentaint.go.config.GoDefaultConfigLoader
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CmdInjEnvSinkDiagTest : AnalysisTest() {
 
     override val commonPassRules: List<PassThrough> =
-        GoConfigLoader.getConfig()?.passThrough ?: emptyList()
+        GoDefaultConfigLoader.loadConfig()?.passThrough ?: emptyList()
 
     private val getenvSource = Source(
         pkg = GoNameMatcher.Simple("os"),

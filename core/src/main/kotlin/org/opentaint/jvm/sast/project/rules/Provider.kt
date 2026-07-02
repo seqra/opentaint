@@ -1,5 +1,6 @@
 package org.opentaint.jvm.sast.project.rules
 
+import org.opentaint.common.sast.ProjectAnalyzerBase.PreloadedRules
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -13,22 +14,19 @@ import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.ProjectAnalysisContext
 import org.opentaint.jvm.sast.project.spring.SpringRuleProvider
-import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.jvm.sast.util.locationChecker
-import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.createTaintConfig
 
-fun List<TaintRuleFromSemgrep<SerializedItem>>.semgrepRulesWithDefaultConfig(
-    cp: JIRClasspath
-): JIRTaintRulesProvider {
-    val defaultRules = loadDefaultConfig()
-    val defaultPassRules = SerializedTaintConfig(passThrough = defaultRules.passThrough)
-
+fun loadTaintConfig(
+    cp: JIRClasspath,
+    rules: PreloadedRules<SerializedItem, SerializedTaintConfig>
+): TaintRulesProvider {
     val config = TaintConfiguration(cp)
-    config.loadConfig(defaultPassRules)
-    this.forEach { config.loadConfig(it.createTaintConfig()) }
+    rules.rules.forEach { config.loadConfig(it.createTaintConfig()) }
 
-    return JIRTaintRulesProvider(config)
+    config.loadConfig(rules.defaultConfig)
+
+    return JIRTaintRulesProvider(config).withApproximationConfigs(cp, rules.customApproximationConfig)
 }
 
 val approximationConfigCombinationOptions = CombinationOptions(

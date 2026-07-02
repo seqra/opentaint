@@ -178,21 +178,6 @@ jobs:
           echo "Bundled artifacts:"
           ls -la lib/
       -
-        name: Set up JDK for test-util jar
-        if: ${{ steps.release_version.outputs.status == 'succeeded' }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      -
-        name: Build and embed test-util jar
-        if: ${{ steps.release_version.outputs.status == 'succeeded' }}
-        run: |
-          set -euo pipefail
-          (cd core && ./gradlew :opentaint-sast-test-util:jar)
-          (cd cli && go generate ./...)
-          cp core/opentaint-sast-test-util/build/libs/opentaint-sast-test-util.jar cli/lib/
-      -
         name: Run GoReleaser
         if: ${{ steps.release_version.outputs.status == 'succeeded' }}
         uses: goreleaser/goreleaser-action@v6

@@ -2,8 +2,6 @@ package security.dataqueryinjection;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,7 +23,6 @@ public class DataQueryInjectionSpringSamples {
         private final org.w3c.dom.Document usersDoc = null; // simplified
 
         @GetMapping("/data-query/xpath/spring/unsafe")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeXPath(@RequestParam("username") String username,
                                   @RequestParam("password") String password) throws Exception {
             // VULNERABLE: user data concatenated into XPath
@@ -43,7 +40,6 @@ public class DataQueryInjectionSpringSamples {
         private final org.w3c.dom.Document usersDoc = null; // simplified
 
         @GetMapping("/data-query/xpath/spring/safe")
-        @NegativeRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String safeXPath(@RequestParam("username") String username,
                                 @RequestParam("password") String password) throws Exception {
             if (username == null || password == null
@@ -72,7 +68,6 @@ public class DataQueryInjectionSpringSamples {
         private final com.mongodb.DB db = null; // simplified placeholder
 
         @GetMapping("/data-query/mongo/unsafe")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "mongodb-injection")
         public String unsafeMongo(HttpServletRequest request) {
             String username = request.getParameter("username");
             String password = request.getParameter("password");
@@ -91,7 +86,6 @@ public class DataQueryInjectionSpringSamples {
         private final com.mongodb.client.MongoDatabase db = null; // simplified placeholder
 
         @GetMapping("/data-query/mongo/safe")
-        @NegativeRuleSample(value = "java/security/data-query-injection.yaml", id = "mongodb-injection")
         public String safeMongo(@RequestParam("username") String username,
                                 @RequestParam("password") String password) {
             com.mongodb.client.MongoCollection<org.bson.Document> users = db.getCollection("users");

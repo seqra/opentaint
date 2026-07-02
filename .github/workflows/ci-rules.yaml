@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - 'rules/**'
+      - 'model/**'
       - '.github/workflows/ci-rules.yaml'
     branches: [ "main" ]
   pull_request:
     paths:
       - 'rules/**'
+      - 'model/**'
       - '.github/workflows/ci-rules.yaml'
     branches: [ "main" ]
   workflow_dispatch:

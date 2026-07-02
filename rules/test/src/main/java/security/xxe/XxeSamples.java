@@ -1,7 +1,5 @@
 package security.xxe;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -55,7 +53,6 @@ public class XxeSamples {
     public static class UnsafeXmlUploadServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -79,7 +76,6 @@ public class XxeSamples {
     public static class SafeXmlUploadServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -124,7 +120,6 @@ public class XxeSamples {
     public static class UnsafeSaxParserServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -146,7 +141,6 @@ public class XxeSamples {
     public static class SafeSaxParserServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -177,7 +171,6 @@ public class XxeSamples {
     public static class XxeSpringController {
 
         @PostMapping(value = "/process-xml", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlInsecure(@RequestBody String xml) throws Exception {
             // Insecure: default configuration may allow DTDs and external entities
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -189,7 +182,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/process-xml-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlSafe(@RequestBody String xml) throws Exception {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 
@@ -219,7 +211,6 @@ public class XxeSamples {
     public static class SaxParserSpringController {
 
         @PostMapping(value = "/process-xml", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlInsecure(@RequestBody String xml) throws Exception {
             // Insecure: default configuration allows DTDs and external entities
             SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -230,7 +221,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/process-xml-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlSafe(@RequestBody String xml) throws Exception {
             SAXParserFactory factory = SAXParserFactory.newInstance();
 
@@ -254,7 +244,6 @@ public class XxeSamples {
     public static class UnsafeSaxReaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -277,7 +266,6 @@ public class XxeSamples {
     public static class SafeSaxReaderServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -308,7 +296,6 @@ public class XxeSamples {
     public static class SaxReaderSpringController {
 
         @PostMapping(value = "/process-xml", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlInsecure(@RequestBody String xml) throws Exception {
             // Insecure: default configuration allows DTDs and external entities
             SAXReader reader = new SAXReader();
@@ -319,7 +306,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/process-xml-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlSafe(@RequestBody String xml) throws Exception {
             SAXReader reader = new SAXReader();
 
@@ -343,7 +329,6 @@ public class XxeSamples {
     public static class UnsafeXmlReaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -364,7 +349,6 @@ public class XxeSamples {
     public static class SafeXmlReaderServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -394,7 +378,6 @@ public class XxeSamples {
     public static class XmlReaderSpringController {
 
         @PostMapping(value = "/process-xml", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlInsecure(@RequestBody String xml) throws Exception {
             // Insecure: default configuration allows DTDs and external entities
             XMLReader reader = XMLReaderFactory.createXMLReader();
@@ -404,7 +387,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/process-xml-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlSafe(@RequestBody String xml) throws Exception {
             XMLReader reader = XMLReaderFactory.createXMLReader();
 
@@ -427,7 +409,6 @@ public class XxeSamples {
     public static class UnsafeStaxServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -454,7 +435,6 @@ public class XxeSamples {
     public static class SafeStaxServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -486,7 +466,6 @@ public class XxeSamples {
     public static class StaxSpringController {
 
         @PostMapping(value = "/process-xml", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlInsecure(@RequestBody String xml) throws Exception {
             // Insecure: default configuration allows DTDs and external entities
             XMLInputFactory factory = XMLInputFactory.newInstance();
@@ -503,7 +482,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/process-xml-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlSafe(@RequestBody String xml) throws Exception {
             XMLInputFactory factory = XMLInputFactory.newInstance();
 
@@ -530,7 +508,6 @@ public class XxeSamples {
     public static class UnsafeDigesterServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -554,7 +531,6 @@ public class XxeSamples {
         private static final String TRUSTED_XML = "<config><setting name=\"default\"/></config>";
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -580,7 +556,6 @@ public class XxeSamples {
     public static class DigesterSpringController {
 
         @PostMapping(value = "/process-xml", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlInsecure(@RequestBody String xml) throws Exception {
             // Digester has NO XXE protection - always vulnerable with untrusted input
             Digester digester = new Digester();
@@ -593,7 +568,6 @@ public class XxeSamples {
         private static final String TRUSTED_XML = "<config><setting name=\"default\"/></config>";
 
         @PostMapping(value = "/process-xml-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> processXmlSafe(@RequestBody String xml) throws Exception {
             // Safe: Digester used with trusted static content, NOT untrusted input
             // Digester has no XXE protection, so the ONLY safe approach is to
@@ -614,7 +588,6 @@ public class XxeSamples {
     public static class UnsafeTransformerFactoryServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -636,7 +609,6 @@ public class XxeSamples {
     public static class UnsafeTransformerServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -665,7 +637,6 @@ public class XxeSamples {
         private static final String TRUSTED_XML = "<data><value>static content</value></data>";
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -693,7 +664,6 @@ public class XxeSamples {
     public static class SafeTransformerFactoryServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -714,7 +684,6 @@ public class XxeSamples {
     public static class SafeTransformerTransformServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -742,7 +711,6 @@ public class XxeSamples {
     public static class TransformerSpringController {
 
         @PostMapping(value = "/new-transformer", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> newTransformerInsecure(@RequestBody String xslt) throws Exception {
             // Transformer APIs have NO XXE protection - always vulnerable with untrusted input
             TransformerFactory factory = TransformerFactory.newInstance();
@@ -755,7 +723,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/transform", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> transformInsecure(@RequestBody String xml) throws Exception {
             // Transformer APIs have NO XXE protection - always vulnerable with untrusted input
             TransformerFactory factory = TransformerFactory.newInstance();
@@ -775,7 +742,6 @@ public class XxeSamples {
         private static final String TRUSTED_XML = "<data><value>static content</value></data>";
 
         @PostMapping(value = "/transform-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> transformSafe(@RequestBody String xml) throws Exception {
             // Safe: Transformer used with trusted static content, NOT untrusted input
             // Transformer APIs have no XXE protection, so the ONLY safe approach is to
@@ -794,7 +760,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/new-transformer-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> newTransformerSafe(@RequestBody String xslt) throws Exception {
             TransformerFactory factory = TransformerFactory.newInstance();
             factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -806,7 +771,6 @@ public class XxeSamples {
         }
 
         @PostMapping(value = "/transform-secure-processing", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> transformSafeWithSecureProcessing(@RequestBody String xml) throws Exception {
             TransformerFactory factory = TransformerFactory.newInstance();
             factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -830,7 +794,6 @@ public class XxeSamples {
     public static class UnsafeXmlDecoderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -855,7 +818,6 @@ public class XxeSamples {
         private static final String TRUSTED_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><java><string>safe value</string></java>";
 
         @Override
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
@@ -883,7 +845,6 @@ public class XxeSamples {
     public static class XmlDecoderSpringController {
 
         @PostMapping(value = "/decode", consumes = MediaType.APPLICATION_XML_VALUE)
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> decodeInsecure(@RequestBody String xml) throws Exception {
             // XMLDecoder has NO safety features - always dangerous with untrusted input
             // Can deserialize arbitrary objects leading to RCE
@@ -901,7 +862,6 @@ public class XxeSamples {
         private static final String TRUSTED_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><java><string>safe value</string></java>";
 
         @PostMapping(value = "/decode-safe", consumes = MediaType.APPLICATION_XML_VALUE)
-        @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public ResponseEntity<String> decodeSafe(@RequestBody String xml) throws Exception {
             // Safe: XMLDecoder used with trusted static content, NOT untrusted input
             // XMLDecoder has no safety features, so the ONLY safe approach is to

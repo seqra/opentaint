@@ -1,8 +1,6 @@
 package security.externalconfigurationcontrol;
 
 import org.apache.commons.beanutils.BeanUtilsBean;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -52,7 +50,6 @@ public class BeanInjectionSamples extends HttpServlet {
     /**
      * Positive sample: untrusted servlet parameter map directly populates a bean.
      */
-    @PositiveRuleSample(value = "java/security/external-configuration-control.yaml", id = "bean-injection")
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse resp) {
         UserDto user = new UserDto();
@@ -71,7 +68,6 @@ public class BeanInjectionSamples extends HttpServlet {
     /**
      * Negative sample: only whitelisted properties are populated, sensitive ones remain server-controlled.
      */
-    @NegativeRuleSample(value = "java/security/external-configuration-control.yaml", id = "bean-injection")
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse resp) {
         UserDto user = new UserDto();

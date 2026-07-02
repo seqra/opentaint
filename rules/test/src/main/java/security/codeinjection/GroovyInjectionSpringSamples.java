@@ -1,7 +1,5 @@
 package security.codeinjection;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,7 +15,6 @@ public class GroovyInjectionSpringSamples {
     public static class UnsafeGroovyController {
 
         @GetMapping("/groovy-injection-in-spring/unsafe")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "groovy-injection")
         public String unsafeGroovy(@RequestParam("script") String script) {
             GroovyShell shell = new GroovyShell();
 
@@ -32,7 +29,6 @@ public class GroovyInjectionSpringSamples {
     public static class SafeGroovyController {
 
         @GetMapping("/groovy-injection-in-spring/safe")
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "groovy-injection")
         public String safeGroovy(@RequestParam(value = "action", required = false) String action) {
             // Safer pattern: map user-controlled input to a fixed set of allowed operations,
             // without evaluating arbitrary Groovy code.

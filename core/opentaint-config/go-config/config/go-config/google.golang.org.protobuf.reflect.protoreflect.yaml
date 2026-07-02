@@ -1,9 +1,0 @@
-passThrough:
-- function:
-    package: google.golang.org/protobuf/reflect/protoreflect
-    type: ProtoMessage
-    name: ProtoReflect
-    receiver: true
-  copy:
-  - from: this
-    to: result

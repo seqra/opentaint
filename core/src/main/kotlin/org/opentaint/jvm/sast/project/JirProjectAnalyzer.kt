@@ -6,31 +6,25 @@ import org.opentaint.common.sast.ProjectAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
 import org.opentaint.common.sast.sarif.SarifGenerator
+import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
-import org.opentaint.dataflow.configuration.jvm.serialized.loadSerializedTaintConfig
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
-import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
-import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.rules.analysisConfig
-import org.opentaint.jvm.sast.project.rules.withApproximationConfigs
+import org.opentaint.jvm.sast.project.rules.loadTaintConfig
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.JirDebugFactReachabilitySarifGenerator
 import org.opentaint.jvm.sast.sarif.JirSarifGenerator
 import org.opentaint.jvm.sast.se.api.SastSeAnalyzer
-import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
-import org.opentaint.semgrep.pattern.createTaintConfig
-import java.io.InputStream
 
 class JirProjectAnalyzer(
     project: JavaProject,
@@ -51,18 +45,8 @@ class JirProjectAnalyzer(
         selectProjectEntryPoints(jirOptions)
 
     override fun ruleStrategy() = JavaLanguageStrategy()
-
-    override fun loadApproximationConfig(stream: InputStream) = loadSerializedTaintConfig(stream)
-
-    private fun loadTaintConfig(cp: JIRClasspath, rules: PreloadedRules<SerializedItem, SerializedTaintConfig>): TaintRulesProvider {
-        val config = TaintConfiguration(cp)
-        rules.rules.forEach { config.loadConfig(it.createTaintConfig()) }
-
-        val defaultPassRules = loadDefaultConfig()
-        config.loadConfig(defaultPassRules)
-
-        return JIRTaintRulesProvider(config).withApproximationConfigs(cp, rules.customApproximationConfig)
-    }
+    override fun defaultConfigLoader() = JavaDefaultConfigLoader
+    override fun configLoader() = JavaConfigurationLoader()
 
     override fun ProjectAnalysisContext.createAnalyzer(
         externalMethodTracker: ExternalMethodTracker?,

@@ -12,8 +12,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +25,6 @@ public class StringsSamples {
 
     // string-normalize-after-validation
 
-    @PositiveRuleSample(value = "java/security/strings.yaml", id = "string-normalize-after-validation")
     public String normalizeAfterValidation(String input) throws Exception {
         // Compile regex pattern looking for < or > characters
         Pattern pattern = Pattern.compile("[<>]");
@@ -40,7 +37,6 @@ public class StringsSamples {
         return Normalizer.normalize(input, Normalizer.Form.NFKC);
     }
 
-    @NegativeRuleSample(value = "java/security/strings.yaml", id = "string-normalize-after-validation")
     public String normalizeBeforeValidation(String input) throws Exception {
         // SAFE: normalize before validation
         String userInput = Normalizer.normalize(input, Normalizer.Form.NFKC);
@@ -58,7 +54,6 @@ public class StringsSamples {
     public static class FormatStringServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/strings.yaml", id = "format-string-external-manipulation")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String userFormat = request.getParameter("fmt");
             String value = request.getParameter("value");
@@ -70,7 +65,6 @@ public class StringsSamples {
             writer.println(formatted);
         }
 
-        @NegativeRuleSample(value = "java/security/strings.yaml", id = "format-string-external-manipulation")
         protected void doGetSafe(HttpServletRequest request, HttpServletResponse response) throws IOException {
             String value = request.getParameter("value");
 
@@ -90,7 +84,6 @@ public class StringsSamples {
 
         @GetMapping("/unsafe")
         @ResponseBody
-        @PositiveRuleSample(value = "java/security/strings.yaml", id = "format-string-external-manipulation")
         public String unsafe(@RequestParam("fmt") String fmt,
                              @RequestParam("value") String value) {
             // VULNERABLE: user-controlled format string
@@ -99,7 +92,6 @@ public class StringsSamples {
 
         @GetMapping("/safe")
         @ResponseBody
-        @NegativeRuleSample(value = "java/security/strings.yaml", id = "format-string-external-manipulation")
         public String safe(@RequestParam("value") String value) {
             // SAFE: use a hardcoded format string, user input as data only
             return String.format("Value: %s", value);

@@ -9,8 +9,6 @@ import org.opentaint.project.CommonProject
 import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
-import java.io.InputStream
-import kotlin.io.path.inputStream
 
 abstract class ProjectAnalyzer<
         Ctx : AutoCloseable,
@@ -41,14 +39,7 @@ abstract class ProjectAnalyzer<
 
     abstract fun Ctx.selectProjectEntryPoints(): List<Method>
 
-    data class PreloadedRules<RuleItem, RuleConfig>(
-        val rules: List<TaintRuleFromSemgrep<RuleItem>>,
-        val customApproximationConfig: List<RuleConfig>,
-    )
-
     abstract fun ruleStrategy(): LanguageStrategy<*, RuleItem>
-
-    abstract fun loadApproximationConfig(stream: InputStream): RuleConfig
 
     private fun preloadRules(): PreloadedRules<RuleItem, RuleConfig> {
         val loadedRules = options.loadSemgrepRules(ruleStrategy())
@@ -59,13 +50,7 @@ abstract class ProjectAnalyzer<
             it.first as TaintRuleFromSemgrep<RuleItem>
         }
 
-        val approximations = options.customApproximationConfig.map { cfg ->
-            cfg.inputStream().use { cfgStream ->
-                loadApproximationConfig(cfgStream)
-            }
-        }
-
-        return PreloadedRules(rules, approximations)
+        return preloadApproximation(rules)
     }
 
     private fun Ctx.runAnalyzer(

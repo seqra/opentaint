@@ -13,8 +13,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import freemarker.core.TemplateClassResolver;
 import freemarker.template.Configuration;
@@ -29,7 +27,6 @@ public class SstiServletSamples {
     public static class UnsafeTemplateServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             // Attacker controls the entire template content
             String templateSource = request.getParameter("messageTemplate");
@@ -57,7 +54,6 @@ public class SstiServletSamples {
     public static class SafeTemplateServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             ServletContext servletContext = getServletContext();
             Configuration cfg = (Configuration) servletContext.getAttribute("freemarkerCfg");
@@ -87,7 +83,6 @@ public class SstiServletSamples {
     public static class SafeTemplateServletWithResolver extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String templateSource = request.getParameter("messageTemplate");
 

@@ -1,7 +1,5 @@
 package security.sensitivedataexposure;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
-import org.opentaint.sast.test.util.NegativeRuleSample;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -24,7 +22,6 @@ public class SensitiveDataExposureSamples {
     // cookie-issecure-false
 
     @org.springframework.web.bind.annotation.GetMapping("/insecureCookie")
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void insecureSessionCookie(HttpServletResponse response) {
         // VULNERABLE: create a cookie without setting Secure, allowing cleartext transport
         Cookie session = new Cookie("SESSIONID", "sensitive-session-id");
@@ -32,7 +29,6 @@ public class SensitiveDataExposureSamples {
     }
 
     @org.springframework.web.bind.annotation.GetMapping("/secureCookie")
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void secureSessionCookie(HttpServletResponse response) {
         Cookie session = new Cookie("SESSIONID", "sensitive-session-id");
         // SAFE: explicitly mark cookie as Secure (and typically HttpOnly, but rule focuses on Secure)
@@ -41,7 +37,6 @@ public class SensitiveDataExposureSamples {
     }
 
     @org.springframework.web.bind.annotation.GetMapping("/secureEmptyCookie")
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void secureEmptySessionCookie(HttpServletResponse response) {
         Cookie session = new Cookie("SESSIONID", "sensitive-session-id");
         // SAFE: cookie value is empty, no sensitive data to expose
@@ -49,7 +44,6 @@ public class SensitiveDataExposureSamples {
         response.addCookie(session);
     }
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void explicitSetSecureFalse(HttpServletResponse response) {
         Cookie cookie = new Cookie("TOKEN", "value");
         // VULNERABLE: explicitly setting Secure to false
@@ -57,21 +51,18 @@ public class SensitiveDataExposureSamples {
         response.addCookie(cookie);
     }
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void springResponseCookieSecureFalse() {
         // VULNERABLE: explicitly setting secure(false) on ResponseCookie builder
         ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from("TOKEN", "value");
         builder.secure(false);
     }
 
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void springResponseCookieSecureTrue() {
         // SAFE: setting secure(true) on ResponseCookie builder
         ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from("TOKEN", "value");
         builder.secure(true);
     }
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void cookieGeneratorWithoutSecure(HttpServletResponse response) {
         // VULNERABLE: CookieGenerator without setCookieSecure(true)
         CookieGenerator gen = new CookieGenerator();
@@ -79,7 +70,6 @@ public class SensitiveDataExposureSamples {
         gen.addCookie(response, "value");
     }
 
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void cookieGeneratorWithSecure(HttpServletResponse response) {
         // SAFE: CookieGenerator with setCookieSecure(true)
         CookieGenerator gen = new CookieGenerator();
@@ -88,7 +78,6 @@ public class SensitiveDataExposureSamples {
         gen.addCookie(response, "value");
     }
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void cookieGeneratorExplicitSecureFalse(HttpServletResponse response) {
         // VULNERABLE: explicitly setting setCookieSecure(false)
         CookieGenerator gen = new CookieGenerator();
@@ -96,13 +85,11 @@ public class SensitiveDataExposureSamples {
         gen.addCookie(response, "value");
     }
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void rawSetCookieHeaderWithoutSecure(HttpServletResponse response) {
         // VULNERABLE: raw Set-Cookie header without Secure flag
         response.addHeader("Set-Cookie", "TOKEN=value; HttpOnly; Path=/");
     }
 
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "cookie-issecure-false")
     public void rawSetCookieHeaderWithSecure(HttpServletResponse response) {
         // SAFE: raw Set-Cookie header with Secure flag
         response.addHeader("Set-Cookie", "TOKEN=value; HttpOnly; Secure; Path=/");
@@ -110,25 +97,21 @@ public class SensitiveDataExposureSamples {
 
     // unencrypted-socket
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "unencrypted-socket")
     public Socket createUnencryptedSocket(String host, int port) throws IOException {
         // VULNERABLE: plain Socket, no TLS
         return new Socket(host, port);
     }
 
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "unencrypted-socket")
     public javax.net.ssl.SSLSocket createEncryptedSocket(String host, int port) throws Exception {
         javax.net.ssl.SSLSocketFactory factory = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
         return (javax.net.ssl.SSLSocket) factory.createSocket(host, port);
     }
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "unencrypted-socket")
     public ServerSocket createUnencryptedServerSocket(int port) throws IOException {
         // VULNERABLE: plain ServerSocket, no TLS
         return new ServerSocket(port);
     }
 
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "unencrypted-socket")
     public javax.net.ssl.SSLServerSocket createEncryptedServerSocket(int port) throws Exception {
         javax.net.ssl.SSLServerSocketFactory factory = (javax.net.ssl.SSLServerSocketFactory) javax.net.ssl.SSLServerSocketFactory.getDefault();
         return (javax.net.ssl.SSLServerSocket) factory.createServerSocket(port);
@@ -139,7 +122,6 @@ public class SensitiveDataExposureSamples {
     public static class UrlRewritingController {
 
         @org.springframework.web.bind.annotation.GetMapping("/track")
-        @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "url-rewriting")
         public void track(HttpServletRequest request, HttpServletResponse response) throws IOException {
             String product = request.getParameter("id");
             String target = "https://partner.example.com/track?product=" + product;
@@ -149,7 +131,6 @@ public class SensitiveDataExposureSamples {
         }
 
         @org.springframework.web.bind.annotation.GetMapping("/trackSafe")
-        @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "url-rewriting")
         public void trackSafe(HttpServletRequest request, HttpServletResponse response) throws IOException {
             String product = request.getParameter("id");
             String target = "https://partner.example.com/track?product=" + product;
@@ -162,7 +143,6 @@ public class SensitiveDataExposureSamples {
 
     public static class FileDisclosureServlet extends HttpServlet {
 
-        @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "file-disclosure-request-dispatcher")
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String path = request.getParameter("view");
@@ -171,7 +151,6 @@ public class SensitiveDataExposureSamples {
             dispatcher.forward(request, response);
         }
 
-        @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "file-disclosure-request-dispatcher")
         protected void doGetSafe(HttpServletRequest request, HttpServletResponse response) throws IOException {
             String key = request.getParameter("view");
             String safePath;
@@ -192,7 +171,6 @@ public class SensitiveDataExposureSamples {
     public static class JspFileDisclosureController {
 
         @org.springframework.web.bind.annotation.RequestMapping(value = "/mvc", method = org.springframework.web.bind.annotation.RequestMethod.GET)
-        @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "jsp-file-disclosure")
         public org.springframework.web.servlet.ModelAndView mvcVulnerable(HttpServletRequest request, HttpServletResponse response) {
             String viewName = request.getParameter("view");
             // VULNERABLE: untrusted view name used directly
@@ -200,7 +178,6 @@ public class SensitiveDataExposureSamples {
         }
 
         @org.springframework.web.bind.annotation.RequestMapping(value = "/mvcSafe", method = org.springframework.web.bind.annotation.RequestMethod.GET)
-        @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "jsp-file-disclosure")
         public org.springframework.web.servlet.ModelAndView mvcSafe(HttpServletRequest request, HttpServletResponse response) {
             String key = request.getParameter("view");
             String resolvedView;
@@ -218,13 +195,11 @@ public class SensitiveDataExposureSamples {
 
     // stacktrace-printing-in-error-message
 
-    @PositiveRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "stacktrace-printing-in-error-message")
     public void printStackTraceToStdout(Exception e) {
         // VULNERABLE: prints stack trace directly, potentially exposing sensitive data
         e.printStackTrace();
     }
 
-    @NegativeRuleSample(value = "java/security/sensitive-data-exposure.yaml", id = "stacktrace-printing-in-error-message")
     public void logStackTraceSafely(Exception e, PrintWriter log) {
         // SAFE: write a generic error message and avoid exposing internal details
         log.println("An error occurred. Please contact support with the request ID.");

@@ -13,8 +13,6 @@ import com.mongodb.connection.SslSettings;
 import com.hazelcast.config.SymmetricEncryptionConfig;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.SimpleEmail;
-import org.opentaint.sast.test.util.PositiveRuleSample;
-import org.opentaint.sast.test.util.NegativeRuleSample;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -39,7 +37,6 @@ public class JwtAndTlsCryptoSamples {
 
     // jjwt-hs256
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "jjwt-hs256")
     public String signJwtWithHs256Insecure(String subject) {
         // VULNERABLE: HS256 is considered weak for JWT signing in this context
         return Jwts.builder()
@@ -48,7 +45,6 @@ public class JwtAndTlsCryptoSamples {
                 .compact();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "jjwt-hs256")
     public String signJwtWithRs256Secure(String subject) {
         // SAFE (for this rule): use a different algorithm than HS256
         return Jwts.builder()
@@ -59,7 +55,6 @@ public class JwtAndTlsCryptoSamples {
 
     // jjwt-none-alg
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "jjwt-none-alg")
     public String buildJwtWithoutSigning(String subject) {
         // Source: builder()
         var jwt = Jwts.builder().setSubject(subject);
@@ -67,7 +62,6 @@ public class JwtAndTlsCryptoSamples {
         return jwt.compact();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "jjwt-none-alg")
     public String buildJwtWithSigning1(String subject) {
         var jwt = Jwts.builder().setSubject(subject);
         // SAFE: signWith acts as a sanitizer for this rule
@@ -75,7 +69,6 @@ public class JwtAndTlsCryptoSamples {
         return jwt.compact();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "jjwt-none-alg")
     public String buildJwtWithSigning2(String subject) {
         var jwt = Jwts.builder().setSubject(subject);
         // SAFE: signWith acts as a sanitizer for this rule
@@ -85,7 +78,6 @@ public class JwtAndTlsCryptoSamples {
 
     // jwt-none-alg (auth0)
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "jwt-none-alg")
     public String signAuth0JwtWithNone(String subject) {
         // VULNERABLE: explicit use of Algorithm.none()
         return JWT.create()
@@ -93,7 +85,6 @@ public class JwtAndTlsCryptoSamples {
                 .sign(Algorithm.none());
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "jwt-none-alg")
     public String signAuth0JwtWithHmac(String subject) {
         // SAFE for this rule: use a concrete HMAC algorithm instead of "none"
         return JWT.create()
@@ -103,13 +94,11 @@ public class JwtAndTlsCryptoSamples {
 
     // defaulthttpclient-is-deprecated
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "defaulthttpclient-is-deprecated")
     public HttpClient createDeprecatedDefaultHttpClient() {
         // VULNERABLE: use of deprecated DefaultHttpClient
         return new DefaultHttpClient();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "defaulthttpclient-is-deprecated")
     public HttpClient createModernHttpClient() {
         // SAFE: use HttpClientBuilder instead
         return HttpClientBuilder.create().build();
@@ -117,7 +106,6 @@ public class JwtAndTlsCryptoSamples {
 
     // insecure-hostname-verifier
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "insecure-hostname-verifier")
     public boolean insecureHostnameVerifierVerify(String hostname, SSLSession session) {
         // VULNERABLE: custom HostnameVerifier that accepts any hostname
         return insecureHostnameVerifier().verify(hostname, session);
@@ -133,7 +121,6 @@ public class JwtAndTlsCryptoSamples {
         };
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "insecure-hostname-verifier")
     public HostnameVerifier secureHostnameVerifier() {
         // SAFE: delegate to default verification or perform proper checks
         return HttpsURLConnection.getDefaultHostnameVerifier();
@@ -141,7 +128,6 @@ public class JwtAndTlsCryptoSamples {
 
     // insecure-trust-manager
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "insecure-trust-manager")
     public X509TrustManager insecureTrustManager() {
         // VULNERABLE: trust manager that blindly trusts all certificates
         return new X509ExtendedTrustManager() {
@@ -174,7 +160,6 @@ public class JwtAndTlsCryptoSamples {
         };
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "insecure-trust-manager")
     public X509TrustManager secureTrustManager(X509TrustManager delegate) {
         // SAFE: rely on a provided trust manager implementation
         return delegate;
@@ -182,7 +167,6 @@ public class JwtAndTlsCryptoSamples {
 
     // mongo-hostname-verification-disabled
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "mongo-hostname-verification-disabled")
     public MongoClientSettings insecureMongoSettings() {
         // VULNERABLE: SSL hostname verification disabled
         SslSettings sslSettings = SslSettings.builder()
@@ -196,7 +180,6 @@ public class JwtAndTlsCryptoSamples {
                 .build();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "mongo-hostname-verification-disabled")
     public MongoClientSettings secureMongoSettings() {
         // SAFE: keep invalidHostNameAllowed(false)
         return MongoClientSettings.builder()
@@ -207,13 +190,11 @@ public class JwtAndTlsCryptoSamples {
 
     // no-null-cipher
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "no-null-cipher")
     public Cipher nullCipherInsecure() {
         // VULNERABLE: NullCipher does no encryption
         return new NullCipher();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "no-null-cipher")
     public Cipher aesGcmCipherSecure() throws Exception {
         // SAFE: use a real cipher instance
         return Cipher.getInstance("AES/GCM/NoPadding");
@@ -221,25 +202,21 @@ public class JwtAndTlsCryptoSamples {
 
     // gcm-detection and gcm-nonce-reuse
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "gcm-detection")
     public Cipher aesGcmCipherDetected() throws Exception {
         // INFO: use of GCM mode
         return Cipher.getInstance("AES/GCM/NoPadding");
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "gcm-detection")
     public Cipher otherCipherMode() throws Exception {
         return Cipher.getInstance("AES/CBC/PKCS5Padding");
     }
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "gcm-nonce-reuse")
     public GCMParameterSpec reusedGcmNonce() {
         // VULNERABLE: constant nonce bytes used
         byte[] nonce = "...".getBytes();
         return new GCMParameterSpec(128, nonce, 0, nonce.length);
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "gcm-nonce-reuse")
     public GCMParameterSpec randomGcmNonce() {
         byte[] nonce = new byte[12];
         new SecureRandom().nextBytes(nonce);
@@ -248,7 +225,6 @@ public class JwtAndTlsCryptoSamples {
 
     // use-of-weak-rsa-key
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "use-of-weak-rsa-key")
     public KeyPairGenerator weakRsaKey() throws NoSuchAlgorithmException {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         // VULNERABLE: key size below 2048
@@ -256,7 +232,6 @@ public class JwtAndTlsCryptoSamples {
         return keyPairGenerator;
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "use-of-weak-rsa-key")
     public KeyPairGenerator strongRsaKey() throws NoSuchAlgorithmException {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(4096);
@@ -265,13 +240,11 @@ public class JwtAndTlsCryptoSamples {
 
     // weak-tls-protocol
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "weak-tls-protocol")
     public SSLContext weakSslContextProtocol() throws Exception {
         // VULNERABLE: use insecure "SSL" protocol
         return SSLContext.getInstance("SSL");
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "weak-tls-protocol")
     public SSLContext strongSslContextProtocol() throws Exception {
         // SAFE: use TLSv1.3
         return SSLContext.getInstance("TLSv1.3");
@@ -279,7 +252,6 @@ public class JwtAndTlsCryptoSamples {
 
     // weak-tls-protocol-version
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "weak-tls-protocol-version")
     public void enableWeakTlsVersions() throws Exception {
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, null, null);
@@ -288,7 +260,6 @@ public class JwtAndTlsCryptoSamples {
         engine.setEnabledProtocols(new String[]{"TLSv1.0"});
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "weak-tls-protocol-version")
     public void enableStrongTlsVersions() throws Exception {
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, null, null);
@@ -299,7 +270,6 @@ public class JwtAndTlsCryptoSamples {
 
     // hazelcast-symmetric-encryption
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "hazelcast-symmetric-encryption")
     public SymmetricEncryptionConfig insecureHazelcastConfig() {
         // VULNERABLE: using deprecated symmetric encryption config
         return new SymmetricEncryptionConfig();
@@ -307,7 +277,6 @@ public class JwtAndTlsCryptoSamples {
 
     // insecure-smtp
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "insecure-smtp")
     public Email insecureEmailClient() throws Exception {
         // VULNERABLE: SSL/TLS enabled but server identity not checked
         SimpleEmail email = new SimpleEmail();
@@ -318,7 +287,6 @@ public class JwtAndTlsCryptoSamples {
         return email;
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "insecure-smtp")
     public Email secureEmailClient() throws Exception {
         SimpleEmail email = new SimpleEmail();
         email.setHostName("smtp.example.com");

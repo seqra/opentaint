@@ -2,21 +2,23 @@ package org.opentaint.go.sast.project
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.decodeFromStream
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import mu.KLogging
 import org.opentaint.common.sast.ProjectAnalysisStatus
-import org.opentaint.common.sast.ProjectAnalyzer
 import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.common.sast.test.ProjectAnalysisTestResults
+import org.opentaint.common.sast.test.RuleTest
+import org.opentaint.common.sast.test.RuleTests
 import org.opentaint.common.sast.test.TestProjectAnalyzerBase
 import org.opentaint.common.sast.test.TestResult
 import org.opentaint.common.sast.test.TestSampleInfo
 import org.opentaint.common.sast.toProjectStatus
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.go.serialized.GoConfigurationLoader
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
+import org.opentaint.go.config.GoDefaultConfigLoader
 import org.opentaint.go.sast.dataflow.GoTaintAnalyzer
 import org.opentaint.go.sast.dataflow.GoUnitResolver
 import org.opentaint.go.sast.project.GoTestProjectAnalyzer.GoTestSampleInfo
@@ -53,19 +55,8 @@ class GoTestProjectAnalyzer(
 
     override fun testInfoCls(): KClass<GoTestSampleInfo> = GoTestSampleInfo::class
     override fun testInfoSerializer() = GoTestSampleInfo.serializer()
-
-    @Serializable
-    data class RuleTests(
-        val tests: List<RuleTest>,
-    )
-
-    @Serializable
-    data class RuleTest(
-        @SerialName("rule-id")
-        val ruleId: String,
-        val positive: List<String> = emptyList(),
-        val negative: List<String> = emptyList(),
-    )
+    override fun defaultConfigLoader() = GoDefaultConfigLoader
+    override fun configLoader() = GoConfigurationLoader()
 
     private data class RuleTestSample(
         val ruleId: String,
@@ -122,11 +113,11 @@ class GoTestProjectAnalyzer(
             val samples = mutableListOf<RuleTestSample>()
             testGroup.forEach { group ->
                 group.positive.mapTo(samples) {
-                    val ep = resolveEntryPoint(it) ?: return null
+                    val ep = resolveEntryPoint(it.entrypoint) ?: return null
                     RuleTestSample(ruleInfo, SampleKind.POSITIVE, ep)
                 }
                 group.negative.mapTo(samples) {
-                    val ep = resolveEntryPoint(it) ?: return null
+                    val ep = resolveEntryPoint(it.entrypoint) ?: return null
                     RuleTestSample(ruleInfo, SampleKind.NEGATIVE, ep)
                 }
             }
@@ -199,10 +190,7 @@ class GoTestProjectAnalyzer(
     private fun AnalysisCtx.analyzeTestSample(
         rules: List<TaintRuleFromSemgrep<GoSerializedItem>>, sample: RuleTestSample
     ): AnalysisResult {
-        val rulesProvider = ProjectAnalyzer.PreloadedRules(
-            rules,
-            customApproximationConfig = emptyList<GoSerializedTaintConfig>()
-        ).loadRules()
+        val rulesProvider = approximations.copy(rules = rules).loadRules()
 
         val analyzer = GoTaintAnalyzer(
             cp,
@@ -256,7 +244,7 @@ class GoTestProjectAnalyzer(
 
     private fun RuleTest.toTestInfo(): List<GoTestSampleInfo> {
         val allSamples = positive + negative
-        return allSamples.map { GoTestSampleInfo(it, ruleId, language = "go", testSetName = "default") }
+        return allSamples.map { GoTestSampleInfo(it.entrypoint, ruleId, language = "go", testSetName = "default") }
     }
 
     override fun AnalysisCtx.sarifGenerator() =

@@ -14,8 +14,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for script-engine-injection-in-servlet.
@@ -26,7 +24,6 @@ public class ScriptEngineInjectionServletSamples {
     public static class UnsafeScriptEngineServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String expr = request.getParameter("expr");
@@ -60,7 +57,6 @@ public class ScriptEngineInjectionServletSamples {
         }
 
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
 
                 throws ServletException, IOException {

@@ -11,8 +11,6 @@ import java.security.Permissions;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for permissions-related rules in java/security/permissions.yaml.
@@ -21,7 +19,6 @@ public class PermissionsSamples {
 
     // ===== dangerous-permissions =====
 
-    @PositiveRuleSample(value = "java/security/permissions.yaml", id = "dangerous-permissions")
     public PermissionCollection grantDangerousRuntimeAndReflectPermissions() {
         PermissionCollection pc = new Permissions();
 
@@ -36,7 +33,6 @@ public class PermissionsSamples {
         return pc;
     }
 
-    @NegativeRuleSample(value = "java/security/permissions.yaml", id = "dangerous-permissions")
     public PermissionCollection grantLimitedSafePermissions() {
         PermissionCollection pc = new Permissions();
 
@@ -49,7 +45,6 @@ public class PermissionsSamples {
 
     // ===== overly-permissive-file-permission-inline =====
 
-    @PositiveRuleSample(value = "java/security/permissions.yaml", id = "overly-permissive-file-permission-inline")
     public void createWorldReadableAndWritableFile(String filePath) throws Exception {
         Path path = Paths.get(filePath);
 
@@ -58,7 +53,6 @@ public class PermissionsSamples {
         Files.setPosixFilePermissions(path, permissions);
     }
 
-    @PositiveRuleSample(value = "java/security/permissions.yaml", id = "overly-permissive-file-permission-inline")
     public void addExplicitOthersExecutePermission(Path file) throws Exception {
         Set<PosixFilePermission> permissions = new HashSet<>();
 
@@ -67,7 +61,6 @@ public class PermissionsSamples {
         Files.setPosixFilePermissions(file, permissions);
     }
 
-    @NegativeRuleSample(value = "java/security/permissions.yaml", id = "overly-permissive-file-permission-inline")
     public void createOwnerOnlyFile(String filePath) throws Exception {
         Path path = Paths.get(filePath);
 

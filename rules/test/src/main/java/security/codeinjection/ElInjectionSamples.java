@@ -13,8 +13,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based samples for EL injection rules.
@@ -27,7 +25,6 @@ public class ElInjectionSamples {
         private final ExpressionFactory factory = ExpressionFactory.newInstance(); // using javax.el factory
 
         @Override
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "el-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String expr = request.getParameter("expr");
 
@@ -49,7 +46,6 @@ public class ElInjectionSamples {
         private final ExpressionFactory factory = ExpressionFactory.newInstance(); // using javax.el factory
 
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "el-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String userName = request.getParameter("name");
             if (userName == null) {

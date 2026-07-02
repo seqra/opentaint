@@ -6,6 +6,7 @@ plugins {
 }
 
 dependencies {
+    api(project(":java-config"))
     implementation(opentaintRulesGo)
 
     implementation(KotlinDependency.Libs.kotlinx_serialization_core)
@@ -13,7 +14,9 @@ dependencies {
 }
 
 tasks.withType<ProcessResources> {
-    val configDir = layout.projectDirectory.dir("config")
+    val modelDir = layout.projectDirectory.dir("../../../model/go")
 
-    from(configDir)
+    from(modelDir) {
+        into("model/go")
+    }
 }

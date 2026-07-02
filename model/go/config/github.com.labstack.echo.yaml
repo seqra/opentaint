@@ -1,0 +1,18 @@
+language: go
+passThrough:
+- function:
+    package: github.com/labstack/echo
+    type: Context
+    name: Get
+    receiver: true
+  copy:
+  - from: this
+    to: result
+- function:
+    package: github.com/labstack/echo
+    type: Context
+    name: Set
+    receiver: true
+  copy:
+  - from: arg(1)
+    to: this

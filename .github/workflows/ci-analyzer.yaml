@@ -21,10 +21,10 @@ on:
       - 'core/opentaint-jvm-sast-dataflow/**'
       - 'core/opentaint-jvm-sast-project/**'
       - 'core/opentaint-jvm-sast-se-api/**'
-      - 'core/opentaint-sast-test-util/**'
       - 'core/opentaint-utils/**'
       - 'core/opentaint-project-model/**'
       - 'core/opentaint-common-build/**'
+      - 'model/**'
       - '.github/workflows/ci-analyzer.yaml'
   pull_request:
     branches: [ "main" ]
@@ -44,10 +44,10 @@ on:
       - 'core/opentaint-jvm-sast-dataflow/**'
       - 'core/opentaint-jvm-sast-project/**'
       - 'core/opentaint-jvm-sast-se-api/**'
-      - 'core/opentaint-sast-test-util/**'
       - 'core/opentaint-utils/**'
       - 'core/opentaint-project-model/**'
       - 'core/opentaint-common-build/**'
+      - 'model/**'
       - '.github/workflows/ci-analyzer.yaml'
 
 concurrency:

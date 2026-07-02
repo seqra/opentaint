@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.DummySerializationContext
+import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
@@ -41,7 +42,6 @@ import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.ast.BasicTestUtils
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
-import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -127,6 +127,10 @@ abstract class AnalysisTest : BasicTestUtils() {
         override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc != this.loc
     }
 
+    private val defaultConfig by lazy {
+        JavaDefaultConfigLoader.loadConfig()
+    }
+
     fun runAnalysis(
         config: SerializedTaintConfig,
         entryPointClass: String,
@@ -141,8 +145,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         taintConfig.loadConfig(config)
 
         if (useDefaultConfig) {
-            val defaultRules = loadDefaultConfig()
-            val defaultPassRules = SerializedTaintConfig(passThrough = defaultRules.passThrough)
+            val defaultPassRules = SerializedTaintConfig(passThrough = defaultConfig?.passThrough)
             taintConfig.loadConfig(defaultPassRules)
         }
 

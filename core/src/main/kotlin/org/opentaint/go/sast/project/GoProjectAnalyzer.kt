@@ -7,9 +7,10 @@ import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.go.serialized.GoConfigurationLoader
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
-import org.opentaint.go.config.loadGoSerializedTaintConfig
+import org.opentaint.go.config.GoDefaultConfigLoader
 import org.opentaint.go.sast.dataflow.GoTaintAnalyzer
 import org.opentaint.go.sast.dataflow.GoUnitResolver
 import org.opentaint.go.sast.sarif.GoDebugFactReachabilitySarifGenerator
@@ -19,7 +20,6 @@ import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.project.GoProject
 import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
-import java.io.InputStream
 
 class GoProjectAnalyzer(
     project: GoProject,
@@ -50,9 +50,8 @@ class GoProjectAnalyzer(
     }
 
     override fun ruleStrategy() = GoLanguageStrategy()
-
-    override fun loadApproximationConfig(stream: InputStream): GoSerializedTaintConfig =
-        loadGoSerializedTaintConfig(stream)
+    override fun defaultConfigLoader() = GoDefaultConfigLoader
+    override fun configLoader() = GoConfigurationLoader()
 
     override fun AnalysisCtx.createAnalyzer(
         externalMethodTracker: ExternalMethodTracker?,

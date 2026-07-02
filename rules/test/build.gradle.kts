@@ -1,5 +1,3 @@
-import OpenTaintTestUtilDependency.openTaintSastTestUtil
-
 plugins {
     java
 }
@@ -13,8 +11,6 @@ allprojects {
     apply(plugin = "java")
 
     dependencies {
-        compileOnly(openTaintSastTestUtil)
-
         // Servlet + OGNL + Groovy dependencies for rule samples
         implementation("javax.servlet:javax.servlet-api:4.0.1")
         implementation("ognl:ognl:3.3.4")
@@ -122,7 +118,7 @@ sourceSets {
 // CI helper: validate that all rules are valid YAML and covered by tests
 tasks.register<JavaExec>("checkRulesCoverage") {
     group = "verification"
-    description = "Validates YAML rules and ensures each active rule is covered by a @PositiveRuleSample test."
+    description = "Validates YAML rules and ensures each active rule is covered by a rule-test.yaml entry."
 
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "rules.RuleCoverageCheck"

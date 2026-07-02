@@ -7,8 +7,6 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,14 +21,12 @@ public class UnvalidatedRedirectSpringSamples {
     public static class UnsafeUnvalidatedRedirectController {
 
         @GetMapping("/redirect/unsafe")
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-spring-app")
         public String unsafeRedirect(@RequestParam("url") String url) {
             // VULNERABLE: unvalidated user-controlled URL in redirect
             return "redirect:" + url;
         }
 
         @GetMapping("/redirect/unsafe-view")
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-spring-app")
         public RedirectView unsafeRedirectView(@RequestParam("url") String url) {
             // VULNERABLE: unvalidated user-controlled URL in RedirectView
             return new RedirectView(url);
@@ -48,7 +44,6 @@ public class UnvalidatedRedirectSpringSamples {
         private static final Set<String> ALLOWED_DOMAINS = Set.of("example.com", "trusted-partner.com");
 
         @GetMapping("/redirect/safe-internal")
-        @NegativeRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-spring-app")
         public String safeInternalRedirect(@RequestParam(value = "target", required = false) String target) {
             // SAFE: only internal paths from controlled mapping
             String path = ALLOWED_TARGETS.getOrDefault(target, "/home");

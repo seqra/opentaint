@@ -51,7 +51,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val trackExternalMethods: Boolean by option(help = "Track external methods, produce external methods YAML lists")
         .flag()
 
-    private val dataflowApproximations: List<Path> by option(help = "Directory of compiled approximation class files")
+    private val javaDataflowApproximations: List<Path> by option(help = "Directory of compiled approximation class files")
         .directory()
         .multiple()
 
@@ -113,7 +113,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         common = commonOptions,
         projectKind = projectKind,
         approximationOptions = DataFlowApproximationLoader.Options(
-            customApproximationPaths = dataflowApproximations,
+            customApproximationPaths = javaDataflowApproximations,
         ),
     )
 

@@ -1,0 +1,8 @@
+language: java
+passThrough:
+- function: java.security.interfaces.RSAMultiPrimePrivateCrtKey#getOtherPrimeInfo
+  signature: () java.security.spec.RSAOtherPrimeInfo[]
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result

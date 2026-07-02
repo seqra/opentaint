@@ -1,5 +1,7 @@
 package org.opentaint.jvm.sast.project
 
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.decodeFromStream
 import kotlinx.serialization.Serializable
 import mu.KLogging
 import org.opentaint.common.sast.ProjectAnalysisStatus
@@ -8,26 +10,27 @@ import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
 import org.opentaint.common.sast.sarif.SarifGenerator
 import org.opentaint.common.sast.test.ProjectAnalysisTestResults
 import org.opentaint.common.sast.test.RuleInfo
+import org.opentaint.common.sast.test.RuleSample
+import org.opentaint.common.sast.test.RuleTest
+import org.opentaint.common.sast.test.RuleTests
+import org.opentaint.common.sast.test.SPRING_APP_SAMPLE_MODE
 import org.opentaint.common.sast.test.TestProjectAnalyzerBase
 import org.opentaint.common.sast.test.TestResult
 import org.opentaint.common.sast.test.TestSampleInfo
 import org.opentaint.common.sast.toProjectStatus
+import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
-import org.opentaint.dataflow.configuration.jvm.serialized.loadSerializedTaintConfig
-import org.opentaint.ir.api.jvm.JIRAnnotated
-import org.opentaint.ir.api.jvm.JIRAnnotation
-import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.project.TestProjectAnalyzer.JavaTestSampleInfo
 import org.opentaint.jvm.sast.project.TestProjectAnalyzer.RuleSelectResult.Rule
 import org.opentaint.jvm.sast.project.rules.analysisConfig
-import org.opentaint.jvm.sast.project.rules.semgrepRulesWithDefaultConfig
-import org.opentaint.jvm.sast.project.rules.withApproximationConfigs
+import org.opentaint.jvm.sast.project.rules.loadTaintConfig
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.JirDebugFactReachabilitySarifGenerator
@@ -38,8 +41,8 @@ import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import kotlin.io.path.exists
 import kotlin.io.path.inputStream
-import kotlin.io.path.relativeTo
 import kotlin.reflect.KClass
 
 class TestProjectAnalyzer(
@@ -54,11 +57,6 @@ class TestProjectAnalyzer(
     private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, javaOptions)
     private val loadedRules = options.loadSemgrepRules(JavaLanguageStrategy())
 
-    private val approximationConfigs: List<SerializedTaintConfig> =
-        options.customApproximationConfig.map { cfg ->
-            cfg.inputStream().use { loadSerializedTaintConfig(it) }
-        }
-
     @Serializable
     data class JavaTestSampleInfo(
         val className: String,
@@ -70,17 +68,24 @@ class TestProjectAnalyzer(
 
     override fun testInfoCls(): KClass<JavaTestSampleInfo> = JavaTestSampleInfo::class
     override fun testInfoSerializer() = JavaTestSampleInfo.serializer()
+    override fun defaultConfigLoader() = JavaDefaultConfigLoader
+    override fun configLoader() = JavaConfigurationLoader()
 
     private var status: ProjectAnalysisStatus = ProjectAnalysisStatus.OK
 
     override fun analyze(): ProjectAnalysisStatus {
-        val results = projectAnalysisContexts.map { (module, ctx) ->
-            val testSetName = ctx.project.sourceRoot?.let { srcRoot ->
-                module.moduleSourceRoot?.relativeTo(srcRoot)?.toString()
-            }.orEmpty().replace('/', '-')
+        val ruleTestsFile = project.sourceRoot?.resolve("rule-test.yaml")
+        if (ruleTestsFile == null || !ruleTestsFile.exists()) {
+            logger.error { "No test file in ${project.sourceRoot}" }
+            return ProjectAnalysisStatus.EXCEPTION
+        }
 
-            val testSamples = ctx.allProjectTestSamples(testSetName)
-            ctx.analyzeTestSamples(testSamples)
+        val ruleTests = ruleTestsFile.inputStream().use {
+            Yaml().decodeFromStream<RuleTests>(it)
+        }
+
+        val results = projectAnalysisContexts.map { (_, ctx) ->
+            ctx.analyzeTestSamples(ruleTests.tests)
         }
 
         results.mapTo(this.results.testResults) {
@@ -90,59 +95,54 @@ class TestProjectAnalyzer(
         return status
     }
 
-    private fun ProjectAnalysisContext.allProjectTestSamples(testSetName: String): List<TestSample> {
-        val samples = mutableListOf<TestSample>()
-
-        val classes = projectClasses.allProjectClasses()
-            .filterNotTo(mutableListOf()) { it.isAbstract || it.isInterface || it.isAnonymous }
-
-        classes.mapNotNullTo(samples) { cls ->
-            val sample = cls.findSampleAnnotation(testSetName) ?: return@mapNotNullTo null
-            ClassTestSample(cls, cls.declaredMethods, sample)
-        }
-
-        classes.flatMapTo(mutableListOf()) { it.declaredMethods }
-            .mapNotNullTo(samples) {
-                val sample = it.findSampleAnnotation(testSetName) ?: return@mapNotNullTo null
-                MethodTestSample(it, sample)
+    private fun ProjectAnalysisContext.resolveSamples(
+        rule: RuleInfo, kind: SampleKind, samples: List<RuleSample>, springEntryPoints: List<JIRMethod>
+    ): List<TestSample> =
+        samples.mapNotNull { sample ->
+            val methods = if (sample.mode == SPRING_APP_SAMPLE_MODE) springEntryPoints else resolveMethods(sample.entrypoint)
+            if (methods.isEmpty()) {
+                logger.debug { "No sample found for ${sample.entrypoint} (mode=${sample.mode}) in this module" }
+                return@mapNotNull null
             }
-
-        if (!testSetName.isSpringAppTestSet()) return samples
-
-        logger.info { "Detect spring test set: $testSetName" }
-
-        val springEp = springWebProjectContext?.springWebProjectEntryPoints()?.takeIf { it.isNotEmpty() }
-        if (springEp == null) {
-            logger.error { "No spring entry point found: $testSetName" }
-            return samples
+            val (className, methodName) = sample.entrypoint.splitIdentifier()
+            TestSample(SampleInfo(kind, rule, sample.mode), className, methodName, methods)
         }
 
-        return samples.map { SpringTestSample(springEp, it) }
+    private fun ProjectAnalysisContext.resolveMethods(id: String): List<JIRMethod> {
+        val (className, methodName) = id.splitIdentifier()
+        val normalized = className.replace('$', '.')
+        val cls = projectClasses.allProjectClasses().firstOrNull { it.name.replace('$', '.') == normalized } ?: return emptyList()
+        if (cls.isAbstract || cls.isInterface || cls.isAnonymous) return emptyList()
+        return if (methodName == null) cls.declaredMethods else cls.declaredMethods.filter { it.name == methodName }
     }
 
-    private fun ProjectAnalysisContext.analyzeTestSamples(testSamples: List<TestSample>): TestResult<JavaTestSampleInfo> {
-        val skipped = mutableListOf<TestSample>()
-        val disabled = mutableListOf<TestSample>()
+    private fun ProjectAnalysisContext.analyzeTestSamples(tests: List<RuleTest>): TestResult<JavaTestSampleInfo> {
+        val skipped = mutableListOf<RuleTest>()
+        val disabled = mutableListOf<RuleTest>()
 
         logger.info { "Select test analysis rule" }
 
+        val springEntryPoints = springWebProjectContext?.springWebProjectEntryPoints().orEmpty()
+
         val testWithRule = mutableListOf<Pair<TestSample, Rule>>()
-        val testGroups = testSamples.groupBy { it.info.rule }
-        for ((ruleInfo, testGroup) in testGroups) {
+        for (test in tests) {
+            val ruleInfo = test.ruleId.toRuleInfo()
             val rules = when (val result = selectRules(ruleInfo)) {
                 RuleSelectResult.MultipleRules,
                 RuleSelectResult.NoRules -> {
-                    skipped += testGroup
+                    skipped += test
                     continue
                 }
                 RuleSelectResult.RuleDisabled -> {
-                    disabled += testGroup
+                    disabled += test
                     continue
                 }
                 is Rule -> result
             }
 
-            testGroup.mapTo(testWithRule) { it to rules }
+            val samples = resolveSamples(ruleInfo, SampleKind.POSITIVE, test.positive, springEntryPoints) +
+                resolveSamples(ruleInfo, SampleKind.NEGATIVE, test.negative, springEntryPoints)
+            samples.mapTo(testWithRule) { it to rules }
         }
 
         logger.info { "Start test analysis" }
@@ -214,8 +214,7 @@ class TestProjectAnalyzer(
         rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         sample: TestSample
     ): AnalysisResult {
-        val loadedConfig = rules.semgrepRulesWithDefaultConfig(cp)
-            .withApproximationConfigs(cp, approximationConfigs)
+        val loadedConfig = loadTaintConfig(cp, approximations.copy(rules = rules))
         val config = analysisConfig(loadedConfig)
 
         val analyzer = JIRTaintAnalyzer(
@@ -228,7 +227,7 @@ class TestProjectAnalyzer(
     }
 
     private fun generateTestResult(
-        skipped: List<TestSample>, disabled: List<TestSample>,
+        skipped: List<RuleTest>, disabled: List<RuleTest>,
         results: List<Triple<TestSample, Rule, AnalysisResult>>
     ): TestResult<JavaTestSampleInfo> {
         val success = mutableListOf<TestSample>()
@@ -255,8 +254,8 @@ class TestProjectAnalyzer(
             success = success.map(TestSample::toTestInfo),
             falseNegative = falseNegative.map(TestSample::toTestInfo),
             falsePositive = falsePositive.map(TestSample::toTestInfo),
-            skipped = skipped.map(TestSample::toTestInfo),
-            disabled = disabled.map(TestSample::toTestInfo),
+            skipped = skipped.flatMap { it.toTestInfos() },
+            disabled = disabled.flatMap { it.toTestInfos() },
         )
     }
 
@@ -266,67 +265,23 @@ class TestProjectAnalyzer(
 
     private data class SampleInfo(val kind: SampleKind, val rule: RuleInfo, val testSet: String)
 
-    private sealed interface TestSample {
-        val info: SampleInfo
-        val methods: List<JIRMethod>
-
-        fun toTestInfo(): JavaTestSampleInfo
-    }
-
-    private data class MethodTestSample(val method: JIRMethod, override val info: SampleInfo) : TestSample {
-        override val methods: List<JIRMethod> get() = listOf(method)
-
-        override fun toTestInfo(): JavaTestSampleInfo = JavaTestSampleInfo(
-            method.enclosingClass.name, method.name, info.rule, language = "java", info.testSet
+    private data class TestSample(
+        val info: SampleInfo,
+        val className: String,
+        val methodName: String?,
+        val methods: List<JIRMethod>,
+    ) {
+        fun toTestInfo(): JavaTestSampleInfo = JavaTestSampleInfo(
+            className, methodName, info.rule, language = "java", info.testSet
         )
     }
 
-    private data class ClassTestSample(
-        val cls: JIRClassOrInterface,
-        override val methods: List<JIRMethod>,
-        override val info: SampleInfo
-    ) : TestSample {
-        override fun toTestInfo(): JavaTestSampleInfo = JavaTestSampleInfo(
-            cls.name, methodName = null, info.rule, language = "java", info.testSet
-        )
-    }
-
-    private data class SpringTestSample(
-        override val methods: List<JIRMethod>,
-        val original: TestSample,
-    ) : TestSample {
-        override val info: SampleInfo get() = original.info
-        override fun toTestInfo(): JavaTestSampleInfo = original.toTestInfo()
-    }
-
-    private fun JIRAnnotated.findSampleAnnotation(testSetName: String): SampleInfo? {
-        val positive = annotations.filter { it.name == POSITIVE_SAMPLE_ANNOTATION_NAME }
-        val negative = annotations.filter { it.name == NEGATIVE_SAMPLE_ANNOTATION_NAME }
-        val sampleAnnotations = positive + negative
-        if (sampleAnnotations.isEmpty()) return null
-        if (sampleAnnotations.size > 1) {
-            logger.error { "Multiple sample annotations: $this" }
-            return null
+    private fun RuleTest.toTestInfos(): List<JavaTestSampleInfo> {
+        val rule = ruleId.toRuleInfo()
+        return (positive + negative).map {
+            val (className, methodName) = it.entrypoint.splitIdentifier()
+            JavaTestSampleInfo(className, methodName, rule, language = "java", testSetName = it.mode)
         }
-        return sampleAnnotations.first().toSampleInfo(testSetName)
-    }
-
-    private fun JIRAnnotation.toSampleInfo(testSetName: String): SampleInfo? {
-        val kind = when (name) {
-            POSITIVE_SAMPLE_ANNOTATION_NAME -> SampleKind.POSITIVE
-            NEGATIVE_SAMPLE_ANNOTATION_NAME -> SampleKind.NEGATIVE
-            else -> return null
-        }
-
-        val rulePath = values["value"]?.let { it as? String }?.takeIf { it.isNotBlank() }
-        val ruleId = values["id"]?.let { it as? String }?.takeIf { it.isNotBlank() }
-
-        if (rulePath == null) {
-            logger.error { "Annotation without rule path: $this" }
-            return null
-        }
-
-        return SampleInfo(kind, RuleInfo(rulePath, ruleId), testSetName)
     }
 
     override fun ProjectAnalysisContext.runSeAnalyzer(
@@ -355,9 +310,15 @@ class TestProjectAnalyzer(
     companion object {
         private val logger = object : KLogging() {}.logger
 
-        private const val POSITIVE_SAMPLE_ANNOTATION_NAME = "org.opentaint.sast.test.util.PositiveRuleSample"
-        private const val NEGATIVE_SAMPLE_ANNOTATION_NAME = "org.opentaint.sast.test.util.NegativeRuleSample"
+        private fun String.splitIdentifier(): Pair<String, String?> {
+            val idx = indexOf('#')
+            return if (idx < 0) this to null else substring(0, idx) to substring(idx + 1).ifEmpty { null }
+        }
 
-        private fun String.isSpringAppTestSet(): Boolean = startsWith("spring-app-tests")
+        private fun String.toRuleInfo(): RuleInfo {
+            val idx = lastIndexOf('#')
+            return if (idx < 0) RuleInfo(this, null)
+            else RuleInfo(substring(0, idx), substring(idx + 1).ifEmpty { null })
+        }
     }
 }

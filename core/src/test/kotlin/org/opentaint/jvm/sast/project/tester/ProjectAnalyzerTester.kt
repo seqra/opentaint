@@ -2,6 +2,9 @@ package org.opentaint.jvm.sast.project.tester
 
 import kotlinx.serialization.json.Json
 import mu.KLogging
+import org.opentaint.common.sast.dataflow.DebugOptions
+import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -29,17 +32,14 @@ import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
-import org.opentaint.common.sast.dataflow.DebugOptions
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
-import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.ProjectAnalysisContext
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.project.ProjectKind
 import org.opentaint.jvm.sast.project.initializeProjectAnalysisContext
 import org.opentaint.jvm.sast.project.selectProjectEntryPoints
-import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
 import java.nio.file.Path
@@ -65,7 +65,11 @@ fun testProjectAnalyzerOnTraces(
     val analysisContext = initializeProjectAnalysisContext(project, options)
 
     val mainConfig = JIRTaintRulesProvider(
-        TaintConfiguration(analysisContext.cp).also { it.loadConfig(loadDefaultConfig()) }
+        TaintConfiguration(analysisContext.cp).also {
+            JavaDefaultConfigLoader.loadConfig()?.let { cfg ->
+                it.loadConfig(cfg)
+            }
+        }
     )
 
     val visitedAtSourceMarks = hashSetOf<TaintMark>()

@@ -2,23 +2,20 @@ package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
-import org.opentaint.dataflow.configuration.go.serialized.GoSerializedAssignAction
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedCondition
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassThrough
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.Sink
-import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.Source
 import org.opentaint.dataflow.configuration.go.serialized.GoSinkMetaData
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Result
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
-import org.opentaint.go.config.GoConfigLoader
+import org.opentaint.go.config.GoDefaultConfigLoader
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class Pattern30StrconvAtoiTest : AnalysisTest() {
 
     override val commonPassRules: List<PassThrough> =
-        GoConfigLoader.getConfig()?.passThrough ?: emptyList()
+        GoDefaultConfigLoader.loadConfig()?.passThrough ?: emptyList()
 
     private val intSink = Sink(
         pkg = GoNameMatcher.Simple("util"),

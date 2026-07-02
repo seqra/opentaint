@@ -11,8 +11,6 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,7 +34,6 @@ public class SqlCatalogSpringSamples {
         }
 
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/external-configuration-control.yaml", id = "sql-catalog-external-manipulation")
         public List<String> getUsers(@RequestParam String catalog, @RequestParam int id) throws SQLException {
             Connection conn = DataSourceUtils.getConnection(dataSource);
             try {
@@ -72,7 +69,6 @@ public class SqlCatalogSpringSamples {
         }
 
         @GetMapping("/safe")
-        @NegativeRuleSample(value = "java/security/external-configuration-control.yaml", id = "sql-catalog-external-manipulation")
         public List<String> getUsers(@RequestParam int id, @AuthenticationPrincipal TenantPrincipal principal) throws SQLException {
             String tenantId = principal.getTenantId();
             String catalog = tenantCatalogResolver.resolveCatalogForTenant(tenantId);

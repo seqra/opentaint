@@ -1,13 +1,10 @@
 package org.opentaint.dataflow.configuration.jvm.serialized
 
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
-import com.charleskorn.kaml.decodeFromStream
 import kotlinx.serialization.Serializable
-import java.io.InputStream
 
 @Serializable
 data class SerializedTaintConfig(
+    val language: String? = null,
     val library: String? = null,
     val dependencies: List<String>? = null,
     val entryPoint: List<SerializedRule.EntryPoint>? = null,
@@ -20,8 +17,3 @@ data class SerializedTaintConfig(
     val methodEntrySink: List<SerializedRule.MethodEntrySink>? = null,
     val staticFieldSource: List<SerializedFieldRule.SerializedStaticFieldSource>? = null,
 )
-
-fun loadSerializedTaintConfig(stream: InputStream): SerializedTaintConfig {
-    val yaml = Yaml(configuration = YamlConfiguration(codePointLimit = Int.MAX_VALUE))
-    return yaml.decodeFromStream<SerializedTaintConfig>(stream)
-}

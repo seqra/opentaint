@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import ognl.Ognl;
 
@@ -24,7 +22,6 @@ public class OgnlInjectionServletSamples {
     public static class UnsafeOgnlServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // Attacker controls the "expr" parameter
@@ -52,7 +49,6 @@ public class OgnlInjectionServletSamples {
         private final UserService userService = new UserService();
 
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
 
                 throws ServletException, IOException {

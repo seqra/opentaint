@@ -2,7 +2,7 @@ package org.opentaint.semgrep.util
 
 import kotlinx.coroutines.runBlocking
 import org.opentaint.common.sast.dataflow.DummySerializationContext
-import org.opentaint.config.ConfigLoader
+import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
@@ -132,6 +132,11 @@ class TestAnalysisRunner(
             }
         }
 
+    private val defaultConfig by lazy {
+        JavaDefaultConfigLoader.loadConfig()
+            ?: error("Error while loading default config")
+    }
+
     private fun rulesProvider(
         config: SerializedTaintConfig,
         useDefaultConfig: Boolean,
@@ -141,8 +146,6 @@ class TestAnalysisRunner(
         taintConfig.loadConfig(config)
 
         if (useDefaultConfig) {
-            val defaultConfig = ConfigLoader.getConfig() ?: error("Error while loading default config")
-
             val defaultPassRules = SerializedTaintConfig(passThrough = defaultConfig.passThrough)
             taintConfig.loadConfig(defaultPassRules)
         }

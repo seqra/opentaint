@@ -3,7 +3,6 @@ import OpentaintIrDependency.opentaint_ir_api_storage
 import OpentaintIrDependency.opentaint_ir_approximations
 import OpentaintIrDependency.opentaint_ir_core
 import OpentaintIrDependency.opentaint_ir_storage
-import OpentaintTestUtilDependency.opentaintSastTestUtil
 import OpentaintUtilDependency.opentaintUtilJvm
 import org.opentaint.common.KotlinDependency
 
@@ -43,7 +42,6 @@ dependencies {
 
     testCompileOnly(project("samples"))
     testImplementation("org.opentaint.sast:dataflow")
-    testImplementation(opentaintSastTestUtil)
 }
 
 val testSamples by configurations.creating

@@ -1,7 +1,5 @@
 package security.ldap;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -18,7 +16,6 @@ import java.util.Hashtable;
  */
 public class LdapEntryPoisoningSamples {
 
-    @PositiveRuleSample(value = "java/security/ldap.yaml", id = "ldap-entry-poisoning")
     public Object vulnerableLookup(String url, String baseDn, String filter) throws Exception {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
@@ -39,7 +36,6 @@ public class LdapEntryPoisoningSamples {
         return null;
     }
 
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-entry-poisoning")
     public String safeLookupEmail(String url, String baseDn, String filter) throws Exception {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");

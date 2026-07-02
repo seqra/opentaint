@@ -2,7 +2,7 @@ package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedRule.PassThrough
-import org.opentaint.go.config.GoConfigLoader
+import org.opentaint.go.config.GoDefaultConfigLoader
 import kotlin.test.Test
 
 /**
@@ -19,7 +19,7 @@ import kotlin.test.Test
 class EngineRoadmapDiagnosticTest : AnalysisTest() {
 
     override val commonPassRules: List<PassThrough> =
-        GoConfigLoader.getConfig()?.passThrough ?: emptyList()
+        GoDefaultConfigLoader.loadConfig()?.passThrough ?: emptyList()
 
     // Pattern 1: strings.Builder
     @Test fun diag_p01_stringsBuilderWrite001T() = printFactsAt("test.stringsBuilderWrite001T")

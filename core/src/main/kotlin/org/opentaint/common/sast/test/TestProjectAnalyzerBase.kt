@@ -26,4 +26,8 @@ abstract class TestProjectAnalyzerBase<T : TestSampleInfo,
     abstract fun testInfoSerializer(): KSerializer<T>
 
     abstract fun analyze(): ProjectAnalysisStatus
+
+    val approximations by lazy {
+        preloadApproximation(rules = emptyList())
+    }
 }

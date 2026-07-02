@@ -8,7 +8,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for http-response-splitting-in-servlet.
@@ -22,7 +21,6 @@ public class HttpResponseSplittingServletSamples {
     public static class UnsafeHeaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String user = request.getParameter("user"); // attacker-controlled

@@ -3,7 +3,6 @@ package security.commandinjection;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +20,6 @@ public class CommandInjectionSpringSamples {
          * executed via Runtime.exec.
          */
         @GetMapping("/os-command-injection-in-spring/unsafe")
-        @PositiveRuleSample(value = "java/security/command-injection.yaml", id = "os-command-injection")
         public String unsafePing(@RequestParam String host) {
             // VULNERABLE: direct concatenation of untrusted input into OS command
             String command = "ping -c 4 " + host;

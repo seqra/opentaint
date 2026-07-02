@@ -3,8 +3,6 @@ package security.externalconfigurationcontrol;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +18,6 @@ public class UnsafeReflectionSpringSamples {
     public static class UnsafeReflectionController {
 
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/external-configuration-control.yaml", id = "unsafe-reflection")
         public String loadClass(@RequestParam String className) throws Exception {
             // UNSAFE: user input directly controls Class.forName
             Class<?> clazz = Class.forName(className);
@@ -41,7 +38,6 @@ public class UnsafeReflectionSpringSamples {
         }
 
         @GetMapping("/safe")
-        @NegativeRuleSample(value = "java/security/external-configuration-control.yaml", id = "unsafe-reflection")
         public String loadClass(@RequestParam String type) throws Exception {
             Class<?> clazz = ALLOWED_CLASSES.get(type);
             if (clazz == null) {
