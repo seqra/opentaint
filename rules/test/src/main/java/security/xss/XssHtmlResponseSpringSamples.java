@@ -510,4 +510,17 @@ public class XssHtmlResponseSpringSamples {
             return "<h1>Hello, " + name + "!</h1>";
         }
     }
+
+    @RestController
+    public static class Row57HttpHeadersGetFirstReflectedController {
+
+        @GetMapping("/xss-in-spring-app/row-57")
+        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-spring-app")
+        public ResponseEntity<String> row57(@RequestParam(required = false, defaultValue = "") String name) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Reflected", name);
+            String reflected = headers.getFirst("X-Reflected");
+            return ResponseEntity.ok("<h1>Hello, " + reflected + "!</h1>");
+        }
+    }
 }
