@@ -31,7 +31,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 Pick the scaffold by shape, then pass each coordinate from the tracking file's `dependencies` as a `--dependency`:
 
 - a rule → `test rule init` — scaffolds a `sinks/` and a `sources/` sub-project under `<test-project>`, each with `Taint.java` (the generic `source()`/`sink()`) and the generic marker lib rules in its `test-rules/`. Pass `--sinks-only` / `--sources-only` for a package with only one side, so you get a single sub-project
-- a dataflow approximation → `test approximation init` (Gradle build + the test-util jar, plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies)
+- a dataflow approximation → `test approximation init` (Gradle build, plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies)
 
 ```bash
 # rule test projects — both sides (this package has new sinks and new sources)
@@ -53,7 +53,7 @@ The requirements name sources and sinks. For each new source and new sink, read 
 - a **sink** sample (in the `sinks/` sub-project): assign `test.Taint.source()` to a local of the sink argument's type, then pass it in — `String t = test.Taint.source(); pkg.theSink(t);` (the generic `source()` infers the type, no cast)
 - a **source** sample (in the `sources/` sub-project): call the new source, then pass its value into `test.Taint.sink(...)` — `var v = pkg.theSource(); test.Taint.sink(v);` (`sink` takes `Object`, so any type fits)
 
-Write Java samples under `<test-project>/<sinks|sources>/src/main/java/test/`, each annotated with its expected verdict — `@PositiveRuleSample` (must flag) or `@NegativeRuleSample` (must not). `value`/`id` point at that sub-project's test join, which create-rule writes: `value = "java/security/<name>-sinks.yaml", id = "<name>-sinks"` for sink samples, `<name>-sources` for source samples (`<name>` = the package-kebab). `value` is the rule path relative to the test-rules root, `id` the short id — not the full `--rule-id` used by `opentaint scan`. One expected verdict per sample
+Write Java samples under `<test-project>/<sinks|sources>/src/main/java/test/` as plain methods (no annotations), then record their expected verdicts in a `rule-test.yaml` at that sub-project's source root (`<test-project>/<sinks|sources>/rule-test.yaml`). Each `tests:` entry carries a `rule-id` — `<rule-file-path>#<rule-id>`, the sub-project's test join that create-rule writes: `java/security/<name>-sinks.yaml#<name>-sinks` for sink samples, `<name>-sources` for source samples (`<name>` = the package-kebab) — and lists its samples under `positive` (must flag) and `negative` (must not) as JVM binary class names (nested classes use `$`), each optionally `#<methodName>` to target one method (a bare class name targets all its declared methods), e.g. `test.SqlSinkTest#vulnerable`. A sample entry may instead be an object `{ entrypoint: <id>, mode: spring-app }` to analyze it through the Spring dispatcher instead of calling the method directly (see `references/spring-multimodule.md`); a bare string is equivalent to `mode: default`. The `<rule-file-path>` is relative to the test-rules root and `<rule-id>` the short id — not the full `--rule-id` used by `opentaint scan`. One expected verdict per sample
 
 Load and follow `references/rule.md` (for a rule) or `references/approximation.md` (for a dataflow approximation)
 

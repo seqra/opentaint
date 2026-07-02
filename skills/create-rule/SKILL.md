@@ -131,11 +131,11 @@ opentaint test rule run <test-compiled>/sinks \
 
 - `falseNegative` (positive didn't trigger) → patterns too narrow; broaden `pattern-either`, check metavariable names match across branches and between `refs` and `on`
 - `falsePositive` (negative triggered) → patterns too broad; add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`
-- `skipped` / `disabled` → the rule wasn't exercised; fix the annotation `value`/`id`, or enable the rule
+- `skipped` / `disabled` → the rule wasn't exercised; fix the sample's `rule-id` in `rule-test.yaml`, or enable the rule
 
 ### 5. When a positive won't pass after a couple of fixes
 
-A `@PositiveRuleSample` that won't trigger after ~2 fix attempts may have a cause no rule edit can fix — a library method on its flow killing taint. Before escalating, scan that sub-project's model with `--track-external-methods` (add the marker `test-rules` so the join resolves):
+A positive sample that won't trigger after ~2 fix attempts may have a cause no rule edit can fix — a library method on its flow killing taint. Before escalating, scan that sub-project's model with `--track-external-methods` (add the marker `test-rules` so the join resolves):
 
 ```bash
 opentaint scan --project-model <test-compiled>/sinks \

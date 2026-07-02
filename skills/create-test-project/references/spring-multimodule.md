@@ -1,47 +1,50 @@
-# Spring multi-module test projects
+# Spring app-mode test samples
 
-Load this when a plain method-level sample returns `falseNegative` because the flow only fires through a Spring entry point (controller → bean → sink). Some rules only trigger inside a full Spring MVC entry-point graph — a `@PositiveRuleSample` on a bare method won't trigger them, because the tainted data must flow from a discovered `@Controller`.
+Load this when a plain method-level sample returns `falseNegative` because the flow only fires through a Spring entry point (controller → bean → sink). Some rules only trigger inside a full Spring MVC entry-point graph — a positive sample analyzed as a bare method won't trigger them, because the tainted data must flow from a discovered `@Controller`.
 
-For these rules, create one dedicated Gradle sub-project per sample. Each sub-project is a complete, minimal Spring application containing exactly one `@PositiveRuleSample` or `@NegativeRuleSample`. Split positive and negative cases into separate sub-projects, e.g. `xss-spring-test-positive` and `xss-spring-test-negative`.
+For these rules, run the sample in **Spring app mode**. A `rule-test.yaml` sample entry can be either a plain string (default mode — the sample method is the analysis entry point) or an object with an explicit `mode`:
+
+```yaml
+tests:
+  - rule-id: java/security/xss.yaml#xss-in-spring-app
+    positive:
+      - entrypoint: test.VulnerableSink#vulnerable
+        mode: spring-app
+    negative:
+      - entrypoint: test.SafeSink#safe
+        mode: spring-app
+```
 
 ## How detection works
 
-`TestProjectAnalyzer` computes a `testSetName` per module as `module.moduleSourceRoot.relativeTo(project.sourceRoot)`, with `/` replaced by `-` (see `core/src/main/kotlin/org/opentaint/jvm/sast/project/TestProjectAnalyzer.kt`). If the name starts with `spring-app-tests`, the module is treated as a Spring test set:
+`mode: spring-app` (see `core/src/main/kotlin/org/opentaint/jvm/sast/project/TestProjectAnalyzer.kt`):
 
-- All sample annotations in the module are collected as usual
-- Each sample is wrapped in a `SpringTestSample` that uses the Spring dispatcher method as the analysis entry point instead of the annotated method itself
-- Taint therefore originates from real `@Controller` request parameters and must reach the annotated sink method through normal Spring wiring
+- The analysis entry points become the project's Spring web dispatch entry points (`springWebProjectContext.springWebProjectEntryPoints()`) instead of the sample method itself
+- Taint therefore originates from real `@Controller` request parameters and must reach the sink through normal Spring wiring
+- The sample's `entrypoint` (class, optionally `#method`) is only a marker: it selects which rule to run and records the expected verdict. The actual vulnerable/safe flow must be reachable from a controller in the compiled project
 
-Consequence: the annotated method is only a marker for which rule to run and the expected verdict. The actual vulnerable/safe flow must be reachable from a controller in the same module. Keep each module to a single annotation so the verdict is unambiguous.
+`mode: default` (or a bare string entry) runs the sample method directly as the entry point, as usual.
 
 ## Project layout
 
-Multi-module Gradle build where every `spring-app-tests/<name>` directory is its own sub-project:
+Put one Spring sample per project so the verdict is unambiguous — a `@Controller` that reaches the sink, plus the marker class named in `entrypoint`:
 
 ```
 <test-project>/
 ├── settings.gradle.kts
 ├── build.gradle.kts
-└── spring-app-tests/
-    ├── xss-spring-test-positive/
-    │   ├── build.gradle.kts
-    │   └── src/main/java/test/
-    │       ├── VulnerableController.java    // @Controller with the tainted flow
-    │       └── VulnerableSink.java          // carries the single @PositiveRuleSample
-    └── xss-spring-test-negative/
-        ├── build.gradle.kts
-        └── src/main/java/test/
-            ├── SafeController.java
-            └── SafeSink.java                // carries the single @NegativeRuleSample
+├── rule-test.yaml                        // entries with mode: spring-app
+└── src/main/java/test/
+    ├── VulnerableController.java          // @Controller with the tainted flow
+    └── VulnerableSink.java                // holds the marker method named in entrypoint
 ```
 
-`settings.gradle.kts` should auto-discover every `spring-app-tests/*/build.gradle.kts` so adding a case only needs a new directory. See `rules/test/settings.gradle.kts` in the OpenTaint repo for a reference implementation.
+`rule-test.yaml` lives at the project source root (`<projectSourceRoot>/rule-test.yaml`). Split positive and negative Spring cases into separate projects when a single controller graph cannot host both unambiguously.
 
 ## Required dependencies
 
-Each Spring sub-project needs at least:
+Each Spring project needs at least:
 
-- `compileOnly` on `opentaint-sast-test-util` (the sample annotations)
 - `org.springframework:spring-webmvc` and `spring-context` (so `@Controller` is recognized)
 - Any libraries the sample itself uses (servlet-api, JDBC, etc.)
 
@@ -51,10 +54,8 @@ Each Spring sub-project needs at least:
 opentaint compile <test-project> -o <test-compiled>
 ```
 
-Each `spring-app-tests/<name>` sub-project becomes an independent test set and appears as its own entry in `test-result.json`.
-
 ## Common pitfalls
 
-- No `@Controller` in the module → `TestProjectAnalyzer` logs `No spring entry point found` and the sample is analyzed without Spring context, usually a false negative. Always include a controller that reaches the sink
-- More than one annotation per module → results become ambiguous; keep it to one sample per sub-project
-- Module path not starting with `spring-app-tests` → `isSpringAppTestSet()` returns false and the sample runs as a regular method-level test, so Spring flows won't trigger
+- No `@Controller` reachable → `TestProjectAnalyzer` finds no Spring entry points and the `mode: spring-app` sample is skipped (logged). Always include a controller that reaches the sink
+- Using a bare string (default mode) for a flow that only fires via Spring → false negative; switch that entry to `mode: spring-app`
+- More than one ambiguous sample per controller graph → keep positive and negative in separate projects

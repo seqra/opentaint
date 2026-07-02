@@ -23,7 +23,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 ### 1. List the dependencies
 
-Read `<model-dir>/project.yaml` — its `dependencies:` is every jar on the classpath. Resolve each to the library it is. Most of a large project's jars are transitive infrastructure
+Read `<model-dir>/project.yaml` — the `dependencies:` list under each `javaProjects:` entry is every jar on the classpath. Resolve each to the library it is. Most of a large project's jars are transitive infrastructure
 
 ### 2. Mark each library
 
