@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
@@ -59,6 +60,8 @@ import kotlin.use
 abstract class AnalysisTest {
     lateinit var sourcesDir: Path
     lateinit var cp: PIRClasspath
+
+    open val externalMethods: ExternalMethodTracker? = null
 
     @BeforeAll
     fun setup() {
@@ -160,7 +163,7 @@ abstract class AnalysisTest {
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
-            PIRAnalysisManager(cp, taintConfig),
+            PIRAnalysisManager(cp, taintConfig, externalMethodTracker = externalMethods),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
             apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),

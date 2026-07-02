@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
@@ -46,6 +47,7 @@ class PIRAnalysisManager(
     cp: PIRClasspath,
     val taintRules: PIRTaintRulesProvider,
     private val aliasParams: PIRLocalAliasAnalysis.Params = PIRLocalAliasAnalysis.Params(),
+    private val externalMethodTracker: ExternalMethodTracker? = null,
 ) : PIRLanguageManager(cp), TaintAnalysisManager {
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
     private val pirApplicationGraph = PIRApplicationGraph(cp)
@@ -59,7 +61,7 @@ class PIRAnalysisManager(
         contextForEmptyMethod: MethodAnalysisContext?,
     ): MethodAnalysisContext {
         val method = methodEntryPoint.method as PIRFunction
-        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintRules)
+        val taintCtx = PIRTaintAnalysisContext(taintAnalysisContext.taintSinkTracker, taintRules, externalMethodTracker)
 
         val aliasAnalysis = if (aliasParams.useAliasAnalysis) {
             (contextForEmptyMethod as? PIRMethodAnalysisContext)?.aliasAnalysis

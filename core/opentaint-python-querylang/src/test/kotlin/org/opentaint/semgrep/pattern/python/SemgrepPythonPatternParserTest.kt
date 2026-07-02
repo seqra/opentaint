@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern
+package org.opentaint.semgrep.pattern.python
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

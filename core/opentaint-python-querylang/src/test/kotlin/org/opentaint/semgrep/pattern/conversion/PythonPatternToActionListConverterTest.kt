@@ -1,8 +1,8 @@
 package org.opentaint.semgrep.pattern.conversion
 
-import org.opentaint.semgrep.pattern.SemgrepPythonPattern
-import org.opentaint.semgrep.pattern.SemgrepPythonPatternParser
-import org.opentaint.semgrep.pattern.SemgrepPythonPatternParsingResult
+import org.opentaint.semgrep.pattern.python.SemgrepPythonPattern
+import org.opentaint.semgrep.pattern.python.SemgrepPythonPatternParser
+import org.opentaint.semgrep.pattern.python.SemgrepPythonPatternParsingResult
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.ClassConstraint

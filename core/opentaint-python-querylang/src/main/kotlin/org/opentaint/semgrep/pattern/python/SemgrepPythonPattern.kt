@@ -1,4 +1,4 @@
-package org.opentaint.semgrep.pattern
+package org.opentaint.semgrep.pattern.python
 
 // ----------------------------------------------------------------------------
 // Root

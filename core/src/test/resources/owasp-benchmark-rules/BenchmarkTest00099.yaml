@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-sqli-00099
+    languages: [python]
+    mode: taint
+    message: "Tainted request data reaches a SQL execute (SQL injection)"
+    severity: ERROR
+    metadata:
+      cwe: CWE-89
+    pattern-sources:
+      - pattern: "flask.request.form.get(...)"
+    pattern-sinks:
+      - pattern: "$DB.execute($Q, ...)"

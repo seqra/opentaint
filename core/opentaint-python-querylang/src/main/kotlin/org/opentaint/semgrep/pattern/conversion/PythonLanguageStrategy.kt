@@ -3,9 +3,9 @@ package org.opentaint.semgrep.pattern.conversion
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.semgrep.pattern.JoinRuleMetavarExpected
 import org.opentaint.semgrep.pattern.MetaVarConstraint
-import org.opentaint.semgrep.pattern.Metavar
-import org.opentaint.semgrep.pattern.SemgrepPythonPattern
-import org.opentaint.semgrep.pattern.SemgrepPythonPatternParser
+import org.opentaint.semgrep.pattern.python.Metavar
+import org.opentaint.semgrep.pattern.python.SemgrepPythonPattern
+import org.opentaint.semgrep.pattern.python.SemgrepPythonPatternParser
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 
 class PythonLanguageStrategy : LanguageStrategy<SemgrepPythonPattern, SerializedPythonRule> {

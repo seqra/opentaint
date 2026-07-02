@@ -72,6 +72,8 @@ dependencies {
     testImplementation(opentaint_ir_api_python)
     testImplementation(opentaint_ir_core_python)
     testImplementation("org.opentaint.opentaint-dataflow-core:opentaint-python-dataflow")
+
+    testImplementation(project(":opentaint-python-querylang"))
 }
 
 val testSamples by configurations.creating

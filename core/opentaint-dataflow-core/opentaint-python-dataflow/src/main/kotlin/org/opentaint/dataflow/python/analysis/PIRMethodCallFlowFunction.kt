@@ -237,7 +237,7 @@ class PIRMethodCallFlowFunction(
 
         unresolvedCallPropagateDefault(factReader, factAp, addCallToReturn)
 
-        applyPassRules(factAp, factReader, factAp.rebase(startFactBase), addCallToReturn)
+        applyPassRules(factAp, factReader, factAp.rebase(startFactBase), startFactBase, addCallToReturn)
 
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
@@ -312,6 +312,7 @@ class PIRMethodCallFlowFunction(
         originalFact: FinalFactAp,
         originalFactReader: FinalFactReader,
         mappedFact: FinalFactAp,
+        startFactBase: AccessPathBase,
         propagateFact: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
     ) {
         val typeChecker = FactTypeChecker.Dummy
@@ -337,6 +338,15 @@ class PIRMethodCallFlowFunction(
 
                 evaluator.propagateData(rule, action, from, to)
             }
+        }
+
+        if (startFactBase !is AccessPathBase.ClassStatic) {
+            ctx.taint.externalMethodTracker?.trackExternalMethod(
+                method = callInst.resolvedCallee ?: callInst.callee.toString(),
+                signature = "args:${callInst.args.size}",
+                factPosition = startFactBase.toString(),
+                rulesApplied = passThroughFacts.isSome,
+            )
         }
 
         passThroughFacts.onSome { facts ->

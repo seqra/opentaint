@@ -3,7 +3,7 @@ package org.opentaint.semgrep.pattern.conversion
 import org.opentaint.semgrep.pattern.NormalizedSemgrepRule
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 import org.opentaint.semgrep.pattern.RuleWithMetaVars
-import org.opentaint.semgrep.pattern.SemgrepPythonPattern
+import org.opentaint.semgrep.pattern.python.SemgrepPythonPattern
 
 /** No AST rewrites for Python yet. */
 class PythonRuleRewriter : RuleRewriter<SemgrepPythonPattern> {
