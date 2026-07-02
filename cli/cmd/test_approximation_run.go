@@ -18,10 +18,10 @@ var (
 var testApproximationRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
 	Short: "Run dataflow approximation tests on a compiled project model",
-	Long: `Run annotated samples with the supplied dataflow approximations applied.
+	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow approximations applied.
 
-A built-in source-to-sink harness rule is applied automatically; positive samples reference it as
-` + "`@PositiveRuleSample(value = \"approximation-rule.yaml\", id = \"approximation-rule\")`" + `.
+A built-in source-to-sink harness rule is applied automatically; positive samples reference the
+approximation-rule.yaml rule with id "approximation-rule".
 
 ` + testExitCodesHelp("All approximation tests passed"),
 	Args: cobra.ExactArgs(1),

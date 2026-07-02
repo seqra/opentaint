@@ -5,14 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/seqra/opentaint/internal/testutil"
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-func Bootstrap(outputDir, projectName string, dependencies []string, testUtilJarSrc string) error {
-	if err := utils.CopyFile(testUtilJarSrc, filepath.Join(outputDir, "libs", testutil.JarName)); err != nil {
-		return fmt.Errorf("copy test-util JAR: %w", err)
-	}
+func Bootstrap(outputDir, projectName string, dependencies []string) error {
 	return utils.WriteFiles(map[string][]byte{
 		filepath.Join(outputDir, "build.gradle.kts"):    buildGradle(dependencies),
 		filepath.Join(outputDir, "settings.gradle.kts"): settingsGradle(projectName),
@@ -21,7 +17,7 @@ func Bootstrap(outputDir, projectName string, dependencies []string, testUtilJar
 
 func buildGradle(dependencies []string) []byte {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, `plugins {
+	sb.WriteString(`plugins {
     java
 }
 
@@ -35,8 +31,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly(files("libs/%s"))
-`, testutil.JarName)
+`)
 	for _, dep := range dependencies {
 		fmt.Fprintf(&sb, "    compileOnly(%q)\n", dep)
 	}

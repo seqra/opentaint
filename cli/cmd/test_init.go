@@ -7,7 +7,6 @@ import (
 	"github.com/seqra/opentaint/internal/testapprox"
 	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/testrule"
-	"github.com/seqra/opentaint/internal/testutil"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +25,10 @@ tests source rules against a generic Taint sink. Use --sinks-only or
 
 Each project includes:
   - build.gradle.kts with compile-only dependencies, settings.gradle.kts
-  - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample)
   - src/main/java/test/ with Taint.java (the generic source()/sink()) for test sample sources
   - test-rules/java/lib/test/generic-{source,sink}.yaml marker rules for test-only joins
+
+Positive and negative samples are specified via rule-test.yaml.
 
 Use --dependency to add compile-only Maven dependencies for the samples.`,
 	Args: cobra.ExactArgs(1),
@@ -42,13 +42,9 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 		} else if initRuleSourcesOnly {
 			kinds = []string{"sources"}
 		}
-		jarSrc, err := testutil.ResolveJar()
-		if err != nil {
-			out.Fatalf("Failed to resolve test-util JAR: %s", err)
-		}
 		for _, kind := range kinds {
 			dir := filepath.Join(args[0], kind)
-			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps, jarSrc); err != nil {
+			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
 			}
 			if err := testrule.Scaffold(dir); err != nil {
@@ -67,9 +63,10 @@ var testApproximationInitCmd = &cobra.Command{
 The project includes:
   - build.gradle.kts with compile-only dependencies
   - settings.gradle.kts
-  - libs/opentaint-sast-test-util.jar (provides @PositiveRuleSample and @NegativeRuleSample annotations)
   - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
   - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
+
+Positive and negative samples are specified via rule-test.yaml.
 
 The approximation under test is supplied separately at test time with
 --dataflow-approximations.
@@ -77,11 +74,7 @@ The approximation under test is supplied separately at test time with
 Use --dependency to add compile-only Maven dependencies for the samples.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		jarSrc, err := testutil.ResolveJar()
-		if err != nil {
-			out.Fatalf("Failed to resolve test-util JAR: %s", err)
-		}
-		if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps, jarSrc); err != nil {
+		if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
 			out.Fatalf("Failed to bootstrap test project: %s", err)
 		}
 		if err := testapprox.Scaffold(args[0]); err != nil {

@@ -254,7 +254,7 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 	}
 
 	for _, approxPath := range a.dataflowApproximations {
-		flags = append(flags, "--dataflow-approximations", approxPath)
+		flags = append(flags, "--java-dataflow-approximations", approxPath)
 	}
 
 	if a.trackExternalMethods {

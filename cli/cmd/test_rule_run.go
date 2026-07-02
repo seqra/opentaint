@@ -25,8 +25,8 @@ var (
 var testRuleRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
 	Short: "Run detection-rule tests on a compiled project model",
-	Long: `Run detection rules against samples annotated with @PositiveRuleSample and
-@NegativeRuleSample in the compiled project model.
+	Long: `Run detection rules against the samples specified in rule-test.yaml in the
+compiled project model.
 
 ` + testExitCodesHelp("All rule tests passed"),
 	Args: cobra.ExactArgs(1),

@@ -156,7 +156,7 @@ func resolveProjectDependencies(projectModelDir string) []string {
 		return nil
 	}
 	var absDeps []string
-	for _, dep := range config.Dependencies {
+	for _, dep := range config.AllDependencies() {
 		absPath := dep
 		if !filepath.IsAbs(dep) {
 			absPath = filepath.Join(projectModelDir, dep)
