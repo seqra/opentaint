@@ -82,7 +82,7 @@ class PIRMethodSequentFlowFunction(
             currentFactAp = currentFactAp,
             unchanged = { this += Sequent.Unchanged },
             propagateFact = { it, traceInfo -> this += Sequent.ZeroToFact(it, traceInfo) },
-            propagateFactWithAccessorExclude = { _, _ -> error("Zero fact can't carry an accessor exclusion") },
+            propagateFactWithAccessorExclude = { _, _, _ -> error("Zero fact can't carry an accessor exclusion") },
             addSideEffectRequirement = { error("Can't refine Zero fact") },
             addUnchecked = { this += it }
         )
@@ -97,9 +97,9 @@ class PIRMethodSequentFlowFunction(
             currentFactAp = currentFactAp,
             unchanged = { this += Sequent.Unchanged },
             propagateFact = { it, traceInfo -> this += Sequent.FactToFact(initialFactAp, it, traceInfo) },
-            propagateFactWithAccessorExclude = { fact, accessor ->
+            propagateFactWithAccessorExclude = { fact, accessor, traceInfo ->
                 // Exclude the accessor on BOTH edge ends so the edge stays well-formed.
-                this += Sequent.FactToFact(initialFactAp.exclude(accessor), fact.exclude(accessor), null)
+                this += Sequent.FactToFact(initialFactAp.exclude(accessor), fact.exclude(accessor), traceInfo)
             },
             addSideEffectRequirement = { reader ->
                 this += Sequent.SideEffectRequirement(
@@ -119,7 +119,7 @@ class PIRMethodSequentFlowFunction(
             currentFactAp = currentFactAp,
             unchanged = { this += Sequent.Unchanged },
             propagateFact = { it, traceInfo -> this += Sequent.NDFactToFact(initialFacts, it, traceInfo) },
-            propagateFactWithAccessorExclude = { _, _ -> error("NDF2F edge can't be refined: $currentFactAp") },
+            propagateFactWithAccessorExclude = { _, _, _ -> error("NDF2F edge can't be refined: $currentFactAp") },
             addSideEffectRequirement = { reader ->
                 check(!reader.hasRefinement) { "NDF2F edge can't be refined: $currentFactAp" }
             },
@@ -134,9 +134,9 @@ class PIRMethodSequentFlowFunction(
     private fun propagateFact(
         initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
         addUnchecked: (Sequent) -> Unit
     ) {
@@ -149,10 +149,10 @@ class PIRMethodSequentFlowFunction(
                 propagateFactWithAccessorExclude, addSideEffectRequirement, addUnchecked
             )
             is PIRReturn -> handleReturn(instruction, currentFactAp, unchanged, propagateFact)
-            is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact)
-            is PIRStoreSubscript -> handleStoreSubscript(instruction, currentFactAp, unchanged, propagateFact)
-            is PIRStoreGlobal -> TODO()
-            else -> unchanged()
+            is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            is PIRStoreSubscript -> handleStoreSubscript(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            is PIRStoreGlobal -> handleStoreGlobal(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            else -> unchanged(currentFactAp)
         }
     }
 
@@ -170,11 +170,11 @@ class PIRMethodSequentFlowFunction(
     private fun handleAssign(
         assign: PIRAssign,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
     ) {
-        val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target) ?: return unchanged()
+        val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target) ?: return unchanged(currentFactAp)
         val expr = assign.expr
 
         // Case 1: Simple value copy (x = y)
@@ -214,16 +214,16 @@ class PIRMethodSequentFlowFunction(
         }
 
         // Case 7: Other compound expression — strong update on target, pass through otherwise
-        if (currentFactAp.base != assignTo) unchanged()
+        if (currentFactAp.base != assignTo) unchanged(currentFactAp)
     }
 
     private fun handleReadNameExpr(
         expr: PIRReadNameExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
     ) {
         val (instance, accessor) = PIRFlowFunctionUtils.globalAccess(expr.ref)
         handleAccessorRead(assignTo, instance, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
@@ -247,9 +247,9 @@ class PIRMethodSequentFlowFunction(
         inst: PIRLoadAttr,
         initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
         addUnchecked: (Sequent) -> Unit
     ) {
@@ -273,9 +273,9 @@ class PIRMethodSequentFlowFunction(
             addSideEffectRequirement(factReader)
         }
 
-        val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target) ?: return unchanged()
+        val assignTo = PIRFlowFunctionUtils.accessPathBase(inst.target) ?: return unchanged(currentFactAp)
         val objBase = PIRFlowFunctionUtils.accessPathBase(inst.obj) ?: run {
-            if (currentFactAp.base != assignTo) unchanged()
+            if (currentFactAp.base != assignTo) unchanged(currentFactAp)
             return
         }
         val accessor = mkFieldAccessor(inst.attribute)
@@ -365,15 +365,15 @@ class PIRMethodSequentFlowFunction(
         value: PIRValue,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        if (currentFactAp.base != assignTo) unchanged()
+        if (currentFactAp.base != assignTo) unchanged(currentFactAp)
 
         val assignFrom = PIRFlowFunctionUtils.accessPathBase(value) ?: return
 
         if (assignFrom == assignTo) {
-            unchanged()
+            unchanged(currentFactAp)
             return
         }
 
@@ -391,11 +391,11 @@ class PIRMethodSequentFlowFunction(
         expr: PIRSubscriptExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
     ) {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: return unchanged()
+        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: return unchanged(currentFactAp)
         val accessor = ElementAccessor
 
         handleAccessorRead(assignTo, objBase, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
@@ -406,13 +406,13 @@ class PIRMethodSequentFlowFunction(
         instance: AccessPathBase?,
         accessor: Accessor,
         factAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit
     ) {
         if (assignTo != factAp.base) {
             if (accessor !is ElementAccessor) {
-                unchanged()
+                unchanged(factAp)
             } else {
                 propagateFact(factAp, TraceInfo.Flow)
             }
@@ -431,7 +431,7 @@ class PIRMethodSequentFlowFunction(
                 )
             }
 
-            propagateFactWithAccessorExclude(factAp, accessor)
+            propagateFactWithAccessorExclude(factAp, accessor, TraceInfo.Flow)
 
             return
         }
@@ -454,10 +454,10 @@ class PIRMethodSequentFlowFunction(
         expr: PIRExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        if (currentFactAp.base != assignTo) unchanged()
+        if (currentFactAp.base != assignTo) unchanged(currentFactAp)
 
         val valueExpressions: List<PIRValue> = when (expr) {
             is PIRDictExpr -> expr.values
@@ -491,10 +491,10 @@ class PIRMethodSequentFlowFunction(
         expr: PIRBinaryExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        if (currentFactAp.base != assignTo) unchanged()
+        if (currentFactAp.base != assignTo) unchanged(currentFactAp)
 
         val leftBase = PIRFlowFunctionUtils.accessPathBase(expr.left)
         val rightBase = PIRFlowFunctionUtils.accessPathBase(expr.right)
@@ -515,10 +515,10 @@ class PIRMethodSequentFlowFunction(
         expr: PIRStringExpr,
         assignTo: AccessPathBase,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        if (currentFactAp.base != assignTo) unchanged()
+        if (currentFactAp.base != assignTo) unchanged(currentFactAp)
 
         for (part in expr.parts) {
             val partBase = PIRFlowFunctionUtils.accessPathBase(part)
@@ -536,10 +536,10 @@ class PIRMethodSequentFlowFunction(
     private fun handleReturn(
         ret: PIRReturn,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
-        unchanged()
+        unchanged(currentFactAp)
         val retVal = ret.value ?: return
         val retBase = PIRFlowFunctionUtils.accessPathBase(retVal) ?: return
         if (currentFactAp.base == retBase) {
@@ -558,36 +558,125 @@ class PIRMethodSequentFlowFunction(
     private fun handleStoreAttr(
         store: PIRStoreAttr,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit
     ) {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged()
+        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged(currentFactAp)
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
+        val accessor = mkFieldAccessor(store.attribute)
 
-        if (valueBase != null && currentFactAp.base == valueBase) {
-            val accessor = mkFieldAccessor(store.attribute)
-            val newFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
-            propagateFact(newFact, TraceInfo.Flow)
-            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, newFact) { propagateFact(it, TraceInfo.Flow) }
-            unchanged()
-            return
-        }
-
-        if (currentFactAp.base == objBase && factStartsWithField(currentFactAp, store.attribute)) {
-            // Strong update: obj.attr is being overwritten — kill the tainted field fact
-            return
-        }
-
-        unchanged()
+        handleAccessorWrite(objBase, accessor, valueBase, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
     }
 
-    /**
-     * Checks if a fact's access path starts with a FieldAccessor matching the given field name.
-     * Uses name-only matching, ignoring className and fieldType (which may vary between instructions).
-     */
-    private fun factStartsWithField(factAp: FinalFactAp, fieldName: String): Boolean {
-        val startAccessors = factAp.getStartAccessors()
-        return startAccessors.any { it is FieldAccessor && it.fieldName == fieldName }
+    private fun handleAccessorWrite(
+        destObj: AccessPathBase,
+        accessor: Accessor,
+        assignFrom: AccessPathBase?,
+        currentFactAp: FinalFactAp,
+        unchanged: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit
+    ) {
+        if (destObj == assignFrom) {
+            if (currentFactAp.base != destObj) {
+                unchanged(currentFactAp)
+                return
+            }
+
+            val auxiliaryBase = AccessPathBase.LocalVar.create(-1) // b
+            check(auxiliaryBase != destObj)
+
+            handleAccessorWrite(
+                destObj = destObj,
+                accessor = accessor,
+                assignFrom = auxiliaryBase,
+                currentFactAp = currentFactAp,
+                unchanged = {
+                    if (it.base != auxiliaryBase) {
+                        unchanged(it)
+                    }
+                },
+                propagateFact = { f, traceInfo ->
+                    if (f.base != auxiliaryBase) {
+                        propagateFact(f, traceInfo)
+                    }
+                },
+                propagateFactWithAccessorExclude = { f, a, traceInfo ->
+                    if (f.base != auxiliaryBase) {
+                        propagateFactWithAccessorExclude(f, a, traceInfo)
+                    }
+                }
+            )
+
+            handleAccessorWrite(
+                destObj = destObj,
+                accessor = accessor,
+                assignFrom = auxiliaryBase,
+                currentFactAp = currentFactAp.rebase(auxiliaryBase),
+                unchanged = {
+                    if (it.base != auxiliaryBase) {
+                        unchanged(it)
+                    }
+                },
+                propagateFact = { f, traceInfo ->
+                    if (f.base != auxiliaryBase) {
+                        propagateFact(f, traceInfo)
+                    }
+                },
+                propagateFactWithAccessorExclude = { f, a, traceInfo ->
+                    if (f.base != auxiliaryBase) {
+                        propagateFactWithAccessorExclude(f, a, traceInfo)
+                    }
+                }
+            )
+        }
+
+        if (currentFactAp.base == assignFrom) {
+            val newFact = currentFactAp.rebase(destObj).prependAccessor(accessor)
+            propagateFact(newFact, TraceInfo.Flow)
+
+            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, newFact) {
+                propagateFact(it, TraceInfo.Flow)
+            }
+
+            unchanged(currentFactAp)
+            return
+        }
+
+        if (currentFactAp.base != destObj) {
+            unchanged(currentFactAp)
+            return
+        }
+
+        if (accessor is ElementAccessor) {
+            // Weak update for elements
+            propagateFact(currentFactAp, TraceInfo.Flow)
+            return
+        }
+
+        if (currentFactAp.isAbstract() && !currentFactAp.exclusions.contains(accessor)) {
+            propagateFactWithAccessorExclude(currentFactAp, accessor, TraceInfo.Flow)
+
+            val nonAbstractFact = currentFactAp.removeAbstraction()
+            if (nonAbstractFact != null) {
+                handleAccessorWrite(
+                    destObj, accessor, assignFrom, nonAbstractFact, 
+                    unchanged, propagateFact, propagateFactWithAccessorExclude
+                )
+            }
+            return
+        }
+
+        if (!currentFactAp.startsWithAccessor(accessor)) {
+            propagateFact(currentFactAp, TraceInfo.Flow)
+            return
+        }
+
+        val cleaned = currentFactAp.clearAccessor(accessor)
+        if (cleaned != null) {
+            propagateFact(cleaned, TraceInfo.Flow)
+        }
     }
 
     // ==========================================================================
@@ -601,28 +690,28 @@ class PIRMethodSequentFlowFunction(
     private fun handleStoreSubscript(
         store: PIRStoreSubscript,
         currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
+        unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit
     ) {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged()
+        val objBase = PIRFlowFunctionUtils.accessPathBase(store.obj) ?: return unchanged(currentFactAp)
         val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
-
         val accessor = ElementAccessor
 
-        if (valueBase != null && currentFactAp.base == valueBase) {
-            val elementFact = currentFactAp.rebase(objBase).prependAccessor(accessor)
-            propagateFact(elementFact, TraceInfo.Flow)
-            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, elementFact) { propagateFact(it, TraceInfo.Flow) }
-            unchanged()
-            return
-        }
+        handleAccessorWrite(objBase, accessor, valueBase, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+    }
 
-        if (currentFactAp.base == objBase && currentFactAp.startsWithAccessor(accessor)) {
-            propagateFact(currentFactAp, TraceInfo.Flow)
-            return
-        }
+    private fun handleStoreGlobal(
+        store: PIRStoreGlobal,
+        currentFactAp: FinalFactAp,
+        unchanged: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit
+    ) {
+        val (objBase, accessor) = PIRFlowFunctionUtils.globalAccess(store.ref)
+        val valueBase = PIRFlowFunctionUtils.accessPathBase(store.value)
 
-        unchanged()
+        handleAccessorWrite(objBase, accessor, valueBase, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
     }
 
     // TODO propagateAbstractFactWithFieldExcluded with aliasing ?

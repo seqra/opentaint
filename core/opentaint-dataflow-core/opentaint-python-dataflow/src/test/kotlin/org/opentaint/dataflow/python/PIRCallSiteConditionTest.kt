@@ -29,7 +29,7 @@ class PIRCallSiteConditionTest {
 
     @Test
     fun `arity matches the exact positional count`() {
-        val e = PIRBasicAtomEvaluator(call(pos(), pos()))
+        val e = PIRCallAtomEvaluator(call(pos(), pos()))
         assertTrue(e.visit(NumberOfArgs(2)))
         assertFalse(e.visit(NumberOfArgs(1)))
         assertFalse(e.visit(NumberOfArgs(3)))
@@ -37,14 +37,14 @@ class PIRCallSiteConditionTest {
 
     @Test
     fun `keyword args do not count toward positional arity`() {
-        val e = PIRBasicAtomEvaluator(call(pos(), kw("b")))
+        val e = PIRCallAtomEvaluator(call(pos(), kw("b")))
         assertTrue(e.visit(NumberOfArgs(1)))
         assertFalse(e.visit(NumberOfArgs(2)))
     }
 
     @Test
     fun `a star spread removes the arity upper bound`() {
-        val e = PIRBasicAtomEvaluator(call(pos(), star()))
+        val e = PIRCallAtomEvaluator(call(pos(), star()))
         assertTrue(e.visit(NumberOfArgs(1)), "the concrete positional arg is the lower bound")
         assertTrue(e.visit(NumberOfArgs(50)), "the spread can supply any number of further args")
         assertFalse(e.visit(NumberOfArgs(0)), "below the concrete positional count is infeasible")
@@ -70,7 +70,10 @@ class PIRCallSiteConditionTest {
     }
 
     private fun rewriteAnyArgMark(call: PIRCall): ExprOrConstant =
-        PIRConditionRewriter(call).rewriteAtom(ContainsMark(TaintMark("t"), AnyArgument), negated = false)
+        PIRConditionRewriter(
+            PIRCallAnyArgumentResolver(call),
+            PIRCallAtomEvaluator(call)
+        ).rewriteAtom(ContainsMark(TaintMark("t"), AnyArgument), negated = false)
 
     private fun argumentIndicesOf(or: Or): List<Int> = or.args.map { argumentIndexOf(it as ContainsMarkLiteral) }
 

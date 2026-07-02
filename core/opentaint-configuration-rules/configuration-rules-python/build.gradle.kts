@@ -16,14 +16,5 @@ dependencies {
 
     testImplementation(platform(JunitDependencies.Libs.junit_bom))
     testImplementation(JunitDependencies.Libs.junit_jupiter)
-}
-
-val pythonConfigFile = rootProject.layout.projectDirectory
-    .dir("../opentaint-dataflow-core/opentaint-python-dataflow/config/config")
-    .file("config.yaml")
-    .asFile
-
-tasks.test {
-    systemProperty("python.config.path", pythonConfigFile.absolutePath)
-    inputs.file(pythonConfigFile)
+    testImplementation("org.opentaint.config:python-config")
 }

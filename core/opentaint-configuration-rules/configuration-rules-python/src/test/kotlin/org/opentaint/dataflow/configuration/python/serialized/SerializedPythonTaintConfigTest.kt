@@ -3,6 +3,7 @@ package org.opentaint.dataflow.configuration.python.serialized
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import org.opentaint.python.config.PythonConfigLoader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -60,9 +61,7 @@ class SerializedPythonTaintConfigTest {
 
     @Test
     fun `parses the shipped python config yaml end to end`() {
-        val configPath = System.getProperty("python.config.path")
-            ?: error("python.config.path system property is required")
-        val config = java.io.File(configPath).inputStream().use { loadSerializedPythonTaintConfig(it) }
+        val config = PythonConfigLoader.getConfig() ?: error("Couldn't load config")
 
         assertTrue(config.entryPoint.isNotEmpty())
         assertTrue(config.source.isNotEmpty())
