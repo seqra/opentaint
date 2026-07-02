@@ -1,0 +1,43 @@
+passThrough:
+- function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
+  signature: (java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hc.core5.http.io.entity.StringEntity#content#java.lang.Object
+- function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
+  signature: (java.lang.String, org.apache.hc.core5.http.ContentType) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hc.core5.http.io.entity.StringEntity#content#java.lang.Object
+- function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
+  signature: (java.lang.String, java.nio.charset.Charset) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hc.core5.http.io.entity.StringEntity#content#java.lang.Object
+- function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
+  signature: (java.lang.String, org.apache.hc.core5.http.ContentType, boolean) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hc.core5.http.io.entity.StringEntity#content#java.lang.Object
+- function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
+  signature: (java.lang.String, java.nio.charset.Charset, boolean) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hc.core5.http.io.entity.StringEntity#content#java.lang.Object
+- function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
+  signature: (java.lang.String, org.apache.hc.core5.http.ContentType, java.lang.String, boolean) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hc.core5.http.io.entity.StringEntity#content#java.lang.Object

@@ -1,0 +1,166 @@
+passThrough:
+- function: okhttp3.Request$Builder#url
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#header
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#addHeader
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#headers
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#post
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#put
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#patch
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#delete
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#method
+  signature: (java.lang.String, okhttp3.RequestBody) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#get
+  copy:
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#head
+  copy:
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#removeHeader
+  copy:
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#cacheControl
+  copy:
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#tag
+  copy:
+  - from: this
+    to: result
+- function: okhttp3.Request$Builder#build
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .okhttp3.Request$Builder#url#java.lang.Object
+    to:
+    - result
+    - .okhttp3.Request#url#java.lang.Object

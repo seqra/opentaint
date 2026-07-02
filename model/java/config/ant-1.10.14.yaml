@@ -1,0 +1,13 @@
+passThrough:
+- function: org.apache.tools.ant.types.FileSet#setDir
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.tools.ant.types.FileSet#path#java.lang.Object
+- function: org.apache.tools.ant.types.FileSet#setFile
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.tools.ant.types.FileSet#path#java.lang.Object

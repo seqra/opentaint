@@ -1,0 +1,17 @@
+passThrough:
+- function: org.apache.commons.codec.binary.Base64#encodeBase64String
+  copy:
+  - from: arg(0)
+    to: result
+- function: org.apache.commons.codec.binary.Base64#encodeBase64URLSafeString
+  copy:
+  - from: arg(0)
+    to: result
+- function: org.apache.commons.codec.binary.Base64#encodeBase64URLSafe
+  copy:
+  - from: arg(0)
+    to: result
+- function: org.apache.commons.codec.binary.Base64#encodeBase64Chunked
+  copy:
+  - from: arg(0)
+    to: result

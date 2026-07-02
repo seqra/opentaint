@@ -1,0 +1,36 @@
+passThrough:
+- function: org.codehaus.groovy.control.CompilationUnit#addSource
+  signature: (java.io.File) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.codehaus.groovy.control.CompilationUnit#source#java.lang.Object
+- function: org.codehaus.groovy.control.CompilationUnit#addSource
+  signature: (java.net.URL) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.codehaus.groovy.control.CompilationUnit#source#java.lang.Object
+- function: org.codehaus.groovy.control.CompilationUnit#addSource
+  signature: (java.lang.String, java.io.InputStream) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.codehaus.groovy.control.CompilationUnit#source#java.lang.Object
+- function: org.codehaus.groovy.control.CompilationUnit#addSource
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.codehaus.groovy.control.CompilationUnit#source#java.lang.Object
+- function: org.codehaus.groovy.control.CompilationUnit#addSource
+  signature: (org.codehaus.groovy.control.SourceUnit) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.codehaus.groovy.control.CompilationUnit#source#java.lang.Object
