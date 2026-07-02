@@ -1056,3 +1056,241 @@ passThrough:
     - this
     - .org.springframework.web.context.request.async.DeferredResult#Result#java.lang.Object
     to: result
+- function: org.springframework.http.HttpHeaders#get
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getFirst
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getValuesAsList
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getOrDefault
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getOrEmpty
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getAccept
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getAcceptPatch
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getAccessControlAllowHeaders
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getAccessControlAllowOrigin
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getAccessControlExposeHeaders
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getAccessControlRequestHeaders
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getCacheControl
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getConnection
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getETag
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getIfMatch
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getIfNoneMatch
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getOrigin
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getPragma
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getUpgrade
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getVary
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    to: result
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    to: result
+- function: org.springframework.http.HttpHeaders#getContentType
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    to: result
+- function: org.springframework.http.HttpHeaders#getHost
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    to: result
+- function: org.springframework.http.HttpHeaders#getContentDisposition
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    to: result
+- function: org.springframework.http.HttpHeaders#set
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+- function: org.springframework.http.HttpHeaders#add
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+- function: org.springframework.http.RequestEntity#getUrl
+  copy:
+  - from:
+    - this
+    - .org.springframework.http.RequestEntity#url#java.net.URI
+    to: result
