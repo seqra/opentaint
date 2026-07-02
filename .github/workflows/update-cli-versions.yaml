@@ -18,7 +18,7 @@ on:
 
   workflow_run:
     workflows:
-      - Publish Analyzer
+      - Publish Analyzer and Models
       - Publish Autobuilder
       - Release Rules
     branches: [main]
