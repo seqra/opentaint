@@ -228,8 +228,9 @@ class JoinRuleWithChainedOperations : UnsupportedFeatureBlockingMessage() {
         "Join rule chains an alias as both a source and a sink; intermediate (chained) nodes are not supported"
 }
 
-class JoinRuleWithMultipleDistinctRightItems : UnsupportedFeatureBlockingMessage() {
-    override val message: String = "Join rule references multiple distinct right-hand rules; only a single right-hand rule is supported"
+class JoinSinkMetavarConflict(itemId: String) : RuleIssueBlockingMessage() {
+    override val message: String =
+        "Join sink '$itemId' is referenced with conflicting metavariables across 'on' conditions; a sink must be joined on a single metavariable"
 }
 
 class JoinOnTaintRuleWithNonEmptySources : RuleIssueBlockingMessage() {
@@ -252,9 +253,9 @@ class JoinIsImpossibleNoLabelFound(label: String) : RuleIssueBlockingMessage() {
     override val message: String = "Join is impossible: taint label '$label' required by the join condition was not found in the left-hand rule"
 }
 
-class EmptyTagExpansion(tag: String) : RuleIssueBlockingMessage() {
+class EmptyTagExpansion(tag: String, language: String?) : RuleIssueBlockingMessage() {
     override val message: String =
-        "Join ref targets tag '$tag', but no rule declares that tag"
+        "Join ref targets tag '$tag', but no enabled '$language' rule declares that tag"
 }
 
 class JoinRefMissingTarget : RuleIssueBlockingMessage() {
@@ -275,11 +276,6 @@ class JoinRefToUnsupportedRuleKind(ruleId: String) : RuleIssueBlockingMessage() 
 class JoinRefDuplicateAlias(alias: String) : RuleIssueBlockingMessage() {
     override val message: String =
         "Join alias '$alias' is declared by more than one ref; each ref must use a distinct 'as' alias (use a single 'tag' ref to union several rules under one alias)"
-}
-
-class JoinAliasMetavarConflict(alias: String) : RuleIssueBlockingMessage() {
-    override val message: String =
-        "Join alias '$alias' is referenced with conflicting metavariables across 'on' conditions; an alias must use a single metavariable on each side"
 }
 
 class FailedToConvertToTaintRule(causeMessage: String?) : InternalWarningBlockingMessage() {

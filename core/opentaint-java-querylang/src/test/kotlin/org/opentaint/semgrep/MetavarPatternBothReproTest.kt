@@ -1,9 +1,9 @@
 package org.opentaint.semgrep
 
-import org.opentaint.semgrep.pattern.SemgrepErrorEntry
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import org.opentaint.semgrep.pattern.errorEntries
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -14,15 +14,7 @@ class MetavarPatternBothReproTest {
         val loader = SemgrepRuleLoader(listOf(JavaLanguageStrategy()))
         loader.registerRuleSet(ruleText, Path("repro.yaml"), Path("."), trace)
         loader.loadRules()
-        return buildList {
-            for (file in trace.fileTraces) {
-                file.entries.filterIsInstance<SemgrepErrorEntry>().forEach { add("${it.severity}/${it.step}: ${it.message}") }
-                for (rule in file.ruleTraces) {
-                    rule.entries.filterIsInstance<SemgrepErrorEntry>().forEach { add("${it.severity}/${it.step}: ${it.message}") }
-                    rule.steps.forEach { s -> s.entries.filterIsInstance<SemgrepErrorEntry>().forEach { add("${it.severity}/${it.step}: ${it.message}") } }
-                }
-            }
-        }
+        return trace.errorEntries().map { "${it.severity}/${it.step}: ${it.message}" }
     }
 
     @Test

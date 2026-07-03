@@ -1,6 +1,8 @@
 package org.opentaint.semgrep.pattern
 
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,9 +75,12 @@ class RuleTagsAndJoinTest {
         assertEquals(null, refs[1].tag)
     }
 
-    private fun load(vararg files: Pair<String, String>): Pair<SemgrepRuleLoader.RuleLoadResult, SemgrepLoadTrace> {
+    private fun load(
+        vararg files: Pair<String, String>,
+        strategies: List<LanguageStrategy<*, *>> = listOf(JavaLanguageStrategy())
+    ): Pair<SemgrepRuleLoader.RuleLoadResult, SemgrepLoadTrace> {
         val trace = SemgrepLoadTrace()
-        val loader = SemgrepRuleLoader(listOf(JavaLanguageStrategy()))
+        val loader = SemgrepRuleLoader(strategies)
         for ((path, text) in files) {
             loader.registerRuleSet(text, Path(path), Path("."), trace)
         }
@@ -108,28 +113,85 @@ class RuleTagsAndJoinTest {
               - pattern: servletSource()
     """.trimIndent()
 
+    private val untrustedJoin = "ssrf.yaml" to """
+        rules:
+          - id: ssrf
+            severity: ERROR
+            message: m
+            languages: [java]
+            mode: join
+            join:
+              refs:
+                - tag: untrusted-data-source
+                  as: untrusted-data
+                - rule: lib/sink.yaml#ssrf-sink
+                  as: sink
+              on:
+                - 'untrusted-data.${'$'}X -> sink.${'$'}X'
+    """.trimIndent()
+
     @Test
     fun `tag ref expanding to no rules is a hard error`() {
+        val (_, trace) = load(sinkLib, untrustedJoin)
+        assertTrue(trace.errorMessages().any { it.contains("declares that tag") }, trace.errorMessages().toString())
+    }
+
+    @Test
+    fun `tag expansion skips disabled rules`() {
+        val disabledSource = "lib/disabled.yaml" to """
+            rules:
+              - id: disabled-source
+                options: { lib: true, disabled: true }
+                tags: [untrusted-data-source]
+                severity: NOTE
+                message: src
+                languages: [java]
+                patterns:
+                  - pattern: disabledSource()
+        """.trimIndent()
+        val (result, trace) = load(sinkLib, servletSource, disabledSource, untrustedJoin)
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        assertTrue("ssrf" in loadedRuleIds(result), "join rule should load; loaded=${loadedRuleIds(result)}")
+    }
+
+    @Test
+    fun `tag expanding to only disabled rules is an error`() {
+        val disabledSource = "lib/disabled.yaml" to """
+            rules:
+              - id: disabled-source
+                options: { lib: true, disabled: true }
+                tags: [untrusted-data-source]
+                severity: NOTE
+                message: src
+                languages: [java]
+                patterns:
+                  - pattern: disabledSource()
+        """.trimIndent()
+        val (_, trace) = load(sinkLib, disabledSource, untrustedJoin)
+        assertTrue(trace.errorMessages().any { it.contains("declares that tag") }, trace.errorMessages().toString())
+    }
+
+    @Test
+    fun `tag expansion is scoped to the join rule's language`() {
+        val kotlinFacadeStrategy = object : LanguageStrategy<SemgrepJavaPattern, SerializedItem> by JavaLanguageStrategy() {
+            override val language: String = "kotlin"
+        }
+        val kotlinSource = "lib/ktsrc.yaml" to """
+            rules:
+              - id: kt-source
+                options: { lib: true }
+                tags: [untrusted-data-source]
+                severity: NOTE
+                message: src
+                languages: [kotlin]
+                patterns:
+                  - pattern: ktSource()
+        """.trimIndent()
         val (_, trace) = load(
-            sinkLib,
-            "ssrf.yaml" to """
-                rules:
-                  - id: ssrf
-                    severity: ERROR
-                    message: m
-                    languages: [java]
-                    mode: join
-                    join:
-                      refs:
-                        - tag: untrusted-data-source
-                          as: untrusted-data
-                        - rule: lib/sink.yaml#ssrf-sink
-                          as: sink
-                      on:
-                        - 'untrusted-data.${'$'}X -> sink.${'$'}X'
-            """.trimIndent()
+            sinkLib, kotlinSource, untrustedJoin,
+            strategies = listOf(JavaLanguageStrategy(), kotlinFacadeStrategy)
         )
-        assertTrue(trace.errorMessages().any { it.contains("no rule declares that tag") }, trace.errorMessages().toString())
+        assertTrue(trace.errorMessages().any { it.contains("declares that tag") }, trace.errorMessages().toString())
     }
 
     @Test
@@ -244,7 +306,7 @@ class RuleTagsAndJoinTest {
     }
 
     @Test
-    fun `conflicting alias metavars error`() {
+    fun `sink joined on conflicting metavars errors`() {
         val (_, trace) = load(
             "lib/srcs.yaml" to """
                 rules:
@@ -388,13 +450,3 @@ class RuleTagsAndJoinTest {
         assertTrue(trace.errorMessages().any { it.contains("chains an alias") }, trace.errorMessages().toString())
     }
 }
-
-// Test-only helpers for reading the load trace.
-fun SemgrepFileLoadTrace.errorMessages(): List<String> =
-    entries.filterIsInstance<SemgrepErrorEntry>().map { it.message } +
-        ruleTraces.flatMap { rt ->
-            rt.entries.filterIsInstance<SemgrepErrorEntry>().map { it.message } +
-                rt.steps.flatMap { st -> st.entries.filterIsInstance<SemgrepErrorEntry>().map { it.message } }
-        }
-
-fun SemgrepLoadTrace.errorMessages(): List<String> = fileTraces.flatMap { it.errorMessages() }

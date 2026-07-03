@@ -6,9 +6,9 @@ import org.opentaint.semgrep.pattern.GeneratedTaintMark
 import org.opentaint.semgrep.pattern.JoinIsImpossibleNoLabelFound
 import org.opentaint.semgrep.pattern.JoinOnTaintRuleWithNonEmptySources
 import org.opentaint.semgrep.pattern.JoinRuleWithChainedOperations
-import org.opentaint.semgrep.pattern.JoinRuleWithMultipleDistinctRightItems
 import org.opentaint.semgrep.pattern.JoinRuleWithNoOperations
 import org.opentaint.semgrep.pattern.JoinRuleWithUnsupportedOperation
+import org.opentaint.semgrep.pattern.JoinSinkMetavarConflict
 import org.opentaint.semgrep.pattern.LeftTaintRuleMustHaveSources
 import org.opentaint.semgrep.pattern.LeftTaintRuleShouldNotHaveSinks
 import org.opentaint.semgrep.pattern.Mark.GeneratedMark
@@ -67,15 +67,28 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintAutomataJoinToTain
         return null
     }
 
-    val operationsByRightItem = rule.operations.groupBy { it.rhs }
-    if (operationsByRightItem.size > 1) {
-        trace.error(JoinRuleWithMultipleDistinctRightItems())
-        return null
+    val operationsBySink = rule.operations.groupBy { it.rhs.itemId }
+
+    val allGroups = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup<Item>>()
+    for ((sinkItemId, sinkOps) in operationsBySink) {
+        val rightItemRef = sinkOps.mapTo(linkedSetOf()) { it.rhs }.singleOrNull()
+        if (rightItemRef == null) {
+            trace.error(JoinSinkMetavarConflict(sinkItemId))
+            return null
+        }
+
+        // Each sink converts under its own rule id so the marks generated for one sink cannot
+        // collide with another's; a single-sink join keeps the original id.
+        val sinkCtx =
+            if (operationsBySink.size == 1) this
+            else RuleConversionCtx("$ruleId#$sinkItemId", modeModifier, meta, trace, typeOps)
+
+        val converted = sinkCtx.convertCompositionJoinOperations(strategy, rule, rightItemRef, sinkOps.map { it.lhs })
+            ?: return null
+        allGroups += converted.taintRules
     }
 
-    val (rightItemRef, compositions) = operationsByRightItem.entries.first()
-    val leftItemRefs = compositions.map { it.lhs }
-    return convertCompositionJoinOperations(strategy, rule, rightItemRef, leftItemRefs)
+    return TaintRuleFromSemgrep(ruleId, allGroups)
 }
 
 private fun validateNoChainedOperations(operations: List<TaintAutomataJoinOperation>): Boolean {
