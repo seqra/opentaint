@@ -392,19 +392,10 @@ public class PathTraversalServletSamples {
         }
     }
 
-    // ANALYZER LIMITATION: instance-method sanitizers (Path.normalize, File.getCanonicalFile)
-    // declared in path-traversal-sinks.yaml are not currently honored by OpenTaint's
-    // sanitizer matcher; only fully-qualified static method sanitizers are recognized.
-    // Restore these negative tests when instance-method sanitizer matching is supported.
-    @WebServlet("/pathtraversal/safe-getcanonicalfile")
-    public static class SafeGetCanonicalFileServlet extends HttpServlet {
-        @Override
-        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-            String fileName = request.getParameter("file");
-            File safe = new File("/var/www/uploads/" + fileName).getCanonicalFile();
-            if (safe.exists() && safe.isFile()) streamPath(response, safe.toPath());
-        }
-    }
+    // NOTE: instance-method sanitizers with a typed receiver (e.g.
+    // `(java.io.File $F).getCanonicalFile()`) are an engine gap — the matcher only
+    // honors fully-qualified static sanitizers, so a safe sample is flagged (FP).
+    // Minimal repro: taint/InstanceSanitizerRepro on the core-engine-repros branch.
 
     @WebServlet("/pathtraversal/safe-path-normalize")
     public static class SafePathNormalizeServlet extends HttpServlet {

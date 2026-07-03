@@ -843,6 +843,7 @@ tests:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$UrlRewritingController#trackSafe
   - rule-id: java/security/sqli.yaml#sql-injection
     positive:
+      - security.sqli.SqlInjectionPreExistingSamples$PreparedStatementCreatorFactoryController#unsafeNewPSC
       - security.sqli.SqlInjectionPreExistingSamples$BatchUpdateUtilsController#unsafeBatchUpdate
       - security.sqli.SqlInjectionPreExistingSamples$HibernateRestrictionsController#unsafeSqlRestriction
       - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafeCreateScript

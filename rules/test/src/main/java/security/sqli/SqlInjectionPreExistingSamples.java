@@ -228,11 +228,14 @@ public class SqlInjectionPreExistingSamples {
             return "done";
         }
 
-        // PreparedStatementCreatorFactory.newPreparedStatementCreator does not take String
-        // in Spring JDBC 5.3.x (takes Object[] or List<?>). Pattern exists for potential
-        // future API or alternative usage. No test possible with current Spring version.
-        // @GetMapping("/newPreparedStatementCreator")
-        // public String unsafeNewPSC(@RequestParam("table") String table) { ... }
+        @GetMapping("/newPreparedStatementCreator")
+        public String unsafeNewPSC(@RequestParam("table") String table) {
+            String sql = "SELECT * FROM " + table;
+            PreparedStatementCreatorFactory factory = new PreparedStatementCreatorFactory("SELECT 1");
+            // VULNERABLE: the (String sqlToUse, Object[] params) overload takes the SQL as arg0
+            factory.newPreparedStatementCreator(sql, new Object[0]);
+            return "done";
+        }
     }
 
     // ── Spring BatchUpdateUtils ─────────────────────────────────────────

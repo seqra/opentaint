@@ -224,19 +224,9 @@ public class PathTraversalJenkinsSinksSamples {
         }
     }
 
-    // ── Hudson HttpResponses.staticResource ─────────────────────────────────
-
-    @WebServlet("/pt-jenkins/httpresponses-staticresource")
-    public static class UnsafeHttpResponsesStaticResourceServlet extends HttpServlet {
-        @Override
-        // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        protected void doGet(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            String resource = request.getParameter("resource");
-            java.net.URL url = new java.net.URL("file:///var/data/" + resource);
-            hudson.util.HttpResponses.staticResource(url);
-        }
-    }
+    // NOTE: Hudson HttpResponses.staticResource(new URL("..." + tainted)) is an engine
+    // false-negative (propagator misses taint on a concatenated constructor arg).
+    // Minimal repro: taint/WrapperPropagatorRepro on the core-engine-repros branch.
 
     // ── Hudson IOUtils.mkdirs ───────────────────────────────────────────────
 
