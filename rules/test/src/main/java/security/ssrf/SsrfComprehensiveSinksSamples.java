@@ -57,8 +57,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/classloader")
     public static class UnsafeURLClassLoader {
         @GetMapping("/test")
-        // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        // @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL[] urls = {new URL(url)};
             URLClassLoader cl1 = new URLClassLoader(urls);

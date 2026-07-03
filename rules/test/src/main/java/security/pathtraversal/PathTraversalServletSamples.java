@@ -399,7 +399,6 @@ public class PathTraversalServletSamples {
     @WebServlet("/pathtraversal/safe-getcanonicalfile")
     public static class SafeGetCanonicalFileServlet extends HttpServlet {
         @Override
-        // @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String fileName = request.getParameter("file");
             File safe = new File("/var/www/uploads/" + fileName).getCanonicalFile();

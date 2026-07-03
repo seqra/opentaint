@@ -147,7 +147,6 @@ public class SqlInjectionThirdPartySamples {
         // Couchbase Cluster.queryStreaming is not available in SDK 3.x (may be from SDK 2.x).
         // Pattern kept in rule for backward compatibility, no test possible with current dependency.
         // @GetMapping("/queryStreaming")
-        // @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         // public String unsafeQueryStreaming(@RequestParam("filter") String filter) {
         //     String n1ql = "SELECT * FROM bucket WHERE " + filter;
         //     cluster.queryStreaming(n1ql, row -> {});

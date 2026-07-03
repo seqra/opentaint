@@ -230,7 +230,6 @@ public class PathTraversalJenkinsSinksSamples {
     public static class UnsafeHttpResponsesStaticResourceServlet extends HttpServlet {
         @Override
         // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        // @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");

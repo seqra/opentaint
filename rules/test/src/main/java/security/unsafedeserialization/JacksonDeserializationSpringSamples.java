@@ -64,7 +64,6 @@ public class JacksonDeserializationSpringSamples {
     public static class UnsafeActivateDefaultTypingController {
 
         @PostMapping("/unsafe-activate-default-typing")
-        // @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
         public String unsafeActivateDefaultTyping(@RequestBody String json) throws Exception {
             ObjectMapper mapper = new ObjectMapper();
             mapper.activateDefaultTyping(

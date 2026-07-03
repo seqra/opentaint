@@ -232,7 +232,6 @@ public class SqlInjectionPreExistingSamples {
         // in Spring JDBC 5.3.x (takes Object[] or List<?>). Pattern exists for potential
         // future API or alternative usage. No test possible with current Spring version.
         // @GetMapping("/newPreparedStatementCreator")
-        // @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         // public String unsafeNewPSC(@RequestParam("table") String table) { ... }
     }
 

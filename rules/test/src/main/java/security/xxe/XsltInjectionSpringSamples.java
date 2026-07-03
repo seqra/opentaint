@@ -106,7 +106,6 @@ public class XsltInjectionSpringSamples {
         // but the XXE rule pattern matches on the untrusted XML source argument.
         // TODO: Re-enable when analyzer can distinguish XSLT-injection (tainted transformer) from XXE (tainted XML input)
         @PostMapping("/safe")
-        // @NegativeRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public String safeTransform(@RequestParam("data") String xmlData) throws Exception {
             // SAFE from XSLT injection: XSLT is loaded from a server-controlled resource, not user input
             Processor processor = new Processor(false);
