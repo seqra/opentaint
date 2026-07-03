@@ -229,6 +229,11 @@ rules:
 
       # ── Apache HttpComponents 5 - bootstrap ────────────────────────────
       - pattern: (org.apache.hc.core5.http.impl.bootstrap.HttpAsyncRequester $R).connect($UNTRUSTED, ...)
+      # a HttpHost built from untrusted data (its tainted hostName field) reaching connect
+      - pattern: |
+          $HOST = new org.apache.hc.core5.http.HttpHost($UNTRUSTED);
+          ...
+          (org.apache.hc.core5.http.impl.bootstrap.HttpAsyncRequester $R).connect($HOST, ...);
       # ANALYZER LIMITATION: Inner class types not supported in typed metavariables.
       # TODO: Re-enable when analyzer supports inner class types (BenchmarkConfig.Builder).
       # - pattern: (org.apache.hc.core5.benchmark.BenchmarkConfig.Builder $B).setUri($UNTRUSTED)

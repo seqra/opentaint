@@ -504,8 +504,10 @@ public class SsrfComprehensiveSinksSamples {
             org.apache.hc.core5.http.impl.bootstrap.HttpAsyncRequester requester =
                     org.apache.hc.core5.http.impl.bootstrap.AsyncRequesterBootstrap.bootstrap().create();
             // VULNERABLE: user-controlled host used as the outbound connection target
+            org.apache.hc.core5.http.HttpHost target =
+                    new org.apache.hc.core5.http.HttpHost(host);
             requester.connect(
-                    new org.apache.hc.core5.http.HttpHost(host),
+                    target,
                     org.apache.hc.core5.util.Timeout.ofSeconds(5),
                     null,
                     null);
