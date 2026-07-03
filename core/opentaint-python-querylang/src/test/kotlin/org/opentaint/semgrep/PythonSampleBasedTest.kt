@@ -160,6 +160,12 @@ class PythonSampleBasedTest {
     @Ignore("Globals are not supported")
     @Test fun ruleWithStaticField() = runSample("RuleWithStaticField")
 
+    @Ignore("for-loop iterator element extraction unmodeled: PIRNextIter/PIRIterExpr not handled in sequent flow")
+    @Test fun forLoopElementRead() = runSample("ForLoopElementRead")
+
+    @Ignore("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] element read misses it")
+    @Test fun listAppendElementRead() = runSample("ListAppendElementRead")
+
     // ─── Plumbing ───────────────────────────────────────────────────────────
 
     private fun runSample(ruleName: String) {

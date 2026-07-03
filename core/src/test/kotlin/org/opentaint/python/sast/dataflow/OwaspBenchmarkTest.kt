@@ -124,11 +124,9 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00011() = assertNotReachable("00011")
     @Test fun benchmarkTest00012() = assertNotReachable("00012")
     @Test fun benchmarkTest00100() = assertNotReachable("00100")
-    @Disabled("match/case unsupported in PIR (ast_serializer drops MatchStmt); module can't build")
     @Test fun benchmarkTest00192() = assertNotReachable("00192")
     @Test fun benchmarkTest00285() = assertNotReachable("00285")
     @Test fun benchmarkTest00286() = assertNotReachable("00286")
-    @Disabled("match/case unsupported in PIR (ast_serializer drops MatchStmt); module can't build")
     @Test fun benchmarkTest00287() = assertNotReachable("00287")
     @Test fun benchmarkTest00755() = assertNotReachable("00755")
     @Test fun benchmarkTest01021() = assertNotReachable("01021")
@@ -139,6 +137,53 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00284() = assertReachable("00284")
     @Test fun benchmarkTest00454() = assertReachable("00454")
     @Test fun benchmarkTest00455() = assertReachable("00455")
+
+    // ─── cmdi set (CWE-78). sink: subprocess.run($CMD, ...) focus $CMD ───
+    //   true  = request data reaches the command; false = safe/never-tainted.
+
+    // `lst.append(param)` passthrough (arg(0)->this) lands taint at `lst.append.$PIR_SELF.![mark]`
+    // (spurious method-field on the receiver), not on `lst`/`lst[*]`, so `bar = lst[0]` reads nothing.
+    // Sinks tolerate this via base-prefix matching (01191), but an intraprocedural element read does not.
+    @Disabled("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] read misses it")
+    @Test fun benchmarkTest00165() = assertReachable("00165")
+    @Test fun benchmarkTest00166() = assertReachable("00166")
+    @Test fun benchmarkTest00167() = assertReachable("00167")
+    @Disabled("Any accessor support is required")
+    @Test fun benchmarkTest00267() = assertReachable("00267")
+    @Disabled("Any accessor support is required")
+    @Test fun benchmarkTest00268() = assertReachable("00268")
+    // for-loop iteration (`for name in request.form.keys()`) is unmodeled: PIRNextIter/PIRIterExpr
+    // fall through to `unchanged`, so the loop variable never receives element taint.
+    @Disabled("for-loop iterator element extraction unmodeled (PIRNextIter not handled in sequent flow)")
+    @Test fun benchmarkTest00431() = assertReachable("00431")
+    @Disabled("for-loop iterator element extraction unmodeled (PIRNextIter not handled in sequent flow)")
+    @Test fun benchmarkTest00432() = assertReachable("00432")
+    @Disabled("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] read misses it")
+    @Test fun benchmarkTest00511() = assertReachable("00511")
+    @Disabled("Any accessor support is required")
+    @Test fun benchmarkTest00606() = assertReachable("00606")
+    @Disabled("Any accessor support is required")
+    @Test fun benchmarkTest00607() = assertReachable("00607")
+    @Test fun benchmarkTest01191() = assertReachable("01191")
+
+    @Test fun benchmarkTest01097() = assertNotReachable("01097")
+    @Test fun benchmarkTest01098() = assertNotReachable("01098")
+    @Test fun benchmarkTest01173() = assertNotReachable("01173")
+
+    @Test fun benchmarkTest00168() = assertReachable("00168")
+    @Test fun benchmarkTest00899() = assertReachable("00899")
+
+    // dict/configparser are key-insensitive (single ElementAccessor / .Element): a value written
+    // to one key taints reads of every key, so the safe (read-other-key) variant false-positives.
+    // configparser passthrough is required by the true seed 00099, so this can't be tightened.
+    @Disabled("dict key-insensitivity FP: stores keyB(param), reads keyA(const) — can't distinguish keys")
+    @Test fun benchmarkTest00350() = assertNotReachable("00350")
+    @Disabled("dict key-insensitivity FP: stores keyB(param), reads keyA(const) — can't distinguish keys")
+    @Test fun benchmarkTest00736() = assertNotReachable("00736")
+    @Disabled("configparser key-insensitivity FP (.Element): set keyB(param), get keyA(const) — can't distinguish keys")
+    @Test fun benchmarkTest00512() = assertNotReachable("00512")
+    @Disabled("configparser key-insensitivity FP (.Element): set keyB(param), get keyA(const) — can't distinguish keys")
+    @Test fun benchmarkTest00900() = assertNotReachable("00900")
 
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 

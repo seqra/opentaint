@@ -1,0 +1,10 @@
+rules:
+  - id: list-append-element-read
+    languages: [python]
+    severity: ERROR
+    message: "an element appended to a tainted list reaches a sink"
+    mode: taint
+    pattern-sources:
+      - pattern: source()
+    pattern-sinks:
+      - pattern: sink(...)
