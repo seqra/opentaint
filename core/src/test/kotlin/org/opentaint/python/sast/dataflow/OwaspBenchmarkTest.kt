@@ -1,6 +1,7 @@
 package org.opentaint.python.sast.dataflow
 
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
@@ -117,6 +118,27 @@ class OwaspBenchmarkTest : AnalysisTest() {
      */
     @Test
     fun benchmarkTest00099() = assertReachable("00099")
+
+    // ─── SQLi seed set (CWE-89). true = execute(sql) interpolated; false = execute(sql, (param,)) ───
+
+    @Test fun benchmarkTest00011() = assertNotReachable("00011")
+    @Test fun benchmarkTest00012() = assertNotReachable("00012")
+    @Test fun benchmarkTest00100() = assertNotReachable("00100")
+    @Disabled("match/case unsupported in PIR (ast_serializer drops MatchStmt); module can't build")
+    @Test fun benchmarkTest00192() = assertNotReachable("00192")
+    @Test fun benchmarkTest00285() = assertNotReachable("00285")
+    @Test fun benchmarkTest00286() = assertNotReachable("00286")
+    @Disabled("match/case unsupported in PIR (ast_serializer drops MatchStmt); module can't build")
+    @Test fun benchmarkTest00287() = assertNotReachable("00287")
+    @Test fun benchmarkTest00755() = assertNotReachable("00755")
+    @Test fun benchmarkTest01021() = assertNotReachable("01021")
+    @Test fun benchmarkTest01203() = assertNotReachable("01203")
+    @Test fun benchmarkTest01229() = assertNotReachable("01229")
+
+    @Test fun benchmarkTest00283() = assertReachable("00283")
+    @Test fun benchmarkTest00284() = assertReachable("00284")
+    @Test fun benchmarkTest00454() = assertReachable("00454")
+    @Test fun benchmarkTest00455() = assertReachable("00455")
 
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 

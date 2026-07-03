@@ -1,5 +1,5 @@
 rules:
-  - id: owasp-sqli-00099
+  - id: owasp-sqli-00100
     languages: [python]
     mode: taint
     message: "Tainted request data reaches a SQL execute (SQL injection)"

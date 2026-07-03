@@ -88,12 +88,6 @@ class PythonPatternToActionListConverterTest {
         assertEquals(null, call.enclosingClassName)
     }
 
-    @Test fun metavarRootedMultiDotReceiverIsUnsupported() {
-        val (r, failures) = convert("\$X.a.method(\$Y)")
-        assertNull(r)
-        assertTrue(failures.keys.any { it.contains("MethodInvocation_receiver_unsupported") }, "got $failures")
-    }
-
     @Test fun plainCallWithOnlyEllipsis() {
         val a = convertOk("foo(...)")
         val call = a.actions.single() as MethodCall

@@ -4,6 +4,7 @@ import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRBindFunctionExpr
 import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClass
 import org.opentaint.ir.api.python.PIRClassType
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRGlobalNameRef
@@ -79,13 +80,17 @@ class PIRMethodQFNameReconstructor private constructor(
                 val objIdx = (inst.obj as? PIRLocal)?.index
 
                 if (objIdx == idx) {
+                    val baseName = payload.name.flattenOrNull()
+                    val baseType = baseName?.let { cp.findClassOrNull(it) }
                     val chainedName = payload.name.prependSegment(inst.attribute)
-                    val declaredType = attributeTypeQn(payload.name, inst.attribute)?.let { NameEntry.GlobalRef(it) }
 
-                    // Bind the target to the attribute's declared type so a later
-                    // `target.method()` resolves against that type instead of textually
-                    // chaining onto the base; record the chained name for this read.
-                    (declaredType ?: chainedName)?.let { this += LocalBinding(targetIdx, it) }
+                    if (baseType != null) {
+                        attributeTypeQn(baseType, inst.attribute)?.let { this += LocalBinding(targetIdx, NameEntry.GlobalRef(it)) }
+                        attributeMethodQn(baseType, inst.attribute)?.let { this += LocalBinding(targetIdx, NameEntry.GlobalRef(it)) }
+                    } else {
+                        chainedName?.let { this += LocalBinding(targetIdx, chainedName) }
+                    }
+
                     chainedName?.let { saveResult(inst, it) }
                 }
 
@@ -141,13 +146,18 @@ class PIRMethodQFNameReconstructor private constructor(
     private fun classQnOrNull(type: PIRType?): String? =
         (type as? PIRClassType)?.qualifiedName?.ifEmpty { null }
 
-    private fun attributeTypeQn(baseName: NameEntry, attribute: String): String? {
-        val baseQn = baseName.flattenOrNull() ?: return null
+    /** QN of a method named [attribute] declared on [baseType] or a base class (MRO order). */
+    private fun attributeMethodQn(baseType: PIRClass, attribute: String): String? {
+        for (qn in baseType.mro) {
+            val cls = cp.findClassOrNull(qn) ?: continue
+            val method = cls.methods.find { it.name == attribute } ?: continue
+            return method.qualifiedName
+        }
+        return null
+    }
 
-        // `mro` includes the class itself as its first element. Stop at the first
-        // class that declares the attribute so a subclass override shadows the parent.
-        val mro = cp.findClassOrNull(baseQn)?.mro ?: return null
-        for (qn in mro) {
+    private fun attributeTypeQn(baseType: PIRClass, attribute: String): String? {
+        for (qn in baseType.mro) {
             val cls = cp.findClassOrNull(qn) ?: continue
             val attrType = cls.fields.find { it.name == attribute }?.type
                 ?: cls.properties.find { it.name == attribute }?.type
