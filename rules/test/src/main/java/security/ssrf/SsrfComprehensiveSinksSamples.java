@@ -19,7 +19,6 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,7 +37,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/datagram")
     public static class UnsafeDatagramUsage {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("host") String host) throws Exception {
             InetAddress addr = InetAddress.getByName(host);
             byte[] buf = new byte[256];
@@ -80,7 +78,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeOkHttp3Usage {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through OkHttp Request.Builder chain; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
             okhttp3.Request request = new okhttp3.Request.Builder().url(url).build();
@@ -95,7 +92,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/spring-advanced")
     public static class UnsafeSpringAdvancedUsage {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             // RequestEntity constructor with URI
             URI uri = URI.create(url);
@@ -123,7 +119,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc4-methods")
     public static class UnsafeHc4Methods {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             // All HC4 HTTP method constructors
             new HttpDelete(url);
@@ -164,7 +159,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc5-classic")
     public static class UnsafeHc5ClassicMethods {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             new org.apache.hc.client5.http.classic.methods.HttpDelete(url);
             new org.apache.hc.client5.http.classic.methods.HttpHead(url);
@@ -184,7 +178,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc5-async")
     public static class UnsafeHc5AsyncMethods {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URI uri = URI.create(url);
 
@@ -220,7 +213,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc-core5")
     public static class UnsafeHcCore5 {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URI uri = URI.create(url);
 
@@ -257,7 +249,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/netty-extended")
     public static class UnsafeNettyExtendedUsage {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             InetSocketAddress addr = new InetSocketAddress(url, 80);
 
@@ -289,7 +280,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/database")
     public static class UnsafeDatabaseUsage {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             // JDBI
             org.jdbi.v3.core.Jdbi.create(url);
@@ -307,7 +297,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/jaxrs")
     public static class UnsafeJaxRsUsage {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             // javax.ws.rs Client.target
             javax.ws.rs.client.Client jaxrsClient = javax.ws.rs.client.ClientBuilder.newClient();
@@ -328,7 +317,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeCommonsIOUsage {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL u = new URL(url);
 
@@ -373,7 +361,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeActivationUsage {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL u = new URL(url);
             new javax.activation.URLDataSource(u);
@@ -389,7 +376,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeHudsonUsage {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL u = new URL(url);
 
@@ -415,7 +401,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeStaplerUsage {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL u = new URL(url);
             org.kohsuke.stapler.StaplerResponse response = null;
@@ -430,7 +415,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc4-factory")
     public static class UnsafeHc4Factory {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             // HttpRequestFactory is an interface; use DefaultHttpRequestFactory
             org.apache.http.HttpRequestFactory factory =
@@ -446,7 +430,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc-core5-factory")
     public static class UnsafeHcCore5Factory {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             org.apache.hc.core5.http.HttpRequestFactory factory = null;
             factory.newHttpRequest("GET", url);
@@ -461,7 +444,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeOkHttp3WebSocket {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through OkHttp Request.Builder chain; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) {
             okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
             okhttp3.Request request = new okhttp3.Request.Builder().url(url).build();
@@ -476,7 +458,6 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/netty-connect")
     public static class UnsafeNettyConnectUsage {
         @GetMapping("/test")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("host") String host) throws Exception {
             InetSocketAddress addr = new InetSocketAddress(host, 80);
 
@@ -510,7 +491,6 @@ public class SsrfComprehensiveSinksSamples {
     public static class UnsafeCommonsIOCopy {
         @GetMapping("/test")
         // TODO: Analyzer FN – taint does not propagate through new URL() wrapper; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL u = new URL(url);
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();

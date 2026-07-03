@@ -4,7 +4,6 @@ import org.apache.commons.jexl3.JexlBuilder;
 import org.apache.commons.jexl3.JexlEngine;
 import org.apache.commons.jexl3.JexlExpression;
 import org.apache.commons.jexl3.JexlScript;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +19,6 @@ public class Jexl3InjectionSpringSamples {
     public static class UnsafeJexl3CreateExpressionController {
 
         @GetMapping("/create-expression")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeCreateExpression(@RequestParam("expr") String expr) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             // VULNERABLE: creating JEXL 3 expression from user input
@@ -35,7 +33,6 @@ public class Jexl3InjectionSpringSamples {
     public static class UnsafeJexl3CreateScriptController {
 
         @GetMapping("/create-script")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeCreateScript(@RequestParam("script") String script) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             // VULNERABLE: creating JEXL 3 script from user input
@@ -50,7 +47,6 @@ public class Jexl3InjectionSpringSamples {
     public static class UnsafeJexl3GetPropertyController {
 
         @GetMapping("/get-property")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeGetProperty(@RequestParam("prop") String prop) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             Object target = new Object();
@@ -68,7 +64,6 @@ public class Jexl3InjectionSpringSamples {
 
         @GetMapping("/expression-evaluate")
         // TODO: Analyzer FN – taint does not propagate through engine.createExpression() to JexlExpression object; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeExpressionEvaluate(@RequestParam("expr") String expr) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             // Taint on Argument[this]: the JexlExpression itself is tainted
@@ -79,7 +74,6 @@ public class Jexl3InjectionSpringSamples {
 
         @GetMapping("/expression-callable")
         // TODO: Analyzer FN – taint does not propagate through engine.createExpression() to JexlExpression object; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeExpressionCallable(@RequestParam("expr") String expr) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             JexlExpression expression = engine.createExpression(expr);
@@ -89,7 +83,6 @@ public class Jexl3InjectionSpringSamples {
 
         @GetMapping("/script-execute")
         // TODO: Analyzer FN – taint does not propagate through engine.createScript() to JexlScript object; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeScriptExecute(@RequestParam("script") String script) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             JexlScript jexlScript = engine.createScript(script);
@@ -99,7 +92,6 @@ public class Jexl3InjectionSpringSamples {
 
         @GetMapping("/script-callable")
         // TODO: Analyzer FN – taint does not propagate through engine.createScript() to JexlScript object; re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         public String unsafeScriptCallable(@RequestParam("script") String script) throws Exception {
             JexlEngine engine = new JexlBuilder().create();
             JexlScript jexlScript = engine.createScript(script);

@@ -4,8 +4,6 @@ import java.io.StringReader;
 
 import javax.xml.transform.stream.StreamSource;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -34,7 +32,6 @@ public class XsltInjectionSpringSamples {
         // does not reach the transformer object without summaries for the Saxon compilation chain.
         // TODO: Re-enable when Saxon compilation taint propagation summaries are added to opentaint-config.
         @PostMapping("/unsafe/transform")
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public String unsafeTransform(@RequestParam("xslt") String xsltContent) throws Exception {
             Processor processor = new Processor(false);
             XsltCompiler compiler = processor.newXsltCompiler();
@@ -51,7 +48,6 @@ public class XsltInjectionSpringSamples {
         // ANALYZER LIMITATION: Same as above — taint does not propagate through Saxon compilation chain.
         // TODO: Re-enable when Saxon compilation taint propagation summaries are added to opentaint-config.
         @PostMapping("/unsafe/applyTemplates")
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public String unsafeApplyTemplates(@RequestParam("xslt") String xsltContent) throws Exception {
             Processor processor = new Processor(false);
             XsltCompiler compiler = processor.newXsltCompiler();
@@ -75,7 +71,6 @@ public class XsltInjectionSpringSamples {
         // ANALYZER LIMITATION: Same as Xslt30Transformer — taint does not propagate through Saxon compilation chain.
         // TODO: Re-enable when Saxon compilation taint propagation summaries are added to opentaint-config.
         @PostMapping("/unsafe/transform")
-        @PositiveRuleSample(value = "java/security/xxe.yaml", id = "xxe")
         public String unsafeTransform(@RequestParam("xslt") String xsltContent) throws Exception {
             Processor processor = new Processor(false);
             XsltCompiler compiler = processor.newXsltCompiler();

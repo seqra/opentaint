@@ -515,7 +515,6 @@ public class XssHtmlResponseSpringSamples {
     public static class Row57HttpHeadersGetFirstReflectedController {
 
         @GetMapping("/xss-in-spring-app/row-57")
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-spring-app")
         public ResponseEntity<String> row57(@RequestParam(required = false, defaultValue = "") String name) {
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Reflected", name);

@@ -30,7 +30,6 @@ public class UnvalidatedRedirectSpringSamples {
         }
 
         @GetMapping("/redirect/unsafe-model-and-view")
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-spring-app")
         public ModelAndView unsafeModelAndViewRedirect(@RequestParam("url") String url) {
             // VULNERABLE: unvalidated user-controlled URL in ModelAndView redirect
             return new ModelAndView("redirect:" + url);

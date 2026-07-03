@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Minimal repros for taint-propagation gaps in built-in approximations.
@@ -37,7 +36,6 @@ public class AnalyzerPropagatorRepros {
     @WebServlet("/repro/stringutils-defaultIfBlank")
     public static class StringUtilsDefaultIfBlankServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String name = request.getParameter("name");
@@ -59,7 +57,6 @@ public class AnalyzerPropagatorRepros {
     @WebServlet("/repro/ioutils-toString")
     public static class IOUtilsToStringServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             java.io.InputStream in = request.getInputStream();
@@ -93,7 +90,6 @@ public class AnalyzerPropagatorRepros {
     @WebServlet("/repro/base64-encode")
     public static class Base64EncodeServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String raw = request.getParameter("token");

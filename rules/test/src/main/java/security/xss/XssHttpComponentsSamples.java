@@ -8,8 +8,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Apache HttpComponents response entity samples for xss-in-servlet-app.
@@ -22,7 +20,6 @@ public class XssHttpComponentsSamples {
     public static class UnsafeHc4SetEntity extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -39,7 +36,6 @@ public class XssHttpComponentsSamples {
     public static class UnsafeHc4UpdateEntity extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -58,7 +54,6 @@ public class XssHttpComponentsSamples {
 
         @Override
         // TODO: Analyzer FN - taint does not propagate through new HC5 StringEntity(); re-enable when HC5 summaries are added
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -74,7 +69,6 @@ public class XssHttpComponentsSamples {
     public static class SafeHcServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");

@@ -3,7 +3,6 @@ package security.ssrf;
 import java.io.InputStream;
 import java.net.URL;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +21,6 @@ public class SsrfExtraSinksSamples {
     public static class UnsafeUrlOpenStreamController {
 
         @GetMapping("/open-stream")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> unsafeOpenStream(@RequestParam("url") String url) throws Exception {
             // VULNERABLE: taint on $UNTRUSTED in new URL constructor, then openStream
             InputStream is = new URL(url).openStream();
@@ -39,7 +37,6 @@ public class SsrfExtraSinksSamples {
     public static class UnsafeUrlGetContentController {
 
         @GetMapping("/get-content")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> unsafeGetContent(@RequestParam("url") String url) throws Exception {
             // VULNERABLE: taint on $UNTRUSTED in new URL constructor, then getContent
             Object content = new URL(url).getContent();
@@ -56,7 +53,6 @@ public class SsrfExtraSinksSamples {
     public static class UnsafeHttpClientSendController {
 
         @GetMapping("/http-client-send")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> unsafeSend(@RequestParam("url") String url) throws Exception {
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(url))
@@ -75,7 +71,6 @@ public class SsrfExtraSinksSamples {
     public static class UnsafeJettyGetController {
 
         @GetMapping("/jetty-get")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> unsafeJettyGet(@RequestParam("url") String url) throws Exception {
             org.eclipse.jetty.client.HttpClient httpClient = new org.eclipse.jetty.client.HttpClient();
             // VULNERABLE: user-controlled URL passed directly to Jetty GET

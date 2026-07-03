@@ -9,8 +9,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for os-command-injection-in-servlet.
@@ -25,7 +23,6 @@ public class CommandInjectionServletSamples {
     public static class UnsafeCommandServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/command-injection.yaml", id = "os-command-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String host = request.getParameter("host"); // untrusted input

@@ -19,7 +19,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
 
 /**
  * Negative-only test bank for CodeQL-aligned barriers (sanitizers,
@@ -45,7 +44,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-normalize")
     public static class SafePathNormalizeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -58,7 +56,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-canonicalFile")
     public static class SafeCanonicalFileServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -73,7 +70,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-canonicalPath")
     public static class SafeCanonicalPathServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -86,7 +82,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-filenameutils-normalize")
     public static class SafeFilenameUtilsNormalizeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -103,7 +98,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-filenameutils-normalize-noend")
     public static class SafeFilenameUtilsNormalizeNoEndSeparatorServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -120,7 +114,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-pixee")
     public static class SafePixeeFilenameServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -133,7 +126,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-file-getName")
     public static class SafeFileGetNameServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -146,7 +138,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-esapi-fileName")
     public static class SafeEsapiFileNameServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -164,7 +155,6 @@ public class BarrierTests {
     @WebServlet("/barrier/path-esapi-directoryPath")
     public static class SafeEsapiDirectoryPathServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String dir = request.getParameter("dir");
@@ -184,7 +174,6 @@ public class BarrierTests {
     @WebServlet("/barrier/cmd-pixee-runcommand")
     public static class SafePixeeRunCommandServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/command-injection.yaml", id = "os-command-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String cmd = request.getParameter("cmd");
             io.github.pixee.security.SystemCommand.runCommand(Runtime.getRuntime(), new String[] {"/bin/sh", "-c", cmd});
@@ -197,7 +186,6 @@ public class BarrierTests {
     @WebServlet("/barrier/deser-pixee-validating")
     public static class SafePixeeValidatingOisServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-deserialization")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             try (java.io.InputStream raw = request.getInputStream();
                  java.io.ObjectInputStream ois = io.github.pixee.security.ValidatingObjectInputStreams.from(raw)) {
@@ -212,7 +200,6 @@ public class BarrierTests {
     @WebServlet("/barrier/deser-validating-ois")
     public static class SafeValidatingOisServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-deserialization")
         protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             try (java.io.InputStream in = request.getInputStream();
                  org.apache.commons.io.serialization.ValidatingObjectInputStream ois =
@@ -233,7 +220,6 @@ public class BarrierTests {
     @WebServlet("/barrier/refl-pixee-loadAndVerify")
     public static class SafePixeeLoadAndVerifyServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/external-configuration-control.yaml", id = "unsafe-reflection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String className = request.getParameter("class");
             try {
@@ -251,7 +237,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-urlencoder-1arg")
     public static class SafeUrlEncoder1ArgServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String key = request.getParameter("key");
             @SuppressWarnings("deprecation")
@@ -268,7 +253,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-urlencoder-2arg")
     public static class SafeUrlEncoder2ArgServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String key = request.getParameter("key");
             String encoded = java.net.URLEncoder.encode(key, "UTF-8");
@@ -284,7 +268,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-guava-pathsegment")
     public static class SafeGuavaPathSegmentEscaperServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String key = request.getParameter("key");
             String encoded = com.google.common.net.UrlEscapers.urlPathSegmentEscaper().escape(key);
@@ -300,7 +283,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-guava-formparam")
     public static class SafeGuavaFormParameterEscaperServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String key = request.getParameter("key");
             String encoded = com.google.common.net.UrlEscapers.urlFormParameterEscaper().escape(key);
@@ -316,7 +298,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-guava-fragment")
     public static class SafeGuavaFragmentEscaperServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String key = request.getParameter("key");
             String encoded = com.google.common.net.UrlEscapers.urlFragmentEscaper().escape(key);
@@ -334,7 +315,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-main-urlencoder")
     public static class SafeMainUrlEncoderServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String target = request.getParameter("target");
             String encoded = java.net.URLEncoder.encode(target, "UTF-8");
@@ -347,7 +327,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-main-guava-form")
     public static class SafeMainGuavaFormServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String target = request.getParameter("target");
             String encoded = com.google.common.net.UrlEscapers.urlFormParameterEscaper().escape(target);
@@ -360,7 +339,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssrf-main-pixee-urls")
     public static class SafeMainPixeeUrlsServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String target = request.getParameter("target");
             java.net.URL url = io.github.pixee.security.Urls.create(
@@ -375,7 +353,6 @@ public class BarrierTests {
     // ── ldap-injection ─────────────────────────────────────────────────────
 
     /** LdapInjection — Spring LdapEncoder.filterEncode. */
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     public void safeLdapFilterEncode(HttpServletRequest request) throws Exception {
         String username = request.getParameter("username");
         String encoded = org.springframework.ldap.support.LdapEncoder.filterEncode(username);
@@ -386,7 +363,6 @@ public class BarrierTests {
     }
 
     /** LdapInjection — Spring LdapEncoder.nameEncode. */
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     public void safeLdapNameEncode(HttpServletRequest request) throws Exception {
         String dn = request.getParameter("dn");
         String encoded = org.springframework.ldap.support.LdapEncoder.nameEncode(dn);
@@ -398,7 +374,6 @@ public class BarrierTests {
     // ── log-injection ──────────────────────────────────────────────────────
 
     /** LogInjection — Apache Commons Text StringEscapeUtils.escapeJava. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogEscapeJava(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = org.apache.commons.text.StringEscapeUtils.escapeJava(input);
@@ -407,7 +382,6 @@ public class BarrierTests {
     }
 
     /** LogInjection — Apache Commons Lang3 StringEscapeUtils.escapeJava. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogEscapeJavaLang3(HttpServletRequest request) {
         String input = request.getParameter("input");
         @SuppressWarnings("deprecation")
@@ -417,7 +391,6 @@ public class BarrierTests {
     }
 
     /** LogInjection — OWASP Encode.forJavaScript. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogEncodeForJavaScript(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = org.owasp.encoder.Encode.forJavaScript(input);
@@ -426,7 +399,6 @@ public class BarrierTests {
     }
 
     /** LineBreaksLogInjectionSanitizer — replaceAll("[\r\n]", _) assigned to var. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogStripCrLfBracket(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = input.replaceAll("[\\r\\n]", "_");
@@ -435,7 +407,6 @@ public class BarrierTests {
     }
 
     /** LogInjection — pixee Newlines.stripAll. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogPixeeNewlines(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = io.github.pixee.security.Newlines.stripAll(input);
@@ -444,7 +415,6 @@ public class BarrierTests {
     }
 
     /** LineBreaksLogInjectionSanitizer — replaceAll("\\R", _) assigned to var. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogStripCrLfAnyLineBreak(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = input.replaceAll("\\R", "_");
@@ -453,7 +423,6 @@ public class BarrierTests {
     }
 
     /** LineBreaksLogInjectionSanitizer — replace("\n", _) assigned to var. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogReplaceNewline(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = input.replace("\n", "_");
@@ -462,7 +431,6 @@ public class BarrierTests {
     }
 
     /** LineBreaksLogInjectionSanitizer — replace("\r", _) assigned to var. */
-    @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
     public void safeLogReplaceCarriageReturn(HttpServletRequest request) {
         String input = request.getParameter("input");
         String safe = input.replace("\r", "_");
@@ -476,7 +444,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-htmlescape-1arg")
     public static class SafeHtmlEscape1ArgServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.springframework.web.util.HtmlUtils.htmlEscape(name);
@@ -489,7 +456,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-encode-forhtml")
     public static class SafeOwaspEncodeForHtmlServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forHtml(name);
@@ -502,7 +468,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-commons-text-escapeHtml4")
     public static class SafeApacheEscapeHtml4Servlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.text.StringEscapeUtils.escapeHtml4(name);
@@ -515,7 +480,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-commons-text-escapeHtml3")
     public static class SafeApacheEscapeHtml3Servlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.text.StringEscapeUtils.escapeHtml3(name);
@@ -528,7 +492,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-forHtmlContent")
     public static class SafeOwaspForHtmlContentServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forHtmlContent(name);
@@ -541,7 +504,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-forHtmlAttribute")
     public static class SafeOwaspForHtmlAttributeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forHtmlAttribute(name);
@@ -554,7 +516,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-htmlescape-2arg")
     public static class SafeHtmlEscape2ArgServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.springframework.web.util.HtmlUtils.htmlEscape(name, "UTF-8");
@@ -567,7 +528,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-htmlescape-decimal")
     public static class SafeHtmlEscapeDecimalServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.springframework.web.util.HtmlUtils.htmlEscapeDecimal(name);
@@ -580,7 +540,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-htmlescape-hex")
     public static class SafeHtmlEscapeHexServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.springframework.web.util.HtmlUtils.htmlEscapeHex(name);
@@ -593,7 +552,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-forCDATA")
     public static class SafeOwaspForCDATAServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forCDATA(name);
@@ -606,7 +564,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-forJavaScript")
     public static class SafeOwaspForJavaScriptServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forJavaScript(name);
@@ -619,7 +576,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-forJsAttr")
     public static class SafeOwaspForJsAttrServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forJavaScriptAttribute(name);
@@ -632,7 +588,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-owasp-forCssString")
     public static class SafeOwaspForCssStringServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forCssString(name);
@@ -645,7 +600,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-commons-escapeXml10")
     public static class SafeCommonsEscapeXml10Servlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.text.StringEscapeUtils.escapeXml10(name);
@@ -658,7 +612,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-commons-escapeEcmaScript")
     public static class SafeCommonsEscapeEcmaScriptServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.text.StringEscapeUtils.escapeEcmaScript(name);
@@ -671,7 +624,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-esapi-forJavaScript")
     public static class SafeEsapiForJsServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForJavaScript(name);
@@ -684,7 +636,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-esapi-forHtmlAttribute")
     public static class SafeEsapiForHtmlAttrServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForHTMLAttribute(name);
@@ -697,7 +648,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-esapi-forCss")
     public static class SafeEsapiForCssServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForCSS(name);
@@ -710,7 +660,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-esapi-safeHtml")
     public static class SafeEsapiSafeHtmlServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String html = request.getParameter("html");
             try {
@@ -728,7 +677,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-hudson-escape")
     public static class SafeHudsonEscapeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = hudson.Util.escape(name);
@@ -741,7 +689,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xss-pixee-htmlEncoder")
     public static class SafePixeeHtmlEncoderServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = io.github.pixee.security.HtmlEncoder.encode(name);
@@ -756,7 +703,6 @@ public class BarrierTests {
     @WebServlet("/barrier/redirect-urlencoder")
     public static class SafeRedirectUrlEncoderServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String target = request.getParameter("target");
             String encoded = java.net.URLEncoder.encode(target, "UTF-8");
@@ -768,7 +714,6 @@ public class BarrierTests {
     @WebServlet("/barrier/redirect-guava-pathseg")
     public static class SafeRedirectGuavaServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String target = request.getParameter("target");
             String encoded = com.google.common.net.UrlEscapers.urlPathSegmentEscaper().escape(target);
@@ -780,7 +725,6 @@ public class BarrierTests {
     @WebServlet("/barrier/redirect-esapi-location")
     public static class SafeRedirectEsapiLocationServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String target = request.getParameter("target");
             try {
@@ -796,7 +740,6 @@ public class BarrierTests {
     // ── smtp-crlf-injection ───────────────────────────────────────────────
 
     /** SmtpInjection — pixee Newlines.stripAll strips CR/LF before setSubject. */
-    @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
     public void safeSmtpPixeeNewlines(HttpServletRequest request) throws Exception {
         String subject = request.getParameter("subject");
         String safe = io.github.pixee.security.Newlines.stripAll(subject);
@@ -807,7 +750,6 @@ public class BarrierTests {
     }
 
     /** SmtpInjection — Apache Commons Text escapeJava strips CR/LF before setSubject. */
-    @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
     public void safeSmtpEscapeJava(HttpServletRequest request) throws Exception {
         String subject = request.getParameter("subject");
         String safe = org.apache.commons.text.StringEscapeUtils.escapeJava(subject);
@@ -818,7 +760,6 @@ public class BarrierTests {
     }
 
     /** SmtpInjection — replaceAll("[\r\n]", _) strips CR/LF before setHeader. */
-    @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
     public void safeSmtpReplaceAllBracket(HttpServletRequest request) throws Exception {
         String headerValue = request.getParameter("header");
         String safe = headerValue.replaceAll("[\\r\\n]", "_");
@@ -834,7 +775,6 @@ public class BarrierTests {
     @WebServlet("/barrier/crlf-escapeJava")
     public static class SafeCrlfEscapeJavaServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userInput = request.getParameter("name");
@@ -847,7 +787,6 @@ public class BarrierTests {
     @WebServlet("/barrier/crlf-replaceAll-bracket")
     public static class SafeCrlfReplaceAllBracketServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userInput = request.getParameter("name");
@@ -860,7 +799,6 @@ public class BarrierTests {
     @WebServlet("/barrier/crlf-urlencoder")
     public static class SafeCrlfUrlEncoderServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userInput = request.getParameter("name");
@@ -873,7 +811,6 @@ public class BarrierTests {
     @WebServlet("/barrier/crlf-guava-urlescaper")
     public static class SafeCrlfGuavaUrlEscaperServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userInput = request.getParameter("name");
@@ -886,7 +823,6 @@ public class BarrierTests {
     @WebServlet("/barrier/crlf-pixee-newlines")
     public static class SafeCrlfPixeeNewlinesServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userInput = request.getParameter("name");
@@ -903,7 +839,6 @@ public class BarrierTests {
 
         /** XSS-in-spring — HtmlUtils.htmlEscape. */
         @org.springframework.web.bind.annotation.GetMapping("/htmlescape")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-spring-app")
         public void safeSpringHtmlEscape(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -914,7 +849,6 @@ public class BarrierTests {
 
         /** XSS-in-spring — OWASP Encode.forHtml. */
         @org.springframework.web.bind.annotation.GetMapping("/owaspforhtml")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-spring-app")
         public void safeSpringOwaspForHtml(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -925,7 +859,6 @@ public class BarrierTests {
 
         /** XSS-in-spring — Apache Commons Text escapeHtml4. */
         @org.springframework.web.bind.annotation.GetMapping("/commonstext")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-spring-app")
         public void safeSpringEscapeHtml4(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -941,7 +874,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xpath-owasp-forXml")
     public static class SafeXpathOwaspForXmlServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String userInput = request.getParameter("user");
             String encoded = org.owasp.encoder.Encode.forXml(userInput);
@@ -958,7 +890,6 @@ public class BarrierTests {
     @WebServlet("/barrier/xpath-commons-escapeXml10")
     public static class SafeXpathCommonsEscapeXml10Servlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String userInput = request.getParameter("user");
             String encoded = org.apache.commons.text.StringEscapeUtils.escapeXml10(userInput);
@@ -974,7 +905,6 @@ public class BarrierTests {
     // ── ldap (extra encoder variants) ─────────────────────────────────────
 
     /** LdapInjection — OWASP ESAPI encodeForLDAP. */
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     public void safeLdapEsapiEncodeForLdap(HttpServletRequest request) throws Exception {
         String username = request.getParameter("username");
         String encoded = org.owasp.esapi.ESAPI.encoder().encodeForLDAP(username);
@@ -985,7 +915,6 @@ public class BarrierTests {
     }
 
     /** LdapInjection — OWASP ESAPI encodeForDN. */
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     public void safeLdapEsapiEncodeForDn(HttpServletRequest request) throws Exception {
         String dn = request.getParameter("dn");
         String encoded = org.owasp.esapi.ESAPI.encoder().encodeForDN(dn);
@@ -1000,7 +929,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssti-owasp-forHtml")
     public static class SafeSstiOwaspForHtmlServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String template = request.getParameter("template");
             String safe = org.owasp.encoder.Encode.forHtml(template);
@@ -1018,7 +946,6 @@ public class BarrierTests {
     @WebServlet("/barrier/ssti-htmlescape")
     public static class SafeSstiHtmlEscapeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String template = request.getParameter("template");
             String safe = org.springframework.web.util.HtmlUtils.htmlEscape(template);
@@ -1040,7 +967,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-escapeEcmaScript")
     public static class SafeRespInjEscapeEcmaScriptServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.text.StringEscapeUtils.escapeEcmaScript(name);
@@ -1052,7 +978,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-lang3-escapeEcmaScript")
     public static class SafeRespInjLang3EscapeEcmaScriptServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.lang3.StringEscapeUtils.escapeEcmaScript(name);
@@ -1064,7 +989,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-esapi-url")
     public static class SafeRespInjEsapiUrlServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             try {
@@ -1080,7 +1004,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-esapi-css")
     public static class SafeRespInjEsapiCssServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForCSS(name);
@@ -1092,7 +1015,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-esapi-js")
     public static class SafeRespInjEsapiJsServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForJavaScript(name);
@@ -1104,7 +1026,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-esapi-xml")
     public static class SafeRespInjEsapiXmlServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForXML(name);
@@ -1116,7 +1037,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-esapi-xmlattr")
     public static class SafeRespInjEsapiXmlAttrServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForXMLAttribute(name);
@@ -1128,7 +1048,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-esapi-htmlattr")
     public static class SafeRespInjEsapiHtmlAttrServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.esapi.ESAPI.encoder().encodeForHTMLAttribute(name);
@@ -1140,7 +1059,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-owasp-jsAttr")
     public static class SafeRespInjOwaspJsAttrServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forJavaScriptAttribute(name);
@@ -1152,7 +1070,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-owasp-cssString")
     public static class SafeRespInjOwaspCssStringServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.owasp.encoder.Encode.forCssString(name);
@@ -1164,7 +1081,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-spring-decimal")
     public static class SafeRespInjSpringDecimalServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.springframework.web.util.HtmlUtils.htmlEscapeDecimal(name);
@@ -1176,7 +1092,6 @@ public class BarrierTests {
     @WebServlet("/barrier/respinj-escapeXml11")
     public static class SafeRespInjEscapeXml11Servlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String name = request.getParameter("name");
             String safe = org.apache.commons.text.StringEscapeUtils.escapeXml11(name);
@@ -1192,7 +1107,6 @@ public class BarrierTests {
 
         /** spring-response-injection — Apache Commons Text escapeEcmaScript. */
         @org.springframework.web.bind.annotation.GetMapping("/escapeEcmaScript")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-spring-app")
         public void safeSpringRespEscapeEcmaScript(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -1202,7 +1116,6 @@ public class BarrierTests {
 
         /** spring-response-injection — OWASP ESAPI encodeForURL. */
         @org.springframework.web.bind.annotation.GetMapping("/esapiUrl")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-spring-app")
         public void safeSpringRespEsapiUrl(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -1216,7 +1129,6 @@ public class BarrierTests {
 
         /** spring-response-injection — OWASP ESAPI encodeForJavaScript. */
         @org.springframework.web.bind.annotation.GetMapping("/esapiJs")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-spring-app")
         public void safeSpringRespEsapiJs(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -1226,7 +1138,6 @@ public class BarrierTests {
 
         /** spring-response-injection — OWASP Encode.forJavaScript. */
         @org.springframework.web.bind.annotation.GetMapping("/owaspJs")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-spring-app")
         public void safeSpringRespOwaspJs(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -1236,7 +1147,6 @@ public class BarrierTests {
 
         /** spring-response-injection — Apache Commons Text escapeXml10. */
         @org.springframework.web.bind.annotation.GetMapping("/escapeXml10")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-spring-app")
         public void safeSpringRespEscapeXml10(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {
@@ -1246,7 +1156,6 @@ public class BarrierTests {
 
         /** spring-response-injection — Spring HtmlUtils.htmlEscapeHex. */
         @org.springframework.web.bind.annotation.GetMapping("/htmlEscapeHex")
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-spring-app")
         public void safeSpringRespHtmlEscapeHex(
                 @org.springframework.web.bind.annotation.RequestParam("name") String name,
                 HttpServletResponse response) throws IOException {

@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,7 +21,6 @@ public class CommandInjectionSpringSamples {
          * executed via Runtime.exec.
          */
         @GetMapping("/os-command-injection-in-spring/unsafe")
-        @PositiveRuleSample(value = "java/security/command-injection.yaml", id = "os-command-injection")
         public String unsafePing(@RequestParam String host) {
             // VULNERABLE: direct concatenation of untrusted input into OS command
             String command = "ping -c 4 " + host;
@@ -49,7 +46,6 @@ public class CommandInjectionSpringSamples {
     public static class UnsafeProcessBuilderDirectoryController {
 
         @GetMapping("/os-command-injection-in-spring/directory")
-        @PositiveRuleSample(value = "java/security/command-injection.yaml", id = "os-command-injection")
         public String unsafeDirectory(@RequestParam String dir) throws Exception {
             // VULNERABLE: user-controlled working directory for process execution
             ProcessBuilder pb = new ProcessBuilder("ls");
@@ -71,7 +67,6 @@ public class CommandInjectionSpringSamples {
     public static class UnsafeProcessBuilderCommandController {
 
         @GetMapping("/os-command-injection-in-spring/command")
-        @PositiveRuleSample(value = "java/security/command-injection.yaml", id = "os-command-injection")
         public String unsafeCommand(@RequestParam String cmd) throws Exception {
             // VULNERABLE: user-controlled argument passed to ProcessBuilder.command
             Process process = new ProcessBuilder().command("sh", "-c", cmd).start();

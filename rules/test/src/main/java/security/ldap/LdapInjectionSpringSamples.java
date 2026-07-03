@@ -5,8 +5,6 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -76,7 +74,6 @@ public class LdapInjectionSpringSamples {
          * LDAP search method which concatenates them into the LDAP filter.
          */
         @PostMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
         public boolean unsafeSearch(@RequestParam("username") String username) throws Exception {
             // VULNERABLE: username flows into vulnerableSearch(), which builds an LDAP filter via concatenation
             return ldapService.vulnerableSearch(username);

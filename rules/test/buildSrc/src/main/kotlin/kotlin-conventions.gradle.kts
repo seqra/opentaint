@@ -5,7 +5,7 @@ plugins {
     `maven-publish`
 }
 
-group = "org.opentaint.rules.builtin.test"
+group = "org.seqra.rules.builtin.test"
 
 repositories {
     mavenCentral()

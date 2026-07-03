@@ -14,7 +14,6 @@ import org.hibernate.criterion.Restrictions;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Script;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterBatchUpdateUtils;
@@ -50,7 +49,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/newQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeNewQuery(@RequestParam("q") String q) {
             String jdoql = "SELECT FROM User WHERE " + q;
             pm.newQuery(jdoql);
@@ -58,7 +56,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/newQueryWithClass")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeNewQueryWithClass(@RequestParam("q") String q) {
             String filter = "name == '" + q + "'";
             pm.newQuery(Object.class, filter);
@@ -66,7 +63,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/setFilter")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSetFilter(@RequestParam("filter") String filter) {
             Query<?> query = pm.newQuery(Object.class);
             query.setFilter(filter);
@@ -74,7 +70,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/setGrouping")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSetGrouping(@RequestParam("group") String group) {
             Query<?> query = pm.newQuery(Object.class);
             query.setGrouping(group);
@@ -95,7 +90,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafePrepareCall(@RequestParam("proc") String proc) throws SQLException {
             try (Connection conn = dataSource.getConnection()) {
                 CallableStatement cs = conn.prepareCall("CALL " + proc);
@@ -120,7 +114,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/query")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeQuery(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             sqlClient.query(sql);
@@ -128,7 +121,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/preparedQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafePreparedQuery(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             sqlClient.preparedQuery(sql);
@@ -136,7 +128,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/prepare")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafePrepare(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             sqlConnection.prepare(sql);
@@ -157,7 +148,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/createQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeCreateQuery(@RequestParam("filter") String filter) {
             String jpql = "SELECT u FROM User u WHERE " + filter;
             em.createQuery(jpql);
@@ -165,7 +155,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/createNativeQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeCreateNativeQuery(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             em.createNativeQuery(sql);
@@ -186,14 +175,12 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/createScript")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeCreateScript(@RequestParam("stmt") String stmt) {
             handle.createScript(stmt);
             return "done";
         }
 
         @GetMapping("/createUpdate")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeCreateUpdate(@RequestParam("stmt") String stmt) {
             String sql = "DELETE FROM " + stmt;
             handle.createUpdate(sql);
@@ -201,7 +188,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/prepareBatch")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafePrepareBatch(@RequestParam("stmt") String stmt) {
             String sql = "INSERT INTO " + stmt + " VALUES (?)";
             handle.prepareBatch(sql);
@@ -209,7 +195,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/select")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSelect(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             handle.select(sql);
@@ -217,14 +202,12 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/newScript")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeNewScript(@RequestParam("stmt") String stmt) {
             new Script(handle, stmt);
             return "done";
         }
 
         @GetMapping("/newPreparedBatch")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeNewPreparedBatch(@RequestParam("stmt") String stmt) {
             String sql = "INSERT INTO " + stmt + " VALUES (?)";
             new PreparedBatch(handle, sql);
@@ -239,7 +222,6 @@ public class SqlInjectionPreExistingSamples {
     public static class PreparedStatementCreatorFactoryController {
 
         @GetMapping("/constructor")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeConstructor(@RequestParam("table") String table) {
             String sql = "SELECT * FROM " + table;
             new PreparedStatementCreatorFactory(sql);
@@ -267,7 +249,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/executeBatchUpdate")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeBatchUpdate(@RequestParam("table") String table) {
             String sql = "INSERT INTO " + table + " VALUES (?)";
             org.springframework.jdbc.core.BatchUpdateUtils.executeBatchUpdate(
@@ -283,7 +264,6 @@ public class SqlInjectionPreExistingSamples {
     public static class HibernateRestrictionsController {
 
         @GetMapping("/sqlRestriction")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSqlRestriction(@RequestParam("condition") String condition) {
             Restrictions.sqlRestriction(condition);
             return "done";
@@ -297,7 +277,6 @@ public class SqlInjectionPreExistingSamples {
     public static class TorqueBasePeerController {
 
         @GetMapping("/executeQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeExecuteQuery(@RequestParam("filter") String filter) throws TorqueException {
             String sql = "SELECT * FROM users WHERE " + filter;
             BasePeer.executeQuery(sql);
@@ -305,7 +284,6 @@ public class SqlInjectionPreExistingSamples {
         }
 
         @GetMapping("/executeStatement")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeExecuteStatement(@RequestParam("table") String table) throws TorqueException {
             String sql = "DELETE FROM " + table;
             BasePeer.executeStatement(sql);
@@ -328,7 +306,6 @@ public class SqlInjectionPreExistingSamples {
         // TODO: Analyzer FN – taint does not propagate through NamedParameterUtils.parseSqlStatement()
         // to ParsedSql; re-enable when summaries are added
         @GetMapping("/executeBatch")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeNamedBatchUpdate(@RequestParam("table") String table) {
             String sql = "INSERT INTO " + table + " VALUES (:val)";
             ParsedSql parsedSql = NamedParameterUtils.parseSqlStatement(sql);
@@ -345,7 +322,6 @@ public class SqlInjectionPreExistingSamples {
     public static class PreparedStatementCreatorFactoryNewPscController {
 
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeNewPSC(@RequestParam("table") String table) {
             String sql = "SELECT * FROM " + table;
             PreparedStatementCreatorFactory factory = new PreparedStatementCreatorFactory("SELECT 1");

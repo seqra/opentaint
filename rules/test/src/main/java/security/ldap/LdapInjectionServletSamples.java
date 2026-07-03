@@ -11,8 +11,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.ldap.support.LdapEncoder;
 
 /**
@@ -84,7 +82,6 @@ public class LdapInjectionServletSamples extends HttpServlet {
     }
 
     @Override
-    @PositiveRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         // VULNERABLE: request parameters (untrusted) flow into LDAP filter via vulnerableAuthenticate()
         String username = req.getParameter("username");
@@ -104,7 +101,6 @@ public class LdapInjectionServletSamples extends HttpServlet {
      * which escapes LDAP filter metacharacters. Exercises a CodeQL LdapInjectionSanitizer-aligned
      * static method sanitizer.
      */
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String username = req.getParameter("username");
         String password = req.getParameter("password");

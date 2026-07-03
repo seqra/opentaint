@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import hudson.util.FormValidation;
 import org.kohsuke.stapler.HttpResponses;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Jenkins FormValidation / Stapler HttpResponses samples for xss-in-servlet-app.
@@ -24,7 +22,6 @@ public class XssJenkinsSamples {
     public static class UnsafeErrorWithMarkup extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -36,7 +33,6 @@ public class XssJenkinsSamples {
     public static class UnsafeOkWithMarkup extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -48,7 +44,6 @@ public class XssJenkinsSamples {
     public static class UnsafeWarningWithMarkup extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -60,7 +55,6 @@ public class XssJenkinsSamples {
     public static class UnsafeRespond extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -74,7 +68,6 @@ public class XssJenkinsSamples {
     public static class UnsafeStaplerHtml extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -86,7 +79,6 @@ public class XssJenkinsSamples {
     public static class UnsafeStaplerLiteralHtml extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");
@@ -100,7 +92,6 @@ public class XssJenkinsSamples {
     public static class SafeJenkinsServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String input = request.getParameter("input");

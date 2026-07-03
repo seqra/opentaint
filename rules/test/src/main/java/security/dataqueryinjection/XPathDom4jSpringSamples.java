@@ -9,8 +9,6 @@ import org.dom4j.DocumentHelper;
 import org.dom4j.Node;
 import org.dom4j.XPath;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,7 +26,6 @@ public class XPathDom4jSpringSamples {
     public static class UnsafeCxfXPathController {
 
         @GetMapping("/unsafe/getValueString")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeGetValueString(@RequestParam("expr") String expression) throws Exception {
             org.w3c.dom.Document doc = javax.xml.parsers.DocumentBuilderFactory.newInstance()
                     .newDocumentBuilder().newDocument();
@@ -38,7 +35,6 @@ public class XPathDom4jSpringSamples {
         }
 
         @GetMapping("/unsafe/isExist")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeIsExist(@RequestParam("expr") String expression) throws Exception {
             org.w3c.dom.Document doc = javax.xml.parsers.DocumentBuilderFactory.newInstance()
                     .newDocumentBuilder().newDocument();
@@ -55,7 +51,6 @@ public class XPathDom4jSpringSamples {
     public static class UnsafeDom4jDocumentFactoryController {
 
         @GetMapping("/unsafe/createXPath")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeCreateXPath(@RequestParam("xpath") String xpath) throws Exception {
             DocumentFactory factory = DocumentFactory.getInstance();
             XPath xpathObj = factory.createXPath(xpath);
@@ -63,7 +58,6 @@ public class XPathDom4jSpringSamples {
         }
 
         @GetMapping("/unsafe/createXPathFilter")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeCreateXPathFilter(@RequestParam("xpath") String xpath) throws Exception {
             DocumentFactory factory = DocumentFactory.getInstance();
             factory.createXPathFilter(xpath);
@@ -78,14 +72,12 @@ public class XPathDom4jSpringSamples {
     public static class UnsafeDom4jDocumentHelperController {
 
         @GetMapping("/unsafe/createXPath")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeCreateXPath(@RequestParam("xpath") String xpath) throws Exception {
             XPath xpathObj = DocumentHelper.createXPath(xpath);
             return xpathObj.getText();
         }
 
         @GetMapping("/unsafe/selectNodes")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeSelectNodes(@RequestParam("xpath") String xpath) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='admin'/></root>");
             List nodes = DocumentHelper.selectNodes(xpath, doc.selectNodes("//user"));
@@ -93,7 +85,6 @@ public class XPathDom4jSpringSamples {
         }
 
         @GetMapping("/unsafe/sort")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeSort(@RequestParam("sortExpr") String sortExpr) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='b'/><user name='a'/></root>");
             List nodes = doc.selectNodes("//user");
@@ -109,7 +100,6 @@ public class XPathDom4jSpringSamples {
     public static class UnsafeDom4jNodeController {
 
         @GetMapping("/unsafe/selectSingleNode")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeSelectSingleNode(@RequestParam("xpath") String xpath) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='admin'/></root>");
             Node result = doc.selectSingleNode(xpath);
@@ -117,14 +107,12 @@ public class XPathDom4jSpringSamples {
         }
 
         @GetMapping("/unsafe/valueOf")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeValueOf(@RequestParam("xpath") String xpath) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='admin'/></root>");
             return doc.valueOf(xpath);
         }
 
         @GetMapping("/unsafe/selectNodes")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeSelectNodes(@RequestParam("xpath") String xpath) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='admin'/></root>");
             List nodes = doc.selectNodes(xpath);
@@ -132,7 +120,6 @@ public class XPathDom4jSpringSamples {
         }
 
         @GetMapping("/unsafe/selectNodes2arg")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeSelectNodes2Arg(@RequestParam("sortExpr") String sortExpr) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='b'/><user name='a'/></root>");
             List nodes = doc.selectNodes("//user", sortExpr);
@@ -140,7 +127,6 @@ public class XPathDom4jSpringSamples {
         }
 
         @GetMapping("/unsafe/numberValueOf")
-        @PositiveRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String unsafeNumberValueOf(@RequestParam("xpath") String xpath) throws Exception {
             Document doc = DocumentHelper.parseText("<root><count>42</count></root>");
             Number result = doc.numberValueOf(xpath);
@@ -155,7 +141,6 @@ public class XPathDom4jSpringSamples {
     public static class SafeDom4jController {
 
         @GetMapping("/safe")
-        @NegativeRuleSample(value = "java/security/data-query-injection.yaml", id = "xpath-injection")
         public String safeXPath(@RequestParam("username") String username) throws Exception {
             Document doc = DocumentHelper.parseText("<root><user name='admin'/></root>");
             // SAFE: hardcoded XPath expression, user data not in XPath

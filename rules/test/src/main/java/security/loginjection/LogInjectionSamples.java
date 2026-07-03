@@ -13,8 +13,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.log.Log;
 import org.jboss.seam.log.Logging;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +27,6 @@ public class LogInjectionSamples {
     public static class UnsafeLogServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String username = request.getParameter("username"); // untrusted
@@ -49,7 +46,6 @@ public class LogInjectionSamples {
     public static class SafeLogServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String username = request.getParameter("username");
@@ -65,7 +61,6 @@ public class LogInjectionSamples {
     public static class SafeLogReplaceServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String username = request.getParameter("username");
@@ -81,7 +76,6 @@ public class LogInjectionSamples {
     public static class SafeLogEscapeServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String username = request.getParameter("username");
@@ -103,7 +97,6 @@ public class LogInjectionSamples {
         private static final Logger logger = LoggerFactory.getLogger(SpringLogInjectionController.class);
 
         @org.springframework.web.bind.annotation.PostMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         public org.springframework.http.ResponseEntity<String> unsafeLogin(
                 @org.springframework.web.bind.annotation.RequestParam String username,
                 @org.springframework.web.bind.annotation.RequestParam String password) {
@@ -115,7 +108,6 @@ public class LogInjectionSamples {
 
         /*
         @org.springframework.web.bind.annotation.PostMapping("/safe")
-        @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         public org.springframework.http.ResponseEntity<String> safeLogin(
                 @org.springframework.web.bind.annotation.RequestParam String username,
                 @org.springframework.web.bind.annotation.RequestParam String password) {
@@ -139,7 +131,6 @@ public class LogInjectionSamples {
 
         private static final Log seamLog = Logging.getLog(SeamServletStyleLoginAction.class);
 
-        @PositiveRuleSample(value = "java/security/log-injection.yaml", id = "seam-log-injection")
         public void vulnerableSeamLogging() {
             Map<String, String> params = FacesContext.getCurrentInstance()
                     .getExternalContext()
@@ -151,7 +142,6 @@ public class LogInjectionSamples {
             seamLog.info("Login failed for user #{" + username + "}");
         }
 
-        @PositiveRuleSample(value = "java/security/log-injection.yaml", id = "seam-log-injection")
         public void vulnerableSeamDebug() {
             Map<String, String> params = FacesContext.getCurrentInstance()
                     .getExternalContext()
@@ -161,7 +151,6 @@ public class LogInjectionSamples {
             seamLog.debug("Debug data #{" + input + "}");
         }
 
-        @PositiveRuleSample(value = "java/security/log-injection.yaml", id = "seam-log-injection")
         public void vulnerableSeamError() {
             Map<String, String> params = FacesContext.getCurrentInstance()
                     .getExternalContext()
@@ -171,7 +160,6 @@ public class LogInjectionSamples {
             seamLog.error("Error data #{" + input + "}");
         }
 
-        @PositiveRuleSample(value = "java/security/log-injection.yaml", id = "seam-log-injection")
         public void vulnerableSeamTrace() {
             Map<String, String> params = FacesContext.getCurrentInstance()
                     .getExternalContext()
@@ -182,7 +170,6 @@ public class LogInjectionSamples {
         }
 
         /*
-        @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "seam-log-injection")
         public void safeSeamLogging() {
             Map<String, String> params = FacesContext.getCurrentInstance()
                     .getExternalContext()

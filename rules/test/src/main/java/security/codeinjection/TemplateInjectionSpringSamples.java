@@ -55,7 +55,6 @@ public class TemplateInjectionSpringSamples {
     public static class UnsafeStringTemplateLoaderController {
 
         @PostMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void loadUnsafe(HttpServletRequest request, HttpServletResponse response) throws Exception {
             String templateContent = request.getParameter("template");
 

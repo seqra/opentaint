@@ -1,3 +1,4 @@
+
 plugins {
     java
 }
@@ -12,6 +13,7 @@ allprojects {
     apply(plugin = "java")
 
     dependencies {
+
         // Servlet + OGNL + Groovy dependencies for rule samples
         implementation("javax.servlet:javax.servlet-api:4.0.1")
         implementation("ognl:ognl:3.3.4")
@@ -356,7 +358,7 @@ tasks.withType<Jar> {
 // CI helper: validate that all rules are valid YAML and covered by tests
 tasks.register<JavaExec>("checkRulesCoverage") {
     group = "verification"
-    description = "Validates YAML rules and ensures each active rule is covered by a rule-test.yaml entry."
+    description = "Validates YAML rules and ensures each active rule is covered by a @PositiveRuleSample test."
 
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "rules.RuleCoverageCheck"

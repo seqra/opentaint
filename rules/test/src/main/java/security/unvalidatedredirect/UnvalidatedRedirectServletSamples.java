@@ -58,7 +58,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeAddLocationHeaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL placed directly in Location header
@@ -72,7 +71,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeJaxRsSeeOtherServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URI passed to Response.seeOther
@@ -84,7 +82,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeJaxRsTemporaryRedirectServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URI passed to Response.temporaryRedirect
@@ -99,7 +96,6 @@ public class UnvalidatedRedirectServletSamples {
 
         @Override
         // TODO: Analyzer FN – taint does not propagate through URI.create(); re-enable when summaries are added
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URI passed to Desktop.browse
@@ -117,7 +113,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeStaplerRedirectToServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL passed to HttpResponses.redirectTo
@@ -129,7 +124,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeStaplerRedirectToWithStatusServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL passed to HttpResponses.redirectTo with status
@@ -141,7 +135,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeStaplerSendRedirectServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL passed to StaplerResponse.sendRedirect
@@ -153,7 +146,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeStaplerSendRedirectWithStatusServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL passed to StaplerResponse.sendRedirect with status
@@ -165,7 +157,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeStaplerSendRedirect2Servlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL passed to StaplerResponse.sendRedirect2
@@ -179,7 +170,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeServletContextDispatcherServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled path passed to ServletContext.getRequestDispatcher
@@ -197,7 +187,6 @@ public class UnvalidatedRedirectServletSamples {
         private javax.portlet.PortletContext portletContext;
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled path passed to PortletContext.getRequestDispatcher
@@ -211,7 +200,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeStaplerForwardServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: user-controlled URL passed to StaplerResponse.forward

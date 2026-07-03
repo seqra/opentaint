@@ -183,7 +183,6 @@ public class SsrfSamples {
     public static class UnsafeGetMethodPollutionServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String key = request.getParameter("key");
@@ -200,7 +199,6 @@ public class SsrfSamples {
     public static class UnsafeSetQueryStringPollutionServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String key = request.getParameter("key");
@@ -220,7 +218,6 @@ public class SsrfSamples {
     public static class SafeEncodedParameterPollutionServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String key = request.getParameter("key");

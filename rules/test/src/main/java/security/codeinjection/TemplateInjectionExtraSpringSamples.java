@@ -5,7 +5,6 @@ import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,7 +29,6 @@ public class TemplateInjectionExtraSpringSamples {
         // tested — the method doesn't exist in 2.x which uses the old package.
 
         @PostMapping("/unsafe/getTemplate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeGetTemplate(@RequestParam("name") String templateName) throws Exception {
             com.mitchellbosecke.pebble.PebbleEngine engine = new com.mitchellbosecke.pebble.PebbleEngine.Builder().build();
             com.mitchellbosecke.pebble.template.PebbleTemplate compiled = engine.getTemplate(templateName);
@@ -47,7 +45,6 @@ public class TemplateInjectionExtraSpringSamples {
     public static class UnsafeJinjavaController {
 
         @PostMapping("/unsafe/render")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeRender(@RequestParam("template") String templateContent) throws Exception {
             com.hubspot.jinjava.Jinjava jinjava = new com.hubspot.jinjava.Jinjava();
             Map<String, Object> context = new HashMap<>();
@@ -55,7 +52,6 @@ public class TemplateInjectionExtraSpringSamples {
         }
 
         @PostMapping("/unsafe/renderForResult")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeRenderForResult(@RequestParam("template") String templateContent) throws Exception {
             com.hubspot.jinjava.Jinjava jinjava = new com.hubspot.jinjava.Jinjava();
             Map<String, Object> context = new HashMap<>();
@@ -71,7 +67,6 @@ public class TemplateInjectionExtraSpringSamples {
     public static class UnsafeVelocityController {
 
         @PostMapping("/unsafe/evaluate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeEvaluate(@RequestParam("template") String templateContent) throws Exception {
             org.apache.velocity.VelocityContext ctx = new org.apache.velocity.VelocityContext();
             StringWriter writer = new StringWriter();
@@ -83,7 +78,6 @@ public class TemplateInjectionExtraSpringSamples {
         // into VelocityContext requires ctx.put() taint propagation summary.
         // TODO: Re-enable when VelocityContext taint propagation summaries are added.
         @PostMapping("/unsafe/mergeTemplate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeMergeTemplate(@RequestParam("data") String userData) throws Exception {
             org.apache.velocity.VelocityContext ctx = new org.apache.velocity.VelocityContext();
             ctx.put("data", userData);
@@ -100,7 +94,6 @@ public class TemplateInjectionExtraSpringSamples {
     public static class UnsafeVelocityEngineController {
 
         @PostMapping("/unsafe/evaluate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeEvaluate(@RequestParam("template") String templateContent) throws Exception {
             org.apache.velocity.app.VelocityEngine ve = new org.apache.velocity.app.VelocityEngine();
             ve.init();
@@ -113,7 +106,6 @@ public class TemplateInjectionExtraSpringSamples {
         // ANALYZER LIMITATION: Same as Velocity.mergeTemplate — pattern checks Argument[2] (Context).
         // TODO: Re-enable when VelocityContext taint propagation summaries are added.
         @PostMapping("/unsafe/mergeTemplate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeMergeTemplate(@RequestParam("data") String userData) throws Exception {
             org.apache.velocity.app.VelocityEngine ve = new org.apache.velocity.app.VelocityEngine();
             ve.init();
@@ -132,7 +124,6 @@ public class TemplateInjectionExtraSpringSamples {
     public static class UnsafeVelocityRuntimeController {
 
         @PostMapping("/unsafe/runtimeServicesEvaluate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeRuntimeServicesEvaluate(@RequestParam("template") String templateContent) throws Exception {
             org.apache.velocity.runtime.RuntimeServices rs = org.apache.velocity.runtime.RuntimeSingleton.getRuntimeServices();
             org.apache.velocity.VelocityContext ctx = new org.apache.velocity.VelocityContext();
@@ -142,14 +133,12 @@ public class TemplateInjectionExtraSpringSamples {
         }
 
         @PostMapping("/unsafe/runtimeSingletonParse")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeRuntimeSingletonParse(@RequestParam("template") String templateContent) throws Exception {
             org.apache.velocity.runtime.RuntimeSingleton.parse(new StringReader(templateContent), new org.apache.velocity.Template());
             return "parsed";
         }
 
         @PostMapping("/unsafe/stringResourceRepoPut")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeStringResourceRepoPut(@RequestParam("template") String templateContent) throws Exception {
             org.apache.velocity.runtime.resource.util.StringResourceRepository repo =
                     org.apache.velocity.runtime.resource.loader.StringResourceLoader.getRepository();
@@ -165,7 +154,6 @@ public class TemplateInjectionExtraSpringSamples {
     public static class UnsafeThymeleafController {
 
         @PostMapping("/unsafe/process")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeProcess(@RequestParam("template") String templateContent) throws Exception {
             org.thymeleaf.ITemplateEngine engine = new org.thymeleaf.TemplateEngine();
             org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
@@ -173,7 +161,6 @@ public class TemplateInjectionExtraSpringSamples {
         }
 
         @PostMapping("/unsafe/processThrottled")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         public String unsafeProcessThrottled(@RequestParam("template") String templateContent) throws Exception {
             org.thymeleaf.ITemplateEngine engine = new org.thymeleaf.TemplateEngine();
             org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();

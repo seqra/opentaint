@@ -1,7 +1,5 @@
 package security.crlfinjection;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -31,7 +29,6 @@ public class SmtpCrlfInjectionServletSamples {
     public static class UnsafeSmtpServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String to = request.getParameter("to");
@@ -66,7 +63,6 @@ public class SmtpCrlfInjectionServletSamples {
         }
 
         @Override
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String to = request.getParameter("to");

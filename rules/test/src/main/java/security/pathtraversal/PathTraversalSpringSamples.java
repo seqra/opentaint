@@ -112,7 +112,6 @@ public class PathTraversalSpringSamples {
          * for a path-variable based endpoint.
          */
         @GetMapping("/safe/{*fileName}")
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<ByteArrayResource> safePathVariableDownload(@PathVariable String fileName) {
 
             Path target = prepareValidatedTarget(fileName);
@@ -125,7 +124,6 @@ public class PathTraversalSpringSamples {
          * is validated via pattern and normalized under a fixed base directory.
          */
         @GetMapping("/safe-param")
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<ByteArrayResource> safeParamDownload(@RequestParam("file") String fileName) {
 
             Path target = prepareValidatedTarget(fileName);

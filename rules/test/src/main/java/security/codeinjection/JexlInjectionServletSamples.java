@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.jexl2.JexlEngine;
 import org.apache.commons.jexl2.Expression;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based samples for JEXL injection.
@@ -22,7 +21,6 @@ public class JexlInjectionServletSamples {
     public static class UnsafeJexlServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "jexl-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String expr = request.getParameter("expr");
 

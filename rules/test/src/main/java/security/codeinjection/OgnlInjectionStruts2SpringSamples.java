@@ -9,7 +9,6 @@ import com.opensymphony.xwork2.util.reflection.ReflectionProvider;
 import org.apache.struts2.util.StrutsUtil;
 import org.apache.struts2.util.VelocityStrutsUtil;
 import org.apache.struts2.views.jsp.ui.OgnlTool;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,7 +30,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderGetGetMethodController {
 
         @GetMapping("/reflection-provider/get-get-method")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetGetMethod(@RequestParam("name") String name,
                                          OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.getGetMethod
@@ -45,7 +43,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderGetSetMethodController {
 
         @GetMapping("/reflection-provider/get-set-method")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetSetMethod(@RequestParam("name") String name,
                                          OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.getSetMethod
@@ -59,7 +56,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderGetFieldController {
 
         @GetMapping("/reflection-provider/get-field")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetField(@RequestParam("name") String name,
                                      OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.getField
@@ -73,7 +69,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderSetPropertiesController {
 
         @GetMapping("/reflection-provider/set-properties")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetProperties(@RequestParam("expr") String expr,
                                           OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.setProperties
@@ -88,7 +83,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderSetPropertyController {
 
         @GetMapping("/reflection-provider/set-property")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetProperty(@RequestParam("expr") String expr,
                                         OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.setProperty
@@ -102,7 +96,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderGetValueController {
 
         @GetMapping("/reflection-provider/get-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetValue(@RequestParam("expr") String expr,
                                      OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.getValue
@@ -116,7 +109,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlReflectionProviderSetValueController {
 
         @GetMapping("/reflection-provider/set-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetValue(@RequestParam("expr") String expr,
                                      OgnlReflectionProvider provider) throws Exception {
             // VULNERABLE: OGNL expression via OgnlReflectionProvider.setValue
@@ -135,7 +127,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderGetGetMethodController {
 
         @GetMapping("/iface-reflection-provider/get-get-method")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetGetMethod(@RequestParam("name") String name,
                                          ReflectionProvider provider) throws Exception {
             Object result = provider.getGetMethod(Object.class, name);
@@ -148,7 +139,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderGetSetMethodController {
 
         @GetMapping("/iface-reflection-provider/get-set-method")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetSetMethod(@RequestParam("name") String name,
                                          ReflectionProvider provider) throws Exception {
             Object result = provider.getSetMethod(Object.class, name);
@@ -161,7 +151,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderGetFieldController {
 
         @GetMapping("/iface-reflection-provider/get-field")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetField(@RequestParam("name") String name,
                                      ReflectionProvider provider) throws Exception {
             Object result = provider.getField(Object.class, name);
@@ -174,7 +163,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderSetPropertiesController {
 
         @GetMapping("/iface-reflection-provider/set-properties")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetProperties(@RequestParam("expr") String expr,
                                           ReflectionProvider provider) throws Exception {
             java.util.Map<String, String> props = java.util.Map.of("key", expr);
@@ -188,7 +176,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderSetPropertyController {
 
         @GetMapping("/iface-reflection-provider/set-property")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetProperty(@RequestParam("expr") String expr,
                                         ReflectionProvider provider) throws Exception {
             provider.setProperty(expr, "value", new Object(), java.util.Collections.emptyMap());
@@ -201,7 +188,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderGetValueController {
 
         @GetMapping("/iface-reflection-provider/get-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetValue(@RequestParam("expr") String expr,
                                      ReflectionProvider provider) throws Exception {
             Object result = provider.getValue(expr, null, new Object());
@@ -214,7 +200,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeReflectionProviderSetValueController {
 
         @GetMapping("/iface-reflection-provider/set-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetValue(@RequestParam("expr") String expr,
                                      ReflectionProvider provider) throws Exception {
             provider.setValue(expr, null, new Object(), "value");
@@ -232,7 +217,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeTextParseUtilTranslateVariablesController {
 
         @GetMapping("/text-parse-util/translate-variables")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeTranslateVariables(@RequestParam("expr") String expr,
                                                ValueStack stack) {
             // VULNERABLE: OGNL expression via TextParseUtil.translateVariables
@@ -246,7 +230,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeTextParseUtilTranslateVariablesCollectionController {
 
         @GetMapping("/text-parse-util/translate-variables-collection")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeTranslateVariablesCollection(@RequestParam("expr") String expr,
                                                          ValueStack stack) {
             // VULNERABLE: OGNL expression via TextParseUtil.translateVariablesCollection
@@ -260,7 +243,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeTextParseUtilCommaDelimitedController {
 
         @GetMapping("/text-parse-util/comma-delimited")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeCommaDelimited(@RequestParam("expr") String expr) {
             // VULNERABLE: OGNL expression via TextParseUtil.commaDelimitedStringToSet
             java.util.Set<String> result = TextParseUtil.commaDelimitedStringToSet(expr);
@@ -278,7 +260,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlTextParserEvaluateController {
 
         @GetMapping("/ognl-text-parser/evaluate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeEvaluate(@RequestParam("expr") String expr,
                                      OgnlTextParser parser) {
             // VULNERABLE: OGNL expression via OgnlTextParser.evaluate
@@ -296,7 +277,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlUtilSetPropertyController {
 
         @GetMapping("/ognl-util/set-property")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetProperty(@RequestParam("expr") String expr,
                                         OgnlUtil ognlUtil) throws Exception {
             // VULNERABLE: OGNL expression via OgnlUtil.setProperty
@@ -310,7 +290,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlUtilGetValueController {
 
         @GetMapping("/ognl-util/get-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetValue(@RequestParam("expr") String expr,
                                      OgnlUtil ognlUtil) throws Exception {
             // VULNERABLE: OGNL expression via OgnlUtil.getValue
@@ -324,7 +303,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlUtilSetValueController {
 
         @GetMapping("/ognl-util/set-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetValue(@RequestParam("expr") String expr,
                                      OgnlUtil ognlUtil) throws Exception {
             // VULNERABLE: OGNL expression via OgnlUtil.setValue
@@ -338,7 +316,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlUtilCallMethodController {
 
         @GetMapping("/ognl-util/call-method")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeCallMethod(@RequestParam("expr") String expr,
                                        OgnlUtil ognlUtil) throws Exception {
             // VULNERABLE: OGNL expression via OgnlUtil.callMethod
@@ -352,7 +329,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlUtilCompileController {
 
         @GetMapping("/ognl-util/compile")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeCompile(@RequestParam("expr") String expr,
                                     OgnlUtil ognlUtil) throws Exception {
             // VULNERABLE: OGNL expression via OgnlUtil.compile
@@ -370,7 +346,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeVelocityStrutsUtilEvaluateController {
 
         @GetMapping("/velocity-struts-util/evaluate")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeEvaluate(@RequestParam("expr") String expr,
                                      VelocityStrutsUtil util) throws Exception {
             // VULNERABLE: OGNL expression via VelocityStrutsUtil.evaluate
@@ -388,7 +363,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeStrutsUtilIsTrueController {
 
         @GetMapping("/struts-util/is-true")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeIsTrue(@RequestParam("expr") String expr,
                                    StrutsUtil util) {
             // VULNERABLE: OGNL expression via StrutsUtil.isTrue
@@ -402,7 +376,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeStrutsUtilFindStringController {
 
         @GetMapping("/struts-util/find-string")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeFindString(@RequestParam("expr") String expr,
                                        StrutsUtil util) {
             // VULNERABLE: OGNL expression via StrutsUtil.findString
@@ -416,7 +389,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeStrutsUtilFindValueController {
 
         @GetMapping("/struts-util/find-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeFindValue(@RequestParam("expr") String expr,
                                       StrutsUtil util) throws Exception {
             // VULNERABLE: OGNL expression via StrutsUtil.findValue
@@ -430,7 +402,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeStrutsUtilGetTextController {
 
         @GetMapping("/struts-util/get-text")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeGetText(@RequestParam("key") String key,
                                     StrutsUtil util) {
             // VULNERABLE: OGNL expression via StrutsUtil.getText
@@ -444,7 +415,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeStrutsUtilTranslateVariablesController {
 
         @GetMapping("/struts-util/translate-variables")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeTranslateVariables(@RequestParam("expr") String expr,
                                                StrutsUtil util) {
             // VULNERABLE: OGNL expression via StrutsUtil.translateVariables
@@ -458,7 +428,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeStrutsUtilMakeSelectListController {
 
         @GetMapping("/struts-util/make-select-list")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeMakeSelectList(@RequestParam("expr") String expr,
                                            StrutsUtil util) {
             // VULNERABLE: OGNL expression via StrutsUtil.makeSelectList
@@ -476,7 +445,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeOgnlToolFindValueController {
 
         @GetMapping("/ognl-tool/find-value")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeFindValue(@RequestParam("expr") String expr,
                                       OgnlTool tool) {
             // VULNERABLE: OGNL expression via OgnlTool.findValue
@@ -494,7 +462,6 @@ public class OgnlInjectionStruts2SpringSamples {
     public static class UnsafeValueStackSetParameterController {
 
         @GetMapping("/value-stack/set-parameter")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ognl-injection")
         public String unsafeSetParameter(@RequestParam("expr") String expr,
                                          ValueStack stack) {
             // VULNERABLE: OGNL expression via ValueStack.setParameter

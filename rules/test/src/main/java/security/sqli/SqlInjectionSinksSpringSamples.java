@@ -7,8 +7,6 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -43,7 +41,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeQueryForStream(@RequestParam("table") String table) {
             String sql = "SELECT * FROM " + table;
             jdbcTemplate.queryForStream(sql, (rs, rowNum) -> rs.getString(1)).close();
@@ -64,7 +61,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/query")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeQuery(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             namedJdbc.query(sql, new MapSqlParameterSource(), (rs, rowNum) -> rs.getString(1));
@@ -72,7 +68,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/queryForList")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeQueryForList(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             namedJdbc.queryForList(sql, new MapSqlParameterSource());
@@ -80,7 +75,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/update")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeUpdate(@RequestParam("table") String table) {
             String sql = "DELETE FROM " + table;
             namedJdbc.update(sql, new MapSqlParameterSource());
@@ -88,14 +82,12 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/execute")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeExecute(@RequestParam("stmt") String stmt) {
             namedJdbc.execute(stmt, (org.springframework.jdbc.core.PreparedStatementCallback<Object>) ps -> null);
             return "done";
         }
 
         @GetMapping("/queryForStream")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeQueryForStream(@RequestParam("filter") String filter) {
             String sql = "SELECT * FROM users WHERE " + filter;
             namedJdbc.queryForStream(sql, new MapSqlParameterSource(), (rs, rowNum) -> rs.getString(1)).close();
@@ -116,7 +108,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/mappingSqlQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeMappingSqlQuery(@RequestParam("table") String table) {
             String sql = "SELECT * FROM " + table;
             new MappingSqlQuery<String>(dataSource, sql) {
@@ -129,7 +120,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/sqlUpdate")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSqlUpdate(@RequestParam("table") String table) {
             String sql = "DELETE FROM " + table;
             new SqlUpdate(dataSource, sql);
@@ -137,7 +127,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/setSql")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSetSql(@RequestParam("query") String query) {
             SqlUpdate update = new SqlUpdate();
             update.setDataSource(dataSource);
@@ -146,7 +135,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/batchSqlUpdate")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeBatchSqlUpdate(@RequestParam("table") String table) {
             String sql = "INSERT INTO " + table + " VALUES (?)";
             new BatchSqlUpdate(dataSource, sql);
@@ -154,7 +142,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/mappingSqlQueryWithParameters")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeMappingSqlQueryWithParameters(@RequestParam("table") String table) {
             String sql = "SELECT * FROM " + table;
             new MappingSqlQueryWithParameters<String>(dataSource, sql) {
@@ -167,7 +154,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/sqlCall")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSqlCall(@RequestParam("proc") String proc) {
             String sql = "CALL " + proc;
             new SqlCall(dataSource, sql) {};
@@ -175,7 +161,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/sqlFunction")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSqlFunction(@RequestParam("func") String func) {
             String sql = "SELECT " + func + " FROM dual";
             new SqlFunction<String>(dataSource, sql) {};
@@ -183,7 +168,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/updatableSqlQuery")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeUpdatableSqlQuery(@RequestParam("table") String table) {
             String sql = "SELECT * FROM " + table + " FOR UPDATE";
             new UpdatableSqlQuery<String>(dataSource, sql) {
@@ -209,7 +193,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/getColumns")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeGetColumns(@RequestParam("table") String table) throws SQLException {
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData meta = conn.getMetaData();
@@ -219,7 +202,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/getPrimaryKeys")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeGetPrimaryKeys(@RequestParam("table") String table) throws SQLException {
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData meta = conn.getMetaData();
@@ -242,7 +224,6 @@ public class SqlInjectionSinksSpringSamples {
         }
 
         @GetMapping("/safe")
-        @NegativeRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String safeQuery(@RequestParam("username") String username) {
             String sql = "SELECT * FROM users WHERE username = :username";
             MapSqlParameterSource params = new MapSqlParameterSource("username", username);

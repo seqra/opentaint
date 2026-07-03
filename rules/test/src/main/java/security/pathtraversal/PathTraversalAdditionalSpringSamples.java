@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.FileUrlResource;
@@ -39,7 +38,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeFileUrlResourceController {
 
         @GetMapping("/load")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<byte[]> load(@RequestParam("path") String filePath) throws IOException {
             FileUrlResource resource = new FileUrlResource(filePath);
             byte[] data = FileCopyUtils.copyToByteArray(resource.getInputStream());
@@ -56,7 +54,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafePathResourceController {
 
         @GetMapping("/load")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<byte[]> load(@RequestParam("path") String filePath) throws IOException {
             PathResource resource = new PathResource(filePath);
             byte[] data = FileCopyUtils.copyToByteArray(resource.getInputStream());
@@ -73,7 +70,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeFileSystemResourceController {
 
         @GetMapping("/load")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<byte[]> load(@RequestParam("path") String filePath) throws IOException {
             FileSystemResource resource = new FileSystemResource(filePath);
             byte[] data = FileCopyUtils.copyToByteArray(resource.getInputStream());
@@ -90,7 +86,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeFileCopyController {
 
         @GetMapping("/read")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<byte[]> read(@RequestParam("file") String fileName) throws IOException {
             File file = new File("/var/data/" + fileName);
             byte[] data = FileCopyUtils.copyToByteArray(file);
@@ -107,7 +102,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeFileSystemUtilsController {
 
         @PostMapping("/delete")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<String> deleteDir(@RequestParam("dir") String dirName) {
             File dir = new File("/var/data/" + dirName);
             boolean deleted = FileSystemUtils.deleteRecursively(dir);
@@ -122,7 +116,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeFileSystemUtilsCopyController {
 
         @PostMapping("/copy")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<String> copy(@RequestParam("dest") String destDir) throws IOException {
             Path src = Paths.get("/var/data/source");
             Path dest = Paths.get("/var/data/" + destDir);
@@ -138,7 +131,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeClassPathResourceController {
 
         @GetMapping("/load")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<byte[]> load(@RequestParam("path") String resourcePath) throws IOException {
             ClassPathResource resource = new ClassPathResource(resourcePath);
             byte[] data = FileCopyUtils.copyToByteArray(resource.getInputStream());
@@ -155,7 +147,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeCreateRelativeController {
 
         @GetMapping("/load")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<byte[]> load(@RequestParam("path") String relativePath) throws IOException {
             Resource base = new FileSystemResource("/var/data/");
             Resource resource = base.createRelative(relativePath);
@@ -173,7 +164,6 @@ public class PathTraversalAdditionalSpringSamples {
     public static class UnsafeResourceUtilsController {
 
         @GetMapping("/load")
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         public ResponseEntity<String> load(@RequestParam("path") String resourcePath) throws IOException {
             try {
                 File file = ResourceUtils.getFile(resourcePath);

@@ -9,7 +9,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based test samples covering miscellaneous JDK sink patterns:
@@ -23,7 +22,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/cl-getsysresasstream")
     public static class UnsafeGetSystemResourceAsStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -40,7 +38,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/cl-getsysresources")
     public static class UnsafeGetSystemResourcesServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -54,7 +51,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/module-getresasstream")
     public static class UnsafeModuleGetResourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -72,7 +68,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/pb-redirecterror")
     public static class UnsafeRedirectErrorServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String logFile = request.getParameter("logfile");
@@ -87,7 +82,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/fileimageoutputstream")
     public static class UnsafeFileImageOutputStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -102,7 +96,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/ctx-getresasstream")
     public static class UnsafeCtxGetResourceAsStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String path = request.getParameter("path");
@@ -120,7 +113,6 @@ public class PathTraversalJdkMiscSinksSamples {
     public static class UnsafeStreamSourceServlet extends HttpServlet {
         @Override
         // TODO: Analyzer FN – taint does not reach StreamSource constructor argument via new File(); re-enable when fixed
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -135,7 +127,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/javax-faces-getresource")
     public static class UnsafeJavaxFacesGetResourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -152,7 +143,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/javax-faces-getresasstream")
     public static class UnsafeJavaxFacesGetResourceAsStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -170,7 +160,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/jakarta-faces-getresource")
     public static class UnsafeJakartaFacesGetResourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -187,7 +176,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/jakarta-faces-getresasstream")
     public static class UnsafeJakartaFacesGetResourceAsStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -205,7 +193,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/javax-filedatasource")
     public static class UnsafeJavaxFileDataSourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -220,7 +207,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/jakarta-filedatasource")
     public static class UnsafeJakartaFileDataSourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String fileName = request.getParameter("file");
@@ -235,7 +221,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/class-getresource")
     public static class UnsafeClassGetResourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -252,7 +237,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/class-getresasstream")
     public static class UnsafeClassGetResourceAsStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -270,7 +254,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/classloader-getresource")
     public static class UnsafeClassLoaderGetResourceServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -287,7 +270,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/classloader-getresasstream")
     public static class UnsafeClassLoaderGetResourceAsStreamServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");
@@ -305,7 +287,6 @@ public class PathTraversalJdkMiscSinksSamples {
     @WebServlet("/pt-misc/classloader-getresources")
     public static class UnsafeClassLoaderGetResourcesServlet extends HttpServlet {
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String resource = request.getParameter("resource");

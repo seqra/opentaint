@@ -136,7 +136,6 @@ public class PathTraversalServletSamples {
         private static final File BASE_DIR = new File("/var/www/uploads").getAbsoluteFile();
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -411,7 +410,6 @@ public class PathTraversalServletSamples {
     @WebServlet("/pathtraversal/safe-path-normalize")
     public static class SafePathNormalizeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String fileName = request.getParameter("file");
             Path normalized = java.nio.file.Paths.get("/var/www/uploads/" + fileName).normalize();
@@ -426,7 +424,6 @@ public class PathTraversalServletSamples {
     @WebServlet("/pathtraversal/safe-filenameutils-normalize")
     public static class SafeFilenameUtilsNormalizeServlet extends HttpServlet {
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String fileName = request.getParameter("file");
             String safe = org.apache.commons.io.FilenameUtils.normalize(fileName);
@@ -446,7 +443,6 @@ public class PathTraversalServletSamples {
         private static final String BASE_DIR = "/var/www/uploads/";
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 

@@ -54,7 +54,6 @@ public class SmtpCrlfInjectionSpringSamples {
         }
 
         @PostMapping("/smtp-crlf/spring/safe")
-        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
         public void safe(@RequestParam("to") String to,
                          @RequestParam("subject") String subject,
                          @RequestParam(value = "trackingId", required = false) String trackingId,

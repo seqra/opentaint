@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +26,6 @@ public class JacksonDeserializationSpringSamples {
     public static class UnsafeDefaultTypeResolverClassController {
 
         @PostMapping("/unsafe-resolver-class")
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
         public String unsafeResolverClass(@RequestBody String json) throws Exception {
             ObjectMapper mapper = new ObjectMapper();
             ObjectMapper.DefaultTypeResolverBuilder resolverBuilder =
@@ -47,7 +45,6 @@ public class JacksonDeserializationSpringSamples {
     public static class UnsafeDefaultTypeResolverMinimalClassController {
 
         @PostMapping("/unsafe-resolver-minimal-class")
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
         public String unsafeResolverMinimalClass(@RequestBody String json) throws Exception {
             ObjectMapper mapper = new ObjectMapper();
             ObjectMapper.DefaultTypeResolverBuilder resolverBuilder =

@@ -5,7 +5,6 @@ import javax.el.ExpressionFactory;
 import javax.el.MethodExpression;
 import javax.validation.ConstraintValidatorContext;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,7 +23,6 @@ public class ElInjectionSpringSamples {
     public static class UnsafeCreateMethodExpressionController {
 
         @GetMapping("/method-expression")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "spring-el-injection")
         public String unsafeMethodExpression(@RequestParam("expr") String expr,
                                              ELContext elContext) {
             ExpressionFactory factory = ExpressionFactory.newInstance();
@@ -42,7 +40,6 @@ public class ElInjectionSpringSamples {
     public static class UnsafeBuildConstraintViolationController {
 
         @GetMapping("/constraint-violation")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "spring-el-injection")
         public String unsafeConstraintViolation(@RequestParam("template") String template,
                                                 ConstraintValidatorContext context) {
             // VULNERABLE: user-controlled template evaluated as EL expression

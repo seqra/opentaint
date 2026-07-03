@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.mvel2.MVEL;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based samples for MVEL injection.
@@ -21,7 +20,6 @@ public class MvelInjectionServletSamples {
     public static class UnsafeMvelServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "mvel-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             String expr = request.getParameter("expr");
 

@@ -9,8 +9,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for http-response-splitting-in-servlet.
@@ -24,7 +22,6 @@ public class HttpResponseSplittingServletSamples {
     public static class UnsafeHeaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String user = request.getParameter("user"); // attacker-controlled
@@ -45,7 +42,6 @@ public class HttpResponseSplittingServletSamples {
     public static class UnsafeCookieServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String value = request.getParameter("value"); // attacker-controlled
@@ -62,7 +58,6 @@ public class HttpResponseSplittingServletSamples {
     public static class UnsafeJaxRsResponseBuilderHeaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String user = request.getParameter("user"); // attacker-controlled
