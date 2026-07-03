@@ -920,6 +920,8 @@ tests:
       - security.ssrf.SsrfSamples$SafeParameterPollutionServlet#doGet
   - rule-id: java/security/ssrf.yaml#ssrf
     positive:
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeKotlinIOUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHcCore5Async#test
       - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeURLClassLoader#test
       - security.ssrf.SsrfAdditionalSinksSamples$UnsafeCommonsIoCopy#download
       - security.ssrf.SsrfAdditionalSinksSamples$UnsafeCommonsNetConnect#connect

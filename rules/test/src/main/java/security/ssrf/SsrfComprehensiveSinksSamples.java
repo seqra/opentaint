@@ -342,15 +342,12 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/kotlin-io")
     public static class UnsafeKotlinIOUsage {
         @GetMapping("/test")
-        // TODO: Kotlin TextStreamsKt methods are not accessible from Java; test coverage only, no sink call
-        // @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("url") String url) throws Exception {
             URL u = new URL(url);
-            // Note: Kotlin TextStreamsKt methods are not accessible from Java (private access)
-            // These patterns can only be tested in Kotlin test files
-            // kotlin.io.TextStreamsKt.readBytes(u);
-            // kotlin.io.TextStreamsKt.readText(u, charset);
-            return ResponseEntity.ok("kotlin-io");
+            // VULNERABLE: reads from a user-controlled URL. kotlin.io.TextStreamsKt.readBytes(URL)
+            // is a public static facade method and IS callable from Java.
+            byte[] data = kotlin.io.TextStreamsKt.readBytes(u);
+            return ResponseEntity.ok("kotlin-io " + data.length);
         }
     }
 
@@ -505,13 +502,16 @@ public class SsrfComprehensiveSinksSamples {
     @RequestMapping("/ssrf-coverage/hc-core5-async")
     public static class UnsafeHcCore5Async {
         @GetMapping("/test")
-        // TODO: Analyzer FN – no actual sink call (abstract method cannot be invoked directly); re-enable when test approach found
-        // @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> test(@RequestParam("host") String host) throws Exception {
-            // HttpAsyncRequester.connect - reference for coverage
-            org.apache.hc.core5.http.impl.bootstrap.HttpAsyncRequester requester = null;
-            // requester.connect(...); // abstract, cannot call directly
-            return ResponseEntity.ok("core5-async: HttpAsyncRequester " + host);
+            org.apache.hc.core5.http.impl.bootstrap.HttpAsyncRequester requester =
+                    org.apache.hc.core5.http.impl.bootstrap.AsyncRequesterBootstrap.bootstrap().create();
+            // VULNERABLE: user-controlled host used as the outbound connection target
+            requester.connect(
+                    new org.apache.hc.core5.http.HttpHost(host),
+                    org.apache.hc.core5.util.Timeout.ofSeconds(5),
+                    null,
+                    null);
+            return ResponseEntity.ok("core5-async");
         }
     }
 }
