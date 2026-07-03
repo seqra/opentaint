@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.springframework.jdbc.core.namedparam.NamedParameterUtils#parseSqlStatement
   copy:

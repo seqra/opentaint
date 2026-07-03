@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.apache.hc.core5.http.io.entity.StringEntity#<init>
   signature: (java.lang.String) *

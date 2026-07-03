@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: javax.management.remote.JMXServiceURL#<init>
   signature: (java.lang.String) *

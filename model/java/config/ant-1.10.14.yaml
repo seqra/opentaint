@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.apache.tools.ant.types.FileSet#setDir
   copy:

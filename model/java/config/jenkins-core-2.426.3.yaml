@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: hudson.FilePath#<init>
   signature: (hudson.remoting.VirtualChannel, java.lang.String) *

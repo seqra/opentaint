@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: java.net.http.HttpRequest#newBuilder
   copy:

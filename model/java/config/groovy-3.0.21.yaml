@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.codehaus.groovy.control.CompilationUnit#addSource
   signature: (java.io.File) *

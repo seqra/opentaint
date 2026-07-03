@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: com.unboundid.ldap.sdk.SearchRequest#<init>
   signature: (java.lang.String, com.unboundid.ldap.sdk.SearchScope, java.lang.String, java.lang.String[]) *

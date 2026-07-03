@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.springframework.ldap.query.LdapQueryBuilder#base
   copy:

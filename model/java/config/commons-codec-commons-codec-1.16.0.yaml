@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.apache.commons.codec.binary.Base64#encodeBase64String
   copy:

@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.apache.velocity.context.Context#put
   copy:

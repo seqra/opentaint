@@ -1,3 +1,4 @@
+language: java
 passThrough:
 - function: org.mvel2.MVEL#compileExpression
   copy:
