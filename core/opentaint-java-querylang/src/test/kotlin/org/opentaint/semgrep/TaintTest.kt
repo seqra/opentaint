@@ -29,6 +29,13 @@ class TaintTest : SampleBasedTest() {
     @Test
     fun `test rule with inside`() = runTest<taint.RuleWithInside>()
 
+    // REPRO (#2): a pattern-propagator carrying taint from a constructor arg into
+    // the wrapper object fires for a plain tainted var but NOT for a concatenated
+    // arg. PositiveConcat is missed. Mirrors new java.net.URL("..."+resource) ->
+    // HttpResponses.staticResource(url).
+    @Test
+    fun `wrapper propagator concat-arg repro`() = runTest<taint.WrapperPropagatorRepro>()
+
     @AfterAll
     fun close() {
         closeRunner()

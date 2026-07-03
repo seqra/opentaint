@@ -1,0 +1,15 @@
+rules:
+  - id: taint-WrapperPropagatorRepro
+    languages:
+      - java
+    severity: ERROR
+    message: match taint/WrapperPropagatorRepro
+    mode: taint
+    pattern-sources:
+      - pattern: $A = src()
+    pattern-propagators:
+      - pattern: $W = new taint.WrapperPropagatorRepro.Wrapper($SPEC)
+        from: $SPEC
+        to: $W
+    pattern-sinks:
+      - pattern: sink(...)
