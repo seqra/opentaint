@@ -32,7 +32,8 @@ rules:
         #     - metavariable-regex:
         #         metavariable: $TYPE
         #         regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping((com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator $LFSTV), ObjectMapper.DefaultTyping.EVERYTHING);
+        - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping($LFSTV, ObjectMapper.DefaultTyping.EVERYTHING);
+        - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping($LFSTV, com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.EVERYTHING);
       - pattern-not-inside: |
           (com.fasterxml.jackson.databind.ObjectMapper $OM).enable(MapperFeature.BLOCK_UNSAFE_POLYMORPHIC_BASE_TYPES); ...
       - pattern-not-inside: |

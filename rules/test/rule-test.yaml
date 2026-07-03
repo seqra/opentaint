@@ -1005,6 +1005,7 @@ tests:
       - security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById
   - rule-id: java/security/unsafe-deserialization.yaml#unsafe-jackson-deserialization
     positive:
+      - security.unsafedeserialization.JacksonDeserializationSpringSamples$UnsafeActivateDefaultTypingController#unsafeActivateDefaultTyping
       - security.unsafedeserialization.JacksonDeserializationSpringSamples$UnsafeDefaultTypeResolverClassController#unsafeResolverClass
       - security.unsafedeserialization.JacksonDeserializationSpringSamples$UnsafeDefaultTypeResolverMinimalClassController#unsafeResolverMinimalClass
       - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController
