@@ -30,8 +30,10 @@ import org.opentaint.ir.api.python.PIRBinaryExpr
 import org.opentaint.ir.api.python.PIRDictExpr
 import org.opentaint.ir.api.python.PIRExpr
 import org.opentaint.ir.api.python.PIRInstruction
+import org.opentaint.ir.api.python.PIRIterExpr
 import org.opentaint.ir.api.python.PIRListExpr
 import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRNextIter
 import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.api.python.PIRReturn
 import org.opentaint.ir.api.python.PIRSetExpr
@@ -151,6 +153,9 @@ class PIRMethodSequentFlowFunction(
             is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             is PIRStoreSubscript -> handleStoreSubscript(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             is PIRStoreGlobal -> handleStoreGlobal(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            is PIRNextIter -> handleNextIter(
+                instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude,
+            )
             else -> unchanged(currentFactAp)
         }
     }
@@ -176,44 +181,63 @@ class PIRMethodSequentFlowFunction(
         val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target) ?: return unchanged(currentFactAp)
         val expr = assign.expr
 
-        // Case 1: Simple value copy (x = y)
+        // Simple value copy (x = y)
         if (expr is PIRValue) {
             handleSimpleAssign(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // Case 2: Subscript read (x = obj[index])
+        if (expr is PIRIterExpr) {
+            handleSimpleAssign(expr.iterable, assignTo, currentFactAp, unchanged, propagateFact)
+            return
+        }
+
+        // Subscript read (x = obj[index])
         if (expr is PIRSubscriptExpr) {
             handleSubscriptRead(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             return
         }
 
-        // Case 3: Container literal (dict, list, tuple, set) — taint flows from values to target
+        // Container literal (dict, list, tuple, set) — taint flows from values to target
         if (expr is PIRDictExpr || expr is PIRListExpr || expr is PIRTupleExpr || expr is PIRSetExpr) {
             handleContainerLiteral(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // Case 4: Binary expression — taint flows from either operand (e.g. string concatenation)
+        // Binary expression — taint flows from either operand (e.g. string concatenation)
         if (expr is PIRBinaryExpr) {
             handleBinExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // Case 5: String expression (f-string parts) — taint flows from any part
+        // String expression (f-string parts) — taint flows from any part
         if (expr is PIRStringExpr) {
             handleStringExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // Case 6: Global / module read — read ClassStatic.<name> into the target
+        // Global / module read — read ClassStatic.<name> into the target
         if (expr is PIRReadNameExpr) {
             handleReadNameExpr(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             return
         }
 
-        // Case 7: Other compound expression — strong update on target, pass through otherwise
+        // Other compound expression — strong update on target, pass through otherwise
         if (currentFactAp.base != assignTo) unchanged(currentFactAp)
+    }
+
+    private fun handleNextIter(
+        nextIter: PIRNextIter,
+        currentFactAp: FinalFactAp,
+        unchanged: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
+    ) {
+        val assignTo = PIRFlowFunctionUtils.accessPathBase(nextIter.target) ?: return unchanged(currentFactAp)
+        val objBase = PIRFlowFunctionUtils.accessPathBase(nextIter.iterator)
+        val accessor = ElementAccessor
+
+        handleAccessorRead(assignTo, objBase, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
     }
 
     private fun handleReadNameExpr(
@@ -394,7 +418,7 @@ class PIRMethodSequentFlowFunction(
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
     ) {
-        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj) ?: return unchanged(currentFactAp)
+        val objBase = PIRFlowFunctionUtils.accessPathBase(expr.obj)
         val accessor = ElementAccessor
 
         handleAccessorRead(assignTo, objBase, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)

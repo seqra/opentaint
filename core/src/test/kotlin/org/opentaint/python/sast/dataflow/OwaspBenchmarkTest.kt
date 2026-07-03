@@ -152,11 +152,9 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00267() = assertReachable("00267")
     @Disabled("Any accessor support is required")
     @Test fun benchmarkTest00268() = assertReachable("00268")
-    // for-loop iteration (`for name in request.form.keys()`) is unmodeled: PIRNextIter/PIRIterExpr
-    // fall through to `unchanged`, so the loop variable never receives element taint.
-    @Disabled("for-loop iterator element extraction unmodeled (PIRNextIter not handled in sequent flow)")
+    @Disabled("Any accessor support is required")
     @Test fun benchmarkTest00431() = assertReachable("00431")
-    @Disabled("for-loop iterator element extraction unmodeled (PIRNextIter not handled in sequent flow)")
+    @Disabled("Any accessor support is required")
     @Test fun benchmarkTest00432() = assertReachable("00432")
     @Disabled("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] read misses it")
     @Test fun benchmarkTest00511() = assertReachable("00511")
