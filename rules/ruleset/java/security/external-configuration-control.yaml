@@ -119,7 +119,7 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
+        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
           as: untrusted-data
         - tag: bean-injection-sink
           as: sink

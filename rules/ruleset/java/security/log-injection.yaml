@@ -176,7 +176,7 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
+        - rule: java/lib/generic/seam-untrusted-data-source.yaml#seam-untrusted-data-source
           as: untrusted-data
         - tag: seam-log-injection-sink
           as: sink

@@ -2,8 +2,6 @@ rules:
   - id: seam-untrusted-data-source
     options:
       lib: true
-    tags:
-      - untrusted-data-source
     message: Untrusted data flows from here
     severity: NOTE
     metadata:

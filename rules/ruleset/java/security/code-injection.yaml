@@ -353,7 +353,7 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
+        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
           as: untrusted-data
         - tag: el-injection-sink
           as: sink
@@ -462,7 +462,7 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
+        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
           as: untrusted-data
         - tag: spel-injection-sink
           as: sink
