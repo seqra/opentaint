@@ -33,6 +33,35 @@ rules:
       # FilenameUtils.normalize variants - all strip `..` from paths
       - pattern: org.apache.commons.io.FilenameUtils.normalize(...)
       - pattern: org.apache.commons.io.FilenameUtils.normalizeNoEndSeparator(...)
+    pattern-propagators:
+      # `new URL(spec)` / `new URI(spec)` carry the spec string's taint into the
+      # constructed URL/URI object so it reaches URL/file sinks that take the
+      # object (e.g. HttpResponses.staticResource(url)).
+      - pattern: $URL = new java.net.URL($SPEC)
+        from: $SPEC
+        to: $URL
+      - pattern: $T $URL = new java.net.URL($SPEC)
+        from: $SPEC
+        to: $URL
+      - pattern: $URL = new java.net.URL($CTX, $SPEC)
+        from: $SPEC
+        to: $URL
+      - pattern: $T $URL = new java.net.URL($CTX, $SPEC)
+        from: $SPEC
+        to: $URL
+      - pattern: $URI = new java.net.URI($SPEC)
+        from: $SPEC
+        to: $URI
+      - pattern: $T $URI = new java.net.URI($SPEC)
+        from: $SPEC
+        to: $URI
+      # concatenated spec: new URL("prefix" + tainted)
+      - pattern: $T $URL = new java.net.URL($A + $B)
+        from: $B
+        to: $URL
+      - pattern: $URL = new java.net.URL($A + $B)
+        from: $B
+        to: $URL
     pattern-sinks:
       - patterns:
           - pattern-either:

@@ -22,6 +22,22 @@ rules:
       # pixee Urls.create — URL constructor that filters by allowed protocol
       # set and HostValidator. The result is policy-checked.
       - pattern: io.github.pixee.security.Urls.create(...)
+    pattern-propagators:
+      # `new URL(spec)` carries the spec string's taint into the constructed URL
+      # object (and a URL[] of them) so it reaches sinks that take the object,
+      # e.g. new URLClassLoader(urls).
+      - pattern: $URL = new java.net.URL($SPEC)
+        from: $SPEC
+        to: $URL
+      - pattern: $URL = new java.net.URL($CTX, $SPEC)
+        from: $SPEC
+        to: $URL
+      - pattern: $ARR = {new java.net.URL($SPEC)}
+        from: $SPEC
+        to: $ARR
+      - pattern: $ARR = new java.net.URL[]{new java.net.URL($SPEC)}
+        from: $SPEC
+        to: $ARR
     pattern-sinks:
 
       # ── java.net.URL methods ───────────────────────────────────────────
