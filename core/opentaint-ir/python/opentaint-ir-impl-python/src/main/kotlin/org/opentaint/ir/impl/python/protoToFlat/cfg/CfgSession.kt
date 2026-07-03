@@ -137,6 +137,11 @@ internal class CfgSession(
     fun emitGoto(target: Int, location: PIRPhysicalLocation? = null) =
         emit(FlatGoto(target, location))
 
+    /** Fall through to [target] unless the current block already ended (return/raise/goto/branch). */
+    fun emitGotoIfOpen(target: Int, location: PIRPhysicalLocation? = null) {
+        if (!currentBlockTerminated()) emitGoto(target, location)
+    }
+
     fun emitBranch(
         condition: FlatValue,
         trueBlock: Int,

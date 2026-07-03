@@ -700,6 +700,7 @@ message MypyStmtProto {
     MypyDecoratorDefProto decorator = 29;
     MypyImportStmtProto import_stmt = 30;
     MypyImportFromStmtProto import_from_stmt = 31;
+    MypyMatchStmtProto match_stmt = 32;
   }
 }
 
@@ -744,6 +745,32 @@ message MypyForStmtProto {
   MypyExprProto iterable = 2;
   MypyBlockProto body = 3;
   MypyBlockProto else_body = 4;
+}
+
+message MypyMatchStmtProto {
+  MypyExprProto subject = 1;
+  repeated MypyPatternProto patterns = 2;
+  // Parallel to `patterns`; entry is KIND_NOT_SET when the case has no `if` guard.
+  repeated MypyExprProto guards = 3;
+  repeated MypyBlockProto bodies = 4;
+}
+
+message MypyPatternProto {
+  oneof kind {
+    MypyAsPatternProto as_pattern = 1;
+    MypyValuePatternProto value_pattern = 2;
+  }
+}
+
+// Covers capture (`case x`), wildcard (`case _`) and `as` (`case P as x`):
+// inner `pattern` is absent for capture/wildcard; `name` is empty for wildcard.
+message MypyAsPatternProto {
+  MypyPatternProto pattern = 1;
+  string name = 2;
+}
+
+message MypyValuePatternProto {
+  MypyExprProto expr = 1;
 }
 
 message MypyTryStmtProto {

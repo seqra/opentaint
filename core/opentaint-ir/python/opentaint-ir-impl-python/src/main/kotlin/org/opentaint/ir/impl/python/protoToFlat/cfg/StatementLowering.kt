@@ -33,6 +33,7 @@ private fun CfgSession.visitStmt(stmt: MypyStmtProto) {
         stmt.hasIfStmt() -> visitIf(stmt.ifStmt, loc)
         stmt.hasWhileStmt() -> visitWhile(stmt.whileStmt, loc)
         stmt.hasForStmt() -> visitFor(stmt.forStmt, loc)
+        stmt.hasMatchStmt() -> visitMatch(stmt.matchStmt, loc)
         stmt.hasTryStmt() -> visitTry(stmt.tryStmt, loc)
         stmt.hasWithStmt() -> visitWith(stmt.withStmt, loc)
         stmt.hasRaiseStmt() -> visitRaise(stmt.raiseStmt, loc)
@@ -133,17 +134,88 @@ private fun CfgSession.visitIf(stmt: MypyIfStmtProto, location: PIRPhysicalLocat
 
         activate(trueBlock)
         visitBlock(stmt.getBodies(i))
-        if (!currentBlockTerminated()) emitGoto(endBlock)
+        emitGotoIfOpen(endBlock)
 
         if (falseBlock != endBlock) activate(falseBlock)
     }
 
     if (stmt.hasElseBody()) {
         visitBlock(stmt.elseBody)
-        if (!currentBlockTerminated()) emitGoto(endBlock)
+        emitGotoIfOpen(endBlock)
     }
 
     activate(endBlock)
+}
+
+// ─── Match ─────────────────────────────────────────────
+// Desugared to an if/elif chain: the subject is evaluated once, each case
+// becomes a test (`subject == value`, or always-true for capture/wildcard)
+// whose true edge runs the body and false edge falls to the next case. No new
+// dataflow instruction — captures are ordinary assignments from the subject.
+
+private fun CfgSession.visitMatch(stmt: MypyMatchStmtProto, location: PIRPhysicalLocation?) {
+    val subject = lowerExpr(stmt.subject)
+    val endBlock = newBlock()
+
+    for (i in 0 until stmt.patternsCount) {
+        val pattern = stmt.getPatterns(i)
+        val guard = stmt.getGuards(i)
+        val hasGuard = guard.kindCase != MypyExprProto.KindCase.KIND_NOT_SET
+        val nextBlock = if (i < stmt.patternsCount - 1) newBlock() else endBlock
+
+        val condition = lowerPatternCondition(pattern, subject, location)
+        val matchedBlock = newBlock()
+        if (condition != null) emitBranch(condition, matchedBlock, nextBlock, location)
+        else emitGoto(matchedBlock)
+
+        activate(matchedBlock)
+        bindPattern(pattern, subject, location)
+        if (hasGuard) {
+            val guardVal = lowerExpr(guard)
+            val bodyBlock = newBlock()
+            emitBranch(guardVal, bodyBlock, nextBlock, location)
+            activate(bodyBlock)
+        }
+        visitBlock(stmt.getBodies(i))
+        emitGotoIfOpen(endBlock)
+
+        if (nextBlock != endBlock) activate(nextBlock)
+    }
+
+    activate(endBlock)
+}
+
+// Returns the branch condition, or null when the pattern always matches
+// (capture / wildcard). Emitted into the current block, before the branch.
+private fun CfgSession.lowerPatternCondition(
+    pattern: MypyPatternProto,
+    subject: FlatValue,
+    location: PIRPhysicalLocation?,
+): FlatValue? = when {
+    pattern.hasAsPattern() ->
+        if (pattern.asPattern.hasPattern()) lowerPatternCondition(pattern.asPattern.pattern, subject, location)
+        else null
+    pattern.hasValuePattern() -> {
+        val rhs = lowerExpr(pattern.valuePattern.expr)
+        val target = newTempValue()
+        emit(FlatCompare(target, subject, rhs, FlatCompareOperator.EQ, physicalLocation = location))
+        target
+    }
+    else -> null
+}
+
+// Binds the pattern's captured names to the subject. Emitted on the matched edge.
+private fun CfgSession.bindPattern(
+    pattern: MypyPatternProto,
+    subject: FlatValue,
+    location: PIRPhysicalLocation?,
+) {
+    if (!pattern.hasAsPattern()) return
+    val asPattern = pattern.asPattern
+    if (asPattern.hasPattern()) bindPattern(asPattern.pattern, subject, location)
+    if (asPattern.name.isNotEmpty()) {
+        emit(FlatAssign(FlatLocal(scope.resolveLocal(asPattern.name)), subject, physicalLocation = location))
+    }
 }
 
 // ─── While ─────────────────────────────────────────────
@@ -176,12 +248,12 @@ private fun CfgSession.visitWhile(stmt: MypyWhileStmtProto, location: PIRPhysica
     withLoopTargets(breakBlock = breakBlock, continueBlock = headerBlock) {
         visitBlock(stmt.body)
     }
-    if (!currentBlockTerminated()) emitGoto(headerBlock)
+    emitGotoIfOpen(headerBlock)
 
     if (elseBlock != null) {
         activate(elseBlock)
         visitBlock(stmt.elseBody)
-        if (!currentBlockTerminated()) emitGoto(breakBlock)
+        emitGotoIfOpen(breakBlock)
         activate(breakBlock)
     } else {
         activate(exitBlock)
@@ -226,12 +298,12 @@ private fun CfgSession.visitFor(stmt: MypyForStmtProto, location: PIRPhysicalLoc
     withLoopTargets(breakBlock = breakBlock, continueBlock = headerBlock) {
         visitBlock(stmt.body)
     }
-    if (!currentBlockTerminated()) emitGoto(headerBlock)
+    emitGotoIfOpen(headerBlock)
 
     if (elseBlock != null) {
         activate(elseBlock)
         visitBlock(stmt.elseBody)
-        if (!currentBlockTerminated()) emitGoto(breakBlock)
+        emitGotoIfOpen(breakBlock)
         activate(breakBlock)
     } else {
         activate(exitBlock)
@@ -259,13 +331,7 @@ private fun CfgSession.visitTry(stmt: MypyTryStmtProto, location: PIRPhysicalLoc
     withExceptionHandlers(handlerBlocks) {
         visitBlock(stmt.body)
 
-        if (!currentBlockTerminated()) {
-            when {
-                elseBlock != null -> emitGoto(elseBlock)
-                finallyBlock != null -> emitGoto(finallyBlock)
-                else -> emitGoto(endBlock)
-            }
-        }
+        emitGotoIfOpen(elseBlock ?: finallyBlock ?: endBlock)
 
         // Commit the try-body block under the handler-stack frame. Handlers
         // themselves run *outside* the frame (a raise inside a handler is not
@@ -287,19 +353,19 @@ private fun CfgSession.visitTry(stmt: MypyTryStmtProto, location: PIRPhysicalLoc
         emit(FlatExceptHandler(excTarget, excTypes, physicalLocation = location))
 
         visitBlock(stmt.getHandlers(i))
-        if (!currentBlockTerminated()) emitGoto(finallyBlock ?: endBlock)
+        emitGotoIfOpen(finallyBlock ?: endBlock)
     }
 
     if (elseBlock != null) {
         activate(elseBlock)
         visitBlock(stmt.elseBody)
-        if (!currentBlockTerminated()) emitGoto(finallyBlock ?: endBlock)
+        emitGotoIfOpen(finallyBlock ?: endBlock)
     }
 
     if (finallyBlock != null) {
         activate(finallyBlock)
         visitBlock(stmt.finallyBody)
-        if (!currentBlockTerminated()) emitGoto(endBlock)
+        emitGotoIfOpen(endBlock)
     }
 
     activate(endBlock)

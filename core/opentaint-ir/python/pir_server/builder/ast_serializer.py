@@ -36,6 +36,7 @@ from mypy.nodes import (
     GlobalDecl,
     NonlocalDecl,
     OperatorAssignmentStmt,
+    MatchStmt,
     IntExpr,
     StrExpr,
     FloatExpr,
@@ -70,6 +71,7 @@ from mypy.nodes import (
     ARG_STAR,
     ARG_STAR2,
 )
+from mypy.patterns import AsPattern, ValuePattern
 from mypy.types import CallableType
 from mypy.util import correct_relative_import
 from pir_server.proto import pir_pb2
@@ -451,6 +453,23 @@ class AstSerializer:
             if stmt.else_body:
                 for_proto.else_body.CopyFrom(self._serialize_block(stmt.else_body))
             proto.for_stmt.CopyFrom(for_proto)
+        elif isinstance(stmt, MatchStmt):
+            match_proto = pir_pb2.MypyMatchStmtProto(
+                subject=self._serialize_expr(stmt.subject),
+            )
+            for pattern, guard, body in zip(stmt.patterns, stmt.guards, stmt.bodies):
+                pat_proto = self._serialize_pattern(pattern)
+                if pat_proto is None:
+                    # Unsupported pattern kind — drop this case, keep the rest of
+                    # the match. Keeps patterns/guards/bodies parallel.
+                    continue
+                match_proto.patterns.append(pat_proto)
+                if guard is not None:
+                    match_proto.guards.append(self._serialize_expr(guard))
+                else:
+                    match_proto.guards.append(pir_pb2.MypyExprProto())
+                match_proto.bodies.append(self._serialize_block(body))
+            proto.match_stmt.CopyFrom(match_proto)
         elif isinstance(stmt, TryStmt):
             try_proto = pir_pb2.MypyTryStmtProto(
                 body=self._serialize_block(stmt.body),
@@ -583,6 +602,35 @@ class AstSerializer:
             return None
 
         return proto
+
+    def _serialize_pattern(self, pattern) -> pir_pb2.MypyPatternProto | None:
+        # v1 supports only non-destructuring patterns: capture / wildcard / `as`
+        # (all folded into mypy's AsPattern) and value patterns. Everything else
+        # (sequence/mapping/class/or/singleton/star) is dropped with a diagnostic.
+        proto = pir_pb2.MypyPatternProto()
+        if isinstance(pattern, AsPattern):
+            as_proto = pir_pb2.MypyAsPatternProto()
+            if pattern.pattern is not None:
+                inner = self._serialize_pattern(pattern.pattern)
+                if inner is None:
+                    return None
+                as_proto.pattern.CopyFrom(inner)
+            if pattern.name is not None:
+                as_proto.name = pattern.name.name
+            proto.as_pattern.CopyFrom(as_proto)
+            return proto
+        elif isinstance(pattern, ValuePattern):
+            proto.value_pattern.CopyFrom(
+                pir_pb2.MypyValuePatternProto(expr=self._serialize_expr(pattern.expr))
+            )
+            return proto
+        else:
+            print(
+                f"[pir] unsupported match pattern {type(pattern).__name__}; "
+                "dropping case",
+                file=sys.stderr,
+            )
+            return None
 
     def _serialize_assignment_stmt(
         self, stmt: AssignmentStmt

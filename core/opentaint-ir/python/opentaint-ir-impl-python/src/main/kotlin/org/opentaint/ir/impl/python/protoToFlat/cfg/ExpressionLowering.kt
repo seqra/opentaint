@@ -611,7 +611,7 @@ private fun CfgSession.emitComprehensionLoops(
 
     emitComprehensionLoops(indices, sequences, condlists, location, loopIdx + 1, bodyCallback)
 
-    if (!currentBlockTerminated()) emitGoto(headerBlock)
+    emitGotoIfOpen(headerBlock)
 
     activate(exitBlock)
 }
