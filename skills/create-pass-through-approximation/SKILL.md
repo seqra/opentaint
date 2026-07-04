@@ -24,13 +24,22 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 ### 1. Write the passThrough config
 
-Write `passThrough:` copies into `<config-file>`. When an object carries taint between calls — a setter stores it and a getter returns it later, or a builder holds it — route through a virtual slot, an access path `[<base>, .<DeclaringClass>#<slot>#java.lang.Object]`:
+Every config file MUST begin with a `language: java` header on its own first line, above `passThrough:`. The loader keys on it: a file with no `language:` header — or a mismatched one — is silently dropped whole, with no load error, so the passThrough never applies and every method you modeled stays dropped. Each file is:
+
+```yaml
+language: java
+passThrough:
+- function: ...
+```
+
+Write the `language: java` header, then the `passThrough:` copies, into `<config-file>`. When an object carries taint between calls — a setter stores it and a getter returns it later, or a builder holds it — route through a virtual slot, an access path `[<base>, .<DeclaringClass>#<slot>#java.lang.Object]`:
 - the slot name is nominal — the engine never resolves it, so it need not be a real field
 - type it `java.lang.Object` — a concrete type can fail the read-out type-check and drop the taint
 - the writer and reader must name the identical `Class#slot#java.lang.Object` triple, or the taint drops
 
 Getter / setter pair — the writer stores into the slot, the getter reads the same slot back to `result`:
 ```yaml
+language: java
 passThrough:
 - function: org.springframework.http.HttpEntity#setBody
   copy:
@@ -48,6 +57,7 @@ passThrough:
 
 Several writers sharing one slot — any of them taints the object, the reader pulls it back:
 ```yaml
+language: java
 passThrough:
 - function: org.apache.tools.ant.types.FileSet#setDir
   copy:
@@ -65,6 +75,7 @@ passThrough:
 
 Cross-type builder — when a builder method consumes an argument and returns a *different* type, carry the taint along both the chained receiver (for further calls on `this`) and the returned object, slot included. Four copies: arg → returned-value slot, arg → builder slot, whole builder → returned value, builder slot → returned-value slot:
 ```yaml
+language: java
 passThrough:
 - function: org.springframework.ldap.query.LdapQueryBuilder#filter
   copy:
@@ -88,6 +99,7 @@ passThrough:
 
 Builder terminal — a no-arg `build()` / `toX()` that returns a new object carrying what the builder accumulated; no argument is involved, so copy each slot from `this` to the matching slot on `result` (the setters that filled the builder slot are separate rules of their own):
 ```yaml
+language: java
 passThrough:
 - function: com.google.common.collect.ImmutableMap$Builder#build
   copy:
@@ -107,6 +119,7 @@ passThrough:
 
 Conditional propagation — gate a rule with a `condition` (the copy still routes through a slot):
 ```yaml
+language: java
 passThrough:
 - function: com.example.lib.Parser#parse
   condition:
@@ -121,6 +134,7 @@ passThrough:
 
 Full config — every function in one top-level `passThrough:` list (quote `[*]` — unquoted it parses as a YAML alias):
 ```yaml
+language: java
 passThrough:
 - function: org.springframework.beans.MutablePropertyValues#add
   copy:
@@ -162,7 +176,8 @@ A config error aborts the scan with the parse/load message — fix the YAML and 
 
 There's no test project for passThrough. The main scan applies `<config-file>` and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
 
-- a method you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check package, class, name, `overrides`), or the `from`/`to` doesn't land on the tainted position
+- *every* method you modeled still in `dropped-external-methods.yaml`, with no load error → the whole file was silently skipped: check it starts with the `language: java` header (a headerless or mis-headered file loads to nothing)
+- a *single* method you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check package, class, name, `overrides`), or the `from`/`to` doesn't land on the tainted position
 - the flow still doesn't surface though the method is no longer dropped → most often a broken channel: the writer and reader name different `Class#slot#java.lang.Object` triples, or the slot isn't typed `java.lang.Object`
 - a config load / parse error → fix the YAML (an unknown `condition` key, a bad position, or a 2-part field modifier all fail to load)
 
