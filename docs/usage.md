@@ -175,7 +175,7 @@ Rule and approximation test runs write `test-result.json` and `test-results.sari
 
 ### opentaint compile
 
-Compiles Java and Kotlin projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
+Compiles Java, Kotlin, and Go projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
 
 ```bash
 opentaint compile --output ./my-project-model /path/to/project
