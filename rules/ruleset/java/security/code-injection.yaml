@@ -51,12 +51,15 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
-          as: untrusted-data
+        - tag: servlet-untrusted-data-source
+          as: servlet-untrusted-data
+        - tag: spring-untrusted-data-source
+          as: spring-untrusted-data
         - tag: groovy-injection-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: ognl-injection
     severity: ERROR
@@ -111,12 +114,15 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
-          as: untrusted-data
+        - tag: servlet-untrusted-data-source
+          as: servlet-untrusted-data
+        - tag: spring-untrusted-data-source
+          as: spring-untrusted-data
         - tag: ognl-injection-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$INPUT'
+        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$INPUT'
+        - 'spring-untrusted-data.$UNTRUSTED -> sink.$INPUT'
 
   - id: script-engine-injection
     severity: ERROR
@@ -180,12 +186,15 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
-          as: untrusted-data
+        - tag: servlet-untrusted-data-source
+          as: servlet-untrusted-data
+        - tag: spring-untrusted-data-source
+          as: spring-untrusted-data
         - tag: script-engine-injection-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: ssti
     severity: ERROR
@@ -248,12 +257,15 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
-          as: untrusted-data
+        - tag: servlet-untrusted-data-source
+          as: servlet-untrusted-data
+        - tag: spring-untrusted-data-source
+          as: spring-untrusted-data
         - tag: template-injection-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
 
   - id: el-injection-in-servlet-app
@@ -353,7 +365,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
         - tag: el-injection-sink
           as: sink
@@ -462,7 +474,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: untrusted-data
         - tag: spel-injection-sink
           as: sink

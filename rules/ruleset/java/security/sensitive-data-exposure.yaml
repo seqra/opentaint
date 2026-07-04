@@ -319,7 +319,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
         - tag: file-disclosure-sink
           as: sink
@@ -414,7 +414,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: untrusted-data
         - tag: jsp-file-disclosure-sink
           as: sink

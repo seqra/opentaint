@@ -119,7 +119,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
         - tag: bean-injection-sink
           as: sink
@@ -206,12 +206,15 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
-          as: untrusted-data
+        - tag: servlet-untrusted-data-source
+          as: servlet-untrusted-data
+        - tag: spring-untrusted-data-source
+          as: spring-untrusted-data
         - tag: sql-catalog-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: java-sql-catalog-sink
     options:
@@ -286,9 +289,12 @@ rules:
     mode: join
     join:
       refs:
-        - tag: untrusted-data-source
-          as: untrusted-data
+        - tag: servlet-untrusted-data-source
+          as: servlet-untrusted-data
+        - tag: spring-untrusted-data-source
+          as: spring-untrusted-data
         - tag: unsafe-reflection-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

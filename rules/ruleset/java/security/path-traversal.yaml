@@ -67,9 +67,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
-        - tag: untrusted-path-source
+        - tag: spring-untrusted-path-source
           as: spring-untrusted-data
         - tag: path-traversal-sink
           as: sink

@@ -3,7 +3,7 @@ rules:
     options:
       lib: true
     tags:
-      - untrusted-path-source
+      - spring-untrusted-path-source
     severity: NOTE
     message: Untrusted data flows from here
     metadata:
