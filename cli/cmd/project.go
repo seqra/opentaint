@@ -178,7 +178,8 @@ func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) erro
 	projectYamlPath := filepath.Join(c.outputDir, "project.yaml")
 
 	c.logProjectSummary(projectYamlPath, config)
-	suggest("To scan project run", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
+	out.Successf("Project model generated.")
+	suggest("To scan the generated model, run:", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
 	return nil
 }
 
@@ -215,16 +216,22 @@ var (
 
 var projectCmd = &cobra.Command{
 	Use:   "project",
-	Short: "Create a project model directory containing a project.yaml configuration from precompiled JARs or classes",
-	Long: `Create a project model directory containing a project.yaml configuration from precompiled JARs or classes.
+	Short: "Create a project model from precompiled JARs or classes",
+	Long: `Create a project model directly from precompiled JARs or classes, without running a build. OpenTaint inspects the supplied classpath, detects the modules and dependencies, and writes a project.yaml describing the project for later analysis. Use this when you already have compiled artifacts; opentaint compile builds a model from sources instead.
 
-This command generates a project model, automatically detecting dependencies and project structure.
-Additional packages have to be specified to enhance the generated configuration.
+All inputs are supplied as flags. Provide --source-root for the project sources, one or more --classpath entries for the compiled classes or JARs, and one or more --package names to include. Add --dependency for extra JAR files on the compile classpath.
 
-Examples:
-  # Classpath analysis
-  opentaint project --output ./project-model --source-root /path/to/source \
-    --classpath /path/to/app.jar --package com.example`,
+The project model is written to the required --output directory, which must not already exist, and contains the generated project.yaml.
+
+Run opentaint pull once beforehand to fetch the autobuilder. Scan the generated model with opentaint scan --project-model <output-dir>.`,
+	Example: `  # Generate a project model from a compiled JAR
+  opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model
+
+  # Add extra dependency JARs to the classpath
+  opentaint project --source-root ./src --classpath ./app.jar --dependency ./lib.jar --package com.example -o ./model
+
+  # Validate the inputs without generating anything
+  opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model --dry-run`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := NewJavaAutobuilder().
 			WithOutputDir(OutputDir).
@@ -266,12 +273,12 @@ Examples:
 
 		if DryRunProject {
 			failOnInvalidInputs(config.validate)
-			runDryRun("Project generation")
+			runDryRun("project-model generation")
 			return
 		}
 
 		if err := config.Execute(); err != nil {
-			out.Fatalf("Failed to generate project configuration: %s", err)
+			failf("Failed to generate project configuration: %s", err)
 		}
 	},
 }
@@ -279,15 +286,15 @@ Examples:
 func init() {
 	rootCmd.AddCommand(projectCmd)
 
-	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Output directory for project.yaml")
+	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Directory to write the generated project model")
 	_ = projectCmd.MarkFlagRequired("output")
-	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Source root directory")
+	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Path to the project source root")
 	_ = projectCmd.MarkFlagRequired("source-root")
-	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Project dependencies (JAR files)")
-	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Project packages")
+	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Additional dependency JAR file on the compile classpath (repeatable)")
+	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Package to include in the generated model (repeatable)")
 	_ = projectCmd.MarkFlagRequired("package")
-	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Classpath entries (classes or JAR files)")
+	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Classpath entry: a compiled classes directory or a JAR file (repeatable)")
 	_ = projectCmd.MarkFlagRequired("classpath")
-	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating project model")
+	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating the project model")
 	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 }

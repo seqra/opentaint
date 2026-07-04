@@ -27,15 +27,20 @@ type healthComponent struct {
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Show resolved dependency paths",
-	Long: `Show the on-disk paths OpenTaint uses for the autobuilder, analyzer,
-built-in rules, and Java runtime.
+	Short: "Show dependency paths and report missing components",
+	Long: `Show the on-disk paths for the autobuilder, analyzer, built-in rules, and Java runtime, and report whether each component is present.
 
-Use --autobuilder, --analyzer, --rules, or --runtime to select components. When
-exactly one component is selected, only its path is printed. The command does
-not download artifacts except built-in rules, which are fetched on demand.
+Select components with --autobuilder, --analyzer, --rules, or --runtime; with no flag, all four are reported. When exactly one component is selected, only its path is printed, which suits scripting. Only the built-in rules are fetched on demand; no other artifact is downloaded.
 
-The exit code is non-zero when any selected component is missing.`,
+The command exits non-zero when any selected component is missing. Download the missing components with opentaint pull.`,
+	Example: `  # Report all components and their paths
+  opentaint health
+
+  # Print only the analyzer JAR path, for scripting
+  opentaint health --analyzer
+
+  # Check the Java runtime
+  opentaint health --runtime`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runHealth()
@@ -105,6 +110,7 @@ func runHealth() error {
 	}
 	sb.Render()
 	if len(missing) > 0 {
+		out.Suggest("To download the missing components, run:", "opentaint pull")
 		return fmt.Errorf("missing components: %s", strings.Join(missing, ", "))
 	}
 	return nil

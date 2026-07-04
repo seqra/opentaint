@@ -32,21 +32,28 @@ func currentCompileBuilder(projectPath string) *utils.OpentaintCommandBuilder {
 // dockerCompileSuggestion builds the "try Docker-based compilation" fallback hint.
 func dockerCompileSuggestion() output.Suggestion {
 	return output.Suggestion{
-		Description: dockerFallbackHintPrefix + "compilation:",
+		Description: "If the required Java is missing, set JAVA_HOME or compile in a container instead:",
 		Command:     utils.BuildCompileCommandWithDocker(currentCompileBuilder(""), ProjectPath, OutputProjectModelPath),
 	}
 }
 
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
-	Use:   "compile project",
-	Short: "Compile your Java or Kotlin project",
+	Use:   "compile <project>",
+	Short: "Compile a Java or Kotlin project into a project model",
 	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `This command takes a required path to the project, automatically detects Java/Kotlin build system, modules and dependencies and compiles project model.
+	Long: `OpenTaint detects the Java or Kotlin build system (Gradle or Maven), resolves the project's modules and dependencies, and compiles it into a reusable project model.
 
-Arguments:
-  project  - Path to a project to compile (required)
-`,
+The project argument is the path to the project root and is required. Pass --output to name the project model directory to create; it must not already exist.
+
+The project model is written to the --output directory and can be reused by later scans without rebuilding.
+
+Run opentaint pull once before your first compile to fetch the toolchain. Analyze the resulting project model with opentaint scan --project-model.`,
+	Example: `  # Compile the current directory into a project model
+  opentaint compile . -o ./model
+
+  # Validate inputs without compiling
+  opentaint compile . -o ./model --dry-run`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ProjectPath = args[0]
@@ -72,25 +79,25 @@ Arguments:
 			sb.Line()
 		}
 		sb.FieldNode("Project", absProjectRoot).
-			FieldNode("Output project model", absOutputProjectModelPath).
+			FieldNode("Project model", absOutputProjectModelPath).
 			FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"))).
 			Render()
 
 		if DryRunCompile {
 			out.Blank()
 			failOnInvalidInputs(func() error { return validation.ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath) })
-			runDryRun("Compilation")
+			runDryRun("compilation")
 			return
 		}
 
 		autobuilderJarPath, err := ensureAutobuilderAvailable()
 		if err != nil {
-			out.Fatalf("Native compile preparation failed: %s", err)
+			failf("Native compile preparation failed: %s", err)
 		}
 
 		compileJavaRunner := newAutobuilderJavaRunner()
 		if _, err := compileJavaRunner.EnsureJava(); err != nil {
-			out.Fatalf("Failed to resolve Java for compilation: %s", err)
+			failf("Failed to resolve Java for compilation: %s", err)
 		}
 
 		if err := out.RunWithSpinner("Compiling project model", func() error {
@@ -98,7 +105,8 @@ Arguments:
 		}); err == nil {
 			out.Blank()
 			printCompileSummary(absOutputProjectModelPath)
-			suggest("To scan project run", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath))
+			out.Successf("Compilation completed.")
+			suggest("To scan the compiled project model, run:", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath))
 		} else {
 			out.InteractiveBlank()
 			failWith(1, fmt.Sprintf("Native compile has failed: %s", err), dockerCompileSuggestion())
@@ -109,7 +117,7 @@ Arguments:
 func init() {
 	rootCmd.AddCommand(compileCmd)
 
-	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", `Path to the result project model`)
+	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", `Path to the project model directory to create (required, must not exist)`)
 	_ = compileCmd.MarkFlagRequired("output")
 	compileCmd.Flags().BoolVar(&DryRunCompile, "dry-run", false, "Validate inputs and show what would run without compiling")
 	compileCmd.Flags().StringVar(&CompileLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
