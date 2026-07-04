@@ -33,9 +33,19 @@ var updateHintCh = make(chan string, 1)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:           "opentaint",
-	Short:         "OpenTaint Analyzer",
-	Long:          `OpenTaint is a CLI tool that analyzes Java and Kotlin projects to find vulnerabilities`,
+	Use:   "opentaint",
+	Short: "Find vulnerabilities in Java, Kotlin, and Go projects",
+	Long: `OpenTaint finds vulnerabilities in Java, Kotlin, and Go projects by tracing tainted data from untrusted sources to sensitive sinks.
+
+Run opentaint pull once to fetch the toolchain, opentaint scan to analyze a project, and opentaint summary to re-inspect a SARIF report.`,
+	Example: `  # Fetch the toolchain before the first scan
+  opentaint pull
+
+  # Scan the current directory for vulnerabilities
+  opentaint scan .
+
+  # Re-inspect a SARIF report later
+  opentaint summary report.sarif --show-findings`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 

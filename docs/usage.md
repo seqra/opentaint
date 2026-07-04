@@ -169,7 +169,7 @@ opentaint test approximation run .opentaint/test-compiled/my-approximation \
 | Command | Description |
 |---------|-------------|
 | `opentaint test approximation init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test approximation run <project-model>` | Run dataflow approximation tests on a compiled project model |
+| `opentaint test approximation run <project-model>` | Run dataflow-approximation tests on a compiled project model |
 
 Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
