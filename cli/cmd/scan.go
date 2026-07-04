@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
@@ -75,15 +76,31 @@ func (p scanPlan) title() string {
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan [source-path]",
-	Short: "Scan your Java or Kotlin project",
+	Short: "Scan a Java, Kotlin, or Go project for vulnerabilities",
 	Args:  cobra.MaximumNArgs(1),
-	Long: `This command automatically detects Java/Kotlin build systems, builds the project, and analyzes it
+	Long: `Scan a Java, Kotlin, or Go project for vulnerabilities. OpenTaint detects the build system (Gradle, Maven, or go.mod) and runs taint analysis over the built project; Go modules are analyzed through the bundled go-ssa-server.
 
-Arguments:
-  source-path  - Path to the project sources (default: current directory)
+The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to analyze a pre-compiled project model instead of building; source-path and --project-model are mutually exclusive.
 
-Use --project-model to scan a pre-compiled project model instead of compiling from sources.
-`,
+Findings are written as a SARIF report to --output, or into the project model directory when unset, and summarized on completion.
+
+Run opentaint pull once before your first scan to fetch the toolchain. Re-inspect a report later with opentaint summary.
+
+` + scanExitCodesHelp("Scan completed"),
+	Example: `  # Scan the current directory with the built-in rules
+  opentaint scan .
+
+  # Scan a project and write a SARIF report
+  opentaint scan ./my-app -o report.sarif
+
+  # Analyze a pre-compiled project model instead of building
+  opentaint scan --project-model ./model -o report.sarif
+
+  # Run a custom ruleset and report only errors
+  opentaint scan . --ruleset ./rules --severity error -o report.sarif
+
+  # Give a large project more time and memory
+  opentaint scan . --timeout 30m --max-memory 16G -o report.sarif`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		runScan(cmd, prepareScanConfig(scanFlags, args))
@@ -93,7 +110,7 @@ Use --project-model to scan a pre-compiled project model instead of compiling fr
 func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 	if len(args) > 0 && cfg.ProjectModelPath != "" {
 		out.Error("Cannot use both a source path argument and --project-model flag")
-		suggest("Use either a source path or --project-model",
+		suggest("Use either a source path or --project-model:",
 			utils.NewScanCommand("<source-path>").Build()+"\n  "+utils.NewScanCommand("").WithProjectModel("<model-path>").Build())
 		os.Exit(1)
 	}
@@ -115,19 +132,19 @@ func init() {
 }
 
 func addRuleIDFlag(cmd *cobra.Command) {
-	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Filter active rules by ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
-	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Timeout for analysis")
+	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Maximum wall-clock time for analysis (e.g. 30m, 1h)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "YAML rules file, directory of YAML rules files ending in .yml or .yaml, or `builtin` to scan with built-in rules")
+	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules to run: a YAML file, a directory of .yml or .yaml files, or `builtin` for the built-in rules (repeatable)")
 
 	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep compatible ruleId")
-	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF-report output file")
+	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to write the SARIF report")
 
-	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Report findings only from rules matching the supplied severity level. By default only warning and error rules are run (note, warning, error)")
-	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum memory for the analyzer (e.g., 1024m, 8G, 81920k, 83886080)")
+	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Run only rules at these severity levels: note, warning, error (repeatable)")
+	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g. 8G, 1024m)")
 	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows to include in the report (0 = unlimited)")
 	cmd.Flags().BoolVar(&scanFlags.DryRun, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
 	cmd.Flags().BoolVar(&scanFlags.Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
@@ -165,7 +182,7 @@ func isDefaultSeverity(sev []string) bool {
 // dockerScanSuggestion builds the "try Docker-based scan" fallback hint.
 func dockerScanSuggestion(cfg ScanConfig, projectRoot, sarifReportPath string) output.Suggestion {
 	return output.Suggestion{
-		Description: dockerFallbackHintPrefix + "scan:",
+		Description: "If the required Java is missing, set JAVA_HOME or scan in a container instead:",
 		Command:     utils.BuildScanCommandWithDocker(currentScanBuilder(cfg, ""), projectRoot, sarifReportPath, cfg.Ruleset),
 	}
 }
@@ -183,7 +200,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		if err := validation.ValidateSourceProject(absUserProjectRoot); err != nil {
 			if validation.IsProjectModel(absUserProjectRoot) {
 				out.ErrorErr(err)
-				suggest("Use --project-model to scan a pre-compiled model", currentScanBuilder(cfg, "").WithProjectModel(absUserProjectRoot).Build())
+				suggest("Use --project-model to scan a pre-compiled model:", currentScanBuilder(cfg, "").WithProjectModel(absUserProjectRoot).Build())
 				os.Exit(1)
 			}
 			out.FatalErr(err)
@@ -276,7 +293,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	if cfg.DryRun {
-		runDryRun("Compilation and analysis")
+		runDryRun("the build and scan")
 		return
 	}
 
@@ -308,25 +325,25 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
-			out.Fatalf("Failed to prepare built-in rules: %s", err)
+			failf("Failed to prepare built-in rules: %s", err)
 		}
 	}
 
 	if plan.needsCompilation {
 		autobuilderJarPath, err := ensureAutobuilderAvailable()
 		if err != nil {
-			out.Fatalf("Native compile preparation failed: %s", err)
+			failf("Native compile preparation failed: %s", err)
 		}
 
 		compileJavaRunner := newAutobuilderJavaRunner()
 		if _, err := compileJavaRunner.EnsureJava(); err != nil {
-			out.Fatalf("Failed to resolve Java for compilation: %s", err)
+			failf("Failed to resolve Java for compilation: %s", err)
 		}
 
 		// Wipe any residue from a prior crashed compile before writing new output.
 		if plan.projectCachePath != "" {
 			if err := os.RemoveAll(plan.absProjectModel); err != nil {
-				out.Fatalf("Failed to prepare cache directory: %s", err)
+				failf("Failed to prepare cache directory: %s", err)
 			}
 		}
 
@@ -345,7 +362,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		if plan.projectCachePath != "" {
 			if err := utils.MarkCompileComplete(plan.projectCachePath); err != nil {
 				_ = os.RemoveAll(plan.absProjectModel)
-				out.Fatalf("Failed to mark model complete: %s", err)
+				failf("Failed to mark model complete: %s", err)
 			}
 			if err := plan.cacheLock.Downgrade(); err != nil {
 				output.LogInfof("Cache lock downgrade failed, continuing under exclusive: %v", err)
@@ -356,7 +373,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	if err := utils.EnsureParentDir(absSarifReportPath); err != nil {
-		out.Fatalf("Failed to create output directory: %s", err)
+		failf("Failed to create output directory: %s", err)
 	}
 
 	// Update builder with native paths for native execution
@@ -409,7 +426,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	analyzerJarPath, err := ensureAnalyzerAvailable()
 	if err != nil {
-		out.Fatalf("Native scan preparation failed: %s", err)
+		failf("Native scan preparation failed: %s", err)
 	}
 	nativeBuilder.SetJarPath(analyzerJarPath)
 
@@ -430,7 +447,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv)
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
-		out.Fatalf("Failed to resolve Java for analyzer: %s", err)
+		failf("Failed to resolve Java for analyzer: %s", err)
 	}
 
 	var analyzerFail *analyzer.Error
@@ -485,21 +502,63 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	var suggestions []output.Suggestion
 	if analyzerFail != nil {
 		suggestions = appendLogSuggestion(suggestions)
+		if retry, ok := retrySuggestion(analyzerFail.ExitCode, globals.Config.Scan.Timeout, globals.Config.Scan.MaxMemory); ok {
+			suggestions = append(suggestions, retry)
+		}
 	}
 	if report != nil {
 		// Scan does not expose summary's filter/group flags, so pass zero values:
 		// no filtering, default group dimension, first-flow code-flow selection.
 		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1})
-		suggestions = append(suggestions, output.Suggestion{
-			Description: "To view findings run",
-			Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),
-		})
+		switch {
+		case cfg.DebugFactReachabilitySarif:
+			if analyzerFail == nil {
+				out.Successf("Reachability analysis completed.")
+			}
+			// The reachability report is the command's deliverable; point at it,
+			// never at the main SARIF.
+			reachabilityReportPath := filepath.Join(filepath.Dir(absSarifReportPath), "debug-ifds-fact-reachability.sarif")
+			suggestions = append(suggestions, output.Suggestion{
+				Description: "To view the reachability report, run:",
+				Command:     utils.NewSummaryCommand(reachabilityReportPath).WithShowFindings().Build(),
+			})
+		case sarif.GenerateSummary(report).TotalFindings > 0:
+			if analyzerFail == nil {
+				out.Successf("Scan completed.")
+			}
+			suggestions = append(suggestions, output.Suggestion{
+				Description: "To view the findings, run:",
+				Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),
+			})
+		case analyzerFail == nil:
+			out.Successf("Scan completed. No vulnerabilities found at %s severity.", strings.Join(cfg.Severity, " or "))
+			if isDefaultSeverity(cfg.Severity) {
+				suggestions = append(suggestions, output.Suggestion{
+					Description: "To also check note-level rules, run:",
+					Command:     noteSeverityScanCommand(cfg),
+				})
+			}
+		}
 	}
 	out.Suggestions(suggestions...)
 
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
 	}
+}
+
+// noteSeverityScanCommand builds the follow-up command for a clean scan: the
+// same invocation narrowed to the note-level rules the default run skips.
+func noteSeverityScanCommand(cfg ScanConfig) string {
+	sourcePath := cfg.UserProjectPath
+	if cfg.ProjectModelPath != "" {
+		sourcePath = ""
+	}
+	b := currentScanBuilder(cfg, sourcePath).WithSeverity([]string{"note"})
+	if cfg.ProjectModelPath != "" {
+		b.WithProjectModel(cfg.ProjectModelPath)
+	}
+	return b.Build()
 }
 
 func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
@@ -561,7 +620,7 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 		} else {
 			out.Error("Another scan is currently analyzing this project")
 		}
-		suggest("To scan an existing model instead", utils.NewScanCommand("").WithProjectModel("<model-path>").Build())
+		suggest("To scan an existing model instead, run:", utils.NewScanCommand("").WithProjectModel("<model-path>").Build())
 		os.Exit(1)
 	}
 	if lockErr != nil {
