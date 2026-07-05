@@ -40,9 +40,9 @@ func dockerCompileSuggestion() output.Suggestion {
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
 	Use:   "compile <project>",
-	Short: "Compile a Java, Kotlin, or Go project into a project model",
+	Short: "Compile a project into a reusable project model",
 	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `OpenTaint detects the build system (Gradle, Maven, or go.mod), resolves the project's modules and dependencies, and compiles the project into a reusable model. Go modules are recorded in the model and built through go-ssa-server at scan time.
+	Long: `OpenTaint detects the build system, resolves the project's modules and dependencies, and compiles the project into a reusable model.
 
 The project argument is the path to the project root and is required. Pass --output to name the project model directory to create; it must not already exist.
 
