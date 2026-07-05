@@ -289,7 +289,7 @@ Run opentaint pull once beforehand to fetch the autobuilder. Scan the generated 
 func init() {
 	rootCmd.AddCommand(projectCmd)
 
-	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Directory to write the generated project model")
+	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Directory to write the generated project model (required, must not exist)")
 	_ = projectCmd.MarkFlagRequired("output")
 	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Path to the project source root")
 	_ = projectCmd.MarkFlagRequired("source-root")

@@ -138,9 +138,9 @@ func addRuleIDFlag(cmd *cobra.Command) {
 func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Maximum wall-clock time for analysis (e.g. 30m, 1h)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules to run: a YAML file, a directory of .yml or .yaml files, or `builtin` for the built-in rules (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules to run: a YAML file, a directory of .yml or .yaml files, or builtin for the built-in rules (repeatable)")
 
-	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep compatible ruleId")
+	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep-compatible rule IDs in the SARIF report")
 	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to write the SARIF report")
 
 	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Run only rules at these severity levels: note, warning, error (repeatable)")
