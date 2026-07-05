@@ -76,9 +76,9 @@ func (p scanPlan) title() string {
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan [source-path]",
-	Short: "Scan a Java, Kotlin, or Go project for vulnerabilities",
+	Short: "Scan a project for vulnerabilities",
 	Args:  cobra.MaximumNArgs(1),
-	Long: `Scan a Java, Kotlin, or Go project for vulnerabilities. OpenTaint detects the build system (Gradle, Maven, or go.mod) and runs taint analysis over the built project; Go modules are analyzed through the bundled go-ssa-server.
+	Long: `Scan a project for vulnerabilities. OpenTaint detects the build system, builds the project, and runs taint analysis over the result.
 
 The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to analyze a pre-compiled project model instead of building; source-path and --project-model are mutually exclusive.
 
