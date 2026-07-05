@@ -41,7 +41,7 @@ opentaint test rule reachability <full-id> \
 
 The debug output is the sibling file `<results-dir>/debug-ifds-fact-reachability.sarif`, NOT the `-o` SARIF. The `-o` file is the regular rule run (findings only); the per-instruction fact-reachability data — what shows where taint dies — lives only in the sibling. Read the sibling; the `-o` SARIF only tells you whether the rule fired, not why
 
-When the thing under debug is an approximation (or the flow depends on one), append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` so the trace runs with it applied — taint dying at the approximated call then means the approximation isn't propagating: wrong signature (still in `<dropped-file>`), empty body, or wrong from→to. For a missed detection (a positive sample that won't pass, or a flow absent from a scan): confirm a fact exists at the source — if not, the gap is in `pattern-sources` — then walk the facts to the last instruction still carrying the fact and the first where it's gone; that gap is where taint dies. For a spurious detection, do the reverse: find where a fact appears with no tainted input reaching it
+When the thing under debug is an approximation (or the flow depends on one), append `--passthrough-models <config-dir>` / `--java-models <approx-dir>` so the trace runs with it applied — taint dying at the approximated call then means the approximation isn't propagating: wrong signature (still in `<dropped-file>`), empty body, or wrong from→to. For a missed detection (a positive sample that won't pass, or a flow absent from a scan): confirm a fact exists at the source — if not, the gap is in `pattern-sources` — then walk the facts to the last instruction still carrying the fact and the first where it's gone; that gap is where taint dies. For a spurious detection, do the reverse: find where a fact appears with no tainted input reaching it
 
 ### 3. Isolate an entry point (optional)
 
@@ -79,7 +79,7 @@ The fact-reachability flow is identical, with three differences:
 
 - The reachability command takes the same shape — `opentaint test rule reachability <full-id> --project-model <model-dir> -o <results-dir>/report.sarif --ruleset builtin --ruleset <rules-dir>` — and emits the same `debug-ifds-fact-reachability.sarif` sibling. To force analysis onto an entry point, `--entry-points` takes a Go function full name (`package.FunctionName`), not the JVM `Class#method` form
 - There is **no dataflow-approximation branch**. A taint kill at an external Go function is either a missing/wrong **passThrough** (route to analyze-external-methods-go + create-pass-through-approximation-go) or, if only a dataflow shape could express the propagation, an **engine issue** (route to report-analyzer-issue) — Go has no dataflow approximation to fall back to
-- Approximations are applied with `--passthrough-approximations` only; there is no `--dataflow-approximations` for Go
+- Approximations are applied with `--passthrough-models` only; there is no `--java-models` for Go
 
 ## Tracking
 

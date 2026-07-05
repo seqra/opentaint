@@ -48,11 +48,11 @@ opentaint scan <project-src> \
 Append optional flags as needed:
 
 - `--rule-id <full-id>` — restrict to specific rules (repeatable); omit to run all loaded rules
-- `--passthrough-approximations <config-dir>` — apply Go passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable). The built-in `go-config` set is bundled in the analyzer; this flag adds custom configs on top
+- `--passthrough-models <config-dir>` — apply Go passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable). The built-in `go-config` set is bundled in the analyzer; this flag adds custom configs on top
 - `--timeout <seconds>` — analysis timeout (Go default 600s)
 - `--max-memory <size>` — heap size (Go default 8G)
 
-There is no `--dataflow-approximations` for Go — Go has no dataflow approximations
+There is no `--java-models` for Go — Go has no dataflow approximations
 
 ## Output
 
@@ -69,7 +69,7 @@ Three files, all next to the SARIF report:
 | `--project-model` | Pre-built model directory containing `project.yaml` (omit to scan a source project via the positional arg) |
 | `--ruleset` | Rule directory or YAML file (repeatable); `builtin` for built-ins |
 | `--rule-id` | Restrict to specific full rule IDs (repeatable) |
-| `--passthrough-approximations` | Go passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
+| `--passthrough-models` | Go passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
 | `--track-external-methods` | Emit `dropped-external-methods.yaml` + `approximated-external-methods.yaml` next to the SARIF |
 | `--timeout` | Analysis timeout (Go default 600s) |
 | `--max-memory` | Max heap (Go default 8G) |
@@ -79,4 +79,4 @@ Three files, all next to the SARIF report:
 - `go` not on PATH → a Go-only scan hard-fails; install the toolchain
 - `--project-model` points at a directory (holding `project.yaml`), never at the `project.yaml` file itself
 - Paths fall back to the `.opentaint/` layout when the caller omits them; the caller can override any of them
-- No dataflow approximations and no `--dataflow-approximations` flag for Go — don't pass one
+- No dataflow approximations and no `--java-models` flag for Go — don't pass one

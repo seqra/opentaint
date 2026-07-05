@@ -114,7 +114,7 @@ is present you can catch YAML load/parse errors early with a quick scan applying
 opentaint scan --project-model <test-model> \
   -o .opentaint/test-results/<name>/passthrough-loadcheck.sarif \
   --ruleset builtin \
-  --passthrough-approximations <config-file>
+  --passthrough-models <config-file>
 ```
 
 A config error aborts the scan with the parse/load message — fix the YAML and re-run
