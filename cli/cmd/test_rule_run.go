@@ -26,7 +26,7 @@ var (
 var testRuleRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
 	Short: "Run detection-rule tests on a compiled project model",
-	Long: `Run the built-in detection rules against the samples declared in rule-test.yaml and report which passed.
+	Long: `Run detection rules against the samples declared in rule-test.yaml and report which passed. The built-in rules are always included.
 
 The project-model argument is a compiled project model directory, produced by opentaint compile. Add your own rules with --ruleset, narrow the run to specific rules with --rule-id, and apply approximations with --dataflow-approximations or --passthrough-approximations.
 
