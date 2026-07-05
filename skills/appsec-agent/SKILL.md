@@ -298,7 +298,7 @@ methods:                # engine asks to approximate these, but they carry no ta
 
 - the engine models stored / second-order injection (data persisted then read back) on its own — no source, sink-side, or propagator needs to be added for the store→read path
 - approximations apply only to external library methods — never an application-internal class
-- `--passthrough-approximations` merges with built-ins at the rule level; a provided rule overrides a built-in only when it matches one already there — it does not replace the built-in set
+- `--passthrough-models` merges with built-ins at the rule level; a provided rule overrides a built-in only when it matches one already there — it does not replace the built-in set
 - both approximation dir flags walk the tree recursively, so the final scan points at the parent dirs and applies every unit
 - `--rule-id` drops every rule not named, including library `refs` — list them all when restricting
 - a custom DATAFLOW approximation targeting a class that already has a built-in dataflow approximation errors at load (one class, one approximation); passThrough configs never error this way — they merge at the rule level (see above)

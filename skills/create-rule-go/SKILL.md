@@ -120,7 +120,7 @@ opentaint test rule run <test-compiled> \
   --ruleset <rules-dir>
 ```
 
-When the caller passed `<config-dir>`, append `--passthrough-approximations <config-dir>` —
+When the caller passed `<config-dir>`, append `--passthrough-models <config-dir>` —
 without it a library function on the test flow drops taint and the positive can't pass. Read
 `.opentaint/test-results/go/test-result.json`:
 

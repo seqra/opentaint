@@ -127,7 +127,7 @@ opentaint test rule run <test-compiled>/sinks \
   --ruleset <rules-dir> --ruleset <test-project>/sinks/test-rules
 ```
 
-`test rule run` auto-loads the built-in rules, so pass only your custom rulesets — a literal `builtin` here would be treated as a path. When the caller passed `<config-dir>` / `<approx-dir>`, append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` — without them a library method the test flow relies on drops taint and the positive can't pass. Read `.opentaint/test-results/<name>/sinks/test-result.json`:
+`test rule run` auto-loads the built-in rules, so pass only your custom rulesets — a literal `builtin` here would be treated as a path. When the caller passed `<config-dir>` / `<approx-dir>`, append `--passthrough-models <config-dir>` / `--java-models <approx-dir>` — without them a library method the test flow relies on drops taint and the positive can't pass. Read `.opentaint/test-results/<name>/sinks/test-result.json`:
 
 - `falseNegative` (positive didn't trigger) → patterns too narrow; broaden `pattern-either`, check metavariable names match across branches and between `refs` and `on`
 - `falsePositive` (negative triggered) → patterns too broad; add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`

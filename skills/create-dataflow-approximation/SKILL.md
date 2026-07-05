@@ -79,7 +79,7 @@ Run `test approximation run` over `<test-compiled>` applying only this package's
 ```bash
 opentaint test approximation run <test-compiled> \
   -o .opentaint/test-results/<name> \
-  --dataflow-approximations <approx-src>
+  --java-models <approx-src>
 ```
 
 `test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. The sample that routes taint through the method is a `falseNegative` until the model propagates it. Read `.opentaint/test-results/<name>/test-result.json`:

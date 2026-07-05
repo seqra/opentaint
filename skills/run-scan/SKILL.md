@@ -36,8 +36,8 @@ opentaint scan --project-model <model-dir> \
 Append optional flags as needed:
 
 - `--rule-id <full-id>` — restrict to specific rules (repeatable); omit to run all loaded rules
-- `--passthrough-approximations <config-dir>` — apply passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable)
-- `--dataflow-approximations <approx-dir>` — apply code-based approximations (Java sources, auto-compiled; or pre-compiled `.class` dirs, passed through as-is)
+- `--passthrough-models <config-dir>` — apply passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable)
+- `--java-models <approx-dir>` — apply code-based approximations (Java sources, auto-compiled; or pre-compiled `.class` dirs, passed through as-is)
 
 ## Output
 
@@ -54,8 +54,8 @@ Three files, all next to the SARIF report:
 | `--project-model` | Pre-compiled model directory (omit to scan a source project via the positional arg) |
 | `--ruleset` | Rule directory (repeatable); `builtin` for built-ins |
 | `--rule-id` | Restrict to specific full rule IDs (repeatable) |
-| `--passthrough-approximations` | passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
-| `--dataflow-approximations` | Directory of Java sources or compiled classes (repeatable) |
+| `--passthrough-models` | passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
+| `--java-models` | Directory of Java sources or compiled classes (repeatable) |
 | `--track-external-methods` | Emit `dropped-external-methods.yaml` + `approximated-external-methods.yaml` next to the SARIF |
 | `--timeout` | Analysis timeout (default 900s) |
 

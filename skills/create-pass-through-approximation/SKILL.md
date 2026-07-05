@@ -167,7 +167,7 @@ There's no dedicated load-check command. ONLY when invoked standalone — never 
 opentaint scan --project-model <test-model> \
   -o .opentaint/test-results/<name>/passthrough-loadcheck.sarif \
   --ruleset builtin \
-  --passthrough-approximations <config-file>
+  --passthrough-models <config-file>
 ```
 
 A config error aborts the scan with the parse/load message — fix the YAML and re-run. Nice-to-have, not required; skip it when no model is around
