@@ -1,6 +1,6 @@
 # Installation
 
-**Prerequisites:** Same build requirements as your Java/Kotlin project (Maven or Gradle, project dependencies). Java runtime is bundled with release archives.
+**Prerequisites:** Same build requirements as your project (Maven or Gradle for Java/Kotlin, the Go toolchain for Go modules). Java runtime is bundled with release archives.
 
 ## Homebrew (Linux/macOS)
 
