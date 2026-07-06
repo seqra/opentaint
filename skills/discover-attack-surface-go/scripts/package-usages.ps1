@@ -41,7 +41,11 @@ $out = foreach ($d in $dirs) {
           Push-Location $d
           $id = & go list -f '{{.Name}}' $path 2>$null
           Pop-Location
-          if (-not $id) { $id = ($path -split '/')[-1] }
+          if (-not $id) {
+            $segs = $path -split '/'
+            $id = $segs[-1]
+            if ($id -match '^v\d+$' -and $segs.Count -ge 2) { $id = $segs[-2] }
+          }
           $nameCache[$path] = $id
         }
       }

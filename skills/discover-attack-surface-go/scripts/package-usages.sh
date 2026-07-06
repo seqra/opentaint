@@ -26,7 +26,10 @@ printf '%s\n' "$dirs" | while IFS= read -r d; do
           id=$(awk -v p="$path" '$1==p{print $2;exit}' "$CACHE")
           if [ -z "$id" ]; then
             id=$(cd "$d" 2>/dev/null && go list -f '{{.Name}}' "$path" 2>/dev/null)
-            [ -n "$id" ] || id=$(basename "$path")
+            if [ -z "$id" ]; then
+              id=$(basename "$path")
+              printf '%s' "$id" | grep -qxE 'v[0-9]+' && id=$(basename "${path%/*}")
+            fi
             printf '%s %s\n' "$path" "$id" >>"$CACHE"
           fi
         fi

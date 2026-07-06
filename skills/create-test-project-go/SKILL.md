@@ -69,20 +69,11 @@ Load and follow `references/rule.md` for a complete compilable sample and its ma
 
 ### 3. Write the rule-test manifest
 
-Add (or extend) one entry per rule-id in `<test-module>/rule-test.yaml`, listing the sample
-full names under `positive:`/`negative:`. The `rule-id` is the **real rule** under test — its
-`go/security/<file>.yaml#<id>` (no marker, no test-join), the file path and id create-rule-go
-gives the rule:
-
-```yaml
-tests:
-  - rule-id: go/security/sql-injection.yaml#sql-injection
-    positive:
-      - test/security/all-patterns.PositiveSourceRequestFormValue
-      - test/security/all-patterns.PositiveSourceURLQueryGet
-    negative:
-      - test/security/all-patterns.NegativeSQLParameterizedArgument
-```
+Add (or extend) one entry per rule-id under `tests:` in `<test-module>/rule-test.yaml`, listing
+the sample full names under `positive:`/`negative:`. The `rule-id` is the **real rule** under
+test — its `go/security/<file>.yaml#<id>` (no marker, no test-join), the file path and id
+create-rule-go gives the rule. `references/rule.md` carries the concrete manifest entry
+alongside its sample
 
 ### 4. Compile to a model
 

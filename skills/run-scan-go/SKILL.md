@@ -50,7 +50,7 @@ opentaint scan <project-src> \
 Append optional flags as needed:
 
 - `--rule-id <full-id>` — restrict to specific rules (repeatable); omit to run all loaded rules
-- `--passthrough-models <config-dir>` — apply Go passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable). The built-in `go-config` set is bundled in the analyzer; this flag adds custom configs on top
+- `--passthrough-models <config-dir>` — apply Go passThrough configs from a YAML file or a directory of them (EXTEND: merged with built-ins at the rule level, a provided rule and a matching built-in both apply — nothing is overridden; repeatable). The built-in `go-config` set is bundled in the analyzer; this flag adds custom configs on top
 - `--timeout <duration>` — maximum wall-clock analysis time (default 15m, same flag as the JVM scan)
 - `--max-memory <size>` — maximum analyzer heap size (default 8G)
 
@@ -71,7 +71,7 @@ Three files, all next to the SARIF report:
 | `--project-model` | Pre-built model directory containing `project.yaml` (omit to scan a source project via the positional arg) |
 | `--ruleset` | Rule directory or YAML file (repeatable); `builtin` for built-ins |
 | `--rule-id` | Restrict to specific full rule IDs (repeatable) |
-| `--passthrough-models` | Go passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
+| `--passthrough-models` | Go passThrough configs: a YAML file or directory of them (EXTEND, repeatable) |
 | `--track-external-methods` | Emit `dropped-external-methods.yaml` + `approximated-external-methods.yaml` next to the SARIF |
 | `--timeout` | Maximum wall-clock analysis time (default 15m) |
 | `--max-memory` | Maximum analyzer heap size (default 8G) |
@@ -79,6 +79,7 @@ Three files, all next to the SARIF report:
 ## Gotchas
 
 - `go` not on PATH → a Go-only scan hard-fails; a polyglot repo (Go + Java/Kotlin) instead warns and silently skips Go analysis, scanning the other language(s) with no Go findings. Install `go` to include Go coverage in either case
+- Unresolvable dependencies degrade the scan silently: package loading logs a warning and the missing types/flows just drop out of the analysis. Run `go mod download` or vendor the deps before scanning; set `GOPRIVATE` plus credentials for private modules. A `go.mod` `go` directive newer than the installed toolchain makes `go` try to download a matching one — which fails offline; pin the directive to a version the installed `go` satisfies
 - `--project-model` points at a directory (holding `project.yaml`), never at the `project.yaml` file itself
 - A `--project-model` scan re-derives the source root from the model's recorded `project.yaml` and re-detects Go against it. Autobuilder models are portable — the Go sources (with `go.mod`) are copied into `<model>/go_0` and `projectDir` is model-relative — so a compiled model keeps Go coverage even when copied to another host. Only a hand-written model recording an absolute `projectDir` depends on that external source tree staying put; if it moves or loses its `go.mod`, Go detection yields nothing and the Go wiring is silently skipped: the scan proceeds without go-ssa-server and Go coverage is lost
 - Paths fall back to the `.opentaint/` layout when the caller omits them; the caller can override any of them
