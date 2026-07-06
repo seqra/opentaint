@@ -85,7 +85,7 @@ opentaint test approximation run <test-compiled> \
 `test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. The sample that routes taint through the method is a `falseNegative` until the model propagates it. Read `.opentaint/test-results/<name>/test-result.json`:
 
 - still `falseNegative` → the `@Approximate(...)` target class or a method signature doesn't match what the analyzer sees, or the body doesn't route taint from the real source to the modeled result/argument; diagnose the mismatch, don't rationalize a non-result. Most common: target-class mismatch with the dropped FQN — re-target the exact dropped class and match the cast (`(java.util.HashMap) (Object) this`)
-- `falsePositive` (a negative sample fired) → the model is over-broad: it taints a read it shouldn't, e.g. data fetched under a different key/field than it was stored under. Narrow the propagation until the negative stays non-firing while the positive passes
+- `falsePositive` (a negative sample fired) → the model is over-broad: it taints a read it shouldn't, e.g. data fetched under a different key/field than it was stored under. Narrow the propagation until the negative stays non-firing while the positive passes. For the code flow that fired, use the summary command the CLI suggests on failure: `opentaint summary <output-dir>/test-results.sarif --show-findings`
 
 ### 3. When the sample won't pass after a couple of fixes
 

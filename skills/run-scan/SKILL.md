@@ -57,9 +57,10 @@ Three files, all next to the SARIF report:
 | `--passthrough-models` | passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
 | `--java-models` | Directory of Java sources or compiled classes (repeatable) |
 | `--track-external-methods` | Emit `dropped-external-methods.yaml` + `approximated-external-methods.yaml` next to the SARIF |
-| `--timeout` | Analysis timeout (default 900s) |
+| `--timeout` | Maximum wall-clock analysis time (default 15m) |
 
 ## Gotchas
 
 - Paths fall back to the `.opentaint/` layout when the caller omits them; the caller can override any of them
 - Duplicate approximation targeting the same class as a built-in errors out
+- Failures: analyzer exit codes are forwarded (252 unhandled exception, 253 out of memory, 254 timeout, 255 project configuration error — documented in `opentaint scan --help`). On 253/254 the CLI prints a ready-to-run retry command with doubled `--max-memory`/`--timeout`; operational failures print the log-file path — read that log before diagnosing
