@@ -155,7 +155,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] read misses it")
     @Test fun benchmarkTest00511() = assertReachable("00511")
     @Test fun benchmarkTest00606() = assertReachable("00606")
-    @Disabled("Slices are not supported")
     @Test fun benchmarkTest00607() = assertReachable("00607")
     @Test fun benchmarkTest01191() = assertReachable("01191")
 

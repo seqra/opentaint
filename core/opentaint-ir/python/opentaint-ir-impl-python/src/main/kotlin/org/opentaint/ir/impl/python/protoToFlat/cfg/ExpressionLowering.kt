@@ -69,7 +69,7 @@ internal fun CfgSession.lowerExpr(expr: MypyExprProto): FlatValue {
         MypyExprProto.KindCase.UNARY_EXPR -> lowerUnary(expr.unaryExpr, loc)
         MypyExprProto.KindCase.COMPARISON_EXPR -> lowerComparison(expr.comparisonExpr, loc)
         MypyExprProto.KindCase.INDEX_EXPR -> lowerIndex(expr.indexExpr, loc)
-        MypyExprProto.KindCase.SLICE_EXPR -> lowerSlice(expr.sliceExpr, loc)
+        MypyExprProto.KindCase.SLICE_EXPR -> lowerSlice(expr.sliceExpr, obj = null, loc)
         MypyExprProto.KindCase.LIST_EXPR -> lowerListExpr(expr.listExpr, loc)
         MypyExprProto.KindCase.TUPLE_EXPR -> lowerTupleExpr(expr.tupleExpr, loc)
         MypyExprProto.KindCase.SET_EXPR -> lowerSetExpr(expr.setExpr, loc)
@@ -366,18 +366,22 @@ private fun resolveCallee(expr: MypyCallExprProto): String? {
 
 private fun CfgSession.lowerIndex(expr: MypyIndexExprProto, location: PIRPhysicalLocation?): FlatValue {
     val obj = lowerExpr(expr.base)
+    // Fuse `a[l:u:s]` into a single slice that carries the sliced object.
+    if (expr.index.kindCase == MypyExprProto.KindCase.SLICE_EXPR) {
+        return lowerSlice(expr.index.sliceExpr, obj, location)
+    }
     val index = lowerExpr(expr.index)
     val target = newTempValue()
     emit(FlatLoadSubscript(target, obj, index, physicalLocation = location))
     return target
 }
 
-private fun CfgSession.lowerSlice(expr: MypySliceExprProto, location: PIRPhysicalLocation?): FlatValue {
+private fun CfgSession.lowerSlice(expr: MypySliceExprProto, obj: FlatValue?, location: PIRPhysicalLocation?): FlatValue {
     val target = newTempValue()
     val lower = if (expr.hasBegin()) lowerExpr(expr.begin) else null
     val upper = if (expr.hasEnd()) lowerExpr(expr.end) else null
     val step = if (expr.hasStride()) lowerExpr(expr.stride) else null
-    emit(FlatBuildSlice(target, lower, upper, step, physicalLocation = location))
+    emit(FlatBuildSlice(target, obj, lower, upper, step, physicalLocation = location))
     return target
 }
 

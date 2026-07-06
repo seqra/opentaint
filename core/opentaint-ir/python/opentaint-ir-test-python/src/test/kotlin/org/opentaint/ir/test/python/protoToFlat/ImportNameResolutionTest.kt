@@ -162,7 +162,7 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
             is FlatBuildTuple -> inst.elements.forEach(f)
             is FlatBuildSet -> inst.elements.forEach(f)
             is FlatBuildDict -> { inst.keys.forEach(f); inst.values.forEach(f) }
-            is FlatBuildSlice -> { inst.lower?.let(f); inst.upper?.let(f); inst.step?.let(f) }
+            is FlatBuildSlice -> { inst.obj?.let(f); inst.lower?.let(f); inst.upper?.let(f); inst.step?.let(f) }
             is FlatBuildString -> inst.parts.forEach(f)
             is FlatGetIter -> f(inst.iterable)
             is FlatNextIter -> f(inst.iterator)

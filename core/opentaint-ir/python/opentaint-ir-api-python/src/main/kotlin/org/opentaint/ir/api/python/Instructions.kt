@@ -135,7 +135,7 @@ data class PIRListExpr(val elements: List<PIRValue>) : PIRExpr
 data class PIRTupleExpr(val elements: List<PIRValue>) : PIRExpr
 data class PIRSetExpr(val elements: List<PIRValue>) : PIRExpr
 data class PIRDictExpr(val keys: List<PIRValue>, val values: List<PIRValue>) : PIRExpr
-data class PIRSliceExpr(val lower: PIRValue?, val upper: PIRValue?, val step: PIRValue?) : PIRExpr
+data class PIRSliceExpr(val obj: PIRValue?, val lower: PIRValue?, val upper: PIRValue?, val step: PIRValue?) : PIRExpr
 data class PIRStringExpr(val parts: List<PIRValue>) : PIRExpr
 data class PIRIterExpr(val iterable: PIRValue) : PIRExpr
 data class PIRTypeCheckExpr(val value: PIRValue, val checkType: PIRType) : PIRExpr

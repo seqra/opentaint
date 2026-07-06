@@ -88,7 +88,7 @@ data class FlatBuildSet(val target: FlatValue, val elements: List<FlatValue> = e
 data class FlatBuildDict(val target: FlatValue, val keys: List<FlatValue> = emptyList(), val values: List<FlatValue> = emptyList(), override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitBuildDict(this)
 }
-data class FlatBuildSlice(val target: FlatValue, val lower: FlatValue?, val upper: FlatValue?, val step: FlatValue?, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
+data class FlatBuildSlice(val target: FlatValue, val obj: FlatValue?, val lower: FlatValue?, val upper: FlatValue?, val step: FlatValue?, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitBuildSlice(this)
 }
 data class FlatBuildString(val target: FlatValue, val parts: List<FlatValue>, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {

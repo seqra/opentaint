@@ -464,10 +464,11 @@ def _closure_class(f):
                 listOf("$target = {$pairs}")
             }
             is PIRSliceExpr -> {
-                val lo = if (expr.lower != null) val_(expr.lower!!) else "None"
-                val hi = if (expr.upper != null) val_(expr.upper!!) else "None"
-                val st = if (expr.step != null) val_(expr.step!!) else "None"
-                listOf("$target = slice($lo, $hi, $st)")
+                val lo = expr.lower?.let { val_(it) } ?: ""
+                val hi = expr.upper?.let { val_(it) } ?: ""
+                val st = expr.step?.let { ":${val_(it)}" } ?: ""
+                if (expr.obj != null) listOf("$target = ${val_(expr.obj!!)}[$lo:$hi$st]")
+                else listOf("$target = slice(${lo.ifEmpty { "None" }}, ${hi.ifEmpty { "None" }}, ${expr.step?.let { val_(it) } ?: "None"})")
             }
             is PIRStringExpr -> {
                 val parts = expr.parts.joinToString(" + ") { "str(${val_(it)})" }
@@ -609,7 +610,7 @@ def _closure_class(f):
                 is PIRTupleExpr -> expr.elements.forEach { collectLocalFromValue(it, locals) }
                 is PIRSetExpr -> expr.elements.forEach { collectLocalFromValue(it, locals) }
                 is PIRDictExpr -> { expr.keys.forEach { collectLocalFromValue(it, locals) }; expr.values.forEach { collectLocalFromValue(it, locals) } }
-                is PIRSliceExpr -> { expr.lower?.let { collectLocalFromValue(it, locals) }; expr.upper?.let { collectLocalFromValue(it, locals) }; expr.step?.let { collectLocalFromValue(it, locals) } }
+                is PIRSliceExpr -> { expr.obj?.let { collectLocalFromValue(it, locals) }; expr.lower?.let { collectLocalFromValue(it, locals) }; expr.upper?.let { collectLocalFromValue(it, locals) }; expr.step?.let { collectLocalFromValue(it, locals) } }
                 is PIRStringExpr -> expr.parts.forEach { collectLocalFromValue(it, locals) }
                 is PIRIterExpr -> collectLocalFromValue(expr.iterable, locals)
                 is PIRTypeCheckExpr -> collectLocalFromValue(expr.value, locals)

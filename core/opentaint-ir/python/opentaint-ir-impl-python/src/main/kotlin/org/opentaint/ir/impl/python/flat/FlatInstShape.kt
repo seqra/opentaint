@@ -203,8 +203,8 @@ private class OperandMapper(private val f: (FlatValue) -> FlatValue) : FlatInstV
         else inst.copy(keys = nk, values = nv)
     }
     override fun visitBuildSlice(inst: FlatBuildSlice) =
-        transformNullable(inst, inst.lower, inst.upper, inst.step, f) { l, u, s ->
-            inst.copy(lower = l, upper = u, step = s)
+        transformNullable(inst, inst.obj, inst.lower, inst.upper, inst.step, f) { o, l, u, s ->
+            inst.copy(obj = o, lower = l, upper = u, step = s)
         }
     override fun visitBuildString(inst: FlatBuildString): FlatInst =
         transformList(inst, inst.parts, f) { inst.copy(parts = it) }
@@ -339,6 +339,22 @@ private inline fun transformNullable(
     val nb = b?.let { f(it) }
     val nc = c?.let { f(it) }
     return if (na === a && nb === b && nc === c) original else build(na, nb, nc)
+}
+
+private inline fun transformNullable(
+    original: FlatInst,
+    a: FlatValue?,
+    b: FlatValue?,
+    c: FlatValue?,
+    d: FlatValue?,
+    f: (FlatValue) -> FlatValue,
+    build: (FlatValue?, FlatValue?, FlatValue?, FlatValue?) -> FlatInst,
+): FlatInst {
+    val na = a?.let { f(it) }
+    val nb = b?.let { f(it) }
+    val nc = c?.let { f(it) }
+    val nd = d?.let { f(it) }
+    return if (na === a && nb === b && nc === c && nd === d) original else build(na, nb, nc, nd)
 }
 
 private inline fun transformList(

@@ -37,6 +37,7 @@ import org.opentaint.ir.api.python.PIRNextIter
 import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.api.python.PIRReturn
 import org.opentaint.ir.api.python.PIRSetExpr
+import org.opentaint.ir.api.python.PIRSliceExpr
 import org.opentaint.ir.api.python.PIRStoreAttr
 import org.opentaint.ir.api.python.PIRStoreGlobal
 import org.opentaint.ir.api.python.PIRStoreSubscript
@@ -195,6 +196,11 @@ class PIRMethodSequentFlowFunction(
         // Subscript read (x = obj[index])
         if (expr is PIRSubscriptExpr) {
             handleSubscriptRead(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            return
+        }
+
+        if (expr is PIRSliceExpr) {
+            handleSliceExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
@@ -382,6 +388,17 @@ class PIRMethodSequentFlowFunction(
                 originalFactReader.updateRefinement(reader)
             }
         }
+    }
+
+    private fun handleSliceExpr(
+        value: PIRSliceExpr,
+        assignTo: AccessPathBase,
+        currentFactAp: FinalFactAp,
+        unchanged: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+    ) {
+        val obj = value.obj ?: return unchanged(currentFactAp)
+        handleSimpleAssign(obj, assignTo, currentFactAp, unchanged, propagateFact)
     }
 
     private fun handleSimpleAssign(

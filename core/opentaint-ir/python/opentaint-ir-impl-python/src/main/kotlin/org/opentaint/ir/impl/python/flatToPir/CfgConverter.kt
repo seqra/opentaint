@@ -132,7 +132,7 @@ class CfgConverter private constructor(parameters: List<FlatParameter>, qualifie
         is FlatBuildTuple -> PIRAssign(vLocalVar(flat.target), PIRTupleExpr(flat.elements.map { v(it) }), loc, phys)
         is FlatBuildSet -> PIRAssign(vLocalVar(flat.target), PIRSetExpr(flat.elements.map { v(it) }), loc, phys)
         is FlatBuildDict -> PIRAssign(vLocalVar(flat.target), PIRDictExpr(flat.keys.map { v(it) }, flat.values.map { v(it) }), loc, phys)
-        is FlatBuildSlice -> PIRAssign(vLocalVar(flat.target), PIRSliceExpr(flat.lower?.let { v(it) }, flat.upper?.let { v(it) }, flat.step?.let { v(it) }), loc, phys)
+        is FlatBuildSlice -> PIRAssign(vLocalVar(flat.target), PIRSliceExpr(flat.obj?.let { v(it) }, flat.lower?.let { v(it) }, flat.upper?.let { v(it) }, flat.step?.let { v(it) }), loc, phys)
         is FlatBuildString -> PIRAssign(vLocalVar(flat.target), PIRStringExpr(flat.parts.map { v(it) }), loc, phys)
 
         is FlatGetIter -> PIRAssign(vLocalVar(flat.target), PIRIterExpr(v(flat.iterable)), loc, phys)
