@@ -93,10 +93,13 @@ not raw sources — so compile the module:
 opentaint compile <test-module> -o <test-compiled>
 ```
 
-A clean compile producing `<test-compiled>/project.yaml` is the deliverable. The model's
-`goProjects.projectDir` points back at `<test-module>`, where `rule-test.yaml` and the samples
-live, so `test rule run` resolves the manifest and the sample functions from there. `go` must
-be on PATH. If it won't build, fix the module's samples or `go.mod` before handing off
+A clean compile producing `<test-compiled>/project.yaml` is the deliverable. The model is
+portable: the compile copies the module into `<test-compiled>/go_0` and records the relative
+`projectDir: go_0`, so `test rule run` resolves `rule-test.yaml` and the sample functions from
+that copy — not from the live `<test-module>`. After any edit to samples or the manifest,
+recompile before re-running (`-o` must not already exist — delete the old model or compile to a
+fresh directory). `go` must be on PATH. If it won't build, fix the module's samples or `go.mod`
+before handing off
 
 ## Output
 

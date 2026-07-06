@@ -178,7 +178,7 @@ stages:
 
 ## Constraints
 
-- Lib rules (source and sink) are `severity: NOTE`, `options: {lib: true}`, and `mode: taint`; only the security join carries `severity: ERROR`
+- Lib rules (source and sink) are `severity: NOTE`, `options: {lib: true}`, and `mode: taint`; `severity: ERROR` belongs to the security rules — joins and structural `mode: search` rules alike
 - Security joins (`mode: join`) MUST have `metadata.cwe` and `metadata.short-description`
 - Bind the tainted value as `$UNTRUSTED` in every lib source/sink rule; metavariable names must match across `refs` and `on:` or the join won't connect
 - Rule IDs must be globally unique; a custom join id must not collide with a built-in (`sql-injection`, `ssrf`, …) or it's dropped silently

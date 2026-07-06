@@ -15,7 +15,7 @@ Take one dependency module the triage flagged, settle what the built-in Go rules
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
-- Module `<module>` — the flagged dependency (module path + version, a `pending` entry in `coverage.yaml`)
+- Module `<module>` — the flagged dependency's module path (a `pending` entry in `coverage.yaml`); the version, needed only to locate the source in the module cache, comes from the project's `go.mod`
 - Project model `<model-dir>` — the built model; its `project.yaml` lists the Go module dir(s) under `goProjects.projectDir`. Default: `.opentaint/project`
 - Tracking directory `<tracking-dir>` — where the coverage record and the per-module lib units live. Default: `.opentaint/tracking`
 
