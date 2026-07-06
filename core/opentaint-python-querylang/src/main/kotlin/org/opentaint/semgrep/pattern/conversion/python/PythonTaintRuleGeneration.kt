@@ -2,6 +2,7 @@ package org.opentaint.semgrep.pattern.conversion.python
 
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.dataflow.configuration.python.serialized.PythonSinkMetaData
 import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
@@ -35,6 +36,7 @@ import org.opentaint.semgrep.pattern.conversion.automata.Position
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeCondition
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.EdgeEffect
+import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.MethodPredicate
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata.State
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleEdge
 import org.opentaint.semgrep.pattern.conversion.taint.isGeneratedAnyValueGenerator
@@ -117,7 +119,7 @@ private fun PythonTaintRuleGenerationCtx.buildPythonStateAssignActions(
 ): List<SerializedPythonTaintAssignAction> {
     val result = stateAfter.register.assignedVars.keys.flatMapTo(mutableListOf()) { varName ->
         val varPosition = edgeCondition.accessedVarPosition[varName] ?: return@flatMapTo emptyList()
-        varPosition.positions.flatMap { stateAssignMark(varPosition.varName, stateAfter, it.baseOnly()) }
+        varPosition.positions.flatMap { stateAssignMark(varPosition.varName, stateAfter, it) }
     }
     if (stateAfter in globalStateAssignStates) {
         result += globalStateMarkName(stateAfter).mkPythonAssignMark(stateVarPosition)
@@ -131,7 +133,7 @@ private fun PythonTaintRuleGenerationCtx.buildPythonStateCleanActions(
     edgeCondition: PythonEvaluatedEdgeCondition,
 ): List<SerializedPythonTaintCleanAction> {
     val result = edgeCondition.accessedVarPosition.values.flatMapTo(mutableListOf()) { varPosition ->
-        varPosition.positions.flatMap { stateCleanMark(varPosition.varName, stateAfter, stateBefore, it.baseOnly()) }
+        varPosition.positions.flatMap { stateCleanMark(varPosition.varName, stateAfter, stateBefore, it) }
     }
     result += stateCleanMark(varName = null, stateAfter, stateBefore, position = null)
     if (stateBefore in globalStateAssignStates) {
@@ -151,7 +153,7 @@ private fun PythonEvaluatedEdgeCondition.addPythonStateCheck(
     } else {
         for (metaVar in stateOfEdge.register.assignedVars.keys) {
             for (pos in accessedVarPosition[metaVar]?.positions.orEmpty()) {
-                stateChecks += ctx.containsStateMark(metaVar, stateOfEdge, pos.baseOnly())
+                stateChecks += ctx.containsStateMark(metaVar, stateOfEdge, pos)
             }
         }
     }
@@ -168,20 +170,65 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConditionAndEffect(
     effect: EdgeEffect,
     trace: SemgrepRuleLoadStepTrace,
 ): List<PythonEvaluatedEdgeCondition> {
-    val builders = evaluatePythonFormulaSignature(collectSignatures(effect, condition), trace)
+    // A subscript read attaches a field-signature modifier to the Result position; strip it into
+    // element accessors and re-attach it to the Result position wherever it is materialized.
+    val resultFieldChains = mutableListOf<String>()
+    val normalizedCondition = condition.dropFieldResultModifier(resultFieldChains)
+    val normalizedEffect = effect.dropFieldResultModifier(resultFieldChains)
+    val resultModifiers = resultModifiersOf(resultFieldChains)
+
+    val builders = evaluatePythonFormulaSignature(collectSignatures(normalizedEffect, normalizedCondition), trace)
 
     return builders.map { builder ->
-        condition.readMetaVar.values.flatten().forEach {
-            evaluatePythonEdgePredicateConstraint(edgeState, it.predicate.constraint, it.negated, builder.conditions, trace)
+        normalizedCondition.readMetaVar.values.flatten().forEach {
+            evaluatePythonEdgePredicateConstraint(edgeState, it.predicate.constraint, it.negated, resultModifiers, builder.conditions, trace)
         }
-        condition.other.forEach {
-            evaluatePythonEdgePredicateConstraint(edgeState, it.predicate.constraint, it.negated, builder.conditions, trace)
+        normalizedCondition.other.forEach {
+            evaluatePythonEdgePredicateConstraint(edgeState, it.predicate.constraint, it.negated, resultModifiers, builder.conditions, trace)
         }
 
         val varPositions = hashMapOf<MetavarAtom, PythonRegisterVarPosition>()
-        effect.assignMetaVar.values.flatten().forEach { findPythonMetaVarPosition(it.predicate.constraint, varPositions) }
+        normalizedEffect.assignMetaVar.values.flatten().forEach {
+            findPythonMetaVarPosition(it.predicate.constraint, resultModifiers, varPositions)
+        }
 
         PythonEvaluatedEdgeCondition(builder.build(), varPositions)
+    }
+}
+
+private fun EdgeEffect.dropFieldResultModifier(fieldChains: MutableList<String>) =
+    EdgeEffect(assignMetaVar.dropFieldResultModifier(fieldChains))
+
+private fun EdgeCondition.dropFieldResultModifier(fieldChains: MutableList<String>) =
+    EdgeCondition(readMetaVar.dropFieldResultModifier(fieldChains), other.dropFieldResultModifier(fieldChains))
+
+private fun Map<MetavarAtom, List<MethodPredicate>>.dropFieldResultModifier(fieldChains: MutableList<String>) =
+    mapValues { (_, v) -> v.dropFieldResultModifier(fieldChains) }
+
+private fun List<MethodPredicate>.dropFieldResultModifier(fieldChains: MutableList<String>): List<MethodPredicate> =
+    mapNotNull { it.dropFieldResultModifier(fieldChains) }
+
+private fun MethodPredicate.dropFieldResultModifier(fieldChains: MutableList<String>): MethodPredicate? {
+    val constraint = predicate.constraint as? ParamConstraint ?: return this
+    val paramModifier = constraint.condition as? ParamCondition.ParamModifier ?: return this
+    val remainingModifier = paramModifier.dropFieldResultModifier { field ->
+        fieldChains += field
+        check(constraint.position is Position.Result) { "Field modifier on non-result position" }
+        check(!negated) { "Negated field modifier" }
+    }
+    return if (remainingModifier != null) this else null
+}
+
+/** Splits the collected field chain into serialized element accessors (single chain, mirrors Go). */
+private fun resultModifiersOf(resultFieldChains: List<String>): List<PositionModifier>? {
+    if (resultFieldChains.isEmpty()) return null
+    val uniqueChains = resultFieldChains.distinct()
+    check(uniqueChains.size == 1) { "Multiple result field chains" }
+    return PythonLanguageStrategy.splitFieldNames(uniqueChains.single()).map {
+        when (it) {
+            PythonLanguageStrategy.INDEX_AUX_FIELD_NAME -> PositionModifier.ArrayElement
+            else -> PositionModifier.Field("", it, "")
+        }
     }
 }
 
@@ -215,14 +262,15 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonEdgePredicateConstraint(
     edgeState: State,
     constraint: MethodConstraint?,
     negated: Boolean,
+    resultModifiers: List<PositionModifier>?,
     conditions: MutableList<SerializedPythonCondition>,
     trace: SemgrepRuleLoadStepTrace,
 ) {
     if (!negated) {
-        evaluatePythonMethodConstraints(edgeState, constraint, conditions, trace)
+        evaluatePythonMethodConstraints(edgeState, constraint, resultModifiers, conditions, trace)
     } else {
         val negatedConditions = mutableListOf<SerializedPythonCondition>()
-        evaluatePythonMethodConstraints(edgeState, constraint, negatedConditions, trace)
+        evaluatePythonMethodConstraints(edgeState, constraint, resultModifiers, negatedConditions, trace)
         val body = pythonAnd(negatedConditions)
         // Negating an empty (unrepresentable) body yields Not(true) = false, a never-firing rule.
         // Surface it rather than silently dropping the predicate's effect.
@@ -236,13 +284,16 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonEdgePredicateConstraint(
 private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
     edgeState: State,
     constraint: MethodConstraint?,
+    resultModifiers: List<PositionModifier>?,
     conditions: MutableList<SerializedPythonCondition>,
     trace: SemgrepRuleLoadStepTrace,
 ) {
     when (constraint) {
         null -> {}
         is ParamConstraint -> {
-            val cond = evaluatePythonParamCondition(edgeState, constraint.position.toAbstractPosition(), constraint, trace)
+            val cond = evaluatePythonParamCondition(
+                edgeState, constraint.position.toPositionWithModifiers(resultModifiers), constraint, trace,
+            )
             if (cond != PYTHON_TRUE) conditions += cond
         }
         is NumberOfArgsConstraint -> conditions += SerializedPythonCondition.NumberOfArgs(constraint.num) // TODO kw-args are not supported
@@ -254,7 +305,7 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
 
 private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
     edgeState: State,
-    position: PositionBase,
+    position: PositionBaseWithModifiers,
     param: ParamConstraint,
     trace: SemgrepRuleLoadStepTrace,
 ): SerializedPythonCondition = when (val condition = param.condition) {
@@ -262,7 +313,7 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
         if (metaVarInfo.constraints[condition.metavar.toString()] != null) {
             trace.error(IgnoredMetavarConstraint(condition.metavar))
         }
-        containsMarkWithAnyStateBefore(edgeState, condition.metavar, position.baseOnly())
+        containsMarkWithAnyStateBefore(edgeState, condition.metavar, position)
     }
     // `$X = "..."` etc. — the argument must be a specific constant literal.
     is SpecificStringValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Str, condition.value)
@@ -271,9 +322,11 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
     // Any string literal — the argument must be a string constant (mirrors Go's `ConstantMatches(".*")`).
     // `(?s)` so the match also covers multi-line string literals (`.` skips `\n` otherwise).
     ParamCondition.AnyStringLiteral ->
-        SerializedPythonCondition.ConstantMatches(position.baseOnly().toPythonPosition(), "(?s).*")
+        SerializedPythonCondition.ConstantMatches(position.toPythonPosition(), "(?s).*")
 
     // Type / string-metavar / static-field / annotation / null predicates have no Python representation yet.
+    // A ParamModifier is stripped upstream (dropFieldResultModifier); reaching it here means the modifier
+    // sat on a non-result position and could not be materialized as an accessor.
     is ParamCondition.TypeIs,
     is ParamCondition.StringValueMetaVar,
     is ParamCondition.ParamModifier,
@@ -282,25 +335,35 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
 }
 
 private fun mkConstantCmp(
-    position: PositionBase,
+    position: PositionBaseWithModifiers,
     type: SerializedPythonCondition.ConstantType,
     value: String,
 ): SerializedPythonCondition.ConstantCmp = SerializedPythonCondition.ConstantCmp(
-    pos = position.baseOnly().toPythonPosition(),
+    pos = position.toPythonPosition(),
     value = SerializedPythonCondition.ConstantValue(type, value),
     cmp = SerializedPythonCondition.ConstantCmpType.Eq,
 )
 
 private fun findPythonMetaVarPosition(
     constraint: MethodConstraint?,
+    resultModifiers: List<PositionModifier>?,
     varPositions: MutableMap<MetavarAtom, PythonRegisterVarPosition>,
 ) {
     if (constraint !is ParamConstraint) return
     val condition = constraint.condition
     if (condition !is IsMetavar) return
-    val position = constraint.position.toAbstractPosition()
+    val position = constraint.position.toPositionWithModifiers(resultModifiers)
     varPositions.getOrPut(condition.metavar) { PythonRegisterVarPosition(condition.metavar, hashSetOf()) }
         .positions.add(position)
+}
+
+private fun Position.toPositionWithModifiers(resultModifiers: List<PositionModifier>?): PositionBaseWithModifiers {
+    val base = toAbstractPosition()
+    return if (this is Position.Result && resultModifiers != null) {
+        PositionBaseWithModifiers.WithModifiers(base, resultModifiers)
+    } else {
+        PositionBaseWithModifiers.BaseOnly(base)
+    }
 }
 
 private fun Position.toAbstractPosition(): PositionBase = when (this) {
@@ -311,5 +374,3 @@ private fun Position.toAbstractPosition(): PositionBase = when (this) {
     is Position.Object -> PositionBase.This
     is Position.Result -> PositionBase.Result
 }
-
-private fun PositionBase.baseOnly(): PositionBaseWithModifiers.BaseOnly = PositionBaseWithModifiers.BaseOnly(this)

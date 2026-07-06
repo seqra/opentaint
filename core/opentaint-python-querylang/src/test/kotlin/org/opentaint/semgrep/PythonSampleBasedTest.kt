@@ -166,6 +166,8 @@ class PythonSampleBasedTest {
     @Ignore("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] element read misses it")
     @Test fun listAppendElementRead() = runSample("ListAppendElementRead")
 
+    @Test fun subscriptElementSource() = runSample("SubscriptElementSource")
+
     // ─── Plumbing ───────────────────────────────────────────────────────────
 
     private fun runSample(ruleName: String) {

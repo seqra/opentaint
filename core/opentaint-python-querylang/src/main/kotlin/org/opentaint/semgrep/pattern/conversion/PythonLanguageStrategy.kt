@@ -16,6 +16,14 @@ class PythonLanguageStrategy : LanguageStrategy<SemgrepPythonPattern, Serialized
 
         fun attrReadAttrOrNull(name: String): String? =
             if (name.contains(ATTR_READ_AUX_FN_PREFIX)) name.replace(ATTR_READ_AUX_FN_PREFIX, "") else null
+
+        const val FIELD_AUX_MODIFIER = "$$<field-modifier>$$"
+        const val FIELD_NAME_SEPARATOR = "$$<dot>$$"
+        const val INDEX_AUX_FIELD_NAME = "$$[*]$$"
+
+        fun joinFieldNames(prev: String, next: String) = "$prev$FIELD_NAME_SEPARATOR$next"
+
+        fun splitFieldNames(joinedName: String): List<String> = joinedName.split(FIELD_NAME_SEPARATOR)
     }
 
     override val language = "python"

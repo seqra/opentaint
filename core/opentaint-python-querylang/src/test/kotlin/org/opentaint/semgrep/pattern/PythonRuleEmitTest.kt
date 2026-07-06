@@ -2,6 +2,7 @@ package org.opentaint.semgrep.pattern
 
 import org.opentaint.dataflow.configuration.python.serialized.PythonPosition
 import org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase
+import org.opentaint.dataflow.configuration.python.serialized.PythonPositionModifier
 import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCleaner
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
@@ -80,6 +81,25 @@ class PythonRuleEmitTest {
 
         assertEquals(".*", entryPoint.functionTarget())
         assertTrue(entryPoint.taint.isNotEmpty(), "entry-point taints at least one parameter position")
+    }
+
+    @Test fun `subscript source taints the result element`() {
+        // `source()[0]`: the subscript adds an element accessor onto the subscripted call's result,
+        // so the source marks `Result[*]` rather than the whole result.
+        val source = emit("python-rules/subscript-source.yaml")
+            .filterIsInstance<SerializedPythonSource>()
+            .single { it.functionTarget() == "source" }
+
+        val positions = source.taint.map { it.pos }
+        assertTrue(positions.isNotEmpty(), "expected a taint action")
+        assertTrue(
+            positions.all {
+                it is PythonPosition.WithModifiers &&
+                    it.base == PythonPositionBase.Result &&
+                    it.modifiers == listOf(PythonPositionModifier.ArrayElement)
+            },
+            "subscript source taints Result[*], got $positions",
+        )
     }
 
     @Test fun `qualified attribute read becomes an attribute-fqn source`() {

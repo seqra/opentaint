@@ -53,6 +53,7 @@ data object PythonTaintStrategy :
     data object PythonMarkConditionBuilder : MarkConditionBuilder<SerializedPythonCondition> {
         override fun checkTaintMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): SerializedPythonCondition =
             mark.mkPythonContainsMark(pos)
+            // TODO: ContainsMarkOnAnyAccessor
 
         override fun negate(cond: SerializedPythonCondition): SerializedPythonCondition =
             SerializedPythonCondition.Not(cond)

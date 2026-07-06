@@ -34,6 +34,7 @@ import org.opentaint.semgrep.pattern.python.StarArgument
 import org.opentaint.semgrep.pattern.python.StarParam
 import org.opentaint.semgrep.pattern.python.StringEllipsis
 import org.opentaint.semgrep.pattern.python.StringLiteral
+import org.opentaint.semgrep.pattern.python.Subscript
 import org.opentaint.semgrep.pattern.python.TopList
 import org.opentaint.semgrep.pattern.python.TupleExpr
 import org.opentaint.semgrep.pattern.python.WithStmt
@@ -77,6 +78,7 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
             SemgrepPatternActionList(emptyList(), hasEllipsisInTheBeginning = true, hasEllipsisInTheEnd = true)
         is Call -> transformMethodInvocation(pattern)
         is Attribute -> transformAttributeRead(pattern)
+        is Subscript -> transformSubscriptRead(pattern)
         is Assign -> transformAssignment(pattern)
         is ReturnStmt -> transformReturn(pattern)
         is FunctionDef -> transformFunctionDef(pattern)
@@ -170,6 +172,54 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
             hasEllipsisInTheBeginning = false,
             hasEllipsisInTheEnd = false,
         )
+    }
+
+    private fun transformSubscriptRead(subscript: Subscript): SemgrepPatternActionList {
+        val (recvActions, _) = transformPatternIntoParamConditionWithActions(subscript.obj)
+        if (recvActions.isEmpty()) transformationFailed("Subscript_obj_not_defined")
+        return joinElementModifier(recvActions)
+    }
+
+    /** Appends [PythonLanguageStrategy.INDEX_AUX_FIELD_NAME] onto the last action's result modifier. */
+    private fun joinElementModifier(recvActions: List<SemgrepPatternAction>): SemgrepPatternActionList {
+        val currentFieldModifiers = mutableListOf<String>()
+        val resultWithoutModifier = recvActions.last().result
+            ?.extractAndRemoveFieldSignatureModifier(currentFieldModifiers)
+        check(currentFieldModifiers.size <= 1) { "Field modifier normalization failed" }
+
+        val updatedModifier = createFieldModifier(
+            currentFieldModifiers.firstOrNull(),
+            PythonLanguageStrategy.INDEX_AUX_FIELD_NAME,
+        )
+
+        val result = recvActions.toMutableList()
+        result[result.lastIndex] = recvActions.last()
+            .setResultCondition(mkAnd(setOfNotNull(resultWithoutModifier, updatedModifier)))
+        return SemgrepPatternActionList(result, hasEllipsisInTheBeginning = false, hasEllipsisInTheEnd = false)
+    }
+
+    private fun ParamCondition.extractAndRemoveFieldSignatureModifier(
+        modifier: MutableList<String>,
+    ): ParamCondition? = when (this) {
+        is ParamCondition.And ->
+            mkAnd(conditions.mapNotNullTo(hashSetOf()) { it.extractAndRemoveFieldSignatureModifier(modifier) })
+        is ParamCondition.ParamModifier -> {
+            val value = this.modifier.value
+            if (value is SignatureModifierValue.StringValue && value.paramName == PythonLanguageStrategy.FIELD_AUX_MODIFIER) {
+                modifier += value.value
+                null
+            } else {
+                this
+            }
+        }
+        else -> this
+    }
+
+    private fun createFieldModifier(prevModifier: String?, currentModifier: String): ParamCondition {
+        val chainedModifiers = prevModifier?.let { PythonLanguageStrategy.joinFieldNames(it, currentModifier) }
+            ?: currentModifier
+        val modifierValue = SignatureModifierValue.StringValue(PythonLanguageStrategy.FIELD_AUX_MODIFIER, chainedModifiers)
+        return ParamCondition.ParamModifier(SignatureModifier(TypeConstraint.Any, modifierValue))
     }
 
     private data class ReceiverBinding(

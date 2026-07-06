@@ -1,6 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion.python
 
-import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.python.serialized.PIRUserDefinedRuleInfo
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
@@ -50,7 +50,7 @@ internal data class PythonEvaluatedEdgeCondition(
 
 internal data class PythonRegisterVarPosition(
     val varName: MetavarAtom,
-    val positions: MutableSet<PositionBase>,
+    val positions: MutableSet<PositionBaseWithModifiers>,
 )
 
 /**

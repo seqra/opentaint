@@ -7,7 +7,7 @@ rules:
     metadata:
       cwe: CWE-78
     pattern-sources:
-      - pattern: "flask.request.headers.getlist(...)"
+      - pattern: "flask.request.headers.getlist(...)[...]"
     pattern-sinks:
       - patterns:
           - pattern: "subprocess.run($CMD, ...)"

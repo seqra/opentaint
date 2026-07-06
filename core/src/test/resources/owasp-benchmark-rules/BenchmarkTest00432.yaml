@@ -7,7 +7,7 @@ rules:
     metadata:
       cwe: CWE-78
     pattern-sources:
-      - pattern: "flask.request.form.keys(...)"
+      - pattern: "flask.request.form.keys(...)[...]"
     pattern-sinks:
       - patterns:
           - pattern: "subprocess.run($CMD, ...)"

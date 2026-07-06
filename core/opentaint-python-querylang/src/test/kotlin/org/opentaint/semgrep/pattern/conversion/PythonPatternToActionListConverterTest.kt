@@ -135,6 +135,42 @@ class PythonPatternToActionListConverterTest {
         assertTrue(failures.keys.any { it.contains("Assignment_target_not_metavar") }, "got $failures")
     }
 
+    private fun ParamCondition?.fieldModifierChain(): String? {
+        val conds = when (this) {
+            is ParamCondition.And -> conditions
+            null -> emptyList()
+            else -> listOf(this)
+        }
+        val mod = conds.filterIsInstance<ParamCondition.ParamModifier>().singleOrNull() ?: return null
+        val value = mod.modifier.value as? SignatureModifierValue.StringValue ?: return null
+        return if (value.paramName == PythonLanguageStrategy.FIELD_AUX_MODIFIER) value.value else null
+    }
+
+    @Test fun subscriptReadOnCallReceiverAddsElementModifier() {
+        val a = convertOk("source()[0]")
+        val call = a.actions.single() as MethodCall
+        assertEquals(SignatureName.Concrete("source"), call.methodName)
+        assertEquals(PythonLanguageStrategy.INDEX_AUX_FIELD_NAME, call.result.fieldModifierChain())
+    }
+
+    @Test fun subscriptReadOnBareMetavarUnsupported() {
+        val (r, failures) = convert("\$X[0]")
+        assertNull(r)
+        assertTrue(failures.keys.any { it.contains("Subscript_obj_not_defined") }, "got $failures")
+    }
+
+    @Test fun nestedSubscriptChainsElementModifiers() {
+        val a = convertOk("source()[0][1]")
+        val call = a.actions.single() as MethodCall
+        assertEquals(
+            PythonLanguageStrategy.joinFieldNames(
+                PythonLanguageStrategy.INDEX_AUX_FIELD_NAME,
+                PythonLanguageStrategy.INDEX_AUX_FIELD_NAME,
+            ),
+            call.result.fieldModifierChain(),
+        )
+    }
+
     @Test fun metavarToMetavarAssignFailsGracefully() {
         val (r, failures) = convert("\$X = \$Y")
         assertNull(r)
