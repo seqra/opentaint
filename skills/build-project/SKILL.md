@@ -63,6 +63,6 @@ The project model directory containing `project.yaml` (default `.opentaint/proje
 
 - Analysis hangs → `--package` was omitted in `opentaint project`; the analyzer is processing third-party libraries. Re-run with `--package`
 - Build tool not found → use the wrapper (`./gradlew`, `./mvnw`) or install the tool
-- Compilation errors → check the autobuilder log, fix the build, retry; if it can't be fixed, fall back to 2b
+- Compilation errors → the CLI prints the log-file path on failure ("For full details, check the log file:"); read it, fix the build, retry; if it can't be fixed, fall back to 2b
 - Java version mismatch → set `JAVA_HOME` to the version the project needs (opentaint itself needs Java 21+)
 - Missing dependencies → initialize submodules (`git submodule update --init`)
