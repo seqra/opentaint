@@ -1,6 +1,6 @@
 ---
 name: run-scan
-description: Run an OpenTaint scan on project and produces the SARIF report. Use whenever the user asks to scan or re-scan a project
+description: Run an OpenTaint scan on a JVM project and produces the SARIF report. Use whenever the user asks to scan or re-scan a JVM project
 license: Apache-2.0
 metadata:
   author: opentaint

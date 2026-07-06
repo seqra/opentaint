@@ -1,6 +1,6 @@
 ---
 name: discover-attack-surface
-description: Analyze project-used members of a dependency package for potential sources and sinks not covered by the built-in rules. Use for the depth pass of attack-surface discovery, one package at a time, after triage-dependencies flags it
+description: Analyze project-used members of a dependency package for potential sources and sinks not covered by the built-in rules. Use for the depth pass of attack-surface discovery on a JVM project (dependency jars/bytecode), one package at a time, after triage-dependencies flags it
 license: Apache-2.0
 metadata:
   author: opentaint

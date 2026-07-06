@@ -9,14 +9,15 @@ metadata:
 
 # Skill: Report Analyzer Issue
 
-Turn a confirmed engine-level diagnosis into a self-contained `.opentaint/issues/<slug>.md` report, and optionally a GitHub issue. It only writes the report from the diagnosis, the test project, and the rule or approximation it concerns — it runs no analysis of its own
+Turn a confirmed engine-level diagnosis into a self-contained `.opentaint/issues/<slug>.md` report, and optionally a GitHub issue. It only writes the report from the diagnosis, the test project (or, for a Go passThrough, the scan evidence), and the rule or approximation it concerns — it runs no analysis of its own
 
 ## Inputs
 
 From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
 
 - Diagnosis `<diagnosis>` — debug-rule's engine-level conclusion: where taint dies (`file:line` + instruction), the fact-reachability trace up to the last reachable fact, and observed vs expected verdict
-- Test project `<test-project>` / `<test-compiled>` — the project the artifact was tested on and debug-rule traced, already built by create-test-project. Default: `.opentaint/test-projects/<name>` / `.opentaint/test-compiled/<name>`
+- Test project `<test-project>` / `<test-compiled>` — the project the artifact was tested on and debug-rule traced, built by create-test-project (Java) or create-test-project-go (Go). Default: `.opentaint/test-projects/<name>` / `.opentaint/test-compiled/<name>`; a Go rule test uses the shared `.opentaint/test-projects/go` / `.opentaint/test-compiled/go` module. A Go passThrough issue has no test project — supply the scan evidence below instead
+- Scan evidence `<scan-evidence>` (Go passThrough only) — the main-scan artifacts the passThrough was verified against, since Go passThrough has no test project: the scan SARIF, `dropped-external-methods.yaml` / `approximated-external-methods.yaml` from a `--track-external-methods` run, the passThrough config under test (`.opentaint/pass-through/<name>.yaml`), and a minimal Go repro module (`.go` source + `go.mod`) showing the expected vs actual propagation
 - Artifact `<artifact>` — the rule or approximation the issue concerns: a rule's full id and ruleset, or the approximation's target method(s)
 - Issue file `<issue-file>` — where to write the report. Default: `.opentaint/issues/<slug>.md`; `<slug>` is a short kebab-case symptom name (a filename — no spaces or hashes)
 - Open a GitHub issue `<open-issue>` (optional) — whether to also file at github.com/seqra/opentaint; the main agent decides and passes this. Default: no
@@ -35,14 +36,14 @@ File a report only for an engine issue debug-rule already confirmed. The diagnos
 
 Write `<issue-file>` — this file is the deliverable; never return the diagnosis as chat text only. Assemble from the inputs:
 
-- Test project — `<test-project>` path, the test command (`test rule run` / `test approximation run`), and the failing `test-result.json` snippet (e.g. a positive sample stuck at `falseNegative`)
+- Test project — `<test-project>` path, the test command (`test rule run`, or `test approximation run` for a Java dataflow approximation), and the failing `test-result.json` snippet (e.g. a positive sample stuck at `falseNegative`). A Go passThrough issue has no test project or `test-result.json` — cite the scan evidence instead: the passThrough config under test, the modeled method now absent from `dropped-external-methods.yaml` (and listed in `approximated-external-methods.yaml`), the flow still missing from the scan SARIF, and the Go repro module
 - Rule / approximation — the `<artifact>`: a rule's full id and ruleset, or the approximation's target method(s)
 - Observed vs expected — e.g. expected a finding at `Sink.java:42`; observed none
 - Where the dataflow dies — `file:line` and the instruction, quoted up to the last reachable fact
 - Ruled-out causes — the three gate points
 - Hypothesis — 1–3 sentences on what the engine is likely doing wrong there; a hypothesis, not a fix
 
-Keep it to about one screen plus the test project
+Keep it to about one screen plus the test project (or, for a Go passThrough, the scan evidence and repro module)
 
 ### 3. File on GitHub (only if asked)
 

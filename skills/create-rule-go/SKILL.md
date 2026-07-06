@@ -43,14 +43,18 @@ reference. A `refs` to a built-in is cheaper and more accurate than a new rule
 ### 2. Write sources and sinks (`go/lib`)
 
 Prefer referencing built-in `go/lib` rules; write a custom one only when no built-in fits.
-Go lib rules use `mode: taint`, `options: {lib: true}`, the typed-receiver pattern syntax
-(`($R : *http.Request)`), and bind the tainted value as `$UNTRUSTED`. Source lib rules are
-`severity: NOTE` with `pattern-sources` + `label: "$UNTRUSTED"`; sink lib rules are
-`severity: ERROR` with `pattern-sinks` + `focus-metavariable:` on the tainted argument:
+Go lib rules are `severity: NOTE` with `options: {lib: true}` and `mode: taint`, use the
+typed-receiver pattern syntax (`($R : *http.Request)`), and bind the tainted value as
+`$UNTRUSTED`. Scope every rule to its package by wrapping the patterns in a `patterns:` block
+led by a `pattern-inside: import "pkg"` guard — the built-in multi-pattern lib rules all do this, so a bare call like
+`os.Getenv` or `exec.Command` can't fire in an unrelated file (a single-statement rule can instead
+inline the `import "pkg"` line into a bare `pattern: |`, as `go/lib/http-sources-requesturi.yaml` does). Source lib rules use
+`pattern-sources` + `label: "$UNTRUSTED"`; sink lib rules use `pattern-sinks` +
+`focus-metavariable:` on the tainted argument:
 
 ```yaml
 rules:
-  - id: go-mylib-source
+  - id: mylib-source
     options: {lib: true}
     languages: [go]
     severity: NOTE
@@ -58,21 +62,29 @@ rules:
     mode: taint
     pattern-sources:
       - label: "$UNTRUSTED"
-        pattern-either:
-          - pattern: "($C : *mylib.Ctx).UserInput($K)"
+        patterns:
+          - pattern-inside: |
+              import mylib "github.com/acme/mylib"
+              ...
+          - pattern-either:
+              - pattern: "($C : *mylib.Ctx).UserInput($K)"
 ```
 
 ```yaml
 rules:
-  - id: go-mylib-sink
+  - id: mylib-sink
     options: {lib: true}
     languages: [go]
-    severity: ERROR
-    message: Dangerous operation sink
+    severity: NOTE
+    message: Untrusted data reaches a dangerous operation
     mode: taint
     pattern-sinks:
       - patterns:
-          - pattern: "($E : *mylib.Engine).Render($TPL, ...)"
+          - pattern-inside: |
+              import mylib "github.com/acme/mylib"
+              ...
+          - pattern-either:
+              - pattern: "($E : *mylib.Engine).Render($TPL, ...)"
           - focus-metavariable: $TPL
 ```
 
@@ -95,9 +107,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#go-http-sources
+        - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/my-ssti-sink.yaml#go-mylib-sink
+        - rule: go/lib/my-ssti-sink.yaml#mylib-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -111,8 +123,8 @@ For a purely structural rule (a dangerous primitive used at all — weak hash/ra
 
 Dispatch (or do, when standalone) create-test-project-go to add `PositiveXxx`/`NegativeXxx`
 samples and a `rule-test.yaml` entry mapping this rule-id → its samples, then compile the
-module. Run the tests, loading your custom rules (built-ins are auto-loaded — pass only
-`<rules-dir>`):
+module. Run the tests, loading your custom rules (`test rule run` auto-loads the built-in
+rules, so pass only `<rules-dir>` — a literal `builtin` here would be treated as a path):
 
 ```bash
 opentaint test rule run <test-compiled> \
@@ -125,7 +137,7 @@ without it a library function on the test flow drops taint and the positive can'
 `.opentaint/test-results/go/test-result.json`:
 
 - `falseNegative` (positive didn't trigger) → patterns too narrow; broaden `pattern-either`, check the receiver type and that `$UNTRUSTED` matches across the lib rules and the join `on:`
-- `falsePositive` (negative triggered) → patterns too broad; add a sanitizer pattern or narrow the sink
+- `falsePositive` (negative triggered) → patterns too broad; add `pattern-not`, `pattern-not-inside`, `pattern-sanitizers`, or `metavariable-regex`, or narrow the sink. Inspect the flow that fired with `opentaint summary .opentaint/test-results/go/test-results.sarif --show-findings`
 - `skipped` / not run → the manifest entry's rule-id or sample full name is wrong; fix it
 
 ### 5. When a positive won't pass after a couple of fixes
@@ -166,10 +178,10 @@ stages:
 
 ## Constraints
 
-- Source lib rules `severity: NOTE`, sink lib rules `severity: ERROR`; both `options: {lib: true}` and `mode: taint`
+- Lib rules (source and sink) are `severity: NOTE`, `options: {lib: true}`, and `mode: taint`; only the security join carries `severity: ERROR`
 - Security joins (`mode: join`) MUST have `metadata.cwe` and `metadata.short-description`
 - Bind the tainted value as `$UNTRUSTED` in every lib source/sink rule; metavariable names must match across `refs` and `on:` or the join won't connect
-- Rule IDs must be globally unique; a custom join id must not collide with a built-in (`go-sql-injection`, `go-ssrf`, …) or it's dropped silently
+- Rule IDs must be globally unique; a custom join id must not collide with a built-in (`sql-injection`, `ssrf`, …) or it's dropped silently
 - Custom Go rules go under `<rules-dir>/go/{lib,security}/`, never the `java/` tree
 - For structural patterns (no dataflow) use `mode: search`; for taint flow use `mode: join`
 
@@ -179,4 +191,5 @@ stages:
 - Refine the rule, never the samples — if a sample is wrong, hand it back to create-test-project-go; don't weaken it to force a pass
 - A positive that won't pass because a library function drops taint is not a rule bug — surface it for a Go passThrough (step 5), don't broaden the rule to force it
 - The typed-receiver form needs the pointer where the API is pointer-receiver (`($R : *http.Request)`); a value receiver omits the `*`
+- Don't unpack or grep the analyzer JAR for built-in rules — its internals aren't a stable API; read the YAMLs from the path `opentaint health --rules` prints
 - Keep produced rule YAML comment-free

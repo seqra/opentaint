@@ -1,6 +1,6 @@
 ---
 name: analyze-external-methods
-description: Analyze and group an OpenTaint scan's dropped external methods and decide what to approximate or skip. Use when a dropped-external-methods.yaml needs turning into approximation targets
+description: Analyze and group a JVM OpenTaint scan's dropped external methods and decide what to approximate or skip. Use when a JVM dropped-external-methods.yaml needs turning into approximation targets
 license: Apache-2.0
 metadata:
   author: opentaint

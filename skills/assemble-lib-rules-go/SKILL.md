@@ -38,12 +38,12 @@ For each vuln class, and within it each sink rule that needs new wiring, write `
 
 Two rules that bite here:
 
-- Unique id — use `id: <class>-<sink>-lib-ext`, never the bare class name; a custom join named `go-ssrf`/`go-sql-injection` collides silently with the built-in join of that id and is dropped with no error (only the scan's rule statistics reveal it)
+- Unique id — use `id: <class>-<sink>-lib-ext`, never the bare class name; a custom join named `ssrf`/`sql-injection` collides silently with the built-in join of that id and is dropped with no error (only the scan's rule statistics reveal it)
 - Same metavariable both sides — every `on:` clause connects the metavariable both lib rules bind (`$UNTRUSTED` by convention) as `source.$UNTRUSTED -> sink.$UNTRUSTED`; don't invent a new name on either end, or the join won't connect
 
 ```yaml
 rules:
-  - id: ssrf-go-httpclient-sink-lib-ext
+  - id: ssrf-httpclient-sink-lib-ext
     severity: ERROR
     message: Untrusted data reaches an SSRF sink
     metadata:
@@ -53,15 +53,18 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#go-http-sources
+        - rule: go/lib/http-sources.yaml#http-sources
           as: http-source
-        - rule: go/lib/my-httpclient-sink.yaml#go-httpclient-sink
+        - rule: go/lib/http-sources-requesturi.yaml#http-sources-requesturi
+          as: requesturi-source
+        - rule: go/lib/my-httpclient-sink.yaml#httpclient-sink
           as: sink
       on:
         - 'http-source.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'requesturi-source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-The same class's built-in sink is a second file (`ssrf-go-ssrf-sink-lib-ext.yaml`), refing only the created sources → that built-in sink. The `#` comments in these examples are for you — don't copy them into the rules you write
+The same class's built-in sink is a second file (`ssrf-ssrf-sinks-lib-ext.yaml`), refing only the created sources → that built-in sink
 
 ### 3. Stop — the main scan verifies
 
@@ -80,11 +83,15 @@ These joins carry no test project — the main Go scan applies them. Write them 
 ```yaml
 name: ssrf
 sources:
-  - ref: go/lib/http-sources.yaml#go-http-sources
+  - ref: go/lib/http-sources.yaml#http-sources
+  - ref: go/lib/http-sources-requesturi.yaml#http-sources-requesturi
 joins:
-  - rule_id: go/security/ssrf-go-httpclient-sink-lib-ext.yaml:ssrf-go-httpclient-sink-lib-ext
-    artifact: .opentaint/rules/go/security/ssrf-go-httpclient-sink-lib-ext.yaml
-    sink: { new: go/lib/my-httpclient-sink.yaml#go-httpclient-sink }
+  - rule_id: go/security/ssrf-httpclient-sink-lib-ext.yaml:ssrf-httpclient-sink-lib-ext
+    artifact: .opentaint/rules/go/security/ssrf-httpclient-sink-lib-ext.yaml
+    sink: { new: go/lib/my-httpclient-sink.yaml#httpclient-sink }
+  - rule_id: go/security/ssrf-ssrf-sinks-lib-ext.yaml:ssrf-ssrf-sinks-lib-ext
+    artifact: .opentaint/rules/go/security/ssrf-ssrf-sinks-lib-ext.yaml
+    sink: { builtin: go/lib/ssrf-sinks.yaml#ssrf-sinks }
 stages:
   written: done
   verified: pending

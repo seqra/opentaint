@@ -19,17 +19,23 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 - Methods to model `<methods>` — the target function(s) and what each propagates, from the tracking file's `methods` (each a `{package, name, type, receiver}` matcher)
 - Tracking file `<tracking-file>` — the passThrough approximation unit. Default: `.opentaint/tracking/approximations/<name>.yaml`
 - Config output `<config-file>` — where to write the passThrough approximation. Default: `.opentaint/pass-through/<name>.yaml`
-- Test model `<test-model>` (optional) — any compiled model to dry-run the config against for a load/parse check. Default: `.opentaint/project` if it exists
+- Test model `<test-model>` (optional) — any compiled model to dry-run the config against for a load/parse check. Default: `.opentaint/project` if it exists, else a `.opentaint/test-compiled/go` model
 
 ## Workflow
 
 ### 1. Write the passThrough config
+
+Every config file MUST begin with a `language: go` header on its own first line, above
+`passThrough:`. The loader keys on it: a file with no `language:` header — or a mismatched
+one — is silently dropped whole, with no load error, so the passThrough never applies and
+every function you modeled stays dropped
 
 Each entry has a structured `function:` matcher and a list of `copy:` rules. The matcher
 names the Go function by `package`, `name`, `type` (the receiver type, methods only), and
 `receiver` (true for a method, false for a package-level function):
 
 ```yaml
+language: go
 passThrough:
 - function:
     package: net
@@ -53,6 +59,7 @@ passThrough:
 Multiple return values are addressed by index — `result(0)`, `result(1)`:
 
 ```yaml
+language: go
 passThrough:
 - function:
     package: net
@@ -74,6 +81,7 @@ a container's contents). The writer and the reader must name the **identical**
 `package.Type#field` accessor, or the taint drops:
 
 ```yaml
+language: go
 passThrough:
 - function:
     package: container/list
@@ -123,7 +131,8 @@ A config error aborts the scan with the parse/load message — fix the YAML and 
 
 There's no test project for passThrough. The main Go scan applies `<config-file>` and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
 
-- a method you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check `package`, `type`, `name`, `receiver`), or the `from`/`to` doesn't land on the tainted position
+- *every* function you modeled still in `dropped-external-methods.yaml`, with no load error → the whole file was silently skipped: check it starts with the `language: go` header (a headerless or mis-headered file loads to nothing)
+- a *single* function you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check `package`, `type`, `name`, `receiver`), or the `from`/`to` doesn't land on the tainted position
 - the flow still doesn't surface though the method is no longer dropped → most often a broken channel: the writer and reader name different `package.Type#field` accessors
 - a config load / parse error → fix the YAML
 
@@ -157,11 +166,11 @@ Do not touch other stages or fields
 
 Position bases
 - `this` (receiver, methods only), `result`, `result(N)` (return index), `arg(0)`, `arg(1)`, …
-- `[*]` — slice/array element
+- `[*]` — slice/array element; as a list item it must be quoted (`- '[*]'`) — unquoted it parses as a YAML alias and fails to load
 
 Access-path modifiers (list form `[<base>, <modifier>]`)
 - `.<package>.<Type>#<field>` — a struct field or virtual slot; the slot name is nominal (use the real field, or `<element>` for container contents)
-- `<element>` — container element slot
+- `<element>` — container element slot; `<value>` and `<key>` are accepted aliases and all three collapse to the same single element accessor (key and value are not distinguished)
 - `<deref>` — a pointer's pointee
 
 Function matching — the structured `function: {package, name, type, receiver}` block. `type` is the receiver type (methods only); `receiver: false` for package-level functions
@@ -169,6 +178,7 @@ Function matching — the structured `function: {package, name, type, receiver}`
 ## Gotchas
 
 - Go passThrough has **no `condition:` support** — the loader parses only `function`/`copy`/`from`/`to` and position modifiers. Don't write `condition`, `typeIs`, `isConstant`, etc.; they won't load
+- User passThroughs **EXTEND** (concatenate with) Go's built-in configs — both your rule and any built-in matching the same function apply, there's no override. Check `approximated-external-methods.yaml` before modeling so you don't redundantly re-model a stdlib/library function that's already covered
 - The `#` comments in the examples here are for you — keep produced YAML comment-free
 - A wrong argument position copies the wrong value — point `from`/`to` at the tainted one
 - In doubt about how a function moves taint — which argument or field reaches the result — read the package source or docs rather than guessing
