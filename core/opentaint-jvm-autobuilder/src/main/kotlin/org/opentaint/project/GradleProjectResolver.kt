@@ -283,6 +283,7 @@ class GradleProjectResolver(
             "-Dorg.gradle.dependency.verification=off",
             "-Dorg.gradle.warning.mode=none",
             "-Dorg.gradle.caching=false",
+            "-Dorg.gradle.configuration-cache=false",
         )
 
         private const val RESOLVE_CLASSES_TASK = "opentaintResolveClasses"
@@ -353,6 +354,7 @@ class GradleProjectResolver(
         private fun resolveGradleDependencyCmdArgs(workDir: Path, initScript: Path, reportDir: Path): List<String> =
             listOf(
                 "-Dorg.gradle.configureondemand=false",
+                "-Dorg.gradle.configuration-cache=false",
                 "-Dorg.gradle.dependency.verification=off",
                 "-Dorg.gradle.warning.mode=none",
                 "--init-script",
