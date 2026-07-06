@@ -46,7 +46,7 @@ discipline below are otherwise identical:
 | Step | Java/Kotlin skill | Go skill |
 |---|---|---|
 | build | build-project | build-project-go |
-| discover (deep) | triage-dependencies → discover-attack-surface | triage-dependencies (Go branch) → *(discovery deferred)* |
+| discover (deep) | triage-dependencies → discover-attack-surface | triage-dependencies (Go branch) → discover-attack-surface-go |
 | lib rules (deep) | create-test-project + create-rule + assemble-lib-rules | create-test-project-go + create-rule-go + assemble-lib-rules-go |
 | scan | run-scan | run-scan-go |
 | approximations | analyze-external-methods + create-pass-through-approximation + (create-test-project + create-dataflow-approximation) | analyze-external-methods-go + create-pass-through-approximation-go |
@@ -60,9 +60,6 @@ Go-specific gating (everything else is unchanged):
   approximation loop never spawns a dataflow unit, a test project for it, or
   create-dataflow-approximation. A passThrough that genuinely can't express a method's
   propagation is an engine issue (debug-rule → report-analyzer-issue), not a dataflow fallback
-- **Deep tier == normal for now.** Go project-used lib-rule discovery (discover-attack-surface-go)
-  is not yet available, so a Go `deep` run executes the normal pipeline plus a logged note that
-  lib-rule discovery is pending; it does not run the discover/lib-rules steps
 - **Heavy-agent set** drops create-dataflow-approximation for Go; build-project-go / run-scan-go /
   create-rule-go carry the JVM-equivalent RAM weight
 
@@ -154,7 +151,7 @@ The single source of truth for the tracking schema; each skill writes only its o
   coverage.yaml                           # triage-dependencies seeds, discover-attack-surface flips — one entry per dependency package weighed (deep)
   usage/<package-kebab>.yaml              # discover-attack-surface writes project-used package members (deep)
   findings/<finding_name>.yaml            # one per logical finding (from the SARIF→finding script; split by triage)
-  rules/lib/<package-kebab>.yaml          # per-package project-used rule plan — new source/sink lib rules (discover plans; create-* build + test vs the marker) (deep)
+  rules/lib/<package-kebab>.yaml          # per-package project-used rule plan — new source/sink lib rules (discover plans; create-* build + test vs the marker; Go: vs real source→sink samples, no marker) (deep)
   rules/join/<class>.yaml                 # per-vuln-class security join (assemble-lib-rules writes; main scan verifies) (deep)
   approximations/<package-kebab>-passthrough.yaml   # simple from→to copies; write-only, scan-verified
   approximations/<package-kebab>-dataflow.yaml      # lambda/callback/async; tested on a test project
@@ -170,8 +167,8 @@ scan_level: deep        # lite | normal | deep
 triage_level: dynamic   # static | dynamic
 phases:                 # pending | in_progress | done
   build: done
-  discover: done        # deep only; Java only (Go discovery deferred)
-  rules: done           # deep only; fixed first; Java only
+  discover: done        # deep only
+  rules: done           # deep only; fixed first
   scan: done
   approximations: in_progress  # normal/deep; iterative, rescans within
   triage: pending
@@ -193,7 +190,7 @@ findings/<finding_name>.yaml — created by the SARIF→finding script; `verdict
 ```yaml
 finding_name: brave-hopper
 sarif_hashes: [<hash>, ...]
-rule_id: java/security/sqli.yaml:sqli
+rule_id: java/security/sqli.yaml:sqli   # Go: go/security/sql-injection.yaml:sql-injection
 verdict: pending        # pending | TP | FP
 notes: >                # analyzer report, then triage and PoC notes
   <analyzer report>
@@ -301,5 +298,5 @@ methods:                # engine asks to approximate these, but they carry no ta
 - `--passthrough-models` merges with built-ins at the rule level; a provided rule overrides a built-in only when it matches one already there — it does not replace the built-in set
 - both approximation dir flags walk the tree recursively, so the final scan points at the parent dirs and applies every unit
 - `--rule-id` drops every rule not named, including library `refs` — list them all when restricting
-- a custom DATAFLOW approximation targeting a class that already has a built-in dataflow approximation errors at load (one class, one approximation); passThrough configs never error this way — they merge at the rule level (see above)
-- a custom dataflow approximation overrides a passThrough for the same method — the passThrough→dataflow fallback when a passThrough won't converge; remove that method's passThrough config when re-planning it as dataflow, before the dataflow one is tested or scanned, to avoid override issues
+- **Java only** — a custom DATAFLOW approximation targeting a class that already has a built-in dataflow approximation errors at load (one class, one approximation); passThrough configs never error this way — they merge at the rule level (see above)
+- **Java only** — a custom dataflow approximation overrides a passThrough for the same method — the passThrough→dataflow fallback when a passThrough won't converge; remove that method's passThrough config when re-planning it as dataflow, before the dataflow one is tested or scanned, to avoid override issues. Go has no dataflow approximation, so a passThrough that won't converge escalates via debug-rule, never a dataflow fallback

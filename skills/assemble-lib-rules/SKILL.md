@@ -1,6 +1,6 @@
 ---
 name: assemble-lib-rules
-description: Write the per-vuln-class security join rules that merge the created source/sink lib rules with the built-ins. Use after the per-package lib rules are created and tested, to wire them into project-level joins
+description: Write the per-vuln-class security join rules that merge the created JVM source/sink lib rules with the built-ins. Use after the per-package JVM lib rules are created and tested, to wire them into project-level joins
 license: Apache-2.0
 metadata:
   author: opentaint

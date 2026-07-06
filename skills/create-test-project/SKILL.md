@@ -1,6 +1,6 @@
 ---
 name: create-test-project
-description: Create an OpenTaint test project with annotated positive/negative samples for verifying a rule or approximation. Use when a rule or approximation needs a test project to check against
+description: Create an OpenTaint JVM test project with annotated positive/negative samples for verifying a JVM rule or approximation. Use when a JVM rule or approximation needs a test project to check against
 license: Apache-2.0
 metadata:
   author: opentaint

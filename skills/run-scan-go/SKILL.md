@@ -25,6 +25,8 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 `go` must be on PATH — the analyzer compiles Go through the Go toolchain (go-ssa-server) at scan time and a Go-only project hard-fails without it. Check `command -v go` before scanning
 
+The go-ssa-server, analyzer, and built-in rules auto-download on the first scan. Optionally pre-provision them ahead of time with `opentaint pull` (it also fetches a bundled Java runtime); `go` itself is never downloaded — install it yourself
+
 ## Workflow
 
 Point at the code either way: a Go source project (the CLI compiles it) as the positional `scan <project-src>`, or a pre-built model via `--project-model <model-dir>` (a directory containing `project.yaml`, not the file). If a model is provided prefer it over re-compiling the source
@@ -76,8 +78,9 @@ Three files, all next to the SARIF report:
 
 ## Gotchas
 
-- `go` not on PATH → a Go-only scan hard-fails; install the toolchain
+- `go` not on PATH → a Go-only scan hard-fails; a polyglot repo (Go + Java/Kotlin) instead warns and silently skips Go analysis, scanning the other language(s) with no Go findings. Install `go` to include Go coverage in either case
 - `--project-model` points at a directory (holding `project.yaml`), never at the `project.yaml` file itself
+- A `--project-model` scan re-derives the source root from the model's recorded `project.yaml` and re-detects Go against it — Go is compiled from that source tree at scan time, not baked into the model. If the recorded source root has moved or no longer holds `go.mod` (model built in CI or a container then copied elsewhere, source relocated), Go detection yields nothing and the Go wiring is silently skipped: the scan proceeds without go-ssa-server and Go coverage is lost. Keep the source tree with its `go.mod` co-located with the model, or scan from source
 - Paths fall back to the `.opentaint/` layout when the caller omits them; the caller can override any of them
 - No dataflow approximations and no `--java-models` flag for Go — don't pass one
 - Failures: analyzer exit codes are forwarded (252 unhandled exception, 253 out of memory, 254 timeout, 255 project configuration error — documented in `opentaint scan --help`). On 253/254 the CLI prints a ready-to-run retry command with doubled `--max-memory`/`--timeout`; operational failures print the log-file path — read that log before diagnosing

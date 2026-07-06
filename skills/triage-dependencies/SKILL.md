@@ -31,7 +31,7 @@ Read `<model-dir>/project.yaml` — the `dependencies:` list under each `javaPro
 
 For each library decide: could it introduce an attacker-controlled source (e.g. HTTP/RPC request data, message-broker payloads and so on) or a dangerous sink (e.g. query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection and so on)?
 
-- clearly irrelevant — build/Gradle plugins, logging, annotations, bytecode tooling (ASM, byte-buddy), test libraries, pure data structures: dismiss
+- clearly irrelevant — build/Gradle plugins, logging (Go: go.uber.org/zap, log/slog), annotations, bytecode tooling (ASM, byte-buddy) or Go codegen runtimes (google.golang.org/protobuf), test libraries (Go: github.com/stretchr/testify), pure data structures: dismiss
 - clearly relevant — web frameworks, query/ORM libraries, HTTP clients, deserializers, template engines, LDAP/JNDI, scripting: flag
 - unsure — do a brief peek: grep `<project-root>` sources for the library's package imports or call sites. If the app never references it and nothing transitive exposes it to untrusted data, dismiss; otherwise flag
 
@@ -61,8 +61,8 @@ packages:
   - package: <infrastructure>
     status: done                                          # bulk dismissal
     notes: >
-      logging (logback/slf4j), build plugins, annotations, ASM/byte-buddy, test libs,
-      data structures — no source/sink surface
+      logging (logback/slf4j, Go zap/slog), build plugins, annotations, ASM/byte-buddy or
+      Go codegen (protobuf), test libs (Go testify), data structures — no source/sink surface
 ```
 
 ## Gotchas

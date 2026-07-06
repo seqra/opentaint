@@ -35,9 +35,14 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 One module serves all Go rule tests (extend it, don't make a new one per rule). It is an
 ordinary Go module:
 
-- `<test-module>/go.mod` — `module test`, a `go` line (1.18+), and a `require` (plus a local
-  `replace` to a `stubs/<dep>` directory) for any third-party API the samples import. Stub a
-  heavy dependency to a minimal local package rather than vendoring the whole library
+- `<test-module>/go.mod` — `module test`, a `go` line, and, for any third-party API the samples
+  import, a `require <import-path> <version>` plus a local `replace <import-path> => ./stubs/<dep>`.
+  Stub a heavy dependency to a minimal local package rather than vendoring the whole library. The
+  stub directory must itself be a **nested Go module**: `stubs/<dep>/go.mod` whose `module` line is
+  the **exact real import path** being stubbed (e.g. `module github.com/beego/beego/v2`), holding
+  only the API surface the samples use. `replace <import-path> => ./stubs/<dep>` resolves only when
+  that directory has its own `go.mod`; a bare directory of `.go` files fails at module resolution
+  when `opentaint compile` runs `go`
 - sample functions under a category package, e.g. `<test-module>/security/all-patterns/sample.go`
   (package `allpatterns`); the analyzer references a function by its **import path + name**:
   `test/security/all-patterns.PositiveSourceRequestFormValue`
@@ -60,15 +65,18 @@ verdict, named by convention:
 Prefix a sample whose behavior the engine is known not to support yet with `Unsupported` so it
 isn't listed as a strict pass/fail. One verdict per function — don't make a function both
 
+Load and follow `references/rule.md` for a complete compilable sample and its manifest entry
+
 ### 3. Write the rule-test manifest
 
 Add (or extend) one entry per rule-id in `<test-module>/rule-test.yaml`, listing the sample
 full names under `positive:`/`negative:`. The `rule-id` is the **real rule** under test — its
-`go/security/<file>.yaml#<id>` (no marker, no test-join):
+`go/security/<file>.yaml#<id>` (no marker, no test-join), the file path and id create-rule-go
+gives the rule:
 
 ```yaml
 tests:
-  - rule-id: go/security/sql-injection.yaml#go-sql-injection
+  - rule-id: go/security/sql-injection.yaml#sql-injection
     positive:
       - test/security/all-patterns.PositiveSourceRequestFormValue
       - test/security/all-patterns.PositiveSourceURLQueryGet
@@ -111,5 +119,8 @@ Do not touch other stages or fields
 - One verdict per sample function; the `Positive`/`Negative` name is the verdict — don't mix
 - A positive must route the helper source into the real sink — a sink fed a constant or a bare parameter with no in-sample source can't be flagged by a taint rule
 - The function full name in `rule-test.yaml` is `import-path.FuncName` (the directory path, e.g. `test/security/all-patterns.Foo`), not the Go `package` name (`allpatterns`)
+- A name that resolves to no function is fatal to the **whole run**, not just that sample: resolution is an exact `fullName` match with no fuzzy fallback, and one unresolved entrypoint (a typo, wrong case, or wrong import path) aborts every test with an opaque analyzer exception and no per-sample results — not a single false negative. After `compile`, verify every name matches a compiled function before `test rule run`
 - `go` not on PATH → the compile step fails; install the toolchain
+- Keep the `go.mod` `go` directive (and each stub's) at or below the installed toolchain version. Under the default `GOTOOLCHAIN=auto`, a directive newer than the installed `go` makes it try to **download** a matching toolchain, which fails in an offline or sandboxed build; pin to a version the running `go` already satisfies (the shared module tracks `go 1.22`)
+- One module serves every Go rule test, so parallel agents share `go.mod`, the sample packages, and `rule-test.yaml` — coordinate so they don't clobber each other. Give each rule its own category dir/package, keep `rule-test.yaml` edits append-only (add your rule-id block; don't rewrite others'), and don't concurrently edit a shared helper file or the same `require`/`replace` lines
 - Keep `.go` and YAML comment-free in produced samples and manifest entries

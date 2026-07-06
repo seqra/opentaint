@@ -28,7 +28,7 @@ Reuse `<base-url>` if given. Otherwise build and start the app the way the proje
 
 When the app needs backing services (DB, broker, cache, …), bring them all up with one `docker compose` on a shared network rather than starting each by hand, and register it as a single `compose` entry
 
-Bind to `127.0.0.1` (`--server.address=127.0.0.1`, `docker run -p 127.0.0.1:8080:8080`, a compose override on the port mapping) — never `0.0.0.0` or a public interface: a live exploit must not be reachable off-host. A specific non-local IP is fine when the test genuinely needs one, but never the public wildcard
+Bind to `127.0.0.1`, never `0.0.0.0` or a public interface: a live exploit must not be reachable off-host. Prefer the app's own bind control — `--server.address=127.0.0.1` for Spring; for Go, check the app's flag parsing / README for a bind flag (`-addr`/`-host`/`-listen`) or env (`HOST`/`ADDR`/`LISTEN_ADDR`) and point it at `127.0.0.1` (Go has no universal runtime flag). If the app hardcodes its listen address (a plain `go run ./...` or `./app` doing `http.ListenAndServe(":8080")` binds off-host), publish only to loopback from outside instead: `docker run -p 127.0.0.1:8080:8080 ...` (the container may bind `0.0.0.0` internally, the host publish stays local) or a compose override on the port mapping. A specific non-local IP is fine when the test genuinely needs one, but never the public wildcard
 
 Once it's listening, record it in the registry (see § Tracking) so the orchestrator can reap it later
 

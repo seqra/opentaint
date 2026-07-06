@@ -13,7 +13,8 @@ to `pending`, and leaves existing verdict/notes/poc and triage splits intact.
 
 SARIF assumptions — adjust the two helpers below if the real OpenTaint SARIF
 differs:
-- result.ruleId holds the full rule id (e.g. java/security/sqli.yaml:sqli)
+- result.ruleId holds the full rule id (e.g. java/security/sqli.yaml:sqli,
+  Go: go/security/sql-injection.yaml:sql-injection)
 - a stable per-result hash comes from result.fingerprints / partialFingerprints
   when present, else is computed from ruleId + locations + code-flow locations
 - result.message.text seeds the analyzer report in `notes`

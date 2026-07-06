@@ -53,11 +53,11 @@ Editing an existing finding touches only `verdict` and `notes`. A split also cre
 ```yaml
 finding_name: <new-slug>              # a fresh docker-like name for the split-off vuln
 sarif_hashes: [<moved hash>, ...]     # hashes matching this logical vulnerability
-rule_id: java/security/sqli.yaml:sqli # same rule as the bundle it came from (Go: go/security/sql-injection.yaml:go-sql-injection)
+rule_id: java/security/sqli.yaml:sqli # same rule as the bundle it came from (Go: go/security/sql-injection.yaml:sql-injection)
 verdict: TP                           # pending | TP | FP
 notes: >
   <analyzer report for these results — moved from the bundle>
-  triage: @RequestParam orderBy is attacker-controlled; reaches ${} in SelectProvider unsanitized → TP
+  triage: @RequestParam orderBy is attacker-controlled; reaches ${} in SelectProvider unsanitized → TP (Go: r.FormValue is attacker-controlled; reaches db.Query built by string concatenation unsanitized → TP)
 poc: pending
 poc_script: null
 ```

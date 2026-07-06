@@ -26,7 +26,7 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 ### 1. Precondition — library model complete
 
-Open `<dropped-file>` from the run that showed the problem. If any method on the source→sink path is listed, STOP and model it (passThrough or dataflow), re-run, then debug — that missing model is the cause, not the engine. A method you already approximated that is still listed means the approximation isn't matching the real signature; fix it there. Debug only once no method on the path remains; if no `<dropped-file>` exists, produce one with a `--track-external-methods` run
+Open `<dropped-file>` from the run that showed the problem. If any method on the source→sink path is listed, STOP and model it (passThrough or dataflow; Go: passThrough only — see § Go projects), re-run, then debug — that missing model is the cause, not the engine. A method you already approximated that is still listed means the approximation isn't matching the real signature; fix it there. Debug only once no method on the path remains; if no `<dropped-file>` exists, produce one with a `--track-external-methods` run
 
 ### 2. Localize the kill — fact-reachability SARIF
 
@@ -55,7 +55,7 @@ opentaint test rule reachability <full-id> \
   --ruleset builtin --ruleset <rules-dir>
 ```
 
-A finding that appears here but not in the full run points to entry-point discovery / reachability, not the dataflow; if it still doesn't appear, localize the kill with step 2. On Spring projects the flag is **additive, not restrictive**: auto-discovered endpoints stay and your method is added if absent — use it only to force-include a method the analyzer never starts from (an endpoint Spring didn't recognize); you can't narrow to a single method
+A finding that appears here but not in the full run points to entry-point discovery / reachability, not the dataflow; if it still doesn't appear, localize the kill with step 2. Where the analyzer auto-discovers entry points (Spring endpoints, for example) the flag is **additive, not restrictive**: auto-discovered endpoints stay and your method is added if absent — use it only to force-include a method the analyzer never starts from (an endpoint auto-discovery missed); you can't narrow to a single method
 
 ### 4. Classify the cause
 
@@ -63,7 +63,7 @@ An engine bug is the least likely outcome by far — assume it last. Nearly ever
 
 The killing instruction decides who owns the fix:
 
-- external library method → missing or broken model. If the method is NOT in `approximated-external-methods.yaml`, step 1 should have caught it (route to analyze-external-methods + create-*-approximation). If it IS listed (a built-in claims to model it) yet taint dies here, the built-in is wrong for this case — write your own override: passthrough overrides at the rule level, so prefer a passthrough config for the specific method; a dataflow override conflicts with built-ins at load, so fall back to passthrough on that method, or if only a dataflow shape can express the propagation, treat it as an engine issue
+- external library method → missing or broken model. If the method is NOT in `approximated-external-methods.yaml`, step 1 should have caught it (route to analyze-external-methods + create-*-approximation; Go: -go variants, see § Go projects). If it IS listed (a built-in claims to model it) yet taint dies here, the built-in is wrong for this case — write your own override: passthrough overrides at the rule level, so prefer a passthrough config for the specific method; a dataflow override conflicts with built-ins at load, so fall back to passthrough on that method, or if only a dataflow shape can express the propagation, treat it as an engine issue
 - something the rule should handle — a mistaken sanitizer, an unmatched sink or source variant → fix the rule
 - a plain instruction the engine should propagate through (assignment, cast, field read, an already-modeled call), with the rule correct and model complete → engine issue; route to report-analyzer-issue with the trace
 

@@ -25,7 +25,19 @@ Requires `<dropped-file>`, without it there's nothing to group
 
 ### 1. Read the dropped records
 
-Each entry in `<dropped-file>` is an `ExternalMethodRecord` with `method` and `signature` strings (plus `factPositions`, `callSites`). The `method`/`signature` identify the Go function: its package, its receiver type (if any), and its name. Resolve each to a `{package, name, type, receiver}` matcher — the shape create-pass-through-approximation-go's `function:` block uses. Read the real Go signature from the dependency or the stdlib docs when the dropped strings are ambiguous
+Each entry in `<dropped-file>` is an `ExternalMethodRecord` (plus `factPositions`, `callSites`). Only `method` carries the qualified callee; `signature` is literally `args:<arity>` — the parameter count at the call site (it varies only for variadic calls) and holds no package, type, receiver, or name. Read the import path and receiver type out of `method` (and the dependency or stdlib docs when a name is ambiguous), never out of `signature`
+
+`method` comes in two shapes:
+
+- Plain function — `<import-path>.<Name>`, e.g. `net/url.ParseQuery`, `net/http.Get`. Split at the last `.`: everything before is the import path (may hold `/` and `.`, like `github.com/foo/bar`), the trailing segment is the name; `receiver: false`, no `type`
+- Method — `(<recv-type>).<Name>`, e.g. `(*net/http.Request).FormValue`. The parenthesized part is the receiver type; strip a leading `*`, then split at the last `.` for the import path and the `type`. The segment after `)` is the method name; `receiver: true`
+
+Resolve each to the `{package, name, type, receiver}` matcher create-pass-through-approximation-go's `function:` block consumes:
+
+```text
+net/url.ParseQuery            → package: net/url,  name: ParseQuery,  receiver: false
+(*net/http.Request).FormValue → package: net/http, type: Request, name: FormValue, receiver: true
+```
 
 ### 2. Group by package
 

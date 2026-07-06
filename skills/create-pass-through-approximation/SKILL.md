@@ -1,6 +1,6 @@
 ---
 name: create-pass-through-approximation
-description: Model a library method's taint propagation as a passThrough approximation config. Use for a dropped external method whose propagation is simple copying
+description: Model a JVM library method's taint propagation as a passThrough approximation config. Use for a dropped external JVM method whose propagation is simple copying
 license: Apache-2.0
 metadata:
   author: opentaint
