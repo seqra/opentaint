@@ -6,14 +6,19 @@ import org.opentaint.ir.api.python.PIRBindFunctionExpr
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRClass
 import org.opentaint.ir.api.python.PIRClassType
+import org.opentaint.ir.api.python.PIRDictExpr
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRGlobalNameRef
 import org.opentaint.ir.api.python.PIRInstruction
+import org.opentaint.ir.api.python.PIRListExpr
 import org.opentaint.ir.api.python.PIRLoadAttr
 import org.opentaint.ir.api.python.PIRLocal
 import org.opentaint.ir.api.python.PIRModuleNameRef
 import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRReadNameExpr
+import org.opentaint.ir.api.python.PIRSetExpr
+import org.opentaint.ir.api.python.PIRStringExpr
+import org.opentaint.ir.api.python.PIRTupleExpr
 import org.opentaint.ir.api.python.PIRType
 import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.api.python.targets
@@ -49,6 +54,12 @@ class PIRMethodQFNameReconstructor private constructor(
                     }
                     LocalBinding(inst.target.index, name)
                 }
+
+                is PIRListExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_LIST))
+                is PIRTupleExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_TUPLE))
+                is PIRSetExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_SET))
+                is PIRDictExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_DICT))
+                is PIRStringExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_STR))
 
                 else -> null
             }
@@ -240,6 +251,12 @@ class PIRMethodQFNameReconstructor private constructor(
 
     companion object {
         const val SEGMENT_SIZE_LIMIT = 7u
+
+        private const val BUILTIN_LIST = "builtins.list"
+        private const val BUILTIN_TUPLE = "builtins.tuple"
+        private const val BUILTIN_SET = "builtins.set"
+        private const val BUILTIN_DICT = "builtins.dict"
+        private const val BUILTIN_STR = "builtins.str"
 
         fun compute(method: PIRFunction, applicationGraph: PIRApplicationGraph) =
             PIRMethodQFNameReconstructor(method, applicationGraph).compute()
