@@ -31,6 +31,12 @@ sealed interface SerializedPythonCondition {
         val pos: PythonPosition,
     ) : SerializedPythonCondition
 
+    @Serializable
+    data class ContainsMarkOnAnyAccessor(
+        val tainted: String,
+        val pos: PythonPosition,
+    ) : SerializedPythonCondition
+
     /** Call-arity predicate: the matched call passes exactly `n` positional arguments. */
     @Serializable
     data class NumberOfArgs(val n: Int) : SerializedPythonCondition
@@ -74,6 +80,7 @@ class SerializedPythonConditionSerializer :
             "allOf" to SerializedPythonCondition.And.serializer(),
             "not" to SerializedPythonCondition.Not.serializer(),
             "tainted" to SerializedPythonCondition.ContainsMark.serializer(),
+            "taintedAny" to SerializedPythonCondition.ContainsMarkOnAnyAccessor.serializer(),
             "n" to SerializedPythonCondition.NumberOfArgs.serializer(),
             "cmp" to SerializedPythonCondition.ConstantCmp.serializer(),
             "pattern" to SerializedPythonCondition.ConstantMatches.serializer(),

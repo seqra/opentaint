@@ -76,6 +76,9 @@ private fun PositionModifier.toPythonPositionModifier(): PythonPositionModifier 
 internal fun GeneratedMark.mkPythonContainsMark(pos: PositionBaseWithModifiers): SerializedPythonCondition.ContainsMark =
     SerializedPythonCondition.ContainsMark(taintMarkStr(), pos.toPythonPosition())
 
+internal fun GeneratedMark.mkPythonContainsMarkOnAnyAccessor(pos: PositionBaseWithModifiers): SerializedPythonCondition.ContainsMarkOnAnyAccessor =
+    SerializedPythonCondition.ContainsMarkOnAnyAccessor(taintMarkStr(), pos.toPythonPosition())
+
 internal fun GeneratedMark.mkPythonAssignMark(pos: PositionBaseWithModifiers): SerializedPythonTaintAssignAction =
     SerializedPythonTaintAssignAction(kind = taintMarkStr(), pos = pos.toPythonPosition())
 

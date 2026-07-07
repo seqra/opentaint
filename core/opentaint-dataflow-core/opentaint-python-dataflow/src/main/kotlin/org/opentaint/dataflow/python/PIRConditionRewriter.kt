@@ -5,6 +5,7 @@ import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.python.AnyArgument
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ContainsMark
+import org.opentaint.dataflow.configuration.python.ContainsMarkOnAnyAccessor
 import org.opentaint.dataflow.configuration.python.Position
 import org.opentaint.dataflow.configuration.python.PositionWithAccess
 import org.opentaint.dataflow.configuration.python.PythonRuleCondition
@@ -13,6 +14,7 @@ import org.opentaint.dataflow.taint.RuleConditionRewriter
 import org.opentaint.dataflow.taint.RuleConditionRewriter.Companion.falseExpr
 import org.opentaint.dataflow.taint.RuleConditionRewriter.Companion.trueExpr
 import org.opentaint.dataflow.taint.RuleConditionRewriter.ExprOrConstant
+import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr.ContainsMarkLiteral
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRCallArgKind
@@ -37,10 +39,22 @@ class PIRConditionRewriter(
 
     private fun rewriteAtom(atom: PythonRuleCondition): ExprOrConstant {
         if (atom is ContainsMark) {
-            if (atom.pos.rootBase() is AnyArgument) return expandAnyArgument(atom)
+            if (atom.pos.rootBase() is AnyArgument) {
+                return expandAnyArgument(atom.pos) { ContainsMark(atom.mark, it) }
+            }
 
             val pos = atom.pos.resolveAp() ?: return falseExpr
             val literal = ContainsMarkLiteral(pos, TaintMarkAccessor(atom.mark.name), negated = false)
+            return ExprOrConstant(literal)
+        }
+
+        if (atom is ContainsMarkOnAnyAccessor) {
+            if (atom.pos.rootBase() is AnyArgument) {
+                return expandAnyArgument(atom.pos) { ContainsMarkOnAnyAccessor(atom.mark, it) }
+            }
+
+            val pos = atom.pos.resolveAp() ?: return falseExpr
+            val literal = TaintMarkAwareConditionExpr.ContainsMarkOnAnyAccessorLiteral(pos, TaintMarkAccessor(atom.mark.name), negated = false)
             return ExprOrConstant(literal)
         }
 
@@ -49,10 +63,13 @@ class PIRConditionRewriter(
     }
 
     /** `ContainsMark` over `arg(*)` = mark on some positional argument of the concrete call. */
-    private fun expandAnyArgument(atom: ContainsMark): ExprOrConstant {
+    private fun expandAnyArgument(
+        pos: Position,
+        build: (Position) -> PythonRuleCondition,
+    ): ExprOrConstant {
         val expandedArgs = anyArgumentResolver.resolve(AnyArgument)
         val expandedAtom = expandedArgs.map {
-            CommonCondition.Atom<PythonRuleCondition>(ContainsMark(atom.mark, atom.pos.replaceRoot(it)))
+            CommonCondition.Atom(build(pos.replaceRoot(it)))
         }
 
         return rewriteOrCondition(expandedAtom)

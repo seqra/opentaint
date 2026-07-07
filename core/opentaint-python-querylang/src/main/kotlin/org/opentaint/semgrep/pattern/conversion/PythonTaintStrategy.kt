@@ -18,6 +18,7 @@ import org.opentaint.semgrep.pattern.conversion.python.emitPythonTaintRules
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonAssignMark
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonCleanMark
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonContainsMark
+import org.opentaint.semgrep.pattern.conversion.python.mkPythonContainsMarkOnAnyAccessor
 import org.opentaint.semgrep.pattern.conversion.python.pythonAnd
 import org.opentaint.semgrep.pattern.conversion.python.pythonOr
 import org.opentaint.semgrep.pattern.conversion.taint.MarkConditionBuilder
@@ -52,8 +53,7 @@ data object PythonTaintStrategy :
 
     data object PythonMarkConditionBuilder : MarkConditionBuilder<SerializedPythonCondition> {
         override fun checkTaintMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): SerializedPythonCondition =
-            mark.mkPythonContainsMark(pos)
-            // TODO: ContainsMarkOnAnyAccessor
+            mark.mkPythonContainsMarkOnAnyAccessor(pos)
 
         override fun negate(cond: SerializedPythonCondition): SerializedPythonCondition =
             SerializedPythonCondition.Not(cond)

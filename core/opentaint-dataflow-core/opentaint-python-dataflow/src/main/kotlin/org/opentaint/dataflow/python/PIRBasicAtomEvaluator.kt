@@ -8,6 +8,7 @@ import org.opentaint.dataflow.configuration.python.ConstantCmp
 import org.opentaint.dataflow.configuration.python.ConstantCmpType
 import org.opentaint.dataflow.configuration.python.ConstantMatches
 import org.opentaint.dataflow.configuration.python.ContainsMark
+import org.opentaint.dataflow.configuration.python.ContainsMarkOnAnyAccessor
 import org.opentaint.dataflow.configuration.python.IntConstantValue
 import org.opentaint.dataflow.configuration.python.KwArgument
 import org.opentaint.dataflow.configuration.python.NumberOfArgs
@@ -27,6 +28,9 @@ import org.opentaint.ir.api.python.PIRValue
 interface PIRBasicAtomEvaluator : PIRConditionVisitor<Boolean> {
     override fun visit(c: ContainsMark): Boolean =
         error("ContainsMark is a taint-fact atom; handle it in condition rewriter, not the evaluator")
+
+    override fun visit(c: ContainsMarkOnAnyAccessor): Boolean =
+        error("ContainsMarkOnAnyAccessor is a taint-fact atom; handle it in condition rewriter, not the evaluator")
 }
 
 /**

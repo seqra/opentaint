@@ -106,21 +106,6 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         }
     }
 
-    override fun patchSinkConditionFactReader(factReaders: List<FinalFactReader>): List<FactReader> {
-        val arrayElementFactReaders = factReaders.arrayElementConditionReaders()
-        return factReaders + arrayElementFactReaders
-    }
-
-    private fun List<FinalFactReader>.arrayElementConditionReaders(): List<FactReader> =
-        mapNotNull {
-            val base = it.factAp.base as? AccessPathBase.Argument ?: return@mapNotNull null
-
-            val arrayElementPosition = PositionAccess.Complex(PositionAccess.Simple(base), ElementAccessor)
-            if (!it.containsPosition(arrayElementPosition)) return@mapNotNull null
-
-            FinalFactReaderWithPrefix(it, ElementAccessor)
-        }
-
     abstract fun createRuleTraceInfo(rule: CommonTaintConfigurationItem, action: CommonTaintAction): TraceInfo
     abstract fun mapFactToReturn(fact: FinalFactAp): List<FinalFactAp>
     abstract fun mapFactToReturn(fact: InitialFactAp): List<InitialFactAp>

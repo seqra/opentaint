@@ -13,6 +13,7 @@ import org.opentaint.dataflow.configuration.python.ConstantCmpType
 import org.opentaint.dataflow.configuration.python.ConstantMatches
 import org.opentaint.dataflow.configuration.python.ConstantValue
 import org.opentaint.dataflow.configuration.python.ContainsMark
+import org.opentaint.dataflow.configuration.python.ContainsMarkOnAnyAccessor
 import org.opentaint.dataflow.configuration.python.IntConstantValue
 import org.opentaint.dataflow.configuration.python.KwArgument
 import org.opentaint.dataflow.configuration.python.NumberOfArgs
@@ -387,6 +388,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         is SerializedPythonCondition.And -> CommonCondition.And(c.allOf.map { convertCondition(it) })
         is SerializedPythonCondition.Not -> CommonCondition.Not(convertCondition(c.not))
         is SerializedPythonCondition.ContainsMark -> containsMarkCondition(c)
+        is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> containsMarkOnAnyAccessorCondition(c)
         is SerializedPythonCondition.NumberOfArgs -> atom(NumberOfArgs(c.n))
         is SerializedPythonCondition.ConstantCmp ->
             mkOr(expandPositions(c.pos).map { atom(ConstantCmp(it, c.value.toEngineValue(), c.cmp.toEngineCmp())) })
@@ -411,6 +413,9 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
     /** `ContainsMark` over `arg(*)` means "the mark is on some argument" — an [CommonCondition.Or] of per-arg atoms. */
     private fun containsMarkCondition(c: SerializedPythonCondition.ContainsMark): PIRCondition =
         mkOr(expandPositions(c.pos).map { atom(ContainsMark(mark = TaintMark(c.tainted), pos = it)) })
+
+    private fun containsMarkOnAnyAccessorCondition(c: SerializedPythonCondition.ContainsMarkOnAnyAccessor): PIRCondition =
+        mkOr(expandPositions(c.pos).map { atom(ContainsMarkOnAnyAccessor(mark = TaintMark(c.tainted), pos = it)) })
 
     // endregion
 
