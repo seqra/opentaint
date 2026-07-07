@@ -4,17 +4,12 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.common.sast.dataflow.DummySerializationContext
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.config.JavaDefaultConfigLoader
-import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
-import org.opentaint.dataflow.ap.ifds.MethodWithContext
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
-import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
@@ -26,17 +21,15 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssign
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.dataflow.ifds.SingletonUnit
-import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
+import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.ast.BasicTestUtils
@@ -44,7 +37,6 @@ import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximati
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AnalysisTest : BasicTestUtils() {
@@ -139,7 +131,6 @@ abstract class AnalysisTest : BasicTestUtils() {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
             ?: error("No $entryPointMethod method in $entryPointClass")
-        val startMethod = MethodWithContext(ep, EmptyMethodContext)
 
         val taintConfig = TaintConfiguration(cp)
         taintConfig.loadConfig(config)
@@ -156,36 +147,22 @@ abstract class AnalysisTest : BasicTestUtils() {
         val mainGraph = JApplicationGraphImpl(cp, usages)
         val ifdsGraph = JIRSafeApplicationGraph(mainGraph)
 
-        @Suppress("UNCHECKED_CAST")
-        val engine = TaintAnalysisUnitRunnerManager(
-            JIRAnalysisManager(cp, rulesProvider),
-            ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
-            unitResolver = SingleLocationUnit(cls.declaration.location) as UnitResolver<CommonMethod>,
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
-            summarySerializationContext = DummySerializationContext,
-            taintRulesStatsSamplingPeriod = null,
+        val options = TaintAnalyzerOptions(
+            ifdsTimeout = 1.minutes,
+            ifdsApMode = ApMode.Tree
         )
 
-        return engine.use { eng ->
-            eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
+        val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
+            override val unrollStrategy: AnyAccessorUnrollStrategy
+                get() = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
-            val allVulnerabilities = eng.getVulnerabilities()
-            val confirmed = eng.confirmVulnerabilities(
-                setOf(ep), allVulnerabilities,
-                timeout = 1.minutes, cancellationTimeout = 10.seconds
-            )
+            override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
+            override fun analysisManager() = JIRAnalysisManager(cp, rulesProvider)
+            override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
+        }
 
-            val interProcTraces = eng.resolveVulnerabilityInterProceduralTraces(
-                setOf(ep), confirmed,
-                resolverParams = TraceResolver.Params(),
-                timeout = 1.minutes, cancellationTimeout = 10.seconds
-            )
-
-            eng.resolveVulnerabilityTraces(
-                interProcTraces,
-                resolverParams = TracePathResolveParams(),
-                timeout = 1.minutes, cancellationTimeout = 10.seconds
-            ).filter { it.trace !is TracePathGenerationResult.Failure }
+        return analyzer.use {
+            it.analyzeWithIfds(listOf(ep)).first
         }
     }
 

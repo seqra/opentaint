@@ -2,19 +2,14 @@ package org.opentaint.semgrep
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.common.sast.dataflow.DummySerializationContext
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
-import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
-import org.opentaint.dataflow.ap.ifds.MethodWithContext
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
-import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
-import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
@@ -24,25 +19,22 @@ import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.go.config.GoDefaultConfigLoader
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.client.GoIRLoadConfig
+import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.go.pattern.conversion.loadGoTaintConfiguration
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
@@ -150,36 +142,21 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
     ): AnalysisResult {
         val ifdsGraph = GoApplicationGraph(program, resolver)
 
-        @Suppress("UNCHECKED_CAST")
-        val engine = TaintAnalysisUnitRunnerManager(
-            GoAnalysisManager(program, config, tracker),
-            ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
-            unitResolver = resolver as UnitResolver<CommonMethod>,
-            apManager = TreeApManager(AnyUnrollStrategy),
-            summarySerializationContext = DummySerializationContext,
-            taintRulesStatsSamplingPeriod = null,
+        val options = TaintAnalyzerOptions(
+            ifdsTimeout = 1.minutes,
+            ifdsApMode = ApMode.Tree
         )
 
-        val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
-        return engine.use { eng ->
-            eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
+        val analyzer = object : TaintAnalyzer<GoIRFunction, GoIRInst>(options) {
+            override val unrollStrategy: AnyAccessorUnrollStrategy get() = AnyUnrollStrategy
+            override fun analysisGraph() = ifdsGraph
+            override fun analysisManager() = GoAnalysisManager(program, config, tracker)
+            override fun unitResolver() = resolver
+        }
 
-            val vulns = eng.getVulnerabilities()
-
-            val interProcTraces = eng.resolveVulnerabilityInterProceduralTraces(
-                setOf(entryPoint), vulns,
-                resolverParams = TraceResolver.Params(),
-                timeout = 1.minutes, cancellationTimeout = 10.seconds,
-            )
-
-            val traces = eng.resolveVulnerabilityTraces(
-                interProcTraces,
-                resolverParams = TracePathResolveParams(),
-                timeout = 1.minutes, cancellationTimeout = 10.seconds,
-            )
-
-            val resolvedTraces = traces.filter { it.trace !is TracePathGenerationResult.Failure }
-
+        return analyzer.use { eng ->
+            val resolvedTraces = eng.analyzeWithIfds(listOf(entryPoint)).first
+            val vulns = eng.ifdsEngine.getVulnerabilities()
             AnalysisResult(vulns.isNotEmpty(), resolvedTraces.isNotEmpty())
         }
     }
