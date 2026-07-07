@@ -33,6 +33,8 @@ import org.opentaint.semgrep.pattern.conversion.toSerializedPythonTaintConfig
 import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
+import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
+import org.opentaint.dataflow.python.rules.loadDefaultConfig
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.test.Ignore
@@ -160,12 +162,6 @@ class PythonSampleBasedTest {
     @Ignore("Globals are not supported")
     @Test fun ruleWithStaticField() = runSample("RuleWithStaticField")
 
-    @Ignore("for-loop iterator element extraction unmodeled: PIRNextIter/PIRIterExpr not handled in sequent flow")
-    @Test fun forLoopElementRead() = runSample("ForLoopElementRead")
-
-    @Ignore("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] element read misses it")
-    @Test fun listAppendElementRead() = runSample("ListAppendElementRead")
-
     @Test fun subscriptElementSource() = runSample("SubscriptElementSource")
 
     // ─── Plumbing ───────────────────────────────────────────────────────────
@@ -245,8 +241,9 @@ class PythonSampleBasedTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<SerializedPythonRule>
-        val config: SerializedPythonTaintConfig = typed.toSerializedPythonTaintConfig()
-        return PIRConfigTaintRulesProvider(PIRTaintConfiguration(config))
+        val config = PIRTaintConfiguration(typed.toSerializedPythonTaintConfig())
+        val defaultConfig = loadDefaultConfig()
+        return PIRCombinedTaintRulesProvider(PIRConfigTaintRulesProvider(config), defaultConfig)
     }
 
     private fun runAnalysis(

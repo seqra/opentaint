@@ -139,8 +139,10 @@ passThrough:
 # --- Collection mutations: arg → receiver (taint flows into the collection) ---
 - function: builtins.list.append
   copy:
-  - from: arg(0)
-    to: this
+    - from: arg(0)
+      to:
+      - this
+      - '[*]'
 - function: builtins.list.extend
   copy:
   - from: arg(0)

@@ -141,10 +141,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     // ─── cmdi set (CWE-78). sink: subprocess.run($CMD, ...) focus $CMD ───
     //   true  = request data reaches the command; false = safe/never-tainted.
 
-    // `lst.append(param)` passthrough (arg(0)->this) lands taint at `lst.append.$PIR_SELF.![mark]`
-    // (spurious method-field on the receiver), not on `lst`/`lst[*]`, so `bar = lst[0]` reads nothing.
-    // Sinks tolerate this via base-prefix matching (01191), but an intraprocedural element read does not.
-    @Disabled("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] read misses it")
     @Test fun benchmarkTest00165() = assertReachable("00165")
     @Test fun benchmarkTest00166() = assertReachable("00166")
     @Test fun benchmarkTest00167() = assertReachable("00167")
@@ -152,7 +148,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00268() = assertReachable("00268")
     @Test fun benchmarkTest00431() = assertReachable("00431")
     @Test fun benchmarkTest00432() = assertReachable("00432")
-    @Disabled("list.append passthrough taints receiver.<method>.\$PIR_SELF, not the receiver; lst[0] read misses it")
     @Test fun benchmarkTest00511() = assertReachable("00511")
     @Test fun benchmarkTest00606() = assertReachable("00606")
     @Test fun benchmarkTest00607() = assertReachable("00607")
