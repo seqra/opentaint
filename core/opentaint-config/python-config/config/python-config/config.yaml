@@ -47,6 +47,10 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from: this
+    to:
+    - result
+    - '[*]'
 - function: cgi.FieldStorage.getfirst
   copy:
   - from: this
@@ -56,6 +60,10 @@ passThrough:
   - from: arg(1)
     to: result
   - from: kwarg(default)
+    to: result
+  - from:
+    - this
+    - '[*]'
     to: result
 - function: contextlib.ExitStack.enter_context
   copy:
@@ -183,12 +191,28 @@ passThrough:
     to: result
   - from: kwarg(pathname)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - '[*]'
+  - from: kwarg(pathname)
+    to:
+    - result
+    - '[*]'
 - function: glob.glob
   copy:
   - from: arg(0)
     to: result
   - from: kwarg(pathname)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - '[*]'
+  - from: kwarg(pathname)
+    to:
+    - result
+    - '[*]'
 - function: gzip.GzipFile
   copy:
   - from: arg(0)
@@ -275,6 +299,14 @@ passThrough:
     to: result
   - from: kwarg(top)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - '[*]'
+  - from: kwarg(top)
+    to:
+    - result
+    - '[*]'
 - function: pathlib.Path.__enter__
   copy:
   - from: this
@@ -461,6 +493,14 @@ passThrough:
     to: result
   - from: kwarg(qs)
     to: result
+  - from: arg(0)
+    to:
+    - result
+    - '[*]'
+  - from: kwarg(qs)
+    to:
+    - result
+    - '[*]'
 - function: urllib.parse.urlparse
   copy:
   - from: arg(0)
@@ -507,6 +547,14 @@ passThrough:
     to: result
   - from: kwarg(query)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - kwarg(query)
+    - '[*]'
+    to: result
 - function: urllib.parse.urljoin
   copy:
   - from: arg(0)
@@ -521,6 +569,14 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .filelist
+    - '[*]'
+    - .filename
+    to:
+    - result
+    - '[*]'
 - function: zipfile.ZipFile
   copy:
   - from: arg(0)
@@ -557,6 +613,14 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .filelist
+    - '[*]'
+    - .filename
+    to:
+    - result
+    - '[*]'
 - attribute: flask.request.path
   copy:
   - from: this

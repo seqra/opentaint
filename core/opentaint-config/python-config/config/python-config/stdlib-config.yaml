@@ -78,8 +78,8 @@ passThrough:
   - from: this
     to: result
   - from:
-      - arg(0)
-      - '[*]'
+    - arg(0)
+    - '[*]'
     to: result
 
 # `str.format`: result taint comes from the format string (this) and any positional argument.
@@ -113,9 +113,17 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: builtins.bytes
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: builtins.list
   copy:
@@ -152,11 +160,15 @@ passThrough:
 - function: builtins.list.insert
   copy:
   - from: arg(1)
-    to: this
+    to:
+    - this
+    - '[*]'
 - function: builtins.set.add
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - '[*]'
 - function: builtins.set.update
   copy:
   - from: arg(0)
@@ -167,17 +179,29 @@ passThrough:
     to: this
 - function: builtins.dict.setdefault
   copy:
-  - from: arg(0)
-    to: this
+  - from: arg(1)
+    to:
+    - this
+    - '[*]'
+  - from: arg(1)
+    to: result
+  - from:
+    - this
+    - '[*]'
+    to: result
 
 # --- Collection reads: receiver → result (tainted container → tainted read) ---
 - function: builtins.dict.get
   copy:
-  - from: this
+  - from:
+    - this
+    - '[*]'
     to: result
 - function: builtins.dict.pop
   copy:
-  - from: this
+  - from:
+    - this
+    - '[*]'
     to: result
 - function: builtins.dict.values
   copy:
@@ -193,7 +217,9 @@ passThrough:
     to: result
 - function: builtins.list.pop
   copy:
-  - from: this
+  - from:
+    - this
+    - '[*]'
     to: result
 - function: builtins.list.copy
   copy:
@@ -201,7 +227,9 @@ passThrough:
     to: result
 - function: builtins.set.pop
   copy:
-  - from: this
+  - from:
+    - this
+    - '[*]'
     to: result
 - function: builtins.set.copy
   copy:
@@ -212,10 +240,10 @@ passThrough:
     - from: arg(2)
       to:
       - this
-      - .Element
+      - '[*]'
 - function: configparser.ConfigParser.get
   copy:
     - from:
       - this
-      - .Element
+      - '[*]'
       to: result
