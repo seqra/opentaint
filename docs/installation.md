@@ -33,15 +33,23 @@ The correct binary for your platform (Linux, macOS, or Windows; x64 or arm64) is
 
 ## Install Scripts
 
-The install scripts accept an optional version argument. Without one, the latest GitHub release is installed.
+The install scripts accept an optional version argument (leading `v` optional). Without one, the latest GitHub release is installed. You can pin to:
+
+- an exact version — `v1.2.3`
+- the newest patch of a minor line — `v1.2` (resolves to the newest `v1.2.x`)
+- the newest release of a major line — `v1` (resolves to the newest `v1.x.y`)
+
+The leading `v` is optional in every form (`1.2.3` works the same as `v1.2.3`).
 
 **Linux/macOS:**
 ```bash
 # Latest
 curl -fsSL https://opentaint.org/install.sh | bash
 
-# Specific version (leading 'v' is optional)
-curl -fsSL https://opentaint.org/install.sh | bash -s -- 1.2.3
+# Exact version, minor line, or major line
+curl -fsSL https://opentaint.org/install.sh | bash -s -- v1.2.3
+curl -fsSL https://opentaint.org/install.sh | bash -s -- v1.2
+curl -fsSL https://opentaint.org/install.sh | bash -s -- v1
 ```
 
 **Windows (PowerShell):**
@@ -49,8 +57,10 @@ curl -fsSL https://opentaint.org/install.sh | bash -s -- 1.2.3
 # Latest
 irm https://opentaint.org/install.ps1 | iex
 
-# Specific version
-& ([scriptblock]::Create((irm https://opentaint.org/install.ps1))) -Version 1.2.3
+# Exact version, minor line, or major line
+& ([scriptblock]::Create((irm https://opentaint.org/install.ps1))) -Version v1.2.3
+& ([scriptblock]::Create((irm https://opentaint.org/install.ps1))) -Version v1.2
+& ([scriptblock]::Create((irm https://opentaint.org/install.ps1))) -Version v1
 ```
 
 **Windows (CMD):**
@@ -58,8 +68,10 @@ irm https://opentaint.org/install.ps1 | iex
 :: Latest
 curl -fsSL https://opentaint.org/install.cmd -o install.cmd && install.cmd && del install.cmd
 
-:: Specific version
-curl -fsSL https://opentaint.org/install.cmd -o install.cmd && install.cmd 1.2.3 && del install.cmd
+:: Exact version, minor line, or major line
+curl -fsSL https://opentaint.org/install.cmd -o install.cmd && install.cmd v1.2.3 && del install.cmd
+curl -fsSL https://opentaint.org/install.cmd -o install.cmd && install.cmd v1.2 && del install.cmd
+curl -fsSL https://opentaint.org/install.cmd -o install.cmd && install.cmd v1 && del install.cmd
 ```
 
 ### Environment variables

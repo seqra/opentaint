@@ -1,13 +1,58 @@
 # OpenTaint installer for Windows (PowerShell)
 # Usage:
 #   irm https://raw.githubusercontent.com/seqra/opentaint/main/scripts/install/install.ps1 | iex
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/seqra/opentaint/main/scripts/install/install.ps1))) -Version 1.2.3
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v1.2.3  # exact version ('v' optional)
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v0       # newest v0.x.y
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v0.2     # newest v0.2.x
 
 param(
     [string]$Version = "latest"
 )
 
 $ErrorActionPreference = 'Stop'
+
+$Repo = if ($env:OPENTAINT_REPOSITORY) { $env:OPENTAINT_REPOSITORY } else { "seqra/opentaint" }
+
+# Resolves a floating major/minor selector (e.g. v0 or v0.2) to the newest
+# matching exact vX.Y.Z release tag via the GitHub releases API. Only exact
+# vX.Y.Z tags are considered, mirroring scripts/resolve_opentaint_version.py.
+function Resolve-FloatingSelector {
+    param(
+        [string]$Selector   # e.g. v0 or v0.2
+    )
+
+    $headers = @{ "Accept" = "application/vnd.github+json" }
+    $token = if ($env:OPENTAINT_GITHUB_TOKEN) { $env:OPENTAINT_GITHUB_TOKEN } elseif ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } else { $null }
+    if ($token) { $headers["Authorization"] = "Bearer $token" }
+
+    $apiUrl = "https://api.github.com/repos/$Repo/releases?per_page=100"
+    try {
+        $releases = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing
+    } catch {
+        [Console]::Error.WriteLine("Error: failed to query the GitHub releases API to resolve '$Selector'.")
+        exit 2
+    }
+
+    # v0 must match v0.*, not v0.* only after a dot boundary; the trailing dot
+    # ensures v1 does not match v10.x and v0.1 does not match v0.10.x.
+    $prefix = "$Selector."
+    $best = $null
+    foreach ($release in $releases) {
+        $tag = $release.tag_name
+        if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { continue }
+        if (-not $tag.StartsWith($prefix)) { continue }
+        $ver = [version]($tag.Substring(1))
+        if (-not $best -or $ver -gt $best.Ver) {
+            $best = @{ Ver = $ver; Tag = $tag }
+        }
+    }
+
+    if (-not $best) {
+        [Console]::Error.WriteLine("Error: no release found matching selector '$Selector'.")
+        exit 2
+    }
+    return $best.Tag
+}
 
 function Test-Version {
     param([string]$Raw)
@@ -21,7 +66,21 @@ function Test-Version {
         return @{ PathSegment = "download/v$normalized"; Tag = "v$normalized" }
     }
 
-    [Console]::Error.WriteLine("Error: Invalid version '$Raw'. Expected 'latest' or 'X.Y.Z' (optionally prefixed with 'v').")
+    if ($Raw -match '^(v)?(?<ver>[0-9]+\.[0-9]+)$') {
+        $selector = "v$($Matches['ver'])"
+        Write-Host "Resolving $selector to an exact release..."
+        $tag = Resolve-FloatingSelector -Selector $selector
+        return @{ PathSegment = "download/$tag"; Tag = $tag }
+    }
+
+    if ($Raw -match '^(v)?(?<ver>[0-9]+)$') {
+        $selector = "v$($Matches['ver'])"
+        Write-Host "Resolving $selector to an exact release..."
+        $tag = Resolve-FloatingSelector -Selector $selector
+        return @{ PathSegment = "download/$tag"; Tag = $tag }
+    }
+
+    [Console]::Error.WriteLine("Error: Invalid version '$Raw'. Expected 'latest', 'X', 'X.Y', or 'X.Y.Z' (optionally prefixed with 'v').")
     exit 2
 }
 
@@ -44,8 +103,6 @@ function Test-HomebrewInstall {
     }
     return $null
 }
-
-$Repo = if ($env:OPENTAINT_REPOSITORY) { $env:OPENTAINT_REPOSITORY } else { "seqra/opentaint" }
 
 function Get-Architecture {
     $arch = $env:PROCESSOR_ARCHITECTURE
