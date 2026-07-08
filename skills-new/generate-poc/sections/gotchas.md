@@ -1,0 +1,2 @@
+- Reproduce, don't theorize — a script you didn't run, or a 200 with no observable effect, is not a confirmation
+- failed ≠ false positive — couldn't-reproduce isn't proof the code is safe (auth, missing state, wrong payload). Record `failed` and DO NOT flip `verdict` here

@@ -1,0 +1,2 @@
+- Bulk verdicts are the most common triage error — many results marked under one shared rationale with the traces unread
+- A rule's bundle is not one finding — split distinct vulnerabilities apart, but keep true duplicates (same sink and flow) together as one finding with multiple `sarif_hashes`

@@ -1,0 +1,30 @@
+---
+name: analyze-external-methods
+description: Analyze an OpenTaint scan's dropped external methods and decide which of them are propagators and optionally sinks. Use when a dropped-external-methods.yaml needs classification for dropped method type
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "{{ version }}"
+---
+
+{% include "sections/preamble.md" %}
+
+## Inputs
+
+{% include "sections/input.md" %}
+
+## Workflow
+
+{% include "sections/workflow.md" %}
+
+## Output
+
+{% include "sections/output.md" %}
+
+## Tracking
+
+{% include "sections/tracking.md" %}
+
+## Constraints
+
+{% include "sections/constraints.md" %}

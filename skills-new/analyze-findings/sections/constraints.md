@@ -1,0 +1,2 @@
+- Verdicts and notes go in the finding files only — never write `.opentaint/vulnerabilities.md`; the orchestrator assembles it from the verdicts
+- Judge each result on its own trace, never share one verdict across results just because they fired the same rule

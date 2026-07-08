@@ -1,0 +1,2 @@
+- Ref the existing lib rules (built-in + created), never re-declare a source or sink
+- Keep produced joins comment-free

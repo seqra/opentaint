@@ -1,0 +1,3 @@
+- Bind a started instance to loopback (or a specific IP the test genuinely needs), never `0.0.0.0` or a public interface — a live exploit must stay off-host
+- Don't stop an instance you started, and always register it — the orchestrator owns teardown and can only reap what's in `.opentaint/tracking/poc-servers.yaml`
+- The outcome goes in the finding file only — never write `.opentaint/vulnerabilities.md`

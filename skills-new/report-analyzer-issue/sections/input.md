@@ -1,0 +1,7 @@
+{% include "shared/inputs-preamble.md" %}
+
+{% include "shared/inputs/project-root.md" %}
+- `diagnosis` (required for `analysis`) — the confirmed engine-level conclusion: where taint dies, the fact-reachability trace up to the last reachable fact, and observed vs expected verdict
+- `artifact` (required for `analysis`) — the rule or approximation the issue concerns: a rule's full id and ruleset, or the approximation's target method(s)
+- `name` (optional, `analysis`) — the test-project name the artifact was traced on; its tree is `.opentaint/test-projects/<name>` and model `.opentaint/test-compiled/<name>`, cited so the engine team can reproduce
+- `setup` (required for `resource`) — what was running when the scan ran out of memory: the ruleset(s), the approximation dirs, the project model, the `--max-memory` reached (up to `16G`), and the commit hash (`git rev-parse HEAD`)
