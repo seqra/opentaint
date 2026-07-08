@@ -18,7 +18,7 @@ interface PIRTaintRulesProvider : CommonTaintRulesProvider {
     fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource>
     fun sourcesForMethod(method: PIRFunction): List<TaintSource>
     fun sinksForMethod(method: PIRFunction): List<TaintSink>
-    fun passThroughForMethod(method: PIRFunction): List<TaintPassThrough>
+    fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean = false): List<TaintPassThrough>
     fun cleanersForMethod(method: PIRFunction): List<TaintCleaner>
 
     fun sourcesForAttribute(name: String): List<TaintSource>

@@ -84,7 +84,7 @@ import kotlin.contracts.contract
  * [method] is null for attribute-targeted resolution (an attribute access has
  * no enclosing call, hence no positional arguments or call arity).
  */
-internal class MethodTaintConfigurationResolver(private val method: PIRFunction?) {
+internal class MethodTaintConfigurationResolver(private val method: PIRFunction?, val bySimpleName: Boolean = false) {
 
     // region Function-targeted resolution
 
@@ -247,28 +247,30 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
     }
 
     private fun matchesName(target: PythonTarget.Attribute, attribute: String): Boolean =
-        if ("." in target.attribute && "." in attribute) {
+        if ("." in target.attribute && "." in attribute && !bySimpleName) {
             target.attribute == attribute
         } else {
             target.attribute.substringAfterLast('.') == attribute.substringAfterLast('.')
         }
 
     private fun matchesName(target: PythonTarget.Function, method: PIRFunction): Boolean {
-        val name = target.function
+        val targetName = target.function
+        val targetSimpleName = targetName.substringAfterLast(".")
 
-        if (method is PIRSimpleNameUnknownFunction) return name.substringAfterLast('.') == method.name
+        if (method is PIRSimpleNameUnknownFunction) return targetSimpleName == method.name
 
-        val qn = method.qualifiedName
-        val ctorQn = if (method.enclosingClass != null) qn.removeSuffix(".${PythonNames.INIT_METHOD}") else qn
-        val ctorName = if (ctorQn != qn) ctorQn.substringAfterLast('.') else method.name
+        val qn = method.qualifiedName.let {
+            if (method.enclosingClass != null) it.removeSuffix(".${PythonNames.INIT_METHOD}") else it
+        }
+        val simpleName = qn.substringAfterLast('.')
 
         return when {
-            hasRegexMetaChar(name) -> {
-                val rx = Regex(name)
-                rx.matches(qn) || (ctorQn != qn && rx.matches(ctorQn))
+            hasRegexMetaChar(targetName) -> {
+                val rx = Regex(targetName)
+                rx.matches(qn)
             }
-            '.' in name -> qn == name || ctorQn == name
-            else -> method.name == name || ctorName == name
+            '.' !in targetName || bySimpleName -> simpleName == targetSimpleName
+            else -> qn == targetName
         }
     }
 

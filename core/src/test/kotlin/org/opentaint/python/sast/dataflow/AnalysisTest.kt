@@ -230,7 +230,7 @@ private class TestRulesProvider(
         }
 
     override fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource> = emptyList()
-    override fun passThroughForMethod(method: PIRFunction): List<TaintPassThrough> = emptyList()
+    override fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean): List<TaintPassThrough> = emptyList()
     override fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> = emptyList()
     override fun sourcesForAttribute(name: String): List<TaintSource> = emptyList()
     override fun sinksForAttribute(name: String): List<TaintSink> = emptyList()

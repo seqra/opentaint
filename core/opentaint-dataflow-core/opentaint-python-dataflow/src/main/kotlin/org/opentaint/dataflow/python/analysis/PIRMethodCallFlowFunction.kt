@@ -316,8 +316,14 @@ class PIRMethodCallFlowFunction(
         propagateFact: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
     ) {
         val typeChecker = FactTypeChecker.Dummy
-        val passRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
+        var passRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
             rulesProvider.passThroughForMethod(method)
+        }
+
+        if (passRules.isEmpty()) {
+            passRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
+                rulesProvider.passThroughForMethod(method, bySimpleName = true)
+            }
         }
 
         val reader = FinalFactReader(mappedFact, apManager)

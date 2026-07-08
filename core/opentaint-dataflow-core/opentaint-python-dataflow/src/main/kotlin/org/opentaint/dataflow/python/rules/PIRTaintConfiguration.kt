@@ -23,6 +23,7 @@ class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
     private val sourcesByMethod = ConcurrentHashMap<PIRFunction, List<TaintSource>>()
     private val sinksByMethod = ConcurrentHashMap<PIRFunction, List<TaintSink>>()
     private val passThroughByMethod = ConcurrentHashMap<PIRFunction, List<TaintPassThrough>>()
+    private val passThroughBySimpleMethod = ConcurrentHashMap<PIRFunction, List<TaintPassThrough>>()
     private val cleanersByMethod = ConcurrentHashMap<PIRFunction, List<TaintCleaner>>()
 
     private val sourcesByAttribute = ConcurrentHashMap<String, List<TaintSource>>()
@@ -39,8 +40,17 @@ class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
     fun sinksForMethod(method: PIRFunction): List<TaintSink> =
         sinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveSinks(config.sink) }
 
-    fun passThroughForMethod(method: PIRFunction): List<TaintPassThrough> =
-        passThroughByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolvePassThrough(config.passThrough) }
+    fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean): List<TaintPassThrough> =
+        if (bySimpleName) {
+            passThroughBySimpleMethod.cached(method) {
+                MethodTaintConfigurationResolver(it, bySimpleName = true).resolvePassThrough(config.passThrough)
+            }
+        } else {
+            passThroughByMethod.cached(method) {
+                MethodTaintConfigurationResolver(it, bySimpleName = false).resolvePassThrough(config.passThrough)
+            }
+        }
+
 
     fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> =
         cleanersByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveCleaners(config.cleaner) }
