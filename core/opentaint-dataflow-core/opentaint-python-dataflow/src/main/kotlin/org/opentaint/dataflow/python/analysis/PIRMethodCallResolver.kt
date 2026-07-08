@@ -45,10 +45,10 @@ class PIRMethodCallResolver(
         }
         val factMapper = callerContext.methodCallFactMapper as PIRMethodCallFactMapper
         for (callee in callees) {
-            // Apply the implicit-parameter offset to the callee-frame entry
-            // base. The flow function produced an offset-free Argument(i)
-            // based on call.args; offsetEnter shifts it to Argument(i + offset)
-            // for the callee's frame. Out-of-range Arguments are dropped.
+            // Bind the call-site entry base into the callee's parameter
+            // frame. The flow function produced a call-site Argument(i) based
+            // on call.args; toCalleeFrame binds it to the callee parameter
+            // (positional shift or keyword-by-name). Unbindable bases are dropped.
             val rebasedHandler = rebaseStartFactBase(handler, pirCall, callee, factMapper) ?: continue
             analyzer.handleResolvedMethodCall(MethodWithContext(callee, EmptyMethodContext), rebasedHandler)
         }
@@ -62,15 +62,15 @@ class PIRMethodCallResolver(
     ): MethodCallHandler? = when (handler) {
         is MethodCallHandler.ZeroToZeroHandler -> handler
         is MethodCallHandler.ZeroToFactHandler -> {
-            val newBase: AccessPathBase = factMapper.offsetEnter(pirCall, callee, handler.startFactBase) ?: return null
+            val newBase: AccessPathBase = factMapper.toCalleeFrame(pirCall, callee, handler.startFactBase) ?: return null
             MethodCallHandler.ZeroToFactHandler(handler.currentEdge, newBase)
         }
         is MethodCallHandler.FactToFactHandler -> {
-            val newBase: AccessPathBase = factMapper.offsetEnter(pirCall, callee, handler.startFactBase) ?: return null
+            val newBase: AccessPathBase = factMapper.toCalleeFrame(pirCall, callee, handler.startFactBase) ?: return null
             MethodCallHandler.FactToFactHandler(handler.currentEdge, newBase)
         }
         is MethodCallHandler.NDFactToFactHandler -> {
-            val newBase: AccessPathBase = factMapper.offsetEnter(pirCall, callee, handler.startFactBase) ?: return null
+            val newBase: AccessPathBase = factMapper.toCalleeFrame(pirCall, callee, handler.startFactBase) ?: return null
             MethodCallHandler.NDFactToFactHandler(handler.currentEdge, newBase)
         }
     }

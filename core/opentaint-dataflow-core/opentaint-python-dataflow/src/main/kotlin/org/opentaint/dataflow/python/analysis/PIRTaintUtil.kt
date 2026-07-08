@@ -88,13 +88,16 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         )
     }
 
+    /** The call to resolve `kwarg(name)` positions against; null for attribute loads (no kwargs). */
+    protected open val positionCall: PIRCall? get() = null
+
     override fun applySourceAction(
         rule: TaintConfigurationSource,
         sourceEvaluator: TaintSourceActionEvaluator,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit
     ) {
         rule.taint.forEach { action ->
-            val pos = action.pos.resolveAp() ?: return@forEach
+            val pos = action.pos.resolveAp(positionCall) ?: return@forEach
             val trace = createRuleTraceInfo(rule, action)
             val mark = TaintMarkAccessor(action.mark.name)
             sourceEvaluator.evaluate(rule, action, pos, mark).onSome { facts ->
@@ -121,6 +124,8 @@ class PIRMethodCallTaintUtil(
 
     override fun createRuleTraceInfo(rule: CommonTaintConfigurationItem, action: CommonTaintAction): TraceInfo =
         TraceInfo.Rule(rule, action)
+
+    override val positionCall get() = statement
 
     override fun mapFactToReturn(fact: FinalFactAp) =
         callFactMapper.mapMethodExitToReturnFlowFact(statement, fact, FactTypeChecker.Dummy)

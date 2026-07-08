@@ -12,6 +12,8 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
 import org.opentaint.dataflow.python.pIRDowncast
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
+import org.opentaint.dataflow.python.util.indexOfKeywordArg
+import org.opentaint.dataflow.python.util.indexOfKeywordParam
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -21,11 +23,12 @@ import org.opentaint.ir.api.python.*
 /**
  * Maps facts between caller and callee frames at call boundaries.
  *
- * Offset-blind: the core mapping methods align `call.args[i]` with
- * callee `Argument(i)` positionally with no shift for `self`/`cls`.
- * All implicit-parameter offset arithmetic is encapsulated in
- * [offsetEnter] / [offsetExit], which are invoked only by
- * [PIRMethodCallResolver] and [PIRMethodCallSummaryHandler].
+ * The core mapping methods align `call.args[i]` with callee `Argument(i)`
+ * positionally, with no shift for `self`/`cls` and no keyword resolution.
+ * All argument-to-parameter binding — the `self`/`cls` offset and
+ * keyword-argument name matching — is encapsulated in [toCalleeFrame] /
+ * [toCallerFrame], which are invoked only by [PIRMethodCallResolver] and
+ * [PIRMethodCallSummaryHandler].
  */
 object PIRMethodCallFactMapper : MethodCallFactMapper {
 
@@ -191,50 +194,72 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         factAp.base !is AccessPathBase.LocalVar
 
     /**
-     * Translates an offset-free [base] into the callee's frame when
-     * entering [callee] at [callSite]. For implicit-parameter callees
-     * (instance methods, classmethods), maps `Argument(i)` to
-     * `Argument(i + offset)` and the receiver marker `This` to the
-     * implicit first parameter `Argument(0)`. Other bases are returned
-     * unchanged.
+     * Binds a call-site [base] into the callee's parameter frame when
+     * entering [callee] at [callSite]. A positional `Argument(i)` shifts by
+     * the implicit-parameter offset to `Argument(i + offset)`; a keyword
+     * `Argument(i)` binds by name to its declared parameter's absolute
+     * index; the receiver marker `This` maps to the implicit first
+     * parameter `Argument(0)`. Other bases are returned unchanged.
      *
-     * Returns null when the shifted Argument would exceed the callee's
-     * formal parameter count (avoids AccessPathBaseStorage crashes on
-     * extra positional args), or when a `This` receiver reaches a callee
-     * with no implicit parameter (static/module function).
+     * Returns null when the shifted positional Argument would exceed the
+     * callee's formal parameter count (avoids AccessPathBaseStorage crashes
+     * on extra positional args), when a keyword matches no declared
+     * parameter (`**kwargs` capture is future work), or when a `This`
+     * receiver reaches a callee with no implicit parameter (static/module
+     * function).
      *
      * Only invoked from [PIRMethodCallResolver].
      */
-    fun offsetEnter(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
+    fun toCalleeFrame(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
         val offset = PIRFlowFunctionUtils.implicitParamOffset(callee)
         return when (base) {
-            // Offset-free receiver marker → the implicit first parameter (self/cls).
-            // Dropped for callees with no implicit parameter (static/module functions).
             is AccessPathBase.This -> if (offset > 0) AccessPathBase.Argument(0) else null
             is AccessPathBase.Argument -> {
-                val newIdx = base.idx + offset
-                if (newIdx >= callee.parameters.size) null else AccessPathBase.Argument(newIdx)
+                val arg = callSite.args.getOrNull(base.idx) ?: return null
+                when (arg.kind) {
+                    PIRCallArgKind.KEYWORD -> arg.keyword?.let { name ->
+                        callee.indexOfKeywordParam(name)?.let { AccessPathBase.Argument(it) }
+                    }
+
+                    PIRCallArgKind.POSITIONAL -> {
+                        val newIdx = base.idx + offset
+                        if (newIdx >= callee.parameters.size) null else AccessPathBase.Argument(newIdx)
+                    }
+                    PIRCallArgKind.STAR, PIRCallArgKind.DOUBLE_STAR -> null
+                }
             }
             else -> base
         }
     }
 
     /**
-     * Inverse of [offsetEnter]: translates a callee-frame [base] back to
-     * the offset-free frame when returning from [callee] at [callSite].
-     * Maps the implicit first parameter `Argument(0)` to the receiver
-     * marker `This`, and other `Argument(i)` to `Argument(i - offset)`.
-     * Returns null when the shifted Argument would underflow.
+     * Inverse of [toCalleeFrame]: translates a callee-parameter [base] back
+     * to the call-site frame when returning from [callee] at [callSite].
+     * Maps the implicit first parameter `Argument(0)` to the receiver marker
+     * `This`, a parameter filled by a keyword arg back to that keyword's raw
+     * slot, and a positional parameter `Argument(i)` to `Argument(i - offset)`.
+     * Returns null when the positional Argument would underflow or would
+     * rebase onto a non-positional slot.
      *
      * Only invoked from [PIRMethodCallSummaryHandler].
      */
-    fun offsetExit(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
+    fun toCallerFrame(callSite: PIRCall, callee: PIRFunction, base: AccessPathBase): AccessPathBase? {
         if (base !is AccessPathBase.Argument) return base
         val offset = PIRFlowFunctionUtils.implicitParamOffset(callee)
-        // The implicit first parameter (self/cls) maps back to the offset-free receiver marker.
-        if (offset > 0 && base.idx == 0) return AccessPathBase.This
-        val newIdx = base.idx - offset
+        val p = base.idx
+        // The implicit first parameter (self/cls) maps back to the receiver marker.
+        if (offset > 0 && p == 0) return AccessPathBase.This
+
+        // Name-first: a keyword call arg bound to callee parameter p maps back to its raw slot.
+        // parameters is index-ordered (parameters[i].index == i), so p indexes it directly.
+        val paramName = callee.parameters.getOrNull(p)?.name
+        val kwIdx = paramName?.let { callSite.indexOfKeywordArg(it) }
+        if (kwIdx != null) return AccessPathBase.Argument(kwIdx)
+
+        val newIdx = p - offset
         if (newIdx < 0) return null
+        // Guard: an unfilled/default parameter must not rebase onto a later keyword arg's slot.
+        if (callSite.args.getOrNull(newIdx)?.kind != PIRCallArgKind.POSITIONAL) return null
         return AccessPathBase.Argument(newIdx)
     }
 }

@@ -14,6 +14,7 @@ import org.opentaint.ir.api.python.PIRCallArgKind
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.BitSet
+import org.opentaint.dataflow.python.util.indexOfKeywordParam
 
 /**
  * Inter-procedural call inlining support, mirroring the JVM `InterProcCallNode`.
@@ -71,20 +72,19 @@ class CallTreeNode(val ctx: ContextInfo, val instEvalCtx: InstEvalContext) {
 
 /**
  * Evaluates a callee's body in [ctx], substituting its parameter references with
- * the caller-frame actuals: positional parameter `i` binds to `args[i - offset]`.
- * The implicit receiver (`self`/`cls`, when [offset] == 1) has no positional
- * actual, so it falls through to the unbound slot `Local(-1, ctx)` and is bound
- * to the call's receiver separately by `PIRDSUAliasAnalysis.bindReceiver` (via
- * `call.callee.$PIR_SELF`). Other unbound parameters (missing positional /
- * keyword / star args) likewise become fresh context-local slots that alias nothing.
+ * the caller-frame actuals in [paramActuals], indexed by callee parameter index.
+ * The implicit receiver (`self`/`cls`) is left unbound here, so it falls through
+ * to the slot `Local(-1, ctx)` and is bound to the call's receiver separately by
+ * `PIRDSUAliasAnalysis.bindReceiver` (via `call.callee.$PIR_SELF`). Other unbound
+ * parameters (missing / star args) likewise become fresh context-local slots that
+ * alias nothing.
  */
 class NestedCallInstEvalCtx(
-    private val args: List<RefValue?>,
+    private val paramActuals: Array<RefValue?>,
     private val ctx: ContextInfo,
-    private val offset: Int,
 ) : InstEvalContext {
     override fun createArg(idx: Int): RefValue =
-        args.getOrNull(idx - offset) ?: RefValue.Local(-(idx + 1), ctx)
+        paramActuals.getOrNull(idx) ?: RefValue.Local(-(idx + 1), ctx)
 
     override fun createLocal(idx: Int): RefValue.Local = RefValue.Local(idx, ctx)
 }
@@ -97,22 +97,35 @@ private fun resolveCallNoCache(
 ): Map<PIRFunction, ResolvedCallMethod>? {
     val methods = callResolver.resolveMethodCall(call, callerCtx.level) ?: return null
 
-    // Caller-frame positional actuals bound to the callee's parameters when inlining.
-    // The receiver (self/cls) is bound separately via call.callee.$PIR_SELF.
-    val args = call.args.map { arg ->
-        if (arg.kind == PIRCallArgKind.POSITIONAL) callerCtxEval.refValue(arg.value) else null
-    }
-
     val resolved = methods.mapIndexedNotNull { idx, method ->
         val graph = callResolver.buildMethodGraph(method) ?: return@mapIndexedNotNull null
         val nestedCtx = ContextInfo(callerCtx.context + mkContextId(call, idx))
-        val offset = PIRFlowFunctionUtils.implicitParamOffset(method)
-        val instEvalCtx = NestedCallInstEvalCtx(args, nestedCtx, offset)
+        val instEvalCtx = NestedCallInstEvalCtx(bindParamActuals(call, method, callerCtxEval), nestedCtx)
         val analysisState = GraphAnalysisState(graph.statements.size, CallTreeNode(nestedCtx, instEvalCtx))
         method to ResolvedCallMethod(graph, analysisState)
     }.toMap()
 
     return resolved.takeIf { it.isNotEmpty() }
+}
+
+/**
+ * Binds each caller actual to the callee parameter it fills: a positional arg at raw
+ * slot `s` to parameter `s + offset`, a keyword arg to the declared parameter of its
+ * name. The result is indexed by callee parameter index (self/cls at 0, left unbound).
+ */
+private fun bindParamActuals(call: PIRCall, method: PIRFunction, callerCtxEval: InstEvalContext): Array<RefValue?> {
+    val offset = PIRFlowFunctionUtils.implicitParamOffset(method)
+    val actuals = arrayOfNulls<RefValue>(method.parameters.size)
+    for ((slot, arg) in call.args.withIndex()) {
+        val paramIdx = when (arg.kind) {
+            PIRCallArgKind.POSITIONAL -> slot + offset
+            PIRCallArgKind.KEYWORD -> arg.keyword?.let { method.indexOfKeywordParam(it) } ?: continue
+            PIRCallArgKind.STAR, PIRCallArgKind.DOUBLE_STAR -> continue
+        }
+
+        if (paramIdx in actuals.indices) actuals[paramIdx] = callerCtxEval.refValue(arg.value)
+    }
+    return actuals
 }
 
 private fun mkContextId(call: PIRCall, methodIdx: Int): Int = call.location.index * 1000 + methodIdx

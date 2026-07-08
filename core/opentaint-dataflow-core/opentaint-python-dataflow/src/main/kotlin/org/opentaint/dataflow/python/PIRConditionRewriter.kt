@@ -22,14 +22,16 @@ import org.opentaint.ir.api.python.PIRCallArgKind
 /**
  * Rewrites a compiled [PythonRuleCondition] against the concrete [call] it is checked at.
  * `ContainsMark` becomes a taint-fact literal; an `arg(*)` ([AnyArgument]) `ContainsMark` is
- * unpacked here into an OR over the call's positional arguments (the signature can't be trusted
- * for Python varargs). Every other (basic) atom is decided to a constant true/false by
+ * unpacked here into an OR over the call's explicit (positional + keyword) arguments (the
+ * signature can't be trusted for Python varargs). Every other (basic) atom is decided to a constant true/false by
  * [PIRBasicAtomEvaluator]. Mirrors `GoRuleConditionRewriter`.
  */
 class PIRConditionRewriter(
     private val anyArgumentResolver: AnyArgumentResolver,
     private val atomEvaluator: PIRBasicAtomEvaluator,
+    private val call: PIRCall? = null,
 ) : RuleConditionRewriter<PythonRuleCondition> {
+
     override fun rewriteAtom(atom: PythonRuleCondition, negated: Boolean): ExprOrConstant {
         if (!negated) {
             return rewriteAtom(atom)
@@ -43,7 +45,7 @@ class PIRConditionRewriter(
                 return expandAnyArgument(atom.pos) { ContainsMark(atom.mark, it) }
             }
 
-            val pos = atom.pos.resolveAp() ?: return falseExpr
+            val pos = atom.pos.resolveAp(call) ?: return falseExpr
             val literal = ContainsMarkLiteral(pos, TaintMarkAccessor(atom.mark.name), negated = false)
             return ExprOrConstant(literal)
         }
@@ -53,7 +55,7 @@ class PIRConditionRewriter(
                 return expandAnyArgument(atom.pos) { ContainsMarkOnAnyAccessor(atom.mark, it) }
             }
 
-            val pos = atom.pos.resolveAp() ?: return falseExpr
+            val pos = atom.pos.resolveAp(call) ?: return falseExpr
             val literal = TaintMarkAwareConditionExpr.ContainsMarkOnAnyAccessorLiteral(pos, TaintMarkAccessor(atom.mark.name), negated = false)
             return ExprOrConstant(literal)
         }
@@ -62,7 +64,7 @@ class PIRConditionRewriter(
         return if (result) trueExpr else falseExpr
     }
 
-    /** `ContainsMark` over `arg(*)` = mark on some positional argument of the concrete call. */
+    /** `ContainsMark` over `arg(*)` = mark on some explicit (positional or keyword) argument of the concrete call. */
     private fun expandAnyArgument(
         pos: Position,
         build: (Position) -> PythonRuleCondition,
@@ -93,9 +95,10 @@ interface AnyArgumentResolver {
 class PIRCallAnyArgumentResolver(val call: PIRCall) : AnyArgumentResolver {
     override fun resolve(position: AnyArgument): List<Position> =
         call.args.indices.mapNotNull { argIdx ->
-            if (call.args[argIdx].kind != PIRCallArgKind.POSITIONAL) return@mapNotNull null
-
-            Argument(argIdx)
+            when (call.args[argIdx].kind) {
+                PIRCallArgKind.POSITIONAL, PIRCallArgKind.KEYWORD -> Argument(argIdx)
+                PIRCallArgKind.STAR, PIRCallArgKind.DOUBLE_STAR -> null
+            }
         }
 }
 

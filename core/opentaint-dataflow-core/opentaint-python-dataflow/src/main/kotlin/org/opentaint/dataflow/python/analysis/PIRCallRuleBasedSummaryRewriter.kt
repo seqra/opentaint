@@ -44,7 +44,7 @@ class PIRCallRuleBasedSummaryRewriter(
 
     private val userRuleDefinedActions: List<UserRuleDefinedAction> by lazy {
         val conditionRewriter = PIRConditionRewriter(
-            PIRCallAnyArgumentResolver(callInst), PIRCallAtomEvaluator(callInst)
+            PIRCallAnyArgumentResolver(callInst), PIRCallAtomEvaluator(callInst), callInst
         )
 
         val result = mutableListOf<UserRuleDefinedAction>()
@@ -78,7 +78,7 @@ class PIRCallRuleBasedSummaryRewriter(
 
         val cleanedFact = userRuleDefinedActions.applyCleanerActions(
             evalAction = { f, rule, action ->
-                val pos = action.pos.resolveAp() ?: return@applyCleanerActions listOf(f)
+                val pos = action.pos.resolveAp(callInst) ?: return@applyCleanerActions listOf(f)
 
                 cleanEvaluator.removeFinalFact(f, pos, TaintMarkAccessor(action.mark.name), rule, action)
             },

@@ -15,12 +15,15 @@ import org.opentaint.dataflow.configuration.python.PositionAccessor
 import org.opentaint.dataflow.configuration.python.PositionWithAccess
 import org.opentaint.dataflow.configuration.python.Result
 import org.opentaint.dataflow.configuration.python.This
+import org.opentaint.dataflow.python.util.indexOfKeywordArg
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.PositionTypeResolver
 import org.opentaint.ir.api.common.CommonType
+import org.opentaint.ir.api.python.PIRCall
 
 object PIRFlowFunctionUtils {
-    fun Position.resolveAp() = resolveBaseAp()?.let { resolveAp(it) }
+    /** `kwarg(name)` resolves only when [call] is in scope, to the raw [PIRCall.args] slot of the matching keyword. */
+    fun Position.resolveAp(call: PIRCall? = null): PositionAccess? = resolveBaseAp(call)?.let { resolveAp(it) }
 
     fun Position.resolveAp(baseAp: AccessPathBase): PositionAccess? = when (this) {
         is KwArgument,
@@ -42,14 +45,17 @@ object PIRFlowFunctionUtils {
         AnyArgument -> anyArgumentUnsupported()
     }
 
-    fun Position.resolveBaseAp(): AccessPathBase? = when (this) {
+    fun Position.resolveBaseAp(call: PIRCall? = null): AccessPathBase? = when (this) {
         is ClassRef -> AccessPathBase.ClassStatic
         is Argument -> AccessPathBase.Argument(index)
         Result -> AccessPathBase.Return
         This -> AccessPathBase.This
-        is PositionWithAccess -> base.resolveBaseAp()
+        is PositionWithAccess -> base.resolveBaseAp(call)
 
-        is KwArgument -> null
+        is KwArgument -> call?.let { call ->
+            call.indexOfKeywordArg(name)?.let { AccessPathBase.Argument(it) }
+        }
+
         AnyArgument -> anyArgumentUnsupported()
     }
 

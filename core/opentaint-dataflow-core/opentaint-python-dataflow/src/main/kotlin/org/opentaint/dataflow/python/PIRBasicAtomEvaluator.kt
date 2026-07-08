@@ -40,11 +40,15 @@ interface PIRBasicAtomEvaluator : PIRConditionVisitor<Boolean> {
  */
 class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
     override fun visit(c: NumberOfArgs): Boolean {
-        val positional = call.args.count { it.kind == PIRCallArgKind.POSITIONAL }
-        val hasStar = call.args.any { it.kind == PIRCallArgKind.STAR }
-        val max = if (hasStar) Int.MAX_VALUE else positional
+        val explicit = call.args.count {
+            it.kind == PIRCallArgKind.POSITIONAL || it.kind == PIRCallArgKind.KEYWORD
+        }
+        val hasSplat = call.args.any {
+            it.kind == PIRCallArgKind.STAR || it.kind == PIRCallArgKind.DOUBLE_STAR
+        }
+        val max = if (hasSplat) Int.MAX_VALUE else explicit
 
-        return c.n in positional..max
+        return c.n in explicit..max
     }
 
     override fun visit(c: ConstantCmp): Boolean {

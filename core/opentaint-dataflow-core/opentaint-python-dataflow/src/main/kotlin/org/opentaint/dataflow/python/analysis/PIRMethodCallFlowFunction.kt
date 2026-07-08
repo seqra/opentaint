@@ -168,7 +168,7 @@ class PIRMethodCallFlowFunction(
         )
 
         val simpleConditionEvaluator = PIRSimpleFactAwareConditionEvaluator(conditionRewriter, conditionEvaluator)
-        val cleaner = PIRTaintCleanActionEvaluator()
+        val cleaner = PIRTaintCleanActionEvaluator(callInst)
 
         val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
         val cleanerResults = applyCleaner(factReaderBeforeCleaner, simpleConditionEvaluator, cleaner)
@@ -333,8 +333,8 @@ class PIRMethodCallFlowFunction(
             if (!simpleConditionEvaluator.eval(rule.condition)) return@maybeFlatMap Maybe.none()
 
             rule.copy.maybeFlatMap { action ->
-                val from = action.from.resolveAp() ?: return@maybeFlatMap Maybe.none()
-                val to = action.to.resolveAp() ?: return@maybeFlatMap Maybe.none()
+                val from = action.from.resolveAp(callInst) ?: return@maybeFlatMap Maybe.none()
+                val to = action.to.resolveAp(callInst) ?: return@maybeFlatMap Maybe.none()
 
                 evaluator.propagateData(rule, action, from, to)
             }
@@ -383,6 +383,6 @@ class PIRMethodCallFlowFunction(
     }
 
     private fun callConditionRewriter(call: PIRCall) = PIRConditionRewriter(
-        PIRCallAnyArgumentResolver(call), PIRCallAtomEvaluator(call)
+        PIRCallAnyArgumentResolver(call), PIRCallAtomEvaluator(call), call
     )
 }
