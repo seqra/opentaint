@@ -347,8 +347,6 @@ jobs:
         with:
           release-version: ${{ steps.release_version.outputs.RELEASE_VERSION }}
           tag-prefix: ''
-          component-name: 'CLI'
-          copy-assets-from: v${{ steps.release_version.outputs.RELEASE_VERSION }}
 
     outputs:
       release_version: ${{ steps.release_version.outputs.RELEASE_VERSION }}

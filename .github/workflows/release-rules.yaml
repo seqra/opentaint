@@ -134,8 +134,6 @@ jobs:
         with:
           release-version: ${{ steps.manual_release.outputs.new-version || steps.release_version.outputs.RELEASE_VERSION }}
           tag-prefix: 'rules/'
-          component-name: 'rules'
-          release-assets: opentaint-rules.tar.gz
 
     outputs:
       release_version: ${{ steps.manual_release.outputs.new-version || steps.release_version.outputs.RELEASE_VERSION }}
