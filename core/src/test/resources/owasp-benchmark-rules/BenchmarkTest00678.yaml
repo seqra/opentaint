@@ -1,0 +1,17 @@
+rules:
+  - id: owasp-xxe-00678
+    languages: [python]
+    mode: taint
+    message: "Tainted request data reaches an external-entity-enabled XML parse (XXE)"
+    severity: ERROR
+    metadata:
+      cwe: CWE-611
+    pattern-sources:
+      - pattern: "flask.request.args.get(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              $P.setFeature($F, True)
+              ...
+          - pattern: "xml.dom.minidom.parseString($DOC, $P)"
+          - focus-metavariable: $DOC

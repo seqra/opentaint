@@ -189,6 +189,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
 
     @Disabled("dict key-insensitivity FP (inv 16): store keyB(param), read keyA(const)")
     @Test fun benchmarkTest00428() = assertNotReachable("00428")
+    @Disabled("list index-insensitivity FP (inv 19): append taints whole list; lst[1] reads tainted")
     @Test fun benchmarkTest00991() = assertNotReachable("00991")
     @Test fun benchmarkTest01095() = assertNotReachable("01095")
     @Test fun benchmarkTest01168() = assertNotReachable("01168")
@@ -227,6 +228,58 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00732() = assertNotReachable("00732")
     @Disabled("path-insensitive always-true ternary guard FP (inv 18): else-branch taints bar")
     @Test fun benchmarkTest00897() = assertNotReachable("00897")
+
+    // ─── xxe (CWE-611). sink: xml.dom.minidom.parseString($DOC, $P) where $P had a
+    //   setFeature(_, True) enabling external entities — the parser-hardening discriminator.
+    //   The safe (FALSE) variants either omit that setFeature (hardened parser → sink never fires,
+    //   regardless of whether tainted data reaches it) or don't carry taint to the parse.
+
+    @Test fun benchmarkTest00205() = assertReachable("00205")
+    @Test fun benchmarkTest00294() = assertReachable("00294")
+    @Test fun benchmarkTest00460() = assertReachable("00460")
+    @Test fun benchmarkTest00930() = assertReachable("00930")
+    @Test fun benchmarkTest00931() = assertReachable("00931")
+    @Test fun benchmarkTest01212() = assertReachable("01212")
+
+    // dynamic getattr construction yields an Any-typed receiver, so thing.doSomething(param) can't
+    // resolve to the concrete class and the arg->return pass-through is lost — FN (inv 20, escalated).
+    @Disabled("dynamic getattr dispatch (inv 20): Any receiver, thing.doSomething unresolved — FN")
+    @Test fun benchmarkTest00462() = assertReachable("00462")
+    @Disabled("dynamic getattr dispatch (inv 20): Any receiver, thing.doSomething unresolved — FN")
+    @Test fun benchmarkTest00541() = assertReachable("00541")
+
+    // Safe/hardened-parser FALSE variants: no setFeature(_, True), so the dangerous-parse sink
+    // never fires even when tainted data reaches parseString (01211 vs TRUE 01212 differ ONLY here).
+    @Test fun benchmarkTest00017() = assertNotReachable("00017")
+    @Test fun benchmarkTest00204() = assertNotReachable("00204")
+    @Test fun benchmarkTest00291() = assertNotReachable("00291")
+    @Test fun benchmarkTest00292() = assertNotReachable("00292")
+    @Test fun benchmarkTest00293() = assertNotReachable("00293")
+    @Test fun benchmarkTest00459() = assertNotReachable("00459")
+    @Test fun benchmarkTest00538() = assertNotReachable("00538")
+    @Test fun benchmarkTest00539() = assertNotReachable("00539")
+    @Test fun benchmarkTest00678() = assertNotReachable("00678")
+    @Test fun benchmarkTest00850() = assertNotReachable("00850")
+    @Test fun benchmarkTest01024() = assertNotReachable("01024")
+    @Test fun benchmarkTest01122() = assertNotReachable("01122")
+    @Test fun benchmarkTest01211() = assertNotReachable("01211")
+
+    // request.path is not a taint source (inv 17); dangerous parser but source never matches → safe.
+    @Test fun benchmarkTest01025() = assertNotReachable("01025")
+
+    // Dangerous-parser FALSE variants that false-positive on data-flow approximation limits.
+    @Disabled("configparser key-insensitivity FP (inv 16): set keyB(param), get keyA(const)")
+    @Test fun benchmarkTest00206() = assertNotReachable("00206")
+    @Disabled("configparser key-insensitivity FP (inv 16): set keyB(param), get keyA(const)")
+    @Test fun benchmarkTest00759() = assertNotReachable("00759")
+    @Disabled("dict key-insensitivity FP (inv 16): store keyB(param), read keyA(const)")
+    @Test fun benchmarkTest00461() = assertNotReachable("00461")
+    @Disabled("list index-insensitivity FP (inv 19): append taints whole list; lst[1] reads tainted")
+    @Test fun benchmarkTest00679() = assertNotReachable("00679")
+    @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm still explored")
+    @Test fun benchmarkTest00540() = assertNotReachable("00540")
+    @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm still explored")
+    @Test fun benchmarkTest00851() = assertNotReachable("00851")
 
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 

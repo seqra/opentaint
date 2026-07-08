@@ -130,6 +130,27 @@ one, add it.
     concrete class and its arg→return pass-through is lost; taint drops. Interprocedural resolution does
     NOT fall back to simple-name matching the way config pass/sink rules do (inv 3). Escalated
     (ldapi 00896, `ThingFactory`); reproducer = the `@Disabled` OWASP entry itself.
+    **Confirmed still failing** in the xxe round (00462/00541, same `ThingFactory`) despite the
+    `7aba04fa6` simple-name resolver fallback — that fallback resolves to a synthetic *unknown*
+    function with no arg→return modeling, so taint still drops. Not stale.
+21. **Config-gated sink (parser hardening) via `pattern-inside` sibling-statement match.** When a sink
+    is dangerous only if a *sibling* config call enabled it, gate it with a statement-sequence
+    `pattern-inside`. XXE (CWE-611): the parse is dangerous only when the parser has external entities
+    on. Model with the parser var `$P` unified across a preceding `setFeature(_, True)` and the parse:
+    ```yaml
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              $P.setFeature($F, True)
+              ...
+          - pattern: "xml.dom.minidom.parseString($DOC, $P)"
+          - focus-metavariable: $DOC
+    ```
+    Hardened FALSE variants omit `setFeature(_, True)` (all features off by default) → the sink never
+    fires **regardless of whether tainted data reaches the parse** — this is how 13 safe-parser xxe
+    FALSE entries pass, incl. 01211 (byte-identical dataflow to TRUE 01212, differing *only* in that
+    line). `pattern-inside` in taint `pattern-sinks` works (see sample `RuleWithInside`;
+    statement-sequence form in `RuleWithRealInsideSequence`).
 
 ## Category → sink / CWE reference
 

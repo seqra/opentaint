@@ -182,3 +182,47 @@ via string concat + slice; 01193 flows `param` straight into the filter f-string
   object is `Any`; `thing.doSomething(param)` can't resolve to `Thing1`/`Thing2` and the arg→return
   pass-through is lost. Root cause: interprocedural resolution doesn't fall back to simple-name matching for
   user methods on an Any receiver (unlike config pass/sink rules, inv 3). User will investigate later (inv 20).
+
+## xxe round (CWE-611, 28 entries)
+
+Sink for all: an **external-entity-enabled parse** — `xml.dom.minidom.parseString($DOC, $P)` gated by a
+preceding `$P.setFeature($F, True)` via statement-sequence `pattern-inside` (see inv 21). Every sample
+uses the same `xml.sax.make_parser()` + optional `setFeature(feature_external_ges, True)` + `parseString`
+shape; the setFeature line is the TRUE/FALSE discriminator for the "hardened-parser" FALSE variants.
+Sources mirror the SQLi/cmdi/ldapi shapes. **20 active pass (6 TRUE + 14 FALSE), 8 @Disabled.**
+
+### Active TRUE (6, pass): 00205, 00294, 00460, 00930, 00931, 01212
+- 00205 configparser same-key round-trip; 00294 wrapper form + if/else tainted-else; 00460 headers.get
+  direct; 01212 args.getlist direct.
+- 00930/00931 (query_string): needed source `flask.request.query_string.decode(...)` — the fullest
+  accessor chain. A bare `flask.request` source FN'd NOT because of the attribute read — whole-object
+  taint DOES propagate through `request.query_string` — but because the `.decode(...)` call resolves
+  to the chained QN `flask.request.query_string.decode` (no passthrough) and, being a resolved name,
+  suppresses the simple-name fallback that would hit `builtins.bytes.decode` (inv 22, corrected;
+  inv 3/7). Tagging the decode() result directly sidesteps it. 00930 base64 round-trip +
+  `urllib.parse.unquote_plus` (passthrough already present); 00931 match/case (case A: bar=param).
+  No new pass-throughs needed.
+
+### Active FALSE (14, pass)
+Hardened-parser (no `setFeature(_,True)` → sink never fires even though taint often DOES reach the
+parse): 00017, 00204, 00291, 00292, 00293, 00459, 00538, 00539, 00678, 00850, 01024, 01122, 01211.
+This is the robust way to model the safe variants — no cleaner needed, the sink simply isn't dangerous.
+Plus 01025 (dangerous parser but `request.path` source, not matched by `flask.request.args.get` → never
+tainted, inv 17).
+
+### Unfixable-by-design (@Disabled)
+Dangerous-parser FALSE variants that FP on dataflow-approximation limits:
+- 00206, 00759 — configparser key-insensitivity (inv 16): set keyB(param), get keyA(const).
+- 00461 — dict key-insensitivity (inv 16).
+- 00679 — list index-insensitivity (inv 19): append(param), pop, read lst[1].
+- 00540, 00851 — path-insensitive match arms (inv 18): const discriminator picks safe arm, tainted arm explored.
+
+### Escalated (getattr inv 20, confirmed still failing)
+- 00462, 00541 (TRUE, FN) — `helpers.ThingFactory.createThing()` uses `getattr(mod, name)()` → Any
+  receiver → `thing.doSomething(param)` unresolved. **Verified empirically** by un-disabling + re-running
+  (both FAIL). The `7aba04fa6` simple-name fallback does not help — synthetic unknown func has no
+  arg→return. Same root cause as ldapi 00896; reproducer = these `@Disabled` OWASP entries.
+
+### Capability-invariant guard applied
+No stale "unsupported" invariant found this round. match/case (00931 TRUE reaches, 00540/00851 FALSE
+FP as expected) and getattr (inv 20, re-verified failing) both behaved per current engine.
