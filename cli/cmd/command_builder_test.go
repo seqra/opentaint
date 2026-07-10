@@ -62,3 +62,40 @@ func TestAppendVerbosityFlagPreservesExistingFlags(t *testing.T) {
 		t.Fatalf("appendVerbosityFlag did not preserve prior flags: got %v, want %v", got, want)
 	}
 }
+
+// containsFlagPair reports whether args contains the adjacent pair `flag value`.
+func containsFlagPair(args []string, flag, value string) bool {
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == flag && args[i+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
+// Dependencies must reach the autobuilder via its --dependency option so they land
+// in project.yaml's dependencies field (resolvable library bytecode), distinct from
+// --cp module classes. Folding them into --cp would misfile them as project classes.
+func TestAutobuilderBuildNativeCommandRoutesDependenciesToDependencyFlag(t *testing.T) {
+	cmd := NewAutobuilderBuilder().
+		SetProjectRootDir("/src").
+		SetResultDir("/out").
+		SetBuildType("cp").
+		AddClasspath("/app.jar").
+		AddDependency("/dep.jar").
+		AddPackage("com.example").
+		BuildNativeCommand()
+
+	if !containsFlagPair(cmd, "--cp", "/app.jar") {
+		t.Fatalf("classpath /app.jar not passed as --cp; command was %v", cmd)
+	}
+	if !containsFlagPair(cmd, "--dependency", "/dep.jar") {
+		t.Fatalf("dependency /dep.jar not routed to --dependency; command was %v", cmd)
+	}
+	if containsFlagPair(cmd, "--cp", "/dep.jar") {
+		t.Fatalf("dependency /dep.jar must not be folded into --cp; command was %v", cmd)
+	}
+	if !containsFlagPair(cmd, "--pkg", "com.example") {
+		t.Fatalf("package com.example not passed as --pkg; command was %v", cmd)
+	}
+}
