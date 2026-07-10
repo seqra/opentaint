@@ -249,7 +249,11 @@ jobs:
           # platform package too. New package names must exist on npm before a
           # trusted publisher can be attached (first publish is a manual,
           # token-based bootstrap).
-          npm install -g npm@latest
+          # Pin to npm 11.x: npm@latest (12.0.0) ships a broken provenance
+          # path that fails with "Cannot find module 'sigstore'" under the
+          # OIDC trusted publisher (npm/cli#9722, no 12.0.1 fix released yet).
+          # 11.x still supports trusted publishing (added in 11.5.1).
+          npm install -g npm@11
           npm --version
 
           bash scripts/build-npm-packages.sh dist "$RELEASE_VERSION"
