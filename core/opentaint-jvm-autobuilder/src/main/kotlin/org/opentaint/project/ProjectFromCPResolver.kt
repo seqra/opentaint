@@ -20,7 +20,7 @@ class ProjectFromCPResolver {
 
         val resolvedCp = projectCp.cp.flatMap { resolveProjectCp(it, resolverWorkDir) }
         val module = ProjectModuleClasses(rootDir, projectCp.pkg, resolvedCp)
-        return JavaProject(rootDir, projectCp.toolchain, listOf(module))
+        return JavaProject(rootDir, projectCp.toolchain, listOf(module), projectCp.dependency)
     }
 
     private var unpackId = 0

@@ -49,4 +49,8 @@ class ProjectFromCP : ProjectBuildType("Create project from class path") {
 
     val pkg: List<String> by option(help = "Project package name")
         .multiple()
+
+    val dependency: List<Path> by option(help = "Project dependency (JAR file)")
+        .path()
+        .multiple()
 }
