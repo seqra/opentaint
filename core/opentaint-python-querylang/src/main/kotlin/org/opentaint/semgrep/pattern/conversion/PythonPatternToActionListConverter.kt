@@ -291,7 +291,7 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
                         ?: transformationFailed("KeywordArgument_name_metavar")
                     val (actions, cond) = transformPatternIntoParamConditionWithActions(arg.value)
                     allActions += actions
-                    patterns += ParamPattern(ParamPosition.Named(key), cond ?: ParamCondition.True)
+                    patterns += ParamPattern(ParamPosition.Named(PythonLanguageStrategy.kwargClassifier(key)), cond ?: ParamCondition.True)
                 }
 
                 else -> {

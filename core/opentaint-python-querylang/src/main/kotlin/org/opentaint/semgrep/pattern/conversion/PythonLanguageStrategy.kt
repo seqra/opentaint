@@ -24,6 +24,13 @@ class PythonLanguageStrategy : LanguageStrategy<SemgrepPythonPattern, Serialized
         fun joinFieldNames(prev: String, next: String) = "$prev$FIELD_NAME_SEPARATOR$next"
 
         fun splitFieldNames(joinedName: String): List<String> = joinedName.split(FIELD_NAME_SEPARATOR)
+
+        const val KWARG_CLASSIFIER_PREFIX = "$$<kwarg>$$"
+
+        fun kwargClassifier(name: String) = "$KWARG_CLASSIFIER_PREFIX$name"
+
+        fun kwargClassifierNameOrNull(classifier: String): String? =
+            if (classifier.startsWith(KWARG_CLASSIFIER_PREFIX)) classifier.removePrefix(KWARG_CLASSIFIER_PREFIX) else null
     }
 
     override val language = "python"

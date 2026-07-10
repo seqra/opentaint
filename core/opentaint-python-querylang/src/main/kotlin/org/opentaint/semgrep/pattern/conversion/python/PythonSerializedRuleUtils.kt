@@ -10,6 +10,7 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCo
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintCleanAction
 import org.opentaint.semgrep.pattern.Mark.GeneratedMark
+import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
 
 /** Match-anything function target. */
 internal const val ANY_PYTHON_FUNCTION = ".*"
@@ -60,7 +61,9 @@ internal fun PositionBaseWithModifiers.toPythonPosition(): PythonPosition = when
 
 private fun PositionBase.toPythonPositionBase(): PythonPositionBase = when (this) {
     is PositionBase.Argument -> PythonPositionBase.Argument(idx)
-    is PositionBase.AnyArgument -> PythonPositionBase.Argument(null)
+    is PositionBase.AnyArgument ->
+        PythonLanguageStrategy.kwargClassifierNameOrNull(classifier)?.let { PythonPositionBase.KwArgument(it) }
+            ?: PythonPositionBase.Argument(null)
     PositionBase.This -> PythonPositionBase.This
     PositionBase.Result -> PythonPositionBase.Result
     is PositionBase.ClassStatic -> PythonPositionBase.ClassRef(className)

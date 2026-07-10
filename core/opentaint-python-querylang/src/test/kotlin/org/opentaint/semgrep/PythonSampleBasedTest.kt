@@ -79,6 +79,11 @@ class PythonSampleBasedTest {
 
     @Test fun multiArgSink() = runSample("MultiArgSink")
     @Test fun constantArgSink() = runSample("ConstantArgSink")
+    @Test fun kwargConstantSink() = runSample("KwargConstantSink")
+    @Test fun kwargSource() = runSample("KwargSource")
+    @Test fun kwargStructuralSink() = runSample("KwargStructuralSink")
+    @Test fun kwargSanitizer() = runSample("KwargSanitizer")
+    @Test fun kwargNotCleaner() = runSample("KwargNotCleaner")
     @Test fun complexSourceSink() = runSample("ComplexSourceSink")
     @Test fun joinWithTaintAndMatchingLeft() = runSample("JoinWithTaintAndMatchingLeft")
     @Test fun ndRule() = runSample("NDRule")

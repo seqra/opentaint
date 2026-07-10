@@ -28,6 +28,16 @@ class PythonRuleEmitTest {
         return rule.taintRules.flatMap { it.rules }
     }
 
+    private fun emitAll(resource: String): List<SerializedPythonRule> {
+        val yaml = javaClass.classLoader.getResource(resource)!!.readText()
+        val loader = SemgrepRuleLoader(listOf(PythonLanguageStrategy()))
+        loader.registerRuleSet(yaml, Path(resource), Path("."), SemgrepLoadTrace())
+        return loader.loadRules().rulesWithMeta.flatMap {
+            @Suppress("UNCHECKED_CAST")
+            (it.first as TaintRuleFromSemgrep<SerializedPythonRule>).taintRules.flatMap { tr -> tr.rules }
+        }
+    }
+
     private fun SerializedPythonRule.functionTarget(): String? = (target as? PythonTarget.Function)?.function
 
     private fun SerializedPythonRule.attributeTarget(): String? = (target as? PythonTarget.Attribute)?.attribute
@@ -113,8 +123,102 @@ class PythonRuleEmitTest {
         assertTrue(source.taint.all { it.pos.base == PythonPositionBase.Result }, "attribute read taints the result")
     }
 
+    // A taint-reachability sink is expanded to check every position generically (arg(*)/This), so the
+    // keyword name only survives on a *condition* over that keyword. `run($CMD, shell=True)` keeps
+    // `shell=True` as a constant compare, which must land on kwarg(shell), not the over-broad arg(*).
+    @Test fun `constant keyword-arg condition serializes as a named position`() {
+        val sink = emitAll("python-rules/kwarg-const.yaml")
+            .filterIsInstance<SerializedPythonSink>()
+            .first { it.functionTarget() == "run" }
+
+        assertEquals(
+            setOf(PythonPositionBase.KwArgument("shell")),
+            sink.condition!!.constantCmpPositions().map { it.base }.toSet(),
+            "shell=True lands on kwarg(shell), not arg(*)",
+        )
+    }
+
+    @Test fun `each constant keyword-arg condition keeps its own name`() {
+        val sink = emitAll("python-rules/kwarg-const.yaml")
+            .filterIsInstance<SerializedPythonSink>()
+            .first { it.functionTarget() == "mrun" }
+
+        assertEquals(
+            setOf(PythonPositionBase.KwArgument("shell"), PythonPositionBase.KwArgument("check")),
+            sink.condition!!.constantCmpPositions().map { it.base }.toSet(),
+            "each keyword condition keeps its name (guard exemption preserves multi-kwarg)",
+        )
+    }
+
+    @Test fun `constant positional after ellipsis stays any-argument`() {
+        val sink = emitAll("python-rules/kwarg-const.yaml")
+            .filterIsInstance<SerializedPythonSink>()
+            .first { it.functionTarget() == "prun" }
+
+        assertEquals(
+            setOf(PythonPositionBase.Argument(null)),
+            sink.condition!!.constantCmpPositions().map { it.base }.toSet(),
+            "a positional `*->i` classifier must not be mistaken for a kwarg name",
+        )
+    }
+
+    // Structural (non-`mode: taint`) rules synthesize source/sink from a `patterns:` block and keep
+    // concrete argument positions, so a keyword condition there must also decode to a named position.
+    @Test fun `structural rule keyword condition serializes as a named position`() {
+        val sink = emitAll("python-rules/kwarg-structural.yaml")
+            .filterIsInstance<SerializedPythonSink>()
+            .single { it.functionTarget() == "sink" }
+
+        assertEquals(
+            setOf(PythonPositionBase.KwArgument("mode")),
+            sink.condition!!.constantCmpPositions().map { it.base }.toSet(),
+            "structural mode=\"constant\" lands on kwarg(mode), not arg(*)",
+        )
+    }
+
+    // A structural `pattern-not` synthesizes a cleaner (dead-edge). A keyword condition distinguishing
+    // the not-pattern must decode to a named position in the cleaner's guard, else it over-cleans on arg(*).
+    @Test fun `structural not-pattern cleaner keyword condition serializes as a named position`() {
+        val cleaners = emitAll("python-rules/kwarg-not-cleaner.yaml")
+            .filterIsInstance<SerializedPythonCleaner>()
+            .filter { it.functionTarget() == "transform" }
+
+        assertTrue(cleaners.isNotEmpty(), "expected a transform cleaner from pattern-not")
+        assertEquals(
+            setOf(PythonPositionBase.KwArgument("mode")),
+            cleaners.flatMap { it.condition!!.constantCmpPositions() }.map { it.base }.toSet(),
+            "the cleaner guard checks kwarg(mode)==\"safe\", not arg(*)",
+        )
+    }
+
+    // The source-mark placement path is the shared TaintRuleStrategy (createAssignMark), distinct from
+    // the sink-condition path — proves the keyword name survives both lowerings, not just conditions.
+    @Test fun `focused keyword-arg source taints the named position`() {
+        val source = emit("python-rules/kwarg-source.yaml")
+            .filterIsInstance<SerializedPythonSource>()
+            .single { it.functionTarget() == "handler" }
+
+        assertEquals(
+            listOf(PythonPositionBase.KwArgument("payload")),
+            source.taint.map { it.pos.base },
+            "a focused kwarg source marks kwarg(payload); without the fix this is arg(*) and crashes at runtime",
+        )
+    }
+
+    private fun SerializedPythonCondition.constantCmpPositions(): List<PythonPosition> = when (this) {
+        is SerializedPythonCondition.ConstantCmp -> listOf(pos)
+        is SerializedPythonCondition.And -> allOf.flatMap { it.constantCmpPositions() }
+        is SerializedPythonCondition.Or -> anyOf.flatMap { it.constantCmpPositions() }
+        is SerializedPythonCondition.Not -> not.constantCmpPositions()
+        is SerializedPythonCondition.ContainsMark,
+        is SerializedPythonCondition.ContainsMarkOnAnyAccessor,
+        is SerializedPythonCondition.NumberOfArgs,
+        is SerializedPythonCondition.ConstantMatches -> emptyList()
+    }
+
     private fun SerializedPythonCondition.markPositions(): List<PythonPosition> = when (this) {
         is SerializedPythonCondition.ContainsMark -> listOf(pos)
+        is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> listOf(pos)
         is SerializedPythonCondition.And -> allOf.flatMap { it.markPositions() }
         is SerializedPythonCondition.Or -> anyOf.flatMap { it.markPositions() }
         is SerializedPythonCondition.Not -> not.markPositions()

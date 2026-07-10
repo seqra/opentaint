@@ -229,8 +229,10 @@ class PythonPatternToActionListConverterTest {
         val a = convertOk("foo(x=\$V)")
         val call = a.actions.single() as MethodCall
         val params = call.params as ParamConstraint.Partial
+        // The keyword name is prefix-encoded into the classifier so it can ride the shared
+        // any-argument channel and be recovered at the Python position decode.
         assertEquals(
-            listOf(ParamPattern(ParamPosition.Named("x"), IsMetavar(MetavarAtom.create("\$V")))),
+            listOf(ParamPattern(ParamPosition.Named(PythonLanguageStrategy.kwargClassifier("x")), IsMetavar(MetavarAtom.create("\$V")))),
             params.params,
         )
     }
