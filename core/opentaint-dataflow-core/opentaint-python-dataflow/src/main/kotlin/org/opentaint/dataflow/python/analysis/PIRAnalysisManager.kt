@@ -165,8 +165,7 @@ class PIRAnalysisManager(
         analysisContext: MethodAnalysisContext,
         statement: CommonInst,
         runner: AnalysisRunner,
-    ): MethodSideEffectSummaryHandler =
-        PIRMethodSideEffectSummaryHandler()
+    ): MethodSideEffectSummaryHandler = PIRMethodSideEffectSummaryHandler(runner)
 
     override fun isReachable(
         apManager: ApManager,

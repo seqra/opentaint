@@ -26,6 +26,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.PIRSimpleFactAwareConditionEvaluator
 import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.python.alias.forEachAliasAfterCallStatement
+import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
@@ -76,7 +77,10 @@ class PIRMethodCallFlowFunction(
             }
         )
 
-        applySinkRules(factReader = null, conditionRewriter)
+        applySinkRules(initialFacts = emptySet(), factReader = null, conditionRewriter) {
+            check(it is ZeroCallFact)
+            result += it
+        }
 
         result.add(CallToStartZeroFact)
 
@@ -111,7 +115,7 @@ class PIRMethodCallFlowFunction(
         val conditionRewriter = callConditionRewriter(callInst)
         val reader = FinalFactReader(factAp, apManager)
 
-        applySinkRules(reader, conditionRewriter)
+        applySinkRules(initialFacts, reader, conditionRewriter, addUnchecked)
 
         applySourceRules(
             initialFacts, reader, exclusion, conditionRewriter,
@@ -296,8 +300,10 @@ class PIRMethodCallFlowFunction(
     }
 
     private fun applySinkRules(
+        initialFacts: Set<InitialFactAp>,
         factReader: FinalFactReader?,
         conditionRewriter: PIRConditionRewriter,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit
     ) {
         val sinkRules = resolvedMethods.flatMapTo(mutableListOf()) { method ->
             rulesProvider.sinksForMethod(method)
@@ -305,7 +311,13 @@ class PIRMethodCallFlowFunction(
 
         val taintUtil = PIRMethodCallTaintUtil(callExpr, ctx, callInst, apManager)
 
-        taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyFieldResolver = null)
+        val markAfterAnyAccessorResolver = createMarkAfterAccessorResolver(
+            ctx.methodEntryPoint, initialFacts
+        ) { i, k ->
+            addUnchecked(MethodCallFlowFunction.FactSideEffect(i, k))
+        }
+
+        taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyAccessorResolver)
     }
 
     private fun applyPassRules(
