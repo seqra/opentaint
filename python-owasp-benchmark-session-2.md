@@ -34,12 +34,24 @@ fixes accumulate cleanly.
 
 ## Current status
 
-- **Seed set committed** — 16 SQLi entries: 14 active (all pass), 2 `@Disabled` (`00192`, `00287` —
-  `match`/`case` unsupported, see invariant 4).
-- **Engine fix committed** — `PIRMethodQFNameReconstructor` resolves `x.attr` on a known base class
-  via the MRO (fixed the `request_wrapper` FN; invariant 7).
+- **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
+  redirect (34). Each entry has a hand-written rule + hardcoded ground-truth `@Test`; unfixable-by-design
+  FALSE entries are `@Disabled` with a one-line reason. OWASP suite currently 100 pass / 0 fail / 33 skipped.
+- **Next batch: `codeinj`** (CWE-94, `eval`/`exec`, ~53) — the next-smallest untouched taint-flow category.
+  Then trustbound (37), deserialization (54), xss (89), pathtraver (168), xpathi (186). Structural-only
+  categories (weakrand/hash/securecookie) are deferred — discuss first (see category table note).
+- **Author rules STRUCTURALLY by default** (invariants 22/23/24/25) — not taint-mode. Thread the source
+  metavar into the sink (inv 24); use `[...]` on collection-accessor sources (inv 25); unify the guard
+  metavar for validator exclusions (inv 23).
+- **Engine/converter fixes committed:** `PIRMethodQFNameReconstructor` MRO attr resolution (inv 7);
+  `pattern-not` cleaner handling (`95ad3f916`, retires the "cleaners no-op" claim, inv 23);
+  `PythonPatternToActionListConverter.transformAssignmentValue` preserves the subscript element modifier
+  so `$A = src(...)[...]` taints `Result[*]` (inv 25).
 - **Pass-throughs committed** — base64 (`b64encode`/`b64decode`) + `builtins.bytes.decode` in
   `config.yaml` (fixed `00454`).
+- **Known unrelated red test:** `PythonSampleBasedTest.allowedSpecificConstant` fails on this branch
+  independently of the benchmark work (a `Positive_iter_proc` sample; converter-independent). The OWASP
+  suite is unaffected — don't mistake it for a regression.
 - Running notes: `python-owasp-benchmark-insights.md` (per-entry FP/FN, pass-throughs, deep
   root-cause writeups). Read it before a hard debug.
 
