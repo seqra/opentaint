@@ -281,6 +281,61 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm still explored")
     @Test fun benchmarkTest00851() = assertNotReachable("00851")
 
+    // ─── redirect (CWE-601, open redirect) ──────────────────────────────────────────
+    // Structural rules: source binding ... flask.redirect($URL) sink. FALSE variants guarded by a
+    // urllib.parse.urlparse(+netloc/scheme) validator are excluded with a pattern-not-inside cleaner
+    // on the redirect arg; never-tainted FALSE variants (constant get_safe_value / request.path)
+    // use a source that never matches.
+
+    // TRUE — tainted request data reaches flask.redirect.
+    @Test fun benchmarkTest00067() = assertReachable("00067")
+    @Test fun benchmarkTest00068() = assertReachable("00068")
+    @Test fun benchmarkTest00258() = assertReachable("00258")
+    @Test fun benchmarkTest00418() = assertReachable("00418")
+    @Test fun benchmarkTest00495() = assertReachable("00495")
+    @Test fun benchmarkTest00496() = assertReachable("00496")
+    @Test fun benchmarkTest00596() = assertReachable("00596")
+    @Test fun benchmarkTest00654() = assertReachable("00654")
+    @Test fun benchmarkTest00655() = assertReachable("00655")
+    @Test fun benchmarkTest00814() = assertReachable("00814")
+    @Test fun benchmarkTest00982() = assertReachable("00982")
+    @Test fun benchmarkTest01178() = assertReachable("01178")
+    @Test fun benchmarkTest01208() = assertReachable("01208")
+
+    // FALSE — urlparse+netloc/scheme guard excluded via pattern-not-inside cleaner on $URL.
+    @Test fun benchmarkTest00069() = assertNotReachable("00069")
+    @Test fun benchmarkTest00151() = assertNotReachable("00151")
+    @Test fun benchmarkTest00419() = assertNotReachable("00419")
+    @Test fun benchmarkTest00420() = assertNotReachable("00420")
+    @Test fun benchmarkTest00598() = assertNotReachable("00598")
+    @Test fun benchmarkTest00815() = assertNotReachable("00815")
+    @Test fun benchmarkTest00816() = assertNotReachable("00816")
+    @Test fun benchmarkTest00983() = assertNotReachable("00983")
+    @Test fun benchmarkTest01209() = assertNotReachable("01209")
+
+    // FALSE — never tainted: constant get_safe_value wrapper (01156-01160) or request.path (01091);
+    // the flask.request.* source pattern never matches, so nothing reaches the sink.
+    @Test fun benchmarkTest01091() = assertNotReachable("01091")
+    @Test fun benchmarkTest01156() = assertNotReachable("01156")
+    @Test fun benchmarkTest01157() = assertNotReachable("01157")
+    @Test fun benchmarkTest01158() = assertNotReachable("01158")
+    @Test fun benchmarkTest01159() = assertNotReachable("01159")
+    @Test fun benchmarkTest01160() = assertNotReachable("01160")
+
+    // FALSE — data-flow-approximation FP (no runtime guard); structural lowering can't distinguish.
+    @Disabled("path-insensitive ternary FP (inv 18): const-true guard picks safe arm, param arm still explored")
+    @Test fun benchmarkTest00259() = assertNotReachable("00259")
+    @Disabled("configparser key-insensitivity FP (inv 16): set keyB(param), get keyA(const)")
+    @Test fun benchmarkTest00417() = assertNotReachable("00417")
+    @Disabled("list index-insensitivity FP (inv 19): append(param), pop, read lst[1]")
+    @Test fun benchmarkTest00597() = assertNotReachable("00597")
+    @Disabled("configparser key-insensitivity FP (inv 16): set keyB(param), get keyA(const)")
+    @Test fun benchmarkTest00722() = assertNotReachable("00722")
+    @Disabled("list index-insensitivity FP (inv 19): append(param), pop, read lst[1]")
+    @Test fun benchmarkTest00723() = assertNotReachable("00723")
+    @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm explored")
+    @Test fun benchmarkTest00724() = assertNotReachable("00724")
+
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 
     private fun assertReachable(id: String) {

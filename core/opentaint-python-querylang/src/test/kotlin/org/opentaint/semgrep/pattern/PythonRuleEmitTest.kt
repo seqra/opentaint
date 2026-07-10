@@ -225,5 +225,6 @@ class PythonRuleEmitTest {
         is SerializedPythonCondition.NumberOfArgs,
         is SerializedPythonCondition.ConstantCmp,
         is SerializedPythonCondition.ConstantMatches -> emptyList()
+        is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> listOf(pos)
     }
 }

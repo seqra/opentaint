@@ -151,6 +151,87 @@ one, add it.
     FALSE entries pass, incl. 01211 (byte-identical dataflow to TRUE 01212, differing *only* in that
     line). `pattern-inside` in taint `pattern-sinks` works (see sample `RuleWithInside`;
     statement-sequence form in `RuleWithRealInsideSequence`).
+22. **Structural (search-mode) rules are supported — PREFER them for OWASP entries.** A rule can be a
+    pure *structural* semgrep match instead of a taint rule: top-level `patterns:` holding
+    `pattern` / `pattern-not` / `pattern-inside` / `pattern-not-inside` blocks (NO `pattern-sources` /
+    `pattern-sinks`, NO `mode: taint`). Metavariables (`$A`, `$SOURCE`, `$SINK`) **unify across
+    blocks**, `...` matches intervening statements (statement-sequence), `pattern-inside` /
+    `pattern-not-inside` scope to the enclosing context, and `focus-metavariable` narrows the reported
+    node. Because each OWASP entry is one self-contained function with a **fixed syntactic shape**, a
+    structural rule that matches the source→sink shape (threading unification through every
+    intermediate assignment) and **excludes the safe/validated variant** with `pattern-not` /
+    `pattern-not-inside` is usually MORE reliable than a taint rule: it sidesteps the engine's
+    path-insensitivity and index/flow-insensitivity (inv 16/18/19) that otherwise force `@Disabled` on
+    many FALSE entries. E.g. redirect FALSE 00069 is "safe" only because of a `urllib.parse.urlparse` +
+    netloc/scheme guard the taint engine can't model as a sanitizer — but a structural
+    `pattern-not-inside` that matches the guard excludes it cleanly.
+    **ALWAYS use structural rules — every OWASP entry can be expressed as one.** Do NOT fall back to
+    taint-mode (`pattern-sources`/`pattern-sinks`) syntax. **Why it's not a fallback:** a structural
+    rule is *itself lowered to a taint rule* by `PythonPatternToActionListConverter` (the first
+    binding becomes the source, the sink call the sink; `...`/`EllipsisStmt` spans intervening
+    statements) — so the resulting taint dataflow **tracks flow through intermediate calls AND field
+    reads/writes just like a hand-written taint rule**. Intermediate calls/field ops on the source→sink
+    path are therefore NOT a reason to switch modes: put a `...` between the source binding and the
+    sink and the lowered rule follows the flow across them (interprocedurally too). This was the trap
+    the first structural round fell into — the sub-agent saw intermediate calls and reverted to taint
+    mode; that is always unnecessary. Reference forms in
+    `core/opentaint-python-querylang/samples-py/`: `RuleWithPatternsSimple` (source→sink),
+    `RuleWithMultiplePatternsUnification` (unification + `pattern-inside return`),
+    `RuleWithMultiplePatterns` (source→sink through two intermediate `mk_type*` calls — the exact
+    "intermediate calls" shape), `TrickyPatternNot` / `ObjectMapperPatternNotFull` (`pattern-not`
+    excludes the cleaned variant), `RuleWithPatternInside` (`pattern-inside` source scope). Caveat:
+    metavariable unification must thread through the binding chain — either name each intermediate
+    binding and unify it (`$V2 = f($A); ... g($V2)`) or elide the chain with `...` between the source
+    binding and the sink; a broken chain (metavar that never re-appears) just won't match.
+    **CORRECTION (redirect round):** the claim above that a `pattern-not-inside` matching a validator
+    "excludes 00069 cleanly" was NEVER empirically true as written — see invariant 23 for the exact
+    working form. A `pattern-not` / `pattern-not-inside` only excludes if it clears **the same taint
+    mark the sink checks**, which requires the guard metavar to be unified with the source+sink metavar.
+23. **A validator/sanitizer exclusion (`pattern-not` / `pattern-not-inside`) works ONLY when source,
+    sink, AND the excluded guard call are unified on ONE metavar** — the ObjectMapperPatternNotEllipsis
+    shape. Discovered debugging redirect FALSE guard entries (urlparse+netloc/scheme validators).
+    - **Why the naive forms silently fail (all verified by dumping emitted rules via `PythonRuleEmitTest`):**
+      - *Sink-only + cleaner* (`pattern: sink($X)` + `pattern-not-inside: clean($X) ...`, i.e. no source):
+        emits **just a bare `NumberOfArgs` sink, NO cleaner** — the cleaner's automata edges have "no
+        positive predicate" (no taint mark exists without a source) and are dropped. `RuleWithNotInsidePrefix`
+        (the canonical sample for this shape) only *appears* to pass because its Negative is decorated
+        `@TaintRuleFalsePositive` (a **tolerated** FP), not because the cleaner fires. Do not trust it.
+      - *Split source/sink metavars* (`$A = src() ... sink($URL)` + `pattern-not: ... clean($URL) ... sink($URL)`):
+        the source taints a canonical mark `_<S>_` and the sink checks `_<S>_`, but the cleaner cleans a
+        **different** mark `$URL` → the cleaner removes a mark nobody checks → FP persists.
+    - **The working form (unify everything on `$M`):**
+      ```yaml
+      patterns:
+        - pattern: |
+            $M = <request-source>(...)
+            ...
+            sink($M)
+        - pattern-not: |
+            ...
+            validator($M)
+            ...
+            sink($M)
+      ```
+      Emits: Source taints mark `$M`; Sink checks `ContainsMark($M, arg0)`; Cleaner (validator) checks
+      `ContainsMark($M, arg0)` and cleans it — **all the same mark id `$M`**, so the cleaner removes
+      exactly what the sink checks. Crucially, sink/cleaner are **dataflow `ContainsMark` checks on
+      arg0, NOT syntactic metavar matches** — so even when the request value is **rebound** before the
+      sink (`param → configparser/list/match/base64/dict → bar; validator(bar); sink(bar)`), the `$M`
+      mark propagates by dataflow to `bar`, the validator cleans it there, and the sink sees it clean.
+      This made all 9 urlparse-guarded redirect FALSE entries pass — direct (01209) and rebinding
+      (00069/00151/00419/00420/00598/00815/00816/00983) alike.
+    - **Cleaners are NOT a general no-op** (retires the stale `reference_cleaner_mark_abstraction` claim
+      for this engine): `ObjectMapperPatternNotFull`, `ObjectMapperPatternNotEllipsis`, and the unified-`$M`
+      OWASP rules all clean correctly on the real engine (post commit `95ad3f916` "Fix pattern-not handling").
+    - **When there is NO distinguishing validator CALL** (safety comes purely from a key/index/branch the
+      engine can't fold — configparser/dict key-insensitivity inv 16, list index-insensitivity inv 19,
+      const ternary/match arm inv 18), there is nothing to unify a cleaner against → still `@Disabled`.
+    - **Debugging tool:** to see what a structural rule *actually* lowers to, add a throwaway test to
+      `PythonRuleEmitTest` calling the loader and printing `rule.taintRules.flatMap { it.rules }`
+      (Source `taint`, Sink `condition`, Cleaner `cleans`+`condition`). The `SemgrepLoadTrace` also
+      surfaces `AUTOMATA_TO_TAINT_RULE` warnings like "N automata edges have no positive predicate and
+      were removed" — that message means your cleaner got dropped for lack of a source mark. Fast
+      (querylang module only, no PIR build). Remove the throwaway test before finishing.
 
 ## Category → sink / CWE reference
 

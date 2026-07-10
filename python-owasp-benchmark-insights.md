@@ -226,3 +226,61 @@ Dangerous-parser FALSE variants that FP on dataflow-approximation limits:
 ### Capability-invariant guard applied
 No stale "unsupported" invariant found this round. match/case (00931 TRUE reaches, 00540/00851 FALSE
 FP as expected) and getattr (inv 20, re-verified failing) both behaved per current engine.
+
+## redirect round (CWE-601, 34 entries) — ALL STRUCTURAL rules
+
+Sink for all: `flask.redirect(...)` (code always calls `import flask; return flask.redirect(bar)`).
+Sources mirror prior rounds (cookies/form/args/headers `.get`/`.getlist`, `.form/.headers.keys(...)[...]`
+loop, `.query_string.decode(...)`). **28 active pass (13 TRUE + 15 FALSE), 6 @Disabled.** Zero
+taint-mode rules — every entry is a structural `patterns:` rule.
+
+### The TRUE/FALSE discriminator is a `urllib.parse.urlparse` + netloc/scheme validator
+No TRUE entry uses `urlparse` (they use `unquote_plus`); 9 FALSE entries are safe ONLY because of the
+`url = urllib.parse.urlparse(bar); if url.netloc not in [...] or url.scheme != 'https': return` guard.
+Modeled structurally with the **unified-`$M` validator-exclusion form** (new invariant 23) — DO read
+it before the next validator-guarded category:
+```yaml
+patterns:
+  - pattern: |
+      $M = flask.request.<accessor>(...)
+      ...
+      flask.redirect($M)
+  - pattern-not: |
+      ...
+      urllib.parse.urlparse($M)
+      ...
+      flask.redirect($M)
+```
+Source/sink/cleaner all keyed to mark `$M`; sink+cleaner are dataflow `ContainsMark($M, arg0)` checks,
+so they fire on the rebound `bar` and the cleaner removes `$M` there. Works for direct (01209) AND
+rebinding (00069 configparser, 00151/00420/00816 match, 00419 list, 00598 ThingFactory, 00815 if/else,
+00983 dict) guard entries.
+
+**Two dead-ends burned first (both silently emit no working cleaner — confirmed via `PythonRuleEmitTest`
+dumps):** (1) sink-only `flask.redirect($URL)` + `pattern-not-inside: urlparse($URL) ...` → bare
+`NumberOfArgs` sink, cleaner edges dropped ("no positive predicate"); (2) split `$A=src ... redirect($URL)`
++ `pattern-not ... urlparse($URL) ... redirect($URL)` → source marks `_<S>_`, cleaner cleans `$URL`
+(mismatched mark). See invariant 23 for the full autopsy.
+
+### Active TRUE (13, pass): 00067, 00068, 00258, 00418, 00495, 00496, 00596, 00654, 00655, 00814, 00982, 01178, 01208
+Plain structural `$A = <source> ... flask.redirect($URL)`. Flows through base64 round-trip (00067/00495),
+dict same-key (00068), getlist+index (00258/00814), keys()-loop (00418/00654/00655), configparser same-key
+(00596), ternary/if-else tainted arm (00496/00418 — path-insensitive so tainted arm reaches), query_string
+decode+slice (00982), direct (01178/01208). All reachable.
+
+### Active FALSE (15, pass)
+- **9 urlparse-guarded** (unified-`$M`, inv 23): 00069, 00151, 00419, 00420, 00598, 00815, 00816, 00983, 01209.
+- **6 never-tainted**: 01091 (`request.path` not a source, inv 17), 01156/01157/01158/01159/01160
+  (`request_wrapper.get_safe_value()` returns constant `"bar"`). Rule uses source
+  `flask.request.form.getlist(...)` which never matches these files → nothing tainted → not reachable.
+  NOTE: source `flask.request.form.get(...)` was a TRAP here — its simple-name `get` collides with
+  configparser/dict `.get(...)` (inv 3 last-segment fallback) and FP'd 01157/01160; `getlist` has no
+  such collision. Prefer a rare accessor (`getlist`) for never-match sources.
+
+### Unfixable-by-design (@Disabled, 6) — no distinguishing validator CALL to unify a cleaner against
+- **00259** — path-insensitive const-true ternary (inv 18): `bar = SAFE if <const-true> else param`.
+- **00724** — path-insensitive match arm (inv 18): const `guess` picks safe case, tainted arm still explored.
+- **00417, 00722** — configparser key-insensitivity (inv 16): set keyB(param), get keyA(const).
+- **00597, 00723** — list index-insensitivity (inv 19): append(param), pop(0), read lst[1].
+These are safe only by a runtime key/index/branch value; there is no `urlparse`-style guard call to clean
+on, so the unified-`$M` trick doesn't apply.

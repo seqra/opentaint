@@ -1,0 +1,17 @@
+rules:
+  - id: owasp-redirect-00419
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches flask.redirect (open redirect / CWE-601)"
+    metadata:
+      cwe: CWE-601
+    patterns:
+      - pattern: |
+          $M = flask.request.form.keys(...)[...]
+          ...
+          flask.redirect($M)
+      - pattern-not: |
+          ...
+          urllib.parse.urlparse($M)
+          ...
+          flask.redirect($M)
