@@ -321,7 +321,8 @@ class JIRMethodCallFlowFunction(
                     val methodName = "${method.enclosingClass.name}#${method.name}"
                     val methodDesc = method.description
                     val factPosition = startFactBase.toString()
-                    tracker.trackExternalMethod(methodName, methodDesc, factPosition, passThroughFacts.isSome)
+                    val ruleApplied = startFactBase in passEvaluator.relevantPositionBase
+                    tracker.trackExternalMethod(methodName, methodDesc, factPosition, ruleApplied)
                 }
             }
 

@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.taint
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -28,6 +29,8 @@ class TaintPassActionEvaluator(
     private val factReader: FinalFactReader,
     private val positionTypeResolver: PositionTypeResolver,
 ) : PassActionEvaluator<EvaluatedPass> {
+    val relevantPositionBase = hashSetOf<AccessPathBase>()
+
     override fun propagateData(
         rule: CommonTaintConfigurationItem,
         action: CommonTaintAction,
@@ -53,6 +56,8 @@ class TaintPassActionEvaluator(
         fromPosAccess: PositionAccess,
         toPosAccess: PositionAccess,
     ): Maybe<List<FinalFactAp>> {
+        relevantPositionBase += fromPosAccess.base()
+
         if (!factReader.containsPosition(fromPosAccess)) {
             return Maybe.none()
         }
@@ -86,6 +91,8 @@ class TaintPassActionEvaluator(
         toPosAccess: PositionAccess,
         markRestriction: TaintMarkAccessor,
     ): Maybe<List<FinalFactAp>> {
+        relevantPositionBase += fromPosAccess.base()
+
         if (!factReader.containsPositionWithTaintMark(fromPosAccess, markRestriction)) return Maybe.none()
 
         val copiedFact = apManager.mkAccessPath(toPosAccess, factReader.factAp.exclusions, markRestriction)
