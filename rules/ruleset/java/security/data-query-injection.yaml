@@ -130,3 +130,4 @@ rules:
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$INPUT'
         - 'spring-untrusted-data.$UNTRUSTED -> sink.$INPUT'
+

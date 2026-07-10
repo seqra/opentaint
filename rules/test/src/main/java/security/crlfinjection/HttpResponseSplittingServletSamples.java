@@ -7,6 +7,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response;
 
 
 /**
@@ -35,53 +36,33 @@ public class HttpResponseSplittingServletSamples {
     }
 
     /**
-     * Safe servlet that validates and encodes header and redirect values.
+     * Unsafe servlet that writes untrusted input into Cookie values.
      */
-    @WebServlet("/http-response-splitting-in-servlet/safe")
-    public static class SafeHeaderServlet extends HttpServlet {
+    @WebServlet("/http-response-splitting-in-servlet/unsafe-cookie")
+    public static class UnsafeCookieServlet extends HttpServlet {
 
         @Override
-// TODO: restore this when conditional validators are implemented
-//        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "http-response-splitting")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
-            String user = request.getParameter("user");
-            if (user == null) {
-                user = "anonymous";
-            }
+            String value = request.getParameter("value"); // attacker-controlled
+            // VULNERABLE: user-controlled value is placed directly into cookie
+            javax.servlet.http.Cookie cookie = new javax.servlet.http.Cookie("session", value);
+            response.addCookie(cookie);
+        }
+    }
 
-            // Reject CR/LF characters that could break header structure
-            if (user.contains("\r") || user.contains("\n")) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid user");
-                return;
-            }
+    /**
+     * Unsafe servlet that writes untrusted input into JAX-RS Response headers.
+     */
+    @WebServlet("/http-response-splitting-in-servlet/unsafe-jaxrs")
+    public static class UnsafeJaxRsResponseBuilderHeaderServlet extends HttpServlet {
 
-            // Enforce a simple allow-list for header-safe username
-            if (!user.matches("^[A-Za-z0-9_-]{1,32}$")) {
-                user = "anonymous";
-            }
-
-            response.setHeader("X-User", user);
-
-            String next = request.getParameter("next");
-            if (next == null || next.isBlank()) {
-                next = "/";
-            }
-
-            // Reject any CR/LF in redirect parameter as well
-            if (next.contains("\r") || next.contains("\n")) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid next parameter");
-                return;
-            }
-
-            // Only allow local paths to avoid open redirect-style issues (extra hardening)
-            if (!next.startsWith("/")) {
-                next = "/";
-            }
-
-            // In this simplified example we avoid extra encoding helpers and rely
-            // on already-validated values that do not contain CR/LF or dangerous characters.
-            response.sendRedirect(next);
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+            String user = request.getParameter("user"); // attacker-controlled
+            // VULNERABLE: user-controlled value is placed into JAX-RS Response header via builder chain
+            Response.ok().header("X-User", user).build();
         }
     }
 }

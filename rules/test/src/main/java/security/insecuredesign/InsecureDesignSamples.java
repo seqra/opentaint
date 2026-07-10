@@ -143,20 +143,10 @@ public class InsecureDesignSamples {
         headers.set("Access-Control-Allow-Origin", "*");
     }
 
-/* todo: header values is a vararg.
-   in bytecode:
-   x = new String[]
-   x[0] = "*"
-   header(..., x)
-*/
-
-//    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
-//    public ResponseEntity<String> setPermissiveCorsHeadersInResponseEntity() {
-//        // Insecure: ResponseEntity builder with wildcard origin
-//        return ResponseEntity.ok()
-//                .header("Access-Control-Allow-Origin", "*")
-//                .body("ok");
-//    }
+    // NOTE: ResponseEntity.ok().header("Access-Control-Allow-Origin", "*") is an engine
+    // false-negative — the pattern's fixed args don't match the varargs
+    // BodyBuilder.header(String, String...). Minimal repro:
+    // custom/BuilderChainMatchRepro on the core-engine-repros branch.
 
     public void setPermissiveCorsHeadersInReactive(ServerHttpResponse response) {
         // Insecure: reactive ServerHttpResponse with wildcard origin

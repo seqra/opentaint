@@ -79,22 +79,4 @@ public class LdapInjectionSpringSamples {
             return ldapService.vulnerableSearch(username);
         }
     }
-
-    @RestController
-    @RequestMapping("/ldap-injection")
-    public static class SafeLdapSpringController {
-
-        private final LdapInjectionSpringService ldapService;
-
-        public SafeLdapSpringController(LdapInjectionSpringService ldapService) {
-            this.ldapService = ldapService;
-        }
-
-        @GetMapping("/safe")
-// TODO: restore this when conditional validators are implemented
-//        @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
-        public boolean safeSearch(@RequestParam("username") String username) throws Exception {
-            return ldapService.safeSearch(username);
-        }
-    }
 }

@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.ldap.support.LdapEncoder;
 
 /**
  * Samples for ldap-injection-in-servlet rule.
@@ -51,6 +52,21 @@ class LdapInjectionService {
         NamingEnumeration<SearchResult> results = ctx.search(baseDn, filter, filterArgs, controls);
         return results.hasMore();
     }
+
+    /**
+     * SAFE: untrusted username/password are passed through Spring LDAP's
+     * LdapEncoder.filterEncode, which escapes LDAP-specific metacharacters.
+     */
+    public boolean encodedAuthenticate(String username, String password) throws Exception {
+        String encUser = LdapEncoder.filterEncode(username);
+        String encPass = LdapEncoder.filterEncode(password);
+        String filter = "(&(uid=" + encUser + ")(userPassword=" + encPass + "))";
+
+        SearchControls controls = new SearchControls();
+        controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        NamingEnumeration<SearchResult> results = ctx.search(baseDn, filter, controls);
+        return results.hasMore();
+    }
 }
 
 /**
@@ -79,15 +95,18 @@ public class LdapInjectionServletSamples extends HttpServlet {
     }
 
     @Override
-//  TODO: restore this when conditional validators are implemented
-//    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // SAFE: request parameters flow into safeAuthenticate(), which uses filter arguments
+
+    /**
+     * SAFE: username/password are passed through Spring LDAP's LdapEncoder.filterEncode,
+     * which escapes LDAP filter metacharacters. Exercises a CodeQL LdapInjectionSanitizer-aligned
+     * static method sanitizer.
+     */
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
         try {
-            authService.safeAuthenticate(username, password);
+            authService.encodedAuthenticate(username, password);
         } catch (Exception e) {
             throw new ServletException(e);
         }

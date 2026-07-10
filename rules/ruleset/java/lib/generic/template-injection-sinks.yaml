@@ -8,7 +8,18 @@ rules:
       provenance: https://github.com/github/codeql/tree/cdd8aa49e16650a96b8993e8745c7672600fe930/java/ql/lib/ext
     languages:
       - java
-    pattern-either:
+    mode: taint
+    pattern-sanitizers:
+      # CodeQL TemplateInjection.qll has no static-method sanitizers
+      # (defaults to SimpleTypeSanitizer). HTML/XML encoders neutralise
+      # the user input so it can no longer compile as template syntax.
+      - pattern: org.owasp.encoder.Encode.forHtml(...)
+      - pattern: org.owasp.encoder.Encode.forXml(...)
+      - pattern: org.springframework.web.util.HtmlUtils.htmlEscape(...)
+      - pattern: org.apache.commons.text.StringEscapeUtils.escapeHtml4(...)
+      - pattern: org.apache.commons.text.StringEscapeUtils.escapeXml(...)
+    pattern-sinks:
+
       # ── Freemarker ────────────────────────────────
       - patterns:
           - pattern: |
@@ -47,6 +58,36 @@ rules:
       # ── Velocity (static) ─────────────────────────
       - pattern: (org.apache.velocity.app.Velocity $VELOCITY).evaluate($_, $_, $_, $UNTRUSTED, ...);
       - pattern: (org.apache.velocity.app.Velocity $VELOCITY).mergeTemplate($_, $_, $UNTRUSTED, ...);
+      # Static-call form of the same (no typed receiver) — required when the
+      # caller invokes Velocity.evaluate(...) without an instance binding.
+      - pattern: org.apache.velocity.app.Velocity.evaluate($_, $_, $_, $UNTRUSTED, ...);
+      - pattern: org.apache.velocity.app.Velocity.mergeTemplate($_, $_, $UNTRUSTED, ...);
+      # Context-data SSTI: untrusted value put into a Velocity Context that is then
+      # merged/evaluated. The Context approximation stores the value in a virtual
+      # field, so the whole-Context sinks above can't observe it. Focus the value
+      # entering the Context and require the same Context to reach a merge/evaluate,
+      # exactly like the List.add(..) -> new ProcessBuilder($ARGS) pattern in
+      # command-injection-sinks; pattern-inside factors out the put so it is not
+      # repeated per render method. The Context arg is matched with `...` around it
+      # (mergeTemplate(..., $CTX, ...)): a $CTX bound in the put correlates across
+      # the join only when the consuming call leaves it positionally free, not when
+      # it is pinned with explicit placeholders ($_, $_, $CTX, $_).
+      - patterns:
+          - pattern: $CTX.put($_, $UNTRUSTED)
+          - pattern-either:
+              - pattern-inside: |
+                  ...
+                  org.apache.velocity.app.Velocity.mergeTemplate(..., $CTX, ...);
+              - pattern-inside: |
+                  ...
+                  org.apache.velocity.app.Velocity.evaluate($CTX, ...);
+              - pattern-inside: |
+                  ...
+                  (org.apache.velocity.app.VelocityEngine $ENGINE).mergeTemplate(..., $CTX, ...);
+              - pattern-inside: |
+                  ...
+                  (org.apache.velocity.app.VelocityEngine $ENGINE).evaluate($CTX, ...);
+          - focus-metavariable: $UNTRUSTED
       # ── VelocityEngine (instance) ─────────────────
       - patterns:
           - pattern-either:
@@ -61,6 +102,10 @@ rules:
       - pattern: (org.apache.velocity.runtime.RuntimeServices $VELOCITY_RUNTIME).evaluate($_, $_, $_, $UNTRUSTED, ...);
       - pattern: (org.apache.velocity.runtime.RuntimeServices $VELOCITY_RUNTIME).parse($UNTRUSTED, ...);
       - pattern: (org.apache.velocity.runtime.RuntimeSingleton $VELOCITY_RUNTIME).parse($UNTRUSTED, ...);
+      # Static-call form: RuntimeSingleton.parse(reader, template) takes the
+      # Reader as the first argument with the template content inside it.
+      - pattern: org.apache.velocity.runtime.RuntimeSingleton.parse($UNTRUSTED, ...);
+      - pattern: org.apache.velocity.runtime.RuntimeSingleton.getRuntimeServices().parse($UNTRUSTED, ...);
       - pattern: (org.apache.velocity.runtime.resource.util.StringResourceRepository $VELOCITY_REPO).putStringResource($_, $UNTRUSTED, ...);
       # ── Thymeleaf ─────────────────────────────────
       - patterns:

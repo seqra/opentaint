@@ -39,30 +39,53 @@ public class LogInjectionSamples {
         }
     }
 
-    @WebServlet("/log-injection-in-servlet/safe")
+    // ANALYZER LIMITATION: instance-method String.replace/replaceAll sanitizers
+    // (CodeQL LineBreaksLogInjectionSanitizer) are not honored by OpenTaint's
+    // pattern-sanitizer matcher today. Restore these once the limitation is fixed.
+    @WebServlet("/log-injection-in-servlet/safe-crlf")
     public static class SafeLogServlet extends HttpServlet {
 
         @Override
-//      TODO: restore this when conditional validators are implemented
-//        @NegativeRuleSample(value = "java/security/log-injection.yaml", id = "log-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String username = request.getParameter("username");
             Logger logger = LoggerFactory.getLogger(SafeLogServlet.class);
 
-            String safeUsername = sanitizeForLog(username);
-
-            // SAFE: parameterized logging with sanitized value
-            logger.warn("Failed login attempt for user [{}]", safeUsername);
-
+            // SAFE: CRLF neutralization via String.replaceAll on [\r\n]
+            String safe = username.replaceAll("[\\r\\n]", "_");
+            logger.warn("Failed login attempt for user [{}]", safe);
         }
     }
 
-    private static String sanitizeForLog(String value) {
-        if (value == null) {
-            return "";
+    @WebServlet("/log-injection-in-servlet/safe-replace")
+    public static class SafeLogReplaceServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+            String username = request.getParameter("username");
+            Logger logger = LoggerFactory.getLogger(SafeLogReplaceServlet.class);
+
+            // SAFE: line break neutralization via String.replace on each newline char
+            String stripped = username.replace("\n", "_").replace("\r", "_");
+            logger.warn("Failed login attempt for user [{}]", stripped);
         }
-        return value.replaceAll("[\\r\\n\\t\\x00-\\x1F]", "_");
+    }
+
+    @WebServlet("/log-injection-in-servlet/safe-escape")
+    public static class SafeLogEscapeServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+            String username = request.getParameter("username");
+            Logger logger = LoggerFactory.getLogger(SafeLogEscapeServlet.class);
+
+            // SAFE: Apache Commons Text escapeJava neutralizes line breaks (existing sanitizer)
+            String escaped = org.apache.commons.text.StringEscapeUtils.escapeJava(username);
+            logger.warn("Failed login attempt for user [{}]", escaped);
+
+        }
     }
 
     // log-injection
@@ -117,6 +140,33 @@ public class LogInjectionSamples {
 
             // VULNERABLE: EL expression built from untrusted input
             seamLog.info("Login failed for user #{" + username + "}");
+        }
+
+        public void vulnerableSeamDebug() {
+            Map<String, String> params = FacesContext.getCurrentInstance()
+                    .getExternalContext()
+                    .getRequestParameterMap();
+
+            String input = params.get("data");
+            seamLog.debug("Debug data #{" + input + "}");
+        }
+
+        public void vulnerableSeamError() {
+            Map<String, String> params = FacesContext.getCurrentInstance()
+                    .getExternalContext()
+                    .getRequestParameterMap();
+
+            String input = params.get("data");
+            seamLog.error("Error data #{" + input + "}");
+        }
+
+        public void vulnerableSeamTrace() {
+            Map<String, String> params = FacesContext.getCurrentInstance()
+                    .getExternalContext()
+                    .getRequestParameterMap();
+
+            String input = params.get("data");
+            seamLog.trace("Trace data #{" + input + "}");
         }
 
         /*

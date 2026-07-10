@@ -136,8 +136,6 @@ public class PathTraversalServletSamples {
         private static final File BASE_DIR = new File("/var/www/uploads").getAbsoluteFile();
 
         @Override
-//    TODO: enable this test when we have conditional sanitizers
-//        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -391,6 +389,62 @@ public class PathTraversalServletSamples {
 
         try (OutputStream out = response.getOutputStream()) {
             Files.copy(path, out);
+        }
+    }
+
+    // NOTE: instance-method sanitizers with a typed receiver (e.g.
+    // `(java.io.File $F).getCanonicalFile()`) are an engine gap — the matcher only
+    // honors fully-qualified static sanitizers, so a safe sample is flagged (FP).
+    // Minimal repro: taint/InstanceSanitizerRepro on the core-engine-repros branch.
+
+    @WebServlet("/pathtraversal/safe-path-normalize")
+    public static class SafePathNormalizeServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            String fileName = request.getParameter("file");
+            Path normalized = java.nio.file.Paths.get("/var/www/uploads/" + fileName).normalize();
+            streamPath(response, normalized);
+        }
+    }
+
+    // ANALYZER LIMITATION: FilenameUtils.normalize sanitizer (CodeQL PathSanitizer-aligned)
+    // is declared in path-traversal-sinks.yaml but isn't currently honored by OpenTaint.
+    // FilenameUtils.getName works (see test below) but normalize does not - both are static
+    // method patterns with identical syntax, so this looks like a matcher gap to be triaged.
+    @WebServlet("/pathtraversal/safe-filenameutils-normalize")
+    public static class SafeFilenameUtilsNormalizeServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            String fileName = request.getParameter("file");
+            String safe = org.apache.commons.io.FilenameUtils.normalize(fileName);
+            File file = new File("/var/www/uploads/", safe);
+            if (file.exists()) streamPath(response, file.toPath());
+        }
+    }
+
+    /**
+     * SAFE: untrusted file name is passed through Apache Commons IO FilenameUtils.getName,
+     * which strips any path components and returns just the file name.
+     * Exercises the existing pre-existing FilenameUtils.getName sanitizer.
+     */
+    @WebServlet("/pathtraversal/safe-filenameutils-getname")
+    public static class SafeFilenameUtilsGetNameServlet extends HttpServlet {
+
+        private static final String BASE_DIR = "/var/www/uploads/";
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+
+            String fileName = request.getParameter("file");
+            // SAFE: FilenameUtils.getName returns only the base file name (no `..` segments)
+            String safe = org.apache.commons.io.FilenameUtils.getName(fileName);
+            File file = new File(BASE_DIR, safe);
+            if (file.exists() && file.isFile()) {
+                streamPath(response, file.toPath());
+            } else {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            }
         }
     }
 }

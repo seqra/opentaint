@@ -1,5 +1,6 @@
 package security.externalconfigurationcontrol;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +24,21 @@ public class UnsafeReflectionSpringSamples {
             Class<?> clazz = Class.forName(className);
             Object instance = clazz.getDeclaredConstructor().newInstance();
             return "Loaded class: " + instance.getClass().getName();
+        }
+    }
+
+    @RestController
+    @RequestMapping("/spring/external-config/reflection")
+    public static class UnsafeMethodInvokeController {
+
+        @GetMapping("/unsafe-invoke")
+        public String unsafeInvoke(@RequestParam String className) throws Exception {
+            // VULNERABLE: user-controlled class loaded and invoked via reflection
+            Class<?> clazz = Class.forName(className);
+            Object instance = clazz.getDeclaredConstructor().newInstance();
+            Method method = clazz.getMethod("toString");
+            Object result = method.invoke(instance);
+            return String.valueOf(result);
         }
     }
 

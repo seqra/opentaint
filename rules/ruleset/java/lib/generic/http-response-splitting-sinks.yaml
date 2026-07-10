@@ -25,6 +25,15 @@ rules:
         patterns:
           - pattern: org.apache.commons.text.StringEscapeUtils.unescapeJava($CLEAN);
           - focus-metavariable: $CLEAN
+      # URL encoding maps CR/LF (0x0D, 0x0A) to %0D / %0A so they no longer
+      # break out of the header line.
+      - pattern: java.net.URLEncoder.encode(...)
+      # Guava UrlEscapers similarly percent-encode CR/LF.
+      - pattern: com.google.common.net.UrlEscapers.urlPathSegmentEscaper().escape(...)
+      - pattern: com.google.common.net.UrlEscapers.urlFormParameterEscaper().escape(...)
+      - pattern: com.google.common.net.UrlEscapers.urlFragmentEscaper().escape(...)
+      # pixee java-security-toolkit Newlines.stripAll.
+      - pattern: io.github.pixee.security.Newlines.stripAll(...)
     pattern-sinks:
       - patterns:
         - pattern-either:
@@ -37,4 +46,10 @@ rules:
           - pattern: ($X.servlet.http.HttpServletResponse $RES).addHeader("$KEY", $UNTRUSTED);
           - pattern: ($X.servlet.http.HttpServletResponseWrapper $WRP).setHeader("$KEY", $UNTRUSTED);
           - pattern: ($X.servlet.http.HttpServletResponseWrapper $WRP).addHeader("$KEY", $UNTRUSTED);
+        - focus-metavariable: $UNTRUSTED
+      # JAX-RS ResponseBuilder.header (javax + jakarta)
+      - patterns:
+        - pattern-either:
+          - pattern: javax.ws.rs.core.Response.$M(...).header($NAME, $UNTRUSTED)
+          - pattern: jakarta.ws.rs.core.Response.$M(...).header($NAME, $UNTRUSTED)
         - focus-metavariable: $UNTRUSTED

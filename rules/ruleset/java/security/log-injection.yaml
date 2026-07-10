@@ -45,7 +45,7 @@ rules:
 
         Key vulnerable patterns covered by this rule include common Java logging APIs (`slf4j`, `log4j`,
         `java.util.logging`, `commons-logging`, `tinylog`) when tainted data is logged.
-      refernces:
+      references:
         - https://owasp.org/www-community/attacks/Log_Injection
         - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
       provenance: https://semgrep.dev/r/gitlab.find_sec_bugs.CRLF_INJECTION_LOGS-1

@@ -76,3 +76,4 @@ rules:
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$FILE'
         - 'spring-untrusted-data.$UNTRUSTED -> sink.$FILE'
+

@@ -5,20 +5,52 @@ rules:
     severity: NOTE
     message: Logging the data
     metadata:
-      provenance: https://semgrep.dev/r/gitlab.find_sec_bugs.CRLF_INJECTION_LOGS-1
+      provenance:
+        - https://semgrep.dev/r/gitlab.find_sec_bugs.CRLF_INJECTION_LOGS-1
+        - https://github.com/github/codeql/blob/cdd8aa49e16650a96b8993e8745c7672600fe930/java/ql/lib/semmle/code/java/security/LogInjection.qll
     languages:
       - java
     mode: taint
     pattern-sanitizers:
       - pattern: org.apache.commons.text.StringEscapeUtils.escapeJava(...);
+      - pattern: org.apache.commons.lang.StringEscapeUtils.escapeJava(...);
+      - pattern: org.apache.commons.lang3.StringEscapeUtils.escapeJava(...);
+      - pattern: org.owasp.encoder.Encode.forJavaScript(...);
+      # CodeQL LogInjection.LineBreaksLogInjectionSanitizer — same shape as
+      # http-response-splitting-sinks.yaml's CRLF sanitizer: the assigned
+      # result of a String.replaceAll/replace whose target neutralises CR/LF
+      # is clean.
+      - patterns:
+        - pattern: |
+            $CLEAN = $STR.replaceAll($REPLACER, $_);
+        - metavariable-regex:
+            metavariable: "$REPLACER"
+            regex: '"(\\\\R|\\\\n|\\\\r|\\\\\\\\R|\[[^]]*\\\\[nrR]+[^]]*\])"'
+        - focus-metavariable: $CLEAN
+      - patterns:
+        - pattern: |
+            $CLEAN = $STR.replace($REPLACER, $_);
+        - metavariable-regex:
+            metavariable: "$REPLACER"
+            regex: '("\\\\n"|"\\\\r"|''\\\\n''|''\\\\r'')'
+        - focus-metavariable: $CLEAN
+      # pixee java-security-toolkit Newlines.stripAll — removes CR/LF from
+      # arbitrary input before logging.
+      - pattern: io.github.pixee.security.Newlines.stripAll(...)
     pattern-sinks:
       - patterns:
           - pattern-either:
               - pattern: $STATIC_LOGGER.$METHOD(...,$DATA,...);
               - pattern: (Logger $LOG).$METHOD(..., $DATA,...);
+              - pattern: (org.apache.log4j.Category $LOG).$METHOD(..., $DATA,...);
+              - pattern: (org.apache.logging.log4j.LogBuilder $LB).$METHOD(..., $DATA,...);
+              - pattern: (com.google.common.flogger.LoggingApi $API).$METHOD(..., $DATA,...);
+              - pattern: (org.jboss.logging.BasicLogger $LOG).$METHOD(..., $DATA,...);
+              - pattern: (org.slf4j.spi.LoggingEventBuilder $LEB).$METHOD(..., $DATA,...);
+              - pattern: org.apache.cxf.common.logging.LogUtils.$METHOD(..., $DATA,...);
           - metavariable-regex:
               metavariable: $METHOD
-              regex: ^(log|logp|logrb|entering|exiting|fine|finer|finest|info|debug|trace|warn|warning|config|error|severe)$
+              regex: ^(log|logp|logrb|entering|exiting|fine|finer|finest|info|debug|trace|warn|warning|config|error|severe|fatal|assertLog|forcedLog|l7dlog|entry|logMessage|printf|traceEntry|traceExit|logVarargs|alwaysLog|wtf|debugf|debugv|errorf|errorv|fatalf|fatalv|infof|infov|tracef|tracev|warnf|warnv|logf|logv)$
           - metavariable-pattern:
               metavariable: $STATIC_LOGGER
               pattern-either:
@@ -28,6 +60,11 @@ rules:
                 - pattern: org.slf4j.Logger
                 - pattern: org.apache.commons.logging.Log
                 - pattern: java.util.logging.Logger
+                - pattern: android.util.Log
+      # ANALYZER LIMITATION: Inner class types not supported in typed metavariables.
+      # java.lang.System.Logger log methods cannot be matched with typed patterns.
+      # TODO: Re-enable when analyzer supports inner class types in typed patterns.
+      # Affects 8 CodeQL entries for java.lang.System.Logger.log(...)
 
   - id: seam-log-injection-sinks
     options:

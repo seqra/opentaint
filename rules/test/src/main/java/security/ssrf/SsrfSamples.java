@@ -140,7 +140,7 @@ public class SsrfSamples {
 
     @RestController
     @RequestMapping("/ssrf/proxy")
-    public static class SsrfSpringController {
+    public static class UnsafeSsrfSpringController {
 
         private final RestTemplate restTemplate = new RestTemplate();
 
@@ -149,53 +149,8 @@ public class SsrfSamples {
             if (targetUrl == null || targetUrl.isBlank()) {
                 return ResponseEntity.badRequest().body("Missing 'url' parameter");
             }
-
             // VULNERABLE: directly using unvalidated user input as target URL
             String body = restTemplate.getForObject(targetUrl, String.class);
-            return ResponseEntity.ok(body);
-        }
-
-        private static final Set<String> ALLOWED_SPRING_HOSTS = Set.of(
-                "api.example.com",
-                "services.partner.com"
-        );
-
-        @GetMapping("/safe")
-//      TODO: restore this when conditional validators are implemented
-//        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
-        public ResponseEntity<String> safeProxy(@RequestParam("url") String targetUrl) {
-            if (targetUrl == null || targetUrl.isBlank()) {
-                return ResponseEntity.badRequest().body("Missing 'url' parameter");
-            }
-
-            URI uri;
-            try {
-                uri = new URI(targetUrl);
-            } catch (URISyntaxException e) {
-                return ResponseEntity.badRequest().body("Invalid URL");
-            }
-
-            String scheme = uri.getScheme();
-            if (scheme == null ||
-                    !("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))) {
-                return ResponseEntity.badRequest().body("Unsupported scheme");
-            }
-
-            String host = uri.getHost();
-            if (host == null || !ALLOWED_SPRING_HOSTS.contains(host.toLowerCase())) {
-                return ResponseEntity.status(403).body("Host not allowed");
-            }
-
-            try {
-                InetAddress addr = InetAddress.getByName(host);
-                if (addr.isAnyLocalAddress() || addr.isLoopbackAddress() || addr.isSiteLocalAddress()) {
-                    return ResponseEntity.status(403).body("Internal addresses are not allowed");
-                }
-            } catch (UnknownHostException e) {
-                return ResponseEntity.badRequest().body("Unable to resolve host");
-            }
-
-            String body = restTemplate.getForObject(uri, String.class);
             return ResponseEntity.ok(body);
         }
     }
@@ -213,6 +168,62 @@ public class SsrfSamples {
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
                 // VULNERABLE: directly concatenate untrusted value into URL query string
                 String url = "https://example.com/getId?key=" + key;
+                HttpGet httpget = new HttpGet(url);
+                try (CloseableHttpResponse clientResponse = httpClient.execute(httpget)) {
+                    byte[] data = clientResponse.getEntity().getContent().readAllBytes();
+                    response.getOutputStream().write(data);
+                }
+            }
+        }
+    }
+
+    // java-servlet-parameter-pollution - GetMethod constructor (Commons HttpClient 3.x)
+
+    @WebServlet("/ssrf/parameter-pollution/unsafe-getmethod")
+    public static class UnsafeGetMethodPollutionServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+            String key = request.getParameter("key");
+            String url = "https://example.com/getId?key=" + key;
+            org.apache.commons.httpclient.methods.GetMethod getMethod =
+                    new org.apache.commons.httpclient.methods.GetMethod(url);
+            response.getWriter().write("method: " + getMethod.getName());
+        }
+    }
+
+    // java-servlet-parameter-pollution - GetMethod.setQueryString (Commons HttpClient 3.x)
+
+    @WebServlet("/ssrf/parameter-pollution/unsafe-setquerystring")
+    public static class UnsafeSetQueryStringPollutionServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+            String key = request.getParameter("key");
+            org.apache.commons.httpclient.methods.GetMethod getMethod =
+                    new org.apache.commons.httpclient.methods.GetMethod("https://example.com/getId");
+            getMethod.setQueryString("key=" + key);
+            response.getWriter().write("method: " + getMethod.getName());
+        }
+    }
+
+    /**
+     * SAFE: untrusted query argument is URL-encoded via java.net.URLEncoder.encode
+     * before being concatenated into the URL. Exercises an existing static method
+     * sanitizer (CodeQL RequestForgerySanitizer-aligned encoding helper).
+     */
+    @WebServlet("/ssrf/parameter-pollution/safe-encoded")
+    public static class SafeEncodedParameterPollutionServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
+            String key = request.getParameter("key");
+            String encoded = java.net.URLEncoder.encode(key);
+            try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+                String url = "https://example.com/getId?key=" + encoded;
                 HttpGet httpget = new HttpGet(url);
                 try (CloseableHttpResponse clientResponse = httpClient.execute(httpget)) {
                     byte[] data = clientResponse.getEntity().getContent().readAllBytes();

@@ -6,50 +6,169 @@ tests:
       - security.codeinjection.ElInjectionSamples$SafeElServlet#doGet
   - rule-id: java/security/code-injection.yaml#groovy-injection
     positive:
+      - security.codeinjection.GroovyInjectionExtendedSpringSamples$UnsafeTemplateEngineController#unsafeTemplateEngine
       - security.codeinjection.GroovyInjectionServletSamples$UnsafeGroovyServlet#doGet
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeCompilationUnitController#unsafeCompile
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeEvalMeController#unsafeEvalMe
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeEvalXController#unsafeEvalX
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeEvalXyController#unsafeEvalXy
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeEvalXyzController#unsafeEvalXyz
       - security.codeinjection.GroovyInjectionSpringSamples$UnsafeGroovyController#unsafeGroovy
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeGroovyParseClassController#unsafeParseClass
     negative:
       - security.codeinjection.GroovyInjectionServletSamples$SafeGroovyServlet#doGet
       - security.codeinjection.GroovyInjectionSpringSamples$SafeGroovyController#safeGroovy
   - rule-id: java/security/code-injection.yaml#ognl-injection
     positive:
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeActionSupportGetFormattedController#unsafeGetFormatted
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeExpressionAccessorGetController#unsafeAccessorGet
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeOgnlNodeGetValueController#unsafeNodeGetValue
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeOgnlValueStackFindStringController#unsafeFindString
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeOgnlValueStackFindValueController#unsafeFindValue
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeTextProviderGetTextController#unsafeGetText
+      - security.codeinjection.OgnlInjectionExtendedSpringSamples$UnsafeTextProviderHasKeyController#unsafeHasKey
       - security.codeinjection.OgnlInjectionServletSamples$UnsafeOgnlServlet#doGet
       - security.codeinjection.OgnlInjectionSpringSamples$UnsafeOgnlController#unsafeOgnl
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderGetFieldController#unsafeGetField
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderGetGetMethodController#unsafeGetGetMethod
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderGetSetMethodController#unsafeGetSetMethod
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderGetValueController#unsafeGetValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderSetPropertiesController#unsafeSetProperties
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderSetPropertyController#unsafeSetProperty
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlReflectionProviderSetValueController#unsafeSetValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlTextParserEvaluateController#unsafeEvaluate
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlToolFindValueController#unsafeFindValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlUtilCallMethodController#unsafeCallMethod
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlUtilCompileController#unsafeCompile
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlUtilGetValueController#unsafeGetValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlUtilSetPropertyController#unsafeSetProperty
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeOgnlUtilSetValueController#unsafeSetValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderGetFieldController#unsafeGetField
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderGetGetMethodController#unsafeGetGetMethod
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderGetSetMethodController#unsafeGetSetMethod
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderGetValueController#unsafeGetValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderSetPropertiesController#unsafeSetProperties
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderSetPropertyController#unsafeSetProperty
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeReflectionProviderSetValueController#unsafeSetValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeStrutsUtilFindStringController#unsafeFindString
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeStrutsUtilFindValueController#unsafeFindValue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeStrutsUtilGetTextController#unsafeGetText
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeStrutsUtilIsTrueController#unsafeIsTrue
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeStrutsUtilMakeSelectListController#unsafeMakeSelectList
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeStrutsUtilTranslateVariablesController#unsafeTranslateVariables
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeTextParseUtilCommaDelimitedController#unsafeCommaDelimited
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeTextParseUtilTranslateVariablesCollectionController#unsafeTranslateVariablesCollection
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeTextParseUtilTranslateVariablesController#unsafeTranslateVariables
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeValueStackSetParameterController#unsafeSetParameter
+      - security.codeinjection.OgnlInjectionStruts2SpringSamples$UnsafeVelocityStrutsUtilEvaluateController#unsafeEvaluate
     negative:
       - security.codeinjection.OgnlInjectionServletSamples$SafeOgnlServlet#doGet
       - security.codeinjection.OgnlInjectionSpringSamples$SafeOgnlController#safeOgnl
   - rule-id: java/security/code-injection.yaml#script-engine-injection
     positive:
       - security.codeinjection.ScriptEngineInjectionServletSamples$UnsafeScriptEngineServlet#doGet
+      - security.codeinjection.ScriptEngineInjectionSpringSamples$UnsafeInvocableFunctionController#unsafeInvokeFunction
+      - security.codeinjection.ScriptEngineInjectionSpringSamples$UnsafeInvocableMethodController#unsafeInvokeMethod
       - security.codeinjection.ScriptEngineInjectionSpringSamples$UnsafeScriptEngineController#unsafeScriptEngine
     negative:
       - security.codeinjection.ScriptEngineInjectionServletSamples$SafeScriptEngineServlet#doGet
       - security.codeinjection.ScriptEngineInjectionSpringSamples$SafeScriptEngineController#safeScriptEngine
   - rule-id: java/security/code-injection.yaml#spring-el-injection
     positive:
+      - security.codeinjection.ElInjectionSpringSamples$UnsafeBuildConstraintViolationController#unsafeConstraintViolation
+      - security.codeinjection.ElInjectionSpringSamples$UnsafeCreateMethodExpressionController#unsafeMethodExpression
       - security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController#evalUnsafe
     negative:
       - security.codeinjection.SpringElInjectionSamples$SafeSpringElController#evalSafe
   - rule-id: java/security/code-injection.yaml#ssti
     positive:
       - security.codeinjection.SstiServletSamples$UnsafeTemplateServlet#doPost
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeJinjavaController#unsafeRender
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeJinjavaController#unsafeRenderForResult
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafePebbleController#unsafeGetTemplate
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeThymeleafController#unsafeProcess
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeThymeleafController#unsafeProcessThrottled
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityController#unsafeEvaluate
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityController#unsafeMergeTemplate
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityEngineController#unsafeEvaluate
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityEngineController#unsafeMergeTemplate
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityRuntimeController#unsafeRuntimeServicesEvaluate
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityRuntimeController#unsafeRuntimeSingletonParse
+      - security.codeinjection.TemplateInjectionExtraSpringSamples$UnsafeVelocityRuntimeController#unsafeStringResourceRepoPut
+      - security.codeinjection.TemplateInjectionSpringSamples$UnsafeStringTemplateLoaderController#loadUnsafe
       - security.codeinjection.TemplateInjectionSpringSamples$UnsafeTemplateControllerWithResolver#previewUnsafeWithResolver
     negative:
+      - security.barriers.BarrierTests$SafeSstiHtmlEscapeServlet#doGet
+      - security.barriers.BarrierTests$SafeSstiOwaspForHtmlServlet#doGet
       - security.codeinjection.SstiServletSamples$SafeTemplateServlet#doPost
       - security.codeinjection.SstiServletSamples$SafeTemplateServletWithResolver#doPost
       - security.codeinjection.TemplateInjectionSpringSamples$SafeTemplateControllerWithResolver#previewSafeWithResolver
+  - rule-id: java/security/code-injection.yaml#jexl-injection
+    positive:
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3CreateExpressionController#unsafeCreateExpression
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3CreateScriptController#unsafeCreateScript
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3ExpressionEvaluateController#unsafeExpressionCallable
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3ExpressionEvaluateController#unsafeExpressionEvaluate
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3ExpressionEvaluateController#unsafeScriptCallable
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3ExpressionEvaluateController#unsafeScriptExecute
+      - security.codeinjection.Jexl3InjectionSpringSamples$UnsafeJexl3GetPropertyController#unsafeGetProperty
+      - security.codeinjection.JexlInjectionServletSamples$UnsafeJexlServlet#doGet
+      - security.codeinjection.JexlInjectionSpringSamples$UnsafeJexl2CreateExpressionController#unsafeCreateExpression
+      - security.codeinjection.JexlInjectionSpringSamples$UnsafeJexl2ExpressionEvaluateController#unsafeExpressionEvaluate
+      - security.codeinjection.JexlInjectionSpringSamples$UnsafeJexl2GetPropertyController#unsafeGetProperty
+      - security.codeinjection.JexlInjectionSpringSamples$UnsafeJexl2SetPropertyController#unsafeSetProperty
+    negative:
+      - security.codeinjection.JexlInjectionSpringSamples$SafeJexlController#safeJexl
+  - rule-id: java/security/code-injection.yaml#mvel-injection
+    positive:
+      - security.codeinjection.MvelInjectionServletSamples$UnsafeMvelServlet#doGet
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelCompiledScriptEvalController#unsafeCompiledScriptEval
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelEvalController#unsafeEval
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelEvalToBooleanController#unsafeEvalToBoolean
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelEvalToStringController#unsafeEvalToString
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelExecuteAllExpressionController#unsafeExecuteAllExpression
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelExecuteExpressionController#unsafeExecuteExpression
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelExecuteSetExpressionController#unsafeExecuteSetExpression
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelRuntimeExecuteController#unsafeRuntimeExecute
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelScriptEngineEvalController#unsafeScriptEngineEval
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelScriptEngineEvaluateController#unsafeScriptEngineEvaluate
+      - security.codeinjection.MvelInjectionSpringSamples$UnsafeMvelTemplateController#unsafeTemplate
+    negative:
+      - security.codeinjection.MvelInjectionSpringSamples$SafeMvelController#safeMvel
   - rule-id: java/security/command-injection.yaml#os-command-injection
     positive:
+      - security.commandinjection.AntCommandInjectionSamples$UnsafeAntExecuteController#unsafeRunCommand
       - security.commandinjection.CommandInjectionServletSamples$UnsafeCommandServlet#doGet
       - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePing
+      - security.commandinjection.CommandInjectionSpringSamples$UnsafeProcessBuilderCommandController#unsafeCommand
+      - security.commandinjection.CommandInjectionSpringSamples$UnsafeProcessBuilderDirectoryController#unsafeDirectory
+      - security.commandinjection.CommonsExecCommandInjectionSamples$UnsafeCommonsExecAddArgumentsController#unsafeAddArguments
+      - security.commandinjection.CommonsExecCommandInjectionSamples$UnsafeCommonsExecParseController#unsafeParse
+      - security.commandinjection.HudsonCommandInjectionSamples$UnsafeLauncherLaunchController#unsafeLaunch
+    negative:
+      - security.barriers.BarrierTests$SafePixeeRunCommandServlet#doGet
   - rule-id: java/security/crlf-injection.yaml#http-response-splitting
     positive:
+      - security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeCookieServlet#doGet
       - security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeHeaderServlet#doGet
+      - security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeJaxRsResponseBuilderHeaderServlet#doGet
       - security.crlfinjection.HttpResponseSplittingSpringSamples$UnsafeHttpResponseSplittingController#unsafe
+    negative:
+      - security.barriers.BarrierTests$SafeCrlfEscapeJavaServlet#doGet
+      - security.barriers.BarrierTests$SafeCrlfGuavaUrlEscaperServlet#doGet
+      - security.barriers.BarrierTests$SafeCrlfPixeeNewlinesServlet#doGet
+      - security.barriers.BarrierTests$SafeCrlfReplaceAllBracketServlet#doGet
+      - security.barriers.BarrierTests$SafeCrlfUrlEncoderServlet#doGet
   - rule-id: java/security/crlf-injection.yaml#smtp-crlf-injection
     positive:
       - security.crlfinjection.SmtpCrlfInjectionServletSamples$UnsafeSmtpServlet#doPost
       - security.crlfinjection.SmtpCrlfInjectionSpringSamples$UnsafeSpringSmtpController#unsafe
+    negative:
+      - security.barriers.BarrierTests#safeSmtpEscapeJava
+      - security.barriers.BarrierTests#safeSmtpPixeeNewlines
+      - security.barriers.BarrierTests#safeSmtpReplaceAllBracket
+      - security.crlfinjection.SmtpCrlfInjectionServletSamples$SafeSmtpServlet#doPost
+      - security.crlfinjection.SmtpCrlfInjectionSpringSamples$SafeSpringSmtpController#safe
   - rule-id: java/security/crypto.yaml#aes-hardcoded-key
     positive:
       - security.crypto.CipherAndKeyCryptoSamples#aesWithHardcodedKey
@@ -227,6 +346,15 @@ tests:
     positive:
       - security.dataqueryinjection.DataQueryInjectionServletSamples$UnsafeMongoServlet#doGet
       - security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeMongoController#unsafeMongo
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeBasicDBObjectAppendController#unsafeAppend
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeBasicDBObjectPutController#unsafePut
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeBuilderAddController#unsafeBuilderAdd
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeBuilderAppendController#unsafeBuilderAppend
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeBuilderStartController#unsafeBuilderStart
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeBuilderStartMapController#unsafeBuilderStartMap
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeJsonParseController#unsafeJsonParse
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafeMapConstructorController#unsafeMapConstructor
+      - security.dataqueryinjection.MongoDBInjectionExtraSpringSamples$UnsafePutAllController#unsafePutAll
     negative:
       - security.dataqueryinjection.DataQueryInjectionServletSamples$SafeMongoServlet#doGet
       - security.dataqueryinjection.DataQueryInjectionSpringSamples$SafeMongoController#safeMongo
@@ -234,9 +362,25 @@ tests:
     positive:
       - security.dataqueryinjection.DataQueryInjectionServletSamples$UnsafeXPathServlet#doGet
       - security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeXPathController#unsafeXPath
+      - security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeXPathEvaluateExpressionController#unsafeEvaluateExpression
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeCxfXPathController#unsafeGetValueString
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeCxfXPathController#unsafeIsExist
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jDocumentFactoryController#unsafeCreateXPath
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jDocumentFactoryController#unsafeCreateXPathFilter
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jDocumentHelperController#unsafeCreateXPath
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jDocumentHelperController#unsafeSelectNodes
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jDocumentHelperController#unsafeSort
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jNodeController#unsafeNumberValueOf
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jNodeController#unsafeSelectNodes
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jNodeController#unsafeSelectNodes2Arg
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jNodeController#unsafeSelectSingleNode
+      - security.dataqueryinjection.XPathDom4jSpringSamples$UnsafeDom4jNodeController#unsafeValueOf
     negative:
+      - security.barriers.BarrierTests$SafeXpathCommonsEscapeXml10Servlet#doGet
+      - security.barriers.BarrierTests$SafeXpathOwaspForXmlServlet#doGet
       - security.dataqueryinjection.DataQueryInjectionServletSamples$SafeXPathServlet#doGet
       - security.dataqueryinjection.DataQueryInjectionSpringSamples$SafeXPathController#safeXPath
+      - security.dataqueryinjection.XPathDom4jSpringSamples$SafeDom4jController#safeXPath
   - rule-id: java/security/external-configuration-control.yaml#bean-injection
     positive:
       - security.externalconfigurationcontrol.BeanInjectionSamples#doGet
@@ -252,8 +396,10 @@ tests:
   - rule-id: java/security/external-configuration-control.yaml#unsafe-reflection
     positive:
       - security.externalconfigurationcontrol.UnsafeReflectionServletSamples$DynamicLoaderServlet#doGet
+      - security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$UnsafeMethodInvokeController#unsafeInvoke
       - security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$UnsafeReflectionController#loadClass
     negative:
+      - security.barriers.BarrierTests$SafePixeeLoadAndVerifyServlet#doGet
       - security.externalconfigurationcontrol.UnsafeReflectionServletSamples$SafeDynamicLoaderServlet#doGet
       - security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$SafeReflectionController#loadClass
   - rule-id: java/security/hardcoded-credentials.yaml#constant-db-password
@@ -328,16 +474,288 @@ tests:
   - rule-id: java/security/ldap.yaml#ldap-injection
     positive:
       - security.ldap.LdapInjectionServletSamples#doPost
+      - security.ldap.LdapInjectionSinkSamples$ApacheDirectoryLdapSinkController#search
+      - security.ldap.LdapInjectionSinkSamples$JmxConnectorSinkController#jmxConnectorConnect
+      - security.ldap.LdapInjectionSinkSamples$JmxConnectorSinkController#jmxConnectorFactoryConnect
+      - security.ldap.LdapInjectionSinkSamples$JndiExtensionsSinkController#contextListBindings
+      - security.ldap.LdapInjectionSinkSamples$JndiExtensionsSinkController#contextLookupLink
+      - security.ldap.LdapInjectionSinkSamples$JndiExtensionsSinkController#initialContextDoLookup
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#contextLookup
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#dirContextLookup
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#eventDirContextLookup
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#eventDirContextSearch
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#initialDirContextLookup
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#ldapContextLookup
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#ldapContextSearch
+      - security.ldap.LdapInjectionSinkSamples$JndiLdapSinkController#ldapName
+      - security.ldap.LdapInjectionSinkSamples$ShiroJndiTemplateSinkController#shiroJndiLookup
+      - security.ldap.LdapInjectionSinkSamples$SpringJndiTemplateSinkController#jndiLookup
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#findByDn
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#listBindings
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#lookupContext
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#opsFindByDn
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#opsListBindings
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#opsLookupContext
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#opsRename
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapExtendedSinkController#rename
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#authenticate
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#find
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#findOne
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#list
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#lookup
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#searchForContext
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapOperationsSinkController#searchForObject
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#authenticate
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#find
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#findOne
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#list
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#lookup
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#searchForContext
+      - security.ldap.LdapInjectionSinkSamples$SpringLdapSinkController#searchForObject
+      - security.ldap.LdapInjectionSinkSamples$UnboundIdLdapSinkController#asyncSearch
+      - security.ldap.LdapInjectionSinkSamples$UnboundIdLdapSinkController#searchForEntry
       - security.ldap.LdapInjectionSpringSamples$UnsafeLdapSpringController#unsafeSearch
+    negative:
+      - security.barriers.BarrierTests#safeLdapEsapiEncodeForDn
+      - security.barriers.BarrierTests#safeLdapEsapiEncodeForLdap
+      - security.barriers.BarrierTests#safeLdapFilterEncode
+      - security.barriers.BarrierTests#safeLdapNameEncode
+      - security.ldap.LdapInjectionServletSamples#doDelete
   - rule-id: java/security/log-injection.yaml#log-injection
     positive:
+      - security.loginjection.LogInjectionAdditionalSinksSamples$CxfLogUtilsController#log
+      - security.loginjection.LogInjectionAdditionalSinksSamples$FloggerController#log
+      - security.loginjection.LogInjectionAdditionalSinksSamples$JBossBasicLoggerController#warnv
+      - security.loginjection.LogInjectionAdditionalSinksSamples$JBossLoggerController#infof
+      - security.loginjection.LogInjectionAdditionalSinksSamples$Log4j1CategoryController#fatal
+      - security.loginjection.LogInjectionAdditionalSinksSamples$Log4j2ExtrasController#printf
+      - security.loginjection.LogInjectionAdditionalSinksSamples$Log4j2LogBuilderController#fluent
+      - security.loginjection.LogInjectionAdditionalSinksSamples$SciJavaLoggerController#alwaysLog
+      - security.loginjection.LogInjectionAdditionalSinksSamples$Slf4jFluentController#log
       - security.loginjection.LogInjectionSamples$SpringLogInjectionController#unsafeLogin
       - security.loginjection.LogInjectionSamples$UnsafeLogServlet#doGet
+    negative:
+      - security.barriers.BarrierTests#safeLogEncodeForJavaScript
+      - security.barriers.BarrierTests#safeLogEscapeJava
+      - security.barriers.BarrierTests#safeLogEscapeJavaLang3
+      - security.barriers.BarrierTests#safeLogPixeeNewlines
+      - security.barriers.BarrierTests#safeLogReplaceCarriageReturn
+      - security.barriers.BarrierTests#safeLogReplaceNewline
+      - security.barriers.BarrierTests#safeLogStripCrLfAnyLineBreak
+      - security.barriers.BarrierTests#safeLogStripCrLfBracket
+      - security.loginjection.LogInjectionSamples$SafeLogEscapeServlet#doGet
+      - security.loginjection.LogInjectionSamples$SafeLogReplaceServlet#doGet
+      - security.loginjection.LogInjectionSamples$SafeLogServlet#doGet
   - rule-id: java/security/log-injection.yaml#seam-log-injection
     positive:
+      - security.loginjection.LogInjectionSamples$SeamServletStyleLoginAction#vulnerableSeamDebug
+      - security.loginjection.LogInjectionSamples$SeamServletStyleLoginAction#vulnerableSeamError
       - security.loginjection.LogInjectionSamples$SeamServletStyleLoginAction#vulnerableSeamLogging
+      - security.loginjection.LogInjectionSamples$SeamServletStyleLoginAction#vulnerableSeamTrace
   - rule-id: java/security/path-traversal.yaml#path-traversal
     positive:
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeCanReadServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeClassLoaderResourceServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeCommonsIoCopyServlet#doPost
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeCommonsIoMkdirServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeCommonsIoWriterServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeFileChannelServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeFileHandlerServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeFilesLinesServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeFilesReadStringServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeGuavaFilesServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeJacksonServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafePrintStreamServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafePrintWriterServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeProcessBuilderServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeRenameToServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeServletContextResourceServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeStreamResultServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalServletSamples$UnsafeZipFileServlet#doGet
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeClassPathResourceController#load
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeCreateRelativeController#load
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeFileCopyController#read
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeFileSystemResourceController#load
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeFileSystemUtilsController#deleteDir
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeFileSystemUtilsCopyController#copy
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeFileUrlResourceController#load
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafePathResourceController#load
+      - security.pathtraversal.PathTraversalAdditionalSpringSamples$UnsafeResourceUtilsController#load
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCleanDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyDirToDirServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyFileToDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyToDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyToFileServlet#doPost
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeCopyURLToFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeDeleteDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeDeleteQuietlyServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeDeleteServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeFileUtilsNewOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeForceDeleteOnExitServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeForceDeleteServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeForceMkdirParentServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeIOUtilsCopyServlet#doPost
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeIOUtilsResourceToStringServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeIterateFilesAndDirsServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeIterateFilesServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeKeyManagerUtilsFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeListFilesAndDirsServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeListFilesServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeLockableFileWriterServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeMoveDirToDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeMoveDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeMoveFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeMoveFileToDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeMoveToDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeOpenInputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeOpenOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafePathUtilsCopyFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafePathUtilsCopyFileToDirServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafePathUtilsNewOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafePathUtilsWriteStringServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeRandomAccessFileModeServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeReadFileToByteArrayServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeReadFileToStringServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeReadLinesServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeStreamFilesServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeTouchServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeWriteByteArrayToFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeWriteLinesServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeWriteServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeWriteStringToFileServlet#doGet
+      - security.pathtraversal.PathTraversalCommonsIoSinksSamples$UnsafeXmlStreamWriterServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeCanExecuteServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeCanWriteServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeCreateNewFileServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeCreateTempFileServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeDeleteOnExitServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeDeleteServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeFileOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeFileReaderServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeFileWriterServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeIsDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeIsHiddenServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeMkdirServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeMkdirsServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeRandomAccessFileServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeSetExecutableServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeSetLastModifiedServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeSetReadOnlyServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeSetReadableServlet#doGet
+      - security.pathtraversal.PathTraversalJavaIoSinksSamples$UnsafeSetWritableServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeClassGetResourceAsStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeClassGetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeClassLoaderGetResourceAsStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeClassLoaderGetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeClassLoaderGetResourcesServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeCtxGetResourceAsStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeFileImageOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeGetSystemResourceAsStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeGetSystemResourcesServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeJakartaFacesGetResourceAsStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeJakartaFacesGetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeJakartaFileDataSourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeJavaxFacesGetResourceAsStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeJavaxFacesGetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeJavaxFileDataSourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeModuleGetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeRedirectErrorServlet#doGet
+      - security.pathtraversal.PathTraversalJdkMiscSinksSamples$UnsafeStreamSourceServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeAtomicFileWriterServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeChangeLogParserServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeClasspathBuilderAddServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeDirectoryBrowserSupportServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathCopyFromServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathCopyRecursiveToServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathCopyToServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathCopyToWithPermServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathExistsServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathReadServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathReadToStringServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeFilePathWriteServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeIOUtilsMkdirsServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeItemsLoadServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeKernel32MoveFileExServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeLifecycleRewriteWarServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeReopenableFileOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeRewindableFileOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeSCMCheckoutServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeSCMCompareRemoteServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeStaplerLargeTextServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeStaplerServeFileServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeStaplerServeLocalizedFileServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeStreamTaskListenerServlet#doGet
+      - security.pathtraversal.PathTraversalJenkinsSinksSamples$UnsafeXmlFileServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeANTLRFileStreamServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntClassLoaderServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntCopyAddFilesetServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntCopySetFileServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntCopySetTodirServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntCopySetTofileServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntDirectoryScannerServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntExpandSetDestServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntExpandSetSrcServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntPropertySetFileServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeAntPropertySetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaAsByteSinkServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaAsCharSinkServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaAsCharSourceServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaNewWriterServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaReadLinesServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaToStringServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeGuavaWriteServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeJacksonWriteValueServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeJmhResultServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinAppendBytesServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinAppendTextServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinCopyRecursivelyServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinCopyToServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinDeleteRecursivelyServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinReadBytesServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinReadTextServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinWriteBytesServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeKotlinWriteTextServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeNettyCreateTempFileServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeNettyFileUploadServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeNettySslForServerServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeNettySslTrustManagerServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeOpenSslServerContextServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeUndertowGetResourceServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeXStreamServlet#doGet
+      - security.pathtraversal.PathTraversalLibSinksSamples$UnsafeZip4jExtractAllServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateDirectoriesServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateDirectoryServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateFileServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateLinkServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateSymlinkServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateTempDirServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeCreateTempFileServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeDeleteIfExistsServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeDeleteServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeFindServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeGetFileStoreServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeGetFileSystemServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeMoveServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewBufferedReaderServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewBufferedWriterServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewByteChannelServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewDirectoryStreamServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewFileSystemServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewInputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNewOutputStreamServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeNotExistsServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeProbeContentTypeServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeReadAllLinesServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeReadSymbolicLinkServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeSetLastModifiedTimeServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeSetOwnerServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeSetPosixPermissionsServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeWalkFileTreeServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeWalkServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeWriteServlet#doGet
+      - security.pathtraversal.PathTraversalNioSinksSamples$UnsafeWriteStringServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$UnsafeCookieDownloadServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost
       - security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet#doGet
@@ -347,12 +765,27 @@ tests:
       - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload
       - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload
     negative:
+      - security.barriers.BarrierTests$SafeCanonicalFileServlet#doGet
+      - security.barriers.BarrierTests$SafeCanonicalPathServlet#doGet
+      - security.barriers.BarrierTests$SafeEsapiDirectoryPathServlet#doGet
+      - security.barriers.BarrierTests$SafeEsapiFileNameServlet#doGet
+      - security.barriers.BarrierTests$SafeFileGetNameServlet#doGet
+      - security.barriers.BarrierTests$SafeFilenameUtilsNormalizeNoEndSeparatorServlet#doGet
+      - security.barriers.BarrierTests$SafeFilenameUtilsNormalizeServlet#doGet
+      - security.barriers.BarrierTests$SafePathNormalizeServlet#doGet
+      - security.barriers.BarrierTests$SafePixeeFilenameServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFileCreateTempFilePrefixSuffixServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeFilenameUtilsGetNameServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeFilenameUtilsNormalizeServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempDirectoryPrefixServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempFilePrefixSuffixServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeHeaderDownloadServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeParamDownloadServlet1#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeParamDownloadServlet2#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafePathNormalizeServlet#doGet
       - security.pathtraversal.PathTraversalSpringSamples$SafeFileDownloadController#safeHeaderDownload
+      - security.pathtraversal.PathTraversalSpringSamples$SafeFileDownloadController#safeParamDownload
+      - security.pathtraversal.PathTraversalSpringSamples$SafeFileDownloadController#safePathVariableDownload
       - security.pathtraversal.PathTraversalSpringSamples$SafeTempFileController#safeCreateTempDirectory
       - security.pathtraversal.PathTraversalSpringSamples$SafeTempFileController#safeCreateTempFile
       - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#safeNonWildcardPathVariable
@@ -410,21 +843,132 @@ tests:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$UrlRewritingController#trackSafe
   - rule-id: java/security/sqli.yaml#sql-injection
     positive:
+      - security.sqli.SqlInjectionPreExistingSamples$PreparedStatementCreatorFactoryController#unsafeNewPSC
+      - security.sqli.SqlInjectionPreExistingSamples$BatchUpdateUtilsController#unsafeBatchUpdate
+      - security.sqli.SqlInjectionPreExistingSamples$HibernateRestrictionsController#unsafeSqlRestriction
+      - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafeCreateScript
+      - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafeCreateUpdate
+      - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafeNewPreparedBatch
+      - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafeNewScript
+      - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafePrepareBatch
+      - security.sqli.SqlInjectionPreExistingSamples$JdbiHandleController#unsafeSelect
+      - security.sqli.SqlInjectionPreExistingSamples$JdoController#unsafeNewQuery
+      - security.sqli.SqlInjectionPreExistingSamples$JdoController#unsafeNewQueryWithClass
+      - security.sqli.SqlInjectionPreExistingSamples$JdoController#unsafeSetFilter
+      - security.sqli.SqlInjectionPreExistingSamples$JdoController#unsafeSetGrouping
+      - security.sqli.SqlInjectionPreExistingSamples$JpaEntityManagerController#unsafeCreateNativeQuery
+      - security.sqli.SqlInjectionPreExistingSamples$JpaEntityManagerController#unsafeCreateQuery
+      - security.sqli.SqlInjectionPreExistingSamples$NamedParameterBatchUpdateUtilsController#unsafeNamedBatchUpdate
+      - security.sqli.SqlInjectionPreExistingSamples$PrepareCallController#unsafePrepareCall
+      - security.sqli.SqlInjectionPreExistingSamples$PreparedStatementCreatorFactoryController#unsafeConstructor
+      - security.sqli.SqlInjectionPreExistingSamples$PreparedStatementCreatorFactoryNewPscController#unsafeNewPSC
+      - security.sqli.SqlInjectionPreExistingSamples$TorqueBasePeerController#unsafeExecuteQuery
+      - security.sqli.SqlInjectionPreExistingSamples$TorqueBasePeerController#unsafeExecuteStatement
+      - security.sqli.SqlInjectionPreExistingSamples$VertxController#unsafePrepare
+      - security.sqli.SqlInjectionPreExistingSamples$VertxController#unsafePreparedQuery
+      - security.sqli.SqlInjectionPreExistingSamples$VertxController#unsafeQuery
       - security.sqli.SqlInjectionServletSamples$UnsafeSqlServlet#doGet
+      - security.sqli.SqlInjectionSinksSpringSamples$DatabaseMetaDataController#unsafeGetColumns
+      - security.sqli.SqlInjectionSinksSpringSamples$DatabaseMetaDataController#unsafeGetPrimaryKeys
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeBatchSqlUpdate
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeMappingSqlQuery
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeMappingSqlQueryWithParameters
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeSetSql
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeSqlCall
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeSqlFunction
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeSqlUpdate
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcObjectController#unsafeUpdatableSqlQuery
+      - security.sqli.SqlInjectionSinksSpringSamples$JdbcTemplateQueryForStreamController#unsafeQueryForStream
+      - security.sqli.SqlInjectionSinksSpringSamples$NamedParameterJdbcController#unsafeExecute
+      - security.sqli.SqlInjectionSinksSpringSamples$NamedParameterJdbcController#unsafeQuery
+      - security.sqli.SqlInjectionSinksSpringSamples$NamedParameterJdbcController#unsafeQueryForList
+      - security.sqli.SqlInjectionSinksSpringSamples$NamedParameterJdbcController#unsafeQueryForStream
+      - security.sqli.SqlInjectionSinksSpringSamples$NamedParameterJdbcController#unsafeUpdate
       - security.sqli.SqlInjectionSpringSamples$UnsafeSqlSpringController#unsafeSearch
+      - security.sqli.SqlInjectionThirdPartySamples$CouchbaseClusterController#unsafeAnalyticsQuery
+      - security.sqli.SqlInjectionThirdPartySamples$CouchbaseClusterController#unsafeQuery
+      - security.sqli.SqlInjectionThirdPartySamples$DruidController#unsafeConsole
+      - security.sqli.SqlInjectionThirdPartySamples$HibernateQueryProducerController#unsafeCreateNativeQuery
+      - security.sqli.SqlInjectionThirdPartySamples$HibernateQueryProducerController#unsafeCreateQuery
+      - security.sqli.SqlInjectionThirdPartySamples$HibernateQueryProducerController#unsafeCreateSQLQuery
+      - security.sqli.SqlInjectionThirdPartySamples$HibernateSharedSessionController#unsafeCreateQuery
+      - security.sqli.SqlInjectionThirdPartySamples$HibernateSharedSessionController#unsafeCreateSQLQuery
+      - security.sqli.SqlInjectionThirdPartySamples$LiquibaseController#unsafePrepareStatement
+      - security.sqli.SqlInjectionThirdPartySamples$LiquibaseController#unsafeRawSqlStatement
+      - security.sqli.SqlInjectionThirdPartySamples$MyBatisSqlRunnerController#unsafeDelete
+      - security.sqli.SqlInjectionThirdPartySamples$MyBatisSqlRunnerController#unsafeRun
+      - security.sqli.SqlInjectionThirdPartySamples$MyBatisSqlRunnerController#unsafeSelectOne
+      - test.AnalyzerPropagatorRepros$Base64EncodeServlet#doGet
+      - test.AnalyzerPropagatorRepros$IOUtilsToStringServlet#doGet
+      - test.AnalyzerPropagatorRepros$StringUtilsDefaultIfBlankServlet#doGet
     negative:
       - security.sqli.SqlInjectionServletSamples$SafeSqlServlet#doGet
+      - security.sqli.SqlInjectionSinksSpringSamples$SafeNamedParameterJdbcController#safeQuery
       - security.sqli.SqlInjectionSpringSamples$SafeSqlSpringController#safeSearch
+      - security.sqli.SqlInjectionThirdPartySamples$SafeMyBatisController#safeSelectOne
   - rule-id: java/security/ssrf.yaml#java-servlet-parameter-pollution
     positive:
+      - security.ssrf.SsrfSamples$UnsafeGetMethodPollutionServlet#doGet
       - security.ssrf.SsrfSamples$UnsafeParameterPollutionServlet#doGet
+      - security.ssrf.SsrfSamples$UnsafeSetQueryStringPollutionServlet#doGet
     negative:
+      - security.barriers.BarrierTests$SafeGuavaFormParameterEscaperServlet#doGet
+      - security.barriers.BarrierTests$SafeGuavaFragmentEscaperServlet#doGet
+      - security.barriers.BarrierTests$SafeGuavaPathSegmentEscaperServlet#doGet
+      - security.barriers.BarrierTests$SafeUrlEncoder1ArgServlet#doGet
+      - security.barriers.BarrierTests$SafeUrlEncoder2ArgServlet#doGet
+      - security.ssrf.SsrfSamples$SafeEncodedParameterPollutionServlet#doGet
       - security.ssrf.SsrfSamples$SafeParameterPollutionServlet#doGet
   - rule-id: java/security/ssrf.yaml#ssrf
     positive:
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeKotlinIOUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHcCore5Async#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeURLClassLoader#test
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeCommonsIoCopy#download
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeCommonsNetConnect#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeDriverManager#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeDriverManagerDataSource#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeHc4RequestBuilder#fetch
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeHc5HttpGet#fetch
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeHikariConfig#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeInetSocketAddress#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeJSchSession#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeJavaHttpClient#fetch
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeJettyHttpClient#fetch
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeNettyHttpRequest#fetch
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeRequestEntity#fetch
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeSocket#connect
+      - security.ssrf.SsrfAdditionalSinksSamples$UnsafeWebClient#fetch
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeActivationUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeCommonsIOCopy#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeCommonsIOUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeDatabaseUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeDatagramUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHc4Factory#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHc4Methods#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHc5AsyncMethods#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHc5ClassicMethods#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHcCore5#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHcCore5Factory#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeHudsonUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeJaxRsUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeNettyConnectUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeNettyExtendedUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeOkHttp3Usage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeOkHttp3WebSocket#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeSpringAdvancedUsage#test
+      - security.ssrf.SsrfComprehensiveSinksSamples$UnsafeStaplerUsage#test
+      - security.ssrf.SsrfExtraSinksSamples$UnsafeHttpClientSendController#unsafeSend
+      - security.ssrf.SsrfExtraSinksSamples$UnsafeJettyGetController#unsafeJettyGet
+      - security.ssrf.SsrfExtraSinksSamples$UnsafeUrlGetContentController#unsafeGetContent
+      - security.ssrf.SsrfExtraSinksSamples$UnsafeUrlOpenStreamController#unsafeOpenStream
       - security.ssrf.SsrfSamples$SsrfSpringController#unsafeProxy
       - security.ssrf.SsrfSamples$UnsafeProxyServlet#doGet
+      - security.ssrf.SsrfSamples$UnsafeSsrfSpringController#unsafeProxy
     negative:
+      - security.barriers.BarrierTests$SafeMainGuavaFormServlet#doGet
+      - security.barriers.BarrierTests$SafeMainPixeeUrlsServlet#doGet
+      - security.barriers.BarrierTests$SafeMainUrlEncoderServlet#doGet
       - security.ssrf.SsrfSamples$SafeProxyServlet#doGet
   - rule-id: java/security/strings.yaml#format-string-external-manipulation
     positive:
@@ -465,6 +1009,9 @@ tests:
       - security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById
   - rule-id: java/security/unsafe-deserialization.yaml#unsafe-jackson-deserialization
     positive:
+      - security.unsafedeserialization.JacksonDeserializationSpringSamples$UnsafeActivateDefaultTypingController#unsafeActivateDefaultTyping
+      - security.unsafedeserialization.JacksonDeserializationSpringSamples$UnsafeDefaultTypeResolverClassController#unsafeResolverClass
+      - security.unsafedeserialization.JacksonDeserializationSpringSamples$UnsafeDefaultTypeResolverMinimalClassController#unsafeResolverMinimalClass
       - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController
       - security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeJacksonServlet
     negative:
@@ -484,16 +1031,63 @@ tests:
     negative:
       - security.unsafedeserialization.UnsafeDeserializationSamples$SafeSnakeYamlServlet#doPost
       - security.unsafedeserialization.UnsafeDeserializationSamples$SnakeYamlSpringController#safeYaml
+  - rule-id: java/security/unsafe-deserialization.yaml#unsafe-deserialization
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JYamlSpringController#unsafeYamlLoad
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JYamlSpringController#unsafeYamlLoadStream
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JYamlSpringController#unsafeYamlLoadStreamOfType
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JYamlSpringController#unsafeYamlLoadType
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JabsorbSpringController#unsafeFromJson
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JsonIoSpringController#unsafeJsonToJava
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeAlibabaHessian2Servlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeAlibabaHessianServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeBurlapServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeCastorServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeCommonsLang3Servlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeCommonsLangServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeHessian2Servlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeHessianServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeJYamlConfigServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeJsonReaderServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$UnsafeXmlDecoderServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$YamlBeansSpringController#unsafeYamlBeans
+    negative:
+      - security.barriers.BarrierTests$SafePixeeValidatingOisServlet#doGet
+      - security.barriers.BarrierTests$SafeValidatingOisServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JYamlSpringController#safeYaml
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JabsorbSpringController#safeFromJson
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$JsonIoSpringController#safeJsonToJava
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$SafeCommonsLang3Servlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$SafeHessianServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$SafeXmlDecoderServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationAdditionalSamples$YamlBeansSpringController#safeYamlBeans
   - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-servlet-app
     positive:
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeAddLocationHeaderServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeDesktopBrowseServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeJaxRsSeeOtherServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeJaxRsTemporaryRedirectServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafePortletContextDispatcherServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeServletContextDispatcherServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeStaplerForwardServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeStaplerRedirectToServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeStaplerRedirectToWithStatusServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeStaplerSendRedirect2Servlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeStaplerSendRedirectServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeStaplerSendRedirectWithStatusServlet#doGet
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeUnvalidatedRedirectServlet#doGet
     negative:
+      - security.barriers.BarrierTests$SafeRedirectEsapiLocationServlet#doGet
+      - security.barriers.BarrierTests$SafeRedirectGuavaServlet#doGet
+      - security.barriers.BarrierTests$SafeRedirectUrlEncoderServlet#doGet
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet#doGet
   - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-spring-app
     positive:
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeModelAndViewRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirectView
     negative:
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeMapLookupRedirectController#safeInternalRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeInternalRedirect
   - rule-id: java/security/weak-authentication.yaml#java-jwt-decode-without-verify
     positive:
@@ -508,10 +1102,30 @@ tests:
   - rule-id: java/security/xss.yaml#response-injection-in-servlet-app
     positive:
       - security.xss.XssServletSamples$UnsafeJsonInfoServlet#doGet
+    negative:
+      - security.barriers.BarrierTests$SafeRespInjEsapiCssServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEsapiHtmlAttrServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEsapiJsServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEsapiUrlServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEsapiXmlAttrServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEsapiXmlServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEscapeEcmaScriptServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjEscapeXml11Servlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjLang3EscapeEcmaScriptServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjOwaspCssStringServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjOwaspJsAttrServlet#doGet
+      - security.barriers.BarrierTests$SafeRespInjSpringDecimalServlet#doGet
   - rule-id: java/security/xss.yaml#response-injection-in-spring-app
     positive:
       - security.xss.XssSpringSamples$UnsafeNoContentTypeSpringController#unsafeNoContentType
       - security.xss.XssSpringSamples$UnsafeResponseEntityController#unsafeResponseEntity
+    negative:
+      - security.barriers.BarrierTests$SpringRespInjBarrierController#safeSpringRespEsapiJs
+      - security.barriers.BarrierTests$SpringRespInjBarrierController#safeSpringRespEsapiUrl
+      - security.barriers.BarrierTests$SpringRespInjBarrierController#safeSpringRespEscapeEcmaScript
+      - security.barriers.BarrierTests$SpringRespInjBarrierController#safeSpringRespEscapeXml10
+      - security.barriers.BarrierTests$SpringRespInjBarrierController#safeSpringRespHtmlEscapeHex
+      - security.barriers.BarrierTests$SpringRespInjBarrierController#safeSpringRespOwaspJs
   - rule-id: java/security/xss.yaml#wicket-xss
     positive:
       - security.xss.WicketXssSamples$UnsafeWicketPage
@@ -526,11 +1140,48 @@ tests:
       - security.xss.XssHtmlResponseServletSamples$UnsafeOutputStreamLocalServlet#doGet
       - security.xss.XssHtmlResponseServletSamples$UnsafeSendErrorServlet#doGet
       - security.xss.XssHtmlResponseServletSamples$UnsafeTypedPrintWriterServlet#doGet
+      - security.xss.XssHttpComponentsSamples$UnsafeHc4SetEntity#doGet
+      - security.xss.XssHttpComponentsSamples$UnsafeHc4UpdateEntity#doGet
+      - security.xss.XssHttpComponentsSamples$UnsafeHc5SetEntity#doGet
+      - security.xss.XssJenkinsSamples$UnsafeErrorWithMarkup#doGet
+      - security.xss.XssJenkinsSamples$UnsafeOkWithMarkup#doGet
+      - security.xss.XssJenkinsSamples$UnsafeRespond#doGet
+      - security.xss.XssJenkinsSamples$UnsafeStaplerHtml#doGet
+      - security.xss.XssJenkinsSamples$UnsafeStaplerLiteralHtml#doGet
+      - security.xss.XssJenkinsSamples$UnsafeWarningWithMarkup#doGet
+      - security.xss.XssJsfSamples$UnsafeJakartaResponseStreamServlet#doGet
+      - security.xss.XssJsfSamples$UnsafeJakartaResponseWriterServlet#doGet
+      - security.xss.XssJsfSamples$UnsafeJavaxResponseStreamServlet#doGet
+      - security.xss.XssJsfSamples$UnsafeJavaxResponseWriterServlet#doGet
       - security.xss.XssServletSamples$UnsafeGreetingServlet#doGet
     negative:
+      - security.barriers.BarrierTests$SafeApacheEscapeHtml3Servlet#doGet
+      - security.barriers.BarrierTests$SafeApacheEscapeHtml4Servlet#doGet
+      - security.barriers.BarrierTests$SafeCommonsEscapeEcmaScriptServlet#doGet
+      - security.barriers.BarrierTests$SafeCommonsEscapeXml10Servlet#doGet
+      - security.barriers.BarrierTests$SafeEsapiForCssServlet#doGet
+      - security.barriers.BarrierTests$SafeEsapiForHtmlAttrServlet#doGet
+      - security.barriers.BarrierTests$SafeEsapiForJsServlet#doGet
+      - security.barriers.BarrierTests$SafeEsapiSafeHtmlServlet#doGet
+      - security.barriers.BarrierTests$SafeHtmlEscape1ArgServlet#doGet
+      - security.barriers.BarrierTests$SafeHtmlEscape2ArgServlet#doGet
+      - security.barriers.BarrierTests$SafeHtmlEscapeDecimalServlet#doGet
+      - security.barriers.BarrierTests$SafeHtmlEscapeHexServlet#doGet
+      - security.barriers.BarrierTests$SafeHudsonEscapeServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspEncodeForHtmlServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspForCDATAServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspForCssStringServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspForHtmlAttributeServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspForHtmlContentServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspForJavaScriptServlet#doGet
+      - security.barriers.BarrierTests$SafeOwaspForJsAttrServlet#doGet
+      - security.barriers.BarrierTests$SafePixeeHtmlEncoderServlet#doGet
       - security.xss.XssHtmlResponseServletSamples$SafeChainedWriterJsonServlet#doGet
       - security.xss.XssHtmlResponseServletSamples$SafeHtmlServlet#doGet
       - security.xss.XssHtmlResponseServletSamples$SafeOutputStreamOctetServlet#doGet
+      - security.xss.XssHttpComponentsSamples$SafeHcServlet#doGet
+      - security.xss.XssJenkinsSamples$SafeJenkinsServlet#doGet
+      - security.xss.XssJsfSamples$SafeJsfServlet#doGet
       - security.xss.XssServletSamples$SafeGreetingServlet#doGet
   - rule-id: java/security/xss.yaml#xss-in-spring-app
     positive:
@@ -558,13 +1209,20 @@ tests:
       - security.xss.XssHtmlResponseSpringSamples$Row53BuilderChainHtmlObjectReturnController#row53
       - security.xss.XssHtmlResponseSpringSamples$Row54BuilderChainHtmlMultiStatementController#row54
       - security.xss.XssHtmlResponseSpringSamples$Row56ControllerResponseBodyStringController#row56
+      - security.xss.XssHtmlResponseSpringSamples$Row57HttpHeadersGetFirstReflectedController#row57
       - security.xss.XssHtmlResponseSpringSamples$UnsafeResponseEntityBytesHtmlController#unsafeBytesHtml
       - security.xss.XssHtmlResponseSpringSamples$UnsafeResponseEntityStringController#unsafeResponseEntityString
       - security.xss.XssHtmlResponseSpringSamples$UnsafeSetContentTypeController#unsafeHtmlGreet
       - security.xss.XssHtmlResponseSpringSamples$UnsafeSetHeaderController#unsafeSetHeaderGreet
       - security.xss.XssHtmlResponseSpringSamples$UnsafeStringReturnController#unsafeStringReturn
+      - security.xss.XssServletSinkSpringSamples$UnsafeOutputStreamWriteController#unsafeOutputStreamWrite
+      - security.xss.XssServletSinkSpringSamples$UnsafeSendErrorController#unsafeSendError
+      - security.xss.XssServletSinkSpringSamples$UnsafeSendErrorMultilineController#unsafeSendErrorMultiline
       - security.xss.XssSpringSamples$UnsafeXssSpringController#unsafeGreet
     negative:
+      - security.barriers.BarrierTests$SpringXssBarrierController#safeSpringEscapeHtml4
+      - security.barriers.BarrierTests$SpringXssBarrierController#safeSpringHtmlEscape
+      - security.barriers.BarrierTests$SpringXssBarrierController#safeSpringOwaspForHtml
       - security.xss.SafeDtoRestController#safeDto
       - security.xss.XssHtmlResponseSpringSamples$Row04StringProducesTextPlainController#row04
       - security.xss.XssHtmlResponseSpringSamples$Row05StringProducesPdfController#row05
@@ -596,6 +1254,13 @@ tests:
       - security.xss.XssRequestWrapperSamples$SafeEncodingFilter#doFilter
   - rule-id: java/security/xxe.yaml#xxe
     positive:
+      - security.xxe.XsltInjectionSpringSamples$UnsafeSaxonXslt30Controller#unsafeApplyTemplates
+      - security.xxe.XsltInjectionSpringSamples$UnsafeSaxonXslt30Controller#unsafeTransform
+      - security.xxe.XsltInjectionSpringSamples$UnsafeSaxonXsltTransformerController#unsafeTransform
+      - security.xxe.XxeExtraSpringSamples$UnsafeTransformerFactoryController#unsafeNewTransformer
+      - security.xxe.XxeExtraSpringSamples$UnsafeXMLDecoderController#unsafeDecoder1Arg
+      - security.xxe.XxeExtraSpringSamples$UnsafeXMLDecoderController#unsafeDecoder2Arg
+      - security.xxe.XxeExtraSpringSamples$UnsafeXMLDecoderController#unsafeDecoder3Arg
       - security.xxe.XxeSamples$DigesterSpringController#processXmlInsecure
       - security.xxe.XxeSamples$SaxParserSpringController#processXmlInsecure
       - security.xxe.XxeSamples$SaxReaderSpringController#processXmlInsecure

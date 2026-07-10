@@ -3,11 +3,13 @@ package security.codeinjection;
 import javax.script.Bindings;
 import javax.script.Compilable;
 import javax.script.CompiledScript;
+import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +28,43 @@ public class ScriptEngineInjectionSpringSamples {
 
             // VULNERABLE: directly evaluates attacker-controlled script code
             Object result = engine.eval(expr);
+            return String.valueOf(result);
+        }
+    }
+
+    // ── Invocable.invokeFunction ─────────────────────────────────────────
+
+    @RestController
+    @RequestMapping("/script-engine-injection-in-spring")
+    public static class UnsafeInvocableFunctionController {
+
+        @GetMapping("/invoke-function")
+        public String unsafeInvokeFunction(@RequestParam("input") String input) throws Exception {
+            ScriptEngineManager manager = new ScriptEngineManager();
+            ScriptEngine engine = manager.getEngineByName("javascript");
+            engine.eval("function process(x) { return eval(x); }");
+            Invocable invocable = (Invocable) engine;
+            // VULNERABLE: user input passed as argument to script function
+            Object result = invocable.invokeFunction("process", input);
+            return String.valueOf(result);
+        }
+    }
+
+    // ── Invocable.invokeMethod ──────────────────────────────────────────
+
+    @RestController
+    @RequestMapping("/script-engine-injection-in-spring")
+    public static class UnsafeInvocableMethodController {
+
+        @GetMapping("/invoke-method")
+        public String unsafeInvokeMethod(@RequestParam("input") String input) throws Exception {
+            ScriptEngineManager manager = new ScriptEngineManager();
+            ScriptEngine engine = manager.getEngineByName("javascript");
+            engine.eval("var obj = { process: function(x) { return eval(x); } }");
+            Object obj = engine.get("obj");
+            Invocable invocable = (Invocable) engine;
+            // VULNERABLE: user input passed as argument to script method
+            Object result = invocable.invokeMethod(obj, "process", input);
             return String.valueOf(result);
         }
     }

@@ -63,8 +63,6 @@ public class SmtpCrlfInjectionServletSamples {
         }
 
         @Override
-//      TODO: restore this when conditional validators are implemented
-//        @NegativeRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String to = request.getParameter("to");
