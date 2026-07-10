@@ -9,4 +9,4 @@ rules:
       - pattern: |
           $A = flask.request.headers.keys(...)[...]
           ...
-          flask.redirect($URL)
+          flask.redirect($A)

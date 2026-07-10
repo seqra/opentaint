@@ -9,4 +9,4 @@ rules:
       - pattern: |
           $A = flask.request.form.keys(...)[...]
           ...
-          flask.redirect($URL)
+          flask.redirect($A)

@@ -232,6 +232,66 @@ one, add it.
       surfaces `AUTOMATA_TO_TAINT_RULE` warnings like "N automata edges have no positive predicate and
       were removed" — that message means your cleaner got dropped for lack of a source mark. Fast
       (querylang module only, no PIR build). Remove the throwaway test before finishing.
+24. **The source metavar MUST thread into the sink — this is what models the data flow. (THE #1
+    structural-rule rule.)** A shape like
+    ```yaml
+    - pattern: |
+        $A = flask.request.form.get(...)
+        ...
+        flask.redirect($URL)          # ← WRONG: $URL is a different, unbound metavar
+    ```
+    does **NOT** model taint flow. `$A` (source result) and `$URL` (sink arg) are distinct metavars, so
+    this lowers to a pure **syntactic co-occurrence**: "a source call is assigned somewhere AND a
+    `redirect(anything)` call occurs somewhere" — the source's value need not reach the sink at all.
+    Consequences: a TRUE entry passes for the WRONG reason (masks any taint-drop on the real path — the
+    rule fires regardless), and a FALSE entry that calls the source but redirects a *constant/other*
+    value FALSE-POSITIVES. Correct form unifies the metavar end-to-end:
+    ```yaml
+    - pattern: |
+        $A = flask.request.form.get(...)
+        ...
+        flask.redirect($A)            # ← same $A: lowers to ContainsMark($A) dataflow check on the sink arg
+    ```
+    Because the sink becomes a **dataflow** `ContainsMark($A)` check (not a syntactic match, inv 23), it
+    correctly follows rebinding (`param=source(); ...; bar=f(param); redirect(bar)` still fires) — you do
+    NOT need to name every intermediate binding, just bind the source to `$A` and use `$A` at the sink
+    with `...` between. Same principle for a `focus`/multi-arg sink: the tainted metavar in the sink
+    pattern must be the one the source bound. (The first redirect round shipped the split-metavar shape
+    for all plain rules — passing by co-occurrence, not flow — and was corrected in a follow-up.)
+25. **A collection-element source MUST carry the `[...]` subscript so it taints the ELEMENT, not the
+    whole collection — AND the structural `$A = expr[...]` assignment now preserves that element
+    modifier (engine fix this round).** Two coupled facts, discovered fixing the 6 redirect TRUE
+    entries that FN'd after the inv-24 metavar unification (00258/00418/00596/00654/00655/00814):
+    - **inv 12 is STALE for concrete facts.** A concrete whole-object source fact `values.![mark]`
+      does NOT propagate through an intraprocedural element read (`param = values[0]`) or a for-loop
+      `NextIter` (`for name in request.form.keys()`). `mayReadAccessor(values, ElementAccessor)`
+      (`PIRFlowFunctionUtils`) is **false** — the fact starts with a `TaintMarkAccessor`, not
+      `ElementAccessor`, and a concrete source fact is not `isAbstract()`. Inv 12's whole→element
+      propagation only exists on the **abstract** branch (interprocedural call-abstraction, the `.*`
+      tail), NOT the concrete intraprocedural path. So a source that taints the *whole* collection
+      drops at the very first `x[i]` / loop-iteration read on that path.
+    - **The fix: taint the element directly.** A source pattern `flask.request.form.getlist(...)[...]`
+      (bare, taint-mode) taints `Result[*]` (the element), and reading `values[0]` extracts it cleanly
+      via `startsWithAccessor(ElementAccessor)`. This is why the cmdi/ldapi taint-mode keys/getlist
+      entries always used the `[...]` shape (insights "add the subscript for collection accessors").
+    - **The structural trap that caused the FNs:** in a STRUCTURAL rule the source is bound by an
+      assignment `$A = flask.request.form.getlist(...)[...]`, and `transformAssignmentValue`'s
+      `setResultCondition(mkAnd(conditions))` **overwrote** the subscript's element modifier with just
+      `$A` → the source tainted the *whole* `Result`, identical to the no-`[...]` form (verified by
+      dumping emitted rules: both `getlist(...)` and `getlist(...)[...]` → `taint=[BaseOnly(Result)]`).
+      Then the concrete whole-object taint dropped at the element read/NextIter per the bullet above.
+      **Fix landed in `PythonPatternToActionListConverter.transformAssignmentValue`:** merge the value's
+      existing result modifier into the metavar condition (`conditions + last.result`) so
+      `$A = getlist(...)[...]` now emits `taint=[WithModifiers(Result,[ArrayElement])]` = `Result[*]`,
+      matching the bare taint-mode subscript source. Regression-locked by
+      `PythonRuleEmitTest.subscript-assignment source binds the metavar to the result element`
+      (+ resource `python-rules/subscript-assign-source.yaml`).
+    - **Consequence for authoring:** for any collection-accessor source in a STRUCTURAL rule
+      (`getlist`/`keys`/`values`/`getlist`-view), write `$A = <source>(...)[...]` (with `[...]`). The
+      `[...]` is now load-bearing (was a silent no-op before this fix). Plain scalar sources
+      (`.get(...)`) need no `[...]`. This also made the two keys-source FALSE entries 00419/00420 pass
+      for the RIGHT reason: previously their taint dropped at NextIter (masking); now it flows and the
+      unified-`$M` urlparse cleaner (inv 23) removes it.
 
 ## Category → sink / CWE reference
 

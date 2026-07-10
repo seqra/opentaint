@@ -9,4 +9,4 @@ rules:
       - pattern: |
           $A = flask.request.args.get(...)
           ...
-          flask.redirect($URL)
+          flask.redirect($A)

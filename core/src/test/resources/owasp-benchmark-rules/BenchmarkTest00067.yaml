@@ -9,4 +9,4 @@ rules:
       - pattern: |
           $A = flask.request.cookies.get(...)
           ...
-          flask.redirect($URL)
+          flask.redirect($A)

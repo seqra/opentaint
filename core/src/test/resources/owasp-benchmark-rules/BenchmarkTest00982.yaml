@@ -9,4 +9,4 @@ rules:
       - pattern: |
           $A = flask.request.query_string.decode(...)
           ...
-          flask.redirect($URL)
+          flask.redirect($A)

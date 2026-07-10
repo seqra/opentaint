@@ -7,6 +7,6 @@ rules:
       cwe: CWE-601
     patterns:
       - pattern: |
-          $A = flask.request.headers.getlist(...)
+          $A = flask.request.headers.getlist(...)[...]
           ...
-          flask.redirect($URL)
+          flask.redirect($A)

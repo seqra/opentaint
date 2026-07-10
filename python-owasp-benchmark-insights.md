@@ -268,6 +268,40 @@ dict same-key (00068), getlist+index (00258/00814), keys()-loop (00418/00654/006
 (00596), ternary/if-else tainted arm (00496/00418 — path-insensitive so tainted arm reaches), query_string
 decode+slice (00982), direct (01178/01208). All reachable.
 
+### Collection-element source drop (00258/00418/00596/00654/00655/00814 — was FN after inv-24, now fixed)
+After the inv-24 metavar unification made the redirect sink a real `ContainsMark($A)` dataflow check, these
+6 TRUE entries FN'd ("sink not reached"). Root cause was **not** a rule-shape issue — it's a two-part
+engine/lowering gap (full writeup in session-2 invariant 25):
+- The 6 entries all flow a **collection element** to the sink: `values = form.getlist(...); param =
+  values[0]` (00258/00814/00596 getlist+index) or `for name in request.headers.keys(): param = name`
+  (00418/00654/00655 keys-loop). The source (`getlist`/`keys`) taints the whole collection; the value that
+  reaches `flask.redirect` is the *element* / loop var.
+- **inv 12 is stale for concrete facts:** a concrete whole-object fact `values.![mark]` does NOT propagate
+  through an intraprocedural element read or for-loop NextIter — `mayReadAccessor(values, ElementAccessor)`
+  is false (fact starts with `TaintMarkAccessor`, not `ElementAccessor`; not abstract). Confirmed the drop
+  in `PIRFlowFunctionUtils.mayReadAccessor` / `handleAccessorRead`.
+- **Structural-lowering bug:** the source binding `$A = getlist(...)[...]` was supposed to taint the
+  element, but `PythonPatternToActionListConverter.transformAssignmentValue` **dropped the `[...]` element
+  modifier** (`setResultCondition` replaced the result with just `$A`), so `getlist(...)` and
+  `getlist(...)[...]` lowered identically to whole-`Result` taint (verified by dumping emitted rules).
+  The whole-object taint then dropped at the first element read/NextIter.
+- **Fix (rule-shape + one converter change):** (a) added `[...]` to the 3 getlist rules
+  (00258/00596/00814); the 3 keys rules already had it. (b) fixed `transformAssignmentValue` to merge the
+  value's existing result modifier into the metavar condition, so `$A = getlist(...)[...]` now taints
+  `Result[*]` (element), matching the proven bare taint-mode subscript source. All 6 now pass; no OWASP
+  regressions (94→100 passing, 0 failing, skipped unchanged at 33). Regression test:
+  `PythonRuleEmitTest.subscript-assignment source binds the metavar to the result element`.
+- **Bonus:** keys-source FALSE entries 00419/00420 (urlparse-guarded) previously passed because taint
+  dropped at NextIter (masking); now taint flows and the unified-`$M` urlparse cleaner removes it — they
+  pass for the right reason.
+- **NOT a pure rule-shape issue:** there is no YAML-only way to bind a structural metavar to the element
+  (subscripting a bare metavar `$A = $V[...]` fails conversion), so the converter fix was required. It is a
+  small, principled lowering fix (not engine grinding) that aligns structural sources with taint-mode.
+
+### Pre-existing unrelated failure (out of scope)
+`PythonSampleBasedTest.allowedSpecificConstant` fails on the current branch **independently of this work**
+(verified: fails with the converter change stashed). Not touched here.
+
 ### Active FALSE (15, pass)
 - **9 urlparse-guarded** (unified-`$M`, inv 23): 00069, 00151, 00419, 00420, 00598, 00815, 00816, 00983, 01209.
 - **6 never-tainted**: 01091 (`request.path` not a source, inv 17), 01156/01157/01158/01159/01160
