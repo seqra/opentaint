@@ -112,6 +112,27 @@ class PythonRuleEmitTest {
         )
     }
 
+    @Test fun `subscript-assignment source binds the metavar to the result element`() {
+        // `$A = source()[0] ... sink($A)`: the metavar assignment must NOT drop the subscript's
+        // element modifier. The source binds `$A` to `Result[*]` (the element), exactly like the
+        // bare taint-mode `source()[0]` form, so an intraprocedural element read / for-loop
+        // iteration of the source result propagates the mark to the sink.
+        val source = emit("python-rules/subscript-assign-source.yaml")
+            .filterIsInstance<SerializedPythonSource>()
+            .single { it.functionTarget() == "source" }
+
+        val positions = source.taint.map { it.pos }
+        assertTrue(positions.isNotEmpty(), "expected a taint action")
+        assertTrue(
+            positions.all {
+                it is PythonPosition.WithModifiers &&
+                    it.base == PythonPositionBase.Result &&
+                    it.modifiers == listOf(PythonPositionModifier.ArrayElement)
+            },
+            "subscript-assignment source taints Result[*], got $positions",
+        )
+    }
+
     @Test fun `qualified attribute read becomes an attribute-fqn source`() {
         // `flask.request`: concrete receiver folds ahead of the synthetic name, so the unpacked
         // attribute target must keep the qualifier (`flask.request`), not collapse to `request`.

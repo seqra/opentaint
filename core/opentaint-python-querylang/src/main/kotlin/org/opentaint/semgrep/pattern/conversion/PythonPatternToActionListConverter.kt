@@ -398,7 +398,12 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         val actionList = transformPatternToActionList(value)
         if (actionList.actions.isEmpty()) transformationFailed("Assignment_nothing_to_assign")
         val last = actionList.actions.last()
-        val newLast = last.setResultCondition(mkAnd(conditions.toSet()))
+        val existingResult = last.result
+        val setConditions = conditions.toMutableSet()
+
+        if (existingResult != null) setConditions += existingResult
+
+        val newLast = last.setResultCondition(mkAnd(setConditions))
         return SemgrepPatternActionList(
             actionList.actions.dropLast(1) + newLast,
             hasEllipsisInTheBeginning = false,
