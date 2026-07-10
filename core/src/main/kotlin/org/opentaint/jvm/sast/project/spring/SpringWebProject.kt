@@ -25,9 +25,11 @@ import org.opentaint.ir.api.jvm.cfg.JIRByte
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRChar
 import org.opentaint.ir.api.jvm.cfg.JIRDouble
+import org.opentaint.ir.api.jvm.cfg.JIREqExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRFloat
 import org.opentaint.ir.api.jvm.cfg.JIRGotoInst
+import org.opentaint.ir.api.jvm.cfg.JIRIfInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInstRef
@@ -46,6 +48,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRSwitchInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.cfg.JIRVirtualCallExpr
 import org.opentaint.ir.api.jvm.ext.JAVA_OBJECT
+import org.opentaint.ir.api.jvm.ext.boolean
 import org.opentaint.ir.api.jvm.ext.findClass
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 import org.opentaint.ir.api.jvm.ext.findType
@@ -214,6 +217,8 @@ class SpringWebProjectContext(
 
 private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<JIRMethod>): JIRMethod {
     val initMethod = generateComponentInitializer()
+    val cleanupMethod = generateCleanup()
+    val selectMethod = generateSelect()
 
     val controllerDispatchers = controllerWrappers
         .groupBy { it.enclosingClass.name }
@@ -222,13 +227,16 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
                 dispatcherName = GeneratedSpringControllerDispatcherDispatchMethod + controllerName,
                 prepareMethod = null,
                 methods = methods,
+                selectMethod = selectMethod,
+                cleanupMethod = cleanupMethod,
             )
         }
 
     val dispatcher = ndMethodDispatch(
         GeneratedSpringControllerDispatcherDispatchMethod,
         initMethod,
-        controllerDispatchers.values.toList()
+        controllerDispatchers.values.toList(),
+        selectMethod, cleanupMethod
     )
     return dispatcher
 }
@@ -236,10 +244,10 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
 private fun SpringWebProjectContext.ndMethodDispatch(
     dispatcherName: String,
     prepareMethod: JIRMethod?,
-    methods: List<JIRMethod>
+    methods: List<JIRMethod>,
+    selectMethod: JIRMethod,
+    cleanupMethod: JIRMethod,
 ): JIRMethod {
-    val cleanupMethod = generateCleanup()
-    val selectMethod = generateSelect()
     val cp = controllerDispatcher.classpath
 
     val mutableInstructions = mutableListOf<JIRInst>()
@@ -305,7 +313,8 @@ private fun SpringWebProjectContext.ndMethodDispatch(
     }
 
     instructions.addInstWithLocation(dispatcher) { loc ->
-        JIRGotoInst(loc, JIRInstRef(loopStart.index)) // infinite loop
+        val loopExit = JIREqExpr(cp.boolean, selectValue, JIRInt(-1, cp.int))
+        JIRIfInst(loc, loopExit, JIRInstRef(loc.index + 1), JIRInstRef(loopStart.index))
     }
 
     instructions.addInstWithLocation(dispatcher) { loc ->
