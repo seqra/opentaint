@@ -226,12 +226,11 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     (inv 25 family) → wrapper-source resolve variants still FP. FALSE pathtraver guards (`'../' in bar`,
     `str(p).startswith(...)`) are operators/receiver-guards, NOT callable validators → NOT unifiable (inv 23) →
     approximation-limited FPs `@Disabled` (inv 16/18/19).
-31. **`p.read_text()[:1000]` pathtraver variant fails entry-point serialization → `@Disabled` (build gap, ESCALATED).**
-    The 6 read_text entries (00009/00010/00092/00093/00094/00182) throw "Entry point not found" — the POST
-    function isn't serialized (rule/config-independent; no serializer WARNING logged). Confounded trigger:
-    `p.read_text()[:1000]` co-occurs with a malformed `except OSError:` block referencing undefined `e`/`fileName`
-    plus `{{...}}` literal-brace f-string; exact cause unconfirmed. exists-variant siblings build fine.
-    Reproducer = these 6 `@Disabled` entries.
+31. **RESOLVED (`a4d733729`).** The read_text serialization gap ("Entry point not found" on the 6 entries
+    00009/00010/00092/00093/00094/00182) was caused by `ClosureAnalyzer` treating unresolved free names — the
+    undefined `e`/`fileName` in a dead `except OSError:` block — as closure captures, breaking closure lowering
+    so the POST function never serialized. Fixed in `a4d733729`; all 6 now build and PASS with correct verdicts
+    (no rule changes needed — 2 TRUE reach, 4 FALSE cleaned by `unquote_plus`/`.resolve()` drops).
 
 ## Category → sink / CWE reference
 

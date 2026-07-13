@@ -534,12 +534,20 @@ inv 19 (00090 list) / inv 18 (00091 ternary, 00181 match) / inv 16 (00276 config
 ### @Disabled — FN inv 20 (2): 00003 00177
 ThingFactory `thing.doSomething(param)` getattr → Any receiver → unresolved (same as prior rounds).
 
-### @Disabled — build gap (6): 00009 00010 00092 00093 00094 00182  (2 TRUE + 4 FALSE)  ESCALATED (inv 31)
-The `p.read_text()[:1000]` variant fails entry-point serialization ("Entry point not found") — POST function
-not emitted; rule/config-independent, NO serializer WARNING logged. Confounded trigger: read_text[:1000] AND a
-malformed `except OSError:` block (undefined `e`/`fileName`, `{{...}}` literal-brace f-string). exists-variant
-siblings (identical source/flow) build fine. Reproducer = these 6 entries. Cost this round: 2 TRUE FN
-(00092 dict, 00182 getlist) unrecoverable until fixed.
+### RESOLVED — build gap (6): 00009 00010 00092 00093 00094 00182  (2 TRUE + 4 FALSE)  (inv 31)
+FIXED in `a4d733729`: `ClosureAnalyzer` was treating unresolved free names (undefined `e`/`fileName` in the
+dead `except OSError:` block) as closure captures, breaking closure lowering so the POST function never
+serialized ("Entry point not found"). Not read_text-specific — the malformed except block was the trigger.
+All 6 now build and all 6 PASS with correct verdicts (verify-and-triage, no rule changes needed):
+- 00092 TRUE reaches: `param = form.get(...)` → dict same-key (keyB store/read) → `bar` → `p = testfiles / bar`
+  (native binop, keeps taint, inv 30) → `p.read_text()` receiver tainted → sink fires. assertReachable ✓.
+- 00182 TRUE reaches: `getlist(...)[...]` element source → `values[0]` → str concat+slice `[4:-17]` → `bar`
+  → `testfiles / bar` → read_text. Concrete taint survives the concat/slice hops here. assertReachable ✓.
+- 00009/00010 FALSE: source wrapped in `urllib.parse.unquote_plus(request.cookies.get(...))` — the unmodeled
+  `unquote_plus` drops the concrete mark → param never tainted. Plus `.resolve()`. assertNotReachable ✓.
+- 00093/00094 FALSE: `param = form.get(...)` tainted, but `p = (testfiles / bar).resolve()` — the unmodeled
+  `.resolve()` drops concrete taint (inv 30) → read_text receiver untainted. assertNotReachable ✓.
+No taint-triage fixes required; the hand-authored rules were already correct once the function serialized.
 
 ### @Disabled — FP approximation-limited (18)
 No FALSE pathtraver variant has a unifiable validator CALL: the guards are `'../' in bar` (a `Contains`
