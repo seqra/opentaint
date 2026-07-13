@@ -34,26 +34,35 @@ fixes accumulate cleanly.
 
 ## Current status
 
+- **Branch:** this work now lives on **`saloed/python-support`**. The `saloed/python-owasp-getlist`
+  branch and its worktree were retired after folding all benchmark commits into python-support. **Start the
+  next session in a fresh worktree off `saloed/python-support`.**
 - **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
-  redirect (34), codeinj (53), trustbound (37, **all `@Disabled` — blocked by the store-sink gap inv 28**),
-  deserialization (54). Each entry has a hand-written rule + hardcoded ground-truth `@Test`;
-  unfixable-by-design FALSE entries are `@Disabled` with a one-line reason. OWASP suite currently
-  271 tests: 171 pass / 0 fail / 100 skipped. codeinj: 26 pass + 27 `@Disabled` (inv 27/16/18/19/20);
-  trustbound: 0 pass + 37 `@Disabled` (all inv 28); deserialization: 45 pass + 9 `@Disabled` (inv 20/16/18/19/29).
-- **Next batch: `pathtraver`** (CWE-22, 168, `open()`/`os.path.join` call sink) — cleaner next step. `xss`
-  (89) is entangled with the inv-25/29 char-rebuild gap + `html.escape`/`escape_for_html` sanitizer modeling,
-  so prefer pathtraver first. Then xpathi (186). trustbound stays blocked (inv 28). Structural-only
-  categories (weakrand/hash/securecookie) deferred.
-- **Open engine gaps (escalated, deferred to a later engine phase):**
-  - **inv 27** — receiver-position (`This`) `pattern-not` cleaners clean only the `$PIR_SELF` may-alias,
-    not the base variable → ~14 codeinj FALSE `@Disabled`. Fix: propagate receiver-cleans to may-aliases.
-  - **inv 28** — subscript-STORE (assignment-target) sinks unsupported → all 37 trustbound `@Disabled`.
-    Fix: emit + fire a store-sink for subscript/attr assignment targets. Tripwire:
-    `PythonRuleEmitTest.subscript-assignment sink emits no sink` (flips when fixed).
-  - **inv 25/29** — concrete whole-object taint drops through element/NextIter reads, incl. interprocedural
-    char-rebuild helpers (`escape_for_html`) → deser 00605 `@Disabled`; will bite xss. Fix: propagate the
-    mark through NextIter.
-  - **inv 20** — dynamic `getattr` dispatch FN (ThingFactory). Full traces in the insights log.
+  redirect (34), codeinj (53), trustbound (37, all `@Disabled` — store-sink gap inv 28),
+  deserialization (54), **pathtraver batch 1 of ~4 (46 of 168)**. Each entry has a hand-written rule +
+  hardcoded ground-truth `@Test`; unfixable FALSE entries are `@Disabled` with a one-line reason. OWASP
+  suite currently **317 tests: 198 pass / 0 fail / 119 skipped**. Per-round: codeinj 26+27
+  (inv 27/16/18/19/20); trustbound 0+37 (inv 28); deserialization 46+8 (inv 20/16/18/19); pathtraver b1
+  26+20 (inv 16/18/19/20/23).
+- **Next batch: `pathtraver` batch 2** — IDs from ~00356 onward; ~122 of 168 remain (run in ~3 more batches
+  of ~40). Then xpathi (186, `$T.xpath($Q)`/`find($Q)` call sink). `xss` (89) after — entangled with
+  char-rebuild sanitizer modeling (inv 29). trustbound stays blocked (inv 28). Structural-only
+  weakrand/hash/securecookie deferred (discuss first).
+- **RESOLVED this session:** **inv 29** (char-rebuild NextIter drop) — per-entry workaround: deepen the
+  collection source one `[...]` (`getlist(...)[...][...]` → `Result[*][*]`) so char-level taint survives;
+  per-entry SAFE, NEVER where the char-rebuild is a real sanitizer (xss). **inv 31** (read_text
+  "Entry point not found") — engine fix `a4d733729` (`ClosureAnalyzer` treated unresolved free names as
+  closure captures); the 6 read_text entries now pass.
+- **Open engine gaps (escalated, deferred to a later engine phase; each has a reproducer/tripwire):**
+  - **inv 28** (highest leverage) — subscript-STORE sinks unsupported → all 37 trustbound `@Disabled`.
+    Fix: emit + fire a store-sink for subscript/attr targets. Tripwire:
+    `PythonRuleEmitTest.subscript-assignment sink emits no sink`.
+  - **inv 27** — receiver-position (`This`) cleaners clean only the `$PIR_SELF` may-alias → ~14 codeinj
+    FALSE `@Disabled`. Fix: propagate receiver-cleans to may-aliases.
+  - **inv 25/29** — a proper NextIter propagation fix would remove the manual `[...]` workaround + help xss.
+  - **inv 20** — dynamic `getattr` dispatch FN (ThingFactory).
+  - **Category-level (pathtraver)** — FALSE half needs path-sanitizer modeling (`'../' in bar`,
+    `str(p).startswith` guards aren't unifiable cleaners) → many `@Disabled` FPs.
 - **Author rules STRUCTURALLY — always** (see CARDINAL RULES). Never taint-mode. Thread the source
   metavar into the sink; use `[...]` on collection-accessor sources; unify the guard metavar for
   validator exclusions.
