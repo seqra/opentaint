@@ -564,3 +564,21 @@ Verified `/` (truediv) is a native binop (a `pathlib.Path.__truediv__` passThrou
 as a call) and NO TRUE entry uses `.resolve()`, so the initially-added pathlib passThroughs were removed as
 unnecessary. Receiver-position sinks (`$A.exists(...)`) fire correctly (metavar receiver → This-position
 `ContainsMark`, resolveReceiver → IsMetavar).
+
+## pathtraver round batch 2 (CWE-22, 00356-00616, 40 entries) — ALL STRUCTURAL
+Same sink family as batch 1. New source shapes, all resolve like the form.* ones (inv 2 last-segment):
+`request.headers.get(...)` → `flask.request.headers.get(...)`; `request.headers.getlist(...)[...]` →
+`flask.request.headers.getlist(...)[...]`; `for name in request.headers.keys(): if request.headers.get_all(name): param=name`
+keys-loop (inv 15) → `flask.request.headers.keys(...)[...]`; and `request.form.keys()` loop → `flask.request.form.keys(...)[...]`.
+Suite after round: **357 tests, 0 fail, 141 skipped (216 pass)** (+40: +18 active pass, +22 @Disabled).
+- **Active TRUE (12 reach):** 00357 00438 00439 00444 00445 00449 00516 00523 00529 00610 00613 00615
+  (dict-keyB / concat+slice / match-arm-param / ternary-else-param / list / configparser-keyB all keep taint into open/codecs.open/os.path.exists/pathlib $A.exists).
+- **Active FALSE (6 pass):** 00446 00448 00527 00528 00616 via `.resolve()` concrete-taint-drop (inv 30);
+  **00524 via ThingFactory FN (inv 20)** — the getattr FN leaves `bar` untainted so the FALSE entry correctly
+  does NOT reach (a FALSE ThingFactory entry passes for free; only TRUE ThingFactory entries FN → @Disabled).
+- **@Disabled FN inv 20 (3, ThingFactory TRUE):** 00517 00526 00612.
+- **@Disabled FP approximation-limited (19):** inv 18 path-insensitive if/else/ternary/match:
+  00356 00360 00441 00442 00525 00530 00611; inv 18/23 `'../' in bar` substring guard (concat/dict/match arm stays tainted):
+  00440 00518 00520 00522; inv 19 list index-insensitivity: 00359 00443 00519 00521 00614; inv 16 dict/configparser
+  key-insensitivity (read keyA-const, no `.resolve()` drop): 00358 00361 00447.
+- **No pass-throughs / engine changes** (all 12 TRUE reached; no new dropped external methods on TRUE paths).

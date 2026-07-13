@@ -162,7 +162,9 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     obj.doSomething(param)` — `obj` is `Any` → `doSomething` unresolved, arg→return pass-through lost. No
     simple-name fallback for interproc resolution (`7aba04fa6` resolves to a synthetic *unknown* fn with no
     arg→return → still drops). Escalated (ThingFactory: ldapi 00896, xxe 00462/00541, codeinj
-    00343/00422/00601). Reproducer = the `@Disabled` entry.
+    00343/00422/00601). Reproducer = the `@Disabled` entry. **Corollary:** a *FALSE* ThingFactory entry
+    passes for free (the FN leaves the var untainted → correctly not-reachable, e.g. pathtraver 00524);
+    only *TRUE* ThingFactory entries are FN → `@Disabled` (00517/00526/00612).
 21. **Config-gated sink via `pattern-inside` sibling-statement match.** XXE (611): the parse is dangerous
     only when a preceding `setFeature(_, True)` enabled entities — unify `$P` across the `setFeature` and the
     parse. Hardened FALSE variants omit `setFeature(_,True)` → the sink never fires regardless of taint (13
