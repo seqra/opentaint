@@ -670,3 +670,22 @@ wrapper → `flask.request.args.get` (01214, inv 26). Suite after round: **439 t
   key-insens inv 16 (00542/00551/00683); list index-insens inv 19 (00547/00676); const if/else + ternary + match path-insens
   inv 18 (00468/00544/00548/00680); `'` apostrophe substring guard (operator, not unifiable) inv 23 (00468/00549/00550/
   00552/00684/00685/00758). Most stack two safety mechanisms (e.g. key-insens + replace, path-insens + apostrophe).
+
+## xpathi batch 4 (CWE-643, 40 entries, FALSE-heavy: 6 TRUE) — 18 active pass / 22 @Disabled / 0 fail
+
+- **All inv 34 patterns re-confirmed; no new invariant, no rule/engine/passthrough changes.** Sinks: `$T.xpath($A)`,
+  `elementpath.select($ROOT,$A)`, `lxml.etree.XPath($A)`. Sources: `args.getlist[...]` (00762-00764), wrapper
+  `helpers.separate_request.request_wrapper(request).get_query_parameter` → canonical `flask.request.args.get(...)`
+  (00843-00858, inv 26), `flask.request.query_string` (00927-00944, inv 32), `request.path` FALSE entries modeled with a
+  non-matching `flask.request.query_string` source (01022-01030, inv 17/33, same as pathtraver 01004+).
+- **TRUE active pass (3):** 00854 (`if 'should' not in TestParam` → else bar=param genuinely tainted), 00932 (list
+  lst[0]=param genuine after pop(0)), 00933 (`s='help'; s+=param; s+='...'; bar=s[4:-17]` — string concat + slice keeps
+  taint → reaches).
+- **FALSE active pass-free (15):** StringIO drop 00764 (inv 34); kwarg `xpath(query, name=bar)` const query, bar in kwarg,
+  query-arg sink never binds (00856/00857/00939/00940/00941/00942/00943, inv 34 — 00939/00942 have genuinely-tainted bar,
+  still pass free via kwarg); request.path never-tainted (01022/01023/01026/01027/01028/01029/01030, inv 17/33).
+- **TRUE FN @Disabled (3):** ThingFactory getattr 00844 (inv 20); io.StringIO drop 00858/00944 (inv 34).
+- **FALSE FP @Disabled (19):** replace-not-cleaner inv 34 (00763/00845/00846/00847/00927/00937/00938); configparser/dict
+  key-insens inv 16 (00843/00853/00938); list index-insens inv 19 (00934/00936); const if/else + ternary + match path-insens
+  inv 18 (00762/00763/00847/00852/00929/00935); `'` apostrophe substring guard (operator, not unifiable) inv 23 (00848/
+  00849/00855/00928/00929). Several stack two mechanisms (key-insens + replace, path-insens + apostrophe).
