@@ -582,3 +582,26 @@ Suite after round: **357 tests, 0 fail, 141 skipped (216 pass)** (+40: +18 activ
   00440 00518 00520 00522; inv 19 list index-insensitivity: 00359 00443 00519 00521 00614; inv 16 dict/configparser
   key-insensitivity (read keyA-const, no `.resolve()` drop): 00358 00361 00447.
 - **No pass-throughs / engine changes** (all 12 TRUE reached; no new dropped external methods on TRUE paths).
+
+## pathtraver round batch 3 (CWE-22, 00617-00911, 40 entries) — ALL STRUCTURAL
+Same sink family (open / codecs.open / os.path.exists / pathlib `$A.exists`|`$A.read_text`). Sources: headers.keys[...]
+loop (00617-00620), `request.args.get` (00661-00667), `request.args.getlist(...)[...]` (00737-00751),
+`get_query_parameter` wrapper → `flask.request.args.get` (00831-00838), and NEW **`request.query_string`** source
+(00906-00911) → `flask.request.query_string`. Suite after round: **397 tests, 0 fail, 156 skipped (241 pass)**
+(+40: +25 active pass, +15 @Disabled). Batch = 18 active TRUE + 7 active FALSE + 15 @Disabled.
+- **Active TRUE (18 reach):** 00618 00619 00620 00662 00665 00667 00737 00739 00741 00742 00749 00750 00751 00831
+  00835 00906 00907 00910 (configparser-keyB / dict-keyB / base64-roundtrip / match-arm-param / ternary-else-param /
+  list-lst[0] / query_string all keep taint into open/codecs.open/pathlib `$A.exists`).
+  **00742/00751 confirm concrete getlist[...] element taint SURVIVES list append→`lst[0]`** into the pathlib/open sink.
+- **NEW query_string source works (00906/00907/00910 TRUE reach):** `flask.request.query_string` → `.decode('utf-8')`
+  (bytes.decode passThrough) → **string slicing `qs[a:]`/`p[:b]`** → `urllib.parse.unquote_plus` (arg0→result passThrough,
+  already in config.yaml — the old "unquote_plus DROPS" note is STALE) → param. Concrete taint survives the whole chain
+  incl. the slices (whole-string slice does NOT drop, unlike an element read). No rule/config change needed.
+- **Active FALSE (7 pass):** 00617 00664 00744 00746 00747 00748 via `.resolve()` concrete-taint-drop (inv 30, real
+  reasons inv 16/18); **00833 via ThingFactory FN (inv 20)** — getattr leaves `bar` untainted → correctly not-reached.
+- **@Disabled FN inv 20 (1, ThingFactory TRUE):** 00834 (`os.path.exists` sink; getattr `thing.doSomething(param)` unresolved).
+- **@Disabled FP approximation-limited (14):** inv 18 path-insensitive match-arm/ternary/if-else: 00666 00738 00832 00837
+  00838 00909; inv 18/23 `'../' in bar` substring guard (bar/base64 stays tainted): 00663 00740 00911; inv 19 list
+  index-insensitivity (read lst[1]): 00743 00908; inv 16 configparser key-insensitivity (set keyB, read keyA-const, no
+  `.resolve()` drop): 00661 00745; inv 18+inv 30 wrapper ABSTRACT taint survives `.resolve()` (match arm): 00836.
+- **No pass-throughs / engine changes** (all 18 TRUE reached; unquote_plus/bytes.decode/base64 passThroughs already present).

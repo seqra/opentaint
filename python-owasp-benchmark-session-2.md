@@ -237,6 +237,12 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     (inv 25 family) → wrapper-source resolve variants still FP. FALSE pathtraver guards (`'../' in bar`,
     `str(p).startswith(...)`) are operators/receiver-guards, NOT callable validators → NOT unifiable (inv 23) →
     approximation-limited FPs `@Disabled` (inv 16/18/19).
+32. **`request.query_string` source flows end-to-end** (VERIFIED, pathtraver b3, 00906/00907/00910). Model as
+    `flask.request.query_string`; concrete taint survives `.decode('utf-8')` (bytes.decode passThrough) → **whole-string
+    slicing** `qs[a:]`/`p[:b]` (does NOT drop, unlike an element read) → `urllib.parse.unquote_plus` (arg0→result
+    passThrough already in config.yaml — the old "unquote_plus DROPS concrete taint" note is STALE; it now PROPAGATES).
+    Also: concrete `getlist(...)[...]` element taint survives `list.append`→`lst[0]` into the sink (00742/00751).
+
 31. **RESOLVED (`a4d733729`).** The read_text serialization gap ("Entry point not found" on the 6 entries
     00009/00010/00092/00093/00094/00182) was caused by `ClosureAnalyzer` treating unresolved free names — the
     undefined `e`/`fileName` in a dead `except OSError:` block — as closure captures, breaking closure lowering

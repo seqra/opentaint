@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-pathtraver-00617
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches a file-access path (path traversal / CWE-22)"
+    metadata:
+      cwe: CWE-22
+    patterns:
+      - pattern: |
+          $A = flask.request.headers.keys(...)[...]
+          ...
+          $A.read_text(...)
