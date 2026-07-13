@@ -243,6 +243,13 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     passThrough already in config.yaml — the old "unquote_plus DROPS concrete taint" note is STALE; it now PROPAGATES).
     Also: concrete `getlist(...)[...]` element taint survives `list.append`→`lst[0]` into the sink (00742/00751).
 
+33. **`get_safe_value` wrapper is a genuine NON-source** (VERIFIED, pathtraver b4). Unlike
+    `get_form_parameter`/`get_query_parameter` (which return `self.request.form/args.get`, inv 26),
+    `request_wrapper.get_safe_value(name)` just `return "bar"` (a literal) → `param` never tainted → all
+    10 FALSE entries 01105-01114 pass free (the canonical source rule simply doesn't bind). Same free-pass
+    mechanism as inv 17 (`request.path`). Model FALSE query_string/path/const-wrapper entries with a
+    non-matching bare-attribute source (`flask.request.query_string`, no `.get` last-segment collision).
+
 31. **RESOLVED (`a4d733729`).** The read_text serialization gap ("Entry point not found" on the 6 entries
     00009/00010/00092/00093/00094/00182) was caused by `ClosureAnalyzer` treating unresolved free names — the
     undefined `e`/`fileName` in a dead `except OSError:` block — as closure captures, breaking closure lowering

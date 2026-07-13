@@ -605,3 +605,28 @@ loop (00617-00620), `request.args.get` (00661-00667), `request.args.getlist(...)
   index-insensitivity (read lst[1]): 00743 00908; inv 16 configparser key-insensitivity (set keyB, read keyA-const, no
   `.resolve()` drop): 00661 00745; inv 18+inv 30 wrapper ABSTRACT taint survives `.resolve()` (match arm): 00836.
 - **No pass-throughs / engine changes** (all 18 TRUE reached; unquote_plus/bytes.decode/base64 passThroughs already present).
+
+## pathtraver round batch 4 (CWE-22, 00912-01222, 42 entries — FINAL) — ALL STRUCTURAL
+**pathtraver is now COMPLETE (all 168).** Same sink family (open / codecs.open / os.path.exists / pathlib
+`$A.exists`|`$A.read_text`). Sources: `request.query_string` (00912-00922), `request.form.get`/`.getlist[...]`/
+`.keys()` loop (01179/01183/01192), `request.headers.get` (01196), `request.args.get` (01202), `get_query_parameter`
+wrapper → `flask.request.args.get` (01214, inv 26). Suite after round: **439 tests, 0 fail, 162 skipped (277 pass)**
+(+42: +36 active pass, +6 @Disabled). Batch = 11 active TRUE + 25 active FALSE (pass-free) + 6 @Disabled.
+- **Active TRUE (11 reach):** 00914 00915 00916 00918 00920 (query_string → configparser-keyB / if-not-in-else /
+  concat+slice into open/pathlib exists/read_text), 01179 01181 01183 01196 (form.get/getlist[...]/headers.get direct
+  → open/os.path.exists), 01192 (form.keys loop → pathlib read_text), 01214 (get_query_parameter wrapper → read_text).
+- **Active FALSE pass-free (25):**
+  - **request.path source (inv 17, NOT a source) — 13 free:** 01004 01005 01006 01007 01008 01009 01010 01011 01012
+    01013 01220 01221 01222. Code reads `parts=request.path.split("/"); param=parts[1]` — server-controlled route,
+    never tainted. Modeled with a non-matching bare-attr source (`flask.request.query_string`) → source never binds.
+  - **`get_safe_value` const-wrapper source (inv 33, NEW) — 10 free:** 01105 01106 01107 01108 01109 01110 01111 01112
+    01113 01114. `request_wrapper.get_safe_value()` returns literal `"bar"` (unlike get_form/query_parameter) → param
+    never tainted. Same non-matching-source modeling as inv 17.
+  - **query_string source but taint-drop — 2 free:** 00919 (ThingFactory `thing.doSomething(param)` getattr FN, inv 20
+    → bar untainted), 00921 (ternary bar + `(testfiles/bar).resolve()` concrete-taint-drop, inv 18/30).
+- **@Disabled FP approximation-limited (6):** inv 16 configparser keyA-const read (no `.resolve()` drop): 00912;
+  inv 18 path-insensitive const if/else (tainted else explored): 00913; inv 18/23 `'../' in bar`/`'../' in param`
+  substring guard (bar=param direct stays tainted): 00917 01180 01202; inv 19 list index-insensitivity: 00922.
+- **No pass-throughs / engine changes** (all 11 TRUE reached; query_string/unquote_plus/bytes.decode chain already modeled).
+- **NEW (inv 33):** `get_safe_value` returning a literal is a genuine non-source; for FALSE query_string/path/const-wrapper
+  entries use a bare-attribute source (`flask.request.query_string`) — no `.get` last-segment collision with configparser.get.
