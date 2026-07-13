@@ -630,3 +630,26 @@ wrapper → `flask.request.args.get` (01214, inv 26). Suite after round: **439 t
 - **No pass-throughs / engine changes** (all 11 TRUE reached; query_string/unquote_plus/bytes.decode chain already modeled).
 - **NEW (inv 33):** `get_safe_value` returning a literal is a genuine non-source; for FALSE query_string/path/const-wrapper
   entries use a bare-attribute source (`flask.request.query_string`) — no `.get` last-segment collision with configparser.get.
+
+## xpathi batch 1 (CWE-643, 40 entries) — 14 active pass / 26 @Disabled / 0 fail
+
+- **Sinks (all fire, last-segment inv 3):** `elementpath.select($ROOT, $A)` (2nd/query arg), `lxml.etree.XPath($A)`
+  (compile-time sink, arg0 — the `run_query = XPath(query)` compilation is where injection is flagged), `$T.xpath($A)`
+  (receiver metavar, arg0). Rule shape = pathtraver's `$A = <src>(...)` ... `<sink>(...$A...)`; the query is built by an
+  f-string / `"".join([...,bar,...])` that carries the mark. VERIFIED reachable: 00018/00104 (XPath), 00101/00197/00198
+  (select), 00107/00207/00210/00211 (xpath).
+- **Sources:** cookies.get(unquote_plus) / form.get / form.getlist(...)[...]; all copied from pathtraver templates.
+- **str.replace is NOT a cleaner (FP):** `bar.replace("'", "&apos;")` resolves last-segment `replace` → `copy.replace`
+  passThrough → PROPAGATES taint. VERIFIED: 00199 (bar=param direct, only replace before sink) reaches. @Disabled the
+  apostrophe-escape FALSE variants 00108/00109/00199/00200/00202. (Contrast inv 30 `.resolve()` which DROPS — the
+  difference is a matching last-segment passThrough exists for replace.)
+- **io.StringIO DROPS taint (FN):** `strIO.write(bar); q = strIO.getvalue()` loses the mark (needs arg→receiver→result,
+  which passThrough can't express). @Disabled TRUE 00112/00113; FALSE 00024 (StringIO after configparser) passes free.
+- **FALSE pass-free:** 00023/00111 parameterized `xpath(query, name=bar)` (bar in kwarg, const query); 00201 ThingFactory
+  getattr FN (inv 20) leaves bar untainted; 00024 StringIO drop.
+- **FALSE FP @Disabled (approximation-limited):** dict key-insens inv 16 (00020/00102/00193); list index-insens inv 19
+  (00013/00195/00208); path-insens const if/else & ternary inv 18 (00105/00106/00194); match arm inv 18 (00196); and the
+  `'` apostrophe substring-guard variants (inv 18/23, guard is `if "'" in bar: return`, an operator not a callable
+  validator → not unifiable): 00014/00015/00016/00021/00022/00110/00203.
+- **TRUE FN @Disabled:** 00103/00209 ThingFactory getattr (inv 20); 00112/00113 StringIO drop.
+- **No pass-throughs / engine changes.** configparser .set/.get flows key-insensitively as before (00104 TRUE reaches).

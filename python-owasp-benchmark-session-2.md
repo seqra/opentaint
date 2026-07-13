@@ -250,6 +250,19 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     mechanism as inv 17 (`request.path`). Model FALSE query_string/path/const-wrapper entries with a
     non-matching bare-attribute source (`flask.request.query_string`, no `.get` last-segment collision).
 
+34. **xpathi sink resolution + str.replace/StringIO taint mechanics** (VERIFIED, xpathi b1). All three
+    xpathi sinks fire by last-segment (inv 3): `elementpath.select($ROOT, $A)` (`select`, $A=2nd/query
+    arg), `lxml.etree.XPath($A)` (`XPath`, compile-time sink, arg0), `$T.xpath($A)` (`xpath`, receiver
+    metavar, arg0). Thread the request source into the query arg exactly like pathtraver's `open($A)`;
+    the f-string/`"".join([...,bar,...])` carrying `bar` propagates the mark. Parameterized
+    `root.xpath(query, name=bar)` with a CONST `$name` query → bar rides a kwarg, not the query → the
+    query-arg sink never binds it → FALSE passes free (00023/00111). **`str.replace` is NOT a cleaner:**
+    `bar.replace("'", "&apos;")` resolves by last-segment `replace` to the `copy.replace` passThrough and
+    PROPAGATES taint (VERIFIED — 00199 has ONLY replace between param and the sink, still reaches), so the
+    apostrophe-escape sanitizer FPs (00108/00109/00199/00200/00202 @Disabled). **`io.StringIO` DROPS taint:**
+    `strIO.write(bar); q = strIO.getvalue()` loses the mark (unmodeled, needs arg→receiver→result which
+    passThrough can't express) → StringIO-built queries FN (00112/00113 TRUE @Disabled; 00024 FALSE free).
+
 31. **RESOLVED (`a4d733729`).** The read_text serialization gap ("Entry point not found" on the 6 entries
     00009/00010/00092/00093/00094/00182) was caused by `ClosureAnalyzer` treating unresolved free names — the
     undefined `e`/`fileName` in a dead `except OSError:` block — as closure captures, breaking closure lowering
