@@ -441,3 +441,49 @@ the intended dual-position structural authoring via `pattern-either` (key `sess[
   `get_query_parameter` wrappers (inv 26 → flask.request.form/args.get), `query_string.decode`.
 
 ### No pass-throughs / engine changes made this round (gap escalated, not patched).
+
+## deserialization round (CWE-502, 54 entries) — ALL STRUCTURAL rules
+
+Two sinks, both CALLS:
+- **pickle:** `pickle.loads($A)` — payload arrives base64-wrapped
+  `pickle.loads(base64.urlsafe_b64decode(bar))`. Threading `$A` into `pickle.loads($A)` lowers to a
+  `ContainsMark($A)` check on arg0; arg0 is `urlsafe_b64decode(bar)` → needed the **`base64.urlsafe_b64decode`
+  passThrough (arg(0)+kwarg(s)→result)** added to `config.yaml` (was missing; `b64encode/b64decode` already
+  present). Every pickle TRUE entry depended on it.
+- **yaml:** unsafe `yaml.load($A, ...)` (full Loader) is the vuln; the SAFE variant is a **different callee**
+  `yaml.safe_load(...)`. Rule matches `yaml.load` only → the source still matches & taints `bar`, but the
+  sink never fires on `safe_load` (last-segment `load`≠`safe_load`, no collision). This is the robust
+  safe/unsafe modeling — no cleaner needed (like the xxe hardened-parser). Covers ~19 FALSE entries.
+
+**Suite after round: 271 tests, 0 fail, 100 skipped (171 pass).** Batch = 45 active pass (16 TRUE + 29
+FALSE) + 9 `@Disabled`.
+
+### Active TRUE (16): 00078 00164 00270 00433 00507 00510 00657 00734 00735 00825 00827 00898 00992 00993 00994 01216
+cookies/form/args/headers `.get`, `.getlist(...)[...]`, `.keys(...)[...]` loop, `query_string.decode`,
+`get_query_parameter` wrapper (inv 26 → `flask.request.args.get`). Flows through dict same-key (00433),
+match tainted arm (00507), b64 roundtrip (00657), html.escape passthrough (00992), if/else tainted arm
+(00898/00993). All reach.
+
+### Active FALSE (29)
+- **19 safe by callee** (`yaml.safe_load`): 00079/00080/00081 00271 00434 00435 00514 00609 00659 00660
+  00828 00901/00902/00903/00904 00996/00997/00998/00999. Source matches & taints, `yaml.load` sink doesn't
+  match `safe_load` → not reachable.
+- **9 never-tainted** (source pattern never matches the real request use): 01096 01099 01100/01101/01102
+  01228 (`request.path.split`, inv 17) + 01172 01174 01230 (`get_safe_value` returns const). Rule source is a
+  `getlist(...)[...]` that never appears in these files.
+- **1 copy-semantics** (00509): `copy = string33385(''); string33385 += param; copy += 'const'; bar=copy` →
+  `copy` never carries `param` (immutable-string rebind). NotReachable, passes cleanly.
+
+### @Disabled (9)
+- **00269** (TRUE, FN, inv 20): ThingFactory `getattr` → Any receiver → `thing.doSomething(param)` unresolved.
+- **00605** (TRUE, FN, inv 29 NEW): `escape_for_html` char-rebuild body drops taint. **VERIFIED**: a call-arg
+  probe rule (`... helpers.utils.escape_for_html($A)` as sink) FIRES → taint reaches the call; drop is inside
+  the `for c in s: ret += c` body (scalar NextIter, inv-25 family). A temp `config.yaml` passThrough on
+  `escape_for_html` had NO effect (analyzed user fn, not overridable by config). NOT added globally — it
+  would FP future xss where escape_for_html is the real sanitizer.
+- **00349, 00658** (FALSE, FP, inv 16): dict key-insensitivity (store keyB(param), read keyA(const)).
+- **00508, 00513, 00608, 00995** (FALSE, FP, inv 18): path-insensitive match/if-else/ternary (const-selected
+  safe arm, tainted arm still explored).
+- **00826** (FALSE, FP, inv 19): list index-insensitivity (append(param), pop(0), read lst[1]).
+
+### Pass-throughs added: `base64.urlsafe_b64decode` (arg(0)+kwarg(s)→result).

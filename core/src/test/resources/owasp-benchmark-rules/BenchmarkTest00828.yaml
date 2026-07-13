@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-deserialization-00828
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches yaml.load (unsafe deserialization / CWE-502)"
+    metadata:
+      cwe: CWE-502
+    patterns:
+      - pattern: |
+          $A = flask.request.args.getlist(...)[...]
+          ...
+          yaml.load($A, ...)

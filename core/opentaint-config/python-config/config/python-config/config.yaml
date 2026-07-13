@@ -35,6 +35,12 @@ passThrough:
     to: result
   - from: kwarg(s)
     to: result
+- function: base64.urlsafe_b64decode
+  copy:
+  - from: arg(0)
+    to: result
+  - from: kwarg(s)
+    to: result
 - function: builtins.bytes.decode
   copy:
   - from: this

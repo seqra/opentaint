@@ -35,20 +35,24 @@ fixes accumulate cleanly.
 ## Current status
 
 - **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
-  redirect (34), codeinj (53), trustbound (37, **all `@Disabled` — blocked by the store-sink gap inv 28**).
-  Each entry has a hand-written rule + hardcoded ground-truth `@Test`; unfixable-by-design FALSE entries are
-  `@Disabled` with a one-line reason. OWASP suite currently 217 tests: 126 pass / 0 fail / 91 skipped.
-  codeinj split: 26 pass + 27 `@Disabled` (14 receiver-position cleaner gap inv 27; 10 key/index/branch
-  inv 16/18/19; 3 ThingFactory getattr FN inv 20). trustbound: 0 pass + 37 `@Disabled` (all inv 28).
-- **Next batch: `deserialization`** (CWE-502, 54) — call sink (`pickle.loads`/`yaml.load`), works with the
-  standard mechanism. Then xss (89), pathtraver (168), xpathi (186). trustbound stays blocked until the
-  store-sink feature lands. Structural-only categories (weakrand/hash/securecookie) are deferred.
+  redirect (34), codeinj (53), trustbound (37, **all `@Disabled` — blocked by the store-sink gap inv 28**),
+  deserialization (54). Each entry has a hand-written rule + hardcoded ground-truth `@Test`;
+  unfixable-by-design FALSE entries are `@Disabled` with a one-line reason. OWASP suite currently
+  271 tests: 171 pass / 0 fail / 100 skipped. codeinj: 26 pass + 27 `@Disabled` (inv 27/16/18/19/20);
+  trustbound: 0 pass + 37 `@Disabled` (all inv 28); deserialization: 45 pass + 9 `@Disabled` (inv 20/16/18/19/29).
+- **Next batch: `pathtraver`** (CWE-22, 168, `open()`/`os.path.join` call sink) — cleaner next step. `xss`
+  (89) is entangled with the inv-25/29 char-rebuild gap + `html.escape`/`escape_for_html` sanitizer modeling,
+  so prefer pathtraver first. Then xpathi (186). trustbound stays blocked (inv 28). Structural-only
+  categories (weakrand/hash/securecookie) deferred.
 - **Open engine gaps (escalated, deferred to a later engine phase):**
   - **inv 27** — receiver-position (`This`) `pattern-not` cleaners clean only the `$PIR_SELF` may-alias,
     not the base variable → ~14 codeinj FALSE `@Disabled`. Fix: propagate receiver-cleans to may-aliases.
   - **inv 28** — subscript-STORE (assignment-target) sinks unsupported → all 37 trustbound `@Disabled`.
     Fix: emit + fire a store-sink for subscript/attr assignment targets. Tripwire:
     `PythonRuleEmitTest.subscript-assignment sink emits no sink` (flips when fixed).
+  - **inv 25/29** — concrete whole-object taint drops through element/NextIter reads, incl. interprocedural
+    char-rebuild helpers (`escape_for_html`) → deser 00605 `@Disabled`; will bite xss. Fix: propagate the
+    mark through NextIter.
   - **inv 20** — dynamic `getattr` dispatch FN (ThingFactory). Full traces in the insights log.
 - **Author rules STRUCTURALLY — always** (see CARDINAL RULES). Never taint-mode. Thread the source
   metavar into the sink; use `[...]` on collection-accessor sources; unify the guard metavar for
@@ -57,8 +61,8 @@ fixes accumulate cleanly.
   `pattern-not` cleaner handling (`95ad3f916`, retires the "cleaners no-op" claim, inv 23);
   `PythonPatternToActionListConverter.transformAssignmentValue` preserves the subscript element modifier
   so `$A = src(...)[...]` taints `Result[*]` (inv 25).
-- **Pass-throughs committed** — base64 (`b64encode`/`b64decode`) + `builtins.bytes.decode` in
-  `config.yaml` (fixed `00454`).
+- **Pass-throughs committed** — base64 (`b64encode`/`b64decode`/`urlsafe_b64decode`) +
+  `builtins.bytes.decode` in `config.yaml`.
 - **Known unrelated red test:** `PythonSampleBasedTest.allowedSpecificConstant` fails on this branch
   independently of the benchmark work (a `Positive_iter_proc` sample; converter-independent). The OWASP
   suite is unaffected — don't mistake it for a regression.
@@ -206,6 +210,13 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     a subscript/attribute-target assignment (check taint on key AND value) + engine checks it at
     `handleStoreSubscript`/`handleStoreSubscript`-analogues + a new sink kind. Reproducer: the 37 `@Disabled`
     trustbound entries + the `PythonRuleEmitTest` probe (`python-rules/subscript-assign-sink.yaml`).
+29. **Interprocedural char-rebuild loop drops taint (inv-25 family) → `@Disabled`** (deser 00605,
+    `helpers.utils.escape_for_html`). A helper that rebuilds its string arg char-by-char
+    (`for c in s: ret += c`) drops taint: `s` (scalar) is base-tainted but `for c in s` NextIter doesn't
+    taint `c` (concrete whole-object fact doesn't propagate through element/NextIter read, inv 25). VERIFIED
+    on 00605: a call-arg probe (`... escape_for_html($A)` as sink) FIRES → taint reaches the call; the drop
+    is inside the body. A `config.yaml` passThrough does NOT override an analyzed user fn (no effect). Fix
+    candidate = same as inv 25 (propagate concrete whole-object taint through NextIter).
 
 ## Category → sink / CWE reference
 

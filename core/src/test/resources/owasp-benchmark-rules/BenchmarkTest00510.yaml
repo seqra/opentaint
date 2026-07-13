@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-deserialization-00510
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches pickle.loads (unsafe deserialization / CWE-502)"
+    metadata:
+      cwe: CWE-502
+    patterns:
+      - pattern: |
+          $A = flask.request.headers.get(...)
+          ...
+          pickle.loads($A)
