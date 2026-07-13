@@ -23,8 +23,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,7 +41,6 @@ public class SsrfSamples {
     public static class UnsafeProxyServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // User controls full target URL
@@ -79,7 +76,6 @@ public class SsrfSamples {
         );
 
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String targetUrl = request.getParameter("url");
@@ -149,7 +145,6 @@ public class SsrfSamples {
         private final RestTemplate restTemplate = new RestTemplate();
 
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "ssrf")
         public ResponseEntity<String> unsafeProxy(@RequestParam("url") String targetUrl) {
             if (targetUrl == null || targetUrl.isBlank()) {
                 return ResponseEntity.badRequest().body("Missing 'url' parameter");
@@ -211,7 +206,6 @@ public class SsrfSamples {
     public static class UnsafeParameterPollutionServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String key = request.getParameter("key"); // untrusted
@@ -239,7 +233,6 @@ public class SsrfSamples {
         }
 
         @Override
-        @NegativeRuleSample(value = "java/security/ssrf.yaml", id = "java-servlet-parameter-pollution")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String key = request.getParameter("key");

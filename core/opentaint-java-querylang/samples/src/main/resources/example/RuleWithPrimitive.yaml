@@ -1,0 +1,13 @@
+rules:
+  - id: example-Rule
+    languages:
+      - java
+    options:
+      primitive-tracking: true
+    severity: ERROR
+    message: match example/Rule
+    patterns:
+      - pattern: |-
+          $A = src();
+          ...
+          sink($A);

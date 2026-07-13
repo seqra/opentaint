@@ -363,7 +363,8 @@ class GoIRToGoCodeGenerator {
 
         // Function signature
         val recv = if (fn.isMethod && fn.receiverType != null) {
-            val recvType = fn.receiverType!!.name
+            val recvType = (fn.receiverType as? GoIRNamedTypeRef)?.namedType?.name
+            check(recvType != null) { "Receiver has no name" }
             val recvParam = fn.params.firstOrNull()
             val recvName = recvParam?.name ?: "recv"
             if (fn.isPointerReceiver) "($recvName *$recvType) "
@@ -997,7 +998,7 @@ class GoIRToGoCodeGenerator {
             }
             is GoIRNamedTypeRef -> {
                 val named = type.namedType
-                if (named != null) "${named.name}{}" else null
+                "${named.name}{}"
             }
             is GoIRPointerType -> "new(${TypeFormatter.format(type.elem)})"
             is GoIRBasicType -> when (type.kind) {

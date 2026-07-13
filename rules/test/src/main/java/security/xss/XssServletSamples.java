@@ -9,8 +9,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 public class XssServletSamples {
 
@@ -18,7 +16,6 @@ public class XssServletSamples {
     public static class UnsafeGreetingServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -40,7 +37,6 @@ public class XssServletSamples {
     public static class SafeGreetingServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -67,7 +63,6 @@ public class XssServletSamples {
     public static class UnsafeJsonInfoServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "response-injection-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 

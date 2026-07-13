@@ -73,7 +73,7 @@ Arguments:
 		}
 		sb.FieldNode("Project", absProjectRoot).
 			FieldNode("Output project model", absOutputProjectModelPath).
-			FieldNode("Autobuilder", utils.ArtifactDisplayVersion(globals.ArtifactByKind("autobuilder"), globals.Config.Autobuilder.JarPath)).
+			FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"))).
 			Render()
 
 		if DryRunCompile {
@@ -88,11 +88,7 @@ Arguments:
 			out.Fatalf("Native compile preparation failed: %s", err)
 		}
 
-		compileJavaRunner := java.NewJavaRunner().
-			WithSkipVerify(globals.Config.SkipVerify).
-			WithDebugOutput(out.DebugStream("Autobuilder")).
-			TrySystem().
-			TrySpecificVersion(globals.Config.Java.Version)
+		compileJavaRunner := newAutobuilderJavaRunner()
 		if _, err := compileJavaRunner.EnsureJava(); err != nil {
 			out.Fatalf("Failed to resolve Java for compilation: %s", err)
 		}
@@ -117,25 +113,6 @@ func init() {
 	_ = compileCmd.MarkFlagRequired("output")
 	compileCmd.Flags().BoolVar(&DryRunCompile, "dry-run", false, "Validate inputs and show what would run without compiling")
 	compileCmd.Flags().StringVar(&CompileLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
-}
-
-func ensureAutobuilderAvailable() (string, error) {
-	if globals.Config.Autobuilder.JarPath != "" {
-		return globals.Config.Autobuilder.JarPath, nil
-	}
-
-	autobuilderJarPath, err := utils.GetAutobuilderJarPath(globals.Config.Autobuilder.Version)
-	if err != nil {
-		return "", fmt.Errorf("failed to construct path to the autobuilder: %w", err)
-	}
-
-	if err = ensureArtifactAvailable("autobuilder", globals.Config.Autobuilder.Version, autobuilderJarPath, func() error {
-		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, globals.Config.Autobuilder.Version, globals.AutobuilderAssetName, autobuilderJarPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
-	}); err != nil {
-		return "", err
-	}
-
-	return autobuilderJarPath, nil
 }
 
 func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath string, javaRunner java.JavaRunner) error {

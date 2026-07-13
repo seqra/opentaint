@@ -1,5 +1,7 @@
 # Usage
 
+> **Run without installing:** every `opentaint <command>` below can be run install-free with `npx @seqra/opentaint <command>` (requires Node.js), e.g. `npx @seqra/opentaint scan`. See [Installation](installation.md#npm).
+
 ## Scanning Projects
 
 ```bash
@@ -80,6 +82,9 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 | `opentaint compile` | Build project model separately from scanning |
 | `opentaint project` | Create project model from precompiled JARs/classes |
 | `opentaint summary` | View SARIF analysis results |
+| `opentaint health` | Show resolved paths for the analyzer, autobuilder, rules, and Java runtime |
+| `opentaint test rule` | Create, run, and debug detection-rule tests |
+| `opentaint test approximation` | Create and run dataflow-approximation tests |
 | `opentaint pull` | Download analyzer dependencies |
 | `opentaint update` | Update to latest version |
 | `opentaint prune` | Remove stale downloaded artifacts and cached models |
@@ -101,6 +106,72 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--ruleset` | YAML rules file or directory (default: `builtin`) |
 | `--dry-run` | Validate inputs and show what would run without compiling or scanning |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
+
+#### Rule-authoring flags
+
+These flags are to work with custom approximations:
+
+| Flag | Description |
+|------|-------------|
+| `--track-external-methods` | Write external-method coverage files next to the SARIF report |
+| `--passthrough-approximations` | Apply pass-through approximation YAML files or directories (repeatable) |
+| `--dataflow-approximations` | Apply dataflow approximation classes or Java source directories (repeatable) |
+
+Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
+
+### opentaint health
+
+Show the on-disk paths OpenTaint uses for its dependencies:
+
+```bash
+opentaint health
+opentaint health --rules
+opentaint health --analyzer
+```
+
+With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Java runtime. With a single component flag, it prints only the bare path, which is useful for scripts.
+
+| Flag | Description |
+|------|-------------|
+| `--autobuilder` | Print only the autobuilder JAR path |
+| `--analyzer` | Print only the analyzer JAR path |
+| `--rules` | Print only the built-in rules path, downloading rules if needed |
+| `--runtime` | Print only the Java runtime path |
+
+### opentaint test
+
+The `test` command group is tooling for rule and approximation development.
+
+#### Rule tests
+
+```bash
+opentaint test rule init .opentaint/test-projects/my-rule
+opentaint compile .opentaint/test-projects/my-rule/sinks -o .opentaint/test-compiled/my-rule/sinks
+opentaint test rule run .opentaint/test-compiled/my-rule/sinks --ruleset .opentaint/rules --ruleset .opentaint/test-projects/my-rule/sinks/test-rules
+opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-model .opentaint/test-compiled/my-rule/sinks --ruleset builtin --ruleset .opentaint/rules
+```
+
+| Command | Description |
+|---------|-------------|
+| `opentaint test rule init <output-dir>` | Create source and sink test projects with annotated sample support |
+| `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
+| `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
+
+#### Approximation tests
+
+```bash
+opentaint test approximation init .opentaint/test-projects/my-approximation
+opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
+opentaint test approximation run .opentaint/test-compiled/my-approximation \
+  --dataflow-approximations .opentaint/dataflow/my-approximation
+```
+
+| Command | Description |
+|---------|-------------|
+| `opentaint test approximation init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test approximation run <project-model>` | Run dataflow approximation tests on a compiled project model |
+
+Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
 ### opentaint compile
 

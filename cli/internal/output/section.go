@@ -61,7 +61,7 @@ func (sb *SectionBuilder) StyledField(key string, value any, valueStyle lipgloss
 
 func (sb *SectionBuilder) FieldNode(key string, value any) *SectionBuilder {
 	th := sb.printer.theme
-	root := th.FieldKey.Render(key + ":")
+	root := th.FieldKey.Render(key)
 	leaf := th.FieldValue.Render(fmt.Sprint(value))
 	sb.items = append(sb.items, sb.printer.GroupItem(root, leaf))
 	return sb

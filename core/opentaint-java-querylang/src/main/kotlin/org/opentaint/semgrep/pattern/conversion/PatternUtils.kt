@@ -1,5 +1,6 @@
 package org.opentaint.semgrep.pattern.conversion
 
+import org.opentaint.semgrep.pattern.AnonymousName
 import org.opentaint.semgrep.pattern.ConcreteName
 import org.opentaint.semgrep.pattern.FieldAccess
 import org.opentaint.semgrep.pattern.Identifier
@@ -34,7 +35,8 @@ fun tryExtractConcreteNames(names: List<Name>): List<String>? {
     names.forEach { name ->
         when (name) {
             is ConcreteName -> result.add(name.name)
-            is MetavarName -> return null
+            is MetavarName,
+            is AnonymousName -> return null
         }
     }
     return result

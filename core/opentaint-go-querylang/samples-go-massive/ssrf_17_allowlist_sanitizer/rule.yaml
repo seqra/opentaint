@@ -9,4 +9,4 @@ rules:
     pattern-sinks:
       - pattern: http.Get($U)
     pattern-sanitizers:
-      - pattern: util.assertAllowedHost($V)
+      - pattern: ssrf_17_allowlist_sanitizer.assertAllowedHost($V)

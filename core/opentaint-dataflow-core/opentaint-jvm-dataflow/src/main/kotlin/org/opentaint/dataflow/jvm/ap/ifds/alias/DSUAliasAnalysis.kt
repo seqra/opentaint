@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntCollection
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
@@ -9,9 +8,9 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.DsuMergeStrategy
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
-import org.opentaint.dataflow.ap.ifds.analysis.alias.IntDisjointSets
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
@@ -20,11 +19,14 @@ import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.JIRIns
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue.Local
 import org.opentaint.dataflow.util.firstInt
 import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.forEachIntEntry
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalAssign
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalObject
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.Position
 
 class DSUAliasAnalysis(
     val methodCallResolver: CallResolver,
@@ -48,23 +50,6 @@ class DSUAliasAnalysis(
         }
     }
 
-    class DsuMergeStrategy(
-        private val manager: AAInfoManager
-    ) : IntDisjointSets.RankStrategy {
-        override fun compare(a: Int, b: Int): Int {
-            val aImpl = manager.getElementUncheck(a)
-            val bImpl = manager.getElementUncheck(b)
-            return aImpl.compareTo(bImpl)
-        }
-    }
-
-    data class ConnectedAliases(val aliasGroups: Int2ObjectOpenHashMap<List<AAInfo>>)
-
-    data class AnalysisResult(
-        val statesBeforeStmt: List<ConnectedAliases>,
-        val statesAfterStmt: List<ConnectedAliases>
-    )
-
     class GraphAnalysisState(size: Int, val call: CallTreeNode) {
         val stateBeforeStmt = arrayOfNulls<ImmutableState>(size)
         val stateAfterStmt = arrayOfNulls<ImmutableState>(size)
@@ -85,41 +70,12 @@ class DSUAliasAnalysis(
         return aliasManager.getOrAdd(this)
     }
 
-    private fun getConnectedAliases(states: Array<ImmutableState?>): List<ConnectedAliases> =
-        List(states.size) { stmt ->
-            val state = states[stmt]?.mutableCopy()
-                ?: return@List ConnectedAliases(Int2ObjectOpenHashMap())
-
-            val groupsElements = Int2ObjectOpenHashMap<IntOpenHashSet>()
-
-            state.allElements().forEach { element ->
-                val groupId = state.aliasGroupId(element)
-                val group = groupsElements.get(groupId)
-                    ?: IntOpenHashSet().also { groupsElements.put(groupId, it) }
-                group.add(element)
-            }
-
-            val groups = Int2ObjectOpenHashMap<List<AAInfo>>()
-            groupsElements.forEachIntEntry { key, groupElements ->
-                val elements = mutableListOf<AAInfo>()
-                groupElements.forEachInt {
-                    elements += aliasManager.getElementUncheck(it)
-                }
-                groups.put(key, elements)
-            }
-
-            ConnectedAliases(groups)
-        }
-
     fun analyze(jig: JIRInstGraph): AnalysisResult {
         val initialState = State.empty(aliasManager, dsuMergeStrategy)
         val rootCall = CallTreeNode(ContextInfo.rootContext, instEvalCtx = RootInstEvalContext)
         val analysisState = GraphAnalysisState(jig.statements.size, rootCall)
         val (stateBeforeStmt, stateAfterStmt) = analyze(jig, initialState, analysisState)
-        return AnalysisResult(
-            getConnectedAliases(stateBeforeStmt),
-            getConnectedAliases(stateAfterStmt)
-        )
+        return AnalysisResult(aliasManager, stateBeforeStmt, stateAfterStmt)
     }
 
     private fun analyze(
@@ -200,19 +156,50 @@ class DSUAliasAnalysis(
             if (result != null) return result
         }
 
-        val resultState = if (stmt.lValue != null) {
+        var resultState = state
+        if (stmt.lValue != null) {
             val info = aliasSetFromInfo(CallReturn(stmt, callFrame.ctx))
-            state.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
-        } else state
-        if (stmt.cantMutateAliasedHeap()) return resultState
-
-        val argAliases = IntOpenHashSet()
-        stmt.args.forEach { arg ->
-            val info = arg.aliasInfo() ?: return@forEach
-            val infoIndex = aliasManager.getOrAdd(info)
-            resultState.forEachAliasInSet(infoIndex) { argAliases.add(it) }
+            resultState = resultState.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
         }
-        return resultState.invalidateOuterHeapAliases(argAliases)
+
+        if (!stmt.cantMutateAliasedHeap()) {
+            val argAliases = IntOpenHashSet()
+            stmt.args.forEach { arg ->
+                val info = arg.aliasInfo() ?: return@forEach
+                val infoIndex = aliasManager.getOrAdd(info)
+                resultState.forEachAliasInSet(infoIndex) { argAliases.add(it) }
+            }
+            resultState = resultState.invalidateOuterHeapAliases(argAliases)
+        }
+
+        val externalModel = methodCallResolver.externalCallModel(stmt.method)
+        resultState = externalModel.fold(resultState) { s, model ->
+            model.evalExternalCallModel(stmt, s)
+        }
+
+        return resultState
+    }
+
+    private fun ExternalAssign.evalExternalCallModel(stmt: Stmt.Call, state: State): State {
+        val fromInfo = from.eval(state, stmt) ?: return state
+        val toInfo = to.eval(state, stmt) ?: return state
+        return state.mergeWith(
+            aliasManager.getOrAdd(fromInfo),
+            aliasManager.getOrAdd(toInfo),
+        )
+    }
+
+    private fun ExternalObject.eval(state: State, stmt: Stmt.Call): AAInfo? {
+        val baseValue = pos.resolveValue(stmt)?.aliasInfo() ?: return null
+        return accessors.fold(baseValue) { instanceInfo, accessor ->
+            HeapAlias(state.heapObj(instanceInfo), accessor)
+        }
+    }
+
+    private fun Position.resolveValue(stmt: Stmt.Call): Value? = when (this) {
+        is Position.Arg -> stmt.args.getOrNull(idx)
+        is Position.RetVal -> stmt.lValue
+        is Position.This -> stmt.instance
     }
 
     private fun evalCall(

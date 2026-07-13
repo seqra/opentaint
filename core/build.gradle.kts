@@ -14,9 +14,14 @@ import OpentaintProjectDependency.opentaintProject
 import OpentaintUtilDependency.opentaintUtilCli
 import OpentaintUtilDependency.opentaintUtilJvm
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
 import org.opentaint.common.resolveIncludedProjectTask
+import org.opentaint.common.ensureGoEnvInitialized
+import org.opentaint.common.goEnvironment
+import org.opentaint.common.setupOpentaintGoEnvironment
 
 plugins {
     id("kotlin-conventions")
@@ -52,6 +57,8 @@ dependencies {
     implementation(KotlinDependency.Libs.kotlinx_serialization_json)
     implementation(KotlinDependency.Libs.kotlin_logging)
     implementation(KotlinDependency.Libs.kaml)
+
+    implementation(Libs.fastutil)
 
     implementation(Libs.sarif4k)
     implementation(Libs.clikt)
@@ -109,14 +116,11 @@ tasks.withType<Test> {
 
 tasks.withType<JavaCompile> {
     sourceCompatibility = JavaVersion.VERSION_17.toString()
-    // Bumped from the convention default (8) to 11 so this module can consume
-    // :opentaint-go-querylang (compiled for JVM 11) on its test classpath. Gradle's
-    // variant-aware resolution otherwise rejects a JVM-11 dependency on a JVM-8 consumer.
-    targetCompatibility = JavaVersion.VERSION_11.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "17"
 }
 
 val projectAnalyzerJar = tasks.register<ShadowJar>("projectAnalyzerJar") {

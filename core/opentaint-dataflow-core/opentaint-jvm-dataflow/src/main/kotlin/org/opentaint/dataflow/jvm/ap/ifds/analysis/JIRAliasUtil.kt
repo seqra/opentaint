@@ -7,28 +7,23 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.analysis.alias.applyAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachAliasAtStatement
+import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachAliasAtStatementAmongBases
+import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasBeforeStatement
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.locals
 
-fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
-    val base = fact.base as? AccessPathBase.LocalVar ?: return
-    val aliases = findAlias(base, statement) ?: return
-    aliases.filterIsInstance<AliasApInfo>()
-        .filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { alias -> applyAlias(fact, alias, body) }
-}
+fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) =
+    forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
 
-fun JIRLocalAliasAnalysis.forEachAliasAfterStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
-    val base = fact.base as? AccessPathBase.LocalVar ?: return
-    val aliases = findAliasAfterStatement(base, statement) ?: return
-    aliases.filterIsInstance<AliasApInfo>()
-        .filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { alias -> applyAlias(fact, alias, body) }
-}
+fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: InitialFactAp, body: (InitialFactAp) -> Unit) =
+    forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
 
 fun JIRLocalAliasAnalysis.forEachAliasAfterCallStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
     val base = fact.base as? AccessPathBase.LocalVar ?: return
@@ -39,17 +34,11 @@ fun JIRLocalAliasAnalysis.forEachAliasAfterCallStatement(statement: JIRInst, fac
     aliasesPersistedThroughCall
         .filterIsInstance<AliasApInfo>()
         .filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { alias -> applyAlias(fact, alias, body) }
+        .forEach { alias -> applyAlias(fact, alias, AliasAccessor::apAccessor, body) }
 }
 
-private fun applyAlias(fact: FinalFactAp, alias: AliasApInfo, body: (FinalFactAp) -> Unit) {
-    val result = alias.accessors.foldRight(fact.rebase(alias.base)) { accessor, f ->
-        val apAccessor = accessor.apAccessor()
-        f.prependAccessor(apAccessor)
-    }
-
-    body(result)
-}
+fun JIRLocalAliasAnalysis.forEachHeapAliasBeforeStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) =
+    forEachHeapAliasBeforeStatement(statement, fact, Accessor::aliasAccessor, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
 
 fun JIRLocalAliasAnalysis.forEachPossibleAliasAtStatement(
     statement: JIRInst,
@@ -68,35 +57,22 @@ fun JIRLocalAliasAnalysis.forEachAliasAtStatementAmongBases(
     fact: InitialFactAp,
     bases: List<AccessPathBase.LocalVar>,
     body: (InitialFactAp) -> Unit
-) {
-    bases.forEach { base ->
-        val aliases = findAlias(base, statement) ?: return@forEach
-        aliases.filterIsInstance<AliasApInfo>()
-            .filterNot { alias -> alias.base is AccessPathBase.Constant }
-            .forEach { alias -> applyAlias(fact, base, alias, body) }
-    }
-}
+) = forEachAliasAtStatementAmongBases(
+    statement, fact, bases, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body
+)
 
-private fun applyAlias(
-    fact: InitialFactAp,
-    newBase: AccessPathBase.LocalVar,
-    alias: AliasApInfo,
-    body: (InitialFactAp) -> Unit
-) {
-    if (alias.base != fact.base) {
-        return
-    }
-
-    val result = alias.accessors.fold(fact.rebase(newBase)) { f, accessor ->
-        val apAccessor = accessor.apAccessor()
-        f.readAccessor(apAccessor) ?: return
-    }
-
-    body(result)
-}
+private fun AliasInfo.relevantApInfo(): AliasApInfo? =
+    (this as? AliasApInfo)?.takeIf { it.base !is AccessPathBase.Constant }
 
 fun AliasAccessor.apAccessor(): Accessor = when (this) {
     is AliasAccessor.Array -> ElementAccessor
     is AliasAccessor.Field -> FieldAccessor(className, fieldName, fieldType)
     is AliasAccessor.Static -> ClassStaticAccessor(typeName)
+}
+
+fun Accessor.aliasAccessor(): AliasAccessor? = when (this) {
+    is ElementAccessor -> AliasAccessor.Array
+    is FieldAccessor -> AliasAccessor.Field(className, fieldName, fieldType)
+    is ClassStaticAccessor -> AliasAccessor.Static(typeName)
+    else -> null
 }

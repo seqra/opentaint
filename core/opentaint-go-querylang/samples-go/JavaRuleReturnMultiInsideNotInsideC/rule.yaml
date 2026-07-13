@@ -5,8 +5,8 @@ rules:
     message: match example/RuleReturnMultiInsideNotInsideC (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.MkType2($X)"
+      - pattern: "JavaRuleReturnMultiInsideNotInsideC.MkType2($X)"
     pattern-sanitizers:
-      - pattern: "util.SanitizeC($X)"
+      - pattern: "JavaRuleReturnMultiInsideNotInsideC.SanitizeC($X)"
     pattern-sinks:
-      - pattern: "util.MkType3($X)"
+      - pattern: "JavaRuleReturnMultiInsideNotInsideC.MkType3($X)"

@@ -1,0 +1,25 @@
+rules:
+  - id: issue-chain-split-builder
+    message: "Working form: bind newBuilder() in its own pattern-inside, then match .uri()/.build() call-by-call"
+    severity: WARNING
+    languages: [java]
+    mode: taint
+
+    pattern-sources:
+      - pattern: $UNTRUSTED = issues.iChain.Source.taint();
+
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $URL = issues.iChain.URI.create($UNTRUSTED);
+                  ...
+          - pattern-inside: |
+              $NEW_BUILDER = issues.iChain.HttpRequest.newBuilder();
+              ...
+          - pattern: |
+              $BUILDER = $NEW_BUILDER.uri($URL);
+              ...;
+              $TYPE $REQ = $BUILDER.build();
+              ...;
+              (issues.iChain.HttpClient $C).send($REQ, ...);

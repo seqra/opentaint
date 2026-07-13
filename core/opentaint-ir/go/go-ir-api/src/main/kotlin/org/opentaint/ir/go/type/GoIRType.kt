@@ -2,6 +2,7 @@ package org.opentaint.ir.go.type
 
 import org.opentaint.ir.api.common.CommonTypeName
 import org.opentaint.ir.go.api.GoIRNamedType
+import org.opentaint.ir.go.api.GoIRProgram
 
 /**
  * Base sealed interface for all Go IR types.
@@ -55,12 +56,28 @@ data class GoIRChanType(val elem: GoIRType, val direction: GoIRChanDirection) : 
     }
 }
 
+data class NamedTypeRef(
+    val refTypePkg: String,
+    val refTypeName: String,
+) {
+    lateinit var program: GoIRProgram
+    val fullRefName: String get() = "$refTypePkg.$refTypeName"
+
+    val namedType: GoIRNamedType
+        get() = program.findPackage(refTypePkg)?.findNamedType(refTypeName)
+            ?: error("Can't find namedType for $fullRefName")
+
+    override fun toString(): String = "ref($fullRefName)"
+}
+
 data class GoIRStructType(
     val fields: List<GoIRStructField>,
-    var namedType: GoIRNamedType?,
+    val structTypeRef: NamedTypeRef?,
 ) : GoIRType {
+    val namedType: GoIRNamedType? get() = structTypeRef?.namedType
+
     override val displayName: String get() =
-        namedType?.fullName ?: "struct{${fields.joinToString("; ") { "${it.name} ${it.type.displayName}" }}}"
+        structTypeRef?.fullRefName ?: "struct{${fields.joinToString("; ") { "${it.name} ${it.type.displayName}" }}}"
 }
 
 data class GoIRStructField(
@@ -70,13 +87,35 @@ data class GoIRStructField(
     val tag: String,
 )
 
-data class GoIRInterfaceType(
+sealed interface GoIRInterfaceType: GoIRType
+
+data class GoIRAnonymousInterfaceTypeRef(
+    val id: Int,
+) : GoIRInterfaceType {
+    lateinit var program: GoIRProgram
+
+    val interfaceType: GoIRAnonymousInterfaceType
+        get() = program.anonymousInterfaces[id]
+            ?: error("Anonymous interface for $id not found")
+
+    override val displayName: String get() = interfaceType.displayName
+}
+
+data class GoIRAnonymousInterfaceType(
+    val id: Int,
     val methods: List<GoIRInterfaceMethodSig>,
     val embeds: List<GoIRType>,
-    var namedType: GoIRNamedType?,
-) : GoIRType {
-    override val displayName: String get() =
-        namedType?.fullName ?: "interface{...}"
+) : GoIRInterfaceType {
+    override val displayName: String get() = "interface{...}"
+}
+
+data class GoIRNamedInterfaceType(
+    val methods: List<GoIRInterfaceMethodSig>,
+    val embeds: List<GoIRType>,
+    val interfaceTypeRef: NamedTypeRef,
+) : GoIRInterfaceType {
+    val namedType: GoIRNamedType get() = interfaceTypeRef.namedType
+    override val displayName: String get() = namedType.fullName
 }
 
 data class GoIRInterfaceMethodSig(
@@ -102,20 +141,35 @@ data class GoIRFuncType(
 }
 
 data class GoIRNamedTypeRef(
-    var namedType: GoIRNamedType,
-    var typeArgs: List<GoIRType>,
+    val typeRef: NamedTypeRef,
+    val typeArgs: List<GoIRType>,
 ) : GoIRType {
-    override val displayName: String get() =
-        if (typeArgs.isEmpty()) namedType.fullName
-        else "${namedType.fullName}[${typeArgs.joinToString(", ") { it.displayName }}]"
+    override val displayName: String get() = toString()
+
+    val namedType: GoIRNamedType get() = typeRef.namedType
+
+    override fun toString(): String = if (typeArgs.isEmpty()) {
+        typeRef.fullRefName
+    } else {
+        "${typeRef.fullRefName}[${typeArgs.joinToString(", ") { it.displayName }}]"
+    }
+}
+
+data class GoIRTypeParamRef(
+    val name: String,
+    val paramIndex: Int,
+) : GoIRType {
+    override val displayName: String get() = name
 }
 
 data class GoIRTypeParamType(
-    val name: String,
-    val paramIndex: Int,
+    val ref: GoIRTypeParamRef,
     val constraint: GoIRType,
 ) : GoIRType {
-    override val displayName: String get() = name
+    val name: String get() = ref.name
+    val paramIndex: Int get() = ref.paramIndex
+
+    override val displayName: String get() = ref.displayName
 }
 
 data class GoIRTupleType(val elements: List<GoIRType>) : GoIRType {

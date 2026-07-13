@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +28,6 @@ public class TemplateInjectionSpringSamples {
     public static class UnsafeTemplateControllerWithResolver {
 
         @PostMapping("/unsafe-resolver")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void previewUnsafeWithResolver(HttpServletRequest request, HttpServletResponse response) throws ServletException {
             String templateSource = request.getParameter("messageTemplate");
 
@@ -57,7 +54,6 @@ public class TemplateInjectionSpringSamples {
     public static class SafeTemplateControllerWithResolver {
 
         @PostMapping("/safe-resolver")
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "ssti")
         protected void previewSafeWithResolver(HttpServletRequest request, HttpServletResponse response) throws ServletException {
             String templateSource = request.getParameter("messageTemplate");
 

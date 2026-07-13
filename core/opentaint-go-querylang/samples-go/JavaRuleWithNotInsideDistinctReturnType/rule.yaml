@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithNotInsideDistinctReturnType (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithNotInsideDistinctReturnType.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithNotInsideDistinctReturnType.Sink($X)"

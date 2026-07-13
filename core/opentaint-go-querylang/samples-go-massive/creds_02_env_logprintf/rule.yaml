@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("DB_PASS")
     pattern-sinks:
-      - pattern: util.Sink_LogOutput($X)
+      - pattern: creds_02_env_logprintf.Sink_LogOutput($X)

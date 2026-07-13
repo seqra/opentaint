@@ -3,8 +3,6 @@ package security.xss;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.model.Model;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for wicket-xss.
@@ -15,7 +13,6 @@ public class WicketXssSamples {
      * Wicket page that disables string escaping, which can lead to XSS when used with
      * user-controlled input.
      */
-    @PositiveRuleSample(value = "java/security/xss.yaml", id = "wicket-xss")
     public static class UnsafeWicketPage extends WebPage {
 
         public UnsafeWicketPage(String userSuppliedContent) {
@@ -31,7 +28,6 @@ public class WicketXssSamples {
     /**
      * Wicket page that keeps string escaping enabled, which is the recommended safe default.
      */
-    @NegativeRuleSample(value = "java/security/xss.yaml", id = "wicket-xss")
     public static class SafeWicketPage extends WebPage {
 
         public SafeWicketPage(String userSuppliedContent) {

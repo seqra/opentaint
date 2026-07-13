@@ -1,7 +1,5 @@
 package security.crlfinjection;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,7 +22,6 @@ public class SmtpCrlfInjectionSpringSamples {
     public static class UnsafeSpringSmtpController {
 
         @PostMapping("/smtp-crlf/spring/unsafe")
-        @PositiveRuleSample(value = "java/security/crlf-injection.yaml", id = "smtp-crlf-injection")
         public void unsafe(@RequestParam("to") String to,
                            @RequestParam("subject") String subject,
                            @RequestParam(value = "trackingId", required = false) String trackingId,

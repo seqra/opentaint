@@ -7,6 +7,7 @@ import org.opentaint.dataflow.util.map
 import org.opentaint.dataflow.util.toSet
 import org.opentaint.semgrep.pattern.MetaVarConstraint
 import org.opentaint.semgrep.pattern.MetaVarConstraintFormula
+import org.opentaint.semgrep.pattern.MetaVarConstraintFormulaCube
 import org.opentaint.semgrep.pattern.MetaVarConstraints
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
@@ -32,6 +33,7 @@ import org.opentaint.semgrep.pattern.conversion.automata.Position
 import org.opentaint.semgrep.pattern.conversion.automata.Predicate
 import org.opentaint.semgrep.pattern.conversion.generatedAnyValueGeneratorMethodName
 import org.opentaint.semgrep.pattern.conversion.generatedStringConcatMethodName
+import org.opentaint.semgrep.pattern.toDNF
 import java.util.BitSet
 
 fun trySimplifyMethodFormula(
@@ -767,6 +769,17 @@ private fun MethodName.unify(
             is SignatureName.MetaVar -> {
                 val thisConstraints = metaVarInfo.metaVarConstraints[this.name.metaVar] ?: return other
                 val otherConstraints = metaVarInfo.metaVarConstraints[other.name.metaVar] ?: return this
+
+                val thisModels = thisConstraints.constraint.toDNF()
+                val otherModels = otherConstraints.constraint.toDNF()
+
+                val constraintIntersection = thisModels.flatMap { tm ->
+                    otherModels.mapNotNull { om ->
+                        intersectConstraints(tm, om)
+                    }
+                }
+                if (constraintIntersection.isEmpty()) return null
+
                 TODO("Method name metavar constraints intersection")
             }
         }
@@ -798,4 +811,30 @@ private fun stringMatches(name: String, constraint: MetaVarConstraint): Boolean 
         val pattern = Regex(constraint.regex)
         pattern.matches(name)
     }
+}
+
+private fun intersectConstraints(
+    left: MetaVarConstraintFormulaCube<MetaVarConstraint>,
+    right: MetaVarConstraintFormulaCube<MetaVarConstraint>
+): MetaVarConstraintFormulaCube<MetaVarConstraint>? {
+    val intersectionIsEmpty = left.positive.any { lp ->
+        right.positive.any { rp ->
+            intersectionIsEmpty(lp.constraint, rp.constraint)
+        }
+    }
+    if (intersectionIsEmpty) return null
+
+    return MetaVarConstraintFormulaCube(
+        left.positive + right.positive,
+        left.negative + right.negative,
+    )
+}
+
+private fun intersectionIsEmpty(
+    left: MetaVarConstraint,
+    right: MetaVarConstraint
+): Boolean {
+    if (left !is MetaVarConstraint.Concrete) return false
+    if (right !is MetaVarConstraint.Concrete) return false
+    return left != right
 }

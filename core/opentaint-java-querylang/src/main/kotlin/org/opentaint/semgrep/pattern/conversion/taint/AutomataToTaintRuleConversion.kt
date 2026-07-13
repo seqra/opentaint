@@ -92,7 +92,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertMatchingRuleToT
 ): TaintRuleFromSemgrep<Item> {
     val ruleGroups = rule.rules.mapIndexedNotNull { idx, r ->
         val rules = safeConvertToTaintRules {
-            convertAutomataToTaintRules(strategy, r.metaVarInfo, r.rule, RuleUniqueMarkPrefix(ruleId, idx))
+            convertAutomataToTaintRules(strategy, r.metaVarInfo, r.rule, RuleUniqueMarkPrefix(ruleId, modeModifier, idx))
         }
 
         rules?.let { TaintRuleFromSemgrep.TaintRuleGroup(it) }

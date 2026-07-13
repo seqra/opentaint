@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="OpenTaint Zusammenfassungsausgabe">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="OpenTaint Zusammenfassungsausgabe">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>Weitere Screenshots</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="OpenTaint Scan-Ausgabe">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="OpenTaint Scan-Ausgabe">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="OpenTaint Zusammenfassungsausgabe">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="OpenTaint Zusammenfassungsausgabe">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="OpenTaint Zusammenfassungsausgabe">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="OpenTaint Zusammenfassungsausgabe">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="OpenTaint Zusammenfassungsausgabe">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="OpenTaint Zusammenfassungsausgabe">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="OpenTaint Zusammenfassungsausgabe">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## Warum OpenTaint
+## Warum OpenTaint?
 
-KI generiert Produktionscode schneller, als heutige Sicherheitswerkzeuge mithalten konnen.
+> OpenTaint ist eine Open-Source-Alternative zu *Semgrep Pro* und *CodeQL* — eine formale interprozedurale Taint-Engine, die Sie anpassen und selbst hosten konnen, gebaut dafur, dass KI-Agenten Ihre Sicherheitsanalyse steuern, ohne bei jedem Scan Tokens zu verbrennen.
 
-LLM-Sicherheitsagenten finden Schwachstellen, die Menschen ubersehen, verbrauchen bei jeder Datei Tokens und konnen dennoch nicht garantieren, dass sie alles erkennen.
+KI generiert Produktionscode schneller, als Sicherheitsteams mithalten konnen, und die beiden Arten von Werkzeugen, die entwickelt wurden, um die dabei entstehenden Fehler zu finden, erzwingen jeweils einen schlechten Kompromiss:
 
-Je mehr KI Code schreibt, desto mehr braucht man formale Methoden als Grundlage.
+- **AST-Pattern-Matcher** (Semgrep OSS, ast-grep, Linter) sind kostenlos und schnell, aber sie gleichen Syntax ab, nicht Datenfluss — nicht vertrauenswurdige Eingaben, die eine Funktionsgrenze oder eine Persistenzschicht uberschreiten, rutschen einfach durch. Die tiefere, interprozedurale Analyse, die sie *doch* findet, war lange in proprietaren Werkzeugen eingeschlossen.
+- **LLM-Sicherheitsagenten** finden, was Pattern-Matcher ubersehen, aber sie lesen Ihren Code bei jedem Lauf erneut. Die Tokens summieren sich mit jeder Datei, jedem Commit, jedem CI-Build — und ein probabilistisches Modell kann trotzdem nicht versprechen, dass es alles erfasst hat.
 
-- **Findet, was AST-Pattern-Matching-Engines ubersehen.** Die interprozedurale Dataflow-Engine verfolgt nicht vertrauenswurdige Daten uber Funktionsgrenzen, Persistenzschichten, Aliase und asynchronen Code hinweg.
-- **Ein Fund wird zur vollstandigen Abdeckung.** AST-Pattern-Regeln ermoglichen es, jede entdeckte Schwachstelle als Regel umzusetzen, wobei die Engine sie deterministisch in wenigen CPU-Minuten auf die gesamte Codebasis anwendet.
-- **Open Source, alles inklusive.** Engine, Regeln, CI-Integrationen — der gesamte Stack wird unter Apache 2.0 und MIT ausgeliefert. Kein kostenpflichtiges Tier zum Freischalten der Taint-Verfolgung, keine Einschrankungen beim Erstellen eigener Regeln.
+OpenTaint gibt Ihnen die Tiefe eines LLM-Agenten zum Preis eines statischen Analyzers:
+
+- **Findet, was AST-Pattern-Matcher ubersehen.** Eine formale interprozedurale Dataflow-Engine verfolgt nicht vertrauenswurdige Daten uber Funktionsgrenzen, Persistenzschichten, Aliase und asynchronen Code hinweg.
+- **Zahlen Sie das Modell einmal, nicht bei jedem Scan.** Lassen Sie einen Agenten einen einzelnen Fund zu einer Taint-Regel destillieren. Die deterministische Engine wendet diese Regel dann auf die gesamte Codebasis an — und auf jeden Commit danach — in wenigen CPU-Minuten, zu null Token-Kosten.
+- **Open Source, alles inklusive.** Engine, Regeln und CI-Integrationen kommen als ein Stack unter Apache 2.0 und MIT.
 
 ## Schnellstart
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Installation uber npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Oder sofort mit npx ausfuhren — ohne Installation (benotigt Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Projekt scannen:**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ Weitere Optionen finden Sie unter [Installation](../../docs/README.md#installati
 
 ---
 
+## KI-Agenten-Workflows
+
+OpenTaint enthalt Agenten-Skills, die statische Analyse in einen durchgangigen Workflow fur Anwendungssicherheit verwandeln. Installieren Sie sie mit:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Der Skill `appsec-agent` orchestriert eine vollstandige Projektbewertung: das Projekt bauen, OpenTaint ausfuhren, die Angriffsflache ermitteln, gezielte Regeln hinzufugen, fehlende Bibliotheks-Datenflusse modellieren, Funde triagieren und optional dynamische Proof-of-Concept-Prufungen fur bestatigte Schwachstellen generieren.
+
+Die enthaltenen Skills decken den gangigen Sicherheitsanalyse-Zyklus ab:
+
+- **Scannen und Triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Erweiterung der Abdeckung:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Datenfluss-Modellierung:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## Dokumentation
 
 Vollstandige Anleitungen — Installation, Verwendung, Konfiguration, CI/CD-Integration: **[Dokumentation](../../docs/README.md)**.
@@ -150,6 +186,16 @@ Vollstandige Anleitungen — Installation, Verwendung, Konfiguration, CI/CD-Inte
 - **Issues:** [GitHub Issues](https://github.com/seqra/opentaint/issues)
 - **Community:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-Mail:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## Sternverlauf
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## Lizenz
 

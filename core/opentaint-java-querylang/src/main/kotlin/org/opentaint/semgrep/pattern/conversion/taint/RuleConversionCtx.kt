@@ -6,6 +6,7 @@ import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
 
 class RuleConversionCtx(
     val ruleId: String,
+    val modeModifier: String?,
     val meta: SinkMetaData,
     val trace: SemgrepRuleLoadStepTrace,
     val typeOps: LanguageTypeOps,

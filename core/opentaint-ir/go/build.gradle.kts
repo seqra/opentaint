@@ -1,19 +1,19 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Exec
+import org.opentaint.common.goEnvironmentExtraKey
 
 plugins {
     id("kotlin-conventions")
 }
 
 // ─── Go server environment setup ────────────────────────────────────
-val goEnvironmentExtraKey = "opentaint.go.env"
 val goRootDir = layout.projectDirectory
 val goServerDir = goRootDir.dir("go-ssa-server")
 val goProtoDir = goRootDir.dir("proto")
 val goServerBinary = goServerDir.file("go-ssa-server")
 val goModulePath = "github.com/opentaint/go-ir/go-ssa-server"
-val protocGenGoVersion = "v1.36.1"
-val protocGenGoGrpcVersion = "v1.5.1"
+val protocGenGoVersion = "v1.36.11"
+val protocGenGoGrpcVersion = "v1.6.2"
 
 fun goEnvironment(): Map<String, String> {
     return mapOf(
@@ -59,7 +59,7 @@ tasks.register<Exec>("buildGoServer") {
           --go-grpc_opt=module=$goModulePath \
           "$goProtoDir/goir/service.proto"
 
-        go build -o "$goServerBinary" ./cmd/go-ssa-server
+        go build -buildvcs=false -o "$goServerBinary" ./cmd/go-ssa-server
         """.trimIndent()
     )
 }

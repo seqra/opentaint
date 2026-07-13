@@ -35,7 +35,7 @@ class JIRFilteredTaintRulesProvider(
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
-        statement: CommonInst,
+        statement: CommonInst?,
         fact: FactAp?,
         allRelevant: Boolean
     ) = provider.passTroughRulesForMethod(method, statement, fact, allRelevant)

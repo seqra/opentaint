@@ -14,6 +14,9 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.TraceResolutionResult.
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 class TraceResolver(
     private val entryPointMethods: Set<CommonMethod>,
@@ -23,22 +26,7 @@ class TraceResolver(
 ) {
     data class Params(
         val resolveEntryPointToStartTrace: Boolean = true,
-        val sourceToSinkInnerTraceResolutionLimit: Int? = null,
-        val innerCallTraceResolveStrategy: InnerCallTraceResolveStrategy = InnerCallTraceResolveStrategy.Default,
     )
-
-    interface InnerCallTraceResolveStrategy {
-        fun innerCallTraceIsRelevant(callSummary: TraceEntryAction.CallSummary): Boolean =
-            callSummary.summaryEdges.any { innerCallSummaryEdgeIsRelevant(it) }
-
-        fun innerCallSummaryEdgeIsRelevant(summaryEdge: TraceEntryAction.TraceSummaryEdge): Boolean =
-            when (summaryEdge) {
-                is TraceEntryAction.TraceSummaryEdge.SourceSummary -> true
-                is TraceEntryAction.TraceSummaryEdge.MethodSummary -> summaryEdge.edge.fact != summaryEdge.edgeAfter.fact
-            }
-
-        object Default: InnerCallTraceResolveStrategy
-    }
 
     data class Trace(
         val entryPointToStart: EntryPointToStartTrace?,
@@ -91,8 +79,8 @@ class TraceResolver(
 
     sealed interface InterProceduralTraceNode: SourceToSinkTraceNode
 
-    data class InterProceduralFullTraceNode(
-        val trace: MethodTraceResolver.FullTrace
+    data class InterProceduralStart2FinalTraceNode(
+        val trace: MethodTraceResolver.Start2FinalTrace
     ) : InterProceduralTraceNode {
         override val methodEntryPoint: MethodEntryPoint
             get() = trace.method
@@ -109,7 +97,7 @@ class TraceResolver(
     // Override hashcode() and equals() when using enum as a field in classes whose objects
     // can be stored in sets etc.
     enum class CallKind {
-        CallToSource, CallToSink, CallInnerTrace
+        CallToSource, CallToSink
     }
 
     @Suppress("EqualsOrHashCode")
@@ -170,13 +158,13 @@ class TraceResolver(
                 }
 
                 ProcessingKind.PROCESS -> {
-                    state.builder.process(limit = 100)
+                    val timeLimit = TimeSource.Monotonic.markNow() + 100.milliseconds
+                    state.builder.process(stepLimit = 100, timeLimit)
 
                     if (!state.builder.isEmpty()) {
                         return TraceResolutionResult.InProgress(state)
                     }
 
-                    state.builder.removeUnresolvedInnerCalls()
                     val trace = state.builder.createSource2SinkTrace()
 
                     if (trace.startNodes.isEmpty()) {
@@ -201,8 +189,8 @@ class TraceResolver(
     private fun addNextRequest(state: Source2SinkTraceResolutionState): Source2SinkTraceResolutionState {
         val request = state.requests[state.nextRequestIdx]
         manager.withMethodRunner(request.methodEntryPoint) {
-            val traces = resolveIntraProceduralTraceSummary(
-                request.methodEntryPoint,
+            val traceResolver = methodTraceResolver(request.methodEntryPoint)
+            val traces = traceResolver.resolveIntraProceduralTrace(
                 state.vulnerability.statement,
                 request.facts,
                 request.includeStatement
@@ -324,7 +312,7 @@ class TraceResolver(
 
     private inner class InterProceduralTraceGraphBuilder {
         val fullNodes =
-            hashMapOf<MethodEntryPoint, MutableMap<Pair<MethodTraceResolver.FullTrace, CallKind>, InterProceduralTraceNode>>()
+            hashMapOf<MethodEntryPoint, MutableMap<Pair<MethodTraceResolver.Start2FinalTrace, CallKind>, InterProceduralTraceNode>>()
         val summaryNodes =
             hashMapOf<MethodEntryPoint, MutableMap<Pair<MethodTraceResolver.SummaryTrace, CallKind>, List<InterProceduralTraceNode>>>()
 
@@ -333,11 +321,8 @@ class TraceResolver(
         val rootNodes = hashSetOf<InterProceduralTraceNode>()
         val successors = hashMapOf<InterProceduralTraceNode, MutableSet<InterProceduralCall>>()
 
-        val requestedInnerTraces = hashSetOf<InterProceduralCall>()
-
         val unprocessedCall2Source = mutableListOf<BuilderUnprocessedTrace>()
         val unprocessedCall2Sink = mutableListOf<BuilderUnprocessedTrace>()
-        val unprocessedInner = mutableListOf<BuilderUnprocessedTrace>()
 
         fun createSinkNode(trace: MethodTraceResolver.SummaryTrace) {
             val nodes = resolveNode(trace, CallKind.CallToSink, depth = 0)
@@ -347,26 +332,22 @@ class TraceResolver(
         private fun pollUnprocessedEvent(): BuilderUnprocessedTrace? {
             unprocessedCall2Sink.removeLastOrNull()?.let { return it }
             unprocessedCall2Source.removeLastOrNull()?.let { return it }
-            return unprocessedInner.removeLastOrNull()
+            return null
         }
 
         private fun addUnprocessedEvent(event: BuilderUnprocessedTrace) {
             when (event.kind) {
                 CallKind.CallToSource -> unprocessedCall2Source.add(event)
                 CallKind.CallToSink -> unprocessedCall2Sink.add(event)
-                CallKind.CallInnerTrace -> {
-                    event.predecessor?.let { requestedInnerTraces.add(it) }
-                    unprocessedInner.add(event)
-                }
             }
         }
 
         fun isEmpty(): Boolean =
-            unprocessedCall2Sink.isEmpty() && unprocessedCall2Source.isEmpty() && unprocessedInner.isEmpty()
+            unprocessedCall2Sink.isEmpty() && unprocessedCall2Source.isEmpty()
 
-        fun process(limit: Int) {
+        fun process(stepLimit: Int, timeLimit: TimeMark) {
             var steps = 0
-            while (cancellation.isActive() && ++steps < limit) {
+            while (cancellation.isActive() && ++steps < stepLimit && timeLimit.hasNotPassedNow()) {
                 val event = pollUnprocessedEvent() ?: break
                 val resolvedNodes = resolveNode(event.trace, event.kind, event.depth)
 
@@ -402,89 +383,6 @@ class TraceResolver(
             return SourceToSinkTrace(rootsWithReachableSinks, sinkNodes, successors)
         }
 
-        fun removeUnresolvedInnerCalls() {
-            while (cancellation.isActive()) {
-                val unresolvedNodes = hashMapOf<InterProceduralFullTraceNode, MutableList<InterProceduralCall>>()
-
-                for (r in requestedInnerTraces) {
-                    val node = r.node
-                    if (node !is InterProceduralFullTraceNode) continue
-
-                    val callResolved = successors[node].orEmpty()
-                        .any { it.kind == r.kind && it.statement == r.statement && it.summary == r.summary }
-
-                    if (callResolved) continue
-
-                    unresolvedNodes.getOrPut(node, ::mutableListOf).add(r)
-                }
-
-                if (unresolvedNodes.isEmpty()) return
-
-                for ((node, calls) in unresolvedNodes) {
-                    removeUnresolvedCallsFromNode(node, calls)
-                }
-            }
-        }
-
-        private fun removeUnresolvedCallsFromNode(
-            node: InterProceduralFullTraceNode,
-            calls: List<InterProceduralCall>
-        ) {
-            val actions = calls.map { it.statement to it.summary }
-            calls.forEach { requestedInnerTraces.remove(it) }
-
-            val filteredTrace = removeCallActions(node.trace, actions)
-            val nodeReplacement = filteredTrace?.let { InterProceduralFullTraceNode(it) }
-
-            replaceNode(node, nodeReplacement)
-        }
-
-        private fun replaceNode(node: InterProceduralFullTraceNode, replacement: InterProceduralFullTraceNode?) {
-            if (sinkNodes.remove(node)) {
-                replacement?.let { sinkNodes.add(it) }
-            }
-
-            if (rootNodes.remove(node)) {
-                replacement?.let { rootNodes.add(it) }
-            }
-
-            successors.remove(node)?.let { s -> replacement?.let { successors[it] = s } }
-
-            for (nodeSuccessors in successors.values) {
-                val dependentSuccessors = nodeSuccessors.filterTo(hashSetOf()) { it.node == node }
-                val successorsReplacement = replacement?.let {
-                    dependentSuccessors.map { s -> s.copy(node = it) }
-                }
-
-                nodeSuccessors.removeAll(dependentSuccessors)
-                successorsReplacement?.let { nodeSuccessors.addAll(it) }
-            }
-
-            val dependentRequests = requestedInnerTraces.filterTo(hashSetOf()) { it.node == node }
-            val requestsReplacement = replacement?.let {
-                dependentRequests.map { s -> s.copy(node = it) }
-            }
-
-            requestedInnerTraces.removeAll(dependentRequests)
-            requestsReplacement?.let { requestedInnerTraces.addAll(it) }
-        }
-
-        private fun removeCallActions(
-            trace: MethodTraceResolver.FullTrace,
-            calls: List<Pair<CommonInst, MethodTraceResolver.SummaryTrace>>
-        ): MethodTraceResolver.FullTrace? = trace.filter { entry ->
-            if (entry !is MethodTraceResolver.TraceEntry.Action) return@filter true
-
-            val action = entry.primaryAction
-            if (action !is TraceEntryAction.CallSummary) return@filter true
-
-            val entryContainsCall = calls.any { call ->
-                entry.statement == call.first && action.summaryTrace == call.second
-            }
-
-            !entryContainsCall
-        }
-
         private fun resolveNode(
             trace: MethodTraceResolver.SummaryTrace,
             kind: CallKind,
@@ -496,34 +394,22 @@ class TraceResolver(
             if (currentNode != null) return currentNode
 
             val fullTraces = manager.withMethodRunner(trace.method) {
-                resolveIntraProceduralFullTrace(trace.method, trace, cancellation, collapseUnchangedNodes = true)
+                val traceResolver = methodTraceResolver(trace.method)
+                traceResolver.resolveIntraProceduralStart2FinalTrace(trace, cancellation)
             }
 
             val resultNodes = mutableListOf<InterProceduralTraceNode>()
 
-            for (fullTrace in fullTraces) {
-                val innerDepth = when (kind) {
-                    CallKind.CallToSource,
-                    CallKind.CallToSink -> 0
-                    CallKind.CallInnerTrace -> depth
-                }
-
-                addInnerTraces(fullTrace, innerDepth)
-
-                if (kind == CallKind.CallInnerTrace) {
-                    resultNodes += InterProceduralFullTraceNode(fullTrace)
-                    continue
-                }
-
-                when (val start = fullTrace.startEntry) {
+            for (s2fTrace in fullTraces) {
+                when (val start = s2fTrace.startEntry) {
                     is SourceStartEntry -> {
-                        resultNodes += resolveNode(fullTrace, kind, depth)
+                        resultNodes += resolveNode(s2fTrace, kind, depth)
                     }
 
                     is MethodEntry -> {
                         check(kind != CallKind.CallToSource) { "Unexpected trace: $trace" }
 
-                        val node = InterProceduralFullTraceNode(fullTrace)
+                        val node = InterProceduralStart2FinalTraceNode(s2fTrace)
                         resultNodes += node
 
                         val callerTraces = resolveMethodEntry(start)
@@ -545,7 +431,7 @@ class TraceResolver(
             return resultNodes
         }
 
-        private fun resolveNode(trace: MethodTraceResolver.FullTrace, kind: CallKind, depth: Int): InterProceduralTraceNode {
+        private fun resolveNode(trace: MethodTraceResolver.Start2FinalTrace, kind: CallKind, depth: Int): InterProceduralTraceNode {
             val traceNodes = fullNodes.getOrPut(trace.method, ::hashMapOf)
             val cacheKey = trace to kind
             val currentNode = traceNodes[cacheKey]
@@ -557,7 +443,7 @@ class TraceResolver(
                 }
 
                 is SourceStartEntry -> {
-                    val node = InterProceduralFullTraceNode(trace)
+                    val node = InterProceduralStart2FinalTraceNode(trace)
                     traceNodes[cacheKey] = node
 
                     if (kind == CallKind.CallToSink) {
@@ -589,48 +475,14 @@ class TraceResolver(
             }
         }
 
-        private fun addInnerTraces(trace: MethodTraceResolver.FullTrace, depth: Int) {
-            if (params.sourceToSinkInnerTraceResolutionLimit != null) {
-                if (depth > params.sourceToSinkInnerTraceResolutionLimit) {
-                    return
-                }
-            }
-
-            val node = InterProceduralFullTraceNode(trace)
-            val allActions = trace.successors.keys
-                .filterIsInstance<MethodTraceResolver.TraceEntry.Action>()
-
-            for (entry in allActions) {
-                if (!cancellation.isActive()) return
-
-                val action = entry.primaryAction
-                if (action !is TraceEntryAction.CallSummary) continue
-                if (!params.innerCallTraceResolveStrategy.innerCallTraceIsRelevant(action)) continue
-
-                val summary = action.summaryTrace
-                addUnprocessedEvent(
-                    BuilderUnprocessedTrace(
-                        trace = summary,
-                        kind = CallKind.CallInnerTrace,
-                        depth = depth + 1,
-                        predecessor = InterProceduralCall(
-                            CallKind.CallInnerTrace,
-                            entry.statement,
-                            summary,
-                            node
-                        )
-                    )
-                )
-            }
-        }
-
         private fun resolveMethodEntry(
             methodEntry: MethodEntry
         ): List<Pair<CommonInst, MethodTraceResolver.SummaryTrace>> {
             val callers = manager.findMethodCallers(methodEntry.entryPoint)
             return callers.flatMap { caller ->
                 manager.withMethodRunner(caller.callerEp) {
-                    resolveIntraProceduralTraceSummaryFromCall(caller.callerEp, caller.statement, methodEntry)
+                    val traceResolver = methodTraceResolver(caller.callerEp)
+                    traceResolver.resolveIntraProceduralTraceFromCall(caller.statement, methodEntry)
                 }.map { caller.statement to it }
             }
         }

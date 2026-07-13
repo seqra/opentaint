@@ -5,6 +5,6 @@ rules:
     message: "Taint from r.Form reaches Sink"
     mode: search
     pattern: |
-      $X = util.Source()
+      $X = MatchingRuleWithSink.Source()
       ...
-      util.Sink($X)
+      MatchingRuleWithSink.Sink($X)

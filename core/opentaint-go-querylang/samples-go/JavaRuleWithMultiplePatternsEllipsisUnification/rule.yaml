@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithMultiplePatternsEllipsisUnification (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.MkType2($X)"
+      - pattern: "JavaRuleWithMultiplePatternsEllipsisUnification.MkType2($X)"
     pattern-sinks:
-      - pattern: "util.MkType1FromType3($X)"
+      - pattern: "JavaRuleWithMultiplePatternsEllipsisUnification.MkType1FromType3($X)"

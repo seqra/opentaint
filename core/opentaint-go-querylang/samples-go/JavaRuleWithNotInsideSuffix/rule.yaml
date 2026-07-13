@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithNotInsideSuffix (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithNotInsideSuffix.Source(...)"
     pattern-sanitizers:
-      - pattern: "util.SuffixClean($X)"
+      - pattern: "JavaRuleWithNotInsideSuffix.SuffixClean($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithNotInsideSuffix.Sink($X)"

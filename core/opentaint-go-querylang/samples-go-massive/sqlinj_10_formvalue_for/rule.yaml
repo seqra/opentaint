@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_10_formvalue_for.Sink_DbQuery($X)

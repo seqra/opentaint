@@ -1,0 +1,41 @@
+language: java
+passThrough:
+- function: javax.management.remote.JMXServiceURL#<init>
+  signature: (java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.management.remote.JMXServiceURL#url#java.lang.Object
+- function: javax.management.remote.JMXServiceURL#<init>
+  signature: (java.lang.String, java.lang.String, int) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.management.remote.JMXServiceURL#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.management.remote.JMXServiceURL#url#java.lang.Object
+- function: javax.management.remote.JMXServiceURL#<init>
+  signature: (java.lang.String, java.lang.String, int, java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.management.remote.JMXServiceURL#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.management.remote.JMXServiceURL#url#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .javax.management.remote.JMXServiceURL#url#java.lang.Object
+- function: javax.management.remote.JMXConnectorFactory#newJMXConnector
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .javax.management.remote.JMXConnector#url#java.lang.Object

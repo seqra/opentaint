@@ -1,10 +1,34 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAHeapAccessor
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
+import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.LocalAliasAnalysis
+import org.opentaint.dataflow.configuration.jvm.Argument
+import org.opentaint.dataflow.configuration.jvm.ClassStatic
+import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
+import org.opentaint.dataflow.configuration.jvm.Position
+import org.opentaint.dataflow.configuration.jvm.PositionAccessor
+import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
+import org.opentaint.dataflow.configuration.jvm.Result
+import org.opentaint.dataflow.configuration.jvm.This
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ArrayAlias
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalAssign
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalObject
+import org.opentaint.dataflow.jvm.ap.ifds.alias.FieldAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis
+import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.Convert.convertToAliasInfo
+import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias
+import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue
+import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.graph.JApplicationGraph
 import kotlin.time.Duration
@@ -14,62 +38,88 @@ class JIRLocalAliasAnalysis(
     private val entryPoint: JIRInst,
     private val graph: JApplicationGraph,
     private val callResolver: JIRCallResolver,
+    private val modelProvider: TaintRulesProvider?,
     private val localVariableReachability: JIRLocalVariableReachability,
     private val cancellation: Cancellation,
     private val languageManager: JIRLanguageManager,
     private val params: Params,
-) {
+) : LocalAliasAnalysis<AliasInfo, AliasAccessor>() {
     data class Params(
         val useAliasAnalysis: Boolean = true,
         val aliasAnalysisInterProcCallDepth: Int = 0,
         val aliasAnalysisTimeLimit: Duration = 10.seconds,
     )
 
-    private val aliasInfo by lazy { compute() }
+    override fun getInstIndex(statement: CommonInst): Int =
+        languageManager.getInstIndex(statement)
 
-    class MethodAliasInfo(
-        val aliasBeforeStatement: Array<Int2ObjectOpenHashMap<Array<Any>>?>?,
-        val aliasAfterStatement: Array<Int2ObjectOpenHashMap<Array<Any>>?>?,
-        val unboundBeforeStatement: Array<Array<Array<Any>>?>?,
-    )
+    override fun localInfo(localIdx: Int): AAInfo =
+        LocalAlias.SimpleLoc(RefValue.Local(localIdx, ContextInfo.rootContext))
 
-    private fun getLocalVarAliases(
-        alias: Array<Int2ObjectOpenHashMap<Array<Any>>?>,
-        instIdx: Int, base: AccessPathBase.LocalVar
-    ): List<AliasInfo>? =
-        alias[instIdx]?.getOrDefault(base.idx, null)?.filter {
-            it !is AliasApInfo || it.accessors.isNotEmpty() || it.base != base
-        }?.map { it.wrapAliasInfo() }
-
-    fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
-        val aliasBefore = aliasInfo.aliasBeforeStatement ?: return null
-        val idx = languageManager.getInstIndex(statement)
-        return getLocalVarAliases(aliasBefore, idx, base)
+    override fun convertAliasAccessor(aa: AliasAccessor): List<AAHeapAccessor> = when (aa) {
+        is AliasAccessor.Array -> listOf(ArrayAlias)
+        is AliasAccessor.Field -> listOf(FieldAlias(aa, false), FieldAlias(aa, true))
+        is AliasAccessor.Static -> emptyList()
     }
 
-    fun getAllAliasAtStatement(statement: CommonInst): List<List<AliasInfo>> {
-        val result = mutableListOf<List<AliasInfo>>()
-        val idx = languageManager.getInstIndex(statement)
+    override fun convert(
+        info: AAInfo,
+        depth: Int,
+        convertInstance: (Int) -> List<AliasInfo>
+    ): List<AliasInfo> = info.convertToAliasInfo(depth, null, convertInstance)
 
-        aliasInfo.aliasBeforeStatement?.let { aliasBefore ->
-            aliasBefore[idx]?.let { wrapAllInfo(it) }?.let { result.addAll(it.values) }
+    private inner class CallModelProvider : ExternalCallModelProvider {
+        override fun provideModel(method: JIRMethod): List<ExternalAssign> {
+            val rules = modelProvider?.passTroughRulesForMethod(method, null, null, false)?.toList().orEmpty()
+            if (rules.isEmpty()) return emptyList()
+
+            val actions = rules
+                .flatMap { it.actionsAfter }
+                .filterIsInstance<CopyAllMarks>()
+                .distinct()
+
+            val externalAssigns = actions.mapNotNull { action ->
+                val from = action.from.toExternalObject() ?: return@mapNotNull null
+                val to = action.to.toExternalObject() ?: return@mapNotNull null
+                ExternalAssign(from, to)
+            }
+
+            return externalAssigns
         }
 
-        aliasInfo.unboundBeforeStatement?.let { unboundBefore ->
-            unboundBefore[idx]?.let { aliases -> aliases.map { wrapAliasSet(it) } }?.let { result.addAll(it) }
+        private fun Position.toExternalObject(): ExternalObject? {
+            val base = when (this) {
+                is Argument -> ExternalCallModelProvider.Position.Arg(index)
+                is Result -> ExternalCallModelProvider.Position.RetVal
+                is This -> ExternalCallModelProvider.Position.This
+                is PositionWithAccess -> {
+                    val b = base.toExternalObject() ?: return null
+                    val a = access.toAaAccessor() ?: return null
+                    return ExternalObject(b.pos, b.accessors + a)
+                }
+
+                is ClassStatic -> return null
+            }
+
+            return ExternalObject(base, emptyList())
         }
 
-        return result
+        private fun PositionAccessor.toAaAccessor(): AAHeapAccessor? = when (this) {
+            is PositionAccessor.AnyFieldAccessor -> null
+            is PositionAccessor.ElementAccessor -> ArrayAlias
+            is PositionAccessor.FieldAccessor -> FieldAlias(
+                AliasAccessor.Field(className, fieldName, fieldType),
+                isImmutable = false
+            )
+        }
     }
 
-    fun findAliasAfterStatement(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
-        val aliasAfter = aliasInfo.aliasAfterStatement ?: return null
-        val idx = languageManager.getInstIndex(statement)
-        return getLocalVarAliases(aliasAfter, idx, base)
-    }
-
-    private fun compute(): MethodAliasInfo {
-        val analysis = JIRIntraProcAliasAnalysis(entryPoint, graph, callResolver, languageManager, cancellation, params)
+    override fun compute(): AnalysisResult? {
+        val analysis = JIRIntraProcAliasAnalysis(
+            entryPoint, graph, callResolver,
+            CallModelProvider(),
+            languageManager, cancellation, params
+        )
         return analysis.compute(localVariableReachability)
     }
 
@@ -80,45 +130,12 @@ class JIRLocalAliasAnalysis(
     }
 
     sealed interface AliasInfo
-    data class AliasApInfo(val base: AccessPathBase, val accessors: List<AliasAccessor>): AliasInfo
-    data class AliasAllocInfo(val allocInst: Int): AliasInfo
 
-    companion object {
-        fun AliasInfo.unwrap(): Any = when (this) {
-            is AliasAllocInfo -> allocInst
-            is AliasApInfo -> if (accessors.isEmpty()) base else this
-        }
+    data class AliasApInfo(
+        override val base: AccessPathBase,
+        override val accessors: List<AliasAccessor>
+    ) : AliasInfo,
+        CommonAliasApInfo<AliasAccessor>
 
-        fun Any.wrapAliasInfo(): AliasInfo = when (this) {
-            is AccessPathBase -> AliasApInfo(this, emptyList())
-            is AliasInfo -> this
-            is Int -> AliasAllocInfo(this)
-            else -> error("Impossible")
-        }
-
-        fun wrapAllInfo(info: Int2ObjectOpenHashMap<Array<Any>>): Int2ObjectOpenHashMap<List<AliasInfo>> {
-            val result = Int2ObjectOpenHashMap<List<AliasInfo>>()
-            for ((key, aliases) in info) {
-                result.put(key, wrapAliasSet(aliases))
-            }
-            return result
-        }
-
-        fun wrapAliasSet(aliases: Array<Any>): List<AliasInfo> =
-            List(aliases.size) { aliases[it].wrapAliasInfo() }
-
-        fun unwrapAllInfo(info: Int2ObjectOpenHashMap<List<AliasInfo>>): Int2ObjectOpenHashMap<Array<Any>> {
-            val result = Int2ObjectOpenHashMap<Array<Any>>(info.size, 0.99f)
-            val iter = info.int2ObjectEntrySet().fastIterator()
-            while (iter.hasNext()) {
-                val entry = iter.next()
-                val unwrapped = unwrapAliasSet(entry.value)
-                result.put(entry.intKey, unwrapped)
-            }
-            return result
-        }
-
-        fun unwrapAliasSet(aliases: List<AliasInfo>): Array<Any> =
-            Array(aliases.size) { aliases[it].unwrap() }
-    }
+    data class AliasAllocInfo(val allocInst: Int) : AliasInfo
 }

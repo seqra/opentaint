@@ -25,9 +25,11 @@ import org.opentaint.ir.api.jvm.cfg.JIRByte
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRChar
 import org.opentaint.ir.api.jvm.cfg.JIRDouble
+import org.opentaint.ir.api.jvm.cfg.JIREqExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRFloat
 import org.opentaint.ir.api.jvm.cfg.JIRGotoInst
+import org.opentaint.ir.api.jvm.cfg.JIRIfInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInstRef
@@ -46,6 +48,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRSwitchInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.cfg.JIRVirtualCallExpr
 import org.opentaint.ir.api.jvm.ext.JAVA_OBJECT
+import org.opentaint.ir.api.jvm.ext.boolean
 import org.opentaint.ir.api.jvm.ext.findClass
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 import org.opentaint.ir.api.jvm.ext.findType
@@ -216,6 +219,35 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
     val initMethod = generateComponentInitializer()
     val cleanupMethod = generateCleanup()
     val selectMethod = generateSelect()
+
+    val controllerDispatchers = controllerWrappers
+        .groupBy { it.enclosingClass.name }
+        .mapValues { (controllerName, methods) ->
+            ndMethodDispatch(
+                dispatcherName = GeneratedSpringControllerDispatcherDispatchMethod + controllerName,
+                prepareMethod = null,
+                methods = methods,
+                selectMethod = selectMethod,
+                cleanupMethod = cleanupMethod,
+            )
+        }
+
+    val dispatcher = ndMethodDispatch(
+        GeneratedSpringControllerDispatcherDispatchMethod,
+        initMethod,
+        controllerDispatchers.values.toList(),
+        selectMethod, cleanupMethod
+    )
+    return dispatcher
+}
+
+private fun SpringWebProjectContext.ndMethodDispatch(
+    dispatcherName: String,
+    prepareMethod: JIRMethod?,
+    methods: List<JIRMethod>,
+    selectMethod: JIRMethod,
+    cleanupMethod: JIRMethod,
+): JIRMethod {
     val cp = controllerDispatcher.classpath
 
     val mutableInstructions = mutableListOf<JIRInst>()
@@ -223,7 +255,7 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
 
     val returnType = PredefinedPrimitives.Void.typeName()
     val dispatcher = SpringGeneratedMethod(
-        name = GeneratedSpringControllerDispatcherDispatchMethod,
+        name = dispatcherName,
         returnType = returnType,
         description = methodDescription(emptyList(), returnType),
         parameters = emptyList(),
@@ -233,9 +265,11 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
         it.bind(controllerDispatcher)
     }
 
-    instructions.addInstWithLocation(dispatcher) { loc ->
-        val initCall = JIRStaticCallExpr(initMethod.staticMethodRef(), emptyList())
-        JIRCallInst(loc, initCall)
+    if (prepareMethod != null) {
+        instructions.addInstWithLocation(dispatcher) { loc ->
+            val initCall = JIRStaticCallExpr(prepareMethod.staticMethodRef(), emptyList())
+            JIRCallInst(loc, initCall)
+        }
     }
 
     val selectValue = JIRLocalVar(index = 0, "%sel", cp.int)
@@ -253,7 +287,7 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
         JIRAssignInst(loc, selectValue, selectValue) // nop
     }
 
-    val blocks = controllerWrappers.map { cwm ->
+    val blocks = methods.map { cwm ->
         val blockStart: JIRInstLocation
         val blockEnd: JIRInstLocation
 
@@ -279,7 +313,8 @@ private fun SpringWebProjectContext.generateDispatcher(controllerWrappers: List<
     }
 
     instructions.addInstWithLocation(dispatcher) { loc ->
-        JIRGotoInst(loc, JIRInstRef(loopStart.index)) // infinite loop
+        val loopExit = JIREqExpr(cp.boolean, selectValue, JIRInt(-1, cp.int))
+        JIRIfInst(loc, loopExit, JIRInstRef(loc.index + 1), JIRInstRef(loopStart.index))
     }
 
     instructions.addInstWithLocation(dispatcher) { loc ->

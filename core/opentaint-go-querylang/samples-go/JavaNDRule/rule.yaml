@@ -5,6 +5,6 @@ rules:
     message: match example/NDRule (Go port, two sources joined via pass)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaNDRule.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaNDRule.Sink($X)"

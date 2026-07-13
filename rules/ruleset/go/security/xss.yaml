@@ -1,92 +1,56 @@
 rules:
-  - id: go-reflected-xss
-    languages: [go]
+  - id: reflected-xss
     severity: ERROR
-    message: Tainted user input written to HTTP response body (reflected XSS)
+    message: >-
+      Reflected XSS: user-controlled input is written to the HTTP response body
     metadata:
       cwe: CWE-79
-      short-description: Reflected cross-site scripting
-    mode: taint
-    pattern-sources:
-      - pattern-either:
-          - pattern: $R.FormValue($K)
-          - pattern: $R.PostFormValue($K)
-          - pattern: $R.FormFile($K)
-          - pattern: $R.Cookie($K)
-          - pattern: $R.Cookies()
-          - pattern: $R.MultipartReader()
-          - pattern: $R.Referer()
-          - pattern: $R.UserAgent()
-          - pattern: $R.URL.Query()
-          - pattern: $R.URL.Query().Get($K)
-          - pattern: $R.URL.Path
-          - pattern: $R.URL.RawQuery
-          - pattern: $R.URL.RawPath
-          - pattern: $R.Header.Get($K)
-          - pattern: $R.Header[$K]
-          - pattern: $R.Header[$K][$I]
-          - pattern: $R.Form[$K]
-          - pattern: $R.Form[$K][$I]
-          - pattern: $R.PostForm[$K]
-          - pattern: $R.PostForm[$K][$I]
-          - pattern: $R.URL.Query()[$K]
-          - pattern: $R.URL.Query()[$K][$I]
-          - pattern: $R.Header.Values($K)
-          - pattern: $R.Form.Get($K)
-          - pattern: $R.PostForm.Get($K)
-          - pattern: $R.Body
-          - pattern: $R.GetBody
-          - pattern: $R.Form
-          - pattern: $R.PostForm
-          - pattern: $R.MultipartForm
-          - pattern: $R.Header
-          - pattern: $R.Trailer
-          - pattern: $R.URL
-          - pattern: os.Getenv($K)
-          - pattern: os.LookupEnv($K)
-          - pattern: os.Args
-          # beego Controller methods
-          - pattern: $C.GetString($K)
-          - pattern: $C.GetString($K, $DEF)
-          - pattern: $C.GetStrings($K)
-          - pattern: $C.GetStrings($K, $DEF)
-          - pattern: $C.GetStrings($K)[$IDX]
-          - pattern: $C.GetStrings($K, $DEF)[$IDX]
-          - pattern: $C.GetInt($K)
-          - pattern: $C.GetInt($K, $DEF)
-          - pattern: $C.GetInt8($K)
-          - pattern: $C.GetInt16($K)
-          - pattern: $C.GetInt32($K)
-          - pattern: $C.GetInt64($K)
-          - pattern: $C.GetUint8($K)
-          - pattern: $C.GetUint16($K)
-          - pattern: $C.GetUint32($K)
-          - pattern: $C.GetUint64($K)
-          - pattern: $C.GetFloat($K)
-          - pattern: $C.GetBool($K)
-          - pattern: $C.GetFile($K)
-          - pattern: $C.GetFiles($K)
-          - pattern: $C.GetSession($K)
-          - pattern: $C.Input()
-          - pattern: $C.ParseForm($PTR)
-          # beego Context.Input methods (c.Ctx.Input.X)
-          - pattern: $X.Param($K)
-          - pattern: $X.Params()
-          - pattern: $X.URI()
-          - pattern: $X.URL()
-          - pattern: $X.RequestBody
-          - pattern: $X.Bind($PTR)
-    pattern-sinks:
-      - pattern-either:
-          - pattern: $W.Write($BUF)
-          - pattern: $W.WriteString($S)
-          - pattern: $O.Body($BODY)
-          - pattern: fmt.Fprint($W, ...)
-          - pattern: fmt.Fprintf($W, ...)
-          - pattern: fmt.Fprintln($W, ...)
-          - pattern: io.WriteString($W, $S)
-          - pattern: $T.Execute($W, $DATA)
-          - pattern: $T.ExecuteTemplate($W, $NAME, $DATA)
-          - pattern: json.NewEncoder($W).Encode($DATA)
-          - pattern: $C.ServeJSON()
-          - pattern: $O.JSON($DATA, ...)
+      short-description: User-controlled input reflected in the HTTP response
+      full-description: |-
+        Reflected cross-site scripting (XSS) occurs when untrusted data is written into the
+        HTTP response body without contextual output encoding, through APIs such as
+        `ResponseWriter.Write`, `fmt.Fprintf`, or `io.WriteString`. A browser then executes
+        attacker-supplied markup or script in the victim's session.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            q := r.FormValue("q") // untrusted
+
+            // VULNERABLE: raw input is reflected into HTML
+            fmt.Fprintf(w, "<p>Results for %s</p>", q)
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        // html/template escapes per output context automatically.
+        var page = template.Must(template.New("p").Parse(`<p>Results for {{.}}</p>`))
+
+        func handler(w http.ResponseWriter, r *http.Request) {
+            // SAFE: {{.}} is HTML-escaped before it reaches the response
+            page.Execute(w, r.FormValue("q"))
+        }
+        ```
+
+        Patterns covered include `http.ResponseWriter.Write`, the beego response writers,
+        `fmt.Fprint`/`Fprintf`/`Fprintln`, `io.WriteString`, and `json.NewEncoder(w).Encode`
+        reached by tainted data. Values passed through `html/template`, `text/template`, or
+        the `html`/`net/url` escapers are treated as sanitized.
+      references:
+        - https://owasp.org/www-community/attacks/xss/
+        - https://cwe.mitre.org/data/definitions/79.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#http-sources
+          as: src
+        - rule: go/lib/xss-sinks.yaml#xss-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

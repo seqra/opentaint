@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Args[$IDX]
     pattern-sinks:
-      - pattern: util.Sink_DbExec($X)
+      - pattern: sqlinj_18_args_atoi_lost.Sink_DbExec($X)

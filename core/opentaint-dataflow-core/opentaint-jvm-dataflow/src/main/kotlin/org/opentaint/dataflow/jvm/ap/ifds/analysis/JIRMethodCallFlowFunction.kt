@@ -26,6 +26,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRMethodCallTaintUtil
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
+import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FactWithMarkAfterAnyAccessorResolver
@@ -277,7 +278,7 @@ class JIRMethodCallFlowFunction(
     ) {
         val factReader = FinalFactReader(factAp, apManager)
 
-        unresolvedCallDefaultFactPropagation(factReader, factAp, addCallToReturn)
+        unresolvedCallDefaultFactPropagation(factAp, addCallToReturn)
 
         val method = callExpr.callee
         val conditionRewriter = JIRMarkAwareConditionRewriter(
@@ -316,10 +317,13 @@ class JIRMethodCallFlowFunction(
 
             if (startFactBase !is AccessPathBase.ClassStatic) {
                 analysisContext.taint.externalMethodTracker?.let { tracker ->
+                    if (JIRCallResolver.alwaysIgnoreMethod(method)) return@let
+
                     val methodName = "${method.enclosingClass.name}#${method.name}"
                     val methodDesc = method.description
                     val factPosition = startFactBase.toString()
-                    tracker.trackExternalMethod(methodName, methodDesc, factPosition, passThroughFacts.isSome)
+                    val ruleApplied = startFactBase in passEvaluator.relevantPositionBase
+                    tracker.trackExternalMethod(methodName, methodDesc, factPosition, ruleApplied)
                 }
             }
 
@@ -350,11 +354,14 @@ class JIRMethodCallFlowFunction(
     }
 
     private fun unresolvedCallDefaultFactPropagation(
-        factReader: FinalFactReader,
         factAp: FinalFactAp,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
     ) {
-        addCallToReturn(factReader, factAp, null)
+        val rewrittenFacts = summaryRewriter.rewriteSummaryFact(factAp)
+        for ((unrefinedFact, factRefinement) in rewrittenFacts) {
+            val fact = factRefinement.refineFact(unrefinedFact)
+            addCallToReturn(factRefinement, fact, null)
+        }
     }
 
     private fun FinalFactAp.mapExitToReturnFact(): FinalFactAp? =

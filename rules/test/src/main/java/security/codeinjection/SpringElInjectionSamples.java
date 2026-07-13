@@ -1,7 +1,5 @@
 package security.codeinjection;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -25,7 +23,6 @@ public class SpringElInjectionSamples {
          * Unsafe endpoint: evaluates arbitrary SpEL provided by the user.
          */
         @GetMapping("/code-injection/spring-el/unsafe")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "spring-el-injection")
         public String evalUnsafe(@RequestParam("expr") String expr) {
             Expression expression = parser.parseExpression(expr);
             Object result = expression.getValue();
@@ -42,7 +39,6 @@ public class SpringElInjectionSamples {
          * Safe endpoint: uses a static expression and binds user data as a variable in a constrained context.
          */
         @GetMapping("/code-injection/spring-el/safe")
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "spring-el-injection")
         public String evalSafe(@RequestParam(value = "name", required = false) String name) {
             if (name == null) {
                 name = "";

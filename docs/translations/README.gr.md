@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="Συνοπτική έξοδος OpenTaint">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="Συνοπτική έξοδος OpenTaint">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>Περισσότερα στιγμιότυπα οθόνης</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="Έξοδος σάρωσης OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="Έξοδος σάρωσης OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="Συνοπτική έξοδος OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="Συνοπτική έξοδος OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="Συνοπτική έξοδος OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="Συνοπτική έξοδος OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="Συνοπτική έξοδος OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="Συνοπτική έξοδος OpenTaint">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="Συνοπτική έξοδος OpenTaint">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## Γιατί OpenTaint
+## Γιατί OpenTaint;
 
-Η τεχνητή νοημοσύνη παράγει κώδικα παραγωγής πιο γρήγορα από ό,τι τα σημερινά εργαλεία ασφαλείας μπορούν να ακολουθήσουν.
+> Το OpenTaint είναι μια εναλλακτική ανοιχτού κώδικα στα *Semgrep Pro* και *CodeQL* — μια τυπική δια-διαδικαστική μηχανή taint που μπορείτε να προσαρμόσετε και να φιλοξενήσετε μόνοι σας, φτιαγμένη ώστε οι πράκτορες AI να καθοδηγούν την ανάλυση ασφαλείας σας χωρίς να ξοδεύουν tokens σε κάθε σάρωση.
 
-Οι πράκτορες ασφαλείας LLM βρίσκουν ευπάθειες που οι άνθρωποι χάνουν, καταναλώνουν tokens σε κάθε αρχείο, και παρόλα αυτά δεν μπορούν να εγγυηθούν ότι εντοπίζουν τα πάντα.
+Η τεχνητή νοημοσύνη παράγει κώδικα παραγωγής πιο γρήγορα από ό,τι μπορούν να ακολουθήσουν οι ομάδες ασφαλείας, και τα δύο είδη εργαλείων που φτιάχτηκαν για να πιάνουν αυτά που κάνει λάθος επιβάλλουν το καθένα έναν κακό συμβιβασμό:
 
-Όσο περισσότερο η τεχνητή νοημοσύνη γράφει κώδικα, τόσο περισσότερο χρειάζεστε τυπικές μεθόδους από κάτω.
+- **Οι μηχανές αντιστοίχισης μοτίβων AST** (Semgrep OSS, ast-grep, linters) είναι δωρεάν και γρήγορες, αλλά αντιστοιχίζουν σύνταξη, όχι ροή δεδομένων — μη αξιόπιστα δεδομένα εισόδου που διασχίζουν ένα όριο συνάρτησης ή ένα επίπεδο αποθήκευσης γλιστρούν ανενόχλητα. Η βαθύτερη, δια-διαδικαστική ανάλυση που *όντως* τα πιάνει είναι εδώ και καιρό κλειδωμένη μέσα σε ιδιόκτητα εργαλεία.
+- **Οι πράκτορες ασφαλείας LLM** βρίσκουν αυτά που χάνουν οι μηχανές αντιστοίχισης μοτίβων, αλλά διαβάζουν ξανά τον κώδικά σας σε κάθε εκτέλεση. Τα tokens αθροίζονται με κάθε αρχείο, κάθε commit, κάθε build CI — και ένα πιθανοτικό μοντέλο εξακολουθεί να μην μπορεί να υποσχεθεί ότι έπιασε τα πάντα.
 
-- **Βρείτε αυτά που οι μηχανές αντιστοίχισης μοτίβων AST χάνουν.** Η δια-διαδικαστική μηχανή ροής δεδομένων παρακολουθεί μη αξιόπιστα δεδομένα πέρα από όρια συναρτήσεων, επίπεδα αποθήκευσης, ψευδώνυμα και ασύγχρονο κώδικα.
-- **Ένα εύρημα γίνεται πλήρης κάλυψη.** Οι κανόνες μοτίβων AST σας επιτρέπουν να μετατρέψετε κάθε ευπάθεια που αποκαλύπτεται σε κανόνα, και η μηχανή τον εφαρμόζει σε ολόκληρη τη βάση κώδικα, ντετερμινιστικά, σε λίγα λεπτά CPU.
-- **Ανοιχτός κώδικας, με τα πάντα ενσωματωμένα.** Μηχανή, κανόνες, ενσωματώσεις CI — ολόκληρη η στοίβα διατίθεται υπό Apache 2.0 και MIT. Κανένα πληρωμένο επίπεδο για να ξεκλειδώσετε την παρακολούθηση taint, κανένα εμπόδιο στη συγγραφή δικών σας κανόνων.
+Το OpenTaint σας δίνει το βάθος ενός πράκτορα LLM με το κόστος ενός στατικού αναλυτή:
+
+- **Βρείτε αυτά που χάνουν οι μηχανές αντιστοίχισης μοτίβων AST.** Μια τυπική δια-διαδικαστική μηχανή ροής δεδομένων παρακολουθεί μη αξιόπιστα δεδομένα πέρα από όρια συναρτήσεων, επίπεδα αποθήκευσης, ψευδώνυμα και ασύγχρονο κώδικα.
+- **Πληρώστε το μοντέλο μία φορά, όχι σε κάθε σάρωση.** Αφήστε έναν πράκτορα να αποστάξει ένα μόνο εύρημα σε έναν κανόνα taint. Η ντετερμινιστική μηχανή στη συνέχεια αναπαράγει αυτόν τον κανόνα σε ολόκληρη τη βάση κώδικα — και σε κάθε commit μετά από αυτό — σε λίγα λεπτά CPU, με μηδενικό κόστος σε tokens.
+- **Ανοιχτός κώδικας, με τα πάντα ενσωματωμένα.** Η μηχανή, οι κανόνες και οι ενσωματώσεις CI έρχονται ως μία στοίβα υπό Apache 2.0 και MIT.
 
 ## Γρήγορη εκκίνηση
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Εγκατάσταση μέσω npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Ή εκτελέστε άμεσα με npx — χωρίς εγκατάσταση (απαιτεί Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Σαρώστε το έργο σας:**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 
 ---
 
+## Ροές εργασίας πρακτόρων AI
+
+Το OpenTaint περιλαμβάνει δεξιότητες πρακτόρων που μετατρέπουν τη στατική ανάλυση σε μια ολοκληρωμένη ροή εργασίας ασφάλειας εφαρμογών. Εγκαταστήστε τις με:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Η δεξιότητα `appsec-agent` ενορχηστρώνει μια πλήρη αξιολόγηση του έργου: κατασκευή του έργου, εκτέλεση του OpenTaint, ανακάλυψη της επιφάνειας επίθεσης, προσθήκη στοχευμένων κανόνων, μοντελοποίηση ελλειπουσών ροών δεδομένων βιβλιοθηκών, διαλογή ευρημάτων και προαιρετικά δημιουργία δυναμικών ελέγχων proof-of-concept για επιβεβαιωμένες ευπάθειες.
+
+Οι περιλαμβανόμενες δεξιότητες καλύπτουν τον συνήθη κύκλο ανάλυσης ασφαλείας:
+
+- **Σάρωση και διαλογή:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Επέκταση κάλυψης:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Μοντελοποίηση ροής δεδομένων:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## Τεκμηρίωση
 
 Πλήρεις οδηγοί — εγκατάσταση, χρήση, διαμόρφωση, ενσωμάτωση CI/CD: **[Τεκμηρίωση](../../docs/README.md)**.
@@ -150,6 +186,16 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 - **Ζητήματα:** [GitHub Issues](https://github.com/seqra/opentaint/issues)
 - **Κοινότητα:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **Email:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## Ιστορικό αστεριών
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## Άδεια χρήσης
 

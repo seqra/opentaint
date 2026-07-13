@@ -16,6 +16,7 @@ object Versions {
     const val lmdb_java = "0.9.0"
 
     const val jdot = "1.0"
+    const val fastutil = "8.5.13"
 }
 
 object Libs {
@@ -120,4 +121,9 @@ object Libs {
         version = Versions.jdot
     )
 
+    val fastutil = dep(
+        group = "it.unimi.dsi",
+        name = "fastutil-core",
+        version = Versions.fastutil,
+    )
 }

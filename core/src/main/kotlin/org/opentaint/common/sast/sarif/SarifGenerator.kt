@@ -6,16 +6,12 @@ import io.github.detekt.sarif4k.Level
 import io.github.detekt.sarif4k.Message
 import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.ThreadFlow
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.semgrep.pattern.RuleMetadata
-import java.io.OutputStream
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.Arrays
@@ -38,24 +34,10 @@ abstract class SarifGenerator<IL>(
 
     val traceGenerationStats = TraceGenerationStats()
 
-    private val json = Json {
-        prettyPrint = true
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    fun generateSarif(
-        output: OutputStream,
-        traces: Sequence<VulnerabilityWithTrace>,
-        metadatas: List<RuleMetadata>
-    ) {
-        val sarifReport = generateSarif(traces, metadatas)
-        json.encodeToStream(sarifReport, output)
-    }
-
     fun generateSarif(
         traces: Sequence<VulnerabilityWithTrace>,
         metadatas: List<RuleMetadata>
-    ): LazySarifReport {
+    ): LazyToolRunReport {
         val sarifResults = traces.mapNotNull { generateSarifResult(it.vulnerability, it.trace) }
 
         val uriBase = options.uriBase ?: sourceRoot?.absolutePathString()
@@ -66,23 +48,22 @@ abstract class SarifGenerator<IL>(
         val run = LazyToolRunReport(
             tool = generateSarifAnalyzerToolDescription(metadatas, options),
             originalURIBaseIDS = sourceUri,
-            results = sarifResults,
+            results = sarifResults.toList().asSequence(),
         )
 
-        val sarifReport = LazySarifReport.fromRuns(listOf(run))
-        return sarifReport
+        return run
     }
 
     open fun postProcessSarif(
         sarif: Result,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>?
     ): Result = sarif
 
     private fun generateSarifResult(
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?
+        trace: TracePathGenerationResult
     ): Result? {
         val vulnerabilityRule = vulnerability.rule
         val ruleId = vulnerabilityRule.id
@@ -170,38 +151,26 @@ abstract class SarifGenerator<IL>(
 
     abstract fun MessageDigest.addLocationFingerprint(loc: IL)
 
-    private fun generateTracePaths(trace: TraceResolver.Trace?): List<List<TracePathNode>>? {
+    private fun generateTracePaths(trace: TracePathGenerationResult): List<List<TracePathNode>>? {
         traceGenerationStats.total++
 
-        if (trace == null) {
-            traceGenerationStats.generationFailed++
-            return null
-        }
-
-        val generatedTracePaths = generateTracePath(trace)
-        val paths = when (generatedTracePaths) {
-            TracePathGenerationResult.Failure -> {
+        when (trace) {
+            is TracePathGenerationResult.Failure -> {
                 traceGenerationStats.generationFailed++
                 return null
             }
 
-            TracePathGenerationResult.Simple -> {
+            is TracePathGenerationResult.Simple -> {
                 traceGenerationStats.simple++
                 return null
             }
 
             is TracePathGenerationResult.Path -> {
+                val generatedTracePaths = generateTracePath(trace, options.sarifCodeFlowLimit)
                 traceGenerationStats.generatedSuccess++
-                generatedTracePaths.path
+                return generatedTracePaths
             }
         }
-
-        var limitedTracePaths = paths
-        if (options.sarifCodeFlowLimit != null) {
-            limitedTracePaths = paths.take(options.sarifCodeFlowLimit)
-        }
-
-        return limitedTracePaths
     }
 
     abstract fun generateThreadFlow(path: List<TracePathNode>, sinkMessage: String): List<IL>

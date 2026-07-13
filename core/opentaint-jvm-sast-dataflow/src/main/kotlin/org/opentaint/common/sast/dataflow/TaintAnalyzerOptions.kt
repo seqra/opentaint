@@ -6,9 +6,10 @@ import kotlin.time.Duration
 data class TaintAnalyzerOptions(
     val ifdsTimeout: Duration,
     val ifdsApMode: ApMode,
-    val symbolicExecutionEnabled: Boolean,
-    val analysisCwe: Set<Int>?,
-    val storeSummaries: Boolean,
+    val symbolicExecutionEnabled: Boolean = false,
+    val analysisCwe: Set<Int>? = null,
+    val storeSummaries: Boolean = false,
     val experimentalAAInterProcCallDepth: Int = 0,
-    val debugOptions: DebugOptions?
+    val tracePathLimit: Int? = null,
+    val debugOptions: DebugOptions? = null,
 )

@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv($X)
     pattern-sinks:
-      - pattern: util.Sink_RandSeed($X)
+      - pattern: crypto_18_env_rand_seed.Sink_RandSeed($X)

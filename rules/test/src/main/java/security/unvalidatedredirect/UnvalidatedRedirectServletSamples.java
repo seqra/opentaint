@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for unvalidated-redirect-in-servlet rule.
@@ -21,7 +19,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class UnsafeUnvalidatedRedirectServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // VULNERABLE: unvalidated user-controlled URL is used directly in redirect
@@ -77,7 +74,6 @@ public class UnvalidatedRedirectServletSamples {
     public static class SafeContextPathRedirectServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/unvalidated-redirect.yaml", id = "unvalidated-redirect-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // SAFE: getContextPath() returns the server-configured context path, not user input

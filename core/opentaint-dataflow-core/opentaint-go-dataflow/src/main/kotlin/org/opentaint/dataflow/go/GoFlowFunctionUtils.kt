@@ -317,8 +317,8 @@ object GoFlowFunctionUtils {
 
     fun detectFieldReadName(inst: GoIRAssignInst): GoFieldSignature? {
         val expr = inst.expr
-        if (expr is GoIRFieldExpr) return GoFieldSignature(expr.fieldName, expr.type)
-        if (expr is GoIRFieldAddrExpr) return GoFieldSignature(expr.fieldName, expr.type)
+        if (expr is GoIRFieldExpr) return GoFieldSignature(expr.fieldName, expr.type, expr.x.type)
+        if (expr is GoIRFieldAddrExpr) return GoFieldSignature(expr.fieldName, expr.type, expr.x.type)
         return null
     }
 

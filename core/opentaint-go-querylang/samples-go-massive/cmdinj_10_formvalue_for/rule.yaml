@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_ExecCommand($X)
+      - pattern: cmdinj_10_formvalue_for.Sink_ExecCommand($X)

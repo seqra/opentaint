@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 public class XssHtmlResponseServletSamples {
 
@@ -19,7 +17,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeHtmlServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -34,7 +31,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeNoContentTypeServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -48,7 +44,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeChainedWriterServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -61,7 +56,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeChainedOutputStreamServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -74,7 +68,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeOutputStreamLocalServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -88,7 +81,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeSendErrorServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -101,7 +93,6 @@ public class XssHtmlResponseServletSamples {
     public static class UnsafeTypedPrintWriterServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -119,7 +110,6 @@ public class XssHtmlResponseServletSamples {
     public static class SafeChainedWriterJsonServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -133,7 +123,6 @@ public class XssHtmlResponseServletSamples {
     public static class SafeOutputStreamOctetServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -147,7 +136,6 @@ public class XssHtmlResponseServletSamples {
     public static class SafeHtmlServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 

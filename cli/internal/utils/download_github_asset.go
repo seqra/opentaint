@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,12 +97,17 @@ func DownloadGithubReleaseAsset(owner, repository, releaseTag, assetName, assetP
 				_ = tmpFile.Close()
 			}()
 
-			written, err := printer.CopyWithProgress(tmpFile, rc, expectedSize, "Downloading "+assetName)
+			var written int64
+			if printer != nil {
+				written, err = printer.CopyWithProgress(tmpFile, rc, expectedSize, "Downloading "+assetName)
+			} else {
+				written, err = io.Copy(tmpFile, rc)
+			}
 			if err != nil {
 				return err
 			}
 
-			if written != expectedSize {
+			if expectedSize > 0 && written != expectedSize {
 				return fmt.Errorf("file size mismatch: expected %d bytes, got %d bytes", expectedSize, written)
 			}
 
@@ -129,67 +135,16 @@ func DownloadGithubReleaseAsset(owner, repository, releaseTag, assetName, assetP
 }
 
 func DownloadAndUnpackGithubReleaseAsset(owner, repository, releaseTag, assetName, destPath, token string, skipVerify bool, printer *output.Printer) error {
-	client := newGithubClient(token)
+	tmpPath := destPath + ".temp"
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
-	ctx := context.Background()
-	release, _, err := client.Repositories.GetReleaseByTag(ctx, owner, repository, releaseTag)
-	if err != nil {
+	if err := DownloadGithubReleaseAsset(owner, repository, releaseTag, assetName, tmpPath, token, skipVerify, printer); err != nil {
 		return err
 	}
 
-	assets := release.Assets
-
-	for assetId := range assets {
-		if *assets[assetId].Name == assetName {
-			asset := assets[assetId]
-			expectedSize := int64(asset.GetSize())
-			rc, _, err := client.Repositories.DownloadReleaseAsset(ctx, owner, repository, asset.GetID(), client.Client())
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = rc.Close()
-			}()
-
-			tmpPath := destPath + ".temp"
-
-			if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-				return err
-			}
-
-			output.LogDebugf("Download asset to: %s", tmpPath)
-			tmpFile, err := os.Create(tmpPath)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = tmpFile.Close()
-				_ = os.Remove(tmpPath)
-			}()
-
-			written, err := printer.CopyWithProgress(tmpFile, rc, expectedSize, "Downloading "+assetName)
-			if err != nil {
-				return err
-			}
-
-			if written != expectedSize {
-				return fmt.Errorf("file size mismatch: expected %d bytes, got %d bytes", expectedSize, written)
-			}
-
-			if err := tmpFile.Close(); err != nil {
-				return err
-			}
-
-			if !skipVerify {
-				if err := verifyAssetChecksum(client, owner, repository, release, asset, tmpPath); err != nil {
-					return err
-				}
-			}
-
-			return extractAsset(tmpPath, assetName, destPath)
-		}
-	}
-	return errors.New("failed to find artifact in release assets")
+	return extractAsset(tmpPath, assetName, destPath)
 }
 
 func extractAsset(tmpPath, assetName, destPath string) error {

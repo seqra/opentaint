@@ -1,0 +1,28 @@
+# Multiple typed-metavar patterns mirroring the receiver types used by the Go
+# security benchmarks (go-nethttp-demo / go-owasp / go-sec-code):
+#   *http.Request, *sql.DB, *http.Client, *text/template.Template.
+# Each Positive_* isolates one typed pattern against an untyped TypedPatterns.Source/Sink.
+rules:
+  - id: typed-patterns
+    languages: [go]
+    severity: WARNING
+    message: "Tainted user input reaches a typed sink"
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: "($R : *http.Request).FormValue($K)"
+          - pattern: "($C : *web.Controller).GetString($K)"
+          - pattern: "($X : *context.BeegoInput).Param($K)"
+          - pattern: "TypedPatterns.Source(...)"
+    pattern-sinks:
+      - pattern-either:
+          - patterns:
+              - pattern: "($DB : *sql.DB).Query($Q, ...)"
+              - focus-metavariable: $Q
+          - patterns:
+              - pattern: "($C : *http.Client).Get($U)"
+              - focus-metavariable: $U
+          - patterns:
+              - pattern: "($T : *template.Template).Parse($SRC)"
+              - focus-metavariable: $SRC
+          - pattern: "TypedPatterns.Sink($X)"

@@ -88,3 +88,91 @@ jobs:
           name: gradle-reports-lifecycle
           path: '**/build/reports/'
           retention-days: 1
+
+  go-ir:
+    name: Run Go-ir tests
+    runs-on: ubuntu-latest
+    container: ubuntu:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Install Go-ir dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates protobuf-compiler
+          update-ca-certificates
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'main' }}
+
+      - name: Run tests
+        run: ./gradlew opentaint-ir:go:go-ir-tests:check
+        working-directory: core
+
+      - name: Run round-trip tests
+        run: ./gradlew opentaint-ir:go:go-ir-tests:roundtripTest
+        working-directory: core
+
+      - name: Upload Gradle reports
+        if: (!cancelled())
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports-go-ir-tests
+          path: '**/build/reports/'
+          retention-days: 1
+
+  go-ir-bench:
+    name: Run Go-ir benchmark tests
+    runs-on: ubuntu-latest
+    container: gitlab/gitlab-runner-helper:ubuntu-x86_64-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Install Go-ir dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates protobuf-compiler
+          update-ca-certificates
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'main' }}
+
+      - name: Run benchmark tests
+        run: ./gradlew opentaint-ir:go:go-ir-tests:benchmarkTest
+        working-directory: core
+
+      - name: Upload Gradle reports
+        if: (!cancelled())
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports-go-ir-benchmark
+          path: '**/build/reports/'
+          retention-days: 1

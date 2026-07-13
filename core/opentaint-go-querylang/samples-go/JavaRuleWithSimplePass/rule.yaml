@@ -5,10 +5,10 @@ rules:
     message: match example/RuleWithSimplePass (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithSimplePass.Source(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithSimplePass.Sink($X)"
     pattern-propagators:
-      - pattern: "$OUT = util.Pass($IN)"
+      - pattern: "$OUT = JavaRuleWithSimplePass.Pass($IN)"
         from: "$IN"
         to: "$OUT"

@@ -37,7 +37,7 @@ func TestIsInstallCurrent_StaleMarker(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Write a marker with different content
-	if err := os.WriteFile(filepath.Join(installDir, ".versions"), []byte("old-content"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(installDir, VersionMarkerName), []byte("old-content"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -57,7 +57,7 @@ func TestCleanInstallDir(t *testing.T) {
 	// Create install dirs with content
 	createTestFile(t, filepath.Join(libDir, "artifact.jar"), 100)
 	createTestFile(t, filepath.Join(jreDir, "bin", "java"), 50)
-	if err := os.WriteFile(filepath.Join(installDir, ".versions"), []byte("marker"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(installDir, VersionMarkerName), []byte("marker"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -65,8 +65,8 @@ func TestCleanInstallDir(t *testing.T) {
 		t.Fatalf("CleanInstallDir() error = %v", err)
 	}
 
-	// Verify lib, jre, and .versions are removed
-	for _, p := range []string{libDir, jreDir, filepath.Join(installDir, ".versions")} {
+	// Verify lib, jre, and the version marker are removed
+	for _, p := range []string{libDir, jreDir, filepath.Join(installDir, VersionMarkerName)} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			t.Errorf("expected %s to be removed", p)
 		}
@@ -106,7 +106,7 @@ func TestWriteInstallVersionMarker_Content(t *testing.T) {
 		t.Fatalf("WriteInstallVersionMarker() error = %v", err)
 	}
 
-	markerPath := filepath.Join(home, ".opentaint", "install", ".versions")
+	markerPath := filepath.Join(home, ".opentaint", "install", VersionMarkerName)
 	data, err := os.ReadFile(markerPath)
 	if err != nil {
 		t.Fatalf("failed to read marker: %v", err)

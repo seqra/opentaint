@@ -5,8 +5,8 @@ rules:
     message: match example/TrickyPatternNot (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaTrickyPatternNot.Source()"
     pattern-sanitizers:
-      - pattern: "util.Clean($X)"
+      - pattern: "JavaTrickyPatternNot.Clean($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaTrickyPatternNot.Sink($X)"

@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based samples for unsafe-reflection-in-servlet rule.
@@ -22,7 +20,6 @@ public class UnsafeReflectionServletSamples {
     public static class DynamicLoaderServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/external-configuration-control.yaml", id = "unsafe-reflection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -52,7 +49,6 @@ public class UnsafeReflectionServletSamples {
         }
 
         @Override
-        @NegativeRuleSample(value = "java/security/external-configuration-control.yaml", id = "unsafe-reflection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 

@@ -1,11 +1,12 @@
 package org.opentaint.ir.go.impl
 
 import org.opentaint.ir.go.api.*
+import org.opentaint.ir.go.type.GoIRAnonymousInterfaceType
 
 class GoIRProgramImpl(
     override val packages: Map<String, GoIRPackage>,
-    private val closeable: AutoCloseable? = null,
-) : GoIRProgram, AutoCloseable {
+    override val anonymousInterfaces: Map<Int, GoIRAnonymousInterfaceType>,
+) : GoIRProgram {
     override fun findPackage(importPath: String) = packages[importPath]
 
     override fun allFunctions(): List<GoIRFunction> =
@@ -16,8 +17,4 @@ class GoIRProgramImpl(
 
     override fun mainPackage(): GoIRPackage? =
         packages.values.find { it.name == "main" }
-
-    override fun close() {
-        closeable?.close()
-    }
 }

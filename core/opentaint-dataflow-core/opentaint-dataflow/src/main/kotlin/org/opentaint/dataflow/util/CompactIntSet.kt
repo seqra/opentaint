@@ -13,6 +13,15 @@ class CompactIntSet {
             else -> (offsets as BitSet).cardinality()
         }
 
+    fun clone(): CompactIntSet = CompactIntSet().also { copy ->
+        copy.base = base
+        copy.offsets = when (offsets) {
+            null -> null
+            Singleton -> Singleton
+            else -> (offsets as BitSet).clone()
+        }
+    }
+
     fun contains(element: Int): Boolean {
         val offsets = this.offsets ?: return false
         if (offsets !is BitSet) return element == base
@@ -116,6 +125,30 @@ class CompactIntSet {
 
         offsets.forEach { offset -> body(base + offset) }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CompactIntSet) return false
+
+        if (base != other.base) return false
+        if (offsets != other.offsets) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = base
+        result = 31 * result + (offsets?.hashCode() ?: 0)
+        return result
+    }
+
+    fun toSet(): Set<Int> {
+        val elements = hashSetOf<Int>()
+        forEach { elements.add(it) }
+        return elements
+    }
+
+    override fun toString(): String = toSet().toString()
 
     companion object {
         private data object Singleton

@@ -1,7 +1,5 @@
 package security.ldap;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import javax.naming.Context;
 import javax.naming.directory.InitialDirContext;
@@ -12,7 +10,6 @@ import java.util.Hashtable;
  */
 public class AnonymousLdapSamples {
 
-    @PositiveRuleSample(value = "java/security/ldap.yaml", id = "java-anonymous-ldap")
     public InitialDirContext anonymousBind(String url) throws Exception {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
@@ -23,7 +20,6 @@ public class AnonymousLdapSamples {
         return new InitialDirContext(env);
     }
 
-    @NegativeRuleSample(value = "java/security/ldap.yaml", id = "java-anonymous-ldap")
     public InitialDirContext authenticatedBind(String url, String bindDn, String password) throws Exception {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");

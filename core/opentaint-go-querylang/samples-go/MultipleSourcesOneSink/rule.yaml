@@ -2,10 +2,10 @@ rules:
   - id: multiple-sources-one-sink
     languages: [go]
     severity: WARNING
-    message: "Taint from either util.Source or util.Other reaches util.Sink"
+    message: "Taint from either MultipleSourcesOneSink.Source or MultipleSourcesOneSink.Other reaches MultipleSourcesOneSink.Sink"
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
-      - pattern: "util.Other(...)"
+      - pattern: "MultipleSourcesOneSink.Source(...)"
+      - pattern: "MultipleSourcesOneSink.Other(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "MultipleSourcesOneSink.Sink($X)"

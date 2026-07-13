@@ -7,8 +7,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +20,6 @@ public class ScriptEngineInjectionSpringSamples {
     public static class UnsafeScriptEngineController {
 
         @GetMapping("/script-engine-injection-in-spring/unsafe")
-        @PositiveRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection")
         public String unsafeScriptEngine(@RequestParam("expr") String expr) throws ScriptException {
             ScriptEngineManager manager = new ScriptEngineManager();
             ScriptEngine engine = manager.getEngineByName("javascript");
@@ -49,7 +46,6 @@ public class ScriptEngineInjectionSpringSamples {
         }
 
         @GetMapping("/script-engine-injection-in-spring/safe")
-        @NegativeRuleSample(value = "java/security/code-injection.yaml", id = "script-engine-injection")
         public String safeScriptEngine(@RequestParam("a") int a, @RequestParam("b") int b) throws ScriptException {
             Bindings bindings = engine.createBindings();
             bindings.put("a", a);

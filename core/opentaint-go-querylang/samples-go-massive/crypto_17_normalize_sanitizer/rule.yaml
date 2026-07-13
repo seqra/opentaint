@@ -9,4 +9,4 @@ rules:
     pattern-sinks:
       - pattern: md5.Sum($X)
     pattern-sanitizers:
-      - pattern: util.normalizeKey($V)
+      - pattern: crypto_17_normalize_sanitizer.normalizeKey($V)

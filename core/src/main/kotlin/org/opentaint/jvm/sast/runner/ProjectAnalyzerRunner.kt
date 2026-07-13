@@ -10,21 +10,16 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import org.opentaint.common.sast.CommonAnalysisOptions
-import org.opentaint.common.sast.ProjectAnalysisStatus
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
-import org.opentaint.go.sast.project.GoProjectAnalyzer
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
-import org.opentaint.jvm.sast.project.JirProjectAnalyzer
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
-import org.opentaint.jvm.sast.project.TestProjectAnalyzer
 import org.opentaint.jvm.sast.util.directory
-import org.opentaint.jvm.sast.util.file
-import org.opentaint.project.GoProject
-import org.opentaint.project.JavaProject
 import org.opentaint.util.newFile
 import java.nio.file.Path
+import kotlin.io.path.extension
+import kotlin.io.path.walk
 import kotlin.time.Duration.Companion.seconds
 
 class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
@@ -37,8 +32,10 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val symbolicExecutionTimeout: Int by option(help = "Symbolic execution timeout in seconds")
         .int().default(60)
 
-    private val approximationsConfig: List<Path> by option(help = "YAML passThrough approximations config (OVERRIDE mode)")
-        .file()
+    private val passthroughApproximations: List<Path> by option(
+        help = "passThrough approximation YAML file or directory (walked recursively, OVERRIDE mode, repeatable)"
+    )
+        .path()
         .multiple()
 
     private val semgrepRuleSet: List<Path> by option(help = "Semgrep YAML rule file or directory containing YAML rules")
@@ -54,7 +51,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val trackExternalMethods: Boolean by option(help = "Track external methods, produce external methods YAML lists")
         .flag()
 
-    private val dataflowApproximations: List<Path> by option(help = "Directory of compiled approximation class files")
+    private val javaDataflowApproximations: List<Path> by option(help = "Directory of compiled approximation class files")
         .directory()
         .multiple()
 
@@ -93,7 +90,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     )
 
     private val commonOptions get() = CommonAnalysisOptions(
-        customApproximationConfig = approximationsConfig,
+        customApproximationConfig = passthroughApproximations.flatMap { collectYamlConfigs(it) },
         semgrepRuleSet = semgrepRuleSet,
         semgrepRuleLoadTrace = semgrepRuleLoadTrace,
         semgrepSeverity = semgrepRuleSeverity,
@@ -110,36 +107,22 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
     )
 
-    override fun analyzeProject(project: JavaProject, analyzerOutputDir: Path): ProjectAnalysisStatus {
-        if (project.modules.isEmpty()) {
-            return ProjectAnalysisStatus.OK
-        }
+    override fun commonOptions(): CommonAnalysisOptions = commonOptions
 
-        val options = ProjectAnalysisOptions(
-            common = commonOptions,
-            projectKind = projectKind,
-            approximationOptions = DataFlowApproximationLoader.Options(
-                customApproximationPaths = dataflowApproximations,
-            ),
-        )
+    override fun javaOptions() = ProjectAnalysisOptions(
+        common = commonOptions,
+        projectKind = projectKind,
+        approximationOptions = DataFlowApproximationLoader.Options(
+            customApproximationPaths = javaDataflowApproximations,
+        ),
+    )
 
-        return if (!debugOptions.runRuleTests) {
-            val projectAnalyzer = JirProjectAnalyzer(project, analyzerOutputDir, options)
-            projectAnalyzer.analyze()
-        } else {
-            val testAnalyzer = TestProjectAnalyzer(project, analyzerOutputDir, options)
-            testAnalyzer.analyze()
-        }
-    }
+    override fun goOptions() = GoProjectAnalysisOptions(common = commonOptions)
 
-    override fun analyzeGoProject(project: GoProject, analyzerOutputDir: Path): ProjectAnalysisStatus {
-        val options = GoProjectAnalysisOptions(common = commonOptions)
-        return if (!debugOptions.runRuleTests) {
-            GoProjectAnalyzer(project, analyzerOutputDir, options).analyze()
-        } else {
-            TODO("GO project testing is not supported yet")
-        }
-    }
+    private fun collectYamlConfigs(path: Path): List<Path> = path.walk()
+        .filter { it.extension in arrayOf("yaml", "yml") }
+        .sortedBy { it.toString() }
+        .toList()
 
     companion object {
         @JvmStatic

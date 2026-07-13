@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithDeepNesting (Go port, recast)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithDeepNesting.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithDeepNesting.Sink($X)"

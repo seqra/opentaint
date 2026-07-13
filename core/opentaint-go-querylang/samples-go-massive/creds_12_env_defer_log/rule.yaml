@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("SLACK_TOKEN")
     pattern-sinks:
-      - pattern: util.Sink_LogOutput($X)
+      - pattern: creds_12_env_defer_log.Sink_LogOutput($X)

@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="OpenTaint sumarni izlaz">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="OpenTaint sumarni izlaz">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>Više snimaka ekrana</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="OpenTaint izlaz skeniranja">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="OpenTaint izlaz skeniranja">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="OpenTaint sumarni izlaz">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="OpenTaint sumarni izlaz">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="OpenTaint sumarni izlaz">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="OpenTaint sumarni izlaz">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="OpenTaint sumarni izlaz">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="OpenTaint sumarni izlaz">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="OpenTaint sumarni izlaz">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## Zašto OpenTaint
+## Zašto OpenTaint?
 
-AI generiše produkcijski kod brže nego što današnji sigurnosni alati mogu pratiti.
+> OpenTaint je alternativa otvorenog koda za *Semgrep Pro* i *CodeQL* — formalni inter-proceduralni mehanizam za taint analizu koji možete prilagoditi i sami hostovati, izgrađen tako da AI agenti vode vašu sigurnosnu analizu bez trošenja tokena na svako skeniranje.
 
-LLM sigurnosni agenti pronalaze ranjivosti koje ljudi propuštaju, troše tokene na svaki fajl, i još uvijek ne mogu garantovati da uhvate sve.
+AI generiše produkcijski kod brže nego što sigurnosni timovi mogu pratiti, a obje vrste alata izgrađene da uhvate ono što on pogriješi nameću loš kompromis:
 
-Što više AI piše kod, to više trebate formalne metode u osnovi.
+- **Mehanizmi za podudaranje AST-obrazaca** (Semgrep OSS, ast-grep, linteri) su besplatni i brzi, ali oni podudaraju sintaksu, a ne tok podataka — nepouzdani unos koji prelazi granicu funkcije ili sloj persistencije prošulja se pored njih. Dublja, inter-proceduralna analiza koja ga *zaista* hvata već dugo je zaključana unutar vlasničkih alata.
+- **LLM sigurnosni agenti** pronalaze ono što mehanizmi za podudaranje obrazaca propuste, ali iznova čitaju vaš kod pri svakom pokretanju. Tokeni se gomilaju sa svakim fajlom, svakim commitom, svakom CI izgradnjom — a probabilistički model i dalje ne može obećati da je uhvatio sve.
 
-- **Pronađite ono što mehanizmi za podudaranje AST-obrazaca propuštaju.** Inter-proceduralni mehanizam za tok podataka prati nepouzdane podatke preko granica funkcija, slojeva persistencije, aliasa i asinhronog koda.
-- **Jedan nalaz postaje potpuna pokrivenost.** Pravila AST-obrazaca omogućavaju vam da svaku otkrivenu ranjivost pretvorite u pravilo, a mehanizam ga primjenjuje na cijelu bazu koda, deterministički, za nekoliko minuta CPU vremena.
-- **Otvoreni kod, sve uključeno.** Mehanizam, pravila, CI integracije — cijeli stek se isporučuje pod Apache 2.0 i MIT licencom. Nema plaćenog nivoa za otključavanje taint praćenja, nema prepreka za pisanje vlastitih pravila.
+OpenTaint vam daje dubinu LLM agenta po cijeni statičkog analizatora:
+
+- **Pronađite ono što mehanizmi za podudaranje AST-obrazaca propuštaju.** Formalni inter-proceduralni mehanizam za tok podataka prati nepouzdane podatke preko granica funkcija, slojeva persistencije, aliasa i asinhronog koda.
+- **Platite model jednom, a ne pri svakom skeniranju.** Pustite agenta da destilira jedan nalaz u taint pravilo. Deterministički mehanizam zatim ponavlja to pravilo kroz cijelu bazu koda — i kroz svaki naredni commit — za nekoliko minuta CPU vremena, uz nulti trošak tokena.
+- **Otvoreni kod, sve uključeno.** Mehanizam, pravila i CI integracije dolaze kao jedan stek pod Apache 2.0 i MIT licencom.
 
 ## Brzi početak
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Instalacija putem npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Ili pokrenite odmah pomoću npx — bez instalacije (potreban Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Skenirajte svoj projekat:**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ Za više opcija, pogledajte [Instalacija](../../docs/README.md#installation) i [
 
 ---
 
+## Tokovi rada AI agenata
+
+OpenTaint uključuje agentske vještine koje pretvaraju statičku analizu u cjelovit tok rada za sigurnost aplikacija. Instalirajte ih pomoću:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Vještina `appsec-agent` orkestrira potpunu procjenu projekta: izgradnju projekta, pokretanje OpenTaint-a, otkrivanje površine napada, dodavanje ciljanih pravila, modeliranje nedostajućih tokova podataka biblioteka, trijažu nalaza i opcionalno generisanje dinamičkih proof-of-concept provjera za potvrđene ranjivosti.
+
+Uključene vještine pokrivaju uobičajenu petlju sigurnosne analize:
+
+- **Skeniranje i trijaža:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Proširenje pokrivenosti:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Modeliranje toka podataka:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## Dokumentacija
 
 Kompletni vodiči — instalacija, korištenje, konfiguracija, CI/CD integracija: **[Dokumentacija](../../docs/README.md)**.
@@ -150,6 +186,16 @@ Kompletni vodiči — instalacija, korištenje, konfiguracija, CI/CD integracija
 - **Problemi:** [GitHub Issues](https://github.com/seqra/opentaint/issues)
 - **Zajednica:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-pošta:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## Historija zvjezdica
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## Licenca
 

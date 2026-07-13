@@ -1,0 +1,16 @@
+rules:
+  - id: ssrf-client-get
+    languages: [go]
+    severity: WARNING
+    message: "Tainted value reaches an outbound HTTP request (SSRF)"
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: http.Get($U)
+              - pattern: $C.Get($U)
+              - pattern: http.Post($U, ...)
+              - pattern: $C.Post($U, ...)
+          - focus-metavariable: $U

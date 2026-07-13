@@ -104,15 +104,8 @@ class GoMethodCallSummaryHandler(
     }
 
     private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
-        context.aliasAnalysis.forEachAliasAtStatement(statement, fact) {
+        context.aliasAnalysis.forEachHeapAliasAtStatement(statement, fact) {
             body(it)
-        }
-
-        val freeVars = fact.getStartAccessors().filter { GoFlowFunctionUtils.isFreeVarAccessor(it) }
-        freeVars.forEach { freeVarAccessor ->
-            context.aliasAnalysis.forEachHeapAliasAtStatement(statement, fact, freeVarAccessor) {
-                body(it)
-            }
         }
     }
 

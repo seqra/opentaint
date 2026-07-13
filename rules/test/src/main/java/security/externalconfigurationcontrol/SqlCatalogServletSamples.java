@@ -15,8 +15,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based samples for sql-catalog-external-manipulation rule.
@@ -39,7 +37,6 @@ public class SqlCatalogServletSamples {
         }
 
         @Override
-        @PositiveRuleSample(value = "java/security/external-configuration-control.yaml", id = "sql-catalog-external-manipulation")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String catalog = request.getParameter("catalog");
@@ -82,7 +79,6 @@ public class SqlCatalogServletSamples {
         }
 
         @Override
-        @NegativeRuleSample(value = "java/security/external-configuration-control.yaml", id = "sql-catalog-external-manipulation")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String tenantId = (String) request.getAttribute("tenantId");

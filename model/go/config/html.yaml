@@ -1,0 +1,16 @@
+language: go
+passThrough:
+- function:
+    package: html
+    name: EscapeString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: html
+    name: UnescapeString
+    receiver: false
+  copy:
+  - from: arg(0)
+    to: result

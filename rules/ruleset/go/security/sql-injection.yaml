@@ -1,90 +1,62 @@
 rules:
-  - id: go-sql-injection
-    languages: [go]
+  - id: sql-injection
     severity: ERROR
-    message: Tainted user input flows into SQL query (SQL injection)
+    message: >-
+      SQL injection: a query is assembled from user-controlled input
     metadata:
       cwe: CWE-89
-      short-description: SQL injection
-    mode: taint
-    pattern-sources:
-      - pattern-either:
-          - pattern: $R.FormValue($K)
-          - pattern: $R.PostFormValue($K)
-          - pattern: $R.FormFile($K)
-          - pattern: $R.Cookie($K)
-          - pattern: $R.Cookies()
-          - pattern: $R.MultipartReader()
-          - pattern: $R.Referer()
-          - pattern: $R.UserAgent()
-          - pattern: $R.URL.Query()
-          - pattern: $R.URL.Query().Get($K)
-          - pattern: $R.URL.Path
-          - pattern: $R.URL.RawQuery
-          - pattern: $R.URL.RawPath
-          - pattern: $R.RequestURI
-          - pattern: $R.Header.Get($K)
-          - pattern: $R.Header[$K]
-          - pattern: $R.Header[$K][$I]
-          - pattern: $R.Form[$K]
-          - pattern: $R.Form[$K][$I]
-          - pattern: $R.PostForm[$K]
-          - pattern: $R.PostForm[$K][$I]
-          - pattern: $R.URL.Query()[$K]
-          - pattern: $R.URL.Query()[$K][$I]
-          - pattern: $R.Header.Values($K)
-          - pattern: $R.Form.Get($K)
-          - pattern: $R.PostForm.Get($K)
-          - pattern: $R.Body
-          - pattern: $R.GetBody
-          - pattern: $R.Form
-          - pattern: $R.PostForm
-          - pattern: $R.MultipartForm
-          - pattern: $R.Header
-          - pattern: $R.Trailer
-          - pattern: $R.URL
-          - pattern: os.Getenv($K)
-          - pattern: os.LookupEnv($K)
-          - pattern: os.Args
-          # beego Controller methods
-          - pattern: $C.GetString($K)
-          - pattern: $C.GetString($K, $DEF)
-          - pattern: $C.GetStrings($K)
-          - pattern: $C.GetStrings($K, $DEF)
-          - pattern: $C.GetStrings($K)[$IDX]
-          - pattern: $C.GetStrings($K, $DEF)[$IDX]
-          - pattern: $C.GetInt($K)
-          - pattern: $C.GetInt($K, $DEF)
-          - pattern: $C.GetInt8($K)
-          - pattern: $C.GetInt16($K)
-          - pattern: $C.GetInt32($K)
-          - pattern: $C.GetInt64($K)
-          - pattern: $C.GetUint8($K)
-          - pattern: $C.GetUint16($K)
-          - pattern: $C.GetUint32($K)
-          - pattern: $C.GetUint64($K)
-          - pattern: $C.GetFloat($K)
-          - pattern: $C.GetBool($K)
-          - pattern: $C.GetFile($K)
-          - pattern: $C.GetFiles($K)
-          - pattern: $C.GetSession($K)
-          - pattern: $C.Input()
-          - pattern: $C.ParseForm($PTR)
-          # beego Context.Input methods (c.Ctx.Input.X)
-          - pattern: $X.Param($K)
-          - pattern: $X.Header($K)
-          - pattern: $X.Params()
-          - pattern: $X.URI()
-          - pattern: $X.URL()
-          - pattern: $X.RequestBody
-          - pattern: $X.Bind($PTR)
-    pattern-sinks:
-      - pattern-either:
-          - pattern: $DB.Query($SQL, ...)
-          - pattern: $DB.QueryContext($CTX, $SQL, ...)
-          - pattern: $DB.QueryRow($SQL, ...)
-          - pattern: $DB.QueryRowContext($CTX, $SQL, ...)
-          - pattern: $DB.Exec($SQL, ...)
-          - pattern: $DB.ExecContext($CTX, $SQL, ...)
-          - pattern: $DB.Prepare($SQL)
-          - pattern: $DB.PrepareContext($CTX, $SQL)
+      short-description: SQL query built from user-controlled input
+      full-description: |-
+        SQL injection occurs when untrusted data is concatenated into a query string that
+        is handed to `database/sql` execution APIs such as `Query`, `QueryRow`, `Exec`, or
+        `Prepare`. An attacker who controls part of the query can read, modify, or destroy
+        data, or bypass authentication.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+            name := r.FormValue("name") // untrusted
+
+            // VULNERABLE: user input is concatenated into the query text
+            rows, _ := db.Query("SELECT id FROM users WHERE name = '" + name + "'")
+            _ = rows
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+            name := r.FormValue("name")
+
+            // SAFE: parameterized query; the driver binds the value, never the query text
+            rows, _ := db.Query("SELECT id FROM users WHERE name = ?", name)
+            _ = rows
+        }
+        ```
+
+        Patterns covered include `*sql.DB`, `*sql.Tx`, and `*sql.Conn` query/exec/prepare
+        methods (`Query`, `QueryContext`, `QueryRow`, `Exec`, `Prepare`, ...) reached by a
+        tainted query-string argument.
+      references:
+        - https://owasp.org/www-community/attacks/SQL_Injection
+        - https://cwe.mitre.org/data/definitions/89.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#http-sources
+          as: src
+        - rule: go/lib/http-sources-requesturi.yaml#http-sources-requesturi
+          as: extra_requesturi
+        - rule: go/lib/http-sources-header-index.yaml#http-sources-header-index
+          as: extra_header
+        - rule: go/lib/sql-sinks.yaml#sql-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'extra_requesturi.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'extra_header.$UNTRUSTED -> sink.$UNTRUSTED'

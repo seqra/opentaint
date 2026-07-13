@@ -1,0 +1,61 @@
+rules:
+  - id: xss-sinks
+    options:
+      lib: true
+    severity: NOTE
+    message: Untrusted data reaches an HTTP response write API
+    metadata:
+      short-description: HTTP response write sink
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              import "net/http"
+              import "fmt"
+              import "io"
+              import "encoding/json"
+              import web "github.com/beego/beego/v2/server/web"
+              import context "github.com/beego/beego/v2/server/web/context"
+              ...
+          - pattern-either:
+              - pattern: "($W : http.ResponseWriter).Write($BUF)"
+              - pattern: "($W : *context.Response).Write($BUF)"
+              - pattern: "($W : *context.Context).WriteString($S)"
+              - pattern: "($O : *context.BeegoOutput).Body($BODY)"
+              - pattern: "($O : *context.BeegoOutput).JSON($DATA, ...)"
+              - pattern: "($C : *web.Controller).ServeJSON()"
+              - pattern: "fmt.Fprint($W, ...)"
+              - pattern: "fmt.Fprintf($W, ...)"
+              - pattern: "fmt.Fprintln($W, ...)"
+              - pattern: "io.WriteString($W, $S)"
+              - pattern: "json.NewEncoder($W).Encode($DATA)"
+    pattern-sanitizers:
+      # template escapers live in both html/template and text/template
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  import template "html/template"
+                  ...
+              - pattern-inside: |
+                  import template "text/template"
+                  ...
+          - pattern-either:
+              - pattern: "template.HTMLEscapeString($X)"
+              - pattern: "template.JSEscapeString($X)"
+              - pattern: "template.URLQueryEscaper($X)"
+              - pattern: "template.HTMLEscaper($X)"
+      - patterns:
+          - pattern-inside: |
+              import "html"
+              ...
+          - pattern: "html.EscapeString($X)"
+      - patterns:
+          - pattern-inside: |
+              import "net/url"
+              ...
+          - pattern-either:
+              - pattern: "url.QueryEscape($X)"
+              - pattern: "url.PathEscape($X)"

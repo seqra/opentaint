@@ -205,11 +205,12 @@ class GoMethodCallFlowFunction(
             }
 
             if (startFactBase !is AccessPathBase.ClassStatic) {
+                val ruleApplied = startFactBase in passEvaluator.relevantPositionBase
                 context.taint.externalMethodTracker?.trackExternalMethod(
                     method = signature.name,
                     signature = "args:${signature.arity}",
                     factPosition = startFactBase.toString(),
-                    rulesApplied = passThroughFacts.isSome,
+                    rulesApplied = ruleApplied,
                 )
             }
 

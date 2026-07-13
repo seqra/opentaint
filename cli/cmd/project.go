@@ -121,14 +121,8 @@ func (c *JavaAutobuilderConfig) validate() error {
 }
 
 func (c *JavaAutobuilderConfig) runAutobuilder() error {
-	autobuilderJarPath, err := utils.GetAutobuilderJarPath(globals.Config.Autobuilder.Version)
+	autobuilderJarPath, err := ensureAutobuilderAvailable()
 	if err != nil {
-		return fmt.Errorf("failed to construct path to the autobuilder: %w", err)
-	}
-
-	if err = ensureArtifactAvailable("autobuilder", globals.Config.Autobuilder.Version, autobuilderJarPath, func() error {
-		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, globals.Config.Autobuilder.Version, globals.AutobuilderAssetName, autobuilderJarPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
-	}); err != nil {
 		return err
 	}
 
@@ -189,9 +183,11 @@ func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) erro
 }
 
 func (c *JavaAutobuilderConfig) logProjectSummary(projectYamlPath string, config *project.Config) {
+	modules := config.AllModules()
+	dependencies := config.AllDependencies()
 	totalPackages := 0
 	totalClasses := 0
-	for _, module := range config.Modules {
+	for _, module := range modules {
 		totalPackages += len(module.Packages)
 		totalClasses += len(module.ModuleClasses)
 	}
@@ -200,10 +196,10 @@ func (c *JavaAutobuilderConfig) logProjectSummary(projectYamlPath string, config
 	out.Section("Project Summary").
 		Field("Generated project.yaml at", projectYamlPath).
 		Line().
-		Field("Total modules", len(config.Modules)).
+		Field("Total modules", len(modules)).
 		Field("Total classes", totalClasses).
 		Field("Total packages", totalPackages).
-		Field("Total dependencies", len(config.Dependencies)).
+		Field("Total dependencies", len(dependencies)).
 		Render()
 }
 

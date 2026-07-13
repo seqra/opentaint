@@ -27,6 +27,7 @@ import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.dataflow.taint.preconditionDnf
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
+import org.opentaint.ir.api.jvm.cfg.JIRBinaryExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
 import org.opentaint.ir.api.jvm.cfg.JIRExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
@@ -46,6 +47,10 @@ class JIRMethodSequentPrecondition(
     override fun factPrecondition(
         fact: InitialFactAp,
     ): Set<SequentPrecondition> {
+        if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
+            return setOf(SequentPrecondition.Unchanged)
+        }
+
         val results = mutableSetOf<SequentPrecondition>()
         results.computeFactPrecondition(fact, applyExitSourceRules = true)
         return results
@@ -125,6 +130,11 @@ class JIRMethodSequentPrecondition(
             is JIRImmediate -> MethodFlowFunctionUtils.mkAccess(assignFrom)
             is JIRArrayAccess -> MethodFlowFunctionUtils.mkAccess(assignFrom)
             is JIRFieldRef -> MethodFlowFunctionUtils.mkAccess(assignFrom)
+            is JIRBinaryExpr -> {
+                val lhv = sequentAssignPrecondition(assignFrom.lhv, assignTo, fact)
+                val rhv = sequentAssignPrecondition(assignFrom.rhv, assignTo, fact)
+                return if (lhv == null && rhv == null) null else lhv.orEmpty() + rhv.orEmpty()
+            }
             else -> null
         }
 

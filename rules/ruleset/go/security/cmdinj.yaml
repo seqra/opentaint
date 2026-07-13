@@ -1,98 +1,64 @@
 rules:
-  - id: go-command-injection
-    languages: [go]
+  - id: command-injection
     severity: ERROR
-    message: Tainted user input reaches OS command execution (command injection)
+    message: >-
+      OS command injection: the command line is built from user-controlled input
     metadata:
       cwe: CWE-78
-      short-description: Command injection
-    mode: taint
-    pattern-sources:
-      - pattern-either:
-          # net/http.Request — method calls
-          - pattern: $R.FormValue($K)
-          - pattern: $R.PostFormValue($K)
-          - pattern: $R.FormFile($K)
-          - pattern: $R.Cookie($K)
-          - pattern: $R.Cookies()
-          - pattern: $R.MultipartReader()
-          - pattern: $R.Referer()
-          - pattern: $R.UserAgent()
-          # net/http.Request — URL chain
-          - pattern: $R.URL.Query()
-          - pattern: $R.URL.Query().Get($K)
-          - pattern: $R.URL.Path
-          - pattern: $R.URL.RawQuery
-          - pattern: $R.URL.RawPath
-          # net/http.Request — Header chain
-          - pattern: $R.Header.Get($K)
-          - pattern: $R.Header[$K]
-          - pattern: $R.Header[$K][$I]
-          - pattern: $R.Form[$K]
-          - pattern: $R.Form[$K][$I]
-          - pattern: $R.PostForm[$K]
-          - pattern: $R.PostForm[$K][$I]
-          - pattern: $R.URL.Query()[$K]
-          - pattern: $R.URL.Query()[$K][$I]
-          - pattern: $R.Header.Values($K)
-          # net/http.Request — Form chain
-          - pattern: $R.Form.Get($K)
-          - pattern: $R.PostForm.Get($K)
-          # net/http.Request — field reads
-          - pattern: $R.Body
-          - pattern: $R.GetBody
-          - pattern: $R.Form
-          - pattern: $R.PostForm
-          - pattern: $R.MultipartForm
-          - pattern: $R.Header
-          - pattern: $R.Trailer
-          - pattern: $R.URL
-          # env / args
-          - pattern: os.Getenv($K)
-          - pattern: os.LookupEnv($K)
-          - pattern: os.Args
-          # beego Controller methods
-          - pattern: $C.GetString($K)
-          - pattern: $C.GetString($K, $DEF)
-          - pattern: $C.GetStrings($K)
-          - pattern: $C.GetStrings($K, $DEF)
-          - pattern: $C.GetStrings($K)[$IDX]
-          - pattern: $C.GetStrings($K, $DEF)[$IDX]
-          - pattern: $C.GetInt($K)
-          - pattern: $C.GetInt($K, $DEF)
-          - pattern: $C.GetInt8($K)
-          - pattern: $C.GetInt16($K)
-          - pattern: $C.GetInt32($K)
-          - pattern: $C.GetInt64($K)
-          - pattern: $C.GetUint8($K)
-          - pattern: $C.GetUint16($K)
-          - pattern: $C.GetUint32($K)
-          - pattern: $C.GetUint64($K)
-          - pattern: $C.GetFloat($K)
-          - pattern: $C.GetBool($K)
-          - pattern: $C.GetFile($K)
-          - pattern: $C.GetFiles($K)
-          - pattern: $C.GetSession($K)
-          - pattern: $C.Input()
-          - pattern: $C.ParseForm($PTR)
-          # beego Context.Input methods (c.Ctx.Input.X)
-          - pattern: $X.Param($K)
-          - pattern: $X.Params()
-          - pattern: $X.Header($K)
-          - pattern: $X.URI()
-          - pattern: $X.URL()
-          - pattern: $X.RequestBody
-          - pattern: $X.Bind($PTR)
-    pattern-sinks:
-      - pattern-either:
-          - pattern: exec.Command($NAME, ...)
-          - pattern: exec.CommandContext($CTX, $NAME, ...)
-          - pattern: exec.LookPath($NAME)
-          - pattern: os.StartProcess($NAME, ...)
-          - pattern: syscall.Exec($NAME, ...)
-          - pattern: syscall.ForkExec($NAME, ...)
-          - pattern: syscall.StartProcess($NAME, ...)
-          - pattern: $C.CombinedOutput()
-          - pattern: $C.Run()
-          - pattern: $C.Output()
-          - pattern: $C.Start()
+      short-description: OS command built from user-controlled input
+      full-description: |-
+        Command injection occurs when untrusted data reaches process-execution APIs such as
+        `exec.Command(...)`, `exec.CommandContext(...)`, or `syscall.Exec(...)`. When the
+        command name or a shell argument comes from user-controlled input, an attacker can
+        run arbitrary commands on the host.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            cmd := r.FormValue("cmd") // untrusted
+
+            // VULNERABLE: user input is handed to a shell interpreter
+            exec.Command("sh", "-c", cmd).Run()
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        var hostRe = regexp.MustCompile(`^[A-Za-z0-9.-]{1,255}$`)
+
+        func handler(w http.ResponseWriter, r *http.Request) {
+            host := r.FormValue("host")
+            if !hostRe.MatchString(host) {
+                http.Error(w, "invalid host", http.StatusBadRequest)
+                return
+            }
+
+            // SAFE: fixed executable, arguments passed separately (no shell)
+            exec.Command("ping", "-c", "4", host).Run()
+        }
+        ```
+
+        Patterns covered include `exec.Command`/`exec.CommandContext`/`exec.LookPath`,
+        `os.StartProcess`, and `syscall.Exec`/`syscall.ForkExec`/`syscall.StartProcess`
+        with a tainted command name, a tainted argument to a shell interpreter, and
+        execution of an `*exec.Cmd` whose argv or environment already carries taint.
+      references:
+        - https://owasp.org/www-community/attacks/Command_Injection
+        - https://cwe.mitre.org/data/definitions/78.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#http-sources
+          as: src
+        - rule: go/lib/http-sources-header-index.yaml#http-sources-header-index
+          as: extra_header
+        - rule: go/lib/cmdi-sinks.yaml#cmdi-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'extra_header.$UNTRUSTED -> sink.$UNTRUSTED'

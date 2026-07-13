@@ -30,8 +30,7 @@ func GetOpenTaintHome() (string, error) {
 	return path, nil
 }
 
-// pathExists reports whether a path exists on disk.
-func pathExists(p string) bool {
+func PathExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil
 }
@@ -50,22 +49,30 @@ func exeDir() string {
 	return filepath.Dir(exe)
 }
 
+func resolveBundledDir(exeDir, name string) string {
+	if exeDir == "" {
+		return ""
+	}
+	flat := filepath.Join(exeDir, name)
+	if PathExists(flat) {
+		return flat
+	}
+	if sibling := filepath.Join(exeDir, "..", name); PathExists(sibling) {
+		return sibling
+	}
+	return flat
+}
+
 // GetBundledLibPath returns the path to the bundled lib directory next to the binary.
 // Returns empty string if the path cannot be determined.
 func GetBundledLibPath() string {
-	if dir := exeDir(); dir != "" {
-		return filepath.Join(dir, "lib")
-	}
-	return ""
+	return resolveBundledDir(exeDir(), "lib")
 }
 
 // GetBundledJREPath returns the path to the bundled JRE directory next to the binary.
 // Returns empty string if the path cannot be determined.
 func GetBundledJREPath() string {
-	if dir := exeDir(); dir != "" {
-		return filepath.Join(dir, "jre")
-	}
-	return ""
+	return resolveBundledDir(exeDir(), "jre")
 }
 
 // GetInstallDir returns the path to ~/.opentaint/install/.
@@ -96,6 +103,24 @@ func GetInstallJREPath() string {
 	return ""
 }
 
+// VersionMarkerName is the byte-for-byte copy of the embedded versions.yaml
+// dropped alongside an artifact tier so a later run can detect whether that
+// tier matches the current bind version. Used both next to the binary (bundled
+// tier) and in ~/.opentaint/install/ (install tier).
+const VersionMarkerName = ".versions"
+
+func IsBundledRelease() bool {
+	lib := GetBundledLibPath()
+	if lib == "" {
+		return false
+	}
+	data, err := os.ReadFile(filepath.Join(lib, VersionMarkerName))
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(data, globals.GetVersionsYAML())
+}
+
 // IsInstallCurrent reports whether the install-tier version marker matches
 // the embedded versions.yaml. Returns false if the marker is missing or differs.
 func IsInstallCurrent() bool {
@@ -103,7 +128,7 @@ func IsInstallCurrent() bool {
 	if installDir == "" {
 		return false
 	}
-	data, err := os.ReadFile(filepath.Join(installDir, ".versions"))
+	data, err := os.ReadFile(filepath.Join(installDir, VersionMarkerName))
 	if err != nil {
 		return false
 	}
@@ -120,7 +145,7 @@ func WriteInstallVersionMarker() error {
 	if err := os.MkdirAll(installDir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(installDir, ".versions"), globals.GetVersionsYAML(), 0o644)
+	return os.WriteFile(filepath.Join(installDir, VersionMarkerName), globals.GetVersionsYAML(), 0o644)
 }
 
 // CleanInstallDir removes the install-tier lib and jre directories along with
@@ -130,7 +155,7 @@ func CleanInstallDir() error {
 	if installDir == "" {
 		return nil
 	}
-	for _, sub := range []string{"lib", "jre", ".versions"} {
+	for _, sub := range []string{"lib", "jre", VersionMarkerName} {
 		if err := os.RemoveAll(filepath.Join(installDir, sub)); err != nil {
 			return err
 		}
@@ -151,35 +176,35 @@ func ReconcileInstallMarker() {
 		return
 	}
 	for _, def := range globals.Artifacts() {
-		if !pathExists(filepath.Join(installLib, def.LibSubpath)) {
+		if !PathExists(filepath.Join(installLib, def.LibSubpath)) {
 			return
 		}
 	}
 	_ = WriteInstallVersionMarker()
 }
 
-// resolveArtifactPath resolves the path for an artifact by checking tiers in order:
-//  1. Bundled path (next to binary) — only if version matches bindVersion
-//  2. Install path (~/.opentaint/install/lib/) — only if version matches bindVersion
-//  3. Cache path (~/.opentaint/<cacheName>)
-func resolveArtifactPath(def globals.ArtifactDef) (string, error) {
+func resolveArtifactTier(def globals.ArtifactDef) (string, string, error) {
 	tiers, err := ArtifactTiers(def)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if found := FindExisting(CurrentTiers(tiers, IsInstallCurrent())); found != nil {
-		return found.Path, nil
+		return found.Name, found.Path, nil
 	}
-	// Return last tier as default download target (even if artifact not yet downloaded)
-	return tiers[len(tiers)-1].Path, nil
+	last := tiers[len(tiers)-1]
+	return last.Name, last.Path, nil
 }
 
-func GetAutobuilderJarPath(version string) (string, error) {
-	return resolveArtifactPath(globals.ArtifactByKind("autobuilder").WithVersion(version))
+func resolveArtifactPath(def globals.ArtifactDef) (string, error) {
+	_, path, err := resolveArtifactTier(def)
+	return path, err
 }
 
-func GetAnalyzerJarPath(version string) (string, error) {
-	return resolveArtifactPath(globals.ArtifactByKind("analyzer").WithVersion(version))
+func ResolveJarPath(def globals.ArtifactDef) (string, error) {
+	if def.Override != "" {
+		return def.Override, nil
+	}
+	return resolveArtifactPath(def)
 }
 
 func GetRulesPath(version string) (string, error) {

@@ -26,6 +26,17 @@ class JIRMethodCallSummaryHandler(
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> =
         JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
 
+    override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
+        super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->
+            if (seq !is Sequent.ZeroToFact) return@flatMapTo listOf(seq)
+
+            val result = mutableListOf(seq)
+            applyCallAliases(seq.factAp) { aliased ->
+                result += Sequent.ZeroToFact(aliased, seq.traceInfo)
+            }
+            result
+        }
+
     override fun handleSummary(
         currentFactAp: FinalFactAp,
         summaryEffect: MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication,
@@ -46,7 +57,7 @@ class JIRMethodCallSummaryHandler(
             }
 
             if (summaryEdge.hasMemoryEffect()) {
-                analysisContext.aliasAnalysis?.forEachAliasAfterCallStatement(statement, summaryFactAp) { aliased ->
+                applyCallAliases(summaryFactAp) { aliased ->
                     result += handleSummaryEdge(initialFactRefinement, aliased)
                 }
             }
@@ -77,6 +88,12 @@ class JIRMethodCallSummaryHandler(
                 resultFact,
             )
         }
+
+    private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
+        analysisContext.aliasAnalysis?.forEachAliasAfterCallStatement(statement, fact) { aliased ->
+            body(aliased)
+        }
+    }
 
     private fun SummaryEdge.hasMemoryEffect(): Boolean {
         if (this !is SummaryEdge.F2F) return true

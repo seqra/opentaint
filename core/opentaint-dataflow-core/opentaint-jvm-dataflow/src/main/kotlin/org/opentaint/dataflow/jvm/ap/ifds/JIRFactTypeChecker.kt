@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.jvm.ap.ifds.taint.PrimitiveTaintExt
 import org.opentaint.dataflow.jvm.util.JIRHierarchyInfo
 import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.jvm.JIRArrayType
@@ -36,6 +37,7 @@ import org.opentaint.ir.api.jvm.ext.ifArrayGetElementType
 import org.opentaint.ir.api.jvm.ext.isAssignable
 import org.opentaint.ir.api.jvm.ext.isSubClassOf
 import org.opentaint.ir.api.jvm.ext.objectType
+import org.opentaint.ir.api.jvm.ext.unboxIfNeeded
 import org.opentaint.ir.impl.features.classpaths.JIRUnknownType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.LongAdder
@@ -81,7 +83,18 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
         private fun checkAccessor(accessor: Accessor): FilterResult {
             when (accessor) {
-                is TaintMarkAccessor, FinalAccessor, AnyAccessor, is ClassStaticAccessor -> return FilterResult.Accept
+                is FinalAccessor, is AnyAccessor, is ClassStaticAccessor -> return FilterResult.Accept
+
+                is TaintMarkAccessor -> {
+                    if (actualType.unboxIfNeeded() is JIRPrimitiveType) {
+                        if (!accessor.mark.endsWith(PrimitiveTaintExt.PRIMITIVE_TRACKING_ENABLED_MODE)) {
+                            return FilterResult.Reject
+                        }
+                    }
+
+                    return FilterResult.Accept
+                }
+
                 is FieldAccessor -> {
                     if (actualType !is JIRRefType) return FilterResult.Reject
 

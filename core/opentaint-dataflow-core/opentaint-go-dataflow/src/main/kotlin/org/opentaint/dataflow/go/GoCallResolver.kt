@@ -11,7 +11,7 @@ import org.opentaint.ir.go.cfg.GoIRCallInfo
 import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRCallMode
-import org.opentaint.ir.go.type.GoIRInterfaceType
+import org.opentaint.ir.go.type.GoIRNamedInterfaceType
 import org.opentaint.ir.go.type.GoIRNamedTypeKind
 import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRType
@@ -81,10 +81,10 @@ class GoCallResolver(
     private fun resolveInterfaceFullName(type: GoIRType): String? {
         return when (type) {
             is GoIRNamedTypeRef -> {
-                if (type.namedType.kind == GoIRNamedTypeKind.INTERFACE) type.namedType.fullName
-                else null
+                val named = type.namedType
+                if (named.kind == GoIRNamedTypeKind.INTERFACE) named.fullName else null
             }
-            is GoIRInterfaceType -> type.namedType?.fullName
+            is GoIRNamedInterfaceType -> type.namedType.fullName
             else -> null
         }
     }

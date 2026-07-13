@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="Підсумковий вивід OpenTaint">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="Підсумковий вивід OpenTaint">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>Більше скриншотів</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="Вивід сканування OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="Вивід сканування OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="Підсумковий вивід OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="Підсумковий вивід OpenTaint">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="Підсумковий вивід OpenTaint">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## Чому OpenTaint
+## Чому OpenTaint?
 
-ШІ генерує продакшн-код швидше, ніж сучасні інструменти безпеки встигають за ним.
+> OpenTaint — це альтернатива з відкритим кодом для *Semgrep Pro* та *CodeQL*: формальний міжпроцедурний рушій taint-аналізу, який можна налаштовувати та розгортати у себе, створений для того, щоб ШІ-агенти керували вашим аналізом безпеки, не спалюючи токени на кожному скануванні.
 
-LLM-агенти безпеки знаходять вразливості, які пропускають люди, витрачають токени на кожен файл і все одно не можуть гарантувати, що виявлять усе.
+ШІ генерує продакшн-код швидше, ніж команди безпеки встигають за ним, і обидва типи інструментів, створених для виявлення його помилок, нав'язують невдалий компроміс:
 
-Чим більше коду пише ШІ, тим більше вам потрібні формальні методи в основі.
+- **Рушії на основі AST-шаблонів** (Semgrep OSS, ast-grep, лінтери) безкоштовні та швидкі, але вони зіставляють синтаксис, а не потоки даних — ненадійний ввід, який перетинає межу функції або рівень персистентності, прослизає повз них. Глибший міжпроцедурний аналіз, який *справді* його виявляє, давно замкнений усередині пропрієтарних інструментів.
+- **LLM-агенти безпеки** знаходять те, що пропускають рушії на основі шаблонів, але вони перечитують ваш код при кожному запуску. Токени накопичуються з кожним файлом, кожним комітом, кожною збіркою CI — і ймовірнісна модель усе одно не може гарантувати, що виявила все.
 
-- **Знаходьте те, що пропускають рушії на основі AST-шаблонів.** Міжпроцедурний рушій аналізу потоків даних відстежує ненадійні дані через межі функцій, рівні персистентності, псевдоніми та асинхронний код.
-- **Одне виявлення — повне покриття.** Правила у форматі AST-шаблонів дозволяють перетворити кожну виявлену вразливість на правило, яке рушій застосує до всієї кодової бази детерміновано за хвилини процесорного часу.
-- **Відкритий код, все включено.** Рушій, правила, CI-інтеграції — весь стек поставляється під ліцензіями Apache 2.0 та MIT. Немає платного рівня для taint-відстеження, немає обмежень на створення власних правил.
+OpenTaint дає вам глибину LLM-агента за ціною статичного аналізатора:
+
+- **Знаходьте те, що пропускають рушії на основі AST-шаблонів.** Формальний міжпроцедурний рушій аналізу потоків даних відстежує ненадійні дані через межі функцій, рівні персистентності, псевдоніми та асинхронний код.
+- **Платіть моделі один раз, а не на кожному скануванні.** Дозвольте агенту дистилювати одну знахідку в taint-правило. Потім детермінований рушій відтворює це правило по всій кодовій базі — та по кожному наступному коміту — за хвилини процесорного часу й з нульовою витратою токенів.
+- **Відкритий код, все включено.** Рушій, правила та CI-інтеграції поставляються єдиним стеком під ліцензіями Apache 2.0 та MIT.
 
 ## Швидкий старт
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**Встановлення через npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Або запустіть миттєво через npx — без встановлення (потрібен Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Скануйте свій проєкт:**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 
 ---
 
+## Робочі процеси ШІ-агентів
+
+OpenTaint містить навички для агентів, які перетворюють статичний аналіз на наскрізний робочий процес безпеки застосунків. Встановіть їх командою:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+Навичка `appsec-agent` оркеструє повну оцінку проєкту: збирає проєкт, запускає OpenTaint, виявляє поверхню атаки, додає цільові правила, моделює відсутні потоки даних бібліотек, тріажить знахідки та за потреби генерує динамічні proof-of-concept перевірки для підтверджених вразливостей.
+
+Включені навички охоплюють типовий цикл аналізу безпеки:
+
+- **Сканування та тріаж:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Розширення покриття:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Моделювання потоків даних:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## Документація
 
 Повні посібники — встановлення, використання, налаштування, інтеграція з CI/CD: **[Документація](../../docs/README.md)**.
@@ -150,6 +186,16 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 - **Проблеми:** [GitHub Issues](https://github.com/seqra/opentaint/issues)
 - **Спільнота:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **Електронна пошта:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## Історія зірок
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## Ліцензія
 

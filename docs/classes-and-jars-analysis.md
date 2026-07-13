@@ -5,46 +5,59 @@ OpenTaint supports analyzing pre-compiled Java classes and JARs through a `proje
 
 ## File Structure
 
+A project model groups one or more per-language projects under a top-level wrapper:
+
 ```yaml
-sourceRoot: /path/to/source/root
-javaToolchain: /path/to/java/toolchain  # optional
-modules:
-  - moduleSourceRoot: /path/to/module1/src
-    packages:
-      - com.example.module1
-      - com.example.shared
-    moduleClasses:
-      - /path/to/module1/classes
-      - /path/to/module1/target/classes
-  - moduleSourceRoot: /path/to/module2/src
-    packages:
-      - com.example.module2
-    moduleClasses:
-      - /path/to/module2.jar
-dependencies:  # optional
-  - /path/to/dependency1.jar
-  - /path/to/dependency2.jar
+projectRoot: /path/to/project  # optional
+javaProjects:
+  - sourceRoot: /path/to/source/root
+    javaToolchain: /path/to/java/toolchain  # optional
+    modules:
+      - moduleSourceRoot: /path/to/module1/src
+        packages:
+          - com.example.module1
+          - com.example.shared
+        moduleClasses:
+          - /path/to/module1/classes
+          - /path/to/module1/target/classes
+      - moduleSourceRoot: /path/to/module2/src
+        packages:
+          - com.example.module2
+        moduleClasses:
+          - /path/to/module2.jar
+    dependencies:  # optional
+      - /path/to/dependency1.jar
+      - /path/to/dependency2.jar
+goProjects:  # optional
+  - projectDir: /path/to/go/module
 ```
+
+Empty lists and unset optional fields are omitted from the generated file (so a Java-only model has no `goProjects`, and vice versa).
 
 ## Field Descriptions
 
-### sourceRoot (required)
-The root directory containing your project's source code. This can be an absolute or relative path.
+### projectRoot (optional)
+Root directory of the analyzed project. When the model is generated in portable mode, the paths inside it are stored relative to this directory so the whole model directory can be moved.
 
-### javaToolchain (optional)
-Path to the Java toolchain directory. If not specified, the system's default Java installation will be used. This field is optional and can be omitted from the YAML file.
+### javaProjects
+List of Java projects. Each entry describes one Java project (a multi-module build is a single entry with several `modules`; independent builds are separate entries).
 
-### modules (required)
-Array of module configurations. Each module represents a logical unit of your project. At least one module configuration is required.
+#### Java project fields
 
-#### Module Fields
+- **sourceRoot** (required): The root directory containing the project's source code (absolute or relative).
+- **javaToolchain** (optional): Path to the Java toolchain directory. If omitted, the system's default Java installation is used.
+- **modules** (required): Array of module configurations. Each module represents a logical unit of the project; at least one is required.
+  - **moduleSourceRoot** (required): Path to the module's source code directory
+  - **packages** (required): List of Java packages contained in this module
+  - **moduleClasses** (required): List of paths to compiled classes or JAR files for this module
+- **dependencies** (optional): Array of paths to JAR files the project depends on (typically third-party libraries).
 
-- **moduleSourceRoot** (required): Path to the module's source code directory
-- **packages** (required): List of Java packages contained in this module
-- **moduleClasses** (required): List of paths to compiled classes or JAR files for this module
+### goProjects (optional)
+List of Go projects. Each entry has a single field, **projectDir**, pointing at the Go module directory.
 
-### dependencies (optional)
-Array of paths to JAR files that your project depends on. These are typically third-party libraries. This field is optional and can be omitted from the YAML file.
+### Legacy format
+
+For backward compatibility, a flat single-Java-project layout is still accepted as input — the top-level `sourceRoot`, `javaToolchain`, `modules`, and `dependencies` fields written directly (without the `javaProjects` wrapper). It is loaded as a project model containing one Java project. New models are generated in the wrapped format shown above.
 
 ## Creating project.yaml
 

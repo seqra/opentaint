@@ -29,4 +29,6 @@ interface AnalysisRunner {
     fun submitExternalInitialZeroFact(methodEntryPoint: MethodEntryPoint)
     fun submitExternalInitialFact(methodEntryPoint: MethodEntryPoint, factAp: FinalFactAp)
     fun triggerSideEffectRequirement(methodEntryPoint: MethodEntryPoint, initialFactAp: InitialFactAp)
+
+    fun cleanup()
 }

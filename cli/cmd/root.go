@@ -40,6 +40,8 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		initConfig(cmd)
+
 		applyExperimentalFlagVisibility(cmd.Root(), experimentalMode)
 
 		if err := log.SetUpLogs(); err != nil {
@@ -93,7 +95,6 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
 	configureExperimentalFlagVisibility()
 
 	// Here you will define your flags and configuration settings.
@@ -154,8 +155,9 @@ func init() {
 	_ = viper.BindPFlag("autobuilder.jar_path", rootCmd.PersistentFlags().Lookup("autobuilder-jar"))
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
+func initConfig(cmd *cobra.Command) {
+	bindScanFlags(cmd)
+
 	if globals.ConfigFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(globals.ConfigFile)
@@ -167,6 +169,19 @@ func initConfig() {
 
 	_ = viper.ReadInConfig()
 	_ = viper.Unmarshal(&globals.Config)
+}
+
+func bindScanFlags(cmd *cobra.Command) {
+	for key, name := range map[string]string{
+		"scan.timeout":         "timeout",
+		"scan.ruleset":         "ruleset",
+		"scan.max_memory":      "max-memory",
+		"scan.code_flow_limit": "code-flow-limit",
+	} {
+		if f := cmd.Flags().Lookup(name); f != nil {
+			_ = viper.BindPFlag(key, f)
+		}
+	}
 }
 
 // hasNestedKey reports whether a dotted key path is present in a viper settings map.

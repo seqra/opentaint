@@ -1,0 +1,306 @@
+language: java
+passThrough:
+- function: org.springframework.ldap.query.LdapQueryBuilder#base
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.LdapQueryBuilder#where
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.LdapQueryBuilder#filter
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.LdapQuery#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.LdapQueryBuilder#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.LdapQuery#filter#java.lang.Object
+- function: org.springframework.ldap.query.ConditionCriteria#is
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.ConditionCriteria#like
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.ConditionCriteria#whitespaceWildcardsLike
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.ConditionCriteria#gte
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.ConditionCriteria#lte
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.ConditionCriteria#not
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.LdapQueryBuilder#searchScope
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.LdapQueryBuilder#countLimit
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.LdapQueryBuilder#timeLimit
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.LdapQueryBuilder#attributes
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.ContainerCriteria#and
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.ContainerCriteria#or
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultConditionCriteria#is
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultConditionCriteria#like
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultConditionCriteria#whitespaceWildcardsLike
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultConditionCriteria#gte
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultConditionCriteria#lte
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultConditionCriteria#not
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.query.DefaultContainerCriteria#and
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultContainerCriteria#or
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+    to:
+    - result
+    - .org.springframework.ldap.query.ConditionCriteria#filter#java.lang.Object
+- function: org.springframework.ldap.query.DefaultContainerCriteria#append
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.query.ContainerCriteria#filter#java.lang.Object
+  - from: this
+    to: result

@@ -1,0 +1,20 @@
+language: java
+passThrough:
+- function: org.apache.velocity.context.Context#put
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.apache.velocity.context.Context#value#java.lang.Object
+- function: org.apache.velocity.VelocityContext#put
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.apache.velocity.context.Context#value#java.lang.Object
+- function: org.apache.velocity.context.AbstractContext#put
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.apache.velocity.context.Context#value#java.lang.Object

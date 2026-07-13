@@ -1,0 +1,154 @@
+language: java
+passThrough:
+- function: java.net.http.HttpRequest#newBuilder
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+- function: java.net.http.HttpRequest$Builder#uri
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#header
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#headers
+  signature: (java.lang.String[]) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#setHeader
+  signature: (java.lang.String, java.lang.String) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#POST
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#PUT
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#method
+  signature: (java.lang.String, java.net.http.HttpRequest$BodyPublisher) *
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#DELETE
+  copy:
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#GET
+  copy:
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#timeout
+  copy:
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#version
+  copy:
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#expectContinue
+  copy:
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#copy
+  copy:
+  - from: this
+    to: result
+- function: java.net.http.HttpRequest$Builder#build
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .java.net.http.HttpRequest$Builder#url#java.lang.Object
+    to:
+    - result
+    - .java.net.http.HttpRequest#url#java.lang.Object

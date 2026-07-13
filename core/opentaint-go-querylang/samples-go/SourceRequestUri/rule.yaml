@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: "$R.RequestURI"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "SourceRequestUri.Sink($X)"

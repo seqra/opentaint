@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="OpenTaint özet çıktısı">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="OpenTaint özet çıktısı">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>Daha fazla ekran görüntüsü</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="OpenTaint tarama çıktısı">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="OpenTaint tarama çıktısı">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="OpenTaint özet çıktısı">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="OpenTaint özet çıktısı">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="OpenTaint özet çıktısı">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="OpenTaint özet çıktısı">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="OpenTaint özet çıktısı">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="OpenTaint özet çıktısı">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="OpenTaint özet çıktısı">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## Neden OpenTaint
+## Neden OpenTaint?
 
-Yapay zeka, üretim kodunu günümüzün güvenlik araçlarının takip edemeyeceği hızda üretiyor.
+> OpenTaint, *Semgrep Pro* ve *CodeQL*'e açık kaynaklı bir alternatiftir — özelleştirebileceğiniz ve kendi sunucunuzda barındırabileceğiniz, formal prosedürler arası bir taint motorudur; yapay zeka ajanlarının her taramada token harcamadan güvenlik analizinizi yürütmesi için tasarlanmıştır.
 
-LLM güvenlik ajanları insanların kaçırdığı güvenlik açıklarını buluyor, her dosya için token harcıyor ve yine de her şeyi yakaladıklarını garanti edemiyor.
+Yapay zeka, üretim kodunu güvenlik ekiplerinin takip edebileceğinden daha hızlı üretiyor ve onun hatalarını yakalamak için geliştirilen iki tür araç da kötü bir takastan kaçınamıyor:
 
-Yapay zeka ne kadar çok kod yazarsa, altında formal yöntemlere o kadar çok ihtiyaç duyarsınız.
+- **AST kalıp eşleyiciler** (Semgrep OSS, ast-grep, linter'lar) ücretsiz ve hızlıdır, ancak veri akışını değil söz dizimini eşleştirir — bir fonksiyon sınırını veya bir kalıcılık katmanını aşan güvenilmeyen girdi doğrudan gözden kaçar. Bunu yakalayan daha derin, prosedürler arası analiz ise uzun süredir tescilli araçların içine kilitlenmiş durumda.
+- **LLM güvenlik ajanları** kalıp eşleyicilerin kaçırdığını bulur, ancak her çalıştırmada kodunuzu yeniden okur. Token'lar her dosyada, her commit'te, her CI derlemesinde birikir — ve olasılıksal bir model yine de her şeyi yakaladığına söz veremez.
 
-- **AST kalıp eşleme motorlarının kaçırdığını bulun.** Prosedürler arası veri akışı motoru, güvenilmeyen verileri fonksiyon sınırları, kalıcılık katmanları, takma adlar ve asenkron kod boyunca takip eder.
-- **Bir bulgu toplam kapsama dönüşür.** AST kalıp kuralları, keşfedilen her güvenlik açığını bir kural olarak tanımlamanıza olanak tanır; motor bunu tüm kod tabanına deterministik olarak, dakikalar içinde uygular.
-- **Açık kaynak, her şey dahil.** Motor, kurallar, CI entegrasyonları — tüm yığın Apache 2.0 ve MIT altında dağıtılır. Taint takibini açmak için ücretli katman yok, kendi kurallarınızı yazmak için engel yok.
+OpenTaint, bir LLM ajanının derinliğini bir statik analizörün maliyetiyle sunar:
+
+- **AST kalıp eşleyicilerin kaçırdığını bulun.** Formal, prosedürler arası bir veri akışı motoru, güvenilmeyen verileri fonksiyon sınırları, kalıcılık katmanları, takma adlar ve asenkron kod boyunca takip eder.
+- **Modelin bedelini bir kez ödeyin, her taramada değil.** Bir ajanın tek bir bulguyu bir taint kuralına dönüştürmesine izin verin. Deterministik motor bu kuralı ardından tüm kod tabanında — ve ondan sonraki her commit'te — dakikalar süren CPU işlemiyle, sıfır token maliyetiyle yeniden uygular.
+- **Açık kaynak, her şey dahil.** Motor, kurallar ve CI entegrasyonları, Apache 2.0 ve MIT altında tek bir yığın olarak gelir.
 
 ## Hızlı Başlangıç
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**npm ile kurulum (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**Veya npx ile anında çalıştırın — kurulum gerekmez (Node.js gerektirir):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **Projenizi tarayın:**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ Daha fazla seçenek için [Kurulum](../../docs/README.md#installation) ve [Kulla
 
 ---
 
+## Yapay Zeka Ajan İş Akışları
+
+OpenTaint, statik analizi uçtan uca bir uygulama güvenliği iş akışına dönüştüren ajan becerileri içerir. Bunları şu komutla kurun:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` becerisi, eksiksiz bir proje değerlendirmesini yönetir: projeyi derleyin, OpenTaint'i çalıştırın, saldırı yüzeyini keşfedin, hedefli kurallar ekleyin, eksik kütüphane veri akışlarını modelleyin, bulguları önceliklendirin ve isteğe bağlı olarak doğrulanmış güvenlik açıkları için dinamik kavram kanıtı (proof-of-concept) kontrolleri oluşturun.
+
+İçerilen beceriler, yaygın güvenlik analizi döngüsünü kapsar:
+
+- **Tarama ve önceliklendirme:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **Kapsam genişletme:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Veri akışı modelleme:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## Dokümantasyon
 
 Tam kılavuzlar — kurulum, kullanım, yapılandırma, CI/CD entegrasyonu: **[Dokümantasyon](../../docs/README.md)**.
@@ -150,6 +186,16 @@ Tam kılavuzlar — kurulum, kullanım, yapılandırma, CI/CD entegrasyonu: **[D
 - **Sorunlar:** [GitHub Issues](https://github.com/seqra/opentaint/issues)
 - **Topluluk:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **E-posta:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## Yıldız Geçmişi
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## Lisans
 

@@ -1,0 +1,63 @@
+rules:
+  - id: ssrf
+    severity: ERROR
+    message: >-
+      Server-side request forgery: the outbound request target is user-controlled
+    metadata:
+      cwe: CWE-918
+      short-description: Outbound request target controlled by user input
+      full-description: |-
+        Server-side request forgery (SSRF) occurs when untrusted data controls the target
+        of an outbound request made through APIs such as `http.Get`, `http.Post`, or
+        `http.NewRequest`. An attacker can point the server at internal services, cloud
+        metadata endpoints, or other hosts the server can reach but the client cannot.
+
+        Vulnerable example:
+
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            target := r.FormValue("url") // untrusted
+
+            // VULNERABLE: attacker chooses the host, e.g. http://169.254.169.254/...
+            resp, _ := http.Get(target)
+            _ = resp
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        var allowedHosts = map[string]bool{"api.example.com": true}
+
+        func handler(w http.ResponseWriter, r *http.Request) {
+            u, err := url.Parse(r.FormValue("url"))
+            if err != nil || (u.Scheme != "https") || !allowedHosts[u.Hostname()] {
+                http.Error(w, "host not allowed", http.StatusBadRequest)
+                return
+            }
+
+            // SAFE: only vetted hosts are reachable
+            resp, _ := http.Get(u.String())
+            _ = resp
+        }
+        ```
+
+        Patterns covered include `http.Get`/`Head`/`Post`/`PostForm`, the equivalent
+        `*http.Client` methods, and `http.NewRequest`/`NewRequestWithContext` reached by a
+        tainted URL argument.
+      references:
+        - https://owasp.org/www-community/attacks/Server_Side_Request_Forgery
+        - https://portswigger.net/web-security/ssrf
+        - https://cwe.mitre.org/data/definitions/918.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: join
+    join:
+      refs:
+        - rule: go/lib/http-sources.yaml#http-sources
+          as: src
+        - rule: go/lib/ssrf-sinks.yaml#ssrf-sinks
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

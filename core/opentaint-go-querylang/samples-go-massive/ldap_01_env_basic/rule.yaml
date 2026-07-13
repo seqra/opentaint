@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("LDAP_UID")
     pattern-sinks:
-      - pattern: util.Sink_LdapSearch($X)
+      - pattern: ldap_01_env_basic.Sink_LdapSearch($X)

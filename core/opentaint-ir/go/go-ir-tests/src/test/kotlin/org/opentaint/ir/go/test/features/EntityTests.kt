@@ -9,6 +9,7 @@ import org.opentaint.ir.go.test.GoIRSanityChecker
 import org.opentaint.ir.go.test.GoIRTestBuilder
 import org.opentaint.ir.go.test.GoIRTestExtension
 import org.opentaint.ir.go.type.GoIRNamedTypeKind
+import org.opentaint.ir.go.type.GoIRNamedTypeRef
 
 /**
  * Tests for entity-level IR properties: packages, types, functions, globals.
@@ -60,7 +61,8 @@ class EntityTests {
         assertThat(fn).isNotNull
         assertThat(fn!!.isMethod).isTrue()
         assertThat(fn.receiverType).isNotNull
-        assertThat(fn.receiverType!!.name).isEqualTo("Counter")
+        val receiverName = (fn.receiverType as? GoIRNamedTypeRef)?.namedType?.name
+        assertThat(receiverName).isEqualTo("Counter")
         assertThat(fn.isPointerReceiver).isFalse()
 
         GoIRSanityChecker.check(prog).assertNoErrors()
@@ -211,8 +213,8 @@ class EntityTests {
         assertThat(fn.anonymousFunctions).isNotEmpty()
 
         val anon = fn.anonymousFunctions[0]
-        assertThat(anon.parent).isEqualTo(fn)
-        assertThat(anon.freeVars).isNotEmpty()
+        assertThat(anon.function.parent?.function).isEqualTo(fn)
+        assertThat(anon.function.freeVars).isNotEmpty()
 
         GoIRSanityChecker.check(prog).assertNoErrors()
     }

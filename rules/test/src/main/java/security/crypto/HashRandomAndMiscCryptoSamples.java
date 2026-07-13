@@ -1,7 +1,5 @@
 package security.crypto;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -17,13 +15,11 @@ public class HashRandomAndMiscCryptoSamples {
 
     // use-of-md5
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "use-of-md5")
     public byte[] md5DigestUtilsInsecure(byte[] input) {
         // VULNERABLE: MD5 via DigestUtils using the pattern expected by the rule
         return org.apache.commons.codec.digest.DigestUtils.getMd5Digest().digest(input);
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "use-of-md5")
     public byte[] sha256DigestUtilsSecure(byte[] input) throws NoSuchAlgorithmException {
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
         return sha256.digest(input);
@@ -31,13 +27,11 @@ public class HashRandomAndMiscCryptoSamples {
 
     // use-of-rc2
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "use-of-rc2")
     public void rc2CipherInsecure() throws Exception {
         javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RC2");
         cipher.toString();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "use-of-rc2")
     public void aesInsteadOfRc2() throws Exception {
         javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.toString();
@@ -45,13 +39,11 @@ public class HashRandomAndMiscCryptoSamples {
 
     // use-of-rc4
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "use-of-rc4")
     public void rc4CipherInsecure() throws Exception {
         javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RC4");
         cipher.toString();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "use-of-rc4")
     public void aesInsteadOfRc4() throws Exception {
         javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.toString();
@@ -59,13 +51,11 @@ public class HashRandomAndMiscCryptoSamples {
 
     // use-of-sha1
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "use-of-sha1")
     public byte[] sha1DigestInsecure(byte[] input) throws NoSuchAlgorithmException {
         MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
         return sha1.digest(input);
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "use-of-sha1")
     public byte[] sha256DigestPreferred(byte[] input) throws NoSuchAlgorithmException {
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
         return sha256.digest(input);
@@ -73,20 +63,17 @@ public class HashRandomAndMiscCryptoSamples {
 
     // weak-random
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "weak-random")
     public int weakRandomInt() {
         // VULNERABLE: Math.random()
         return (int) (Math.random() * 1000);
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "weak-random")
     public int secureRandomInt() {
         return new SecureRandom().nextInt(1000);
     }
 
     // bad-hexa-conversion
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "bad-hexa-conversion")
     public String badHexaConversion(byte[] input) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] digest = md.digest(input);
@@ -98,7 +85,6 @@ public class HashRandomAndMiscCryptoSamples {
         return sb.toString();
     }
 
-    @NegativeRuleSample(value = "java/security/crypto.yaml", id = "bad-hexa-conversion")
     public String goodHexaConversion(byte[] input) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] digest = md.digest(input);
@@ -112,7 +98,6 @@ public class HashRandomAndMiscCryptoSamples {
 
     // avoid-implementing-custom-digests
 
-    @PositiveRuleSample(value = "java/security/crypto.yaml", id = "avoid-implementing-custom-digests")
     public class CustomDigestInsecure extends MessageDigest {
         protected CustomDigestInsecure() {
             super("Custom");

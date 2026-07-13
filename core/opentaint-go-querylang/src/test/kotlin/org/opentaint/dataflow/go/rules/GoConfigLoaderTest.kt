@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.go.rules
 
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
-import org.opentaint.go.config.GoConfigLoader
+import org.opentaint.go.config.GoDefaultConfigLoader
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -10,7 +10,7 @@ class GoConfigLoaderTest {
 
     @Test
     fun bundledConfigLoadsAndContainsExpectedEntries() {
-        val config = assertNotNull(GoConfigLoader.getConfig(), "bundled go-config not on classpath")
+        val config = assertNotNull(GoDefaultConfigLoader.loadConfig(), "bundled go-config not on classpath")
         assertTrue(config.passThrough.isNotEmpty(), "expected at least one pass-through rule")
 
         // The bundled config ships propagators for common stdlib functions like
@@ -23,7 +23,7 @@ class GoConfigLoaderTest {
 
     @Test
     fun containerListPushBackRuleSurvivesLoading() {
-        val config = assertNotNull(GoConfigLoader.getConfig())
+        val config = assertNotNull(GoDefaultConfigLoader.loadConfig())
         val pushBack = config.passThrough.filter {
             (it.pkg as? GoNameMatcher.Simple)?.name?.contains("container/list.List") == true &&
             (it.function as? GoNameMatcher.Simple)?.name?.contains("PushBack") == true

@@ -1,0 +1,26 @@
+language: go
+passThrough:
+- function:
+    package: text/scanner
+    type: Scanner
+    name: Init
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: this
+- function:
+    package: text/scanner
+    type: Scanner
+    name: Init
+    receiver: true
+  copy:
+  - from: arg(0)
+    to: result
+- function:
+    package: text/scanner
+    type: Scanner
+    name: TokenText
+    receiver: true
+  copy:
+  - from: this
+    to: result

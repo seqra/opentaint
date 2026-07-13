@@ -2,10 +2,10 @@ rules:
   - id: ldap-injection
     severity: ERROR
     message: >-
-      Potential LDAP injection: detected untrusted user input going into a LDAP query
+      LDAP injection: detected untrusted user input going into a LDAP query
     metadata:
       cwe: CWE-90
-      short-description: Potential LDAP Injection
+      short-description: LDAP Injection
       full-description: |-
         LDAP injection occurs when untrusted input reaches LDAP query APIs as filter/query text.
         This rule focuses on LDAP lookup/search calls in JNDI, UnboundID, and Spring LDAP operations.

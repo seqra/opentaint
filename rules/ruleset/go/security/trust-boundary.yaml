@@ -1,84 +1,139 @@
 rules:
-  - id: go-trust-boundary-cwe-501
-    languages: [go]
+  - id: trust-boundary-cwe-501
     severity: ERROR
-    message: Tainted user input stored across a trust boundary (cookie/header/session)
+    message: >-
+      Trust boundary violation: user-controlled data is stored in a cookie, header, or session
     metadata:
       cwe: CWE-501
-      short-description: Trust boundary violation
+      short-description: User-controlled data stored across a trust boundary
+      full-description: |-
+        A trust boundary violation happens when user-controlled data is written into a
+        server-side trust store — a cookie, response header, or session — without
+        validation. Code downstream reads it back and treats it as trusted, so the attacker
+        effectively seeds trusted state.
+
+        Vulnerable example:
+
+        ```go
+        func (c *web.Controller) Save() {
+            role := c.GetString("role") // untrusted
+
+            // VULNERABLE: attacker-chosen value becomes trusted session state
+            c.SetSession("role", role)
+        }
+        ```
+
+        Safe example:
+
+        ```go
+        var allowedRoles = map[string]bool{"user": true, "editor": true}
+
+        func (c *web.Controller) Save() {
+            role := c.GetString("role")
+            if !allowedRoles[role] {
+                c.Abort("400")
+                return
+            }
+
+            // SAFE: only a validated, allow-listed value is stored
+            c.SetSession("role", role)
+        }
+        ```
+
+        Patterns covered are `http.SetCookie` and beego's `(*web.Controller).SetSession`
+        reached by request-, environment-, or beego-derived tainted data.
+      references:
+        - https://cwe.mitre.org/data/definitions/501.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: taint
     pattern-sources:
-      - pattern-either:
-          - pattern: $R.FormValue($K)
-          - pattern: $R.PostFormValue($K)
-          - pattern: $R.FormFile($K)
-          - pattern: $R.Cookie($K)
-          - pattern: $R.Cookies()
-          - pattern: $R.MultipartReader()
-          - pattern: $R.Referer()
-          - pattern: $R.UserAgent()
-          - pattern: $R.URL.Query()
-          - pattern: $R.URL.Query().Get($K)
-          - pattern: $R.URL.Path
-          - pattern: $R.URL.RawQuery
-          - pattern: $R.URL.RawPath
-          - pattern: $R.RequestURI
-          - pattern: $R.Header.Get($K)
-          - pattern: $R.Header[$K]
-          - pattern: $R.Header[$K][$I]
-          - pattern: $R.Form[$K]
-          - pattern: $R.Form[$K][$I]
-          - pattern: $R.PostForm[$K]
-          - pattern: $R.PostForm[$K][$I]
-          - pattern: $R.URL.Query()[$K]
-          - pattern: $R.URL.Query()[$K][$I]
-          - pattern: $R.Header.Values($K)
-          - pattern: $R.Form.Get($K)
-          - pattern: $R.PostForm.Get($K)
-          - pattern: $R.Body
-          - pattern: $R.GetBody
-          - pattern: $R.Form
-          - pattern: $R.PostForm
-          - pattern: $R.MultipartForm
-          - pattern: $R.Header
-          - pattern: $R.Trailer
-          - pattern: $R.URL
-          - pattern: os.Getenv($K)
-          - pattern: os.LookupEnv($K)
-          - pattern: os.Args
-          # beego Controller methods
-          - pattern: $C.GetString($K)
-          - pattern: $C.GetString($K, $DEF)
-          - pattern: $C.GetStrings($K)
-          - pattern: $C.GetStrings($K, $DEF)
-          - pattern: $C.GetStrings($K)[$IDX]
-          - pattern: $C.GetStrings($K, $DEF)[$IDX]
-          - pattern: $C.GetInt($K)
-          - pattern: $C.GetInt($K, $DEF)
-          - pattern: $C.GetInt8($K)
-          - pattern: $C.GetInt16($K)
-          - pattern: $C.GetInt32($K)
-          - pattern: $C.GetInt64($K)
-          - pattern: $C.GetUint8($K)
-          - pattern: $C.GetUint16($K)
-          - pattern: $C.GetUint32($K)
-          - pattern: $C.GetUint64($K)
-          - pattern: $C.GetFloat($K)
-          - pattern: $C.GetBool($K)
-          - pattern: $C.GetFile($K)
-          - pattern: $C.GetFiles($K)
-          - pattern: $C.GetSession($K)
-          - pattern: $C.Input()
-          - pattern: $C.ParseForm($PTR)
-          # beego Context.Input methods (c.Ctx.Input.X)
-          - pattern: $X.Param($K)
-          - pattern: $X.Header($K)
-          - pattern: $X.Params()
-          - pattern: $X.URI()
-          - pattern: $X.URL()
-          - pattern: $X.RequestBody
-          - pattern: $X.Bind($PTR)
+      - label: "$UNTRUSTED"
+        patterns:
+          - pattern-inside: |
+              import "net/http"
+              import "os"
+              import web "github.com/beego/beego/v2/server/web"
+              import context "github.com/beego/beego/v2/server/web/context"
+              ...
+          - pattern-either:
+              # net/http request methods
+              - pattern: "($R : *http.Request).FormValue($K)"
+              - pattern: "($R : *http.Request).PostFormValue($K)"
+              - pattern: "($R : *http.Request).FormFile($K)"
+              - pattern: "($R : *http.Request).Cookie($K)"
+              - pattern: "($R : *http.Request).Cookies()"
+              - pattern: "($R : *http.Request).MultipartReader()"
+              - pattern: "($R : *http.Request).Referer()"
+              - pattern: "($R : *http.Request).UserAgent()"
+              # net/http request fields
+              - pattern: "($R : *http.Request).URL.Query()"
+              - pattern: "($R : *http.Request).URL.Query().Get($K)"
+              - pattern: "($R : *http.Request).URL.Path"
+              - pattern: "($R : *http.Request).URL.RawQuery"
+              - pattern: "($R : *http.Request).URL.RawPath"
+              - pattern: "($R : *http.Request).RequestURI"
+              - pattern: "($R : *http.Request).Header.Get($K)"
+              - pattern: "($R : *http.Request).Header[$K]"
+              - pattern: "($R : *http.Request).Header[$K][$I]"
+              - pattern: "($R : *http.Request).Form[$K]"
+              - pattern: "($R : *http.Request).Form[$K][$I]"
+              - pattern: "($R : *http.Request).PostForm[$K]"
+              - pattern: "($R : *http.Request).PostForm[$K][$I]"
+              - pattern: "($R : *http.Request).URL.Query()[$K]"
+              - pattern: "($R : *http.Request).URL.Query()[$K][$I]"
+              - pattern: "($R : *http.Request).Header.Values($K)"
+              - pattern: "($R : *http.Request).Form.Get($K)"
+              - pattern: "($R : *http.Request).PostForm.Get($K)"
+              - pattern: "($R : *http.Request).Body"
+              - pattern: "($R : *http.Request).GetBody"
+              - pattern: "($R : *http.Request).Form"
+              - pattern: "($R : *http.Request).PostForm"
+              - pattern: "($R : *http.Request).MultipartForm"
+              - pattern: "($R : *http.Request).Header"
+              - pattern: "($R : *http.Request).Trailer"
+              - pattern: "($R : *http.Request).URL"
+              # process environment
+              - pattern: "os.Getenv($K)"
+              - pattern: "os.LookupEnv($K)"
+              - pattern: "os.Args"
+              # beego Controller methods
+              - pattern: "($C : *web.Controller).GetString($K)"
+              - pattern: "($C : *web.Controller).GetString($K, $DEF)"
+              - pattern: "($C : *web.Controller).GetStrings($K)"
+              - pattern: "($C : *web.Controller).GetStrings($K, $DEF)"
+              - pattern: "($C : *web.Controller).GetInt($K)"
+              - pattern: "($C : *web.Controller).GetInt($K, $DEF)"
+              - pattern: "($C : *web.Controller).GetInt8($K)"
+              - pattern: "($C : *web.Controller).GetInt16($K)"
+              - pattern: "($C : *web.Controller).GetInt32($K)"
+              - pattern: "($C : *web.Controller).GetInt64($K)"
+              - pattern: "($C : *web.Controller).GetUint8($K)"
+              - pattern: "($C : *web.Controller).GetUint16($K)"
+              - pattern: "($C : *web.Controller).GetUint32($K)"
+              - pattern: "($C : *web.Controller).GetUint64($K)"
+              - pattern: "($C : *web.Controller).GetFloat($K)"
+              - pattern: "($C : *web.Controller).GetBool($K)"
+              - pattern: "($C : *web.Controller).GetFile($K)"
+              - pattern: "($C : *web.Controller).GetFiles($K)"
+              - pattern: "($C : *web.Controller).GetSession($K)"
+              - pattern: "($C : *web.Controller).Input()"
+              - pattern: "($C : *web.Controller).ParseForm($PTR)"
+              # beego Context.Input methods (c.Ctx.Input.X)
+              - pattern: "($X : *context.BeegoInput).Param($K)"
+              - pattern: "($X : *context.BeegoInput).Header($K)"
+              - pattern: "($X : *context.BeegoInput).Params()"
+              - pattern: "($X : *context.BeegoInput).URI()"
+              - pattern: "($X : *context.BeegoInput).URL()"
+              - pattern: "($X : *context.BeegoInput).RequestBody"
+              - pattern: "($X : *context.BeegoInput).Bind($PTR)"
     pattern-sinks:
-      - pattern-either:
-          - pattern: http.SetCookie($W, $C)
-          - pattern: $C.SetSession($K, $V)
+      - patterns:
+          - pattern-inside: |
+              import "net/http"
+              import web "github.com/beego/beego/v2/server/web"
+              ...
+          - pattern-either:
+              - pattern: "http.SetCookie($W, $C)"
+              - pattern: "($C : *web.Controller).SetSession($K, $V)"

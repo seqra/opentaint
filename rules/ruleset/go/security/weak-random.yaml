@@ -1,24 +1,77 @@
 rules:
-  - id: go-weak-random-cwe-330
-    languages: [go]
+  - id: weak-random-cwe-330
     severity: ERROR
-    message: Use of a weak (non-cryptographic) random number generator
+    message: >-
+      Insecure randomness: a non-cryptographic random number generator is used
     metadata:
       cwe: CWE-330
-      short-description: Insecure randomness
+      short-description: Insecure (non-cryptographic) randomness
+      full-description: |-
+        The `math/rand` and `math/rand/v2` generators are fast but predictable: given a few
+        outputs an attacker can recover the state and predict the rest. They must not be
+        used for security-sensitive values such as tokens, session IDs, password-reset
+        codes, or key/nonce material. Use `crypto/rand` instead.
+
+        Vulnerable example:
+
+        ```go
+        // VULNERABLE: predictable token
+        token := fmt.Sprintf("%d", rand.Int63())
+        _ = token
+        ```
+
+        Safe example:
+
+        ```go
+        // SAFE: cryptographically secure randomness (crypto/rand)
+        b := make([]byte, 32)
+        if _, err := crand.Read(b); err != nil {
+            panic(err)
+        }
+        token := hex.EncodeToString(b)
+        _ = token
+        ```
+
+        Patterns covered include the `math/rand` and `math/rand/v2` generator functions
+        (`Int`, `Intn`/`IntN`, `Int63`, `Float64`, `Uint64`, `Perm`, `Shuffle`, `Read`,
+        `Seed`, `New`, ...).
+      references:
+        - https://owasp.org/Top10/A02_2021-Cryptographic_Failures
+        - https://cwe.mitre.org/data/definitions/330.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: search
-    pattern-either:
-      - pattern: rand.Int()
-      - pattern: rand.Intn(...)
-      - pattern: rand.Int31()
-      - pattern: rand.Int31n(...)
-      - pattern: rand.Int63()
-      - pattern: rand.Int63n(...)
-      - pattern: rand.Float64()
-      - pattern: rand.Float32()
-      - pattern: rand.NormFloat64()
-      - pattern: rand.ExpFloat64()
-      - pattern: rand.Uint32()
-      - pattern: rand.Uint64()
-      - pattern: rand.Perm(...)
-      - pattern: rand.New(...)
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              import "math/rand"
+              ...
+          - pattern-inside: |
+              import rand "math/rand/v2"
+              ...
+      - pattern-either:
+          - pattern: "rand.Int()"
+          - pattern: "rand.Intn(...)"
+          - pattern: "rand.Int31()"
+          - pattern: "rand.Int31n(...)"
+          - pattern: "rand.Int63()"
+          - pattern: "rand.Int63n(...)"
+          - pattern: "rand.IntN(...)"
+          - pattern: "rand.Int32()"
+          - pattern: "rand.Int32N(...)"
+          - pattern: "rand.Int64()"
+          - pattern: "rand.Int64N(...)"
+          - pattern: "rand.Float64()"
+          - pattern: "rand.Float32()"
+          - pattern: "rand.NormFloat64()"
+          - pattern: "rand.ExpFloat64()"
+          - pattern: "rand.Uint32()"
+          - pattern: "rand.Uint32N(...)"
+          - pattern: "rand.Uint64()"
+          - pattern: "rand.Uint64N(...)"
+          - pattern: "rand.Perm(...)"
+          - pattern: "rand.New(...)"
+          - pattern: "rand.Shuffle(...)"
+          - pattern: "rand.Read(...)"
+          - pattern: "rand.Seed(...)"

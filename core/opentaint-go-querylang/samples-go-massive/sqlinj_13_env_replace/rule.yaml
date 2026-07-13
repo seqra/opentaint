@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("FILTER")
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_13_env_replace.Sink_DbQuery($X)

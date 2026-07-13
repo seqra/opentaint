@@ -1,0 +1,12 @@
+rules:
+  - id: interface-impl-sink
+    languages: [go]
+    severity: WARNING
+    message: "Tainted data written to an http.ResponseWriter"
+    mode: taint
+    pattern-sources:
+      - pattern: "InterfaceImplSink.Source(...)"
+    pattern-sinks:
+      - pattern: |
+          import "net/http"
+          ($W : http.ResponseWriter).Write($BUF)

@@ -8,6 +8,7 @@ import org.opentaint.common.sast.sarif.TracePathNode
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
@@ -49,7 +50,7 @@ class JirSarifGenerator(
     override fun postProcessSarif(
         sarif: Result,
         vulnerability: TaintSinkTracker.TaintVulnerability,
-        trace: TraceResolver.Trace?,
+        trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>?
     ): Result = annotators.fold(sarif) { result, annotator ->
         annotator.annotateSarif(result, vulnerability, trace, tracePaths.orEmpty()) { s ->

@@ -1,7 +1,5 @@
 package security.sqli;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +25,6 @@ public class SqlInjectionSpringSamples {
          * Unsafe endpoint that concatenates untrusted request parameters into a SQL query.
          */
         @GetMapping("/unsafe")
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String unsafeSearch(@RequestParam("username") String username) {
             // VULNERABLE: username is directly concatenated into the SQL string
             String sql = "SELECT id, username FROM users WHERE username = '" + username + "'";
@@ -61,7 +58,6 @@ public class SqlInjectionSpringSamples {
          * Safe endpoint that uses parameterized queries and basic validation.
          */
         @GetMapping("/safe")
-        @NegativeRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         public String safeSearch(@RequestParam("username") String username) {
             if (username == null || username.isBlank()) {
                 return ""; // simple guard; in a real app, you might return 400 or an error body

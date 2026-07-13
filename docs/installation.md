@@ -12,9 +12,13 @@ brew install --cask seqra/tap/opentaint
 
 If you have Node.js installed, you can install opentaint from npm. The package bundles the analyzer, rules, and a Java runtime, so no separate Java install is required.
 
-Run without installing:
+Run without installing — `npx` downloads the package and runs any command directly:
 
 ```bash
+# Scan the current directory
+npx @seqra/opentaint scan
+
+# Quick smoke test
 npx @seqra/opentaint --version
 ```
 

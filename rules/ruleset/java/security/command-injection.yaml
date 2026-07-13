@@ -2,7 +2,7 @@ rules:
   - id: os-command-injection
     severity: ERROR
     message: >-
-      Potential OS command injection: command line depends on a user provided value
+      OS command injection: command line depends on a user provided value
     metadata:
       cwe: CWE-78
       short-description: Command line depends on a user provided value

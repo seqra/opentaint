@@ -9,8 +9,6 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.kerberos.KerberosKey;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -23,13 +21,11 @@ public class HardcodedCredentialsSamples {
 
     // constant-db-password
 
-    @PositiveRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "constant-db-password")
     public Connection connectWithHardcodedDbPassword(String uri, String user) throws Exception {
         // VULNERABLE: hardcoded password literal in getConnection
         return DriverManager.getConnection(uri, user, "superSecretP@ss!");
     }
 
-    @NegativeRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "constant-db-password")
     public Connection connectWithExternalDbPassword(String uri, String user) throws Exception {
         // SAFE: password loaded from environment / config, not hardcoded
         String password = System.getenv("DB_PASSWORD");
@@ -41,13 +37,11 @@ public class HardcodedCredentialsSamples {
 
     // java-empty-db-password
 
-    @PositiveRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "java-empty-db-password")
     public Connection connectWithEmptyDbPassword(String uri, String user) throws Exception {
         // VULNERABLE: explicitly using an empty password
         return DriverManager.getConnection(uri, user, "");
     }
 
-    @NegativeRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "java-empty-db-password")
     public Connection connectWithNonEmptyDbPassword(String uri, String user, String password) throws Exception {
         // SAFE: require a non-empty password that comes from caller/config
         if (password == null || password.isEmpty()) {
@@ -58,7 +52,6 @@ public class HardcodedCredentialsSamples {
 
     // hardcoded-password
 
-    @PositiveRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "hardcoded-password")
     public void useHardcodedPasswordsEverywhere() throws Exception {
         // KeyStore password protection
         new java.security.KeyStore.PasswordProtection("changeit".toCharArray());
@@ -79,7 +72,6 @@ public class HardcodedCredentialsSamples {
         new KerberosKey(null, "kerbSecret".toCharArray(), null);
     }
 
-    @NegativeRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "hardcoded-password")
     public void useExternalPasswords() throws Exception {
         char[] keystorePassword = loadSecret("KEYSTORE_PASSWORD");
         new java.security.KeyStore.PasswordProtection(keystorePassword);
@@ -99,7 +91,6 @@ public class HardcodedCredentialsSamples {
 
     // jwt-hardcoded-secret
 
-    @PositiveRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "jwt-hardcoded-secret")
     public String issueJwtWithHardcodedSecret(String username) {
         // VULNERABLE: secret key hardcoded in source
         return Jwts.builder()
@@ -108,7 +99,6 @@ public class HardcodedCredentialsSamples {
                 .compact();
     }
 
-    @NegativeRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "jwt-hardcoded-secret")
     public String issueJwtWithExternalSecret(String username) {
         String rawSecret = System.getenv("JWT_SECRET");
         if (rawSecret == null || rawSecret.length() < 32) {
@@ -127,7 +117,6 @@ public class HardcodedCredentialsSamples {
 
     // hardcoded-cryptographic-key
 
-    @PositiveRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "hardcoded-cryptographic-key")
     public byte[] encryptWithHardcodedKey(byte[] plaintext) throws Exception {
         // VULNERABLE: AES key bytes are hardcoded in the class
         byte[] AES_KEY_BYTES = new byte[]{
@@ -145,7 +134,6 @@ public class HardcodedCredentialsSamples {
         return cipher.doFinal(plaintext);
     }
 
-    @NegativeRuleSample(value = "java/security/hardcoded-credentials.yaml", id = "hardcoded-cryptographic-key")
     public byte[] encryptWithExternalKey(byte[] plaintext) throws Exception {
         // SAFE: key is loaded from configuration rather than hardcoded
         String keyB64 = System.getenv("APP_AES_KEY");

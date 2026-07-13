@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithEllipsisMethodInvocation (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithEllipsisMethodInvocation.Source(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X, ...)"
+      - pattern: "JavaRuleWithEllipsisMethodInvocation.Sink($X, ...)"

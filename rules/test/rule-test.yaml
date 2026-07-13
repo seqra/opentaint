@@ -1,0 +1,637 @@
+tests:
+  - rule-id: java/security/code-injection.yaml#el-injection-in-servlet-app
+    positive:
+      - security.codeinjection.ElInjectionSamples$UnsafeElServlet#doGet
+    negative:
+      - security.codeinjection.ElInjectionSamples$SafeElServlet#doGet
+  - rule-id: java/security/code-injection.yaml#groovy-injection
+    positive:
+      - security.codeinjection.GroovyInjectionServletSamples$UnsafeGroovyServlet#doGet
+      - security.codeinjection.GroovyInjectionSpringSamples$UnsafeGroovyController#unsafeGroovy
+    negative:
+      - security.codeinjection.GroovyInjectionServletSamples$SafeGroovyServlet#doGet
+      - security.codeinjection.GroovyInjectionSpringSamples$SafeGroovyController#safeGroovy
+  - rule-id: java/security/code-injection.yaml#ognl-injection
+    positive:
+      - security.codeinjection.OgnlInjectionServletSamples$UnsafeOgnlServlet#doGet
+      - security.codeinjection.OgnlInjectionSpringSamples$UnsafeOgnlController#unsafeOgnl
+    negative:
+      - security.codeinjection.OgnlInjectionServletSamples$SafeOgnlServlet#doGet
+      - security.codeinjection.OgnlInjectionSpringSamples$SafeOgnlController#safeOgnl
+  - rule-id: java/security/code-injection.yaml#script-engine-injection
+    positive:
+      - security.codeinjection.ScriptEngineInjectionServletSamples$UnsafeScriptEngineServlet#doGet
+      - security.codeinjection.ScriptEngineInjectionSpringSamples$UnsafeScriptEngineController#unsafeScriptEngine
+    negative:
+      - security.codeinjection.ScriptEngineInjectionServletSamples$SafeScriptEngineServlet#doGet
+      - security.codeinjection.ScriptEngineInjectionSpringSamples$SafeScriptEngineController#safeScriptEngine
+  - rule-id: java/security/code-injection.yaml#spring-el-injection
+    positive:
+      - security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController#evalUnsafe
+    negative:
+      - security.codeinjection.SpringElInjectionSamples$SafeSpringElController#evalSafe
+  - rule-id: java/security/code-injection.yaml#ssti
+    positive:
+      - security.codeinjection.SstiServletSamples$UnsafeTemplateServlet#doPost
+      - security.codeinjection.TemplateInjectionSpringSamples$UnsafeTemplateControllerWithResolver#previewUnsafeWithResolver
+    negative:
+      - security.codeinjection.SstiServletSamples$SafeTemplateServlet#doPost
+      - security.codeinjection.SstiServletSamples$SafeTemplateServletWithResolver#doPost
+      - security.codeinjection.TemplateInjectionSpringSamples$SafeTemplateControllerWithResolver#previewSafeWithResolver
+  - rule-id: java/security/command-injection.yaml#os-command-injection
+    positive:
+      - security.commandinjection.CommandInjectionServletSamples$UnsafeCommandServlet#doGet
+      - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePing
+  - rule-id: java/security/crlf-injection.yaml#http-response-splitting
+    positive:
+      - security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeHeaderServlet#doGet
+      - security.crlfinjection.HttpResponseSplittingSpringSamples$UnsafeHttpResponseSplittingController#unsafe
+  - rule-id: java/security/crlf-injection.yaml#smtp-crlf-injection
+    positive:
+      - security.crlfinjection.SmtpCrlfInjectionServletSamples$UnsafeSmtpServlet#doPost
+      - security.crlfinjection.SmtpCrlfInjectionSpringSamples$UnsafeSpringSmtpController#unsafe
+  - rule-id: java/security/crypto.yaml#aes-hardcoded-key
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#aesWithHardcodedKey
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#aesWithGeneratedKey
+  - rule-id: java/security/crypto.yaml#avoid-implementing-custom-digests
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples$CustomDigestInsecure
+  - rule-id: java/security/crypto.yaml#bad-hexa-conversion
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples#badHexaConversion
+    negative:
+      - security.crypto.HashRandomAndMiscCryptoSamples#goodHexaConversion
+  - rule-id: java/security/crypto.yaml#blowfish-insufficient-key-size
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#blowfishWeakKeySize
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#blowfishStrongKeySize
+  - rule-id: java/security/crypto.yaml#cbc-padding-oracle
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#cbcWithPkcs5Padding
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#gcmModeCipher
+  - rule-id: java/security/crypto.yaml#defaulthttpclient-is-deprecated
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#createDeprecatedDefaultHttpClient
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#createModernHttpClient
+  - rule-id: java/security/crypto.yaml#des-is-deprecated
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#useDesCipher
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#useAesCipherInsteadOfDes
+  - rule-id: java/security/crypto.yaml#desede-is-deprecated
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#useTripleDesCipher
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#useAesInsteadOfTripleDes
+  - rule-id: java/security/crypto.yaml#ecb-cipher
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#genericEcbCipher
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#nonEcbCipher
+  - rule-id: java/security/crypto.yaml#gcm-detection
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#aesGcmCipherDetected
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#otherCipherMode
+  - rule-id: java/security/crypto.yaml#gcm-nonce-reuse
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#reusedGcmNonce
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#randomGcmNonce
+  - rule-id: java/security/crypto.yaml#hazelcast-symmetric-encryption
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#insecureHazelcastConfig
+  - rule-id: java/security/crypto.yaml#insecure-hostname-verifier
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#insecureHostnameVerifierVerify
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#secureHostnameVerifier
+  - rule-id: java/security/crypto.yaml#insecure-smtp
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#insecureEmailClient
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#secureEmailClient
+  - rule-id: java/security/crypto.yaml#insecure-trust-manager
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#insecureTrustManager
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#secureTrustManager
+  - rule-id: java/security/crypto.yaml#jjwt-hs256
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#signJwtWithHs256Insecure
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#signJwtWithRs256Secure
+  - rule-id: java/security/crypto.yaml#jjwt-none-alg
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#buildJwtWithoutSigning
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#buildJwtWithSigning1
+      - security.crypto.JwtAndTlsCryptoSamples#buildJwtWithSigning2
+  - rule-id: java/security/crypto.yaml#jwt-none-alg
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#signAuth0JwtWithNone
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#signAuth0JwtWithHmac
+  - rule-id: java/security/crypto.yaml#mongo-hostname-verification-disabled
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#insecureMongoSettings
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#secureMongoSettings
+  - rule-id: java/security/crypto.yaml#no-null-cipher
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#nullCipherInsecure
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#aesGcmCipherSecure
+  - rule-id: java/security/crypto.yaml#no-static-initialization-vector
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#staticIvInsecure
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#randomIvSecure
+  - rule-id: java/security/crypto.yaml#rsa-no-padding
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#rsaNoPaddingCipher
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#rsaOaepCipher
+  - rule-id: java/security/crypto.yaml#use-of-blowfish
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#blowfishCipher
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#nonBlowfishCipher
+  - rule-id: java/security/crypto.yaml#use-of-default-aes
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#defaultAesCipher
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#explicitAesCipher
+  - rule-id: java/security/crypto.yaml#use-of-md5
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples#md5DigestUtilsInsecure
+    negative:
+      - security.crypto.HashRandomAndMiscCryptoSamples#sha256DigestUtilsSecure
+  - rule-id: java/security/crypto.yaml#use-of-rc2
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples#rc2CipherInsecure
+    negative:
+      - security.crypto.HashRandomAndMiscCryptoSamples#aesInsteadOfRc2
+  - rule-id: java/security/crypto.yaml#use-of-rc4
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples#rc4CipherInsecure
+    negative:
+      - security.crypto.HashRandomAndMiscCryptoSamples#aesInsteadOfRc4
+  - rule-id: java/security/crypto.yaml#use-of-sha1
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples#sha1DigestInsecure
+    negative:
+      - security.crypto.HashRandomAndMiscCryptoSamples#sha256DigestPreferred
+  - rule-id: java/security/crypto.yaml#use-of-weak-rsa-key
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#weakRsaKey
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#strongRsaKey
+  - rule-id: java/security/crypto.yaml#weak-ec-key-size
+    positive:
+      - security.crypto.CipherAndKeyCryptoSamples#weakEcKeySize
+    negative:
+      - security.crypto.CipherAndKeyCryptoSamples#strongEcKeySize
+  - rule-id: java/security/crypto.yaml#weak-random
+    positive:
+      - security.crypto.HashRandomAndMiscCryptoSamples#weakRandomInt
+    negative:
+      - security.crypto.HashRandomAndMiscCryptoSamples#secureRandomInt
+  - rule-id: java/security/crypto.yaml#weak-tls-protocol
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#weakSslContextProtocol
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#strongSslContextProtocol
+  - rule-id: java/security/crypto.yaml#weak-tls-protocol-version
+    positive:
+      - security.crypto.JwtAndTlsCryptoSamples#enableWeakTlsVersions
+    negative:
+      - security.crypto.JwtAndTlsCryptoSamples#enableStrongTlsVersions
+  - rule-id: java/security/csrf.yaml#csrf-disabled-in-spring-app
+    positive:
+      - security.csrf.CsrfSpringSecurityConfigSamples$UnsafeCsrfDisabledConfig#configure
+    negative:
+      - security.csrf.CsrfSpringSecurityConfigSamples$SafeCsrfEnabledConfig#configure
+  - rule-id: java/security/csrf.yaml#unrestricted-request-mapping
+    positive:
+      - security.csrf.CsrfRequestMappingSamples$UnsafeUnrestrictedRequestMappingController#unsafeTransfer
+    negative:
+      - security.csrf.CsrfRequestMappingSamples$SafeRestrictedRequestMappingController#safeTransfer
+      - security.csrf.CsrfRequestMappingSamples$SafeRestrictedRequestMappingController#safeTransferShortcut
+  - rule-id: java/security/data-query-injection.yaml#mongodb-injection
+    positive:
+      - security.dataqueryinjection.DataQueryInjectionServletSamples$UnsafeMongoServlet#doGet
+      - security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeMongoController#unsafeMongo
+    negative:
+      - security.dataqueryinjection.DataQueryInjectionServletSamples$SafeMongoServlet#doGet
+      - security.dataqueryinjection.DataQueryInjectionSpringSamples$SafeMongoController#safeMongo
+  - rule-id: java/security/data-query-injection.yaml#xpath-injection
+    positive:
+      - security.dataqueryinjection.DataQueryInjectionServletSamples$UnsafeXPathServlet#doGet
+      - security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeXPathController#unsafeXPath
+    negative:
+      - security.dataqueryinjection.DataQueryInjectionServletSamples$SafeXPathServlet#doGet
+      - security.dataqueryinjection.DataQueryInjectionSpringSamples$SafeXPathController#safeXPath
+  - rule-id: java/security/external-configuration-control.yaml#bean-injection
+    positive:
+      - security.externalconfigurationcontrol.BeanInjectionSamples#doGet
+    negative:
+      - security.externalconfigurationcontrol.BeanInjectionSamples#doPost
+  - rule-id: java/security/external-configuration-control.yaml#sql-catalog-external-manipulation
+    positive:
+      - security.externalconfigurationcontrol.SqlCatalogServletSamples$UnsafeCatalogServlet#doGet
+      - security.externalconfigurationcontrol.SqlCatalogSpringSamples$UnsafeCatalogController#getUsers
+    negative:
+      - security.externalconfigurationcontrol.SqlCatalogServletSamples$SafeCatalogServlet#doGet
+      - security.externalconfigurationcontrol.SqlCatalogSpringSamples$SafeCatalogController#getUsers
+  - rule-id: java/security/external-configuration-control.yaml#unsafe-reflection
+    positive:
+      - security.externalconfigurationcontrol.UnsafeReflectionServletSamples$DynamicLoaderServlet#doGet
+      - security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$UnsafeReflectionController#loadClass
+    negative:
+      - security.externalconfigurationcontrol.UnsafeReflectionServletSamples$SafeDynamicLoaderServlet#doGet
+      - security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$SafeReflectionController#loadClass
+  - rule-id: java/security/hardcoded-credentials.yaml#constant-db-password
+    positive:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#connectWithHardcodedDbPassword
+    negative:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#connectWithExternalDbPassword
+  - rule-id: java/security/hardcoded-credentials.yaml#hardcoded-cryptographic-key
+    positive:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#encryptWithHardcodedKey
+    negative:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#encryptWithExternalKey
+  - rule-id: java/security/hardcoded-credentials.yaml#hardcoded-password
+    positive:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#useHardcodedPasswordsEverywhere
+    negative:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#useExternalPasswords
+  - rule-id: java/security/hardcoded-credentials.yaml#java-empty-db-password
+    positive:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#connectWithEmptyDbPassword
+    negative:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#connectWithNonEmptyDbPassword
+  - rule-id: java/security/hardcoded-credentials.yaml#jwt-hardcoded-secret
+    positive:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#issueJwtWithHardcodedSecret
+    negative:
+      - security.hardcodedcredentials.HardcodedCredentialsSamples#issueJwtWithExternalSecret
+  - rule-id: java/security/insecure-design.yaml#cookie-missing-httponly
+    positive:
+      - security.insecuredesign.InsecureDesignSamples#cookieGeneratorExplicitHttpOnlyFalse
+      - security.insecuredesign.InsecureDesignSamples#cookieGeneratorWithoutHttpOnly
+      - security.insecuredesign.InsecureDesignSamples#createSessionCookieWithoutHttpOnlyInsecure
+      - security.insecuredesign.InsecureDesignSamples#explicitSetHttpOnlyFalse
+      - security.insecuredesign.InsecureDesignSamples#springResponseCookieHttpOnlyFalse
+    negative:
+      - security.insecuredesign.InsecureDesignSamples#cookieGeneratorWithHttpOnly
+      - security.insecuredesign.InsecureDesignSamples#createSessionCookieWithHttpOnlySecure
+      - security.insecuredesign.InsecureDesignSamples#springResponseCookieHttpOnlyTrue
+  - rule-id: java/security/insecure-design.yaml#do-privileged-use
+    positive:
+      - security.insecuredesign.InsecureDesignSamples#runWithElevatedPrivilegesInsecure
+    negative:
+      - security.insecuredesign.InsecureDesignSamples#avoidPrivilegedBlockSecure
+  - rule-id: java/security/insecure-design.yaml#permissive-cors
+    positive:
+      - security.insecuredesign.InsecureDesignSamples#setPermissiveCorsHeadersInReactive
+      - security.insecuredesign.InsecureDesignSamples#setPermissiveCorsHeadersInServerWebExchange
+      - security.insecuredesign.InsecureDesignSamples#setPermissiveCorsHeadersInServlet
+      - security.insecuredesign.InsecureDesignSamples#setPermissiveCorsHeadersInSpring
+    negative:
+      - security.insecuredesign.InsecureDesignSamples#setRestrictedCorsHeadersSecure
+  - rule-id: java/security/insecure-design.yaml#persistent-cookie
+    positive:
+      - security.insecuredesign.InsecureDesignSamples#createPersistentSensitiveCookieInsecure
+    negative:
+      - security.insecuredesign.InsecureDesignSamples#createShortLivedCookieSecure
+  - rule-id: java/security/insecure-design.yaml#trust-boundary-violation
+    positive:
+      - security.insecuredesign.InsecureDesignSamples#mixesTrustedAndUntrustedInSessionInsecure
+    negative:
+      - security.insecuredesign.InsecureDesignSamples#validateBeforeCrossingTrustBoundarySecure
+  - rule-id: java/security/ldap.yaml#java-anonymous-ldap
+    positive:
+      - security.ldap.AnonymousLdapSamples#anonymousBind
+    negative:
+      - security.ldap.AnonymousLdapSamples#authenticatedBind
+  - rule-id: java/security/ldap.yaml#ldap-entry-poisoning
+    positive:
+      - security.ldap.LdapEntryPoisoningSamples#vulnerableLookup
+    negative:
+      - security.ldap.LdapEntryPoisoningSamples#safeLookupEmail
+  - rule-id: java/security/ldap.yaml#ldap-injection
+    positive:
+      - security.ldap.LdapInjectionServletSamples#doPost
+      - security.ldap.LdapInjectionSpringSamples$UnsafeLdapSpringController#unsafeSearch
+  - rule-id: java/security/log-injection.yaml#log-injection
+    positive:
+      - security.loginjection.LogInjectionSamples$SpringLogInjectionController#unsafeLogin
+      - security.loginjection.LogInjectionSamples$UnsafeLogServlet#doGet
+  - rule-id: java/security/log-injection.yaml#seam-log-injection
+    positive:
+      - security.loginjection.LogInjectionSamples$SeamServletStyleLoginAction#vulnerableSeamLogging
+  - rule-id: java/security/path-traversal.yaml#path-traversal
+    positive:
+      - security.pathtraversal.PathTraversalServletSamples$UnsafeCookieDownloadServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost
+      - security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$UnsafeParamDownloadServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$UnsafeReadSymbolicLinkServlet#doGet
+      - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeHeaderDownload
+      - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload
+      - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload
+    negative:
+      - security.pathtraversal.PathTraversalServletSamples$SafeFileCreateTempFilePrefixSuffixServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempDirectoryPrefixServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempFilePrefixSuffixServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeHeaderDownloadServlet#doGet
+      - security.pathtraversal.PathTraversalServletSamples$SafeParamDownloadServlet2#doGet
+      - security.pathtraversal.PathTraversalSpringSamples$SafeFileDownloadController#safeHeaderDownload
+      - security.pathtraversal.PathTraversalSpringSamples$SafeTempFileController#safeCreateTempDirectory
+      - security.pathtraversal.PathTraversalSpringSamples$SafeTempFileController#safeCreateTempFile
+      - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#safeNonWildcardPathVariable
+  - rule-id: java/security/permissions.yaml#dangerous-permissions
+    positive:
+      - security.permissions.PermissionsSamples#grantDangerousRuntimeAndReflectPermissions
+    negative:
+      - security.permissions.PermissionsSamples#grantLimitedSafePermissions
+  - rule-id: java/security/permissions.yaml#overly-permissive-file-permission-inline
+    positive:
+      - security.permissions.PermissionsSamples#addExplicitOthersExecutePermission
+      - security.permissions.PermissionsSamples#createWorldReadableAndWritableFile
+    negative:
+      - security.permissions.PermissionsSamples#createOwnerOnlyFile
+  - rule-id: java/security/sensitive-data-exposure.yaml#cookie-issecure-false
+    positive:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#cookieGeneratorExplicitSecureFalse
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#cookieGeneratorWithoutSecure
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#explicitSetSecureFalse
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#insecureSessionCookie
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#rawSetCookieHeaderWithoutSecure
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#springResponseCookieSecureFalse
+    negative:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#cookieGeneratorWithSecure
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#rawSetCookieHeaderWithSecure
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#secureEmptySessionCookie
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#secureSessionCookie
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#springResponseCookieSecureTrue
+  - rule-id: java/security/sensitive-data-exposure.yaml#file-disclosure-request-dispatcher
+    positive:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGet
+    negative:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGetSafe
+  - rule-id: java/security/sensitive-data-exposure.yaml#jsp-file-disclosure
+    positive:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$JspFileDisclosureController#mvcVulnerable
+    negative:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$JspFileDisclosureController#mvcSafe
+  - rule-id: java/security/sensitive-data-exposure.yaml#stacktrace-printing-in-error-message
+    positive:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#printStackTraceToStdout
+    negative:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#logStackTraceSafely
+  - rule-id: java/security/sensitive-data-exposure.yaml#unencrypted-socket
+    positive:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#createUnencryptedServerSocket
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#createUnencryptedSocket
+    negative:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#createEncryptedServerSocket
+      - security.sensitivedataexposure.SensitiveDataExposureSamples#createEncryptedSocket
+  - rule-id: java/security/sensitive-data-exposure.yaml#url-rewriting
+    positive:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$UrlRewritingController#track
+    negative:
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$UrlRewritingController#trackSafe
+  - rule-id: java/security/sqli.yaml#sql-injection
+    positive:
+      - security.sqli.SqlInjectionServletSamples$UnsafeSqlServlet#doGet
+      - security.sqli.SqlInjectionSpringSamples$UnsafeSqlSpringController#unsafeSearch
+    negative:
+      - security.sqli.SqlInjectionServletSamples$SafeSqlServlet#doGet
+      - security.sqli.SqlInjectionSpringSamples$SafeSqlSpringController#safeSearch
+  - rule-id: java/security/ssrf.yaml#java-servlet-parameter-pollution
+    positive:
+      - security.ssrf.SsrfSamples$UnsafeParameterPollutionServlet#doGet
+    negative:
+      - security.ssrf.SsrfSamples$SafeParameterPollutionServlet#doGet
+  - rule-id: java/security/ssrf.yaml#ssrf
+    positive:
+      - security.ssrf.SsrfSamples$SsrfSpringController#unsafeProxy
+      - security.ssrf.SsrfSamples$UnsafeProxyServlet#doGet
+    negative:
+      - security.ssrf.SsrfSamples$SafeProxyServlet#doGet
+  - rule-id: java/security/strings.yaml#format-string-external-manipulation
+    positive:
+      - security.strings.StringsSamples$FormatStringServlet#doGet
+      - security.strings.StringsSamples$FormatStringSpringController#unsafe
+    negative:
+      - security.strings.StringsSamples$FormatStringServlet#doGetSafe
+      - security.strings.StringsSamples$FormatStringSpringController#safe
+  - rule-id: java/security/strings.yaml#string-normalize-after-validation
+    positive:
+      - security.strings.StringsSamples#normalizeAfterValidation
+    negative:
+      - security.strings.StringsSamples#normalizeBeforeValidation
+  - rule-id: java/security/unsafe-deserialization.yaml#apache-rpc-enabled-extensions
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$InsecureApacheXmlRpcConfig#enableExtensionsClient
+      - security.unsafedeserialization.UnsafeDeserializationSamples$InsecureApacheXmlRpcConfig#enableExtensionsServer
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeApacheXmlRpcConfig#disableExtensionsClient
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeApacheXmlRpcConfig#disableExtensionsServer
+  - rule-id: java/security/unsafe-deserialization.yaml#default-resteasy-provider-abuse
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$DefaultResteasyResource#unsafeWithoutConsumes
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$DefaultSafeResteasyResource#safeWithConsumes
+  - rule-id: java/security/unsafe-deserialization.yaml#insecure-jms-deserialization
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$InsecureJmsListener#onMessage
+  - rule-id: java/security/unsafe-deserialization.yaml#insecure-resteasy-deserialization
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$InsecureResteasyResource#handleUnsafe
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeResteasyResource#handleSafe
+  - rule-id: java/security/unsafe-deserialization.yaml#server-dangerous-object-deserialization
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$DangerousRemoteService#invoke
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById
+  - rule-id: java/security/unsafe-deserialization.yaml#unsafe-jackson-deserialization
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController
+      - security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeJacksonServlet
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController#safeJackson
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeJacksonServlet
+  - rule-id: java/security/unsafe-deserialization.yaml#unsafe-object-mapper
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$ObjectInputStreamSpringController#unsafeDeserialize
+      - security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeObjectInputStreamServlet#doPost
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$ObjectInputStreamSpringController#safeDeserialize
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeObjectInputStreamServlet#doPost
+  - rule-id: java/security/unsafe-deserialization.yaml#unsafe-snake-yaml-deserialization
+    positive:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SnakeYamlSpringController#unsafeYaml
+      - security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeSnakeYamlServlet#doPost
+    negative:
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeSnakeYamlServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SnakeYamlSpringController#safeYaml
+  - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-servlet-app
+    positive:
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeUnvalidatedRedirectServlet#doGet
+    negative:
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet#doGet
+  - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-spring-app
+    positive:
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirect
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirectView
+    negative:
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeInternalRedirect
+  - rule-id: java/security/weak-authentication.yaml#java-jwt-decode-without-verify
+    positive:
+      - security.weakauthentication.WeakAuthenticationSamples#decodeJwtWithoutVerifyInsecure
+    negative:
+      - security.weakauthentication.WeakAuthenticationSamples#verifyJwtBeforeUseSecure
+  - rule-id: java/security/weak-authentication.yaml#java-saml-ignore-comments
+    positive:
+      - security.weakauthentication.WeakAuthenticationSamples#samlParserPoolIgnoreCommentsInsecure
+    negative:
+      - security.weakauthentication.WeakAuthenticationSamples#samlParserPoolDefaultCommentsSecure
+  - rule-id: java/security/xss.yaml#response-injection-in-servlet-app
+    positive:
+      - security.xss.XssServletSamples$UnsafeJsonInfoServlet#doGet
+  - rule-id: java/security/xss.yaml#response-injection-in-spring-app
+    positive:
+      - security.xss.XssSpringSamples$UnsafeNoContentTypeSpringController#unsafeNoContentType
+      - security.xss.XssSpringSamples$UnsafeResponseEntityController#unsafeResponseEntity
+  - rule-id: java/security/xss.yaml#wicket-xss
+    positive:
+      - security.xss.WicketXssSamples$UnsafeWicketPage
+    negative:
+      - security.xss.WicketXssSamples$SafeWicketPage
+  - rule-id: java/security/xss.yaml#xss-in-servlet-app
+    positive:
+      - security.xss.XssHtmlResponseServletSamples$UnsafeChainedOutputStreamServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeChainedWriterServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeHtmlServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeNoContentTypeServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeOutputStreamLocalServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeSendErrorServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeTypedPrintWriterServlet#doGet
+      - security.xss.XssServletSamples$UnsafeGreetingServlet#doGet
+    negative:
+      - security.xss.XssHtmlResponseServletSamples$SafeChainedWriterJsonServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$SafeHtmlServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$SafeOutputStreamOctetServlet#doGet
+      - security.xss.XssServletSamples$SafeGreetingServlet#doGet
+  - rule-id: java/security/xss.yaml#xss-in-spring-app
+    positive:
+      - security.xss.UnsafeBareBytesController#unsafeBareBytes
+      - security.xss.UnsafeBareResourceController#unsafeBareResource
+      - security.xss.UnsafeHtmlRestController#unsafeHtml
+      - security.xss.UnsafeResponseEntityIsrController#unsafeResponseEntityIsr
+      - security.xss.UnsafeResponseEntityRawController#unsafeResponseEntityRaw
+      - security.xss.UnsafeResponseEntityResourceController#unsafeResponseEntityResource
+      - security.xss.XssHtmlResponseSpringSamples$Row02StringProducesHtmlController#row02
+      - security.xss.XssHtmlResponseSpringSamples$Row09ResponseEntityStringContentTypeHtmlController#row09
+      - security.xss.XssHtmlResponseSpringSamples$Row11ResponseEntityStringHeaderHtmlController#row11
+      - security.xss.XssHtmlResponseSpringSamples$Row14RawResponseEntityNoContentTypeController#row14
+      - security.xss.XssHtmlResponseSpringSamples$Row16StirlingPdfShapeController#row16
+      - security.xss.XssHtmlResponseSpringSamples$Row23StringProducesMediaTypeTextHtmlConstantController#row23
+      - security.xss.XssHtmlResponseSpringSamples$Row25StringProducesSvgController#row25
+      - security.xss.XssHtmlResponseSpringSamples$Row27DeferredResultStringController#row27
+      - security.xss.XssHtmlResponseSpringSamples$Row28CompletableFutureStringController#row28
+      - security.xss.XssHtmlResponseSpringSamples$Row30ServletSetContentTypeHtmlUtf16Controller#row30
+      - security.xss.XssHtmlResponseSpringSamples$Row32RestControllerClassLevelHtmlController#row32
+      - security.xss.XssHtmlResponseSpringSamples$Row34ServletSetHeaderTextHtmlController#row34
+      - security.xss.XssHtmlResponseSpringSamples$Row50ServletSetContentTypeHtmlConstantController#row50
+      - security.xss.XssHtmlResponseSpringSamples$Row51ServletSetHeaderHtmlConstantController#row51
+      - security.xss.XssHtmlResponseSpringSamples$Row52ServletAddHeaderHtmlConstantController#row52
+      - security.xss.XssHtmlResponseSpringSamples$Row53BuilderChainHtmlObjectReturnController#row53
+      - security.xss.XssHtmlResponseSpringSamples$Row54BuilderChainHtmlMultiStatementController#row54
+      - security.xss.XssHtmlResponseSpringSamples$Row56ControllerResponseBodyStringController#row56
+      - security.xss.XssHtmlResponseSpringSamples$UnsafeResponseEntityBytesHtmlController#unsafeBytesHtml
+      - security.xss.XssHtmlResponseSpringSamples$UnsafeResponseEntityStringController#unsafeResponseEntityString
+      - security.xss.XssHtmlResponseSpringSamples$UnsafeSetContentTypeController#unsafeHtmlGreet
+      - security.xss.XssHtmlResponseSpringSamples$UnsafeSetHeaderController#unsafeSetHeaderGreet
+      - security.xss.XssHtmlResponseSpringSamples$UnsafeStringReturnController#unsafeStringReturn
+      - security.xss.XssSpringSamples$UnsafeXssSpringController#unsafeGreet
+    negative:
+      - security.xss.SafeDtoRestController#safeDto
+      - security.xss.XssHtmlResponseSpringSamples$Row04StringProducesTextPlainController#row04
+      - security.xss.XssHtmlResponseSpringSamples$Row05StringProducesPdfController#row05
+      - security.xss.XssHtmlResponseSpringSamples$Row06StringProducesOctetStreamController#row06
+      - security.xss.XssHtmlResponseSpringSamples$Row08ResponseEntityStringProducesJsonController#row08
+      - security.xss.XssHtmlResponseSpringSamples$Row10ResponseEntityStringContentTypeJsonController#row10
+      - security.xss.XssHtmlResponseSpringSamples$Row12ResponseEntityStringHeaderJsonController#row12
+      - security.xss.XssHtmlResponseSpringSamples$Row13NewResponseEntityHeadersJsonController#row13
+      - security.xss.XssHtmlResponseSpringSamples$Row15RawResponseEntityContentTypeJsonController#row15
+      - security.xss.XssHtmlResponseSpringSamples$Row18ResponseEntityBytesContentTypePdfController#row18
+      - security.xss.XssHtmlResponseSpringSamples$Row19ResponseEntityBytesContentTypeOctetStreamController#row19
+      - security.xss.XssHtmlResponseSpringSamples$Row20ServletSetContentTypeJsonController#row20
+      - security.xss.XssHtmlResponseSpringSamples$Row21ServletSetHeaderJsonController#row21
+      - security.xss.XssHtmlResponseSpringSamples$Row22StringProducesMediaTypeJsonConstantController#row22
+      - security.xss.XssHtmlResponseSpringSamples$Row24StringProducesApplicationXmlController#row24
+      - security.xss.XssHtmlResponseSpringSamples$Row31RestControllerClassLevelJsonController#row31
+      - security.xss.XssHtmlResponseSpringSamples$Row35ServletAddHeaderJsonController#row35
+      - security.xss.XssHtmlResponseSpringSamples$Row36ResponseEntityAssignmentJsonController#row36
+      - security.xss.XssHtmlResponseSpringSamples$Row37ServletSetContentTypeJsonAssignmentController#row37
+      - security.xss.XssHtmlResponseSpringSamples$Row55BuilderChainHtmlEntityDiscardedController#row55
+      - security.xss.XssHtmlResponseSpringSamples$SafeHtmlController#safeHtmlGreet
+      - security.xss.XssHtmlResponseSpringSamples$SafeJsonStringReturnController#safeJsonStringReturn
+      - security.xss.XssHtmlResponseSpringSamples$SafeStringReturnController#safeStringReturn
+      - security.xss.XssSpringSamples$SafeXssSpringController#safeGreet
+  - rule-id: java/security/xss.yaml#xssrequestwrapper-is-insecure
+    positive:
+      - security.xss.XssRequestWrapperSamples$InsecureWrappedServlet#doGet
+    negative:
+      - security.xss.XssRequestWrapperSamples$SafeEncodingFilter#doFilter
+  - rule-id: java/security/xxe.yaml#xxe
+    positive:
+      - security.xxe.XxeSamples$DigesterSpringController#processXmlInsecure
+      - security.xxe.XxeSamples$SaxParserSpringController#processXmlInsecure
+      - security.xxe.XxeSamples$SaxReaderSpringController#processXmlInsecure
+      - security.xxe.XxeSamples$StaxSpringController#processXmlInsecure
+      - security.xxe.XxeSamples$TransformerSpringController#newTransformerInsecure
+      - security.xxe.XxeSamples$TransformerSpringController#transformInsecure
+      - security.xxe.XxeSamples$UnsafeDigesterServlet#doPost
+      - security.xxe.XxeSamples$UnsafeSaxParserServlet#doPost
+      - security.xxe.XxeSamples$UnsafeSaxReaderServlet#doPost
+      - security.xxe.XxeSamples$UnsafeStaxServlet#doPost
+      - security.xxe.XxeSamples$UnsafeTransformerFactoryServlet#doPost
+      - security.xxe.XxeSamples$UnsafeTransformerServlet#doPost
+      - security.xxe.XxeSamples$UnsafeXmlDecoderServlet#doPost
+      - security.xxe.XxeSamples$UnsafeXmlReaderServlet#doPost
+      - security.xxe.XxeSamples$UnsafeXmlUploadServlet#doPost
+      - security.xxe.XxeSamples$XmlDecoderSpringController#decodeInsecure
+      - security.xxe.XxeSamples$XmlReaderSpringController#processXmlInsecure
+      - security.xxe.XxeSamples$XxeSpringController#processXmlInsecure
+    negative:
+      - security.xxe.XxeSamples$DigesterSpringController#processXmlSafe
+      - security.xxe.XxeSamples$SafeDigesterServlet#doPost
+      - security.xxe.XxeSamples$SafeSaxParserServlet#doPost
+      - security.xxe.XxeSamples$SafeSaxReaderServlet#doPost
+      - security.xxe.XxeSamples$SafeStaxServlet#doPost
+      - security.xxe.XxeSamples$SafeTransformerFactoryServlet#doPost
+      - security.xxe.XxeSamples$SafeTransformerServlet#doPost
+      - security.xxe.XxeSamples$SafeTransformerTransformServlet#doPost
+      - security.xxe.XxeSamples$SafeXmlDecoderServlet#doPost
+      - security.xxe.XxeSamples$SafeXmlReaderServlet#doPost
+      - security.xxe.XxeSamples$SafeXmlUploadServlet#doPost
+      - security.xxe.XxeSamples$SaxParserSpringController#processXmlSafe
+      - security.xxe.XxeSamples$SaxReaderSpringController#processXmlSafe
+      - security.xxe.XxeSamples$StaxSpringController#processXmlSafe
+      - security.xxe.XxeSamples$TransformerSpringController#newTransformerSafe
+      - security.xxe.XxeSamples$TransformerSpringController#transformSafe
+      - security.xxe.XxeSamples$TransformerSpringController#transformSafeWithSecureProcessing
+      - security.xxe.XxeSamples$XmlDecoderSpringController#decodeSafe
+      - security.xxe.XxeSamples$XmlReaderSpringController#processXmlSafe
+      - security.xxe.XxeSamples$XxeSpringController#processXmlSafe

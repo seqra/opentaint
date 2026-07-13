@@ -1,0 +1,21 @@
+rules:
+  - id: qualified-field-sources
+    languages: [go]
+    severity: WARNING
+    message: Qualified typed field-read source reaches Sink
+    mode: taint
+    pattern-sources:
+      - label: "$UNTRUSTED"
+        patterns:
+          - pattern-inside: |
+              import "net/http"
+              ...
+          - pattern-either:
+              - pattern: "($R : *http.Request).URL.Query()"
+              - pattern: "($R : *http.Request).URL.Query().Get($K)"
+              - pattern: "($R : *http.Request).Header.Get($K)"
+              - pattern: "($R : *http.Request).Header[$K]"
+              - pattern: "($R : *http.Request).Body"
+              - pattern: "($R : *http.Request).Form[$K][$I]"
+    pattern-sinks:
+      - pattern: QualifiedFieldSources.Sink($X)

@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue("password")
     pattern-sinks:
-      - pattern: util.Sink_LogOutput($X)
+      - pattern: creds_07_form_password_log.Sink_LogOutput($X)

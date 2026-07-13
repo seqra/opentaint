@@ -19,9 +19,6 @@ type PathBuilder struct {
 // NewPathBuilder creates a new PathBuilder with default settings
 func NewPathBuilder() *PathBuilder {
 	return &PathBuilder{
-		baseDir:     os.TempDir(),
-		subDir:      filepath.Join("opentaint", "rule_load_trace"),
-		filePrefix:  "",
 		fileSuffix:  ".json",
 		timeFormat:  "2006-01-02_15-04-05",
 		permissions: 0755,
@@ -77,7 +74,8 @@ func (pb *PathBuilder) Build() (string, error) {
 	return filePath, nil
 }
 
-// GenerateSemgrepRuleLoadTraceFilePath creates a trace file path using default settings (backward compatibility)
-func GenerateSemgrepRuleLoadTraceFilePath() (string, error) {
-	return NewPathBuilder().Build()
+// RuleLoadTracePathIn builds a rule-load-trace file path inside dir, e.g.
+// <dir>/rule-load-trace-2006-01-02_15-04-05.json, creating dir if needed.
+func RuleLoadTracePathIn(dir string) (string, error) {
+	return NewPathBuilder().BaseDir(dir).FilePrefix("rule-load-trace-").Build()
 }

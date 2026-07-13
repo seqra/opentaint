@@ -1,6 +1,10 @@
 package org.opentaint.ir.go.impl
 
-import org.opentaint.ir.go.api.*
+import org.opentaint.ir.go.api.GoIRConst
+import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.api.GoIRGlobal
+import org.opentaint.ir.go.api.GoIRNamedType
+import org.opentaint.ir.go.api.GoIRPackage
 
 class GoIRPackageImpl(
     override val importPath: String,
@@ -16,49 +20,33 @@ class GoIRPackageImpl(
 
     override fun hashCode(): Int = importPath.hashCode()
 
+    // Functions are stored as a list because methods on different named types
+    // legitimately share the same short name (e.g. `Legs` on both `Dog` and
+    // `Snake`), so a map keyed by `fn.name` would drop declarations.
     private val _functions = mutableListOf<GoIRFunction>()
-    private val _namedTypes = mutableListOf<GoIRNamedType>()
-    private val _globals = mutableListOf<GoIRGlobal>()
-    private val _constants = mutableListOf<GoIRConst>()
-    private val _imports = mutableListOf<GoIRPackage>()
-    private val _functionSet = HashSet<GoIRFunction>()
-    private val _namedTypeSet = HashSet<GoIRNamedType>()
-    private val _globalSet = HashSet<GoIRGlobal>()
-    private val _constantSet = HashSet<GoIRConst>()
-    private val _importSet = HashSet<GoIRPackage>()
+    private val _namedTypes = mutableMapOf<String, GoIRNamedType>()
+    private val _globals = mutableMapOf<String, GoIRGlobal>()
+    private val _constants = mutableMapOf<String, GoIRConst>()
+    val _imports = mutableListOf<GoIRPackage>()
 
     override val functions: List<GoIRFunction> get() = _functions
-    override val namedTypes: List<GoIRNamedType> get() = _namedTypes
-    override val globals: List<GoIRGlobal> get() = _globals
-    override val constants: List<GoIRConst> get() = _constants
+    override val namedTypes: List<GoIRNamedType> get() = _namedTypes.values.toList()
+    override val globals: List<GoIRGlobal> get() = _globals.values.toList()
+    override val constants: List<GoIRConst> get() = _constants.values.toList()
     override val imports: List<GoIRPackage> get() = _imports
     override var initFunction: GoIRFunction? = null
 
-    // Deferred resolution data
-    internal var importIds: List<Int> = emptyList()
-    internal var initFunctionId: Int = 0
-
-    fun addFunction(fn: GoIRFunction) { if (_functionSet.add(fn)) _functions.add(fn) }
-    fun addNamedType(nt: GoIRNamedType) { if (_namedTypeSet.add(nt)) _namedTypes.add(nt) }
-    fun addGlobal(g: GoIRGlobal) { if (_globalSet.add(g)) _globals.add(g) }
-    fun addConst(c: GoIRConst) { if (_constantSet.add(c)) _constants.add(c) }
-
-    fun resolveImports(packagesById: Map<Int, GoIRPackageImpl>) {
-        for (id in importIds) {
-            packagesById[id]?.let { if (_importSet.add(it)) _imports.add(it) }
-        }
+    fun addFunction(fn: GoIRFunction) {
+        _functions.add(fn)
     }
 
-    fun resolveInitFunction(functionsById: Map<Int, GoIRFunctionImpl>) {
-        if (initFunctionId != 0) {
-            initFunction = functionsById[initFunctionId]
-        }
-    }
+    fun addNamedType(nt: GoIRNamedType) { _namedTypes[nt.name] = nt }
+    fun addGlobal(g: GoIRGlobal) { _globals[g.name] = g }
+    fun addConst(c: GoIRConst) { _constants[c.name] = c }
 
-    override fun findFunction(name: String) = functions.find { it.name == name }
-    override fun findNamedType(name: String) = namedTypes.find { it.name == name }
-    override fun findGlobal(name: String) = globals.find { it.name == name }
-    override fun findConstant(name: String) = constants.find { it.name == name }
+    override fun findNamedType(name: String) = _namedTypes[name]
+    override fun findGlobal(name: String) = _globals[name]
+    override fun findConstant(name: String) = _constants[name]
 
     override fun allMethods(): List<GoIRFunction> =
         namedTypes.flatMap { it.allMethods() }

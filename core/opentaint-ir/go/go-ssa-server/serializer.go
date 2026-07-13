@@ -57,6 +57,9 @@ type serializer struct {
 	// Tracks which functions have already been serialized as ProtoFunction
 	serializedFunctions map[*ssa.Function]bool
 
+	// Tracks which named types already have a ProtoNamedType emitted.
+	emittedNamedTypes map[*types.TypeName]bool
+
 	// Maps for value IDs within a function
 	funcValueIDs map[ssa.Value]int32
 
@@ -76,6 +79,7 @@ func newSerializerWithIDs(prog *ssa.Program, pkgs []*ssa.Package, ids *idAllocat
 		collectedFunctions:  make(map[*ssa.Function]bool),
 		collectedGlobals:    make(map[*ssa.Global]bool),
 		serializedFunctions: make(map[*ssa.Function]bool),
+		emittedNamedTypes:   make(map[*types.TypeName]bool),
 	}
 }
 
@@ -151,51 +155,170 @@ func (s *serializer) shouldEmitBody(fn *ssa.Function) bool {
 	return !isDep && !isStdlib
 }
 
-func (s *serializer) streamTypes(stream pb.GoSSAService_BuildProgramServer) error {
-	for _, t := range s.allTypes {
-		td := s.serializeType(t)
-		if td == nil {
-			continue
-		}
-		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_TypeDef{TypeDef: td}}); err != nil {
-			return err
-		}
-		s.stats.typeCount++
-	}
-	return nil
-}
+// serializeProgram serializes the whole program (types, packages and function
+// bodies) into a single bulk message. Named-type declarations are emitted by
+// serializePackage for top-level named members; types not referenced as
+// package-level members (function-local types, universe types like `error`)
+// are drained afterwards into the correct ProtoPackage, then the type table
+// is drained so every referenced id has a matching ProtoTypeDefinition.
+func (s *serializer) serializeProgram() (*pb.ProtoProgram, []*pb.ProtoError) {
+	program := &pb.ProtoProgram{}
+	var errs []*pb.ProtoError
 
-func (s *serializer) streamPackages(stream pb.GoSSAService_BuildProgramServer) error {
+	protoPkgBySSA := make(map[*ssa.Package]*pb.ProtoPackage, len(s.pkgs))
 	for _, pkg := range s.pkgs {
 		pp := s.serializePackage(pkg)
 		isStdlib, isDep := classifyPackage(s.loadInfo[pkg.Pkg.Path()], s.projectModulePaths)
 		pp.IsStdlib = isStdlib
 		pp.IsDependency = isDep
-		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_PackageDef{PackageDef: pp}}); err != nil {
-			return err
-		}
+		protoPkgBySSA[pkg] = pp
+		program.Packages = append(program.Packages, pp)
 		s.stats.packageCount++
 	}
-	return nil
-}
 
-func (s *serializer) streamFunctionBodies(stream pb.GoSSAService_BuildProgramServer) error {
 	for _, fn := range s.allFunctions {
 		if len(fn.Blocks) == 0 {
 			continue
 		}
 		body, err := s.serializeFunctionBody(fn)
 		if err != nil {
-			stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_Error{Error: &pb.ProtoError{
-				Message: fmt.Sprintf("serializing %s: %v", fn.String(), err), FunctionName: fn.String(), Fatal: false,
-			}}})
+			errs = append(errs, &pb.ProtoError{
+				Message:      fmt.Sprintf("serializing %s: %v", fn.String(), err),
+				FunctionName: fn.String(),
+				Fatal:        false,
+			})
 			continue
 		}
-		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_FunctionBody{FunctionBody: body}}); err != nil {
-			return err
+		program.FunctionBodies = append(program.FunctionBodies, body)
+	}
+
+	// Drain remaining types and named-type declarations together. Each pass
+	// may allocate new ids for the other table (e.g. a NamedRef emitted for a
+	// previously-unseen *types.Named, or a named-type body referencing more
+	// types), so loop until both are drained. Universe-scope named types
+	// (`error`, `comparable`) are routed to a synthetic package so the
+	// deserializer always has a non-nil owner.
+	var universePkg *pb.ProtoPackage
+	getUniversePkg := func() *pb.ProtoPackage {
+		if universePkg == nil {
+			universePkg = &pb.ProtoPackage{
+				Id:         s.ids.packageID(nil),
+				ImportPath: universePackagePath,
+				Name:       universePackagePath,
+				IsStdlib:   true,
+			}
+			program.Packages = append(program.Packages, universePkg)
+			s.stats.packageCount++
+		}
+		return universePkg
+	}
+
+	typeCursor := 0
+	for {
+		progress := false
+		for typeCursor < len(s.allTypes) {
+			t := s.allTypes[typeCursor]
+			typeCursor++
+			td := s.serializeType(t)
+			if td == nil {
+				continue
+			}
+			program.Types = append(program.Types, td)
+			s.stats.typeCount++
+			progress = true
+		}
+		for tn := range s.ids.snapshotNamedIDs() {
+			if s.emittedNamedTypes[tn] {
+				continue
+			}
+			pp := s.protoPackageForTypeName(tn, protoPkgBySSA, getUniversePkg)
+			pp.NamedTypes = append(pp.NamedTypes, s.serializeNamedType(tn))
+			progress = true
+		}
+		// Drain referenced-but-unemitted functions (synthetic wrappers,
+		// stdlib/dep functions, generic instantiations, anonymous functions in
+		// non-user packages). Their signatures need to be in some
+		// ProtoPackage.Functions list so client refs (Parent/Anon/Call) resolve.
+		for fn := range s.ids.snapshotFunctionIDs() {
+			if s.serializedFunctions[fn] {
+				continue
+			}
+			pp := s.protoPackageForFunction(fn, protoPkgBySSA, getUniversePkg)
+			pp.Functions = append(pp.Functions, s.serializeFunction(fn))
+			s.serializedFunctions[fn] = true
+			progress = true
+		}
+		if !progress {
+			break
 		}
 	}
-	return nil
+
+	return program, errs
+}
+
+// universePackagePath is the synthetic import path used for universe-scope
+// named types (e.g. `error`, `comparable`) that don't belong to any real
+// Go package. The deserializer needs every named type to map to a package.
+const universePackagePath = "<universe>"
+
+// protoPackageForTypeName chooses which ProtoPackage should host the
+// declaration of the given named type. Falls back to the universe package
+// when the type has no owner or the owner's SSA package isn't part of the
+// serialized set.
+func (s *serializer) protoPackageForTypeName(
+	tn *types.TypeName,
+	protoPkgBySSA map[*ssa.Package]*pb.ProtoPackage,
+	universe func() *pb.ProtoPackage,
+) *pb.ProtoPackage {
+	if tn.Pkg() == nil {
+		return universe()
+	}
+	ssaPkg := lookupSSAPackageByTypesPackage(s.prog, tn.Pkg())
+	if ssaPkg == nil {
+		return universe()
+	}
+	if pp, ok := protoPkgBySSA[ssaPkg]; ok {
+		return pp
+	}
+	return universe()
+}
+
+// isInValueMethodSet reports whether the underlying *types.Func of sel is
+// already present in the given value-receiver method set. SSA synthesizes a
+// pointer-receiver wrapper for every value-receiver method (so that `*T`
+// implements the same interfaces as `T`); those wrappers share the same
+// *types.Func as the user-declared method and must not be emitted as separate
+// top-level functions.
+func isInValueMethodSet(mset *types.MethodSet, sel *types.Selection) bool {
+	for j := 0; j < mset.Len(); j++ {
+		if mset.At(j).Obj() == sel.Obj() {
+			return true
+		}
+	}
+	return false
+}
+
+// protoPackageForFunction chooses which ProtoPackage should host the
+// declaration of the given function. Mirrors protoPackageForTypeName but for
+// *ssa.Function: prefers fn.Package(), then the declared package (covers
+// synthetic wrappers and instantiated generics whose Package() is nil), and
+// finally the universe package as a catch-all.
+func (s *serializer) protoPackageForFunction(
+	fn *ssa.Function,
+	protoPkgBySSA map[*ssa.Package]*pb.ProtoPackage,
+	universe func() *pb.ProtoPackage,
+) *pb.ProtoPackage {
+	ssaPkg := fn.Package()
+	if ssaPkg == nil {
+		ssaPkg = declaredPackage(fn)
+	}
+	if ssaPkg == nil {
+		return universe()
+	}
+	if pp, ok := protoPkgBySSA[ssaPkg]; ok {
+		return pp
+	}
+	return universe()
 }
 
 func (s *serializer) collectFunction(fn *ssa.Function) {
@@ -306,10 +429,24 @@ func (s *serializer) collectReferencedGlobal(g *ssa.Global) {
 	s.allGlobals = append(s.allGlobals, g)
 }
 
+func (s *serializer) typeID(t types.Type) int32 {
+	if t == nil {
+		return 0
+	}
+	// Resolve type aliases to their target. Since Go 1.23 (gotypesalias=1 by
+	// default) the type checker materializes *types.Alias nodes, which none of
+	// the kind switches below handle; left unresolved they would be assigned an
+	// ID but never emitted, producing a dangling type reference on the client.
+	t = types.Unalias(t)
+	s.collectType(t)
+	return s.ids.typeID(t)
+}
+
 func (s *serializer) collectType(t types.Type) {
 	if t == nil {
 		return
 	}
+	t = types.Unalias(t) // see typeID: never collect a bare *types.Alias
 	if s.collectedTypes[t] {
 		return // already collected in this call
 	}
@@ -388,7 +525,8 @@ func (s *serializer) collectType(t types.Type) {
 // ─── Streaming phase 1: Types ───────────────────────────────────────
 
 func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
-	id := s.ids.typeID(t)
+	t = types.Unalias(t) // aliases are resolved away in typeID/collectType
+	id := s.typeID(t)
 
 	switch ut := t.(type) {
 	case *types.Basic:
@@ -399,27 +537,27 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 	case *types.Pointer:
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
-			Type: &pb.ProtoTypeDefinition_Pointer{Pointer: &pb.ProtoPointerType{ElemTypeId: s.ids.typeID(ut.Elem())}},
+			Type: &pb.ProtoTypeDefinition_Pointer{Pointer: &pb.ProtoPointerType{ElemTypeId: s.typeID(ut.Elem())}},
 		}
 	case *types.Array:
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
-			Type: &pb.ProtoTypeDefinition_Array{Array: &pb.ProtoArrayType{ElemTypeId: s.ids.typeID(ut.Elem()), Length: ut.Len()}},
+			Type: &pb.ProtoTypeDefinition_Array{Array: &pb.ProtoArrayType{ElemTypeId: s.typeID(ut.Elem()), Length: ut.Len()}},
 		}
 	case *types.Slice:
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
-			Type: &pb.ProtoTypeDefinition_Slice{Slice: &pb.ProtoSliceType{ElemTypeId: s.ids.typeID(ut.Elem())}},
+			Type: &pb.ProtoTypeDefinition_Slice{Slice: &pb.ProtoSliceType{ElemTypeId: s.typeID(ut.Elem())}},
 		}
 	case *types.Map:
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
-			Type: &pb.ProtoTypeDefinition_MapType{MapType: &pb.ProtoMapType{KeyTypeId: s.ids.typeID(ut.Key()), ValueTypeId: s.ids.typeID(ut.Elem())}},
+			Type: &pb.ProtoTypeDefinition_MapType{MapType: &pb.ProtoMapType{KeyTypeId: s.typeID(ut.Key()), ValueTypeId: s.typeID(ut.Elem())}},
 		}
 	case *types.Chan:
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
-			Type: &pb.ProtoTypeDefinition_ChanType{ChanType: &pb.ProtoChanType{ElemTypeId: s.ids.typeID(ut.Elem()), Direction: chanDirToProto(ut.Dir())}},
+			Type: &pb.ProtoTypeDefinition_ChanType{ChanType: &pb.ProtoChanType{ElemTypeId: s.typeID(ut.Elem()), Direction: chanDirToProto(ut.Dir())}},
 		}
 	case *types.Struct:
 		fields := make([]*pb.ProtoStructField, ut.NumFields())
@@ -427,7 +565,7 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 			f := ut.Field(i)
 			fields[i] = &pb.ProtoStructField{
 				Name:     f.Name(),
-				TypeId:   s.ids.typeID(f.Type()),
+				TypeId:   s.typeID(f.Type()),
 				Index:    int32(i),
 				Embedded: f.Embedded(),
 				Exported: f.Exported(),
@@ -444,12 +582,12 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 			m := ut.Method(i)
 			methods[i] = &pb.ProtoInterfaceMethod{
 				Name:            m.Name(),
-				SignatureTypeId: s.ids.typeID(m.Type()),
+				SignatureTypeId: s.typeID(m.Type()),
 			}
 		}
 		var embedIDs []int32
 		for i := 0; i < ut.NumEmbeddeds(); i++ {
-			embedIDs = append(embedIDs, s.ids.typeID(ut.EmbeddedType(i)))
+			embedIDs = append(embedIDs, s.typeID(ut.EmbeddedType(i)))
 		}
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
@@ -465,7 +603,7 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 		targs := ut.TypeArgs()
 		if targs != nil {
 			for i := 0; i < targs.Len(); i++ {
-				typeArgIDs = append(typeArgIDs, s.ids.typeID(targs.At(i)))
+				typeArgIDs = append(typeArgIDs, s.typeID(targs.At(i)))
 			}
 		}
 		return &pb.ProtoTypeDefinition{
@@ -481,13 +619,13 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 			Type: &pb.ProtoTypeDefinition_TypeParam{TypeParam: &pb.ProtoTypeParam{
 				Name:             ut.Obj().Name(),
 				Index:            int32(ut.Index()),
-				ConstraintTypeId: s.ids.typeID(ut.Constraint()),
+				ConstraintTypeId: s.typeID(ut.Constraint()),
 			}},
 		}
 	case *types.Tuple:
 		var elemIDs []int32
 		for i := 0; i < ut.Len(); i++ {
-			elemIDs = append(elemIDs, s.ids.typeID(ut.At(i).Type()))
+			elemIDs = append(elemIDs, s.typeID(ut.At(i).Type()))
 		}
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
@@ -501,7 +639,7 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 		// unions only constrain underlying types.
 		var embedIDs []int32
 		for i := 0; i < ut.Len(); i++ {
-			embedIDs = append(embedIDs, s.ids.typeID(ut.Term(i).Type()))
+			embedIDs = append(embedIDs, s.typeID(ut.Term(i).Type()))
 		}
 		return &pb.ProtoTypeDefinition{
 			Id:   id,
@@ -510,6 +648,15 @@ func (s *serializer) serializeType(t types.Type) *pb.ProtoTypeDefinition {
 	default:
 		// Check for unsafe.Pointer
 		if t.String() == "unsafe.Pointer" {
+			return &pb.ProtoTypeDefinition{
+				Id:   id,
+				Type: &pb.ProtoTypeDefinition_UnsafePointer{UnsafePointer: &pb.ProtoUnsafePointerType{}},
+			}
+		}
+		// SSA-internal opaque types (e.g. range-over-func "iter", deferStack)
+		// are unnamed self-underlying values with no public Go representation.
+		// Emit them as unsafe.Pointer so referencing instructions still resolve.
+		if t.Underlying() == t {
 			return &pb.ProtoTypeDefinition{
 				Id:   id,
 				Type: &pb.ProtoTypeDefinition_UnsafePointer{UnsafePointer: &pb.ProtoUnsafePointerType{}},
@@ -524,21 +671,19 @@ func (s *serializer) serializeFuncType(sig *types.Signature) *pb.ProtoFuncType {
 	ft := &pb.ProtoFuncType{Variadic: sig.Variadic()}
 	params := sig.Params()
 	for i := 0; i < params.Len(); i++ {
-		ft.ParamTypeIds = append(ft.ParamTypeIds, s.ids.typeID(params.At(i).Type()))
+		ft.ParamTypeIds = append(ft.ParamTypeIds, s.typeID(params.At(i).Type()))
 	}
 	results := sig.Results()
 	for i := 0; i < results.Len(); i++ {
-		ft.ResultTypeIds = append(ft.ResultTypeIds, s.ids.typeID(results.At(i).Type()))
+		ft.ResultTypeIds = append(ft.ResultTypeIds, s.typeID(results.At(i).Type()))
 	}
 	if sig.Recv() != nil {
-		ft.RecvTypeId = s.ids.typeID(sig.Recv().Type())
+		ft.RecvTypeId = s.typeID(sig.Recv().Type())
 	}
 	return ft
 }
 
 // ─── Streaming phase 2: Packages ────────────────────────────────────
-
-
 
 func (s *serializer) serializePackage(pkg *ssa.Package) *pb.ProtoPackage {
 	pp := &pb.ProtoPackage{
@@ -570,7 +715,7 @@ func (s *serializer) serializePackage(pkg *ssa.Package) *pb.ProtoPackage {
 			pp.Functions = append(pp.Functions, s.serializeFunction(m))
 			s.serializedFunctions[m] = true
 		case *ssa.Type:
-			pp.NamedTypes = append(pp.NamedTypes, s.serializeNamedType(pkg, m))
+			pp.NamedTypes = append(pp.NamedTypes, s.serializeNamedType(m.Object().(*types.TypeName)))
 		case *ssa.Global:
 			pp.Globals = append(pp.Globals, s.serializeGlobal(m))
 		case *ssa.NamedConst:
@@ -609,10 +754,18 @@ func (s *serializer) serializePackage(pkg *ssa.Package) *pb.ProtoPackage {
 				pp.Functions = append(pp.Functions, pf)
 				s.serializedFunctions[fn] = true
 			}
-			// Pointer receiver methods
+			// Pointer receiver methods. Skip entries whose declared method
+			// is already in the value receiver set: those are SSA-synthetic
+			// pointer wrappers around a value-receiver method, not separate
+			// user-declared functions, and serializing both would expose two
+			// functions with the same name in the package.
 			pmset := s.prog.MethodSets.MethodSet(types.NewPointer(named.Type()))
 			for i := 0; i < pmset.Len(); i++ {
-				fn := s.prog.MethodValue(pmset.At(i))
+				sel := pmset.At(i)
+				if isInValueMethodSet(mset, sel) {
+					continue
+				}
+				fn := s.prog.MethodValue(sel)
 				if fn == nil || s.serializedFunctions[fn] {
 					continue
 				}
@@ -712,7 +865,7 @@ func (s *serializer) serializeFunction(fn *ssa.Function) *pb.ProtoFunction {
 	if fnPkg != nil {
 		pf.PackageId = s.ids.packageID(fnPkg)
 	}
-	pf.SignatureTypeId = s.ids.typeID(fn.Signature)
+	pf.SignatureTypeId = s.typeID(fn.Signature)
 
 	// Method info
 	if recv := fn.Signature.Recv(); recv != nil {
@@ -723,7 +876,7 @@ func (s *serializer) serializeFunction(fn *ssa.Function) *pb.ProtoFunction {
 			recvType = ptr.Elem()
 		}
 		if named, ok := recvType.(*types.Named); ok {
-			pf.ReceiverTypeId = s.ids.typeID(named)
+			pf.ReceiverTypeId = s.typeID(named)
 		}
 	}
 
@@ -731,7 +884,7 @@ func (s *serializer) serializeFunction(fn *ssa.Function) *pb.ProtoFunction {
 	for i, p := range fn.Params {
 		pf.Params = append(pf.Params, &pb.ProtoParam{
 			Name:   p.Name(),
-			TypeId: s.ids.typeID(p.Type()),
+			TypeId: s.typeID(p.Type()),
 			Index:  int32(i),
 		})
 	}
@@ -740,7 +893,7 @@ func (s *serializer) serializeFunction(fn *ssa.Function) *pb.ProtoFunction {
 	for i, fv := range fn.FreeVars {
 		pf.FreeVars = append(pf.FreeVars, &pb.ProtoFreeVar{
 			Name:   fv.Name(),
-			TypeId: s.ids.typeID(fv.Type()),
+			TypeId: s.typeID(fv.Type()),
 			Index:  int32(i),
 		})
 	}
@@ -767,13 +920,21 @@ func (s *serializer) serializeFunction(fn *ssa.Function) *pb.ProtoFunction {
 	return pf
 }
 
-func (s *serializer) serializeNamedType(pkg *ssa.Package, t *ssa.Type) *pb.ProtoNamedType {
-	named := t.Object().(*types.TypeName)
+func (s *serializer) serializeNamedType(named *types.TypeName) *pb.ProtoNamedType {
+	s.emittedNamedTypes[named] = true
+	pkgPath := ""
+	if named.Pkg() != nil {
+		pkgPath = named.Pkg().Path()
+	}
+	fullName := named.Name()
+	if pkgPath != "" {
+		fullName = pkgPath + "." + named.Name()
+	}
 	nt := &pb.ProtoNamedType{
 		Id:               s.ids.namedID(named),
 		Name:             named.Name(),
-		FullName:         named.Pkg().Path() + "." + named.Name(),
-		UnderlyingTypeId: s.ids.typeID(named.Type().Underlying()),
+		FullName:         fullName,
+		UnderlyingTypeId: s.typeID(named.Type().Underlying()),
 	}
 
 	// Determine kind
@@ -792,7 +953,7 @@ func (s *serializer) serializeNamedType(pkg *ssa.Package, t *ssa.Type) *pb.Proto
 			f := st.Field(i)
 			nt.Fields = append(nt.Fields, &pb.ProtoFieldDecl{
 				Name:     f.Name(),
-				TypeId:   s.ids.typeID(f.Type()),
+				TypeId:   s.typeID(f.Type()),
 				Index:    int32(i),
 				Embedded: f.Embedded(),
 				Exported: f.Exported(),
@@ -807,7 +968,7 @@ func (s *serializer) serializeNamedType(pkg *ssa.Package, t *ssa.Type) *pb.Proto
 			m := iface.Method(i)
 			nt.InterfaceMethods = append(nt.InterfaceMethods, &pb.ProtoInterfaceMethodDecl{
 				Name:            m.Name(),
-				SignatureTypeId: s.ids.typeID(m.Type()),
+				SignatureTypeId: s.typeID(m.Type()),
 			})
 		}
 		for i := 0; i < iface.NumEmbeddeds(); i++ {
@@ -818,8 +979,13 @@ func (s *serializer) serializeNamedType(pkg *ssa.Package, t *ssa.Type) *pb.Proto
 		}
 	}
 
-	// Methods (value receiver)
-	mset := s.prog.MethodSets.MethodSet(named.Type())
+	// Methods (value receiver). Method sets are queried only for *types.Named;
+	// skip aliases and universe types whose Type() is not a *types.Named.
+	namedType, _ := named.Type().(*types.Named)
+	if namedType == nil {
+		return nt
+	}
+	mset := s.prog.MethodSets.MethodSet(namedType)
 	for i := 0; i < mset.Len(); i++ {
 		fn := s.prog.MethodValue(mset.At(i))
 		if fn != nil {
@@ -827,23 +993,18 @@ func (s *serializer) serializeNamedType(pkg *ssa.Package, t *ssa.Type) *pb.Proto
 		}
 	}
 
-	// Methods (pointer receiver)
-	pmset := s.prog.MethodSets.MethodSet(types.NewPointer(named.Type()))
+	// Methods (pointer receiver). Skip entries already present in the value
+	// receiver set — those are SSA-synthetic pointer wrappers, not separate
+	// user-declared methods.
+	pmset := s.prog.MethodSets.MethodSet(types.NewPointer(namedType))
 	for i := 0; i < pmset.Len(); i++ {
 		sel := pmset.At(i)
-		// Only include methods that are *not* in the value receiver set
+		if isInValueMethodSet(mset, sel) {
+			continue
+		}
 		fn := s.prog.MethodValue(sel)
 		if fn != nil {
-			found := false
-			for j := 0; j < mset.Len(); j++ {
-				if mset.At(j).Obj() == sel.Obj() {
-					found = true
-					break
-				}
-			}
-			if !found {
-				nt.PointerMethodIds = append(nt.PointerMethodIds, s.ids.functionID(fn))
-			}
+			nt.PointerMethodIds = append(nt.PointerMethodIds, s.ids.functionID(fn))
 		}
 	}
 
@@ -859,7 +1020,7 @@ func (s *serializer) serializeGlobal(g *ssa.Global) *pb.ProtoGlobal {
 		Id:         s.ids.globalID(g),
 		Name:       g.Name(),
 		FullName:   g.String(),
-		TypeId:     s.ids.typeID(deref(g.Type())),
+		TypeId:     s.typeID(deref(g.Type())),
 		IsExported: g.Object() != nil && g.Object().Exported(),
 	}
 	if g.Pos().IsValid() {
@@ -873,7 +1034,7 @@ func (s *serializer) serializeConst(c *ssa.NamedConst) *pb.ProtoConst {
 		Id:         s.ids.constID(c),
 		Name:       c.Name(),
 		FullName:   c.String(),
-		TypeId:     s.ids.typeID(c.Type()),
+		TypeId:     s.typeID(c.Type()),
 		Value:      s.constValueToProto(c.Value.Value),
 		IsExported: c.Object().Exported(),
 	}
@@ -978,7 +1139,7 @@ func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32, block
 	// If instruction produces a value
 	if v, ok := inst.(ssa.Value); ok {
 		pi.ValueId = s.funcValueIDs[v]
-		pi.TypeId = s.ids.typeID(v.Type())
+		pi.TypeId = s.typeID(v.Type())
 		pi.Name = v.Name()
 	}
 
@@ -986,7 +1147,7 @@ func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32, block
 	case *ssa.Alloc:
 		pi.Inst = &pb.ProtoInstruction_Alloc{
 			Alloc: &pb.ProtoAllocInst{
-				AllocTypeId: s.ids.typeID(deref(i.Type())),
+				AllocTypeId: s.typeID(deref(i.Type())),
 				Heap:        i.Heap,
 				Comment:     i.Comment,
 			},
@@ -1038,8 +1199,8 @@ func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32, block
 		pi.Inst = &pb.ProtoInstruction_MultiConvert{
 			MultiConvert: &pb.ProtoMultiConvertInst{
 				X:          s.valueRef(i.X),
-				FromTypeId: s.ids.typeID(i.X.Type()),
-				ToTypeId:   s.ids.typeID(i.Type()),
+				FromTypeId: s.typeID(i.X.Type()),
+				ToTypeId:   s.typeID(i.Type()),
 			},
 		}
 	case *ssa.ChangeInterface:
@@ -1128,7 +1289,7 @@ func (s *serializer) serializeInstruction(inst ssa.Instruction, idx int32, block
 		pi.Inst = &pb.ProtoInstruction_TypeAssert{
 			TypeAssert: &pb.ProtoTypeAssertInst{
 				X:              s.valueRef(i.X),
-				AssertedTypeId: s.ids.typeID(i.AssertedType),
+				AssertedTypeId: s.typeID(i.AssertedType),
 				CommaOk:        i.CommaOk,
 			},
 		}
@@ -1231,7 +1392,7 @@ func (s *serializer) valueRef(v ssa.Value) *pb.ProtoValueRef {
 		return nil
 	}
 	ref := &pb.ProtoValueRef{
-		TypeId: s.ids.typeID(v.Type()),
+		TypeId: s.typeID(v.Type()),
 	}
 
 	switch val := v.(type) {
@@ -1275,14 +1436,14 @@ func (s *serializer) valueRef(v ssa.Value) *pb.ProtoValueRef {
 
 func (s *serializer) serializeCallCommon(call *ssa.CallCommon) *pb.ProtoCallInfo {
 	ci := &pb.ProtoCallInfo{
-		ResultTypeId: s.ids.typeID(call.Signature().Results()),
+		ResultTypeId: s.typeID(call.Signature().Results()),
 	}
 
 	if call.IsInvoke() {
 		ci.Mode = pb.ProtoCallMode_CALL_INVOKE
 		ci.Receiver = s.valueRef(call.Value)
 		ci.MethodName = call.Method.Name()
-		ci.MethodSignatureTypeId = s.ids.typeID(call.Method.Type())
+		ci.MethodSignatureTypeId = s.typeID(call.Method.Type())
 	} else {
 		if _, ok := call.Value.(*ssa.Function); ok {
 			ci.Mode = pb.ProtoCallMode_CALL_DIRECT

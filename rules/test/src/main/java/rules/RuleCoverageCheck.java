@@ -2,7 +2,6 @@ package rules;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,16 +14,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.yaml.snakeyaml.Yaml;
 
 /**
  * CI helper that checks that:
  * 1) every YAML in ../ruleset is valid;
- * 2) every non-disabled and non-lib rule is covered by some @PositiveRuleSample test
- *    under src/main/java/security.
+ * 2) every non-disabled and non-lib rule is covered by a rule-test.yaml entry.
  *
  * Fails with non-zero exit code and prints all problems.
  */
@@ -132,34 +128,40 @@ public class RuleCoverageCheck {
 
     private static Set<RuleKey> collectCoveredRules(Path testsRoot) throws IOException {
         Set<RuleKey> covered = new HashSet<>();
-
-        // Handles patterns like:
-        // @PositiveRuleSample(value = "java/security/xss.yaml", id = "xss-in-servlet-app")
-        // and the case when parameters are swapped.
-        Pattern valueFirst = Pattern.compile("@PositiveRuleSample\\s*\\(\\s*value\\s*=\\s*\"([^\"]+)\"\\s*,\\s*id\\s*=\\s*\"([^\"]+)\"[\\s\\S]*?\\)");
-        Pattern idFirst = Pattern.compile("@PositiveRuleSample\\s*\\(\\s*id\\s*=\\s*\"([^\"]+)\"\\s*,\\s*value\\s*=\\s*\"([^\"]+)\"[\\s\\S]*?\\)");
+        Yaml yaml = new Yaml();
 
         Files.walkFileTree(testsRoot, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-            if (!file.getFileName().toString().endsWith(".java")) {
+            if (!file.getFileName().toString().equals("rule-test.yaml")) {
                 return FileVisitResult.CONTINUE;
             }
 
-            String content = Files.readString(file, StandardCharsets.UTF_8);
-
-            Matcher m1 = valueFirst.matcher(content);
-            while (m1.find()) {
-                String value = m1.group(1).replace('\\', '/');
-                String id = m1.group(2);
-                covered.add(new RuleKey(value, id));
-            }
-
-            Matcher m2 = idFirst.matcher(content);
-            while (m2.find()) {
-                String id = m2.group(1);
-                String value = m2.group(2).replace('\\', '/');
-                covered.add(new RuleKey(value, id));
+            try (InputStream in = Files.newInputStream(file)) {
+                Object loaded = yaml.load(in);
+                if (!(loaded instanceof Map<?, ?> map)) {
+                    return FileVisitResult.CONTINUE;
+                }
+                Object testsObj = map.get("tests");
+                if (!(testsObj instanceof Iterable<?> tests)) {
+                    return FileVisitResult.CONTINUE;
+                }
+                for (Object testObj : tests) {
+                    if (!(testObj instanceof Map<?, ?> testMap)) {
+                        continue;
+                    }
+                    Object ruleIdObj = testMap.get("rule-id");
+                    if (!(ruleIdObj instanceof String ruleId)) {
+                        continue;
+                    }
+                    int separator = ruleId.indexOf('#');
+                    if (separator <= 0 || separator == ruleId.length() - 1) {
+                        continue;
+                    }
+                    String rulePath = ruleId.substring(0, separator).replace('\\', '/');
+                    String id = ruleId.substring(separator + 1);
+                    covered.add(new RuleKey(rulePath, id));
+                }
             }
 
             return FileVisitResult.CONTINUE;

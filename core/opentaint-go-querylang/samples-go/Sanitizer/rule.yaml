@@ -2,11 +2,11 @@ rules:
   - id: sanitizer
     languages: [go]
     severity: WARNING
-    message: "Taint from util.Source reaches util.Sink without going through util.Clean"
+    message: "Taint from Sanitizer.Source reaches Sanitizer.Sink without going through Sanitizer.Clean"
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "Sanitizer.Source(...)"
     pattern-sanitizers:
-      - pattern: "util.Clean($X)"
+      - pattern: "Sanitizer.Clean($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "Sanitizer.Sink($X)"

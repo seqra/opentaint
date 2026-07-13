@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("CLEANUP")
     pattern-sinks:
-      - pattern: util.Sink_DbExec($X)
+      - pattern: sqlinj_11_env_defer.Sink_DbExec($X)

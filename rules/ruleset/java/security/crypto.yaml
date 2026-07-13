@@ -876,14 +876,16 @@ rules:
     languages:
       - java
       - kt
+    options:
+      primitive-tracking: true
     pattern: |-
       $X $METHOD(...) {
         ...
         MessageDigest $MD = ...;
         ...
-        $MD.digest(...);
+        $DIGEST = $MD.digest(...);
         ...
-        Integer.toHexString(...);
+        Integer.toHexString($DIGEST[...]);
       }
 
   - id: insecure-smtp

@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.Header.Get($K)
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_05_header_trim.Sink_DbQuery($X)

@@ -1,1 +1,0 @@
-rootProject.name = "opentaint-sast-test-util"

@@ -116,6 +116,10 @@ func JRETiers(javaVersion int, cacheDir string) []Tier {
 	return tiers
 }
 
+func FindCurrentManagedJRE() *Tier {
+	return FindExistingJRE(CurrentTiers(ManagedJRETiers(), IsInstallCurrent()))
+}
+
 // ManagedJRETiers returns the bundled and install JRE tiers (excluding cache).
 // Used to find a pre-installed JRE without triggering a download.
 func ManagedJRETiers() []Tier {

@@ -11,8 +11,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 
 /**
@@ -60,7 +58,6 @@ public class XssRequestWrapperSamples {
     public static class InsecureWrappedServlet extends javax.servlet.http.HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/xss.yaml", id = "xssrequestwrapper-is-insecure")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             HttpServletRequest wrapped = new XSSRequestWrapper(request);
@@ -81,7 +78,6 @@ public class XssRequestWrapperSamples {
     public static class SafeEncodingFilter extends HttpFilter {
 
         @Override
-        @NegativeRuleSample(value = "java/security/xss.yaml", id = "xssrequestwrapper-is-insecure")
         protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             // No custom wrapper; downstream components are expected to perform proper encoding.

@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: $R.FormValue($K)
     pattern-sinks:
-      - pattern: util.Sink_LdapSearch($X)
+      - pattern: ldap_03_form_sprintf.Sink_LdapSearch($X)

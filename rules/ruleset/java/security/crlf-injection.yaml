@@ -63,11 +63,11 @@ rules:
   - id: smtp-crlf-injection
     severity: ERROR
     message: >-
-      Potential CRLF injection into SMTP message:
+      CRLF injection into SMTP message:
       the application was found calling `MimeMessage` methods without encoding
       new line characters. Much like HTTP, Simple Mail Transfer Protocol (SMTP) is a
       text based protocol that uses headers to convey additional directives for how
-      email messages should be treated. An adversary could potentially cause email
+      email messages should be treated. An adversary could cause email
       messages to be sent to unintended recipients by abusing the CC or BCC headers
       if they were able to inject them.
     metadata:

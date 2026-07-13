@@ -7,6 +7,6 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("ARG")
     pattern-sinks:
-      - pattern: util.Sink_ExecCommand($X)
+      - pattern: cmdinj_16_env_branch_sanitizer.Sink_ExecCommand($X)
     pattern-sanitizers:
-      - pattern: util.shellEscape($V)
+      - pattern: cmdinj_16_env_branch_sanitizer.shellEscape($V)

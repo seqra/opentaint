@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithAllowedConstant (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithAllowedConstant.Source(...)"
     pattern-sinks:
       - patterns:
-          - pattern: "util.Sink($X)"
-          - pattern-not: "util.Sink(\"...\")"
+          - pattern: "JavaRuleWithAllowedConstant.Sink($X)"
+          - pattern-not: "JavaRuleWithAllowedConstant.Sink(\"...\")"

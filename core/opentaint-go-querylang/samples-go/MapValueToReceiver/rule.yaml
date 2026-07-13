@@ -1,0 +1,10 @@
+rules:
+  - id: map-value-to-receiver
+    languages: [go]
+    severity: WARNING
+    message: "Tainted controller data reaches a receiver-position sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "MapValueToReceiver.Source(...)"
+    pattern-sinks:
+      - pattern: "($C : *MapValueToReceiver.Controller).Serve()"

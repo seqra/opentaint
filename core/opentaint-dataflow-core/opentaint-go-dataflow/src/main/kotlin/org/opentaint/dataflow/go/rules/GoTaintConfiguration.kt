@@ -138,7 +138,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     @Synchronized
     fun sourceForFieldRead(signature: GoFieldSignature): List<TaintRule.FieldReadSource> = fieldSourceMemo.getOrPut(signature) {
         candidates(signature.name, fieldSourceSimple, fieldSourcePatterns, { field })
-            .mapNotNull { specialize(it, signature.name, signature.type) }
+            .mapNotNull { specialize(it, signature.name, signature.type, signature.receiverType) }
     }
 
     @Synchronized
@@ -168,7 +168,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     ): List<R> {
         val (pkgName, functionName) = sig.name.splitFullName()
         return candidates(functionName, simpleByName, patternRules) { function }
-            .filter { it.pkg.matchPackage(pkgName) }
+            .filter { it.pkg.matchPackage(pkgName) || (sig.pkgName != null && it.pkg.matches(sig.pkgName)) }
     }
 
     private fun <R> candidates(
@@ -185,18 +185,19 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     }
 
     private fun specialize(rule: GoSerializedGlobalSource, name: String, fieldType: GoIRType) =
-        specializeFieldSourceRule(name, fieldType, rule.condition, rule.taint) { name, condition, actions ->
+        specializeFieldSourceRule(name, fieldType, null, rule.condition, rule.taint) { name, condition, actions ->
             TaintRule.GlobalReadSource(name, condition, actions, rule.info)
         }
 
-    private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: GoIRType)  =
-        specializeFieldSourceRule(name, fieldType, rule.condition, rule.taint) { name, condition, actions ->
+    private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: GoIRType, receiverType: GoIRType?)  =
+        specializeFieldSourceRule(name, fieldType, receiverType, rule.condition, rule.taint) { name, condition, actions ->
             TaintRule.FieldReadSource(name, condition, actions, rule.info)
         }
 
     private inline fun <T> specializeFieldSourceRule(
         name: String,
         type: GoIRType,
+        receiverType: GoIRType?,
         condition: GoSerializedCondition?,
         taint: List<GoSerializedAssignAction>,
         buildRule: (String, CommonCondition<GoRuleCondition>, List<GoAssignAction>) -> T
@@ -205,7 +206,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         taint.forEach { validateAssignActionForFieldSource(it) }
 
         val fakeSig = GoFunctionSignature(
-            name = name, receiverType = null, paramTypes = emptyList(), resultType = type
+            name = name, receiverType = receiverType, paramTypes = emptyList(), resultType = type
         )
         val condition = condition.resolveToRuleCondition(fakeSig)
         if (condition.isFalse()) return null
@@ -310,7 +311,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
             is GoSerializedAssignAction.AnyAccessor -> action.pos
             is GoSerializedAssignAction.Direct -> action.pos
         }
-        validatePositionWithModifiersForFieldSource(pos)
+        check(pos.base is PositionBase.Result) { "Unsupported field-source taint target: ${pos.base}" }
     }
 
     private fun validatePositionWithModifiersForFieldSource(pos: PositionBaseWithModifiers) {
@@ -318,17 +319,12 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     }
 
     private fun validatePositionBaseForFieldSource(pos: PositionBase) {
-        check(pos is PositionBase.Result) { "Unsupported field-source position: $pos" }
-    }
-
-    private fun String.splitFullName(): Pair<String, String> {
-        val simpleName = substringAfterLast('.')
-        val pkgName = substringBeforeLast('.', "")
-        return pkgName to simpleName
+        check(pos is PositionBase.Result || pos is PositionBase.This) { "Unsupported field-source position: $pos" }
     }
 
     private fun GoNameMatcher.matchPackage(pkgName: String): Boolean {
         if (matches(pkgName)) return true
+        if (this is GoNameMatcher.Simple && name.contains('/')) return false
 
         val lastPkgPart = pkgName.substringAfterLast('/')
         return matches(lastPkgPart)

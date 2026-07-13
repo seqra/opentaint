@@ -16,6 +16,8 @@ import issues.issue94
 import issues.issue95
 import issues.issue96
 import issues.issue97
+import issues.issueChain
+import issues.issueChainSplitBuilder
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
@@ -104,6 +106,12 @@ class IssuesTest : SampleBasedTest() {
 
     @Test
     fun `issue 97`() = runTest<issue97>()
+
+    @Test
+    fun `issue chain-pattern order-sensitive match`() = runTest<issueChain>(EXPECT_STATE_VAR)
+
+    @Test
+    fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
 
     @AfterAll
     fun close() {

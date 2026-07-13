@@ -1,7 +1,5 @@
 package security.csrf;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -17,7 +15,6 @@ public class CsrfSpringSecurityConfigSamples {
     public static class UnsafeCsrfDisabledConfig extends WebSecurityConfigurerAdapter {
 
         @Override
-        @PositiveRuleSample(value = "java/security/csrf.yaml", id = "csrf-disabled-in-spring-app")
         protected void configure(HttpSecurity http) throws Exception {
             // VULNERABLE: explicitly disabling CSRF protection
             http
@@ -30,7 +27,6 @@ public class CsrfSpringSecurityConfigSamples {
     public static class SafeCsrfEnabledConfig extends WebSecurityConfigurerAdapter {
 
         @Override
-        @NegativeRuleSample(value = "java/security/csrf.yaml", id = "csrf-disabled-in-spring-app")
         protected void configure(HttpSecurity http) throws Exception {
             // SAFE: CSRF is enabled (default) with typical configuration
             http

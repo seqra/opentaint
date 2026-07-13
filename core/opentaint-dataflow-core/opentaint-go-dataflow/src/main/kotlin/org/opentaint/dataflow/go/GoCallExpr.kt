@@ -20,17 +20,22 @@ open class GoCallExpr(
     override val typeName: String
         get() = callInfo.resultType.displayName
 
+    private fun targetHasReceiver(): Boolean {
+        val function = (callInfo.target as? GoIRCallTarget.Function)?.function ?: return false
+        return function.isMethod || function.signature.recv != null
+    }
+
     val effectiveReceiver: GoIRValue?
         get() = when {
             callInfo.receiver != null -> callInfo.receiver
-            resolvedCallee?.isMethod == true -> callInfo.args.firstOrNull()
+            callInfo.mode == GoIRCallMode.DIRECT && targetHasReceiver() -> callInfo.args.firstOrNull()
             else -> null
         }
 
     val explicitArgs: List<GoIRValue>
         get() = when {
             callInfo.receiver != null -> callInfo.args
-            resolvedCallee?.isMethod == true -> callInfo.args.drop(1)
+            callInfo.mode == GoIRCallMode.DIRECT && targetHasReceiver() -> callInfo.args.drop(1)
             else -> callInfo.args
         }
 
@@ -60,5 +65,5 @@ fun GoCallExpr.signature(): GoFunctionSignature? {
     val receiverType = effectiveReceiver?.type
     val paramTypes = explicitArgs.map { it.type }
     val resultType = callInfo.resultType
-    return GoFunctionSignature(name, receiverType, paramTypes, resultType)
+    return GoFunctionSignature(name, receiverType, paramTypes, resultType, resolvedCallee?.pkg?.name)
 }

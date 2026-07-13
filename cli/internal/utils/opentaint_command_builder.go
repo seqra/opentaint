@@ -181,6 +181,31 @@ func (cb *OpentaintCommandBuilder) WithRuleID(ruleIDs []string) *OpentaintComman
 	return cb
 }
 
+func (cb *OpentaintCommandBuilder) WithPassthroughApproximations(paths []string) *OpentaintCommandBuilder {
+	for _, p := range paths {
+		if p != "" {
+			cb.arrayFlags["passthrough-approximations"] = append(cb.arrayFlags["passthrough-approximations"], p)
+		}
+	}
+	return cb
+}
+
+func (cb *OpentaintCommandBuilder) WithDataflowApproximations(paths []string) *OpentaintCommandBuilder {
+	for _, p := range paths {
+		if p != "" {
+			cb.arrayFlags["dataflow-approximations"] = append(cb.arrayFlags["dataflow-approximations"], p)
+		}
+	}
+	return cb
+}
+
+func (cb *OpentaintCommandBuilder) WithTrackExternalMethods(enabled bool) *OpentaintCommandBuilder {
+	if enabled {
+		cb.boolFlags["track-external-methods"] = true
+	}
+	return cb
+}
+
 // WithPartialFingerprint adds repeatable --partial-fingerprint filters.
 func (cb *OpentaintCommandBuilder) WithPartialFingerprint(fingerprints []string) *OpentaintCommandBuilder {
 	for _, f := range fingerprints {

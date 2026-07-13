@@ -53,6 +53,26 @@ class ProjectAutoBuilder : CliWithLogger() {
             return
         }
 
+        // todo: switch to a new project model
+        if (goProjects.isEmpty()) {
+            val javaRootProject = javaProjects.first()
+            val javaOther = javaProjects.drop(1)
+            val javaTopLeveProject = javaRootProject.copy(subProjects = javaOther)
+
+            when (val b = build) {
+                is SimpleProjectBuild -> {
+                    javaTopLeveProject.dump(b.result.createParentDirectories())
+                }
+
+                is PortableProjectBuild -> {
+                    val portableProjectCreator = PortableProjectCreator(b.resultDir)
+                    portableProjectCreator.create(javaTopLeveProject)
+                }
+            }
+
+            return
+        }
+
         val topLevelProject = Project(
             projectRoot = projectRootDir,
             goProjects = goProjects,
@@ -65,8 +85,8 @@ class ProjectAutoBuilder : CliWithLogger() {
             }
 
             is PortableProjectBuild -> {
-                val portableProjectCreator = PortableProjectCreator(b.resultDir, topLevelProject)
-                portableProjectCreator.create()
+                val portableProjectCreator = PortableProjectCreator(b.resultDir)
+                portableProjectCreator.create(topLevelProject)
             }
         }
     }

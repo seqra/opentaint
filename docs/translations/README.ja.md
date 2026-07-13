@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="OpenTaint サマリー出力">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="OpenTaint サマリー出力">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>その他のスクリーンショット</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="OpenTaint スキャン出力">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="OpenTaint スキャン出力">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="OpenTaint サマリー出力">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="OpenTaint サマリー出力">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="OpenTaint サマリー出力">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="OpenTaint サマリー出力">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="OpenTaint サマリー出力">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="OpenTaint サマリー出力">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="OpenTaint サマリー出力">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## なぜ OpenTaint なのか
+## なぜ OpenTaint なのか？
 
-AI は、現在のセキュリティツールが追いつけないほどの速さで本番コードを生成しています。
+> OpenTaint は *Semgrep Pro* や *CodeQL* のオープンソース代替であり、カスタマイズしてセルフホストできる形式的な手続き間テイント解析エンジンです。AI エージェントがスキャンごとにトークンを消費することなく、セキュリティ解析を駆動できるよう設計されています。
 
-LLM セキュリティエージェントは人間が見逃す脆弱性を発見しますが、すべてのファイルでトークンを消費し、それでも完全な検出を保証することはできません。
+AI はセキュリティチームが追いつけないほどの速さで本番コードを生成しており、その誤りを捉えるために作られた 2 種類のツールは、いずれも好ましくないトレードオフを強いてきました：
 
-AI が書くコードが増えるほど、その基盤に形式的手法が必要になります。
+- **AST パターンマッチャー**（Semgrep OSS、ast-grep、各種リンター）は無料で高速ですが、データフローではなく構文を照合するため、関数境界や永続化層をまたぐ信頼できない入力はそのまますり抜けてしまいます。それを実際に捉えるより深い手続き間解析は、長らくプロプライエタリなツールの中に閉じ込められてきました。
+- **LLM セキュリティエージェント**はパターンマッチャーが見逃すものを発見しますが、実行のたびにコードを読み直します。トークンはファイルごと、コミットごと、CI ビルドごとに積み重なり——それでも確率的なモデルは、すべてを捉えたと保証することはできません。
 
-- **AST パターンマッチングエンジンが見逃すものを発見。** 手続き間データフローエンジンが、関数境界、永続化層、エイリアス、非同期コードを横断して信頼できないデータを追跡します。
-- **1つの発見で完全なカバレッジを実現。** AST パターンルールにより、発見されたすべての脆弱性をルールとして定義でき、エンジンがコードベース全体に対して決定的に適用します。必要なのは数分の CPU 時間だけです。
-- **オープンソース、すぐに使える。** エンジン、ルール、CI インテグレーション——スタック全体が Apache 2.0 と MIT ライセンスで提供されます。テイント追跡の利用に課金はなく、独自ルールの作成にも制限はありません。
+OpenTaint は、静的解析ツールのコストで LLM エージェントの深さを提供します：
+
+- **AST パターンマッチャーが見逃すものを発見。** 形式的な手続き間データフローエンジンが、関数境界、永続化層、エイリアス、非同期コードを横断して信頼できないデータを追跡します。
+- **スキャンごとではなく、モデルには一度だけ支払う。** エージェントに単一の検出結果をテイントルールへと蒸留させます。決定的なエンジンはそのルールをコードベース全体——そしてその後のすべてのコミット——に対して、数分の CPU 時間で、トークンコストゼロで再生します。
+- **オープンソース、すぐに使える。** エンジン、ルール、CI インテグレーションが、Apache 2.0 と MIT ライセンスの下で一つのスタックとして提供されます。
 
 ## クイックスタート
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**npm でインストール (Linux/macOS/Windows)：**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**または npx で即座に実行——インストール不要 (Node.js が必要)：**
+```bash
+npx @seqra/opentaint scan
+```
+
 **プロジェクトをスキャン：**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 
 ---
 
+## AI エージェントワークフロー
+
+OpenTaint には、静的解析をエンドツーエンドのアプリケーションセキュリティワークフローへと変えるエージェントスキルが含まれています。以下のコマンドでインストールできます：
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+`appsec-agent` スキルは、プロジェクト評価の全体をオーケストレーションします：プロジェクトのビルド、OpenTaint の実行、攻撃対象領域の発見、対象を絞ったルールの追加、不足しているライブラリのデータフローのモデリング、検出結果のトリアージ、さらにオプションで、確認された脆弱性に対する動的な概念実証チェックの生成までを行います。
+
+含まれるスキルは、一般的なセキュリティ解析のループをカバーします：
+
+- **スキャンとトリアージ：** `build-project`、`run-scan`、`analyze-findings`、`generate-poc`
+- **カバレッジ拡張：** `triage-dependencies`、`discover-attack-surface`、`create-test-project`、`create-rule`、`assemble-lib-rules`
+- **データフローモデリング：** `analyze-external-methods`、`create-pass-through-approximation`、`create-dataflow-approximation`、`debug-rule`、`report-analyzer-issue`
+
+---
+
 ## ドキュメント
 
 完全ガイド——インストール、使い方、設定、CI/CD インテグレーション：**[ドキュメント](../../docs/README.md)**。
@@ -150,6 +186,16 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 - **問題報告：** [GitHub Issues](https://github.com/seqra/opentaint/issues)
 - **コミュニティ：** [Discord](https://discord.gg/6BXDfbP4p9)
 - **メール：** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## スター履歴
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## ライセンス
 

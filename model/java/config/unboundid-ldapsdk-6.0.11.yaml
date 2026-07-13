@@ -1,0 +1,167 @@
+language: java
+passThrough:
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (java.lang.String, com.unboundid.ldap.sdk.SearchScope, java.lang.String, java.lang.String[]) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#filter#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.DN, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(3)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, java.lang.String, com.unboundid.ldap.sdk.SearchScope, java.lang.String, java.lang.String[]) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#filter#java.lang.Object
+  - from: arg(4)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(4)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, com.unboundid.ldap.sdk.DN, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(4)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, java.lang.String, java.lang.String[]) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(6)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#filter#java.lang.Object
+  - from: arg(7)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(7)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.DN, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(7)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, java.lang.String, java.lang.String[]) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(7)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#filter#java.lang.Object
+  - from: arg(8)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(8)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, com.unboundid.ldap.sdk.DN, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(8)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, com.unboundid.ldap.sdk.Control[], java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, java.lang.String, java.lang.String[]) *
+  copy:
+  - from: arg(2)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(8)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#filter#java.lang.Object
+  - from: arg(9)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, com.unboundid.ldap.sdk.Control[], java.lang.String, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(2)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#baseDN#java.lang.Object
+  - from: arg(9)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object
+- function: com.unboundid.ldap.sdk.SearchRequest#<init>
+  signature: (com.unboundid.ldap.sdk.SearchResultListener, com.unboundid.ldap.sdk.Control[], com.unboundid.ldap.sdk.DN, com.unboundid.ldap.sdk.SearchScope, com.unboundid.ldap.sdk.DereferencePolicy, int, int, boolean, com.unboundid.ldap.sdk.Filter, java.lang.String[]) *
+  copy:
+  - from: arg(9)
+    to:
+    - this
+    - .com.unboundid.ldap.sdk.SearchRequest#attributes#java.lang.Object

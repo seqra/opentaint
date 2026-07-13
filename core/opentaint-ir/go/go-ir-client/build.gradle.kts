@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     api(project(":go:go-ir-api"))
+    implementation(Libs.fastutil)
     implementation("io.grpc:grpc-netty-shaded:1.69.0")
     implementation("io.grpc:grpc-protobuf:1.69.0")
     implementation("io.grpc:grpc-stub:1.69.0")

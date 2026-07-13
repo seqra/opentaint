@@ -84,14 +84,15 @@ func (s *goSSAServer) BuildProgram(req *pb.BuildProgramRequest, stream pb.GoSSAS
 
 	ser := newSerializerForBuild(prog, pkgs, info, req.Mode, projectModulePaths)
 
-	if err := ser.streamTypes(stream); err != nil {
-		return fmt.Errorf("streaming types: %w", err)
+	program, serErrs := ser.serializeProgram()
+	for _, e := range serErrs {
+		if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_Error{Error: e}}); err != nil {
+			return err
+		}
 	}
-	if err := ser.streamPackages(stream); err != nil {
-		return fmt.Errorf("streaming packages: %w", err)
-	}
-	if err := ser.streamFunctionBodies(stream); err != nil {
-		return fmt.Errorf("streaming function bodies: %w", err)
+
+	if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_Program{Program: program}}); err != nil {
+		return fmt.Errorf("streaming program: %w", err)
 	}
 
 	return stream.Send(&pb.BuildProgramResponse{

@@ -1,0 +1,19 @@
+rules:
+  - id: example-Rule
+    languages:
+      - java
+    severity: ERROR
+    message: match example/Rule
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $DATA = source();
+            focus-metavariable: $DATA
+    pattern-sinks:
+      - patterns:
+          - pattern: $CTX.put($_, $UNTRUSTED)
+          - pattern-either:
+              - pattern-inside: |
+                  ...
+                  (example.RuleWithConcretePlaceholder.Engine $E).foo($_, $_, $CTX, ...);
+          - focus-metavariable: $UNTRUSTED

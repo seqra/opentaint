@@ -21,6 +21,8 @@ class IntDisjointSets(
         parent.defaultReturnValue(NO_VALUE)
     }
 
+    fun isEmpty(): Boolean = parent.isEmpty()
+
     fun find(x: Int): Int {
         val p = parent.get(x)
         if (p == NO_VALUE) return x
@@ -95,7 +97,7 @@ class IntDisjointSets(
 
         elements.forEach {
             val result = if (allElements.contains(it)) {
-                removeExistingElement(it)
+                removeExistingElement(it, elements)
             } else {
                 RemoveResult.EntireSetRemoved
             }
@@ -110,7 +112,7 @@ class IntDisjointSets(
         data class NewSetRepr(val repr: Int) : RemoveResult
     }
 
-    private fun removeExistingElement(element: Int): RemoveResult {
+    private fun removeExistingElement(element: Int, elementsToRemove: IntOpenHashSet): RemoveResult {
         val children = IntArrayList()
         parent.forEachIntEntry { key, value ->
             if (value == element) {
@@ -120,14 +122,22 @@ class IntDisjointSets(
 
         val rawElementParent = parent.remove(element)
 
-        if (children.isEmpty && rawElementParent == NO_VALUE) return RemoveResult.EntireSetRemoved
-
-        val newRoot = if (rawElementParent != NO_VALUE) {
-            rawElementParent
-        } else {
+        var newRoot = rawElementParent
+        if (newRoot == NO_VALUE && !children.isEmpty) {
             children.sort(strategy)
-            children.getInt(0)
+            for (i in children.indices) {
+                val child = children.getInt(i)
+                if (!elementsToRemove.contains(child)) {
+                    newRoot = child
+                    break
+                }
+            }
         }
+
+        if (newRoot == NO_VALUE) {
+            return RemoveResult.EntireSetRemoved
+        }
+
         children.forEachInt { c ->
             parent.put(c, newRoot)
         }
@@ -149,6 +159,16 @@ class IntDisjointSets(
         allElements.addAll(parent.keys)
         allElements.addAll(parent.values)
         return allElements
+    }
+
+    fun translate(newStrategy: RankStrategy, translateElement: (Int) -> Int): IntDisjointSets {
+        val result = IntDisjointSets(newStrategy)
+        parent.forEachIntEntry { key, value ->
+            val translatedKey = translateElement(key)
+            val translatedValue = translateElement(value)
+            result.parent.put(translatedKey, translatedValue)
+        }
+        return result
     }
 
     override fun mutableCopy(): IntDisjointSets = clone()
@@ -183,6 +203,14 @@ class IntDisjointSets(
 
         return true
     }
+
+    override fun toString(): String =
+        allSets().joinToString(prefix = "[", postfix = "]") { set ->
+            set.joinToString(prefix = "{", postfix = "}") { elem ->
+                if (elem == find(elem)) "($elem)" else "$elem"
+            }
+        }
+
 
     companion object {
         private const val NO_VALUE = Int.MIN_VALUE

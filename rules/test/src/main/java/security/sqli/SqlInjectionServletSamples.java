@@ -15,8 +15,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for sql-injection-in-servlet.
@@ -32,7 +30,6 @@ public class SqlInjectionServletSamples {
         private DataSource dataSource;
 
         @Override
-        @PositiveRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userId = request.getParameter("userId"); // untrusted input
@@ -63,7 +60,6 @@ public class SqlInjectionServletSamples {
         private DataSource dataSource;
 
         @Override
-        @NegativeRuleSample(value = "java/security/sqli.yaml", id = "sql-injection")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             String userId = request.getParameter("userId");

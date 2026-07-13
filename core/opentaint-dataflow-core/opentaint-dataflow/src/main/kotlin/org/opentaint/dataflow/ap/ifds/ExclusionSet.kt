@@ -7,6 +7,7 @@ sealed interface ExclusionSet {
     operator fun contains(accessor: Accessor): Boolean
     fun add(accessor: Accessor): ExclusionSet
     fun union(other: ExclusionSet): ExclusionSet
+    fun intersect(other: ExclusionSet): ExclusionSet
     fun subtract(accessor: Accessor): ExclusionSet
 
     fun contains(other: ExclusionSet): Boolean
@@ -15,6 +16,7 @@ sealed interface ExclusionSet {
         override fun contains(accessor: Accessor): Boolean = false
         override fun add(accessor: Accessor): ExclusionSet = Concrete(accessor)
         override fun union(other: ExclusionSet): ExclusionSet = other
+        override fun intersect(other: ExclusionSet): ExclusionSet = this
         override fun subtract(accessor: Accessor): ExclusionSet = this
         override fun contains(other: ExclusionSet): Boolean = other is Empty
 
@@ -25,6 +27,7 @@ sealed interface ExclusionSet {
         override fun contains(accessor: Accessor): Boolean = true
         override fun add(accessor: Accessor): ExclusionSet = this
         override fun union(other: ExclusionSet): ExclusionSet = this
+        override fun intersect(other: ExclusionSet): ExclusionSet = other
         override fun subtract(accessor: Accessor): ExclusionSet = error("Can't subtract from $this")
         override fun contains(other: ExclusionSet): Boolean = true
 
@@ -62,6 +65,19 @@ sealed interface ExclusionSet {
             is Concrete -> {
                 val union = set.addAll(other.set)
                 if (union === set) this else Concrete(union, union.hashCode())
+            }
+        }
+
+        override fun intersect(other: ExclusionSet): ExclusionSet = when (other) {
+            Empty -> other
+            Universe -> this
+            is Concrete -> {
+                val intersection = set.retainAll(other.set)
+                when {
+                    intersection === set -> this
+                    intersection.isEmpty() -> Empty
+                    else -> Concrete(intersection, intersection.hashCode())
+                }
             }
         }
 

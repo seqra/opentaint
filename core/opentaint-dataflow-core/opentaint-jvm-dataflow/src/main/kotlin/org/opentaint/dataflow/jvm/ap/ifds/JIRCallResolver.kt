@@ -78,7 +78,7 @@ class JIRCallResolver(
             }
         }
 
-        if (!method.isObjectMethod()) {
+        if (!alwaysIgnoreMethod(method)) {
             methods += methodOverrides(method, method.enclosingClass)
         }
 
@@ -91,7 +91,7 @@ class JIRCallResolver(
         val method = call.method.method
         val methodIgnored = unitResolver.resolve(method) == UnknownUnit
 
-        if (methodIgnored && method.isObjectMethod()) {
+        if (methodIgnored && alwaysIgnoreMethod(method)) {
             return listOf(MethodResolutionResult.MethodResolutionFailed)
         }
 
@@ -367,9 +367,13 @@ class JIRCallResolver(
         }
     }
 
-    private fun JIRMethod.isObjectMethod(): Boolean =
-        enclosingClass.name == "java.lang.Object"
+    companion object {
+        fun alwaysIgnoreMethod(method: JIRMethod): Boolean = method.isObjectMethod()
 
-    private fun TypeName.isObject(): Boolean =
-        typeName == "java.lang.Object"
+        private fun JIRMethod.isObjectMethod(): Boolean =
+            enclosingClass.name == "java.lang.Object"
+
+        private fun TypeName.isObject(): Boolean =
+            typeName == "java.lang.Object"
+    }
 }

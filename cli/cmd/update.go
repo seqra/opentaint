@@ -119,7 +119,7 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		out.Print("Downloading...")
-		archivePath, err := utils.DownloadReleaseArchive(globals.Config.Owner, globals.Config.Repo, targetTag, globals.Config.Github.Token, tmpDir, globals.Config.SkipVerify)
+		archivePath, err := utils.DownloadReleaseArchive(globals.Config.Owner, globals.Config.Repo, targetTag, globals.Config.Github.Token, tmpDir, globals.Config.SkipVerify, out)
 		if err != nil {
 			out.Fatalf("Failed to download release: %s", err)
 		}

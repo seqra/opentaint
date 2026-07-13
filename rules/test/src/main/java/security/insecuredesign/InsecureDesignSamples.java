@@ -5,8 +5,6 @@ import java.security.PrivilegedAction;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +21,6 @@ public class InsecureDesignSamples {
 
     // === do-privileged-use ===
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "do-privileged-use")
     public void runWithElevatedPrivilegesInsecure() {
         // Insecure by design: unnecessarily broad privileged block performing multiple actions
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -36,7 +33,6 @@ public class InsecureDesignSamples {
         });
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "do-privileged-use")
     public void avoidPrivilegedBlockSecure() {
         // Secure alternative: avoid doPrivileged and rely on normal permission checks
         String value = System.getProperty("app.mode");
@@ -47,7 +43,6 @@ public class InsecureDesignSamples {
 
     // === trust-boundary-violation ===
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "trust-boundary-violation")
     @GetMapping("/insecure-design/trust-boundary-violation/unsafe")
     public void mixesTrustedAndUntrustedInSessionInsecure(HttpServletRequest request) {
         // Insecure design: store raw request parameter alongside trusted data in the same session attribute
@@ -56,7 +51,6 @@ public class InsecureDesignSamples {
         request.getSession().setAttribute("userProfile", username + ":" + theme);
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "trust-boundary-violation")
     @GetMapping("/insecure-design/trust-boundary-violation/safe")
     public void validateBeforeCrossingTrustBoundarySecure(HttpServletRequest request) {
         String username = (String) request.getSession().getAttribute("username");
@@ -66,21 +60,18 @@ public class InsecureDesignSamples {
 
     // === cookie-missing-httponly ===
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void createSessionCookieWithoutHttpOnlyInsecure(HttpServletResponse response) {
         Cookie sessionCookie = new Cookie("SESSION", "secret-token");
         // Insecure: HttpOnly flag is never set
         response.addCookie(sessionCookie);
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void createSessionCookieWithHttpOnlySecure(HttpServletResponse response) {
         Cookie sessionCookie = new Cookie("SESSION", "secret-token");
         sessionCookie.setHttpOnly(true);
         response.addCookie(sessionCookie);
     }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void explicitSetHttpOnlyFalse(HttpServletResponse response) {
         Cookie cookie = new Cookie("SESSION", "secret-token");
         // VULNERABLE: explicitly setting HttpOnly to false
@@ -88,21 +79,18 @@ public class InsecureDesignSamples {
         response.addCookie(cookie);
     }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void springResponseCookieHttpOnlyFalse() {
         // VULNERABLE: explicitly setting httpOnly(false) on ResponseCookie builder
         ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from("SESSION", "value");
         builder.httpOnly(false);
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void springResponseCookieHttpOnlyTrue() {
         // SAFE: setting httpOnly(true) on ResponseCookie builder
         ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from("SESSION", "value");
         builder.httpOnly(true);
     }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void cookieGeneratorWithoutHttpOnly(HttpServletResponse response) {
         // VULNERABLE: CookieGenerator without setCookieHttpOnly(true)
         CookieGenerator gen = new CookieGenerator();
@@ -110,7 +98,6 @@ public class InsecureDesignSamples {
         gen.addCookie(response, "value");
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void cookieGeneratorWithHttpOnly(HttpServletResponse response) {
         // SAFE: CookieGenerator with setCookieHttpOnly(true)
         CookieGenerator gen = new CookieGenerator();
@@ -119,7 +106,6 @@ public class InsecureDesignSamples {
         gen.addCookie(response, "value");
     }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "cookie-missing-httponly")
     public void cookieGeneratorExplicitHttpOnlyFalse(HttpServletResponse response) {
         // VULNERABLE: explicitly setting setCookieHttpOnly(false)
         CookieGenerator gen = new CookieGenerator();
@@ -129,7 +115,6 @@ public class InsecureDesignSamples {
 
     // === persistent-cookie ===
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "persistent-cookie")
     public void createPersistentSensitiveCookieInsecure(HttpServletResponse response) {
         Cookie authCookie = new Cookie("AUTH_TOKEN", "some-sensitive-token");
         // Insecure: long-lived cookie (>= 1 year)
@@ -137,7 +122,6 @@ public class InsecureDesignSamples {
         response.addCookie(authCookie);
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "persistent-cookie")
     public void createShortLivedCookieSecure(HttpServletResponse response) {
         Cookie tempCookie = new Cookie("TEMP_TOKEN", "short-lived");
         tempCookie.setMaxAge(300); // 5 minutes
@@ -147,7 +131,6 @@ public class InsecureDesignSamples {
 
     // === permissive-cors ===
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
     public void setPermissiveCorsHeadersInServlet(HttpServletResponse response) {
         // Insecure: allow any origin
         response.setHeader("Access-Control-Allow-Origin", "*");
@@ -155,7 +138,6 @@ public class InsecureDesignSamples {
         response.setHeader("Access-Control-Allow-Credentials", "true");
     }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
     public void setPermissiveCorsHeadersInSpring(HttpHeaders headers) {
         // Insecure: allow any origin via HttpHeaders
         headers.set("Access-Control-Allow-Origin", "*");
@@ -176,18 +158,15 @@ public class InsecureDesignSamples {
 //                .body("ok");
 //    }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
     public void setPermissiveCorsHeadersInReactive(ServerHttpResponse response) {
         // Insecure: reactive ServerHttpResponse with wildcard origin
         response.getHeaders().add("Access-Control-Allow-Origin", "*");
     }
 
-    @PositiveRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
     public void setPermissiveCorsHeadersInServerWebExchange(ServerWebExchange exchange) {
         exchange.getResponse().getHeaders().add("Access-Control-Allow-Origin", "*");
     }
 
-    @NegativeRuleSample(value = "java/security/insecure-design.yaml", id = "permissive-cors")
     public void setRestrictedCorsHeadersSecure(HttpServletRequest request, HttpServletResponse response) {
         String origin = request.getHeader("Origin");
         if ("https://app.example.com".equals(origin) || "https://admin.example.com".equals(origin)) {

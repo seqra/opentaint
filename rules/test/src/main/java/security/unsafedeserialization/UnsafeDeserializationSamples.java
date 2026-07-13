@@ -22,8 +22,6 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 import org.apache.xmlrpc.server.XmlRpcServerConfigImpl;
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,7 +43,6 @@ public class UnsafeDeserializationSamples {
     public static class UnsafeObjectInputStreamServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-object-mapper")
         protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
             // VULNERABLE: directly deserialize from request input stream
             try (ObjectInputStream ois = new ObjectInputStream(req.getInputStream())) {
@@ -61,7 +58,6 @@ public class UnsafeDeserializationSamples {
     public static class SafeObjectInputStreamServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-object-mapper")
         protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
           try (ObjectInputStream ois = new ObjectInputStream(new java.io.FileInputStream("/tmp/last_resource"))) {
             Object obj = ois.readObject();
@@ -79,7 +75,6 @@ public class UnsafeDeserializationSamples {
     public static class ObjectInputStreamSpringController {
 
         @PostMapping(path = "/unsafe", consumes = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE)
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-object-mapper")
         public ResponseEntity<String> unsafeDeserialize(@RequestBody byte[] body) {
             try (ObjectInputStream ois = new ObjectInputStream(new java.io.ByteArrayInputStream(body))) {
                 Object obj = ois.readObject();
@@ -90,7 +85,6 @@ public class UnsafeDeserializationSamples {
         }
 
         @PostMapping(path = "/safe", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-object-mapper")
         public ResponseEntity<SafeDto> safeDeserialize(@RequestBody SafeDto dto) {
             // SAFE: rely on Spring's JSON binding into a constrained DTO type
             if (dto == null || dto.name == null || dto.name.length() > 100) {
@@ -110,7 +104,6 @@ public class UnsafeDeserializationSamples {
     public static class InsecureJmsListener implements MessageListener {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "insecure-jms-deserialization")
         public void onMessage(Message message) {
             try {
                 if (message instanceof ObjectMessage) {
@@ -151,7 +144,6 @@ public class UnsafeDeserializationSamples {
     // unsafe-jackson-deserialization
 
     @WebServlet("/deserialize/jackson/unsafe")
-    @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
     public static class UnsafeJacksonServlet extends HttpServlet {
 
         // VULNERABLE: default typing enabled globally -> potential RCE gadget exploitation
@@ -166,7 +158,6 @@ public class UnsafeDeserializationSamples {
     }
 
     @WebServlet("/deserialize/jackson/safe")
-    @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
     public static class SafeJacksonServlet extends HttpServlet {
 
         private final ObjectMapper mapper;
@@ -192,7 +183,6 @@ public class UnsafeDeserializationSamples {
 
     @RestController
     @RequestMapping("/api/deserialize/jackson")
-    @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
     public static class JacksonSpringController {
 
         // VULNERABLE: default typing enabled globally -> potential RCE gadget exploitation
@@ -206,7 +196,6 @@ public class UnsafeDeserializationSamples {
         }
 
         @PostMapping(path = "/safe", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-jackson-deserialization")
         public ResponseEntity<SafeDto> safeJackson(@RequestBody SafeDto dto) {
             if (dto == null || dto.name == null || dto.name.isBlank()) {
                 return ResponseEntity.badRequest().build();
@@ -219,7 +208,6 @@ public class UnsafeDeserializationSamples {
 
     public interface DangerousRemoteService extends Remote {
 
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "server-dangerous-object-deserialization")
         Object invoke(RemoteCommand command) throws RemoteException;
     }
 
@@ -237,7 +225,6 @@ public class UnsafeDeserializationSamples {
 
     public interface SafeRemoteService extends Remote {
 
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "server-dangerous-object-deserialization")
         String invokeById(long commandId) throws RemoteException;
     }
 
@@ -247,7 +234,6 @@ public class UnsafeDeserializationSamples {
     public static class UnsafeSnakeYamlServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-snake-yaml-deserialization")
         protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
             // VULNERABLE: use default SnakeYAML constructor on user-provided data
             Yaml yaml = new Yaml();
@@ -260,7 +246,6 @@ public class UnsafeDeserializationSamples {
     public static class SafeSnakeYamlServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-snake-yaml-deserialization")
         protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
             // SAFE-ish: treat YAML as plain text or use a safe subset parser (simulated here)
             String body = new String(req.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
@@ -277,7 +262,6 @@ public class UnsafeDeserializationSamples {
     public static class SnakeYamlSpringController {
 
         @PostMapping(path = "/unsafe", consumes = "application/x-yaml")
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-snake-yaml-deserialization")
         public ResponseEntity<Object> unsafeYaml(@RequestBody byte[] yamlBytes) {
             Yaml yaml = new Yaml();
             Object obj = yaml.load(new java.io.ByteArrayInputStream(yamlBytes));
@@ -285,7 +269,6 @@ public class UnsafeDeserializationSamples {
         }
 
         @PostMapping(path = "/safe", consumes = "application/x-yaml")
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "unsafe-snake-yaml-deserialization")
         public ResponseEntity<String> safeYaml(@RequestBody String yamlText) {
             if (yamlText.length() > 4096) {
                 return ResponseEntity.badRequest().body("YAML too large");
@@ -300,7 +283,6 @@ public class UnsafeDeserializationSamples {
     public static class InsecureResteasyResource {
 
         @Consumes({"application/x-java-serialized-object", MediaType.WILDCARD})
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "insecure-resteasy-deserialization")
         public Object handleUnsafe(Object body) {
             // VULNERABLE: accepts serialized objects via wildcard media type
             return body;
@@ -311,7 +293,6 @@ public class UnsafeDeserializationSamples {
     public static class SafeResteasyResource {
 
         @Consumes({MediaType.APPLICATION_JSON})
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "insecure-resteasy-deserialization")
         public SafeDto handleSafe(SafeDto dto) {
             return dto;
         }
@@ -321,7 +302,6 @@ public class UnsafeDeserializationSamples {
     public static class DefaultResteasyResource {
 
         @Path("/unsafe-endpoint")
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "default-resteasy-provider-abuse")
         public SafeDto unsafeWithoutConsumes() {
             // VULNERABLE: no @Consumes on method or class; defaults allow serialized objects
             return new SafeDto();
@@ -334,7 +314,6 @@ public class UnsafeDeserializationSamples {
 
         @Path("/safe-endpoint")
         @GET
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "default-resteasy-provider-abuse")
         public SafeDto safeWithConsumes() {
             return new SafeDto();
         }
@@ -344,13 +323,11 @@ public class UnsafeDeserializationSamples {
 
     public static class InsecureApacheXmlRpcConfig {
 
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "apache-rpc-enabled-extensions")
         public void enableExtensionsServer() {
             XmlRpcServerConfigImpl config = new XmlRpcServerConfigImpl();
             config.setEnabledForExtensions(true);
         }
 
-        @PositiveRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "apache-rpc-enabled-extensions")
         public void enableExtensionsClient() {
             XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
             config.setEnabledForExtensions(true);
@@ -359,13 +336,11 @@ public class UnsafeDeserializationSamples {
 
     public static class SafeApacheXmlRpcConfig {
 
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "apache-rpc-enabled-extensions")
         public void disableExtensionsServer() {
             XmlRpcServerConfigImpl config = new XmlRpcServerConfigImpl();
             config.setEnabledForExtensions(false);
         }
 
-        @NegativeRuleSample(value = "java/security/unsafe-deserialization.yaml", id = "apache-rpc-enabled-extensions")
         public void disableExtensionsClient() {
             XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
             config.setEnabledForExtensions(false);

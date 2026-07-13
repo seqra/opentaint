@@ -2,11 +2,11 @@ rules:
   - id: ssrf
     severity: ERROR
     message: >-
-      Potential SSRF: the web server receives a URL or similar request from an upstream component and retrieves the contents of this URL,
+      SSRF: the web server receives a URL or similar request from an upstream component and retrieves the contents of this URL,
       it does not sufficiently ensure that the request is being sent to the expected destination.
     metadata:
       cwe: CWE-918
-      short-description: Potential server-side request forgery (SSRF)
+      short-description: Server-side request forgery (SSRF)
       full-description: |-
         SSRF occurs when untrusted input reaches outbound network APIs without strict destination controls.
         This rule focuses on calls such as URL/URI connection methods, `RestTemplate` requests,

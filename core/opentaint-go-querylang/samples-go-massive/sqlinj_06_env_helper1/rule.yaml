@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("ORDER_BY")
     pattern-sinks:
-      - pattern: util.Sink_DbQuery($X)
+      - pattern: sqlinj_06_env_helper1.Sink_DbQuery($X)

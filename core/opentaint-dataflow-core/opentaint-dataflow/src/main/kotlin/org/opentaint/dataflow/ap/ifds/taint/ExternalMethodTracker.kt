@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class ExternalMethodTracker {
-    private val seen = ConcurrentHashMap.newKeySet<String>()
+    private val trackingDisabled = ConcurrentHashMap.newKeySet<String>()
     private val records = ConcurrentHashMap<String, ExternalMethodAggregation>()
 
     fun trackExternalMethod(
@@ -16,10 +16,9 @@ class ExternalMethodTracker {
         factPosition: String,
         rulesApplied: Boolean,
     ) {
-        val dedupKey = "$method|$signature|$factPosition"
-        if (!seen.add(dedupKey)) return
-
         val methodKey = "$method|$signature"
+        if (trackingDisabled.contains(methodKey)) return
+
         records.computeIfAbsent(methodKey) {
             ExternalMethodAggregation(method, signature)
         }.apply {
@@ -27,6 +26,12 @@ class ExternalMethodTracker {
             if (rulesApplied) markPassRulesApplied()
             incrementCallSites()
         }
+    }
+
+    fun untrackMethod(method: String, signature: String) {
+        val methodKey = "$method|$signature"
+        trackingDisabled.add(methodKey)
+        records.remove(methodKey)
     }
 
     fun getExternalMethods(): SkippedExternalMethods {

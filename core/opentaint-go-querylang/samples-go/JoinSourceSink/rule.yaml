@@ -1,0 +1,34 @@
+# Exercises mode:join for Go: a shared lib SOURCE rule and a lib SINK rule are
+# joined on a metavariable, mirroring rules/ruleset/java/security/sqli.yaml. The
+# join rule must be first so the harness picks it (lib rules are not emitted).
+rules:
+  - id: join-source-sink
+    languages: [go]
+    severity: WARNING
+    message: "Taint from JoinSourceSink.Source reaches JoinSourceSink.Sink (composed via join)"
+    mode: join
+    join:
+      refs:
+        - rule: '#join-src'
+          as: src
+        - rule: '#join-sink'
+          as: sink
+      on:
+        - 'src.$X -> sink.$UNTRUSTED'
+  - id: join-src
+    options: {lib: true}
+    languages: [go]
+    severity: NOTE
+    message: "Untrusted source (lib)"
+    mode: search
+    pattern: "$X = JoinSourceSink.Source(...)"
+  - id: join-sink
+    options: {lib: true}
+    languages: [go]
+    severity: WARNING
+    message: "Sensitive sink (lib)"
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern: "JoinSourceSink.Sink($UNTRUSTED)"
+          - focus-metavariable: $UNTRUSTED

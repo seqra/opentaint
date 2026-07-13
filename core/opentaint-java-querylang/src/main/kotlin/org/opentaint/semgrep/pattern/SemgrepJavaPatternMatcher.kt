@@ -420,6 +420,7 @@ class SemgrepJavaPatternMatcher(
                     }
                     pattern
                 }
+                is AnonymousName -> TODO()
             }
             if (acc.isEmpty()) cur else "$acc\\.$cur"
         }
@@ -801,5 +802,7 @@ class SemgrepJavaPatternMatcher(
                     )
                 )
             }
+
+            AnonymousName -> TODO()
         }
 }

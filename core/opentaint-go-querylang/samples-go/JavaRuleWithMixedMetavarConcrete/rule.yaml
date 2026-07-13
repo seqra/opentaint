@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithMixedMetavarConcrete (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithMixedMetavarConcrete.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithMixedMetavarConcrete.Sink($X)"

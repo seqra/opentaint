@@ -1,0 +1,22 @@
+rules:
+  - id: issue-chain
+    message: "Reproducer (order-sensitive match): rule sub-pattern order (URL before builder) doesn't line up with the code's call order, so the sink is unreachable"
+    severity: WARNING
+    languages: [java]
+    mode: taint
+
+    pattern-sources:
+      - pattern: $UNTRUSTED = issues.iChain.Source.taint();
+
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $URL = issues.iChain.URI.create($UNTRUSTED);
+                  ...
+          - pattern: |
+              $BUILDER = issues.iChain.HttpRequest.newBuilder().uri($URL);
+              ...;
+              $TYPE $REQ = $BUILDER.build();
+              ...;
+              (issues.iChain.HttpClient $C).send($REQ, ...);

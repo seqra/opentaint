@@ -1,0 +1,12 @@
+rules:
+  - id: sql-sink-receiver-arg
+    languages: [go]
+    severity: ERROR
+    message: "Tainted value reaches a *sql.DB query sink"
+    mode: taint
+    pattern-sources:
+      - pattern: "SqlSinkReceiverArg.Source(...)"
+    pattern-sinks:
+      - patterns:
+          - pattern: "($DB : *sql.DB).Query($SQL, ...)"
+          - focus-metavariable: $SQL

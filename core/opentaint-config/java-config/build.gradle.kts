@@ -9,7 +9,10 @@ dependencies {
 }
 
 tasks.withType<ProcessResources> {
-    val configDir = layout.projectDirectory.dir("config")
+    val modelDir = layout.projectDirectory.dir("../../../model/java")
 
-    from(configDir)
+    from(modelDir) {
+        include("config/**")
+        into("model/java")
+    }
 }

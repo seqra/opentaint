@@ -21,18 +21,16 @@
 </p>
 
 <p align="center">
-  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.sv.md">Svenska</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.ua.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a> | <a href="README.id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
 <a href="http://opentaint.org/">
-<a href="http://opentaint.org/">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-2.png">
-  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-2.png">
-  <img src="../../public/opentaint-frame-dark-2.png" alt="ملخص نتائج OpenTaint">
+  <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-demo-light.gif">
+  <img src="../../public/opentaint-demo-light.gif" alt="ملخص نتائج OpenTaint">
 </picture>
-</a>
 </a>
 </p>
 
@@ -65,30 +63,37 @@
   <summary><b>المزيد من لقطات الشاشة</b></summary>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-1.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-1.png">
-      <img src="../../public/opentaint-frame-dark-1.png" alt="نتائج فحص OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-1.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-1.png">
+      <img src="../../public/opentaint-frame-light-1.png" alt="نتائج فحص OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-3.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-3.png">
-      <img src="../../public/opentaint-frame-dark-3.png" alt="ملخص نتائج OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-2.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-2.png">
+      <img src="../../public/opentaint-frame-light-2.png" alt="ملخص نتائج OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-4.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-4.png">
-      <img src="../../public/opentaint-frame-dark-4.png" alt="ملخص نتائج OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-3.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-3.png">
+      <img src="../../public/opentaint-frame-light-3.png" alt="ملخص نتائج OpenTaint">
     </picture>
   </p>
   <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-light-5.png">
-      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-dark-5.png">
-      <img src="../../public/opentaint-frame-dark-5.png" alt="ملخص نتائج OpenTaint">
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-4.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-4.png">
+      <img src="../../public/opentaint-frame-light-4.png" alt="ملخص نتائج OpenTaint">
+    </picture>
+  </p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../public/opentaint-frame-dark-5.png">
+      <source media="(prefers-color-scheme: light)" srcset="../../public/opentaint-frame-light-5.png">
+      <img src="../../public/opentaint-frame-light-5.png" alt="ملخص نتائج OpenTaint">
     </picture>
   </p>
 </details>
@@ -96,17 +101,20 @@
 
 ---
 
-## لماذا OpenTaint
+## لماذا OpenTaint؟
 
-الذكاء الاصطناعي يولّد كود الإنتاج بسرعة أكبر مما تستطيع أدوات الأمان الحالية مواكبته.
+> إن OpenTaint بديل مفتوح المصدر لـ *Semgrep Pro* و*CodeQL* — محرك تلوث رسمي عبر الإجراءات يمكنك تخصيصه واستضافته بنفسك، مبنيٌّ بحيث يقود وكلاء الذكاء الاصطناعي تحليلك الأمني دون استنزاف الرموز في كل عملية فحص.
 
-وكلاء أمان نماذج اللغة الكبيرة يكتشفون ثغرات يفوّتها البشر، لكنهم يستهلكون رموزًا على كل ملف، ومع ذلك لا يستطيعون ضمان اكتشاف كل شيء.
+يولّد الذكاء الاصطناعي كود الإنتاج بسرعة أكبر مما تستطيع فرق الأمان مواكبته، ونوعا الأدوات المبنيان لاكتشاف ما يخطئ فيه يفرض كلٌّ منهما مقايضة سيئة:
 
-كلما زاد كود الذكاء الاصطناعي، زادت حاجتك إلى الأساليب الرسمية في الأساس.
+- **مُطابِقات أنماط AST** (Semgrep OSS، وast-grep، وأدوات الفحص النصي) مجانية وسريعة، لكنها تطابق البنية النحوية لا تدفق البيانات — فالمدخلات غير الموثوقة التي تعبر حدود دالة أو طبقة تخزين تفلت منها مباشرة. أما التحليل الأعمق عبر الإجراءات الذي *يلتقطها فعلاً* فقد ظل طويلاً محبوسًا داخل أدوات احتكارية.
+- **وكلاء أمان نماذج اللغة الكبيرة** يكتشفون ما تفوّته مُطابِقات الأنماط، لكنهم يعيدون قراءة كودك في كل تشغيل. تتراكم الرموز مع كل ملف وكل commit وكل عملية بناء في CI — ومع ذلك لا يستطيع نموذج احتمالي أن يضمن أنه التقط كل شيء.
 
-- **اكتشف ما تفوّته محركات مطابقة أنماط AST.** محرك تدفق البيانات عبر الإجراءات يتتبع البيانات غير الموثوقة عبر حدود الدوال، وطبقات التخزين، والأسماء المستعارة، والكود غير المتزامن.
-- **اكتشاف واحد يصبح تغطية شاملة.** قواعد أنماط AST تتيح لك تحويل كل ثغرة مكتشفة إلى قاعدة يطبقها المحرك على قاعدة الكود بالكامل، بشكل حتمي، في دقائق من وقت المعالج.
-- **مفتوح المصدر، جاهز للاستخدام.** المحرك والقواعد وتكاملات CI — الحزمة الكاملة تُوزَّع تحت رخصتي Apache 2.0 وMIT. لا توجد طبقة مدفوعة لفتح تتبع التلوث، ولا قيود على كتابة قواعدك الخاصة.
+يمنحك OpenTaint عمق وكيل نماذج اللغة الكبيرة بتكلفة محلل ساكن:
+
+- **اكتشف ما تفوّته مُطابِقات أنماط AST.** محرك رسمي لتدفق البيانات عبر الإجراءات يتتبع البيانات غير الموثوقة عبر حدود الدوال، وطبقات التخزين، والأسماء المستعارة، والكود غير المتزامن.
+- **ادفع ثمن النموذج مرة واحدة لا في كل عملية فحص.** دع وكيلاً يقطّر اكتشافًا واحدًا إلى قاعدة تلوث. ثم يعيد المحرك الحتمي تطبيق تلك القاعدة على قاعدة الكود بالكامل — وعلى كل commit بعدها — في دقائق من وقت المعالج، وبتكلفة رموز صفرية.
+- **مفتوح المصدر، جاهز للاستخدام.** المحرك والقواعد وتكاملات CI تأتي كحزمة واحدة تحت رخصتي Apache 2.0 وMIT.
 
 ## البدء السريع
 
@@ -125,6 +133,16 @@ brew install --cask seqra/tap/opentaint
 irm https://opentaint.org/install.ps1 | iex
 ```
 
+**التثبيت عبر npm (Linux/macOS/Windows):**
+```bash
+npm install -g @seqra/opentaint
+```
+
+**أو شغّله فورًا عبر npx — دون الحاجة إلى التثبيت (يتطلب Node.js):**
+```bash
+npx @seqra/opentaint scan
+```
+
 **فحص مشروعك:**
 ```bash
 opentaint scan
@@ -141,6 +159,24 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 
 ---
 
+## سير عمل وكلاء الذكاء الاصطناعي
+
+يتضمن OpenTaint مهارات وكلاء تحوّل التحليل الساكن إلى سير عمل متكامل لأمن التطبيقات. ثبّتها باستخدام:
+
+```bash
+npx skills add https://github.com/seqra/opentaint
+```
+
+تنسّق مهارة `appsec-agent` تقييمًا كاملًا للمشروع: بناء المشروع، تشغيل OpenTaint، اكتشاف سطح الهجوم، إضافة قواعد موجّهة، نمذجة تدفقات بيانات المكتبات المفقودة، فرز النتائج، وبشكل اختياري توليد فحوصات ديناميكية لإثبات المفهوم للثغرات المؤكدة.
+
+تغطي المهارات المضمّنة حلقة التحليل الأمني الشائعة:
+
+- **الفحص والفرز:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
+- **توسيع التغطية:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **نمذجة تدفق البيانات:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+
+---
+
 ## التوثيق
 
 أدلة كاملة — التثبيت، الاستخدام، الإعداد، تكامل CI/CD: **[التوثيق](../../docs/README.md)**.
@@ -150,6 +186,16 @@ docker run --rm -v $(pwd):/project -v $(pwd):/output \
 - **المشكلات:** [مشكلات GitHub](https://github.com/seqra/opentaint/issues)
 - **المجتمع:** [Discord](https://discord.gg/6BXDfbP4p9)
 - **البريد الإلكتروني:** [seqradev@gmail.com](mailto:seqradev@gmail.com)
+
+## سجل النجوم
+
+<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+  </picture>
+</a>
 
 ## الرخصة
 

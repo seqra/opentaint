@@ -2,8 +2,15 @@ package org.opentaint.go.sast.dataflow
 
 import org.junit.jupiter.api.Test
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.ir.go.api.GoIRConst
+import org.opentaint.ir.go.api.GoIRFreeVar
 import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.api.GoIRGlobal
+import org.opentaint.ir.go.api.GoIRNamedType
 import org.opentaint.ir.go.api.GoIRPackage
+import org.opentaint.ir.go.api.GoIRParameter
+import org.opentaint.ir.go.api.GoIRTypeParamDecl
+import org.opentaint.ir.go.api.GoIrFunctionReference
 import kotlin.test.assertEquals
 
 class GoUnitResolverTest {
@@ -42,12 +49,11 @@ class GoUnitResolverTest {
             override val isStdlib = isStdlib
             override val isDependency = isDependency
             override val functions = emptyList<GoIRFunction>()
-            override val namedTypes = emptyList<org.opentaint.ir.go.api.GoIRNamedType>()
-            override val globals = emptyList<org.opentaint.ir.go.api.GoIRGlobal>()
-            override val constants = emptyList<org.opentaint.ir.go.api.GoIRConst>()
+            override val namedTypes = emptyList<GoIRNamedType>()
+            override val globals = emptyList<GoIRGlobal>()
+            override val constants = emptyList<GoIRConst>()
             override val imports = emptyList<GoIRPackage>()
             override val initFunction: GoIRFunction? = null
-            override fun findFunction(name: String) = null
             override fun findNamedType(name: String) = null
             override fun findGlobal(name: String) = null
             override fun findConstant(name: String) = null
@@ -61,19 +67,18 @@ class GoUnitResolverTest {
             override val fullName = "${pkg?.importPath ?: "?"}.fn"
             override val pkg = resolvedPkg
             override val signature get() = error("not used")
-            override val params = emptyList<org.opentaint.ir.go.api.GoIRParameter>()
-            override val freeVars = emptyList<org.opentaint.ir.go.api.GoIRFreeVar>()
+            override val params = emptyList<GoIRParameter>()
+            override val freeVars = emptyList<GoIRFreeVar>()
             override val position = null
             override val isMethod = false
-            override val receiverType = null
             override val isPointerReceiver = false
             override val isExported = true
             override val isSynthetic = false
             override val syntheticKind: String? = null
             override val body = null
             override val parent = null
-            override val anonymousFunctions = emptyList<GoIRFunction>()
-            override val typeParams = emptyList<org.opentaint.ir.go.api.GoIRTypeParamDecl>()
+            override val anonymousFunctions = emptyList<GoIrFunctionReference>()
+            override val typeParams = emptyList<GoIRTypeParamDecl>()
         }
     }
 }

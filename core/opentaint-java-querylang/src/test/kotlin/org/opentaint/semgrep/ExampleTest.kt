@@ -199,10 +199,22 @@ class ExampleTest : SampleBasedTest() {
     fun `test join with taint and matching left`() = runTest<example.JoinWithTaintAndMatchingLeft>()
 
     @Test
+    fun `test join tag union`() = runTest<example.JoinTagUnion>()
+
+    @Test
     fun `test object mapper pattern-not full`() = runTest<example.ObjectMapperPatternNotFull>()
 
     @Test
     fun `test object mapper pattern-not ellipsis`() = runTest<example.ObjectMapperPatternNotEllipsis>()
+
+    @Test
+    fun `test concrete placeholder`() = runTest<example.RuleWithConcretePlaceholder>()
+
+    @Test
+    fun `test rule with primitive`() = runTest<example.RuleWithPrimitive>()
+
+    @Test
+    fun `test rule no primitive`() = runTest<example.RuleNoPrimitive>()
 
     @AfterAll
     fun close() {

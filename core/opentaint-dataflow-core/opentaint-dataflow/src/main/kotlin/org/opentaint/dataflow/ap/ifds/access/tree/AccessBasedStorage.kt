@@ -6,11 +6,13 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.util.forEachEntry
 import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.getOrCreate
+import org.opentaint.dataflow.util.getOrCreateNullable
 import org.opentaint.dataflow.util.int2ObjectMap
 
-abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
-    private val children = int2ObjectMap<S>()
+abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
+    val manager: TreeApManager
+) {
+    private val children = int2ObjectMap<S?>()
 
     abstract fun createStorage(): S
 
@@ -55,7 +57,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
         nodes.add(this as S)
 
         if (pattern.isFinal) {
-            children[FINAL_ACCESSOR_IDX]?.let { nodes.add(it) }
+            children.get(FINAL_ACCESSOR_IDX)?.let { nodes.add(it) }
         }
 
         pattern.forEachAccessor { accessor, accessorPattern ->
@@ -81,6 +83,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
             storages.add(storage as S)
 
             storage.children.forEachEntry { _, s ->
+                if (s == null) return@forEachEntry
                 unprocessedStorages.add(s)
             }
         }
@@ -88,7 +91,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
         return storages.asSequence()
     }
 
-    fun forEachNode(manager: TreeApManager, body: (AccessPath.AccessNode?, S) -> Unit) {
+    fun forEachNode(body: (AccessPath.AccessNode?, S) -> Unit) {
         forEachNodeWithAccessorChain { accessors, s ->
             val ap = manager.createNodeFromAccessors(accessors)
             body(ap, s)
@@ -104,6 +107,8 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
             body(accessors, storage as S)
 
             storage.children.forEachEntry { accessor, s ->
+                if (s == null) return@forEachEntry
+
                 val childrenAccessors = accessors.clone()
                 childrenAccessors.add(accessor)
 
@@ -112,9 +117,43 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>> {
         }
     }
 
-    private fun getOrCreateChild(accessor: AccessorIdx): S =
-        children.getOrCreate(accessor) { createStorage() }
+    fun removeChildren(predicate: (AccessorIdx, S) -> Boolean) {
+        val accessorsToRemove = IntArrayList()
 
-    private fun findChild(accessor: AccessorIdx): S? =
+        children.forEachEntry { accessor, s ->
+            if (s == null) return@forEachEntry
+
+            if (predicate(accessor, s)) {
+                accessorsToRemove.add(accessor)
+            }
+        }
+
+        if (accessorsToRemove.isEmpty) return
+
+        accessorsToRemove.forEachInt { accessor ->
+            children.put(accessor, null)
+        }
+    }
+
+    open fun getOrCreateChild(accessor: AccessorIdx): S =
+        children.getOrCreateNullable(accessor) { createStorage() }
+
+    open fun findChild(accessor: AccessorIdx): S? =
         children.get(accessor)
+
+    override fun toString(): String = buildString {
+        print(this, prefix = "")
+    }
+
+    abstract fun printStorageNode(): String
+
+    fun print(builder: StringBuilder, prefix: String) {
+        builder.appendLine("$prefix${printStorageNode()}")
+        children.forEachEntry { accessorIdx, s ->
+            if (s == null) return@forEachEntry
+            val accessor = with(manager) { accessorIdx.accessor }
+            builder.appendLine("$prefix$accessor ->")
+            s.print(builder, prefix + " ".repeat(4))
+        }
+    }
 }

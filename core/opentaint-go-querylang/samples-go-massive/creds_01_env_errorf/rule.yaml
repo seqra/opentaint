@@ -7,5 +7,5 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("API_KEY")
     pattern-sinks:
-      - pattern: util.Sink_LogError($X)
-      - pattern: util.Sink_LogError($X.Error())
+      - pattern: creds_01_env_errorf.Sink_LogError($X)
+      - pattern: creds_01_env_errorf.Sink_LogError($X.Error())

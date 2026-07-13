@@ -5,6 +5,6 @@ rules:
     message: match example/RuleWithType (Go port, distinct foos per receiver)
     mode: taint
     pattern-sources:
-      - pattern: "util.MakeSimple()"
+      - pattern: "JavaRuleWithType.MakeSimple()"
     pattern-sinks:
-      - pattern: "util.FooSimple($X)"
+      - pattern: "JavaRuleWithType.FooSimple($X)"

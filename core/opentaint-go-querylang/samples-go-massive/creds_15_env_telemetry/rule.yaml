@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("SESSION_KEY")
     pattern-sinks:
-      - pattern: util.Sink_SendTelemetry($X)
+      - pattern: creds_15_env_telemetry.Sink_SendTelemetry($X)

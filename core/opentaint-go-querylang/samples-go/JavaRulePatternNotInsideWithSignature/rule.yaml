@@ -5,6 +5,6 @@ rules:
     message: match example/RulePatternNotInsideWithSignature (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRulePatternNotInsideWithSignature.Source()"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRulePatternNotInsideWithSignature.Sink($X)"

@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.opentaint.project.ProjectResolver.Companion.logger
 import org.opentaint.project.ProjectResolver.Companion.tryJavaToolchains
-import java.nio.file.FileVisitResult
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
@@ -16,11 +15,8 @@ import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isExecutable
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.readText
-import kotlin.io.path.relativeTo
-import kotlin.io.path.visitFileTree
 import kotlin.io.path.walk
 import kotlin.io.path.writeText
 
@@ -30,6 +26,8 @@ class GradleProjectResolver(
 ) : ProjectResolver {
     private val resolvedModules = mutableListOf<ProjectModuleClasses>()
     private val resolvedProjectDependencies = mutableListOf<Path>()
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     private fun registerModule(moduleRoot: Path, snapshotLibs: (Path) -> List<Path>) {
         val snapshotDir = resolverDir.resolve("modules_${resolvedModules.size}").createDirectories()
@@ -57,48 +55,52 @@ class GradleProjectResolver(
     private fun buildProject(): Boolean {
         val gradleExecutable = resolveGradleExecutable(projectSourceRoot)
 
-        val buildTarget = "classes" // todo: maybe use testClasses (to include tests) or assemble task?
-        val args = listOf(gradleExecutable) + gradleBuildFlags + listOf("clean", buildTarget)
+        val classesReportDir = resolverDir.resolve("classes-out").createDirectories()
+
+        val args = listOf(gradleExecutable) +
+            gradleBuildFlags +
+            resolveGradleClassesCmdArgs(classesResolverInitScript, classesReportDir) +
+            listOf("clean", RESOLVE_CLASSES_TASK)
 
         javaToolchain = tryJavaToolchains { ProjectResolver.runCommand(projectSourceRoot, args, it) } ?: return false
 
-        projectSourceRoot.visitFileTree {
-            onPreVisitDirectory { directory, _ ->
-                if (directory.isHiddenSubDirOf(projectSourceRoot)) return@onPreVisitDirectory FileVisitResult.SKIP_SUBTREE
+        registerModulesFromReports(classesReportDir)
 
-                if (isGradleProjectRoot(directory)) {
-                    val classesDir = directory.resolve("build").resolve("classes")
-                    if (classesDir.isDirectory()) {
-                        val languages = classesDir.listDirectoryEntries().filter { it.isDirectory() }
-                        val configurations = languages.flatMap { languageClasses ->
-                            languageClasses.listDirectoryEntries().filter { it.isDirectory() }
-                        }
-
-                        if (configurations.isNotEmpty()) {
-                            registerModule(directory) { snapshotDir ->
-                                configurations.map { configurationClasses ->
-                                    val configurationName = configurationClasses.relativeTo(classesDir)
-                                    val snapshotDestination = snapshotDir.resolve(configurationName)
-
-                                    snapshotDestination.createDirectories()
-                                    configurationClasses.copyDirRecursivelyTo(snapshotDestination)
-
-                                    snapshotDestination
-                                }
-                            }
-                        }
-                    }
-                }
-                FileVisitResult.CONTINUE
-            }
+        if (resolvedModules.isEmpty()) {
+            logger.warn { "No module classes resolved for: $projectSourceRoot" }
         }
 
         return true
     }
 
+    private fun registerModulesFromReports(reportDir: Path) {
+        reportDir.walk().filter { it.extension == "json" }.forEach { reportFile ->
+            val report = json.decodeFromString<ClassesReport>(reportFile.readText())
+
+            val classDirs = report.classDirs.map { Path(it) }.filter { it.isDirectory() }
+            if (classDirs.isEmpty()) return@forEach
+
+            val moduleRoot = Path(report.projectPath)
+            registerModule(moduleRoot) { snapshotDir ->
+                classDirs.mapIndexed { index, classDir ->
+                    val snapshotDestination = snapshotDir.resolve("classes_$index")
+                    snapshotDestination.createDirectories()
+                    classDir.copyDirRecursivelyTo(snapshotDestination)
+                    snapshotDestination
+                }
+            }
+        }
+    }
+
     private val dependencyResolverInitScript: Path by lazy {
         resolverDir.resolve("dep-graph.gradle").apply {
             writeText(GRADLE_DEPENDENCY_INIT_SCRIPT)
+        }
+    }
+
+    private val classesResolverInitScript: Path by lazy {
+        resolverDir.resolve("classes-graph.gradle").apply {
+            writeText(GRADLE_CLASSES_INIT_SCRIPT)
         }
     }
 
@@ -121,10 +123,6 @@ class GradleProjectResolver(
     }
 
     private fun resolveDependenciesFromGraph(graphLocation: Path) {
-        val json = Json {
-            ignoreUnknownKeys = true
-        }
-
         val dependencyResolver = GradleDependencyResolver()
 
         graphLocation.walk().filter { it.extension == "json" }
@@ -179,6 +177,12 @@ class GradleProjectResolver(
             return null
         }
     }
+
+    @Serializable
+    data class ClassesReport(
+        val projectPath: String,
+        val classDirs: List<String> = emptyList()
+    )
 
     @Serializable
     data class GradleDependencies(
@@ -279,7 +283,57 @@ class GradleProjectResolver(
             "-Dorg.gradle.dependency.verification=off",
             "-Dorg.gradle.warning.mode=none",
             "-Dorg.gradle.caching=false",
+            "-Dorg.gradle.configuration-cache=false",
         )
+
+        private const val RESOLVE_CLASSES_TASK = "opentaintResolveClasses"
+
+        private const val CLASSES_REPORT_DIR_PROPERTY = "OPENTAINT_CLASSES_REPORT_DIR"
+
+        private val GRADLE_CLASSES_INIT_SCRIPT = """
+            import groovy.json.JsonOutput
+
+            def reportDir = new File(System.getProperty("$CLASSES_REPORT_DIR_PROPERTY"))
+            reportDir.mkdirs()
+
+            gradle.rootProject { root ->
+                root.tasks.register("$RESOLVE_CLASSES_TASK")
+            }
+
+            allprojects { p ->
+                p.afterEvaluate {
+                    def lifecycle = p.tasks.findByName("jvmMainClasses") ?: p.tasks.findByName("classes")
+                    if (lifecycle == null) return
+
+                    def reportTask = p.tasks.register("opentaintReportClasses") {
+                        dependsOn lifecycle
+                        doLast {
+                            def dirs = [] as Set
+                            lifecycle.taskDependencies.getDependencies(lifecycle).each { t ->
+                                if (t.hasProperty("destinationDirectory")) {
+                                    try {
+                                        def f = t.destinationDirectory.get().asFile
+                                        if (f.exists()) dirs.add(f.absolutePath)
+                                    } catch (Exception e) {
+                                        println "opentaint: failed to read destinationDirectory for " + t.path + ": " + e
+                                    }
+                                }
+                            }
+                            def name = "classes-" + p.path.replace(":", "_") + ".json"
+                            new File(reportDir, name).text = JsonOutput.toJson([projectPath: p.projectDir.absolutePath, classDirs: new ArrayList(dirs)])
+                        }
+                    }
+                    p.rootProject.tasks.named("$RESOLVE_CLASSES_TASK").configure { dependsOn reportTask }
+                }
+            }
+        """.trimIndent()
+
+        private fun resolveGradleClassesCmdArgs(initScript: Path, reportDir: Path): List<String> =
+            listOf(
+                "--init-script",
+                initScript.absolutePathString(),
+                "-D$CLASSES_REPORT_DIR_PROPERTY=${reportDir.absolutePathString()}",
+            )
 
         private val GRADLE_DEPENDENCY_INIT_SCRIPT = """
             import org.gradle.github.GitHubDependencyGraphPlugin
@@ -300,6 +354,7 @@ class GradleProjectResolver(
         private fun resolveGradleDependencyCmdArgs(workDir: Path, initScript: Path, reportDir: Path): List<String> =
             listOf(
                 "-Dorg.gradle.configureondemand=false",
+                "-Dorg.gradle.configuration-cache=false",
                 "-Dorg.gradle.dependency.verification=off",
                 "-Dorg.gradle.warning.mode=none",
                 "--init-script",

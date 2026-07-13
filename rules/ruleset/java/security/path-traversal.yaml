@@ -2,7 +2,7 @@ rules:
   - id: path-traversal
     severity: ERROR
     message: >-
-      Potential path traversal: detected user input controlling a file path. An attacker could control the location of this
+      Path traversal: detected user input controlling a file path. An attacker could control the location of this
       file, to include going backwards in the directory with '../'. To address this, ensure that user-controlled
       variables in file paths are sanitized.
     metadata:

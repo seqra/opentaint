@@ -1,0 +1,23 @@
+language: java
+passThrough:
+- function: hudson.FilePath#<init>
+  signature: (hudson.remoting.VirtualChannel, java.lang.String) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .hudson.FilePath#path#java.lang.Object
+- function: hudson.FilePath#<init>
+  signature: (java.io.File) *
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .hudson.FilePath#path#java.lang.Object
+- function: hudson.FilePath#<init>
+  signature: (hudson.FilePath, java.lang.String) *
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .hudson.FilePath#path#java.lang.Object

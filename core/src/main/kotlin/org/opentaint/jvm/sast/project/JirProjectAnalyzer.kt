@@ -1,45 +1,43 @@
 package org.opentaint.jvm.sast.project
 
+import org.opentaint.common.sast.ProjectAnalysisResults
+import org.opentaint.common.sast.ProjectAnalysisStatus
 import org.opentaint.common.sast.ProjectAnalyzer
-import org.opentaint.common.sast.sarif.SarifGenerator
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
+import org.opentaint.common.sast.sarif.SarifGenerator
+import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
-import org.opentaint.dataflow.configuration.jvm.serialized.loadSerializedTaintConfig
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider
-import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationMode
-import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationOptions
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
-import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
-import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.rules.analysisConfig
+import org.opentaint.jvm.sast.project.rules.loadTaintConfig
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.JirDebugFactReachabilitySarifGenerator
 import org.opentaint.jvm.sast.sarif.JirSarifGenerator
 import org.opentaint.jvm.sast.se.api.SastSeAnalyzer
-import org.opentaint.jvm.sast.util.loadDefaultConfig
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
-import org.opentaint.semgrep.pattern.createTaintConfig
-import java.io.InputStream
-import java.nio.file.Path
 
 class JirProjectAnalyzer(
     project: JavaProject,
-    resultDir: Path,
+    results: ProjectAnalysisResults,
     private val jirOptions: ProjectAnalysisOptions,
 ): ProjectAnalyzer<ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
-    project, resultDir, jirOptions.common
+    project, results, jirOptions.common
 ) {
+    override fun analyze(): ProjectAnalysisStatus {
+        if (project.modules.isEmpty()) return ProjectAnalysisStatus.OK
+        return super.analyze()
+    }
+
     override fun initializeProjectAnalysisContext() =
         initializeProjectAnalysisContext(project, jirOptions)
 
@@ -47,29 +45,8 @@ class JirProjectAnalyzer(
         selectProjectEntryPoints(jirOptions)
 
     override fun ruleStrategy() = JavaLanguageStrategy()
-
-    override fun loadApproximationConfig(stream: InputStream) = loadSerializedTaintConfig(stream)
-
-    private fun loadTaintConfig(cp: JIRClasspath, rules: PreloadedRules<SerializedItem, SerializedTaintConfig>): TaintRulesProvider {
-        val config = TaintConfiguration(cp)
-        rules.rules.forEach { config.loadConfig(it.createTaintConfig()) }
-
-        val defaultPassRules = loadDefaultConfig()
-        config.loadConfig(defaultPassRules)
-
-        val provider = JIRTaintRulesProvider(config)
-        if (rules.customApproximationConfig.isEmpty()) return provider
-
-        val approximationsConfig = TaintConfiguration(cp)
-        rules.customApproximationConfig.forEach {
-            approximationsConfig.loadConfig(it)
-        }
-
-        return JIRCombinedTaintRulesProvider(
-            provider, JIRTaintRulesProvider(approximationsConfig),
-            approximationConfigCombinationOptions,
-        )
-    }
+    override fun defaultConfigLoader() = JavaDefaultConfigLoader
+    override fun configLoader() = JavaConfigurationLoader()
 
     override fun ProjectAnalysisContext.createAnalyzer(
         externalMethodTracker: ExternalMethodTracker?,
@@ -114,16 +91,6 @@ class JirProjectAnalyzer(
         return JirDebugFactReachabilitySarifGenerator(
             options.sarifGenerationOptions,
             sourcesResolver, JIRSarifTraits(cp)
-        )
-    }
-
-    companion object {
-        private val approximationConfigCombinationOptions = CombinationOptions(
-            entryPoint = CombinationMode.IGNORE,
-            source = CombinationMode.IGNORE,
-            sink = CombinationMode.IGNORE,
-            cleaner = CombinationMode.IGNORE,
-            passThrough = CombinationMode.OVERRIDE,
         )
     }
 }

@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithSignature (Go port, recast as either-sink)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source()"
+      - pattern: "JavaRuleWithSignature.Source()"
     pattern-sinks:
       - pattern-either:
-          - pattern: "util.Sink1($X)"
-          - pattern: "util.Sink2($X)"
+          - pattern: "JavaRuleWithSignature.Sink1($X)"
+          - pattern: "JavaRuleWithSignature.Sink2($X)"

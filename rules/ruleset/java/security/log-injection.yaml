@@ -75,7 +75,7 @@ rules:
     metadata:
       cwe:
         - CWE-95
-      short-description: Potential injection of unwanted Seam Logging API expression language
+      short-description: Injection of unwanted Seam Logging API expression language
       full-description: |-
         Seam's Logging API integrates with Java Expression Language (EL) so that any `#{...}`
         found in log messages is evaluated against the Seam/JSF context before being written.

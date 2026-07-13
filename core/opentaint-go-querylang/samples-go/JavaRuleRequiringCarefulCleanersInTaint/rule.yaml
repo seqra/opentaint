@@ -5,8 +5,8 @@ rules:
     message: match example/RuleRequiringCarefulCleanersInTaint (Go port, simplified)
     mode: taint
     pattern-sources:
-      - pattern: "util.GetObjGood($X)"
+      - pattern: "JavaRuleRequiringCarefulCleanersInTaint.GetObjGood($X)"
     pattern-sanitizers:
-      - pattern: "util.GetObjBad($X)"
+      - pattern: "JavaRuleRequiringCarefulCleanersInTaint.GetObjBad($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleRequiringCarefulCleanersInTaint.Sink($X)"

@@ -34,6 +34,7 @@ import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
+import org.opentaint.ir.api.jvm.cfg.JIRBinaryExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
 import org.opentaint.ir.api.jvm.cfg.JIRExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
@@ -256,6 +257,12 @@ class JIRMethodSequentFlowFunction(
                 ?.apply { fact = filterFactBaseType(assignFrom.field.enclosingType, fact) ?: return }
                 ?: return
 
+            is JIRBinaryExpr -> {
+                sequentFlowAssign(assignFrom.lhv, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+                sequentFlowAssign(assignFrom.rhv, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+                return
+            }
+
             else -> null
         }
 
@@ -405,9 +412,17 @@ class JIRMethodSequentFlowFunction(
         propagateFact: (FinalFactAp) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
+        // Assign can't overwrite fact
+        if (assignTo != factAp.base) {
+            if (accessor !is ElementAccessor) {
+                unchanged(factAp)
+            } else {
+                propagateFact(factAp)
+            }
+        }
+
         if (!factAp.mayReadAccessor(instance, accessor)) {
             // Fact is irrelevant to current reading
-            unchanged(factAp)
             return
         }
 
@@ -429,15 +444,6 @@ class JIRMethodSequentFlowFunction(
 
         val newAp = factAp.readAccessorTo(newBase = assignTo, accessor = accessor)
         propagateFact(newAp)
-
-        // Assign can't overwrite fact
-        if (assignTo != factAp.base) {
-            if (accessor !is ElementAccessor) {
-                unchanged(factAp)
-            } else {
-                propagateFact(factAp)
-            }
-        }
     }
 
     private fun fieldWrite(

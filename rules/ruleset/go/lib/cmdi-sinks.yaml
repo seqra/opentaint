@@ -1,0 +1,51 @@
+rules:
+  - id: cmdi-sinks
+    options:
+      lib: true
+    severity: NOTE
+    message: Untrusted data reaches an OS command execution API
+    metadata:
+      short-description: OS command execution sink
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: taint
+    pattern-sinks:
+      # Tainted command name reaches process execution.
+      - patterns:
+          - pattern-inside: |
+              import "os/exec"
+              import "os"
+              import "syscall"
+              ...
+          - pattern-either:
+              - pattern: "exec.Command($NAME, ...)"
+              - pattern: "exec.CommandContext($CTX, $NAME, ...)"
+              - pattern: "exec.LookPath($NAME)"
+              - pattern: "os.StartProcess($NAME, ...)"
+              - pattern: "syscall.Exec($NAME, ...)"
+              - pattern: "syscall.ForkExec($NAME, ...)"
+              - pattern: "syscall.StartProcess($NAME, ...)"
+          - focus-metavariable: $NAME
+      # Shell interpreter invoked with a literal command name; a tainted argument is the injection point.
+      - patterns:
+          - pattern-inside: |
+              import "os/exec"
+              ...
+          - pattern-either:
+              - pattern: "exec.Command(\"$NAME\", ..., $UNTRUSTED, ...)"
+              - pattern: "exec.CommandContext($CTX, \"$NAME\", ..., $UNTRUSTED, ...)"
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: sh
+          - focus-metavariable: $UNTRUSTED
+      # Execution of a *exec.Cmd whose argv/env already carries taint.
+      - patterns:
+          - pattern-inside: |
+              import "os/exec"
+              ...
+          - pattern-either:
+              - pattern: "($C : *exec.Cmd).CombinedOutput()"
+              - pattern: "($C : *exec.Cmd).Run()"
+              - pattern: "($C : *exec.Cmd).Output()"
+              - pattern: "($C : *exec.Cmd).Start()"

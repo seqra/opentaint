@@ -19,8 +19,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
-import org.opentaint.sast.test.util.NegativeRuleSample;
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Servlet-based samples for path-traversal-in-servlet rule.
@@ -39,7 +37,6 @@ public class PathTraversalServletSamples {
         private static final String BASE_DIR = "/var/www/uploads/";
 
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -67,7 +64,6 @@ public class PathTraversalServletSamples {
         private static final String BASE_DIR = "/var/www/uploads/";
 
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -99,7 +95,6 @@ public class PathTraversalServletSamples {
         private static final File BASE_DIR = new File("/var/www/uploads");
 
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -185,7 +180,6 @@ public class PathTraversalServletSamples {
         private static final File BASE_DIR = new File("/var/www/uploads").getAbsoluteFile();
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -218,7 +212,6 @@ public class PathTraversalServletSamples {
         private static final File BASE_DIR = new File("/var/www/uploads").getAbsoluteFile();
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -264,7 +257,6 @@ public class PathTraversalServletSamples {
         private static final String UPLOAD_DIR = "/var/www/uploads/";
 
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doPost(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -294,7 +286,6 @@ public class PathTraversalServletSamples {
     public static class UnsafeReadSymbolicLinkServlet extends HttpServlet {
 
         @Override
-        @PositiveRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -318,7 +309,6 @@ public class PathTraversalServletSamples {
     public static class SafeFilesCreateTempFilePrefixSuffixServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -341,7 +331,6 @@ public class PathTraversalServletSamples {
     public static class SafeFilesCreateTempDirectoryPrefixServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 
@@ -363,7 +352,6 @@ public class PathTraversalServletSamples {
     public static class SafeFileCreateTempFilePrefixSuffixServlet extends HttpServlet {
 
         @Override
-        @NegativeRuleSample(value = "java/security/path-traversal.yaml", id = "path-traversal")
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
 

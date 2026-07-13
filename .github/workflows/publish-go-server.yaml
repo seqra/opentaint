@@ -1,0 +1,128 @@
+name: Publish Go Server
+
+on:
+  workflow_dispatch:
+
+  workflow_run:
+    workflows: [ "CI IR" ]
+    branches: [ main ]
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    permissions:
+      contents: write
+
+    steps:
+      # ubuntu-latest GitHub-hosted runners already ship git and the GitHub CLI (gh),
+      # so no manual install step is needed (unlike the container-based analyzer/autobuilder jobs).
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for go-server changes
+        id: changes
+        uses: ./.github/actions/check-scoped-commits
+        with:
+          scopes: go-server,ir,core
+          tag-prefix: 'go-server/'
+
+      - name: Set up Go
+        if: steps.changes.outputs.has-changes == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/opentaint-ir/go/go-ssa-server/go.mod
+
+      - name: Set up protoc
+        if: steps.changes.outputs.has-changes == 'true'
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build go-ssa-server for all platforms
+        if: steps.changes.outputs.has-changes == 'true'
+        run: |
+          set -euo pipefail
+
+          # Install protobuf/gRPC codegen plugins (versions mirror core/opentaint-ir/go/build.gradle.kts).
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.1
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+
+          PROTO_DIR="$GITHUB_WORKSPACE/core/opentaint-ir/go/proto"
+          MODULE_PATH="github.com/opentaint/go-ir/go-ssa-server"
+
+          cd "$GITHUB_WORKSPACE/core/opentaint-ir/go/go-ssa-server"
+
+          # Regenerate proto/gRPC stubs once (platform-independent), replicating the
+          # protoc invocation from build.gradle.kts (run from the Go module dir).
+          protoc \
+            -I "$PROTO_DIR" \
+            --go_out=. \
+            --go_opt=module="$MODULE_PATH" \
+            --go-grpc_out=. \
+            --go-grpc_opt=module="$MODULE_PATH" \
+            "$PROTO_DIR/goir/service.proto"
+
+          # Cross-compile every target from this single linux runner (CGO disabled).
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          for combo in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os="${combo%/*}"
+            arch="${combo#*/}"
+            out="go-ssa-server_${os}_${arch}"
+            [ "$os" = windows ] && out="${out}.exe"
+            echo "Building dist/$out"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags="-s -w" \
+              -o "$GITHUB_WORKSPACE/dist/$out" ./cmd/go-ssa-server
+          done
+
+          # Generate checksums covering all assets (two-space sha256sum format
+          # consumed by utils.ParseChecksumFile / utils.FetchReleaseChecksums in the CLI).
+          cd "$GITHUB_WORKSPACE/dist"
+          sha256sum go-ssa-server_* > checksums.txt
+
+          echo "Built assets:"
+          ls -l
+          echo "checksums.txt:"
+          cat checksums.txt
+
+      - name: Upload go-ssa-server binaries
+        if: steps.changes.outputs.has-changes == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: go-server/${{ steps.changes.outputs.version }}
+          tag_name: go-server/${{ steps.changes.outputs.version }}
+          body: ${{ steps.changes.outputs.release-notes }}
+          files: dist/*
+          make_latest: false
+
+      - name: Update floating latest tag
+        if: steps.changes.outputs.has-changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "go-server/latest"
+          git push origin "go-server/latest" --force
+
+      - name: Update go-server/latest release
+        if: steps.changes.outputs.has-changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "go-server/latest" --yes || true
+          gh release create "go-server/latest" \
+            --title "go-server/latest" \
+            --notes "Floating release tracking the latest go-ssa-server version (v${{ steps.changes.outputs.version }})" \
+            --latest=false \
+            --prerelease \
+            dist/*

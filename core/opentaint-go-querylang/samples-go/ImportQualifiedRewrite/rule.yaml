@@ -1,0 +1,9 @@
+rules:
+  - id: import-qualified-rewrite
+    languages: [go]
+    severity: ERROR
+    message: "Use of math/rand (weak randomness), disambiguated from crypto/rand by import"
+    mode: search
+    pattern: |
+      import "math/rand"
+      rand.Int(...)

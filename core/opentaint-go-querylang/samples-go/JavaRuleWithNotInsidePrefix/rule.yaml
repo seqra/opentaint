@@ -5,8 +5,8 @@ rules:
     message: match example/RuleWithNotInsidePrefix (Go port)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleWithNotInsidePrefix.Source(...)"
     pattern-sanitizers:
-      - pattern: "util.PrefixClean($X)"
+      - pattern: "JavaRuleWithNotInsidePrefix.PrefixClean($X)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleWithNotInsidePrefix.Sink($X)"

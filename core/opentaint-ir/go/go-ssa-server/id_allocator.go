@@ -211,6 +211,26 @@ func (a *idAllocator) snapshotFunctionIDs() map[*ssa.Function]int32 {
 	return out
 }
 
+func (a *idAllocator) snapshotNamedIDs() map[*types.TypeName]int32 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	out := make(map[*types.TypeName]int32, len(a.namedIDs))
+	for k, v := range a.namedIDs {
+		out[k] = v
+	}
+	return out
+}
+
+func (a *idAllocator) snapshotTypeIDs() map[types.Type]int32 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	out := make(map[types.Type]int32, len(a.typeIDs))
+	for k, v := range a.typeIDs {
+		out[k] = v
+	}
+	return out
+}
+
 func (a *idAllocator) snapshotGlobalIDs() map[*ssa.Global]int32 {
 	a.mu.Lock()
 	defer a.mu.Unlock()

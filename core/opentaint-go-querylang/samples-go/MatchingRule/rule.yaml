@@ -4,4 +4,4 @@ rules:
     severity: WARNING
     message: "Taint from r.Form reaches Sink"
     mode: search
-    pattern: "util.Sink($X)"
+    pattern: "MatchingRule.Sink($X)"

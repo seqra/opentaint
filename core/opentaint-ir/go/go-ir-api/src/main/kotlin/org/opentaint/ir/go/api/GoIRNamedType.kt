@@ -1,5 +1,6 @@
 package org.opentaint.ir.go.api
 
+import org.opentaint.ir.go.type.GoIRFuncType
 import org.opentaint.ir.go.type.GoIRNamedTypeKind
 import org.opentaint.ir.go.type.GoIRType
 
@@ -46,6 +47,6 @@ data class GoIRField(
 
 data class GoIRInterfaceMethod(
     val name: String,
-    val signature: org.opentaint.ir.go.type.GoIRFuncType,
+    val signature: GoIRFuncType,
     val enclosingInterface: GoIRNamedType,
 )

@@ -1,5 +1,6 @@
 package org.opentaint.ir.go.client
 
+import io.grpc.StatusRuntimeException
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.proto.BuildProgramRequest
 import org.opentaint.ir.go.proto.GoSSAServiceGrpc
@@ -43,10 +44,21 @@ class GoIRClient : AutoCloseable {
             .build()
 
         val totalStart = System.nanoTime()
-        val responses = stub.buildProgram(request)
         val deserializer = GoIRDeserializer()
         val deserializeStart = System.nanoTime()
-        val program = deserializer.deserialize(responses)
+        val program = try {
+            val responses = stub.buildProgram(request)
+            deserializer.deserialize(responses)
+        } catch (e: StatusRuntimeException) {
+            // gRPC only says e.g. "UNAVAILABLE: Network closed" when the server
+            // process dies mid-stream. Attach the server's exit state and stderr
+            // tail so the actual crash (panic, fatal runtime error, OOM) is visible.
+            throw GoIRServerException(
+                "go-ssa-server RPC failed (${e.status.code}): ${e.status.description}\n" +
+                    serverProcess.diagnostics(),
+                e,
+            )
+        }
         val deserializeMs = (System.nanoTime() - deserializeStart) / 1_000_000
         val totalMs = (System.nanoTime() - totalStart) / 1_000_000
         return BuildResult(

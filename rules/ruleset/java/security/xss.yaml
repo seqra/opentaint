@@ -84,11 +84,11 @@ rules:
   - id: response-injection-in-servlet-app
     severity: NOTE
     message: >-
-      Potential cross-site scripting (XSS): untrusted input is written to a Servlet response writer
+      Cross-site scripting (XSS): untrusted input is written to a Servlet response writer
       without HTML encoding.
     metadata:
       cwe: CWE-79
-      short-description: Potential cross-site scripting (XSS)
+      short-description: Cross-site scripting (XSS)
       full-description: |-
         Cross-Site Scripting (XSS) is a class of vulnerabilities that allows an attacker to inject malicious
         client-side code (usually JavaScript) into web pages viewed by other users.
@@ -320,11 +320,11 @@ rules:
   - id: response-injection-in-spring-app
     severity: NOTE
     message: >-
-      Potential cross-site scripting (XSS): untrusted input is rendered in a Spring view or response
+      Cross-site scripting (XSS): untrusted input is rendered in a Spring view or response
       without HTML encoding.
     metadata:
       cwe: CWE-79
-      short-description: Potential cross-site scripting (XSS)
+      short-description: Cross-site scripting (XSS)
       full-description: |-
         Cross-Site Scripting (XSS) is a class of vulnerabilities that allows an attacker to inject malicious
         client-side code (usually JavaScript) into web pages viewed by other users.

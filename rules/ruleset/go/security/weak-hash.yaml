@@ -1,15 +1,50 @@
 rules:
-  - id: go-weak-hash-cwe-328
-    languages: [go]
+  - id: weak-hash-cwe-328
     severity: ERROR
-    message: Use of a weak or broken cryptographic hash
+    message: >-
+      Weak or broken cryptographic hash function in use
     metadata:
       cwe: CWE-328
-      short-description: Weak cryptographic hash
+      short-description: Weak or broken cryptographic hash
+      full-description: |-
+        MD5, SHA-1, and MD4 are broken for security purposes: practical collisions exist,
+        so they must not be used for signatures, integrity of untrusted data, or password
+        storage. Use SHA-256 (or SHA-3) for integrity, and a dedicated password hash such
+        as bcrypt or argon2 for passwords.
+
+        Vulnerable example:
+
+        ```go
+        // VULNERABLE: MD5 is collision-broken
+        sum := md5.Sum(data)
+        _ = sum
+        ```
+
+        Safe example:
+
+        ```go
+        // SAFE: SHA-256
+        sum := sha256.Sum256(data)
+        _ = sum
+        ```
+
+        Patterns covered include `md5.New`/`md5.Sum`, `sha1.New`/`sha1.Sum`, and `md4.New`.
+      references:
+        - https://owasp.org/Top10/A02_2021-Cryptographic_Failures
+        - https://cwe.mitre.org/data/definitions/328.html
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
     mode: search
-    pattern-either:
-      - pattern: md5.New(...)
-      - pattern: md5.Sum(...)
-      - pattern: sha1.New(...)
-      - pattern: sha1.Sum(...)
-      - pattern: md4.New(...)
+    patterns:
+      - pattern-inside: |
+          import "crypto/md5"
+          import "crypto/sha1"
+          import "golang.org/x/crypto/md4"
+          ...
+      - pattern-either:
+          - pattern: "md5.New(...)"
+          - pattern: "md5.Sum(...)"
+          - pattern: "sha1.New(...)"
+          - pattern: "sha1.Sum(...)"
+          - pattern: "md4.New(...)"

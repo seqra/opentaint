@@ -1,0 +1,18 @@
+rules:
+  - id: cmd-string-shell-sink
+    languages: [go]
+    severity: ERROR
+    message: Tainted argument reaches a shell command invocation
+    mode: taint
+    pattern-sources:
+      - pattern: os.Getenv($K)
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              import "os/exec"
+              ...
+          - pattern: exec.Command("$NAME", ..., $UNTRUSTED, ...)
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: sh
+          - focus-metavariable: $UNTRUSTED

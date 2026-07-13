@@ -25,6 +25,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.RelevantFactFilter
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.TraceGraph
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolverStats
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.cartesianProductMapTo
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
@@ -118,22 +119,7 @@ interface MethodAnalyzer {
         handler: MethodCallResolutionFailureHandler
     )
 
-    fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean = false,
-    ): List<MethodTraceResolver.SummaryTrace>
-
-    fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace>
-
-    fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace>
+    fun methodTraceResolver(): MethodTraceResolver
 
     fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -148,6 +134,8 @@ interface MethodAnalyzer {
     ): Set<FinalFactAp>
 
     fun allIntraProceduralFacts(): Map<CommonInst, Set<FinalFactAp>>
+
+    fun cleanup()
 
     sealed interface MethodCallHandler {
         data class ZeroToZeroHandler(val currentEdge: ZeroToZero) : MethodCallHandler
@@ -178,7 +166,7 @@ class NormalMethodAnalyzer(
     private val cancellation: Cancellation = runner.manager.cancellation
 
     private var zeroInitialFactProcessed: Boolean = false
-    private val initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
+    private var initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
     private val edges = MethodAnalyzerEdges(apManager, methodEntryPoint, analysisManager)
     private var pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
     private var pendingSideEffectRequirements = arrayListOf<InitialFactAp>()
@@ -201,10 +189,10 @@ class NormalMethodAnalyzer(
     override var analyzerSteps: Long = 0
         private set
 
-    private val stepsForTaintMark: MutableMap<String, Long> = hashMapOf()
+    private val stepsForTaintMark: MutableMap<String, Long>? = taintRulesStatsSamplingPeriod?.let { hashMapOf() }
 
     private var summaryEdgesHandled: Long = 0
-    private var traceResolverSteps: Long = 0
+    private val traceResolverStats = TraceResolverStats()
 
     private var factDepthLimit = INITIAL_ALLOWED_FACT_DEPTH
     private var delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
@@ -238,10 +226,10 @@ class NormalMethodAnalyzer(
         stats.stats(methodEntryPoint.method).apply {
             steps += analyzerSteps
             handledSummaries += summaryEdgesHandled
-            traceResolverSteps += this@NormalMethodAnalyzer.traceResolverSteps
+            traceResolverSteps += this@NormalMethodAnalyzer.traceResolverStats.traceResolverSteps
             unprocessedEdges += this@NormalMethodAnalyzer.unprocessedEdges.size
             coveredInstructions.or(edges.reachedStatements())
-            this@NormalMethodAnalyzer.stepsForTaintMark.forEach { (mark, count) ->
+            this@NormalMethodAnalyzer.stepsForTaintMark?.forEach { (mark, count) ->
                 stepsForTaintMark.compute(mark) { _, prev ->
                     prev?.let { it + count } ?: count
                 }
@@ -558,13 +546,16 @@ class NormalMethodAnalyzer(
     }
 
     private fun addInitialF2FEdge(edge: FactToFact) {
-        if (edgeExceedLimit(edge)) {
-            registerDelayed()
-            delayedF2FInitialEdges.add(edge)
-            return
-        }
-
+        if (delayInitialEdge(edge)) return
         addSequentialEdge(edge)
+    }
+
+    private fun delayInitialEdge(edge: FactToFact): Boolean {
+        if (!edgeExceedLimit(edge)) return false
+
+        registerDelayed()
+        delayedF2FInitialEdges.add(edge)
+        return true
     }
 
     private fun registerDelayed() {
@@ -599,6 +590,12 @@ class NormalMethodAnalyzer(
     private fun addSequentialEdge(edge: Edge) {
         edges.add(edge).forEach { newEdge ->
             enqueueNewEdge(newEdge)
+        }
+    }
+
+    private fun addSequentialUnchangedEdge(edge: Edge) {
+        if (enqueuedUnchangedEdges.add(edge)) {
+            enqueueNewEdge(edge)
         }
     }
 
@@ -662,15 +659,15 @@ class NormalMethodAnalyzer(
             if (!edgeUnchanged) {
                 addSequentialEdge(nextEdge)
             } else {
-                if (enqueuedUnchangedEdges.add(nextEdge)) {
-                    enqueueNewEdge(nextEdge)
-                }
+                addSequentialUnchangedEdge(nextEdge)
             }
         }
     }
 
     private fun tryEmmitSummaryEdge(edge: Edge) {
         if (!methodInstGraph.isExitPoint(analysisManager, edge.statement)) return
+
+        if (!isApplicableExitToReturnEdge(edge)) return
 
         val isValidSummaryEdge = when (edge) {
             is ZeroToZero -> true
@@ -688,19 +685,25 @@ class NormalMethodAnalyzer(
         if (edge is ZeroToZero) {
             runner.addNewSummaryEdges(methodEntryPoint, listOf(edge))
         } else {
-            if (edge is FactToFact) {
-                if (edgeExceedLimit(edge)) {
-                    registerDelayed()
-                    delayedF2FSummaries.add(edge)
-                    return
-                }
-            }
+            if (delaySummaryEdge(edge)) return
+            addNewSummaryEdge(edge)
+        }
+    }
 
-            pendingSummaryEdges.add(edge)
+    private fun delaySummaryEdge(edge: Edge): Boolean {
+        if (edge !is FactToFact) return false
+        if (!edgeExceedLimit(edge)) return false
 
-            if (!analyzerEnqueued) {
-                flushPendingSummaryEdges()
-            }
+        registerDelayed()
+        delayedF2FSummaries.add(edge)
+        return true
+    }
+
+    private fun addNewSummaryEdge(edge: Edge) {
+        pendingSummaryEdges.add(edge)
+
+        if (!analyzerEnqueued) {
+            flushPendingSummaryEdges()
         }
     }
 
@@ -800,7 +803,7 @@ class NormalMethodAnalyzer(
         }
     }
 
-    private val methodEntryPointsCache = hashMapOf<MethodWithContext, Array<CommonInst>>()
+    private var methodEntryPointsCache = hashMapOf<MethodWithContext, Array<CommonInst>>()
 
     private fun methodEntryPoints(method: MethodWithContext): List<MethodEntryPoint> {
         val methodEntryPoints = methodEntryPointsCache.getOrPut(method) {
@@ -1058,11 +1061,13 @@ class NormalMethodAnalyzer(
                 apManager, analysisContext, sub.currentEdge.statement
             )
 
+            val summariesToApply = applicableSummaries.flatMap { handler.prepareFactToFactSummary(it) }
+
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
                 methodInitialFactBase = sub.methodInitialFactBase,
-                methodSummaries = applicableSummaries,
+                methodSummaries = summariesToApply,
                 handleSummaryEdge = { currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge ->
                     handler.handleNDFactToFact(sub.currentEdge.initialFacts, currentFactAp, summaryEffect, summaryEdge)
                 }
@@ -1311,33 +1316,8 @@ class NormalMethodAnalyzer(
         return true
     }
 
-    override fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean
-    ): List<MethodTraceResolver.SummaryTrace> {
-        val resolver = MethodTraceResolver(runner, analysisContext, edges, methodInstGraph)
-        return resolver.resolveIntraProceduralTrace(statement, facts, includeStatement)
-    }
-
-    override fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace> {
-        val resolver = MethodTraceResolver(runner, analysisContext, edges, methodInstGraph)
-        return resolver.resolveIntraProceduralTraceFromCall(statement, calleeEntry)
-    }
-
-    override fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> {
-        val resolver = MethodTraceResolver(runner, analysisContext, edges, methodInstGraph)
-        val (fullTrace, steps) = resolver.resolveIntraProceduralFullTrace(summaryTrace, cancellation, collapseUnchangedNodes)
-        traceResolverSteps += steps
-        return fullTrace
-    }
+    override fun methodTraceResolver(): MethodTraceResolver =
+        MethodTraceResolver(runner, traceResolverStats, analysisContext, edges, methodInstGraph)
 
     override fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -1363,7 +1343,7 @@ class NormalMethodAnalyzer(
 
         val taintMarks = finalEdgeFact.collectTaintMarks()
         taintMarks.forEach { taintMark ->
-            stepsForTaintMark.compute(taintMark) { _, prev ->
+            stepsForTaintMark?.compute(taintMark) { _, prev ->
                 prev?.let { it + 1 } ?: 1
             }
         }
@@ -1371,6 +1351,21 @@ class NormalMethodAnalyzer(
 
     private fun FactToFact.summaryEdge() = SummaryEdge.F2F(initialFactAp, factAp)
     private fun NDFactToFact.summaryEdge() = SummaryEdge.NdF2F(initialFacts, factAp)
+
+    override fun cleanup() {
+        methodEntryPointsCache = hashMapOf()
+
+        unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
+
+        pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        pendingSideEffectRequirements = arrayListOf()
+        pendingSideEffectSummaries = arrayListOf()
+        delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+
+        initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
+        delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+    }
 
     companion object {
         const val INITIAL_ALLOWED_FACT_DEPTH = 3
@@ -1383,7 +1378,7 @@ class EmptyMethodAnalyzer(
     override val methodEntryPoint: MethodEntryPoint
 ) : MethodAnalyzer {
     private var zeroInitialFactProcessed: Boolean = false
-    private val taintedInitialFacts = hashSetOf<AccessPathBase>()
+    private var taintedInitialFacts = hashSetOf<AccessPathBase>()
     private val apManager: ApManager get() = runner.apManager
 
     override fun addInitialZeroFact() {
@@ -1414,6 +1409,10 @@ class EmptyMethodAnalyzer(
             methodEntryPoint,
             listOf(FactToFact(methodEntryPoint, initialFactAp, methodEntryPoint.statement, factAp))
         )
+    }
+
+    override fun cleanup() {
+        taintedInitialFacts = hashSetOf()
     }
 
     override val analyzerSteps: Long = 0
@@ -1533,27 +1532,8 @@ class EmptyMethodAnalyzer(
         error("Empty method should not method resolution results")
     }
 
-    override fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean
-    ): List<MethodTraceResolver.SummaryTrace> {
-        TODO("Not yet implemented")
-    }
-
-    override fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> {
-        TODO("Not yet implemented")
-    }
-
-    override fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry
-    ): List<MethodTraceResolver.SummaryTrace> {
-        error("Empty method have no calls")
+    override fun methodTraceResolver(): MethodTraceResolver {
+        error("Empty method has no trace")
     }
 
     override fun resolveIntraProceduralForwardFullTrace(
@@ -1820,40 +1800,7 @@ class TimedMethodAnalyzer(
         base.handleMethodCallResolutionFailure(callExpr, handler)
     }
 
-    override fun resolveIntraProceduralTraceSummary(
-        statement: CommonInst,
-        facts: Set<InitialFactAp>,
-        includeStatement: Boolean,
-    ): List<MethodTraceResolver.SummaryTrace> = timeOperation(
-        operation = "resolveIntraProceduralTraceSummary",
-        category = OpCategory.TRACE,
-        addToTotalTime = false,
-    ) {
-        base.resolveIntraProceduralTraceSummary(statement, facts, includeStatement)
-    }
-
-    override fun resolveIntraProceduralTraceSummaryFromCall(
-        statement: CommonInst,
-        calleeEntry: MethodTraceResolver.TraceEntry.MethodEntry,
-    ): List<MethodTraceResolver.SummaryTrace> = timeOperation(
-        operation = "resolveIntraProceduralTraceSummaryFromCall",
-        category = OpCategory.TRACE,
-        addToTotalTime = false,
-    ) {
-        base.resolveIntraProceduralTraceSummaryFromCall(statement, calleeEntry)
-    }
-
-    override fun resolveIntraProceduralFullTrace(
-        summaryTrace: MethodTraceResolver.SummaryTrace,
-        cancellation: Cancellation,
-        collapseUnchangedNodes: Boolean,
-    ): List<MethodTraceResolver.FullTrace> = timeOperation(
-        operation = "resolveIntraProceduralFullTrace",
-        category = OpCategory.TRACE,
-        addToTotalTime = false,
-    ) {
-        base.resolveIntraProceduralFullTrace(summaryTrace, cancellation, collapseUnchangedNodes)
-    }
+    override fun methodTraceResolver(): MethodTraceResolver = base.methodTraceResolver()
 
     override fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -1885,6 +1832,10 @@ class TimedMethodAnalyzer(
         addToTotalTime = false,
     ) {
         base.allIntraProceduralFacts()
+    }
+
+    override fun cleanup() {
+        base.cleanup()
     }
 }
 

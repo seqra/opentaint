@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Args[$IDX]
     pattern-sinks:
-      - pattern: util.Sink_DbQueryRow($X)
+      - pattern: sqlinj_14_args_replaceall.Sink_DbQueryRow($X)

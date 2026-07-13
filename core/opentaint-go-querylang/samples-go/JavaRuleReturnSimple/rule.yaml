@@ -5,6 +5,6 @@ rules:
     message: match example/RuleReturnSimple (Go port, recast as call-based)
     mode: taint
     pattern-sources:
-      - pattern: "util.Source(...)"
+      - pattern: "JavaRuleReturnSimple.Source(...)"
     pattern-sinks:
-      - pattern: "util.Sink($X)"
+      - pattern: "JavaRuleReturnSimple.Sink($X)"

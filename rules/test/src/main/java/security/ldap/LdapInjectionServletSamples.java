@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.opentaint.sast.test.util.PositiveRuleSample;
 
 /**
  * Samples for ldap-injection-in-servlet rule.
@@ -67,7 +66,6 @@ public class LdapInjectionServletSamples extends HttpServlet {
     }
 
     @Override
-    @PositiveRuleSample(value = "java/security/ldap.yaml", id = "ldap-injection")
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         // VULNERABLE: request parameters (untrusted) flow into LDAP filter via vulnerableAuthenticate()
         String username = req.getParameter("username");

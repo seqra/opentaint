@@ -152,7 +152,7 @@ tasks.register("downloadBenchmarks") {
             val clone = ProcessBuilder("git", "clone", "--depth", "1", cloneUrl, targetDir.absolutePath)
                 .redirectErrorStream(true)
                 .start()
-            val cloneOutput = clone.inputStream.readAllBytes().decodeToString()
+            val cloneOutput = clone.inputStream.readBytes().decodeToString()
             val cloneOk = clone.waitFor(180, TimeUnit.SECONDS)
             if (!cloneOk || clone.exitValue() != 0) {
                 println("    CLONE FAILED: $cloneOutput")
@@ -165,14 +165,14 @@ tasks.register("downloadBenchmarks") {
                     .directory(targetDir)
                     .redirectErrorStream(true)
                     .start()
-                fetch.inputStream.readAllBytes() // drain
+                fetch.inputStream.readBytes() // drain
                 fetch.waitFor(60, TimeUnit.SECONDS)
 
                 val checkout = ProcessBuilder("git", "checkout", commitHash)
                     .directory(targetDir)
                     .redirectErrorStream(true)
                     .start()
-                checkout.inputStream.readAllBytes() // drain
+                checkout.inputStream.readBytes() // drain
                 checkout.waitFor(30, TimeUnit.SECONDS)
             }
             println("    OK")

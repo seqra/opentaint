@@ -34,12 +34,12 @@ class LoadModeTests {
         GoIRClient().use { client ->
             val prog = client.buildFromDir(root, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).program
 
-            val run = prog.findPackage("example.com/app")!!.findFunction("Run")!!
+            val run = prog.findPackage("example.com/app")!!.functions.first { it.name == "Run" }
             assertThat(run.hasBody).isTrue()
             assertThat(run.bodyAvailable).isTrue()
             assertThat(run.body).isNotNull()
 
-            val helper = prog.findPackage("example.com/dep")!!.findFunction("Helper")!!
+            val helper = prog.findPackage("example.com/dep")!!.functions.first { it.name == "Helper" }
             assertThat(helper.hasBody).isTrue()
             assertThat(helper.bodyAvailable).isFalse()
             assertThatThrownBy { helper.body }.isInstanceOf(GoIRBodyUnavailableException::class.java)
@@ -54,7 +54,7 @@ class LoadModeTests {
         val root = writeWorkspace()
         GoIRClient().use { client ->
             val prog = client.buildFromDir(root, GoIRLoadConfig(mode = GoIRLoadMode.FULL)).program
-            val helper = prog.findPackage("example.com/dep")!!.findFunction("Helper")!!
+            val helper = prog.findPackage("example.com/dep")!!.functions.first { it.name == "Helper" }
             assertThat(helper.bodyAvailable).isTrue()
             assertThat(helper.body).isNotNull()
             val strings = prog.findPackage("strings")!!
@@ -70,7 +70,7 @@ class LoadModeTests {
                 root,
                 GoIRLoadConfig(mode = GoIRLoadMode.PROJECT, projectModules = setOf("example.com/dep")),
             ).program
-            val helper = prog.findPackage("example.com/dep")!!.findFunction("Helper")!!
+            val helper = prog.findPackage("example.com/dep")!!.functions.first { it.name == "Helper" }
             assertThat(helper.bodyAvailable).isTrue()
             assertThat(prog.findPackage("example.com/dep")!!.isDependency).isFalse()
             assertThat(prog.findPackage("strings")!!.functions.any { it.bodyAvailable }).isFalse()

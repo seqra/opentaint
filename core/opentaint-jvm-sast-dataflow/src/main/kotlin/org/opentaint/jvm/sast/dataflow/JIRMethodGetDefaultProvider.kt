@@ -22,11 +22,14 @@ class JIRMethodGetDefaultProvider(
 ) : TaintRulesProvider by base {
     override fun passTroughRulesForMethod(
         method: CommonMethod,
-        statement: CommonInst,
+        statement: CommonInst?,
         fact: FactAp?,
         allRelevant: Boolean
     ): Iterable<TaintPassThrough> {
         val baseRules = base.passTroughRulesForMethod(method, statement, fact, allRelevant)
+
+        // note: hack to disable default get provide in Alias Analysis
+        if (statement == null) return baseRules
 
         if (method !is JIRMethod || method.isStatic) return baseRules
 

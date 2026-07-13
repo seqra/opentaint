@@ -1,0 +1,18 @@
+language: java
+passThrough:
+- function: org.apache.commons.io.IOUtils#toString
+  copy:
+  - from: arg(0)
+    to: result
+- function: org.apache.commons.io.IOUtils#toByteArray
+  copy:
+  - from: arg(0)
+    to: result
+- function: org.apache.commons.io.IOUtils#toCharArray
+  copy:
+  - from: arg(0)
+    to: result
+- function: org.apache.commons.io.IOUtils#readLines
+  copy:
+  - from: arg(0)
+    to: result

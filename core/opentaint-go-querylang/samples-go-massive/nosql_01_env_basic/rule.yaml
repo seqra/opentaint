@@ -7,4 +7,4 @@ rules:
     pattern-sources:
       - pattern: os.Getenv("MONGO_USER")
     pattern-sinks:
-      - pattern: util.Sink_MongoFind($X)
+      - pattern: nosql_01_env_basic.Sink_MongoFind($X)
