@@ -474,16 +474,85 @@ match tainted arm (00507), b64 roundtrip (00657), html.escape passthrough (00992
 - **1 copy-semantics** (00509): `copy = string33385(''); string33385 += param; copy += 'const'; bar=copy` →
   `copy` never carries `param` (immutable-string rebind). NotReachable, passes cleanly.
 
-### @Disabled (9)
+### @Disabled (8)  — 00605 RESOLVED, see inv 29
 - **00269** (TRUE, FN, inv 20): ThingFactory `getattr` → Any receiver → `thing.doSomething(param)` unresolved.
-- **00605** (TRUE, FN, inv 29 NEW): `escape_for_html` char-rebuild body drops taint. **VERIFIED**: a call-arg
-  probe rule (`... helpers.utils.escape_for_html($A)` as sink) FIRES → taint reaches the call; drop is inside
-  the `for c in s: ret += c` body (scalar NextIter, inv-25 family). A temp `config.yaml` passThrough on
-  `escape_for_html` had NO effect (analyzed user fn, not overridable by config). NOT added globally — it
-  would FP future xss where escape_for_html is the real sanitizer.
 - **00349, 00658** (FALSE, FP, inv 16): dict key-insensitivity (store keyB(param), read keyA(const)).
 - **00508, 00513, 00608, 00995** (FALSE, FP, inv 18): path-insensitive match/if-else/ternary (const-selected
   safe arm, tainted arm still explored).
 - **00826** (FALSE, FP, inv 19): list index-insensitivity (append(param), pop(0), read lst[1]).
 
 ### Pass-throughs added: `base64.urlsafe_b64decode` (arg(0)+kwarg(s)→result).
+
+### inv 29 — RESOLVED (00605): char-rebuild element-drop + per-entry `[...]` workaround
+- **Symptom.** 00605 (deser, CWE-502) was a FN: tainted `param` flows through user helper
+  `helpers.utils.escape_for_html`, whose body rebuilds the string char-by-char (`ret = ''; for c in s: ret += c;
+  return ret`) before the result reaches `pickle.loads`. The single-`[...]` source taints the whole string
+  object; `for c in s` is a NextIter read that the concrete whole-object fact does NOT survive (inv-25 family:
+  `mayReadAccessor(values, ElementAccessor)` false — fact starts `TaintMarkAccessor`, not `ElementAccessor`, and
+  isn't `isAbstract()`), so `c` — and thus `ret` — is untainted. VERIFIED earlier: a call-arg probe
+  (`… escape_for_html($A)` as sink) FIRED, so taint reaches the call; the drop is strictly inside the body. A
+  `config.yaml` passThrough on `escape_for_html` had NO effect (config can't override an analyzed user fn).
+- **Fix (per-entry, rule-only).** Add one MORE subscript to the collection-accessor source:
+  `flask.request.headers.getlist(...)[...]` → `…getlist(...)[...][...]`. This pushes the source mark one element
+  level deeper — to the character level — so the mark that reaches `escape_for_html`'s `s` already lives on the
+  element the NextIter reads, survives `for c in s`, propagates to `c`→`ret`, and reaches `pickle.loads`. 00605
+  now PASSES; suite green.
+- **Emitted-rule proof (CARDINAL 5, `PythonRuleEmitTest` throwaway probe, now removed).** For the same
+  source+sink, dumping `source.taint.map { it.pos }`:
+  - single `getlist(...)[...]`  → `taint=[WithModifiers(base=Result, modifiers=[ArrayElement])]`  (`Result[*]`)
+  - double `getlist(...)[...][...]` → `taint=[WithModifiers(base=Result, modifiers=[ArrayElement, ArrayElement])]` (`Result[*][*]`)
+  Exactly ONE extra `ArrayElement` — genuinely one element level deeper, as intended. (The double-subscript source
+  path is the same `transformAssignmentValue` merge locked by inv 25's `PythonRuleEmitTest` regressions.)
+- **Rule of thumb.** Add one `[...]` per element-read / iteration hop between source and sink; verify by re-running.
+- **Caveat — per-entry SAFE, does NOT generalize.** Do NOT apply where the element-read/char-rebuild is a
+  *legitimate sanitizer*. In xss especially, `escape_for_html` / `html.escape` ARE the real sanitizers and you
+  WANT the drop — deepening the source there would defeat sanitization and FP. Here the helper only *copies*
+  (no escaping), so the drop is a pure engine artifact, making the workaround sound for THIS entry only.
+- **Engine-fix candidate** (removes the need for the manual `[...]`): propagate concrete whole-object taint
+  through NextIter / element reads (same fix as inv 25).
+
+## pathtraver round (CWE-22, 46 entries) — ALL STRUCTURAL rules
+
+Sinks (per entry, threading `$A`): `open($A, ...)`, `codecs.open($A, ...)`, `os.path.exists($A)` (path on
+arg0 — the `f'{DIR}/{bar}'` f-string carries the mark), and pathlib **receiver-position** `$A.exists(...)`
+(`p = testfiles / bar` — `/` is a NATIVE binop that propagates taint into `p`, so a metavar-receiver sink
+checks This on `p`). Sources: cookies/form `.get`, `.form.getlist(...)[...]`, `.form.keys(...)[...]` loop,
+`get_form_parameter` wrapper (inv 26 → `flask.request.form.get`). **Suite after round: 317 tests, 0 fail,
+126 skipped (191 pass).** Batch = 20 active pass (16 TRUE + 4 FALSE) + 26 `@Disabled`.
+
+### Active TRUE (16, pass): 00001 00002 00008 00085 00087 00089 00171 00172 00173 00175 00178 00180 00273 00277 00351 00353
+Direct/if/if-else/dict-same-key/configparser-same-key/string-concat+slice/base64-roundtrip/getlist[...]/
+keys-loop/wrapper flows into `open`/`codecs.open`/`os.path.exists`/`pathlib $A.exists`. 00002 (`if 'should' in
+bar: bar=param`) and 00008/00085 (`if 'should' not in TestParam: safe else bar=param`) reach path-insensitively.
+
+### Active FALSE (4, pass via concrete-taint-drop at `.resolve()`): 00090 00091 00181 00276
+pathlib `p = (testfiles / bar).resolve()`: `.resolve()` is an UNMODELED call that drops the CONCRETE taint
+(inv 6 / inv 25 family), so `p.exists()` isn't reached. NOT a robust sanitizer model (they FP once inv-25 is
+fixed) — mirrors prior-round accepted taint-drop passes (00991/01173). Their true approximation reason is
+inv 19 (00090 list) / inv 18 (00091 ternary, 00181 match) / inv 16 (00276 configparser keyA).
+
+### @Disabled — FN inv 20 (2): 00003 00177
+ThingFactory `thing.doSomething(param)` getattr → Any receiver → unresolved (same as prior rounds).
+
+### @Disabled — build gap (6): 00009 00010 00092 00093 00094 00182  (2 TRUE + 4 FALSE)  ESCALATED (inv 31)
+The `p.read_text()[:1000]` variant fails entry-point serialization ("Entry point not found") — POST function
+not emitted; rule/config-independent, NO serializer WARNING logged. Confounded trigger: read_text[:1000] AND a
+malformed `except OSError:` block (undefined `e`/`fileName`, `{{...}}` literal-brace f-string). exists-variant
+siblings (identical source/flow) build fine. Reproducer = these 6 entries. Cost this round: 2 TRUE FN
+(00092 dict, 00182 getlist) unrecoverable until fixed.
+
+### @Disabled — FP approximation-limited (18)
+No FALSE pathtraver variant has a unifiable validator CALL: the guards are `'../' in bar` (a `Contains`
+operator) and `str(p).startswith(str(testfiles))` (receiver-position on `str(p)`, not `bar`) — neither is a
+callable validator, so the inv-23 unified-`$M` trick doesn't apply.
+- inv 18 path-insensitive const if/else/ternary/match: 00004 00086 00088 00095 00174 00176 00184 00274 00352 00354.
+- inv 18/23 substring `'../' in bar` guard (dict-same-key 00005 / string-concat 00007 stay tainted): 00005 00007.
+- inv 19 list index-insensitivity (append/pop/`lst[i]`): 00006 00179.
+- inv 16 configparser/dict key-insensitivity (set keyB(param), read keyA(const)): 00170 00183 00355.
+- inv 18 + wrapper ABSTRACT taint survives `.resolve()` (unlike the 4 concrete passes above): 00275.
+
+### No pass-throughs / engine changes this round.
+Verified `/` (truediv) is a native binop (a `pathlib.Path.__truediv__` passThrough is inert — never resolved
+as a call) and NO TRUE entry uses `.resolve()`, so the initially-added pathlib passThroughs were removed as
+unnecessary. Receiver-position sinks (`$A.exists(...)`) fire correctly (metavar receiver → This-position
+`ContainsMark`, resolveReceiver → IsMetavar).

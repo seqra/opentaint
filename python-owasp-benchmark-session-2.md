@@ -210,13 +210,28 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     a subscript/attribute-target assignment (check taint on key AND value) + engine checks it at
     `handleStoreSubscript`/`handleStoreSubscript`-analogues + a new sink kind. Reproducer: the 37 `@Disabled`
     trustbound entries + the `PythonRuleEmitTest` probe (`python-rules/subscript-assign-sink.yaml`).
-29. **Interprocedural char-rebuild loop drops taint (inv-25 family) → `@Disabled`** (deser 00605,
-    `helpers.utils.escape_for_html`). A helper that rebuilds its string arg char-by-char
-    (`for c in s: ret += c`) drops taint: `s` (scalar) is base-tainted but `for c in s` NextIter doesn't
-    taint `c` (concrete whole-object fact doesn't propagate through element/NextIter read, inv 25). VERIFIED
-    on 00605: a call-arg probe (`... escape_for_html($A)` as sink) FIRES → taint reaches the call; the drop
-    is inside the body. A `config.yaml` passThrough does NOT override an analyzed user fn (no effect). Fix
-    candidate = same as inv 25 (propagate concrete whole-object taint through NextIter).
+29. **Char-rebuild/element-NextIter drops taint (inv-25 family); per-entry `[...]` deepening fixes it** (deser
+    00605: `escape_for_html` rebuilds `s` char-by-char `for c in s: ret += c`, concrete whole-object mark doesn't
+    survive the read). FIX: add one more `[...]` to a collection-accessor source (`getlist(...)[...]`→`[...][...]`,
+    verified `Result[*]`→`Result[*][*]`, one extra `ArrayElement`) per element/iteration hop, re-run to verify.
+    Per-entry SAFE, does NOT generalize — NEVER where the element-read is a *legit sanitizer* (xss:
+    `escape_for_html`/`html.escape` ARE the sanitizer, WANT the drop). Engine fix = propagate concrete taint
+    through NextIter (inv 25). Deep write-up + emitted-rule dumps in insights log.
+30. **pathtraver sinks + pathlib mechanics** (VERIFIED, pathtraver round). `open($A,...)`/`codecs.open($A,...)`/
+    `os.path.exists($A)` thread `$A` on arg0 (f-string `f'{DIR}/{bar}'` carries the mark). For pathlib
+    `p = testfiles / bar; p.exists()`: `/` is a **native binop** (no call resolved — a truediv passThrough is
+    inert), so `p` is tainted natively; the sink is receiver-position `$A.exists(...)` (metavar receiver →
+    This-position `ContainsMark`, fires). `.resolve()` is an unmodeled call that **drops CONCRETE taint** (direct
+    `form.get`→bar→resolve→p passes as not-reachable) but **ABSTRACT (wrapper/interproc) taint SURVIVES it**
+    (inv 25 family) → wrapper-source resolve variants still FP. FALSE pathtraver guards (`'../' in bar`,
+    `str(p).startswith(...)`) are operators/receiver-guards, NOT callable validators → NOT unifiable (inv 23) →
+    approximation-limited FPs `@Disabled` (inv 16/18/19).
+31. **`p.read_text()[:1000]` pathtraver variant fails entry-point serialization → `@Disabled` (build gap, ESCALATED).**
+    The 6 read_text entries (00009/00010/00092/00093/00094/00182) throw "Entry point not found" — the POST
+    function isn't serialized (rule/config-independent; no serializer WARNING logged). Confounded trigger:
+    `p.read_text()[:1000]` co-occurs with a malformed `except OSError:` block referencing undefined `e`/`fileName`
+    plus `{{...}}` literal-brace f-string; exact cause unconfirmed. exists-variant siblings build fine.
+    Reproducer = these 6 `@Disabled` entries.
 
 ## Category → sink / CWE reference
 
