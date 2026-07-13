@@ -689,3 +689,18 @@ wrapper → `flask.request.args.get` (01214, inv 26). Suite after round: **439 t
   key-insens inv 16 (00843/00853/00938); list index-insens inv 19 (00934/00936); const if/else + ternary + match path-insens
   inv 18 (00762/00763/00847/00852/00929/00935); `'` apostrophe substring guard (operator, not unifiable) inv 23 (00848/
   00849/00855/00928/00929). Several stack two mechanisms (key-insens + replace, path-insens + apostrophe).
+
+## xpathi batch 5 (CWE-643, FINAL — completes all 186) — 22 active pass / 4 @Disabled / 0 fail
+
+All verdicts re-confirm existing invariants; no new invariant discovered.
+- **22 active assertNotReachable (pass-free):**
+  - request.path FALSE + get_safe_value const-wrapper (returns literal "bar") → NON-MATCHING bare-attribute
+    source `flask.request.query_string` (inv 17/33): 01031-01039, 01116-01121, 01123-01125, 01225, 01226.
+  - kwarg-const-query sink (inv 34): real matching source but `xpath(query, name=param)` has CONST arg0 →
+    `$T.xpath($A)` binds the const query, never param → free: 01184 (form.getlist), 01204 (args.get).
+- **4 @Disabled (all verified by run — sink message direction confirmed):**
+  - **01218 TRUE FN** — io.StringIO write/getvalue drops taint (inv 34); "sink was not reached".
+  - **01175 FALSE FP** — cookies.get tainted, safe only via `str.replace("'","&apos;")` apostrophe-escape
+    which resolves to `copy.replace` passThrough and PROPAGATES (inv 34).
+  - **01198/01217 FALSE FP** — headers.getlist/query_string tainted, safe only via `'` apostrophe substring
+    guard (`if '\'' in param: return`), an operator with no unifiable validator call (inv 23).

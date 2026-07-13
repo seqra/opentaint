@@ -1151,6 +1151,38 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("FP inv 16/34: configparser key-insensitivity (get keyA(const)) + str.replace apostrophe-escape (copy.replace passthrough)")
     @Test fun benchmarkTest00938() = assertNotReachable("00938")
 
+    // ─── xpathi batch 5 (final) — CWE-643 ───────────────────────────────────────────
+    @Test fun benchmarkTest01031() = assertNotReachable("01031")
+    @Test fun benchmarkTest01032() = assertNotReachable("01032")
+    @Test fun benchmarkTest01033() = assertNotReachable("01033")
+    @Test fun benchmarkTest01034() = assertNotReachable("01034")
+    @Test fun benchmarkTest01035() = assertNotReachable("01035")
+    @Test fun benchmarkTest01036() = assertNotReachable("01036")
+    @Test fun benchmarkTest01037() = assertNotReachable("01037")
+    @Test fun benchmarkTest01038() = assertNotReachable("01038")
+    @Test fun benchmarkTest01039() = assertNotReachable("01039")
+    @Test fun benchmarkTest01116() = assertNotReachable("01116")
+    @Test fun benchmarkTest01117() = assertNotReachable("01117")
+    @Test fun benchmarkTest01118() = assertNotReachable("01118")
+    @Test fun benchmarkTest01119() = assertNotReachable("01119")
+    @Test fun benchmarkTest01120() = assertNotReachable("01120")
+    @Test fun benchmarkTest01121() = assertNotReachable("01121")
+    @Test fun benchmarkTest01123() = assertNotReachable("01123")
+    @Test fun benchmarkTest01124() = assertNotReachable("01124")
+    @Test fun benchmarkTest01125() = assertNotReachable("01125")
+    @Disabled("FP inv 34: cookies.get source, safe only via str.replace apostrophe-escape (copy.replace passthrough propagates)")
+    @Test fun benchmarkTest01175() = assertNotReachable("01175")
+    @Test fun benchmarkTest01184() = assertNotReachable("01184")
+    @Disabled("FP inv 23: headers.getlist source tainted, safe only via `'` apostrophe substring guard (not unifiable)")
+    @Test fun benchmarkTest01198() = assertNotReachable("01198")
+    @Test fun benchmarkTest01204() = assertNotReachable("01204")
+    @Disabled("FP inv 23: query_string source tainted, safe only via `'` apostrophe substring guard (not unifiable)")
+    @Test fun benchmarkTest01217() = assertNotReachable("01217")
+    @Disabled("FN inv 34: io.StringIO write/getvalue drops taint (unmodeled arg->receiver->result), query never tainted")
+    @Test fun benchmarkTest01218() = assertReachable("01218")
+    @Test fun benchmarkTest01225() = assertNotReachable("01225")
+    @Test fun benchmarkTest01226() = assertNotReachable("01226")
+
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 
     private fun assertReachable(id: String) {
