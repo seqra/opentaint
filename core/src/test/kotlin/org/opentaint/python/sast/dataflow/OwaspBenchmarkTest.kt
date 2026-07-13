@@ -336,6 +336,113 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm explored")
     @Test fun benchmarkTest00724() = assertNotReachable("00724")
 
+    // ─── codeinj (CWE-94). sink: eval($X) / exec($X). ──────────────────────────────
+    // Structural rules: $A = <request source> ... eval/exec($A). FALSE variants guarded by a
+    // `bar.startswith("'")/endswith("'")` string-literal check are excluded with a unified-$M
+    // pattern-not cleaner on $M.startswith(...); never-tainted (constant get_safe_value) use a
+    // source that never matches. Approximation-limited FALSE variants (path/key/index-insensitive)
+    // are @Disabled.
+
+    // TRUE — tainted request data reaches eval/exec.
+    @Test fun benchmarkTest00074() = assertReachable("00074")
+    @Test fun benchmarkTest00159() = assertReachable("00159")
+    @Test fun benchmarkTest00160() = assertReachable("00160")
+    @Test fun benchmarkTest00161() = assertReachable("00161")
+    @Test fun benchmarkTest00342() = assertReachable("00342")
+    @Test fun benchmarkTest00425() = assertReachable("00425")
+    @Test fun benchmarkTest00503() = assertReachable("00503")
+    @Test fun benchmarkTest00599() = assertReachable("00599")
+    @Test fun benchmarkTest00728() = assertReachable("00728")
+    @Test fun benchmarkTest00729() = assertReachable("00729")
+    @Test fun benchmarkTest00819() = assertReachable("00819")
+    @Test fun benchmarkTest00820() = assertReachable("00820")
+    @Test fun benchmarkTest00890() = assertReachable("00890")
+    @Test fun benchmarkTest00891() = assertReachable("00891")
+    @Test fun benchmarkTest00894() = assertReachable("00894")
+    @Test fun benchmarkTest00986() = assertReachable("00986")
+    @Test fun benchmarkTest01188() = assertReachable("01188")
+
+    // TRUE but ThingFactory getattr dispatch (inv 20): Any receiver, thing.doSomething unresolved — FN.
+    // Verified empirically this round: all three FN ("sink was not reached").
+    @Disabled("dynamic getattr dispatch (inv 20): Any receiver, thing.doSomething unresolved — FN")
+    @Test fun benchmarkTest00343() = assertReachable("00343")
+    @Disabled("dynamic getattr dispatch (inv 20): Any receiver, thing.doSomething unresolved — FN")
+    @Test fun benchmarkTest00422() = assertReachable("00422")
+    @Disabled("dynamic getattr dispatch (inv 20): Any receiver, thing.doSomething unresolved — FN")
+    @Test fun benchmarkTest00601() = assertReachable("00601")
+
+    // FALSE — ThingFactory getattr dispatch (inv 20) drops taint before the sink, so these safely
+    // never reach eval/exec even though they also carry a startswith guard. Pass via the FN-drop.
+    @Test fun benchmarkTest00075() = assertNotReachable("00075")
+    @Test fun benchmarkTest00163() = assertNotReachable("00163")
+    @Test fun benchmarkTest00504() = assertNotReachable("00504")
+    @Test fun benchmarkTest00818() = assertNotReachable("00818")
+    @Test fun benchmarkTest00989() = assertNotReachable("00989")
+
+    // FALSE — safe ONLY by a `bar.startswith("'")/endswith("'")` string-literal guard. VERIFIED root
+    // cause (inv 27): the `pattern-not` cleaner IS generated, IS reached, and its condition evaluates
+    // true at the `bar.startswith(...)` call site — but it cleans the RECEIVER (`pos=This`). Via the
+    // PIR_SELF hack the receiver is a bound-method-captured copy of `bar` (fact `bar.$PIR_SELF`), a
+    // MAY-alias of `bar`. Cleaning it removes only that fact; the base-variable fact `bar` (a distinct
+    // fact — no must-alias links them) survives and reaches `eval`. Receiver/instance-position cleaners
+    // therefore cannot clean the underlying variable → engine gap, not rule-fixable.
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00073() = assertNotReachable("00073")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00158() = assertNotReachable("00158")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00162() = assertNotReachable("00162")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00345() = assertNotReachable("00345")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00423() = assertNotReachable("00423")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00426() = assertNotReachable("00426")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00603() = assertNotReachable("00603")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00730() = assertNotReachable("00730")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00821() = assertNotReachable("00821")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00822() = assertNotReachable("00822")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00892() = assertNotReachable("00892")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00893() = assertNotReachable("00893")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00987() = assertNotReachable("00987")
+    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Test fun benchmarkTest00988() = assertNotReachable("00988")
+
+    // FALSE — never tainted: constant get_safe_value wrapper; source pattern never matches.
+    @Test fun benchmarkTest01164() = assertNotReachable("01164")
+    @Test fun benchmarkTest01165() = assertNotReachable("01165")
+    @Test fun benchmarkTest01166() = assertNotReachable("01166")
+    @Test fun benchmarkTest01167() = assertNotReachable("01167")
+
+    // FALSE — data-flow-approximation FP (no distinguishing validator call to unify a cleaner on).
+    @Disabled("path-insensitive if/else FP (inv 18): const-true guard picks safe arm, param arm still explored")
+    @Test fun benchmarkTest00156() = assertNotReachable("00156")
+    @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm explored")
+    @Test fun benchmarkTest00157() = assertNotReachable("00157")
+    @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm explored")
+    @Test fun benchmarkTest00263() = assertNotReachable("00263")
+    @Disabled("path-insensitive if/else FP (inv 18): const-true guard picks safe arm, param arm still explored")
+    @Test fun benchmarkTest00264() = assertNotReachable("00264")
+    @Disabled("path-insensitive always-true ternary guard FP (inv 18): else-branch taints bar")
+    @Test fun benchmarkTest00344() = assertNotReachable("00344")
+    @Disabled("configparser key-insensitivity FP (inv 16): set keyB(param), get keyA(const)")
+    @Test fun benchmarkTest00346() = assertNotReachable("00346")
+    @Disabled("dict key-insensitivity FP (inv 16): store keyB(param), read keyA(const)")
+    @Test fun benchmarkTest00347() = assertNotReachable("00347")
+    @Disabled("list index-insensitivity FP (inv 19): append(param), pop, read lst[1]")
+    @Test fun benchmarkTest00424() = assertNotReachable("00424")
+    @Disabled("path-insensitive match-arm FP (inv 18): const discriminator picks safe arm, tainted arm explored")
+    @Test fun benchmarkTest00600() = assertNotReachable("00600")
+    @Disabled("configparser key-insensitivity FP (inv 16): set keyB(param), get keyA(const)")
+    @Test fun benchmarkTest00602() = assertNotReachable("00602")
+
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 
     private fun assertReachable(id: String) {

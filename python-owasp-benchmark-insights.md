@@ -318,3 +318,78 @@ engine/lowering gap (full writeup in session-2 invariant 25):
 - **00597, 00723** — list index-insensitivity (inv 19): append(param), pop(0), read lst[1].
 These are safe only by a runtime key/index/branch value; there is no `urlparse`-style guard call to clean
 on, so the unified-`$M` trick doesn't apply.
+
+## codeinj round (CWE-94, 53 entries) — ALL STRUCTURAL rules
+
+Sink: `eval($A)` or `exec($A)` (per entry). Shape: `$A = <request source> ... eval/exec($A)`.
+Sources mirror prior rounds: cookies/form/args/headers `.get`, `.form/.args/.headers.getlist(...)[...]`,
+`.form.keys(...)[...]` loop, `.query_string.decode(...)`. **26 active pass (17 TRUE + 9 FALSE), 27 @Disabled.**
+Suite after round: 180 tests, 0 fail, 54 skipped (126 pass).
+
+### Wrapper source: use the canonical flask accessor (new inv 26)
+The `request_wrapper` getters (`get_form_parameter`→`self.request.form.get`, `get_query_parameter`→
+`self.request.args.get`) are tagged by the plain source `$A = flask.request.form.get(...)` /
+`flask.request.args.get(...)` — NO `$W.get_form_parameter(...)` needed. The structural rule lowers to a
+taint rule applied at each attribute read, so marks flow through the full `self.request.form.get` chain
+interprocedurally (user-confirmed: not simple-name matching). Verified: 00342/00890/00891/00894 (TRUE) pass.
+
+### Active TRUE (17, pass)
+00074 (cookies.get→configparser), 00159 (form.get→list), 00160 (form.get→match A), 00161 (form.get→ternary
+else), 00342 (wrapper form→configparser), 00425 (keys loop→str slice), 00503 (headers.get→base64), 00599
+(headers.getlist→list), 00728 (args.get→match A), 00729 (args.get→slice), 00819 (args.getlist→bar=param),
+00820 (args.getlist→base64), 00890/00891 (wrapper query→param / configparser), 00894 (wrapper query→
+`if 'should' in bar: bar=param`), 00986 (query_string→list), 01188 (form.getlist→exec(param) direct).
+
+### Active FALSE (9, pass)
+- **5 ThingFactory FN-drop** (00075/00163/00504/00818/00989): `thing.doSomething(param)` where
+  `createThing()` uses `getattr` → Any receiver → taint drops (inv 20), so eval/exec never reached even
+  though these also carry the startswith guard. Pass via the FN. (These are the FALSE mirror of the
+  TRUE ThingFactory entries that FN and are @Disabled.)
+- **4 never-tainted** (01164/01165/01166/01167): `request_wrapper.get_safe_value()` returns constant
+  `"bar"`; source `flask.request.form.getlist(...)` never matches → nothing tainted.
+
+### The startswith/endswith guard: receiver-position cleaner cleans a PIR_SELF may-alias, not the base var (inv 27, @Disabled 14)
+FALSE entries safe only by `if not bar.startswith('\'') or not bar.endswith('\'') or '\'' in bar[1:-1]:
+return`. Authored the unified-$M `pattern-not: ... $M.startswith(...) ... sink($M)` (inv 23 shape) for all
+14 — **every one FP'd**. Root cause VERIFIED on 00073 (rule-dump via `PythonRuleEmitTest` + engine trace
+via `System.err.println` in `PIRMethodCallFlowFunction`, read from the test XML `<system-err>`). Both prior
+hypotheses ("doesn't lower to a cleaner" / "if-condition call not reached") are WRONG:
+- **The cleaner IS emitted.** Dump shows 4 rules: Source taints `Result`→`$M;1`; Sink `eval` checks
+  `ContainsMark($M;1, arg0)`; a Cleaner on `startswith` with `condition=ContainsMark($M;1, pos=This)` /
+  `cleans=[TaintClean($M;1, pos=This)]` — it checks the RECEIVER, correctly. No `AUTOMATA_TO_TAINT_RULE`
+  "no positive predicate" warning; nothing dropped.
+- **The cleaner IS reached and fires.** Trace at the `bar.startswith(...)` call (line 46, inside the
+  if-condition): `cleanersFound=2`, condition `evalTrue=true`, cleaner result `fact=null` (receiver fact
+  dropped). If-condition nesting is irrelevant.
+- **Why the FP persists — no must-alias, PIR_SELF hack.** `bar.startswith(...)` has no real instance at the
+  call site; the receiver is a bound-method capture, so the fact entering the call is `bar.$PIR_SELF![$M]`
+  (a MAY-alias of `bar`, mapped to `<this>`). The cleaner drops only that `This` fact. The **base-variable
+  fact `bar![$M]` is distinct** — the trace shows the mark reaching `eval` on the base var (`var(16)`) while
+  the cleaned receiver was `var(17).$PIR_SELF` — and nothing links them without must-alias, so it survives.
+- **Discriminating control (confirms it's receiver-vs-base, nothing else).** A minimized sample with an
+  identical source→bar→guard→sink flow was run two ways: an ARGUMENT-position guard `check(bar)` (cleaner
+  cleans `Argument(idx=0)`) **passed green** — the arg maps back to base `bar` even without reassignment —
+  while the receiver-position `bar.startswith(...)` variant FALSE-POSITIVEd. The only difference is guard
+  position. Arg-position cleaners work (inv 23); receiver-position ones can't, and the 00073 guard offers no
+  arg-position call carrying `bar` → no structural reshape fixes it. (Reproducer removed after verification.)
+- **Escalated (engine gap).** Fix candidate: propagate a receiver/`This` clean to may-aliases (clean the
+  base var behind `$PIR_SELF`).
+
+@Disabled:
+- Pure-guard (tainted value definitely reaches bar): 00073, 00158, 00345, 00423, 00426, 00603, 00893, 00987, 00988.
+- Guard + also path-insensitive safe arm (still FP via guard): 00162 (match B), 00730/00821/00892 (if-else
+  `'should' not in` → else param), 00822 (ternary).
+
+### Unfixable-by-design (@Disabled, 10) — no distinguishing validator CALL
+- path-insensitive if/else or match arm (inv 18): 00156, 00157, 00263, 00264, 00344, 00600.
+- configparser key-insensitivity (inv 16): 00346, 00602.
+- dict key-insensitivity (inv 16): 00347.
+- list index-insensitivity (inv 19): 00424.
+
+### Escalated (inv 20, confirmed still failing this round) — @Disabled TRUE FN
+- 00343, 00422, 00601 (TRUE, FN): `helpers.ThingFactory.createThing()` getattr → Any receiver →
+  `thing.doSomething(param)` unresolved, arg→return pass-through lost. Verified empirically (all three
+  "sink was not reached"). Same root cause as ldapi 00896 / xxe 00462/00541. Reproducer = these @Disabled
+  OWASP entries.
+
+### No pass-throughs / engine changes needed this round.

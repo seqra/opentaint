@@ -35,14 +35,19 @@ fixes accumulate cleanly.
 ## Current status
 
 - **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
-  redirect (34). Each entry has a hand-written rule + hardcoded ground-truth `@Test`; unfixable-by-design
-  FALSE entries are `@Disabled` with a one-line reason. OWASP suite currently 100 pass / 0 fail / 33 skipped.
-- **Next batch: `codeinj`** (CWE-94, `eval`/`exec`, ~53) — the next-smallest untouched taint-flow category.
-  Then trustbound (37), deserialization (54), xss (89), pathtraver (168), xpathi (186). Structural-only
-  categories (weakrand/hash/securecookie) are deferred — discuss first (see category table note).
-- **Author rules STRUCTURALLY by default** (invariants 22/23/24/25) — not taint-mode. Thread the source
-  metavar into the sink (inv 24); use `[...]` on collection-accessor sources (inv 25); unify the guard
-  metavar for validator exclusions (inv 23).
+  redirect (34), codeinj (53). Each entry has a hand-written rule + hardcoded ground-truth `@Test`;
+  unfixable-by-design FALSE entries are `@Disabled` with a one-line reason. OWASP suite currently
+  180 tests: 126 pass / 0 fail / 54 skipped. codeinj split: 26 pass + 27 `@Disabled` (14 receiver-position
+  cleaner gap inv 27; 10 key/index/branch-insensitivity inv 16/18/19; 3 ThingFactory getattr FN inv 20).
+- **Next batch: `trustbound`** (CWE-501, ~37) — next-smallest untouched taint-flow category. Then
+  deserialization (54), xss (89), pathtraver (168), xpathi (186). Structural-only categories
+  (weakrand/hash/securecookie) are deferred — discuss first (see category table note).
+- **Open engine gap (escalated, inv 27):** receiver/instance-position (`This`) `pattern-not` cleaners
+  fire but clean only the `$PIR_SELF` may-alias, not the base variable → ~14 codeinj FALSE `@Disabled`.
+  Fix candidate: propagate receiver-cleans to may-aliases. Full trace in insights log.
+- **Author rules STRUCTURALLY — always** (see CARDINAL RULES). Never taint-mode. Thread the source
+  metavar into the sink; use `[...]` on collection-accessor sources; unify the guard metavar for
+  validator exclusions.
 - **Engine/converter fixes committed:** `PIRMethodQFNameReconstructor` MRO attr resolution (inv 7);
   `pattern-not` cleaner handling (`95ad3f916`, retires the "cleaners no-op" claim, inv 23);
   `PythonPatternToActionListConverter.transformAssignmentValue` preserves the subscript element modifier
@@ -55,255 +60,135 @@ fixes accumulate cleanly.
 - Running notes: `python-owasp-benchmark-insights.md` (per-entry FP/FN, pass-throughs, deep
   root-cause writeups). Read it before a hard debug.
 
-## Invariants (append-only — future sessions MUST add what they learn here)
+## Invariants
 
-Hard-won facts that make debugging fast. This list is a living reference: when a round discovers a new
-one, add it.
+### CARDINAL RULES — read these; everything below is symptom-reference
 
-> ⚠️ **Capability invariants go stale.** Any invariant claiming the engine "can't do X / is unsupported /
-> unmodeled / broken / escalated" may have been FIXED on a later commit. Before `@Disabling` an entry on
-> such grounds, VERIFY against the current engine: `git log --oneline | grep -i <feature>` and grep the
-> relevant handler (e.g. `handleNextIter` in `PIRMethodSequentFlowFunction.kt`). match/case (inv 4),
-> `list.append` (inv 14), and for-loop NextIter (inv 15) were all marked unsupported here yet already
-> fixed — author the correct rule instead of disabling, then rewrite the invariant.
+1. 🚫 **NEVER taint-mode. EVERY rule is STRUCTURAL.** No `mode: taint` / `pattern-sources:` /
+   `pattern-sinks:` in any `owasp-benchmark-rules/*.yaml`. A structural rule is **not** semgrep syntactic
+   matching: the loader (`PythonPatternToActionListConverter`) **lowers it into generated taint
+   source+sink rules** run by the full interprocedural engine. So source and sink need **not** share a
+   function — the source fires wherever its expression is read (incl. `self.request.form.get` inside a
+   wrapper, via declared-type resolution, inv 26) and taint flows interprocedurally (inv 5). Structural is
+   strictly as powerful as taint-mode; no case ever needs it. (Historic error: taint-mode was once
+   instructed for wrappers citing `01191` — wrong; they pass as structural. Any legacy `mode: taint` file
+   is debt to convert, never a template.)
+2. **Thread the source metavar into the sink** (inv 24): `$A = <src>(...)` … `<sink>($A)` — the SAME `$A`.
+   Different metavars = mere syntactic co-occurrence (masks FNs; FPs safe variants). The sink lowers to a
+   `ContainsMark($A)` dataflow check → follows rebinding: put `...` between source and sink, no need to
+   name intermediates.
+3. **Collection-element sources carry `[...]`** (inv 25): `$A = <src>(...)[...]` for `getlist`/`keys`/
+   `values` (taints the element `Result[*]`). Plain scalar `.get(...)` needs none.
+4. **Exclude a validated FALSE variant only by unifying source+sink+guard on one `$M`** (inv 23): add
+   `pattern-not: … validator($M) … sink($M)`. If safety is a key/index/branch with NO distinguishing
+   validator CALL → nothing to unify → `@Disabled`.
+5. **VERIFY before you conclude** — never assert "doesn't lower / isn't supported / doesn't fire" from a
+   hunch. Dump emitted rules (`PythonRuleEmitTest`, print `rule.taintRules.flatMap { it.rules }`) AND trace
+   facts (`System.err.println` in the flow functions → test XML `<system-err>`, inv 10). Hypothesis-as-fact
+   is a defect.
 
-1. **Sink positional precision.** For a sink where only one arg is dangerous (`$DB.execute($Q, ...)`),
-   restrict with `focus-metavariable: $Q`; otherwise taint anywhere in the call (e.g. a parameterized
-   query's bound-params tuple) false-positives. This is what keeps the parameterized-safe SQLi cases
-   negative.
-2. **Source resolution asymmetry.** Module globals resolve by *import name*
-   (`from flask import request` → `flask.request`); instance attributes resolve by *declared type*,
-   which erases to `Any` for third-party imports under `--ignore-missing-imports` → the callee then
-   falls back to **simple-name (last-segment) matching**.
-3. **Pass/sink rules match by last segment** for simple/unknown callees
-   (`MethodTaintConfigurationResolver.matchesName`) — a config rule `flask.wrappers.Request.form.get`
-   fires on a call resolving only to `get`. Powerful, but broad — mind false positives.
-4. **`match`/`case` is now SUPPORTED.** (Historic: it used to drop `MatchStmt`.) `ast_serializer`
-   serializes `MatchStmt` (ast_serializer.py:456); such functions build and analyze. NOTE the flow is
-   **path-insensitive across arms** — see invariant 18. Do NOT `@Disable` for match/case anymore.
-5. **Field/alias flow works.** Taint stored in `self.field` in one method is readable in another —
-   don't suspect this first when a wrapper/getter drops taint.
-6. **Unmodeled library calls drop taint** → they surface in
-   `core/build/py-owasp-report/external-methods-without-rules.txt` (sorted by call sites) → add a
-   `passThrough` to `config.yaml`. Iterative: fixing one hop reveals the next (e.g. the base64 chain).
-7. **QF-name reconstruction** (`PIRMethodQFNameReconstructor`) resolves `x.attr` on a *known* base
-   class via the MRO (field/property → its type QN; method → its own QN); an `Any`-typed field yields
-   no binding → simple-name fallback. When a call resolves to an unexpected name, trace here.
-8. **Entry function name** — `testcode.BenchmarkTest<id>.init$BenchmarkTest<id>_post`.
-9. **Classpath cost** — built once per test class in `@BeforeAll` (~15s for 1230 files); adding a new
-   `.py` to the owasp-benchmark samples rebuilds the JAR (~45s). Batch entries into one run.
-10. **Reading engine traces** — gradle captures the test JVM's stderr into
-    `core/build/test-results/test/TEST-*.xml` `<system-err>` (NOT the console) — parse the XML. Add
-    targeted `System.err.println` in `PIRMethodSequentFlowFunction` (attr-load path) /
-    `PIRMethodCallFlowFunction.applyPassRules` (call path); minimized reproducers localize the drop.
-11. **`config.yaml` is pass-through-only** — never add source/sink/cleaner there; those come
-    exclusively from the per-entry semgrep rules.
-12. **Source facts are `base.![mark]`** (concrete, taint mark directly on base — edges-knowledge §2).
-    Intraprocedurally reading an *element* (`x[i]`) or attribute of such a whole-object-tainted value
-    used to drop the taint (the outermost accessor is the mark, not `ElementAccessor`). Fixed for
-    subscripts in `handleAccessorRead` (`PIRMethodSequentFlowFunction`): if a fact's start accessors
-    are all `TaintMarkAccessor` and its base is the container, any element read now propagates the mark
-    (`rebase(assignTo)`). This is why the wrapper case (01191) already worked — interprocedural call
-    *abstraction* turns the fact abstract, and the abstract branch handled it; the intraprocedural
-    concrete path did not.
-13. **cmdi sink shape.** `subprocess.run($CMD, ...)` focus `$CMD`. Command is built as
-    `argList.append(f"echo {bar}"); subprocess.run(argList)` — the sink matches `argList` at its base.
-    Sinks match by base-prefix (tolerate junk tails); intraprocedural element reads do NOT.
-14. **`list.append` now propagates (was broken; fixed by "Fix list append rule").** `lst.append(param)`
-    now taints the list so `bar = lst[0]`/`lst[1]` reads tainted. Consequence: lists are
-    **index/flow-insensitive** (see invariant 19) — a safe `append`+`pop`+`lst[1]` pattern false-positives.
-    Previously-`@Disabled` list cases (00165/00511) are candidates to re-enable — verify.
-15. **for-loop iteration is now SUPPORTED (was escalated as unmodeled — STALE).** `handleNextIter` in
-    `PIRMethodSequentFlowFunction.kt` (commit `de73130ad "Add next iter handling"`) taints the loop var
-    from a tainted iterable, so `for name in request.form.keys():` correctly taints `name`. The proven
-    working source shape for keys()-iteration is `flask.request.form.keys(...)[...]` (active passing
-    cmdi entries 00431/00432; ldapi 00427/00429/00430/01193). **Do NOT `@Disable` for for-loop
-    iteration anymore** — this was the same stale-invariant trap that bit match/case (inv 4) and
-    list.append (inv 14). Note the getlist shape is wrong for these entries: `getlist(name)` only
-    appears in the `if` guard and never reaches the sink; the value that flows is the loop KEY `name`.
-16. **dict / `configparser` are key-insensitive** (single `ElementAccessor` / `.Element`): a value
-    stored under one key taints reads of *every* key. So the safe "store keyB(param), read keyA(const)"
-    variant false-positives (00350/00736 dict; 00512/00900 configparser). The configparser passthrough
-    is required by the true seed 00099, so this can't be tightened — mark such FALSE entries `@Disabled`.
-17. **`request.path` is not a taint source** (server-controlled route). Model the FALSE path-based
-    entries (01097/01098) by giving the rule a source pattern that simply doesn't match `request.path`
-    (e.g. `flask.request.form.get(...)`), so nothing is tainted — "never-tainted", not "cleaned".
-18. **Branching is path-insensitive (ternary + match arms) → safe-arm FP.** `bar = SAFE if <const-true>
-    else param` and `match const: case X: bar=SAFE; case _: bar=param` both taint `bar` because the
-    engine explores *all* arms and can't constant-fold the discriminator. So a FALSE entry whose safe
-    value is selected by a constant guard, but which also has a tainted arm, false-positives. Unfixable
-    without path-sensitivity/const-folding → `@Disabled` (ldapi 00077 match, 00732/00897 ternary).
-    Note the mirror: TRUE match/ternary entries with a tainted arm correctly reach (00266/00604/etc.).
-19. **Lists are index/flow-insensitive** (single `ElementAccessor`, like dict inv 16). `lst.append(param)`
-    taints the whole list; `bar = lst[i]` (any index, even after `pop`) reads tainted. So the safe
-    "append param, pop, read a constant slot" pattern false-positives → `@Disabled` (ldapi 00348).
-20. **Dynamic `getattr` construction erases the receiver type → user-method call unresolved (FN).**
-    `obj = getattr(mod, name)(); obj.doSomething(param)` — `obj` is `Any`, so `doSomething` resolves to no
-    concrete class and its arg→return pass-through is lost; taint drops. Interprocedural resolution does
-    NOT fall back to simple-name matching the way config pass/sink rules do (inv 3). Escalated
-    (ldapi 00896, `ThingFactory`); reproducer = the `@Disabled` OWASP entry itself.
-    **Confirmed still failing** in the xxe round (00462/00541, same `ThingFactory`) despite the
-    `7aba04fa6` simple-name resolver fallback — that fallback resolves to a synthetic *unknown*
-    function with no arg→return modeling, so taint still drops. Not stale.
-21. **Config-gated sink (parser hardening) via `pattern-inside` sibling-statement match.** When a sink
-    is dangerous only if a *sibling* config call enabled it, gate it with a statement-sequence
-    `pattern-inside`. XXE (CWE-611): the parse is dangerous only when the parser has external entities
-    on. Model with the parser var `$P` unified across a preceding `setFeature(_, True)` and the parse:
-    ```yaml
-    pattern-sinks:
-      - patterns:
-          - pattern-inside: |
-              $P.setFeature($F, True)
-              ...
-          - pattern: "xml.dom.minidom.parseString($DOC, $P)"
-          - focus-metavariable: $DOC
-    ```
-    Hardened FALSE variants omit `setFeature(_, True)` (all features off by default) → the sink never
-    fires **regardless of whether tainted data reaches the parse** — this is how 13 safe-parser xxe
-    FALSE entries pass, incl. 01211 (byte-identical dataflow to TRUE 01212, differing *only* in that
-    line). `pattern-inside` in taint `pattern-sinks` works (see sample `RuleWithInside`;
-    statement-sequence form in `RuleWithRealInsideSequence`).
-22. **Structural (search-mode) rules are supported — PREFER them for OWASP entries.** A rule can be a
-    pure *structural* semgrep match instead of a taint rule: top-level `patterns:` holding
-    `pattern` / `pattern-not` / `pattern-inside` / `pattern-not-inside` blocks (NO `pattern-sources` /
-    `pattern-sinks`, NO `mode: taint`). Metavariables (`$A`, `$SOURCE`, `$SINK`) **unify across
-    blocks**, `...` matches intervening statements (statement-sequence), `pattern-inside` /
-    `pattern-not-inside` scope to the enclosing context, and `focus-metavariable` narrows the reported
-    node. Because each OWASP entry is one self-contained function with a **fixed syntactic shape**, a
-    structural rule that matches the source→sink shape (threading unification through every
-    intermediate assignment) and **excludes the safe/validated variant** with `pattern-not` /
-    `pattern-not-inside` is usually MORE reliable than a taint rule: it sidesteps the engine's
-    path-insensitivity and index/flow-insensitivity (inv 16/18/19) that otherwise force `@Disabled` on
-    many FALSE entries. E.g. redirect FALSE 00069 is "safe" only because of a `urllib.parse.urlparse` +
-    netloc/scheme guard the taint engine can't model as a sanitizer — but a structural
-    `pattern-not-inside` that matches the guard excludes it cleanly.
-    **ALWAYS use structural rules — every OWASP entry can be expressed as one.** Do NOT fall back to
-    taint-mode (`pattern-sources`/`pattern-sinks`) syntax. **Why it's not a fallback:** a structural
-    rule is *itself lowered to a taint rule* by `PythonPatternToActionListConverter` (the first
-    binding becomes the source, the sink call the sink; `...`/`EllipsisStmt` spans intervening
-    statements) — so the resulting taint dataflow **tracks flow through intermediate calls AND field
-    reads/writes just like a hand-written taint rule**. Intermediate calls/field ops on the source→sink
-    path are therefore NOT a reason to switch modes: put a `...` between the source binding and the
-    sink and the lowered rule follows the flow across them (interprocedurally too). This was the trap
-    the first structural round fell into — the sub-agent saw intermediate calls and reverted to taint
-    mode; that is always unnecessary. Reference forms in
-    `core/opentaint-python-querylang/samples-py/`: `RuleWithPatternsSimple` (source→sink),
-    `RuleWithMultiplePatternsUnification` (unification + `pattern-inside return`),
-    `RuleWithMultiplePatterns` (source→sink through two intermediate `mk_type*` calls — the exact
-    "intermediate calls" shape), `TrickyPatternNot` / `ObjectMapperPatternNotFull` (`pattern-not`
-    excludes the cleaned variant), `RuleWithPatternInside` (`pattern-inside` source scope). Caveat:
-    metavariable unification must thread through the binding chain — either name each intermediate
-    binding and unify it (`$V2 = f($A); ... g($V2)`) or elide the chain with `...` between the source
-    binding and the sink; a broken chain (metavar that never re-appears) just won't match.
-    **CORRECTION (redirect round):** the claim above that a `pattern-not-inside` matching a validator
-    "excludes 00069 cleanly" was NEVER empirically true as written — see invariant 23 for the exact
-    working form. A `pattern-not` / `pattern-not-inside` only excludes if it clears **the same taint
-    mark the sink checks**, which requires the guard metavar to be unified with the source+sink metavar.
-23. **A validator/sanitizer exclusion (`pattern-not` / `pattern-not-inside`) works ONLY when source,
-    sink, AND the excluded guard call are unified on ONE metavar** — the ObjectMapperPatternNotEllipsis
-    shape. Discovered debugging redirect FALSE guard entries (urlparse+netloc/scheme validators).
-    - **Why the naive forms silently fail (all verified by dumping emitted rules via `PythonRuleEmitTest`):**
-      - *Sink-only + cleaner* (`pattern: sink($X)` + `pattern-not-inside: clean($X) ...`, i.e. no source):
-        emits **just a bare `NumberOfArgs` sink, NO cleaner** — the cleaner's automata edges have "no
-        positive predicate" (no taint mark exists without a source) and are dropped. `RuleWithNotInsidePrefix`
-        (the canonical sample for this shape) only *appears* to pass because its Negative is decorated
-        `@TaintRuleFalsePositive` (a **tolerated** FP), not because the cleaner fires. Do not trust it.
-      - *Split source/sink metavars* (`$A = src() ... sink($URL)` + `pattern-not: ... clean($URL) ... sink($URL)`):
-        the source taints a canonical mark `_<S>_` and the sink checks `_<S>_`, but the cleaner cleans a
-        **different** mark `$URL` → the cleaner removes a mark nobody checks → FP persists.
-    - **The working form (unify everything on `$M`):**
-      ```yaml
-      patterns:
-        - pattern: |
-            $M = <request-source>(...)
-            ...
-            sink($M)
-        - pattern-not: |
-            ...
-            validator($M)
-            ...
-            sink($M)
-      ```
-      Emits: Source taints mark `$M`; Sink checks `ContainsMark($M, arg0)`; Cleaner (validator) checks
-      `ContainsMark($M, arg0)` and cleans it — **all the same mark id `$M`**, so the cleaner removes
-      exactly what the sink checks. Crucially, sink/cleaner are **dataflow `ContainsMark` checks on
-      arg0, NOT syntactic metavar matches** — so even when the request value is **rebound** before the
-      sink (`param → configparser/list/match/base64/dict → bar; validator(bar); sink(bar)`), the `$M`
-      mark propagates by dataflow to `bar`, the validator cleans it there, and the sink sees it clean.
-      This made all 9 urlparse-guarded redirect FALSE entries pass — direct (01209) and rebinding
-      (00069/00151/00419/00420/00598/00815/00816/00983) alike.
-    - **Cleaners are NOT a general no-op** (retires the stale `reference_cleaner_mark_abstraction` claim
-      for this engine): `ObjectMapperPatternNotFull`, `ObjectMapperPatternNotEllipsis`, and the unified-`$M`
-      OWASP rules all clean correctly on the real engine (post commit `95ad3f916` "Fix pattern-not handling").
-    - **When there is NO distinguishing validator CALL** (safety comes purely from a key/index/branch the
-      engine can't fold — configparser/dict key-insensitivity inv 16, list index-insensitivity inv 19,
-      const ternary/match arm inv 18), there is nothing to unify a cleaner against → still `@Disabled`.
-    - **Debugging tool:** to see what a structural rule *actually* lowers to, add a throwaway test to
-      `PythonRuleEmitTest` calling the loader and printing `rule.taintRules.flatMap { it.rules }`
-      (Source `taint`, Sink `condition`, Cleaner `cleans`+`condition`). The `SemgrepLoadTrace` also
-      surfaces `AUTOMATA_TO_TAINT_RULE` warnings like "N automata edges have no positive predicate and
-      were removed" — that message means your cleaner got dropped for lack of a source mark. Fast
-      (querylang module only, no PIR build). Remove the throwaway test before finishing.
-24. **The source metavar MUST thread into the sink — this is what models the data flow. (THE #1
-    structural-rule rule.)** A shape like
-    ```yaml
-    - pattern: |
-        $A = flask.request.form.get(...)
-        ...
-        flask.redirect($URL)          # ← WRONG: $URL is a different, unbound metavar
-    ```
-    does **NOT** model taint flow. `$A` (source result) and `$URL` (sink arg) are distinct metavars, so
-    this lowers to a pure **syntactic co-occurrence**: "a source call is assigned somewhere AND a
-    `redirect(anything)` call occurs somewhere" — the source's value need not reach the sink at all.
-    Consequences: a TRUE entry passes for the WRONG reason (masks any taint-drop on the real path — the
-    rule fires regardless), and a FALSE entry that calls the source but redirects a *constant/other*
-    value FALSE-POSITIVES. Correct form unifies the metavar end-to-end:
-    ```yaml
-    - pattern: |
-        $A = flask.request.form.get(...)
-        ...
-        flask.redirect($A)            # ← same $A: lowers to ContainsMark($A) dataflow check on the sink arg
-    ```
-    Because the sink becomes a **dataflow** `ContainsMark($A)` check (not a syntactic match, inv 23), it
-    correctly follows rebinding (`param=source(); ...; bar=f(param); redirect(bar)` still fires) — you do
-    NOT need to name every intermediate binding, just bind the source to `$A` and use `$A` at the sink
-    with `...` between. Same principle for a `focus`/multi-arg sink: the tainted metavar in the sink
-    pattern must be the one the source bound. (The first redirect round shipped the split-metavar shape
-    for all plain rules — passing by co-occurrence, not flow — and was corrected in a follow-up.)
-25. **A collection-element source MUST carry the `[...]` subscript so it taints the ELEMENT, not the
-    whole collection — AND the structural `$A = expr[...]` assignment now preserves that element
-    modifier (engine fix this round).** Two coupled facts, discovered fixing the 6 redirect TRUE
-    entries that FN'd after the inv-24 metavar unification (00258/00418/00596/00654/00655/00814):
-    - **inv 12 is STALE for concrete facts.** A concrete whole-object source fact `values.![mark]`
-      does NOT propagate through an intraprocedural element read (`param = values[0]`) or a for-loop
-      `NextIter` (`for name in request.form.keys()`). `mayReadAccessor(values, ElementAccessor)`
-      (`PIRFlowFunctionUtils`) is **false** — the fact starts with a `TaintMarkAccessor`, not
-      `ElementAccessor`, and a concrete source fact is not `isAbstract()`. Inv 12's whole→element
-      propagation only exists on the **abstract** branch (interprocedural call-abstraction, the `.*`
-      tail), NOT the concrete intraprocedural path. So a source that taints the *whole* collection
-      drops at the very first `x[i]` / loop-iteration read on that path.
-    - **The fix: taint the element directly.** A source pattern `flask.request.form.getlist(...)[...]`
-      (bare, taint-mode) taints `Result[*]` (the element), and reading `values[0]` extracts it cleanly
-      via `startsWithAccessor(ElementAccessor)`. This is why the cmdi/ldapi taint-mode keys/getlist
-      entries always used the `[...]` shape (insights "add the subscript for collection accessors").
-    - **The structural trap that caused the FNs:** in a STRUCTURAL rule the source is bound by an
-      assignment `$A = flask.request.form.getlist(...)[...]`, and `transformAssignmentValue`'s
-      `setResultCondition(mkAnd(conditions))` **overwrote** the subscript's element modifier with just
-      `$A` → the source tainted the *whole* `Result`, identical to the no-`[...]` form (verified by
-      dumping emitted rules: both `getlist(...)` and `getlist(...)[...]` → `taint=[BaseOnly(Result)]`).
-      Then the concrete whole-object taint dropped at the element read/NextIter per the bullet above.
-      **Fix landed in `PythonPatternToActionListConverter.transformAssignmentValue`:** merge the value's
-      existing result modifier into the metavar condition (`conditions + last.result`) so
-      `$A = getlist(...)[...]` now emits `taint=[WithModifiers(Result,[ArrayElement])]` = `Result[*]`,
-      matching the bare taint-mode subscript source. Regression-locked by
-      `PythonRuleEmitTest.subscript-assignment source binds the metavar to the result element`
-      (+ resource `python-rules/subscript-assign-source.yaml`).
-    - **Consequence for authoring:** for any collection-accessor source in a STRUCTURAL rule
-      (`getlist`/`keys`/`values`/`getlist`-view), write `$A = <source>(...)[...]` (with `[...]`). The
-      `[...]` is now load-bearing (was a silent no-op before this fix). Plain scalar sources
-      (`.get(...)`) need no `[...]`. This also made the two keys-source FALSE entries 00419/00420 pass
-      for the RIGHT reason: previously their taint dropped at NextIter (masking); now it flows and the
-      unified-`$M` urlparse cleaner (inv 23) removes it.
+### Reference appendix — consult by symptom, don't read cover-to-cover
+
+⚠️ **Capability claims go stale.** Any "engine can't do X / unsupported / broken" may have been FIXED
+since — verify (`git log --oneline | grep -i <feature>`, grep the handler) before `@Disabling`. match/case
+(4), list.append (14), for-loop NextIter (15) were all wrongly disabled while already working. Numbers are
+stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
+
+1. **Sink precision** — one dangerous arg → `focus-metavariable: $Q` (`$DB.execute($Q,...)`); else taint
+   elsewhere in the call (a parameterized query's bound-params tuple) FPs.
+2. **Source resolution asymmetry** — module globals resolve by *import name* (`from flask import request`
+   → `flask.request`); instance attrs by *declared type*, which erases to `Any` for third-party imports
+   under `--ignore-missing-imports` → simple-name (last-segment) fallback.
+3. **Last-segment matching** — pass/sink rules match by last segment for simple/unknown callees
+   (`MethodTaintConfigurationResolver.matchesName`): config `flask.wrappers.Request.form.get` fires on a
+   call resolving only to `get`. Powerful but broad (FP risk).
+4. **`match`/`case` SUPPORTED** (was: dropped `MatchStmt`; `ast_serializer.py:456`). Path-insensitive
+   across arms (inv 18). Don't `@Disable` for match/case.
+5. **Field/alias flow works** — taint set in `self.field` in one method is readable in another.
+6. **Unmodeled lib calls drop taint** → surface in `external-methods-without-rules.txt` (by call sites) →
+   add a `passThrough` to `config.yaml`. Iterative: fixing one hop reveals the next (base64 chain).
+7. **QF-name reconstruction** (`PIRMethodQFNameReconstructor`) resolves `x.attr` on a *known* base via the
+   MRO (field/prop → type QN, method → own QN); `Any`-typed field → simple-name fallback. Trace here when a
+   call resolves to an unexpected name.
+8. **Entry fn name** — `testcode.BenchmarkTest<id>.init$BenchmarkTest<id>_post`.
+9. **Classpath cost** — built once/class in `@BeforeAll` (~15s/1230 files); a new `.py` sample rebuilds the
+   JAR (~45s). Batch entries into one run.
+10. **Engine traces** — gradle captures the test-JVM stderr into `test-results/test/TEST-*.xml`
+    `<system-err>` (NOT console) → parse the XML. Add `System.err.println` in `PIRMethodSequentFlowFunction`
+    (attr-load) / `PIRMethodCallFlowFunction.applyPassRules` (call).
+11. **`config.yaml` is pass-through-only** — never source/sink/cleaner there.
+12. **Source facts are `base.![mark]`** — whole-object taint propagates to element reads ONLY on the
+    abstract (interprocedural) branch; concrete intraproc `x[i]` used to drop it (`handleAccessorRead` fix
+    propagates for subscripts when start accessors are all `TaintMarkAccessor`). **STALE for concrete facts —
+    see inv 25.**
+13. **cmdi sink** — `subprocess.run($CMD,...)` focus `$CMD`. Command built as
+    `argList.append(f"…{bar}"); run(argList)` → sink matches `argList` at its base. Sinks match by
+    base-prefix (tolerate tails); intraproc element reads do NOT.
+14. **`list.append` propagates** (fixed). Consequence: lists index/flow-insensitive (inv 19) → safe
+    `append`+`pop`+`[1]` FPs. Old `@Disabled` list cases (00165/00511) were re-enable candidates.
+15. **for-loop NextIter SUPPORTED** (`handleNextIter`, `de73130ad`) — taints the loop var from a tainted
+    iterable. Working keys shape `flask.request.form.keys(...)[...]`. Don't `@Disable` for for-loops. (The
+    getlist shape is wrong for these — the value that flows is the loop KEY, not `getlist(name)`.)
+16. **dict / `configparser` key-insensitive** (single `ElementAccessor`) — a value under one key taints
+    reads of every key → safe store-keyB/read-keyA FPs (00350/00736 dict; 00512/00900 configparser). The
+    configparser passthrough is required by true seed 00099 → can't tighten → `@Disable` those FALSE.
+17. **`request.path` is not a source** (server-controlled route). Model FALSE path entries (01097/01098)
+    with a source pattern that simply doesn't match `request.path` → "never-tainted", not "cleaned".
+18. **Branching path-insensitive** (ternary + match arms) — engine explores all arms, can't const-fold the
+    guard → a FALSE entry whose safe value is const-selected but which also has a tainted arm FPs.
+    Unfixable → `@Disabled` (00077 match; 00732/00897 ternary). TRUE tainted-arm entries correctly reach.
+19. **Lists index/flow-insensitive** (single `ElementAccessor`, like inv 16) — `append` taints the whole
+    list; `lst[i]` any index (even post-`pop`) reads tainted → safe append/pop/const-slot FPs → `@Disabled`
+    (00348).
+20. **Dynamic `getattr` erases receiver type → user-method unresolved (FN).** `obj = getattr(mod,name)();
+    obj.doSomething(param)` — `obj` is `Any` → `doSomething` unresolved, arg→return pass-through lost. No
+    simple-name fallback for interproc resolution (`7aba04fa6` resolves to a synthetic *unknown* fn with no
+    arg→return → still drops). Escalated (ThingFactory: ldapi 00896, xxe 00462/00541, codeinj
+    00343/00422/00601). Reproducer = the `@Disabled` entry.
+21. **Config-gated sink via `pattern-inside` sibling-statement match.** XXE (611): the parse is dangerous
+    only when a preceding `setFeature(_, True)` enabled entities — unify `$P` across the `setFeature` and the
+    parse. Hardened FALSE variants omit `setFeature(_,True)` → the sink never fires regardless of taint (13
+    safe-parser xxe pass, incl. 01211 vs byte-identical TRUE 01212). Works in taint `pattern-sinks` (samples
+    `RuleWithInside` / `RuleWithRealInsideSequence`).
+22. **Structural authoring — see CARDINAL 1–4.** Reference forms in `samples-py/`: `RuleWithPatternsSimple`
+    (source→sink), `RuleWithMultiplePatternsUnification` (unification + `pattern-inside return`),
+    `RuleWithMultiplePatterns` (two intermediate `mk_type*` calls), `TrickyPatternNot` /
+    `ObjectMapperPatternNotFull` / `ObjectMapperPatternNotEllipsis` (`pattern-not` excludes the cleaned
+    variant), `RuleWithPatternInside`. `...`/`EllipsisStmt` spans intervening statements (interprocedurally
+    too). Thread the metavar through the chain or elide it with `...`; a broken chain just won't match.
+23. **Validator exclusion needs source+sink+guard unified on one `$M`** (CARDINAL 4). Naive forms fail (all
+    dumpable via `PythonRuleEmitTest`): *sink-only + cleaner* → the cleaner's edges have "no positive
+    predicate" (no source mark) and are DROPPED (`RuleWithNotInsidePrefix` only "passes" via a tolerated
+    `@TaintRuleFalsePositive`); *split source/sink metavars* → cleaner cleans a mark nobody checks. Working
+    form `$M = src(...) … sink($M)` + `pattern-not: … validator($M) … sink($M)` → Source taints `$M`,
+    Sink+Cleaner both `ContainsMark($M)` on arg0 (dataflow → follows rebinding through
+    configparser/list/match/base64/dict). Cleaners fire on the real engine post `95ad3f916` (retires the
+    "cleaners no-op" claim). Debug: `SemgrepLoadTrace` `AUTOMATA_TO_TAINT_RULE` "N edges have no positive
+    predicate" = your cleaner got dropped.
+24. **Thread source metavar into sink** (CARDINAL 2). Split (`$A = src … redirect($URL)`) = syntactic
+    co-occurrence: TRUE passes for the wrong reason (masks taint-drops), a FALSE that redirects a const/other
+    value FPs. Same `$A` = `ContainsMark($A)` dataflow, follows rebinding.
+25. **Collection-element source carries `[...]`** (CARDINAL 3). inv 12 STALE for concrete facts: a concrete
+    whole-object fact drops at the first intraproc `x[i]`/NextIter (`mayReadAccessor(values,ElementAccessor)`
+    false — the fact starts `TaintMarkAccessor`, not `ElementAccessor`, and isn't `isAbstract()`). Fix in
+    `transformAssignmentValue` merges the value's result modifier into the metavar condition so structural
+    `$A = getlist(...)[...]` emits `Result[*]` (was a silent no-op). Regression-locked by `PythonRuleEmitTest`
+    "subscript-assignment source…" (+ `python-rules/subscript-assign-source.yaml`).
+26. **Interprocedural (wrapper) source is STILL structural** (CARDINAL 1). Write the canonical
+    `flask.request.form.get(...)` (`get_form_parameter` wrapper) / `flask.request.args.get(...)`
+    (`get_query_parameter`), NOT `$W.get_form_parameter(...)` and NOT taint-mode. The lowered source fires at
+    the `self.request.form.get` read inside `helpers.separate_request.request_wrapper` (declared-type
+    resolution, not last-segment `get`) and flows interprocedurally to the sink. codeinj wrappers
+    00342/00890/00891/00894 pass this way.
+27. **Receiver-position (`This`) `pattern-not` cleaner fires but doesn't clean the base variable →
+    `@Disabled`** (codeinj `startswith`/`endswith` guards; VERIFIED on 00073 by rule-dump + trace; engine
+    gap, not a rule bug). The cleaner IS emitted and DOES fire, but for `bar.startswith(...)` it cleans
+    only the `bar.$PIR_SELF` `This` may-alias (no must-alias), while the distinct base fact `bar![$M]`
+    survives to the sink. Arg-position cleaners work (inv 23) because the arg maps back to the caller var;
+    receiver-position ones can't, and the guard has no arg-position call carrying `bar` → no rule reshape
+    fixes it. Reproducer = the 14 `@Disabled` codeinj startswith-guard entries (00073 et al.). Fix
+    candidate: propagate receiver-cleans to may-aliases (~14 codeinj + analogues). Full trace in the
+    insights log.
 
 ## Category → sink / CWE reference
 

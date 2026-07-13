@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-codeinj-00891
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches eval (code injection / CWE-94)"
+    metadata:
+      cwe: CWE-94
+    patterns:
+      - pattern: |
+          $A = flask.request.args.get(...)
+          ...
+          eval($A)
