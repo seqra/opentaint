@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-xpathi-00373
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches an XPath query (XPath injection / CWE-643)"
+    metadata:
+      cwe: CWE-643
+    patterns:
+      - pattern: |
+          $A = flask.request.form.keys(...)[...]
+          ...
+          $T.xpath($A)
