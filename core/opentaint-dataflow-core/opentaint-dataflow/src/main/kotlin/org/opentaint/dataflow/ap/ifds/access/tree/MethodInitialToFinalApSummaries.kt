@@ -87,8 +87,7 @@ private open class MethodTaintedSummariesIdStorage(
 
         val nodeExclusion = node.exclusion ?: return node
         storageNode.removeChildren { accessor, _ ->
-            val accessorInstance = with(manager) { accessor.accessor }
-            !nodeExclusion.contains(accessorInstance)
+            !nodeExclusion.contains(accessor)
         }
 
         return node
@@ -97,8 +96,7 @@ private open class MethodTaintedSummariesIdStorage(
     override fun getOrCreateChild(accessor: AccessorIdx): MethodTaintedSummariesIdStorage {
         val curExclusion = current?.exclusion ?: return super.getOrCreateChild(accessor)
 
-        val accessorInstance = with(manager) { accessor.accessor }
-        if (!curExclusion.contains(accessorInstance)) {
+        if (!curExclusion.contains(accessor)) {
             throw NodeSubsumedException()
         }
 
@@ -108,8 +106,7 @@ private open class MethodTaintedSummariesIdStorage(
     override fun findChild(accessor: AccessorIdx): MethodTaintedSummariesIdStorage? {
         val curExclusion = current?.exclusion ?: return super.findChild(accessor)
 
-        val accessorInstance = with(manager) { accessor.accessor }
-        if (!curExclusion.contains(accessorInstance)) {
+        if (!curExclusion.contains(accessor)) {
             return null
         }
 

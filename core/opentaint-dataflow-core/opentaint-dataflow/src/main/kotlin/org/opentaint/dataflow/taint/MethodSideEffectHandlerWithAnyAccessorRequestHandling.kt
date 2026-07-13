@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.taint
 
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
@@ -62,7 +63,12 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
         if (relevantStartAccessors.isEmpty()) return
 
-        val exclusion = relevantStartAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::add)
+        val exclusion = with(runner.apManager.accessorInterner) {
+            val accessorIndices = IntArrayList()
+            relevantStartAccessors.forEach { accessorIndices.add(index(it)) }
+            ExclusionSet.create(accessorIndices)
+        }
+
         val sideEffectRequirement = request.fact.replaceExclusions(exclusion)
         runner.manager.handleCrossUnitSideEffectReq(request.method, sideEffectRequirement)
     }

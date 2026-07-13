@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.access.MethodNDInitialToFinalApSummariesSt
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
 import org.opentaint.dataflow.ap.ifds.access.FactSideEffectSummariesApStorage
 import org.opentaint.dataflow.ap.ifds.access.cactus.AccessCactus.AccessNode
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
@@ -30,6 +31,8 @@ class CactusApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     override val cancellation: Cancellation = Cancellation(),
 ) : ApManager {
+    override val accessorInterner: AccessorInterner = AccessorInterner()
+
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
         CactusInitialFactAbstraction()
 

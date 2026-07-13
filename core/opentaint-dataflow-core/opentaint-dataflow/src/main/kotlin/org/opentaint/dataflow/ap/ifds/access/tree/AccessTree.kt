@@ -46,8 +46,9 @@ class AccessTree(
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
         AccessTree(apManager, newBase, access, exclusions)
 
-    override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessTree(apManager, base, access, exclusions.add(accessor))
+    override fun exclude(accessor: Accessor): FinalFactAp = with(apManager) {
+        AccessTree(apManager, base, access, exclusions.add(accessor.idx))
+    }
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessTree(apManager, base, access, exclusions)
@@ -585,12 +586,10 @@ class AccessTree(
         }
 
         fun filter(exclusion: ExclusionSet.Concrete): AccessNode {
-            val isFinal = this.isFinal && FinalAccessor !in exclusion
+            val isFinal = this.isFinal && FINAL_ACCESSOR_IDX !in exclusion
 
             val transformedAccessors = transformAccessors(accessors, accessorNodes) { accessor, node ->
-                with(manager) {
-                    node.takeIf { accessor.accessor !in exclusion }
-                }
+                node.takeIf { accessor !in exclusion }
             }
 
             if (isFinal == this.isFinal && transformedAccessors == null) {

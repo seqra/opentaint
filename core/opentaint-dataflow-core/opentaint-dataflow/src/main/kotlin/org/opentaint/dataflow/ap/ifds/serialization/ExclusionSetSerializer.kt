@@ -12,9 +12,10 @@ class ExclusionSetSerializer(private val context: SummarySerializationContext) {
             is ExclusionSet.Concrete -> {
                 writeEnum(ExclusionSetType.CONCRETE)
                 writeInt(exclusionSet.set.size)
-                exclusionSet.set.forEach {
-                    writeLong(context.getIdByAccessor(it))
-                }
+                TODO()
+//                exclusionSet.set.forEach {
+//                    writeLong(context.getIdByAccessor(it))
+//                }
             }
         }
     }
@@ -27,7 +28,8 @@ class ExclusionSetSerializer(private val context: SummarySerializationContext) {
             ExclusionSetType.CONCRETE -> {
                 val size = readInt()
                 val accessors = List(size) { context.getAccessorById(readLong()) }
-                accessors.map(ExclusionSet::Concrete).reduce(ExclusionSet::union)
+                TODO()
+//                accessors.map(ExclusionSet::Concrete).reduce(ExclusionSet::union)
             }
         }
     }

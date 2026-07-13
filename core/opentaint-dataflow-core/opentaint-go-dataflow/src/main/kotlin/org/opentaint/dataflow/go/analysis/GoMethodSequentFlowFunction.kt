@@ -236,7 +236,7 @@ class GoMethodSequentFlowFunction(
     ) {
         if (currentFact.base != rhsAccess.base) return
 
-        if (currentFact.isAbstract() && !currentFact.exclusions.contains(rhsAccess.accessor)) {
+        if (currentFact.isAbstract() && !currentFact.exclusions.contains(apManager.accessorInterner.index(rhsAccess.accessor))) {
             propagateFactWithAccessorExclude(currentFact, rhsAccess.accessor, TraceInfo.Flow)
 
             val nonAbstractFact = currentFact.removeAbstraction()
@@ -327,7 +327,7 @@ class GoMethodSequentFlowFunction(
             return
         }
 
-        if (currentFact.isAbstract() && !currentFact.exclusions.contains(accessor)) {
+        if (currentFact.isAbstract() && !currentFact.exclusions.contains(apManager.accessorInterner.index(accessor))) {
             propagateFactWithAccessorExclude(currentFact, accessor, TraceInfo.Flow)
 
             val nonAbstractFact = currentFact.removeAbstraction()

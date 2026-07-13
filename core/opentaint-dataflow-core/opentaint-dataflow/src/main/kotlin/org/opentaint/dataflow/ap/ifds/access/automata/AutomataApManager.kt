@@ -32,6 +32,7 @@ class AutomataApManager(
     override val cancellation: Cancellation = Cancellation()
 ) : ApManager {
     private val interner = AccessorInterner()
+    override val accessorInterner: AccessorInterner get() = interner
 
     val Accessor.idx: AccessorIdx
         get() = interner.index(this)

@@ -33,8 +33,9 @@ class AccessPath(
 
     override fun isAbstract(): Boolean = access == null
 
-    override fun exclude(accessor: Accessor): InitialFactAp =
-        AccessPath(apManager, base, access, exclusions.add(accessor))
+    override fun exclude(accessor: Accessor): InitialFactAp = with(apManager) {
+        AccessPath(apManager, base, access, exclusions.add(accessor.idx))
+    }
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
         AccessPath(apManager, base, access, exclusions)
@@ -171,7 +172,7 @@ class AccessPath(
 
     private fun AccessNode.filter(exclusion: ExclusionSet): AccessNode? = when (exclusion) {
         ExclusionSet.Empty -> this
-        is ExclusionSet.Concrete -> this.takeIf { with(manager) { it.accessor.accessor !in exclusion } }
+        is ExclusionSet.Concrete -> this.takeIf { it.accessor !in exclusion }
         ExclusionSet.Universe -> null
     }
 

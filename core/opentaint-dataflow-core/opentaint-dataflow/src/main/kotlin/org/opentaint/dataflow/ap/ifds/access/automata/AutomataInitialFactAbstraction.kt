@@ -121,7 +121,7 @@ class AutomataInitialFactAbstraction(initialStatement: CommonInst) : InitialFact
             }
 
             val analyzedGraphExclusion = analyzedExclusion[analyzedGraphIdx]
-            val newAccessors = exclusion.set.toBitSet { it.idx }.filter { it !in analyzedGraphExclusion }
+            val newAccessors = exclusion.set.toBitSet().filter { it !in analyzedGraphExclusion }
 
             if (newAccessors.isEmpty) return emptyList()
 

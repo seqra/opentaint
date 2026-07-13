@@ -42,7 +42,9 @@ class FinalFactReader(
             position = position,
             onMismatch = { node, accessor ->
                 if (accessor != null && node.isAbstract()) {
-                    refinement = refinement.add(accessor)
+                    with(apManager.accessorInterner) {
+                        refinement = refinement.add(index(accessor))
+                    }
                 }
                 false
             },

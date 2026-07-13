@@ -421,12 +421,12 @@ class JIRMethodSequentFlowFunction(
             }
         }
 
-        if (!factAp.mayReadAccessor(instance, accessor)) {
+        if (!factAp.mayReadAccessor(apManager, instance, accessor)) {
             // Fact is irrelevant to current reading
             return
         }
 
-        if (factAp.isAbstract() && accessor !in factAp.exclusions) {
+        if (factAp.isAbstract() && apManager.accessorInterner.index(accessor) !in factAp.exclusions) {
             val nonAbstractAp = factAp.removeAbstraction()
             if (nonAbstractAp != null) {
                 fieldRead(
@@ -563,13 +563,13 @@ class JIRMethodSequentFlowFunction(
 
         val accessor = accessors.first()
 
-        if (!factAp.mayRemoveAfterWrite(instance, accessor)) {
+        if (!factAp.mayRemoveAfterWrite(apManager, instance, accessor)) {
             // Fact is irrelevant to current writing
             unchanged(factAp)
             return
         }
 
-        if (factAp.isAbstract() && accessor !in factAp.exclusions) {
+        if (factAp.isAbstract() && apManager.accessorInterner.index(accessor) !in factAp.exclusions) {
             val nonAbstractAp = factAp.removeAbstraction()
             if (nonAbstractAp != null) {
                 fieldWrite(

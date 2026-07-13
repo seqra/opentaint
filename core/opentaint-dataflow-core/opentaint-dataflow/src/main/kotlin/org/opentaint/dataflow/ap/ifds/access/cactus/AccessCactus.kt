@@ -39,7 +39,8 @@ class AccessCactus(
         AccessCactus(newBase, access, exclusions)
 
     override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessCactus(base, access, exclusions.add(accessor))
+        TODO()
+//        AccessCactus(base, access, exclusions.add(accessor))
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessCactus(base, access, exclusions)
@@ -695,19 +696,20 @@ class AccessCactus(
             }
 
         fun filter(exclusion: ExclusionSet.Concrete): AccessNode {
-            if ((!this.isFinal || FinalAccessor !in exclusion) && allEdges.none { it.accessor in exclusion }) {
-                return this
-            }
-
-            with(unrollAll()) {
-                val isFinal = this.isFinal && FinalAccessor !in exclusion
-
-                val transformedEdges = applyTransformEdges { edge ->
-                    edge.takeIf { it.accessor !in exclusion }
-                }
-
-                return create(isAbstract, isFinal, transformedEdges.allEdges)
-            }
+            TODO()
+//            if ((!this.isFinal || FinalAccessor !in exclusion) && allEdges.none { it.accessor in exclusion }) {
+//                return this
+//            }
+//
+//            with(unrollAll()) {
+//                val isFinal = this.isFinal && FinalAccessor !in exclusion
+//
+//                val transformedEdges = applyTransformEdges { edge ->
+//                    edge.takeIf { it.accessor !in exclusion }
+//                }
+//
+//                return create(isAbstract, isFinal, transformedEdges.allEdges)
+//            }
         }
 
         private fun bulkMergeAddEdges(edges: List<BasicEdge>): AccessNode {

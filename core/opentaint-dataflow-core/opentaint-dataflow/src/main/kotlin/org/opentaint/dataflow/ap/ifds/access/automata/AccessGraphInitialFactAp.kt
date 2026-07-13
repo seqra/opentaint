@@ -22,9 +22,9 @@ data class AccessGraphInitialFactAp(
     override fun isAbstract(): Boolean =
         exclusions !is ExclusionSet.Universe && access.initialNodeIsFinal()
 
-    override fun exclude(accessor: Accessor): InitialFactAp {
+    override fun exclude(accessor: Accessor): InitialFactAp = with(access.manager){
         check(accessor !is AnyAccessor)
-        return AccessGraphInitialFactAp(base, access, exclusions.add(accessor))
+        return AccessGraphInitialFactAp(base, access, exclusions.add(accessor.idx))
     }
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =

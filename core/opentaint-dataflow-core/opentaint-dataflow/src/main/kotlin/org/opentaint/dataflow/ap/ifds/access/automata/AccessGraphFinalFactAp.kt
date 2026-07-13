@@ -20,9 +20,9 @@ data class AccessGraphFinalFactAp(
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
         AccessGraphFinalFactAp(newBase, access, exclusions)
 
-    override fun exclude(accessor: Accessor): FinalFactAp {
+    override fun exclude(accessor: Accessor): FinalFactAp = with(access.manager){
         check(accessor !is AnyAccessor)
-        return AccessGraphFinalFactAp(base, access, exclusions.add(accessor))
+        return AccessGraphFinalFactAp(base, access, exclusions.add(accessor.idx))
     }
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =

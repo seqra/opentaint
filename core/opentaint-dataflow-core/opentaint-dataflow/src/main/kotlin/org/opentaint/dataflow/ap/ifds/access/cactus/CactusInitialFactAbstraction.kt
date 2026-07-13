@@ -106,7 +106,7 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
             val possibleNextAccessors = cycles.map { it.first() } + listOf(accessor)
             // Concrete: a.b.* E
             // Added: a.* S
-            if (possibleNextAccessors.any { exclusions.contains(it) }) {
+            if (possibleNextAccessors.any { TODO()/*exclusions.contains(it)*/ }) {
                 // We have initial fact that exclude {b} and we have no a.b fact yet
                 // Return a.b.* {}
 

@@ -19,8 +19,8 @@ class AccessPathWithCycles(
         TODO("Not yet implemented")
     }
 
-    override fun exclude(accessor: Accessor): InitialFactAp =
-        AccessPathWithCycles(base, access, exclusions.add(accessor))
+    override fun exclude(accessor: Accessor): InitialFactAp = TODO()
+//        AccessPathWithCycles(base, access, exclusions.add(accessor))
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
         AccessPathWithCycles(base, access, exclusions)

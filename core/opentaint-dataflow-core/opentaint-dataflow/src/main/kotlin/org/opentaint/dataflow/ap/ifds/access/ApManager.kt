@@ -13,12 +13,14 @@ import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactEdgeSum
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactNDEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.ZeroEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.ZeroToFactEdgeBuilder
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 interface ApManager {
+    val accessorInterner: AccessorInterner
     val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy
     val cancellation: Cancellation
 

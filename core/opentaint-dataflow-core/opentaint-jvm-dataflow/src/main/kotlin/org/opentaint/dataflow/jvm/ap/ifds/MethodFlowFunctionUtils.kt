@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
+import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.ir.api.jvm.JIRField
@@ -74,16 +75,16 @@ object MethodFlowFunctionUtils {
         else -> null
     }
 
-    fun FinalFactAp.mayReadAccessor(base: AccessPathBase, accessor: Accessor): Boolean = when {
+    fun FinalFactAp.mayReadAccessor(manager: ApManager, base: AccessPathBase, accessor: Accessor): Boolean = when {
         this.base != base -> false
         startsWithAccessor(accessor) -> true
-        else -> isAbstract() && accessor !in exclusions
+        else -> isAbstract() && manager.accessorInterner.index(accessor) !in exclusions
     }
 
-    fun FinalFactAp.mayRemoveAfterWrite(base: AccessPathBase, accessor: Accessor): Boolean = when {
+    fun FinalFactAp.mayRemoveAfterWrite(manager: ApManager,base: AccessPathBase, accessor: Accessor): Boolean = when {
         this.base != base -> false
         startsWithAccessor(accessor) -> true
-        else -> isAbstract() && accessor !in exclusions
+        else -> isAbstract() && manager.accessorInterner.index(accessor) !in exclusions
     }
 
     fun FinalFactAp.readAccessorTo(newBase: AccessPathBase, accessor: Accessor): FinalFactAp =

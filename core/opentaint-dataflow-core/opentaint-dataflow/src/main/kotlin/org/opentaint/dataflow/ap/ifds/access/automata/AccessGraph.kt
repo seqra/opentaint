@@ -316,9 +316,7 @@ class AccessGraph(
     fun filter(exclusionSet: ExclusionSet): AccessGraph? = when (exclusionSet) {
         ExclusionSet.Empty -> this
         ExclusionSet.Universe -> if (initialNodeIsFinal()) manager.emptyGraph() else null
-        is ExclusionSet.Concrete -> with(manager) {
-            filter(exclusionSet.set.toBitSet { it.idx })
-        }
+        is ExclusionSet.Concrete -> filter(exclusionSet.set.toBitSet())
     }
 
     private fun filter(exclusionSet: BitSet): AccessGraph? {
