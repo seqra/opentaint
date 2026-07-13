@@ -393,3 +393,51 @@ hypotheses ("doesn't lower to a cleaner" / "if-condition call not reached") are 
   OWASP entries.
 
 ### No pass-throughs / engine changes needed this round.
+
+## trustbound round (CWE-501, 37 entries) — BLOCKED on engine gap, ALL @Disabled (inv 28)
+
+Sink for every entry is a **session write** `flask.session[$K] = $V` — a subscript-STORE, a sink shape
+new to this category. **The engine cannot express or fire a store-target sink**, so the whole category
+is @Disabled. Suite after round: 217 tests, 0 fail / 0 error, 91 skipped (54 prior + 37 trustbound); 126
+pass unchanged.
+
+### Root cause — VERIFIED two independent ways (not hand-waved)
+1. **Rule dump (converter drops it):** a structural rule whose sink statement is `sess[$A] = $V` emits
+   ZERO taint rules. `PythonPatternToActionListConverter.transformAssignment` only binds a metavar target;
+   a subscript (or attribute) assignment target hits `transformationFailed("Assignment_target_not_metavar")`,
+   which throws out of `transformSequence` → the whole `patterns` block converts to null → no source, no
+   sink. Proven by `PythonRuleEmitTest.subscript-assignment sink emits no sink (engine gap)` (probe
+   resource `python-rules/subscript-assign-sink.yaml`, PROBE-EMIT-COUNT=0). This tripwire flips (emit
+   non-empty) when store sinks become expressible.
+2. **Code (engine never checks it):** `flask.session[bar] = v` lowers to `PIRStoreSubscript` (side-effect
+   inst; `StatementLowering.kt:77`, `CfgConverter.kt:109`). Sinks are checked only at call sites
+   (`PIRMethodCallFlowFunction.applySinkRules`) and attribute reads (`sinksForAttribute`).
+   `PIRMethodSequentFlowFunction.handleStoreSubscript` propagates taint (value→obj element) but performs
+   NO sink check. So even a hypothetically-authored store sink would never fire.
+
+The tainted data flows into the **key** (`flask.session[bar] = '12345'`, bar tainted — 00072/00154/…) OR
+the **value** (`flask.session['userid'] = bar` — 00070/00153/…); both are CWE-501. The rule files record
+the intended dual-position structural authoring via `pattern-either` (key `sess[$A]=$V` + value
+`sess[$K]=$A`), ready to enable once the gap is fixed.
+
+### Fix sketch (ESCALATED — hard, multi-part; not a benchmark-round fix)
+- Converter: accept an `Assign` whose target is a `Subscript`/`Attribute` in sink position and emit a new
+  "store sink" that checks taint on BOTH the index/key and the value (roughly: sink on the container write
+  with a `ContainsMark` over the key AP and the value AP).
+- New sink kind + resolver wiring (a store sink isn't function/attribute-targeted).
+- Engine: check store sinks in `handleStoreSubscript` (and the `StoreAttr`/`StoreGlobal` analogues).
+
+### Per-entry ground truth (recorded; sources noted for the enable-later round)
+- TRUE key-position (`session[bar]=`): 00072/00154/00155(cookies/form), 00261/00262(form.getlist),
+  00341(wrapper form), 00501/00502/00656(headers), 00727(args), 00889(wrapper query), 00985(query_string).
+- TRUE value-position (`session['userid']=`): 00153(form), 00260(form.getlist), 00338/00340(wrapper form),
+  00497/00499(headers), 00725(args), 00817(args.getlist), 00887/00888(wrapper query), 00984(query_string).
+- FALSE that would need post-enable triage: 00070/00152 (configparser key-insens inv 16),
+  00071 (never-tainted, param→string not copy), 01092/01093/01094 (`request.path.split` — not a source,
+  inv 17), 01161/01162/01163 (`get_safe_value` returns const → never tainted), plus the usual
+  configparser/dict/list key-insens (inv 16/19) and path-insensitive-arm (inv 18) variants among
+  00155/00262/00339/00421/00498/00500/00726.
+- Sources cover cookies/form/args/headers `.get`, `.form/.args.getlist(...)[...]`, `get_form_parameter`/
+  `get_query_parameter` wrappers (inv 26 → flask.request.form/args.get), `query_string.decode`.
+
+### No pass-throughs / engine changes made this round (gap escalated, not patched).

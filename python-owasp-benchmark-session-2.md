@@ -35,16 +35,21 @@ fixes accumulate cleanly.
 ## Current status
 
 - **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
-  redirect (34), codeinj (53). Each entry has a hand-written rule + hardcoded ground-truth `@Test`;
-  unfixable-by-design FALSE entries are `@Disabled` with a one-line reason. OWASP suite currently
-  180 tests: 126 pass / 0 fail / 54 skipped. codeinj split: 26 pass + 27 `@Disabled` (14 receiver-position
-  cleaner gap inv 27; 10 key/index/branch-insensitivity inv 16/18/19; 3 ThingFactory getattr FN inv 20).
-- **Next batch: `trustbound`** (CWE-501, ~37) — next-smallest untouched taint-flow category. Then
-  deserialization (54), xss (89), pathtraver (168), xpathi (186). Structural-only categories
-  (weakrand/hash/securecookie) are deferred — discuss first (see category table note).
-- **Open engine gap (escalated, inv 27):** receiver/instance-position (`This`) `pattern-not` cleaners
-  fire but clean only the `$PIR_SELF` may-alias, not the base variable → ~14 codeinj FALSE `@Disabled`.
-  Fix candidate: propagate receiver-cleans to may-aliases. Full trace in insights log.
+  redirect (34), codeinj (53), trustbound (37, **all `@Disabled` — blocked by the store-sink gap inv 28**).
+  Each entry has a hand-written rule + hardcoded ground-truth `@Test`; unfixable-by-design FALSE entries are
+  `@Disabled` with a one-line reason. OWASP suite currently 217 tests: 126 pass / 0 fail / 91 skipped.
+  codeinj split: 26 pass + 27 `@Disabled` (14 receiver-position cleaner gap inv 27; 10 key/index/branch
+  inv 16/18/19; 3 ThingFactory getattr FN inv 20). trustbound: 0 pass + 37 `@Disabled` (all inv 28).
+- **Next batch: `deserialization`** (CWE-502, 54) — call sink (`pickle.loads`/`yaml.load`), works with the
+  standard mechanism. Then xss (89), pathtraver (168), xpathi (186). trustbound stays blocked until the
+  store-sink feature lands. Structural-only categories (weakrand/hash/securecookie) are deferred.
+- **Open engine gaps (escalated, deferred to a later engine phase):**
+  - **inv 27** — receiver-position (`This`) `pattern-not` cleaners clean only the `$PIR_SELF` may-alias,
+    not the base variable → ~14 codeinj FALSE `@Disabled`. Fix: propagate receiver-cleans to may-aliases.
+  - **inv 28** — subscript-STORE (assignment-target) sinks unsupported → all 37 trustbound `@Disabled`.
+    Fix: emit + fire a store-sink for subscript/attr assignment targets. Tripwire:
+    `PythonRuleEmitTest.subscript-assignment sink emits no sink` (flips when fixed).
+  - **inv 20** — dynamic `getattr` dispatch FN (ThingFactory). Full traces in the insights log.
 - **Author rules STRUCTURALLY — always** (see CARDINAL RULES). Never taint-mode. Thread the source
   metavar into the sink; use `[...]` on collection-accessor sources; unify the guard metavar for
   validator exclusions.
@@ -189,6 +194,18 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     fixes it. Reproducer = the 14 `@Disabled` codeinj startswith-guard entries (00073 et al.). Fix
     candidate: propagate receiver-cleans to may-aliases (~14 codeinj + analogues). Full trace in the
     insights log.
+28. **Subscript-STORE (assignment-target) sinks are unsupported → whole `trustbound`/CWE-501 category
+    `@Disabled`** (VERIFIED, engine gap, ESCALATED). The CWE-501 sink is a session write
+    `flask.session[k] = v`, which lowers to a `PIRStoreSubscript` (side-effect inst), NOT a call. A
+    structural rule whose sink is `sess[$A] = $V` emits ZERO taint rules: `transformAssignment` rejects a
+    non-metavar (subscript/attribute) assignment target (`Assignment_target_not_metavar`), collapsing the
+    whole `patterns` block (proven — `PythonRuleEmitTest.subscript-assignment sink emits no sink`,
+    emit-count 0). And sinks fire only at calls (`PIRMethodCallFlowFunction.applySinkRules`) / attribute
+    reads; `PIRMethodSequentFlowFunction.handleStoreSubscript` propagates taint but does NO sink check. So
+    no structural rule can express OR fire on a store-target sink. Fix = converter emits a "store sink" for
+    a subscript/attribute-target assignment (check taint on key AND value) + engine checks it at
+    `handleStoreSubscript`/`handleStoreSubscript`-analogues + a new sink kind. Reproducer: the 37 `@Disabled`
+    trustbound entries + the `PythonRuleEmitTest` probe (`python-rules/subscript-assign-sink.yaml`).
 
 ## Category → sink / CWE reference
 

@@ -112,6 +112,19 @@ class PythonRuleEmitTest {
         )
     }
 
+    @Test fun `subscript-assignment sink emits no sink (engine gap)`() {
+        // Reproducer for the trustbound / CWE-501 engine gap: the session-write sink
+        // `flask.session[k] = v` is a subscript-STORE. A structural rule whose final (sink) statement
+        // is a subscript-assignment `sess[$A] = $V` cannot be lowered — transformAssignment rejects a
+        // non-metavar (subscript) assignment target (Assignment_target_not_metavar), which collapses the
+        // whole `patterns` block, so ZERO taint rules are emitted. (Even if it did lower, sinks fire only
+        // at calls/attributes — PIRMethodSequentFlowFunction.handleStoreSubscript performs no sink check.)
+        // When store-target sinks become expressible, this assertion flips (emit becomes non-empty) — the
+        // signal to enable the @Disabled trustbound OWASP entries.
+        val all = emitAll("python-rules/subscript-assign-sink.yaml")
+        assertTrue(all.isEmpty(), "expected zero emitted rules (subscript-store sink unsupported), got ${all.size}")
+    }
+
     @Test fun `subscript-assignment source binds the metavar to the result element`() {
         // `$A = source()[0] ... sink($A)`: the metavar assignment must NOT drop the subscript's
         // element modifier. The source binds `$A` to `Result[*]` (the element), exactly like the

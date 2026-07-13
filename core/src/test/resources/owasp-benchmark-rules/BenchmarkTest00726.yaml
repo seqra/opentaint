@@ -1,0 +1,23 @@
+rules:
+  - id: owasp-trustbound-00726
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches a flask.session write (trust-boundary violation / CWE-501)"
+    metadata:
+      cwe: CWE-501
+    # NOTE: CWE-501 sink is a subscript-STORE `flask.session[k] = v`, which lowers to a
+    # PIRStoreSubscript (a side-effect inst), NOT a call. The converter rejects a subscript-store
+    # target (Assignment_target_not_metavar) so this rule currently emits ZERO taint rules, and the
+    # engine checks sinks only at calls/attributes (handleStoreSubscript has no sink logic). The whole
+    # trustbound category is @Disabled pending store-sink engine support. This file records the intended
+    # structural authoring: tainted data in EITHER the key or the value position is a CWE-501 violation.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $A = flask.request.args.get(...)
+              ...
+              flask.session[$K] = $A
+          - pattern: |
+              $A = flask.request.args.get(...)
+              ...
+              flask.session[$A] = $V
