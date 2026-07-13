@@ -229,24 +229,34 @@ def cmd_analyze(args):
 
 # ---- partition discover ----
 
-def yaml_list(model_yaml, key):
-    # values of every `key` list in project.yaml, at any depth
+def yaml_modules(model_yaml):
+    # every module in project.yaml, at any depth (subProjects nest), as (packages, moduleClasses).
+    # The two belong together: a classpath-mode model puts the whole classpath — dependency jars
+    # included — in moduleClasses, and only `packages` says which of it is project code
     doc = load_yaml(model_yaml, {}) or {}
-    vals = []
+    mods = []
 
     def walk(node):
         if isinstance(node, dict):
-            for k, v in node.items():
-                if k == key and isinstance(v, list):
-                    vals.extend(str(x) for x in v)
-                else:
-                    walk(v)
+            if isinstance(node.get("moduleClasses"), list):
+                mods.append((
+                    [str(p) for p in (node.get("packages") or [])],
+                    [str(c) for c in node["moduleClasses"]],
+                ))
+            for v in node.values():
+                walk(v)
         elif isinstance(node, list):
             for x in node:
                 walk(x)
 
     walk(doc)
-    return vals
+    return mods
+
+
+def is_project_class(cls, packages):
+    # mirrors the engine's ProjectClasses.isModuleClass: an empty `packages` means the module
+    # carries project code only, so every class in it counts
+    return not packages or any(cls.startswith(p) for p in packages)
 
 
 CALL_RE = re.compile(r"//\s*(?:Interface)?Method\s+(\S+?)\.(<?\w+>?):(\S+)")
@@ -256,31 +266,36 @@ def extract_usages():
     # disassemble project classes, collect // Method / // InterfaceMethod call sites with their
     # JVM descriptor; returns (fqn, signature) pairs so an overloaded member stays disambiguated
     fqns = set()
-    for entry in yaml_list(MODEL / "project.yaml", "moduleClasses"):
-        p = MODEL / entry
-        if p.is_dir():
-            classes = [str(c.relative_to(p))[:-6].replace("/", ".") for c in p.rglob("*.class")]
-            cp = str(p)
-        elif p.is_file():
-            try:
-                listing = subprocess.run(["jar", "tf", str(p)], capture_output=True,
-                                         text=True, check=True).stdout
-            except (OSError, subprocess.CalledProcessError):
+    for packages, module_classes in yaml_modules(MODEL / "project.yaml"):
+        for entry in module_classes:
+            p = MODEL / entry
+            if p.is_dir():
+                classes = [str(c.relative_to(p))[:-6].replace("/", ".") for c in p.rglob("*.class")]
+            elif p.is_file():
+                try:
+                    listing = subprocess.run(["jar", "tf", str(p)], capture_output=True,
+                                             text=True, check=True).stdout
+                except (OSError, subprocess.CalledProcessError):
+                    continue
+                if not packages:
+                    print(f"warning: {entry} is a jar in a module that declares no `packages`, so "
+                          f"every class in it counts as project code — the plans will cover the "
+                          f"library's own calls, not the project's", file=sys.stderr)
+                classes = [c[:-6].replace("/", ".") for c in listing.splitlines()
+                           if c.endswith(".class")]
+            else:
                 continue
-            classes = [c[:-6].replace("/", ".") for c in listing.splitlines()
-                       if c.endswith(".class")]
+            classes = [c for c in classes if is_project_class(c, packages)]
             cp = str(p)
-        else:
-            continue
-        for i in range(0, len(classes), 200):           # batch to keep argv under the limit
-            batch = classes[i:i + 200]
-            try:
-                out = subprocess.run(["javap", "-c", "-p", "-classpath", cp, *batch],
-                                     capture_output=True, text=True).stdout
-            except OSError:
-                continue
-            for owner, method, sig in CALL_RE.findall(out):
-                fqns.add((f"{owner.replace('/', '.')}#{method}", sig))
+            for i in range(0, len(classes), 200):       # batch to keep argv under the limit
+                batch = classes[i:i + 200]
+                try:
+                    out = subprocess.run(["javap", "-c", "-p", "-classpath", cp, *batch],
+                                         capture_output=True, text=True).stdout
+                except OSError:
+                    continue
+                for owner, method, sig in CALL_RE.findall(out):
+                    fqns.add((f"{owner.replace('/', '.')}#{method}", sig))
     return fqns
 
 
