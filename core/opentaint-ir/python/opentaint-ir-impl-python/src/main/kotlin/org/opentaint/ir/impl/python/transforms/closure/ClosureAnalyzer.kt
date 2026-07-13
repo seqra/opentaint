@@ -52,7 +52,38 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
 
     private fun analyze(): ClosureAnalysis {
         for (qn in byName.keys) compute(qn)
+        pruneUnprovidableClosureVars()
         return ClosureAnalysis(info = publicCache, diagnostics = diagnostics)
+    }
+
+    /**
+     * Drop captured names the parent can't provide. [compute] propagates every
+     * free name upward, so a nested def's `closureVars` also lists names no
+     * ancestor owns — globals/builtins/unresolved names lowered as NAME_LOCAL
+     * reads. Left in, they falsely mark the def as capturing, so the rewriter
+     * renames it to a `<closure_…>` shim and hides its entry point (inv 31).
+     *
+     * A capture is genuine iff the direct parent provides it (owns it as a cell
+     * or received it itself); walk parents-before-children and intersect with
+     * `parent.cellVars ∪ parent.closureVars`. Dropped names read as plain
+     * locals (Python LEGB). `cellVars` needs no pruning: a leaked name is never
+     * owned, so never a cell.
+     */
+    private fun pruneUnprovidableClosureVars() {
+        // Pre-order DFS of the parent forest (acyclic, so no visited set): each
+        // function is pruned against its already-finalized parent before we
+        // descend, so a kept name is one the parent still provides.
+        fun prune(qn: String) {
+            parentMap[qn]?.let { parentQn ->
+                val parent = publicCache.getValue(parentQn)
+                val provided = parent.cellVars + parent.closureVars
+                val ci = publicCache.getValue(qn)
+                val kept = ci.closureVars.filterTo(LinkedHashSet()) { it in provided }
+                if (kept.size != ci.closureVars.size) publicCache[qn] = ci.copy(closureVars = kept)
+            }
+            for (child in children[qn].orEmpty()) prune(child)
+        }
+        for (qn in byName.keys) if (parentMap[qn] == null) prune(qn)
     }
 
     private fun compute(qn: String): ClosureInfo = publicCache.getOrPut(qn) {
@@ -90,17 +121,14 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
 
         val isClosureRoot = parentMap[qn] == null
         if (isClosureRoot && propagated.isNotEmpty()) {
-            // A parentless function with non-empty propagated free names
-            // is suspect: either a descendant captures a name nobody owns
-            // (e.g. METHOD pass-through to a nested def crossing a
-            // class-inside-function boundary), or an upstream pass leaked
-            // unresolved names into FlatLocal reads.
+            // Free names that reached a parentless function owned by no scope:
+            // globals, builtins, or unresolved names. pruneUnprovidableClosureVars
+            // drops them from captures; flagged here for visibility.
             diagnostics.add(
                 PIRDiagnostic(
                     severity = PIRDiagnosticSeverity.WARNING,
-                    message = "Closure-root '$qn' has unresolved free names " +
-                            "${propagated.toSortedSet()} — descendants capturing these " +
-                            "names will not have cells forwarded.",
+                    message = "Closure-root '$qn' has free names ${propagated.toSortedSet()} " +
+                            "owned by no enclosing scope; read as globals/unresolved locals.",
                     functionName = qn,
                     exceptionType = "ClosureRootLeak",
                 ),

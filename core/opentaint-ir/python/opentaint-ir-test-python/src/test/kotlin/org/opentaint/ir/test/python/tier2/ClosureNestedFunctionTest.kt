@@ -155,6 +155,19 @@ def cnf_transitive(x):
             return x
         return cnf_transitive_inner()
     return cnf_transitive_mid()
+
+def cnf_inv31_route(app):
+    # Nested route referencing an undefined `e` (except has no `as e`) in a
+    # never-run branch — a valid-but-buggy shape from the OWASP read_text
+    # benchmark. `e` must not be mistaken for a capture (inv 31).
+    def cnf_inv31_post():
+        result = ""
+        try:
+            result = open("f").read()[:1000]
+        except OSError:
+            result = e.strerror
+        return result
+    return cnf_inv31_post
 """.trimIndent()
     }
 
@@ -198,6 +211,22 @@ def cnf_transitive(x):
 
     private fun allInstructions(func: PIRFunction): List<PIRInstruction> =
         func.instList
+
+    @Test
+    fun `nested route with undefined name in except keeps its entry point (inv 31)`() {
+        // The undefined `e` is an unowned free name; if mistaken for a capture
+        // the route gets rewritten to a `<closure_…>` shim and renamed, so its
+        // entry point can no longer be found ("Entry point not found").
+        assertNotNull(
+            findFuncOrNull("cnf_inv31_route\$cnf_inv31_post"),
+            "nested route must remain a discoverable entry point, not a closure shim",
+        )
+        val shimmed = cp.modules.any { m ->
+            (m.functions.map { it.name } + m.classes.map { it.name })
+                .any { it.contains("<closure_") && it.contains("cnf_inv31") }
+        }
+        assertFalse(shimmed, "route must not be rewritten into a closure shim")
+    }
 
     // ─── 1. Outer functions with nested defs have valid CFGs ───
 

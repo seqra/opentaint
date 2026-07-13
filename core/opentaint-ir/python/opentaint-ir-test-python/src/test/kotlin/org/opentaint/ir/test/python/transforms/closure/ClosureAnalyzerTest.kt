@@ -355,6 +355,96 @@ class ClosureAnalyzerTest {
     }
 
     /* ------------------------------------------------------------------ */
+    /* 6b. nested def with an ancestor-unowned free name (inv 31)          */
+    /* ------------------------------------------------------------------ */
+
+    @Test
+    fun `nested def free name owned by no ancestor is not a capture`() {
+        // def outer():
+        //     def inner(): return e     # `e` undefined (owned by nobody)
+        // `e` reaches the analyzer as a FlatLocal read but no scope owns it, so
+        // it must not become a closureVar — else `inner` is misclassified as a
+        // closure and renamed to a shim, hiding its entry point (inv 31).
+        val outerQn = "m.outer"
+        val innerQn = "m.outer\$inner"
+
+        val inner = fn(
+            name = "outer\$inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("e"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+
+        val info = ClosureAnalyzer.analyze(module(listOf(outer, inner))).info
+        // `inner` captures nothing — `e` was pruned as a leaked (unowned) name.
+        assertEquals(emptySet<String>(), info.getValue(innerQn).closureVars)
+        // `outer` owns no cells for it either.
+        assertEquals(emptySet<String>(), info.getValue(outerQn).cellVars)
+    }
+
+    @Test
+    fun `same name is captured in one subtree and unresolved in a sibling`() {
+        // def root():
+        //     def a():
+        //         x = 1
+        //         def b(): return x   # genuine capture of a's x
+        //     def c(): return x       # `x` unresolved here (a's x not in scope)
+        // Pruning must be per subtree: `x` leaking to root via c must not strip
+        // b's real capture of a's x.
+        val rootQn = "m.root"
+        val aQn = "m.root\$a"
+        val bQn = "m.root\$a\$b"
+        val cQn = "m.root\$c"
+
+        val b = fn(
+            name = "root\$a\$b", qualifiedName = bQn, parent = aQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val a = fn(
+            name = "root\$a", qualifiedName = aQn, parent = rootQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("b"), FlatGlobalNameRef(bQn)),
+                FlatReturn(null),
+            ),
+        )
+        val c = fn(
+            name = "root\$c", qualifiedName = cQn, parent = rootQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val root = fn(
+            name = "root", qualifiedName = rootQn, parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatBindFunction(local("a"), FlatGlobalNameRef(aQn)),
+                FlatBindFunction(local("c"), FlatGlobalNameRef(cQn)),
+                FlatReturn(null),
+            ),
+        )
+
+        val info = ClosureAnalyzer.analyze(module(listOf(root, a, c, b))).info
+        // b legitimately captures a's x — kept.
+        assertEquals(setOf("x"), info.getValue(bQn).closureVars)
+        assertEquals(setOf("x"), info.getValue(aQn).cellVars)
+        // c's `x` is unresolved (no ancestor owns it) — pruned, not a capture.
+        assertEquals(emptySet<String>(), info.getValue(cQn).closureVars)
+    }
+
+    /* ------------------------------------------------------------------ */
     /* 7. lambda capture                                                  */
     /* ------------------------------------------------------------------ */
 
