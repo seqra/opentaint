@@ -653,3 +653,20 @@ wrapper → `flask.request.args.get` (01214, inv 26). Suite after round: **439 t
   validator → not unifiable): 00014/00015/00016/00021/00022/00110/00203.
 - **TRUE FN @Disabled:** 00103/00209 ThingFactory getattr (inv 20); 00112/00113 StringIO drop.
 - **No pass-throughs / engine changes.** configparser .set/.get flows key-insensitively as before (00104 TRUE reaches).
+
+## xpathi batch 3 (CWE-643, 00468-00761, 40 entries) — 17 active pass / 23 @Disabled / 0 fail
+
+- **All inv 34 patterns re-confirmed; no new invariant, no rule/engine/passthrough changes.** Sinks: `$T.xpath($A)`,
+  `lxml.etree.XPath($A)` (00545/00546), `elementpath.select($ROOT,$A)`. Sources: `headers.get` (00468-00472),
+  `headers.getlist[...]` (00534-00555), `args.get` (00674-00687), `args.getlist[...]` (00756-00761). Query built by
+  f-string / `"".join([...,bar,...])` / `'..'+bar+'..'` — all carry the mark.
+- **TRUE active pass (10):** 00534/00535/00536 (dict-keyB/match-arm/ternary → select), 00543 (if 'should' in bar → param),
+  00545/00546 (if-else / ternary → XPath compile), 00674/00682 (list index-insens lst[0]=param genuinely tainted → reach),
+  00681 (if-else else=param), 00760 (configparser get keyB(param, tainted)).
+- **FALSE active pass-free (7):** parameterized `xpath(query, name=bar)` const query, bar in kwarg → query-arg sink never
+  binds (00469/00470/00553/00686/00687); StringIO drop (00471); ThingFactory getattr FN leaves bar untainted (00677).
+- **TRUE FN @Disabled (4):** StringIO drop 00554/00555 (inv 34); ThingFactory getattr 00761 (inv 20); 00472 both.
+- **FALSE FP @Disabled (19):** replace-not-cleaner inv 34 (00537/00548/00675/00676/00683/00756/00757); dict/configparser
+  key-insens inv 16 (00542/00551/00683); list index-insens inv 19 (00547/00676); const if/else + ternary + match path-insens
+  inv 18 (00468/00544/00548/00680); `'` apostrophe substring guard (operator, not unifiable) inv 23 (00468/00549/00550/
+  00552/00684/00685/00758). Most stack two safety mechanisms (e.g. key-insens + replace, path-insens + apostrophe).

@@ -1000,6 +1000,81 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("FP inv 18 + replace: path-insensitive const if/else + str.replace not modeled (copy.replace passthrough)")
     @Test fun benchmarkTest00467() = assertNotReachable("00467")
 
+    // ─── xpathi (CWE-643). batch 3 (40). same sinks/sources as b1/b2 (inv 34). sources:
+    //   headers.get, headers.getlist[...], args.get, args.getlist[...]. TRUE reach; StringIO drop
+    //   + ThingFactory getattr are FN @Disabled; parameterized xpath(query, name=bar) const query
+    //   passes free (bar in kwarg); ThingFactory-FN FALSE variants pass free (untainted).
+    @Test fun benchmarkTest00534() = assertReachable("00534")
+    @Test fun benchmarkTest00535() = assertReachable("00535")
+    @Test fun benchmarkTest00536() = assertReachable("00536")
+    @Test fun benchmarkTest00543() = assertReachable("00543")
+    @Test fun benchmarkTest00545() = assertReachable("00545")
+    @Test fun benchmarkTest00546() = assertReachable("00546")
+    @Test fun benchmarkTest00674() = assertReachable("00674")
+    @Test fun benchmarkTest00681() = assertReachable("00681")
+    @Test fun benchmarkTest00682() = assertReachable("00682")
+    @Test fun benchmarkTest00760() = assertReachable("00760")
+
+    @Disabled("FN inv 20 + 34: ThingFactory getattr (Any receiver, doSomething unresolved) + io.StringIO drop")
+    @Test fun benchmarkTest00472() = assertReachable("00472")
+    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint (no arg->receiver->result passthrough)")
+    @Test fun benchmarkTest00554() = assertReachable("00554")
+    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint (no arg->receiver->result passthrough)")
+    @Test fun benchmarkTest00555() = assertReachable("00555")
+    @Disabled("FN inv 20: ThingFactory getattr -> Any receiver, thing.doSomething(param) unresolved")
+    @Test fun benchmarkTest00761() = assertReachable("00761")
+
+    // FALSE that pass free: parameterized xpath(query, name=bar) const query (bar in kwarg, inv 34);
+    // StringIO drop (00471); ThingFactory getattr FN leaves bar untainted (00677, inv 20 corollary).
+    @Test fun benchmarkTest00469() = assertNotReachable("00469")
+    @Test fun benchmarkTest00470() = assertNotReachable("00470")
+    @Test fun benchmarkTest00471() = assertNotReachable("00471")
+    @Test fun benchmarkTest00553() = assertNotReachable("00553")
+    @Test fun benchmarkTest00677() = assertNotReachable("00677")
+    @Test fun benchmarkTest00686() = assertNotReachable("00686")
+    @Test fun benchmarkTest00687() = assertNotReachable("00687")
+
+    // FALSE FP -> @Disabled (approximation-limited: replace-not-cleaner inv 34, path/index/key-insens
+    // inv 18/19/16, non-unifiable `'` apostrophe substring guard inv 23).
+    @Disabled("FP inv 18/23: const if/else bar=param, safe only via `'` apostrophe substring guard")
+    @Test fun benchmarkTest00468() = assertNotReachable("00468")
+    @Disabled("FP inv 34: base64 roundtrip keeps taint, safe only via str.replace apostrophe-escape (copy.replace passthrough)")
+    @Test fun benchmarkTest00537() = assertNotReachable("00537")
+    @Disabled("FP inv 16: dict key-insensitivity (store keyB(param), read keyA(const))")
+    @Test fun benchmarkTest00542() = assertNotReachable("00542")
+    @Disabled("FP inv 18: path-insensitive match arm (const guess picks safe arm, tainted arm explored)")
+    @Test fun benchmarkTest00544() = assertNotReachable("00544")
+    @Disabled("FP inv 19: list index-insensitivity (append(param), pop(0), read lst[1])")
+    @Test fun benchmarkTest00547() = assertNotReachable("00547")
+    @Disabled("FP inv 18/34: const if/else bar=param + str.replace apostrophe-escape (copy.replace passthrough, taint survives)")
+    @Test fun benchmarkTest00548() = assertNotReachable("00548")
+    @Disabled("FP inv 23: bar=param, safe only via `'` apostrophe substring guard (operator, not unifiable)")
+    @Test fun benchmarkTest00549() = assertNotReachable("00549")
+    @Disabled("FP inv 23: dict keyB(param) read, safe only via `'` apostrophe substring guard")
+    @Test fun benchmarkTest00550() = assertNotReachable("00550")
+    @Disabled("FP inv 16/23: dict key-insensitivity (read keyA(const)) + `'` apostrophe substring guard")
+    @Test fun benchmarkTest00551() = assertNotReachable("00551")
+    @Disabled("FP inv 23: match arm bar=param, safe only via `'` apostrophe substring guard")
+    @Test fun benchmarkTest00552() = assertNotReachable("00552")
+    @Disabled("FP inv 34: base64 roundtrip keeps taint, safe only via str.replace apostrophe-escape (copy.replace passthrough)")
+    @Test fun benchmarkTest00675() = assertNotReachable("00675")
+    @Disabled("FP inv 19/34: list index-insensitivity + str.replace apostrophe-escape (copy.replace passthrough, taint survives)")
+    @Test fun benchmarkTest00676() = assertNotReachable("00676")
+    @Disabled("FP inv 18: path-insensitive const-true ternary (tainted else arm explored)")
+    @Test fun benchmarkTest00680() = assertNotReachable("00680")
+    @Disabled("FP inv 16/34: configparser key-insensitivity (get keyA(const)) + str.replace apostrophe-escape (copy.replace passthrough)")
+    @Test fun benchmarkTest00683() = assertNotReachable("00683")
+    @Disabled("FP inv 23: bar=param, safe only via `'` apostrophe substring guard (operator, not unifiable)")
+    @Test fun benchmarkTest00684() = assertNotReachable("00684")
+    @Disabled("FP inv 23: dict keyB(param) read, safe only via `'` apostrophe substring guard")
+    @Test fun benchmarkTest00685() = assertNotReachable("00685")
+    @Disabled("FP inv 34: configparser get keyB(param, tainted), safe only via str.replace apostrophe-escape (copy.replace passthrough)")
+    @Test fun benchmarkTest00756() = assertNotReachable("00756")
+    @Disabled("FP inv 34: dict keyB(param, tainted) read, safe only via str.replace apostrophe-escape (copy.replace passthrough)")
+    @Test fun benchmarkTest00757() = assertNotReachable("00757")
+    @Disabled("FP inv 23: bar=param, safe only via `'` apostrophe substring guard (operator, not unifiable)")
+    @Test fun benchmarkTest00758() = assertNotReachable("00758")
+
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 
     private fun assertReachable(id: String) {
