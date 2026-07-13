@@ -704,3 +704,37 @@ All verdicts re-confirm existing invariants; no new invariant discovered.
     which resolves to `copy.replace` passThrough and PROPAGATES (inv 34).
   - **01198/01217 FALSE FP** — headers.getlist/query_string tainted, safe only via `'` apostrophe substring
     guard (`if '\'' in param: return`), an operator with no unifiable validator call (inv 23).
+
+## xss batch 1 (CWE-79, 40 entries) — CATEGORY BLOCKED: return-value-sink engine gap (inv 35)
+
+**Sink-spike verdict (VERIFIED, headline):** the XSS sink is the returned HTTP **response body**, built as
+`RESPONSE += f'...{bar}...'` then a **bare `return RESPONSE`** from the Flask route handler. There is NO
+`render_template_string(...)` / `make_response(...)` / `.write(...)` CALL carrying the body (`make_response`
+appears only in the `from flask import ...` line; the 8 entries that do call it —
+00149/00150/00256/00257/00334/00335/00414/00493, all FALSE — pass `bar` into a HEADER dict
+`make_response((RESPONSE, {'h': bar}))`, not the XSS body). All 16 TRUE entries have only `return RESPONSE`.
+
+A structural sink `return $A` does **not fire**: `PythonPatternToActionListConverter.transformReturn` lowers
+a return to a `MethodExit` action, and `PythonTaintRuleGeneration.emitPythonTaintRules` handles a sink edge
+(`edgesToFinalAccept`) with `Kind.MethodExit` by `ctx.trace.error("Non method call sinks are not supported
+yet")` — emitting ZERO sinks (line ~78-80). Sinks fire only at calls / attribute reads
+(`PIRMethodCallFlowFunction.applySinkRules`). Same shape as the trustbound store-sink gap (inv 28): a whole
+category blocked by an unsupported **sink kind**, not a rule bug.
+
+**Reproducer:** `PythonRuleEmitTest.return-value sink emits no sink (engine gap)` + resource
+`python-rules/return-sink.yaml` (`$A = source(...) ... return $A`): asserts the source lowers (1
+SerializedPythonSource) but ZERO SerializedPythonSink. Flips to non-empty when return-value-sink support
+lands — the signal to enable the 40 @Disabled xss entries.
+
+**Action:** all 40 xss entries added to `OwaspBenchmarkTest.kt` as `@Disabled` `@Test` (16 assertReachable /
+24 assertNotReachable per ground truth) citing inv 35. No per-entry rule yaml authored (would be doomed;
+would need the same return-sink form). The FALSE half is sanitized by `escape_for_html`/`html.escape`/
+`markupsafe.escape` — genuine sanitizers we WANT to drop — but that is moot until the sink can fire at all.
+
+**Fix (engine phase):** emit + fire a return-value sink. Converter: in `emitPythonTaintRules`, map a
+`Kind.MethodExit` accept-edge to a new "return sink" (check `ContainsMark` on the returned value / `Result`
+position) instead of erroring. Engine: check that sink at the method-exit / `return` instruction. Then
+enable the xss block and triage the FALSE half (model the html-escape sanitizers as cleaners).
+
+**Next xss batch: HOLD — category blocked, defer all ~89 xss entries until the return-value-sink engine
+phase.** Do not spend rounds authoring xss rules that cannot fire.

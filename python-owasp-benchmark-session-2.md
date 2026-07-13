@@ -269,6 +269,16 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     so the POST function never serialized. Fixed in `a4d733729`; all 6 now build and PASS with correct verdicts
     (no rule changes needed — 2 TRUE reach, 4 FALSE cleaned by `unquote_plus`/`.resolve()` drops).
 
+35. **Return-value sinks unsupported → whole `xss`/CWE-79 category `@Disabled`** (VERIFIED, engine gap,
+    ESCALATED). The XSS sink is the returned response body: `RESPONSE += f'...{bar}...'; return RESPONSE` — a
+    bare return, no `render_template_string`/`make_response`/`.write` CALL (make_response is import-only; the 8
+    entries calling it inject a HEADER, not the body). A structural sink `return $A` lowers the source but emits
+    ZERO sinks: `transformReturn` → `MethodExit` action, and `emitPythonTaintRules` errors on a `Kind.MethodExit`
+    accept-edge ("Non method call sinks are not supported yet"); sinks fire only at calls/attr reads. Reproducer:
+    `PythonRuleEmitTest.return-value sink emits no sink` + `python-rules/return-sink.yaml` (sources=1, sinks=0).
+    Same shape as inv 28. All 40 xss entries `@Disabled` (no yaml). Fix = emit+fire a return sink; then triage
+    FALSE half (`escape_for_html`/`html.escape`/`markupsafe.escape` sanitizers). **HOLD all ~89 xss until fixed.**
+
 ## Category → sink / CWE reference
 
 | category | CWE | typical sink pattern |

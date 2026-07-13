@@ -156,6 +156,25 @@ class PythonRuleEmitTest {
         assertTrue(all.isEmpty(), "expected zero emitted rules (subscript-store sink unsupported), got ${all.size}")
     }
 
+    @Test fun `return-value sink emits no sink (engine gap)`() {
+        // Reproducer for the xss / CWE-79 engine gap: the XSS sink is the returned HTTP response body
+        // (`RESPONSE += f'...{bar}...'; return RESPONSE`) — a bare `return $A`, not a call. A structural
+        // rule whose sink is `return $A` lowers the source fine but emits ZERO sinks: a return sink is a
+        // MethodExit edge to final-accept, and PythonTaintRuleGeneration errors on it ("Non method call
+        // sinks are not supported yet"). Sinks fire only at calls/attribute reads. So no structural rule
+        // can express OR fire on a return-value sink. When return sinks become expressible this flips
+        // (a SerializedPythonSink appears) — the signal to enable the @Disabled xss OWASP entries.
+        val all = emitAll("python-rules/return-sink.yaml")
+        assertTrue(
+            all.filterIsInstance<SerializedPythonSource>().isNotEmpty(),
+            "source `\$A = source(...)` should still lower",
+        )
+        assertTrue(
+            all.filterIsInstance<SerializedPythonSink>().isEmpty(),
+            "expected zero emitted sinks (return-value sink unsupported), got ${all.filterIsInstance<SerializedPythonSink>().size}",
+        )
+    }
+
     @Test fun `subscript-assignment source binds the metavar to the result element`() {
         // `$A = source()[0] ... sink($A)`: the metavar assignment must NOT drop the subscript's
         // element modifier. The source binds `$A` to `Result[*]` (the element), exactly like the
