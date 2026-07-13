@@ -39,24 +39,38 @@ fixes accumulate cleanly.
   next session in a fresh worktree off `saloed/python-support`.**
 - **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
   redirect (34), codeinj (53), trustbound (37, all `@Disabled` — store-sink gap inv 28),
-  deserialization (54), **pathtraver batch 1 of ~4 (46 of 168)**. Each entry has a hand-written rule +
+  deserialization (54), **pathtraver COMPLETE (168, batches 1–4)**, **xpathi COMPLETE (186, batches 1–5)**,
+  **xss batch 1 (40, all `@Disabled` — return-value-sink gap inv 35)**. Each entry has a hand-written rule +
   hardcoded ground-truth `@Test`; unfixable FALSE entries are `@Disabled` with a one-line reason. OWASP
-  suite currently **317 tests: 198 pass / 0 fail / 119 skipped**. Per-round: codeinj 26+27
-  (inv 27/16/18/19/20); trustbound 0+37 (inv 28); deserialization 46+8 (inv 20/16/18/19); pathtraver b1
-  26+20 (inv 16/18/19/20/23).
-- **Next batch: `pathtraver` batch 2** — IDs from ~00356 onward; ~122 of 168 remain (run in ~3 more batches
-  of ~40). Then xpathi (186, `$T.xpath($Q)`/`find($Q)` call sink). `xss` (89) after — entangled with
-  char-rebuild sanitizer modeling (inv 29). trustbound stays blocked (inv 28). Structural-only
-  weakrand/hash/securecookie deferred (discuss first).
+  suite currently **665 tests: 366 pass / 0 fail / 299 skipped**. pathtraver b2/b3/b4 = 18+18+18 active
+  (inv 16/18/19/20/23/30/33) + 22/23/22/6 `@Disabled`; xpathi b1–b5 = 14+18+17+18+22 active
+  (inv 34 sink; 16/18/19/20/23 limits) — high `@Disabled` from replace-not-cleaner + StringIO drop (inv 34);
+  xss b1 = 0 active, all 40 `@Disabled` (inv 35).
+- **Next batch: NONE runnable without an engine phase.** xss (89) is BLOCKED (inv 35 return-value-sink):
+  ~49 xss entries HELD (do not author doomed `@Disabled` stubs). trustbound (37) BLOCKED (inv 28). Only
+  remaining categories are structural-only weakrand (326) / hash (151) / securecookie (39) — **discuss
+  before investing**. **Recommended: a dedicated engine phase for inv 28 (store-sink) + inv 35
+  (return-value-sink)** — together they unblock trustbound (37) + xss (89), high leverage. This branch:
+  `owasp-pathtraver-b2-work` (off `saloed/python-support` tip `1a5a8ac48`); worktree
+  `/home/pvl/folder/projects/explyt/opentaint-owasp-pt2`. Untracked `core/opentaint-sast-test-util` must be
+  copied into any fresh worktree off this branch for gradle to configure.
 - **RESOLVED this session:** **inv 29** (char-rebuild NextIter drop) — per-entry workaround: deepen the
   collection source one `[...]` (`getlist(...)[...][...]` → `Result[*][*]`) so char-level taint survives;
   per-entry SAFE, NEVER where the char-rebuild is a real sanitizer (xss). **inv 31** (read_text
   "Entry point not found") — engine fix `a4d733729` (`ClosureAnalyzer` treated unresolved free names as
   closure captures); the 6 read_text entries now pass.
 - **Open engine gaps (escalated, deferred to a later engine phase; each has a reproducer/tripwire):**
-  - **inv 28** (highest leverage) — subscript-STORE sinks unsupported → all 37 trustbound `@Disabled`.
+  - **inv 35** (highest leverage) — return-value sinks unsupported → all 89 xss `@Disabled`/held.
+    `return $A` lowers to a `Kind.MethodExit` accept-edge that `PythonTaintRuleGeneration.emitPythonTaintRules`
+    rejects (`error("Non method call sinks are not supported yet")`) → 0 sinks. Fix: emit + fire a
+    return-value sink (ContainsMark on the `Result`/returned position, checked at method-exit). Tripwire:
+    `PythonRuleEmitTest.return-value sink emits no sink` + `python-rules/return-sink.yaml`. Sibling of inv 28.
+  - **inv 28** — subscript-STORE sinks unsupported → all 37 trustbound `@Disabled`.
     Fix: emit + fire a store-sink for subscript/attr targets. Tripwire:
     `PythonRuleEmitTest.subscript-assignment sink emits no sink`.
+  - **inv 34** — xpathi FP/FN: `str.replace("'",…)` resolves to a passThrough and PROPAGATES (apostrophe-escape
+    sanitizer isn't a cleaner); `io.StringIO` write/getvalue DROPS taint (arg→receiver→result unexpressible as
+    a passThrough). ~40+ xpathi `@Disabled`. Reproducers = the `@Disabled` entries.
   - **inv 27** — receiver-position (`This`) cleaners clean only the `$PIR_SELF` may-alias → ~14 codeinj
     FALSE `@Disabled`. Fix: propagate receiver-cleans to may-aliases.
   - **inv 25/29** — a proper NextIter propagation fix would remove the manual `[...]` workaround + help xss.
