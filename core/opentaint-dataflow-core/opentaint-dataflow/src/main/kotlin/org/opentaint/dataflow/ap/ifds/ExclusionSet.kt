@@ -100,6 +100,11 @@ sealed interface ExclusionSet {
     }
 
     companion object {
+        fun create(set: PersistentIntSet?): ExclusionSet {
+            if (set.isNullOrEmpty()) return Empty
+            return Concrete(set.clone(), set.hashCode())
+        }
+
         fun create(accessors: IntList): ExclusionSet {
             if (accessors.isEmpty()) return Empty
 

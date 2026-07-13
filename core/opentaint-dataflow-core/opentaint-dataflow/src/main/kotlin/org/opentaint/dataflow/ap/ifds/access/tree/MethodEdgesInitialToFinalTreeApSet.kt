@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSet
+import org.opentaint.dataflow.util.PersistentIntSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -77,43 +78,61 @@ class MethodEdgesInitialToFinalTreeApSet(
         private val languageManager: LanguageManager,
         manager: TreeApManager,
     ): TreeSetWithCompression(maxInstIdx, manager) {
-        private val exclusions = arrayOfNulls<ExclusionSet>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
+        private val exclusions = arrayOfNulls<PersistentIntSet>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
 
         fun add(
             statement: CommonInst,
             accessWithExclusion: AccessWithExclusion<AccessTree.AccessNode>
         ): AccessWithExclusion<AccessTree.AccessNode>? {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentExclusion = exclusions[edgeSetIdx]
+            val addedExclusion = accessWithExclusion.exclusion.accessors()
 
-            if (currentExclusion == null) {
-                exclusions[edgeSetIdx] = accessWithExclusion.exclusion
+            val currentAccess = edges[edgeSetIdx]
+            if (currentAccess == null) {
+                exclusions[edgeSetIdx] = addedExclusion?.clone()
                 edges[edgeSetIdx] = internIfRequired(accessWithExclusion.access)
                 return accessWithExclusion
             }
 
-            val mergedExclusion = currentExclusion.union(accessWithExclusion.exclusion)
-            exclusions[edgeSetIdx] = mergedExclusion
+            val currentExclusion = exclusions[edgeSetIdx]
+            val exclusionModified = if (currentExclusion == null) {
+                if (addedExclusion == null) {
+                    false
+                } else {
+                    exclusions[edgeSetIdx] = addedExclusion.clone()
+                    true
+                }
+            } else {
+                val initial = currentExclusion.size
+                if (addedExclusion != null) {
+                    currentExclusion.addAll(addedExclusion)
+                }
+                initial != currentExclusion.size
+            }
 
-            val currentAccess = edges[edgeSetIdx]!!
             val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
             if (mergedAccess === currentAccess) {
-                if (mergedExclusion === currentExclusion) return null
+                if (!exclusionModified) return null
 
-                return AccessWithExclusion(mergedAccess, mergedExclusion)
+                return AccessWithExclusion(mergedAccess, ExclusionSet.create(exclusions[edgeSetIdx]))
             }
 
             edges[edgeSetIdx] = internIfRequired(mergedAccess)
             intern(edgeSetIdx)
 
-            return AccessWithExclusion(mergedAccess, mergedExclusion)
+            return AccessWithExclusion(mergedAccess, ExclusionSet.create(exclusions[edgeSetIdx]))
         }
 
         fun allApAtStatement(dst: MutableList<AccessWithExclusion<AccessTree.AccessNode>>, statement: CommonInst) {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentExclusion = exclusions[edgeSetIdx] ?: return
             val access = edges[edgeSetIdx] ?: return
-            dst += AccessWithExclusion(access, currentExclusion)
+            val currentExclusion = exclusions[edgeSetIdx]
+            dst += AccessWithExclusion(access, ExclusionSet.create(currentExclusion))
+        }
+
+        fun ExclusionSet.accessors(): PersistentIntSet? {
+            if (this !is ExclusionSet.Concrete) return null
+            return set
         }
     }
 }
