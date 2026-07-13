@@ -4,73 +4,67 @@ description: Run an OpenTaint scan on project and produces the SARIF report. Use
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.3"
 ---
 
 # Skill: Run Scan
 
-Run an OpenTaint scan over a project and collect results
+Run an OpenTaint scan over the project model and collect its findings
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Target `<model-dir>` / `<project-src>` — pre-compiled model or source project directory. Default: model at `.opentaint/project`
-- Ruleset `<rules-dir>` — Default: `builtin` plus `.opentaint/rules` if present
-- Rule IDs `<full-id>` (optional) — full IDs to restrict the scan to, omit to run all loaded rules
-- SARIF output `<report.sarif>` — Default: `.opentaint/results/report.sarif`
-- PassThrough config `<config-dir>` (optional) — a passThrough YAML file or a directory of them. Default: `.opentaint/pass-through`
-- Dataflow approximations directory `<approx-dir>` (optional) — Default: `.opentaint/dataflow`
-- Memory bound `<max-memory>` (optional) — a `--max-memory` value (e.g. `16G`) to run with from the first attempt. Default: unset (engine default `8G`)
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `rule-ids` (optional) — full rule IDs to restrict the scan to
+- `max-memory` (optional) — a `--max-memory` value to run scan with. Default: unset (engine default `8G`)
 
 ## Workflow
 
-Point at the code either way: a source project (CLI compiles it) as the positional `scan <project-src>`, or a pre-built model via `--project-model <model-dir>`. If project model provided prefer using it instead of source project
+### 1. Run the scan
+
+Scan the pre-built model at `.opentaint/project`. Write the report to `.opentaint/results/report.sarif` and load both the built-in ruleset and the project's own rules under `.opentaint/rules`:
 
 ```bash
-opentaint scan --project-model <model-dir> \
-  -o <report.sarif> \
-  --ruleset builtin --ruleset <rules-dir> \
+opentaint scan --project-model .opentaint/project \
+  -o .opentaint/results/report.sarif \
+  --ruleset builtin --ruleset .opentaint/rules \
   --track-external-methods
 ```
 
-- `--rule-id <full-id>` — restrict to specific rules (repeatable); omit to run all loaded rules
-- `--passthrough-approximations <config-dir>` — apply passThrough configs from a YAML file or a directory of them (OVERRIDE: merged with built-ins at the rule level, a provided rule overrides a built-in only when it matches one; repeatable)
-- `--dataflow-approximations <approx-dir>` — apply code-based approximations (Java sources, auto-compiled; or pre-compiled `.class` dirs, passed through as-is)
-- `--max-memory <max-memory>` — raise the memory bound; pass it when the caller gave you `<max-memory>`
+- `--rule-id <full-id>` — restrict to specific rules (repeatable, one per input rule ID); omit to run all loaded rules
+- `--passthrough-approximations .opentaint/pass-through` — add when that directory exists: passThrough configs override built-ins at the rule level, a provided rule overriding a built-in only when it matches one
+- `--dataflow-approximations .opentaint/dataflow` — add when that directory exists: code-based approximations (sources auto-compiled; pre-compiled `.class` dirs passed through as-is)
+
+Leave `--timeout` at the engine default (900s) — don't shorten it, and don't kill the scan when it runs past: the CLI ends the analysis itself and writes whatever SARIF it has, so let it exit gracefully even if that runs a little over.
+
+### 2. Retry once on out-of-memory
+
+Start at the 8G default. Only after an out-of-memory failure, retry once with `--max-memory 16G` — never higher, more RAM won't improve results. One bump, no further. When the caller passed `max-memory`, run at it from the first attempt instead
+
+### 3. Collect the report, or escalate
+
+If a SARIF was produced — even alongside a timeout or OOM message — take it as-is and ignore the error, the results are already there. When the scan instead fails at config-load on a malformed approximation (e.g. an unexpected position modifier, a duplicate approximation class), it is not out-of-memory: don't retry at 16G — report the engine error and the offending file under `.opentaint/pass-through`/`.opentaint/dataflow` per Output, locating it from the error message (grep the artifacts for the reported symbol when the error doesn't name the file). Only when no valid SARIF comes out even at 16G is it a plain failure: report it per Output with the setup and don't retry beyond that one 16G attempt
 
 ## Output
 
-Three files, all next to the SARIF report:
+Short and concise report of what was done
 
-1. `<report.sarif>` — findings with code-flow traces
-2. `dropped-external-methods.yaml` — methods where dataflow facts were killed (no approximation model) → candidates to approximate; possible source of false negatives
-3. `approximated-external-methods.yaml` — methods already modeled
+### Artifacts:
 
-## Key Flags
+All three sit next to the report under `.opentaint/results/`:
 
-| Flag | Purpose |
-|---|---|
-| `--project-model` | Pre-compiled model directory (omit to scan a source project via the positional arg) |
-| `--ruleset` | Rule directory (repeatable); `builtin` for built-ins |
-| `--rule-id` | Restrict to specific full rule IDs (repeatable) |
-| `--passthrough-approximations` | passThrough configs: a YAML file or directory of them (OVERRIDE, repeatable) |
-| `--dataflow-approximations` | Directory of Java sources or compiled classes (repeatable) |
-| `--track-external-methods` | Emit `dropped-external-methods.yaml` + `approximated-external-methods.yaml` next to the SARIF |
-| `--timeout` | Analysis timeout, a duration with a unit (engine default 900s) — see Memory and timeout |
-| `--max-memory` | Analyzer memory bound (engine default `8G`) — see Memory and timeout |
+- `.opentaint/results/report.sarif` — findings with code-flow traces
+- `.opentaint/results/dropped-external-methods.yaml` — external methods where dataflow facts were killed for lack of a model
+- `.opentaint/results/approximated-external-methods.yaml` — external methods already modeled
 
-## Memory and timeout
+### Summary:
 
-Read this before tuning either — the defaults are deliberate:
+- finding count, and dropped-vs-approximated external-method counts
+- whether memory was bumped to 16G
+- if the scan failed at config-load on a malformed approximation: the engine error and the offending file under `.opentaint/pass-through` or `.opentaint/dataflow` (located from the error), so it can be fixed and rescanned — this is not an out-of-memory failure and 16G won't help
+- if no SARIF came out even at 16G: that the scan is left failed, with the setup used (full scan command with ruleset, approximation dirs, model)
 
-- Leave `--timeout` at the engine default (900s). Don't set a shorter one, and don't externally kill the scan when it passes 900s — the CLI ends the analysis itself and writes whatever SARIF it has, so let it exit gracefully even if that runs a little past.
-- Cap memory at 16G — never higher; more RAM won't improve results. Start at the 8G default; raise to `--max-memory 16G` only after an out-of-memory failure (or run at 16G from the first attempt when the caller passed `<max-memory>`). One bump, no further.
-- If a SARIF was produced — even alongside a timeout or OOM message — take it as-is and ignore the error; the results are already there.
-- Only when no valid SARIF comes out even at 16G is it a real failure: report it to the caller with the setup (ruleset, approximation dirs, model) for documentation. Don't retry beyond that one 16G attempt.
+## Constraints
 
-## Gotchas
-
-- The project model is generated by `opentaint` — never hand-edit `project.yaml` or any file under the model dir to change scan results; if the model is wrong, rebuild it (build-project), don't patch it
-- Paths fall back to the `.opentaint/` layout when the caller omits them; the caller can override any of them
-- Duplicate approximation targeting the same class as a built-in errors out
+- Never hand-edit the project model to change scan results — this skill only reads it. If the model is wrong, rebuild it at the model stage rather than patching `project.yaml` or anything under it

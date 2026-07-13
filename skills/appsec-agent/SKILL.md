@@ -1,289 +1,183 @@
 ---
 name: appsec-agent
-description: Run an end-to-end application-security analysis on a JVM project with OpenTaint — build, scan, model missing library methods, triage, and confirm vulnerabilities. Use when the user asks to find vulnerabilities, run SAST, or scan a Java/Kotlin app for security issues
+description: Run an end-to-end application-security analysis on a project with OpenTaint — build, scan, model missing library methods, triage, and confirm real vulnerabilities. Use when the user asks to find vulnerabilities, run SAST, or scan an app for security issues
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.3"
 ---
 
 # AppSec Agent
 
-Orchestrate an end-to-end OpenTaint analysis of a JVM project: run the workflow the user picks by dispatching each step to a subagent that loads one leaf skill, verifying the artifact it returns, and tracking progress. The leaf work is never done here. OpenTaint is a dataflow (taint) SAST analyzer; the goal is real, confirmed vulnerabilities.
+You orchestrate an end-to-end security analysis of an application, built around the OpenTaint SAST. Following the workflow the user picks, you drive the creation of the project's scaffolding — rules and approximations — to surface findings and verify them. You only direct agents, handing each a short task; the real work is theirs, done through specialized skills.
 
-The run is one pipeline of a few steps, each gated by the chosen workflow; a step's detail lives in a reference loaded when you reach it, while what every workflow shares stays in this file. Default to the current directory when no target is named.
-
-OpenTaint's own artifacts default under one `.opentaint/` directory at the project root — models, rules, configs, approximations, test projects, results, tracking, PoCs, reports — which keeps a run self-contained and easy to clean up. Build tools, the app, and Docker still write their usual outputs (`build/`, `target/`, containers, …) where they always do; that's expected, not something to police.
+OpenTaint is a dataflow (taint) SAST — whole-program, interprocedural, field-sensitive alias analysis. It traces untrusted input from sources to dangerous sinks, and needs approximations of library methods wherever a call is opaque to it. The goal is confirmed vulnerabilities plus a set of artifacts specific to the project's dependencies, reusable on future runs — not raw findings. All of it lives in one self-contained `.opentaint/` directory at the project root.
 
 ## Setup
 
-Before anything else, confirm `opentaint` is on PATH (`command -v opentaint` / `opentaint --version`). If it's missing, don't proceed silently — tell the user and ask to install it, offering the command for their platform; run an install only on explicit confirmation:
+### 1. Confirm the toolchain
 
-macOS / Linux — try in order:
+Confirm `opentaint` is on PATH with `opentaint -v`. If it's missing, don't proceed silently — tell the user and offer the install command for their platform, run an install only on explicit confirmation:
 
-1. Homebrew — `brew install --cask seqra/tap/opentaint`
-2. npm — `npm install -g @seqra/opentaint`
-3. shell script — `curl -fsSL https://opentaint.org/install.sh | bash`
+- macOS / Linux, in order: `brew install --cask seqra/tap/opentaint` · `npm install -g @seqra/opentaint` · `curl -fsSL https://opentaint.org/install.sh | bash`
+- Windows, in order: `npm install -g @seqra/opentaint` · `irm https://opentaint.org/install.ps1 | iex`
 
-Windows — try in order:
+After installing, run `opentaint health` to confirm everything's resolved.
 
-1. npm — `npm install -g @seqra/opentaint`
-2. PowerShell script — `irm https://opentaint.org/install.ps1 | iex`
+### 2. Determine the language
 
-After installing, run `opentaint health` to confirm the autobuilder/analyzer/rules/runtime resolve.
+Read the project's build files to fix the target language — Maven/Gradle → java, `go.mod` → go, and so on. You pass it to every language-coupled dispatch, the leaf reads its own reference for it.
 
-## Choose a workflow
+### 3. Choose the workflow
 
-Begin by asking the user both things in a single AskUserQuestion call — two questions, scan level and triage level, presented together (never one call then another). Record the chosen `scan_level` and `triage_level` in `state.yaml`:
+Ask the user both levels in a single question tool call — two questions, presented together:
 
 1. Scan level — `lite` · `normal` · `deep`
-   - lite — build + scan with existing rules
-   - normal — + approximation iteration
-   - deep — + discover project-used sources, sinks from the taint frontier, and new lib rules
-   - recommend by what's on disk: a cold start (no usable `.opentaint` artifacts) → deep, to build full coverage; a prior run's artifacts already present (model, rules, approximations) → lite, to reuse that coverage
+   - lite — build + scan (expected, when there are already existing artifacts)
+   - normal — build + scan + custom approximations
+   - deep — build + scan + custom approximations + custom rules
+   - recommend by what's on disk: a cold start (no `.opentaint` artifacts) → deep; a prior run's artifacts already present → lite
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
-   - dynamic — + a PoC per confirmed TP. This launches a few test services on the user's current machine (local instances and ports); they're torn down at the end of the run. Make that clear in the option
+   - dynamic — static + PoC per confirmed TP. This launches a few test services on the user's machine (local instances and ports), torn down at the end of the run. Make that clear in the option
 
-The run is one fixed pipeline; the two levels decide which steps execute. Walk it top to bottom — when you reach a step your levels include, load its reference and do it; skip the bracketed steps your levels omit. Don't load a step's reference until you reach it.
+### 4. Bootstrap
 
-```
-build → references/build.md | every run
-discover sources + source rules → references/source-rules.md | deep scan
-scan → references/scan.md | every run
-approximation iteration → references/approximations.md | normal, deep scan
-author sinks + assemble + rescan  → references/sink-rules.md | deep scan
-triage (generate findings + classify) → references/triage.md | every run
-PoC + assemble vulnerabilities → references/poc.md | dynamic triage
+Seed the run state and the working tree with the chosen levels and language:
+
+```bash
+uv run scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-From inside any step, when a rule or approximation won't behave, load references/escalation.md
+It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree. Then `uv run scripts/get_status.py --full` to see the full pipeline setup and start walking it.
 
-## Delegation
+## Workflow
 
-Every block's work runs in subagents. Dispatch each with this template — one `Inputs` line per input the skill lists:
+The run is one fixed pipeline, two levels decide which stages execute. `get_status.py` reports the current stage (based on tracking) and its exact tasks for your setup — which stages are in scope, and where you stand — so you never track position by hand. Walk the pipeline top to bottom: at the stage it names, load that stage's reference and do it. Don't load a stage's reference until you reach it.
 
 ```
-Invoke the Skill tool with skill_id=<skill-name> first, then follow its instructions precisely
+build → references/build.md
+discover sources → references/source-rules.md
+scan → references/scan.md
+approximation iteration → references/approximations.md
+author sinks + rules assemble → references/sink-rules.md
+triage → references/triage.md
+PoC + assemble vulnerabilities → references/poc.md
+```
+
+From inside any stage, when a rule or approximation won't behave, load references/escalation.md.
+
+Reuse over regeneration. The `.opentaint/` tree is long-lived — on resume or a re-invocation over changed code, reuse the `DONE` stages' artifacts and re-derive only what the current code forces. A method already built is trusted and never re-derived; existing rules and approximations apply on every scan.
+
+### Scripts
+
+Two bundled helpers carry every deterministic step, so you neither reason it out nor read files by hand. Run both from the project root.
+
+get_status.py — read-only, your source of pipeline state, run it freely:
+
+- `uv run scripts/get_status.py` — the current stage and the exact tasks for it: the plans, batches, units, or findings to hand out, each named in full. Run it at a stage's gate or during it (to get an overview of what's left), then dispatch what it lists
+- `uv run scripts/get_status.py --full` — every in-scope phase status, plus the run's levels, language, model commit, and agent caps. Run it at run start or on resume
+
+generate.py — writes plans/batches/state, run only at a fan-out join or at bootstrap:
+
+- `uv run scripts/generate.py partition analyze` — dropped external methods → per-batch approximation plans
+- `uv run scripts/generate.py partition discover` — coverage.yaml's project-used members → balanced discover plans
+- `uv run scripts/generate.py mark-safe` — discover plans' verdicts → the classification.yaml ledger, then prunes the consumed plans
+- `uv run scripts/generate.py merge-skipped` — every batch's skipped/engine_issues → approximations/skipped.yaml, then prunes the consumed plans
+- `uv run scripts/generate.py findings` — the scan's SARIF (`results/report.sarif`) → per-rule finding files (idempotent; a rescan adds new result hashes without clobbering a triaged verdict)
+
+Each stage's reference names the script command for that stage.
+
+## Dispatching
+
+Every stage's work runs in subagents. Dispatch each with this template — the Skill-load line plus only the inputs its skill lists (all required per reference), the rest is already in the subagent's skill:
+
+```
+Invoke the Skill <skill-name> first, then follow its instructions precisely
 Inputs:
-  <name>: <resolved path or value>
-Return:
-  <the skill's output if present>
+  <id-or-flag>: <value>
 ```
 
-Universal rules — every dispatch, every workflow:
+A subagent inherits your working directory, so omit `project-root` when it's your current directory.
 
-- open the prompt with the Skill-load line — the subagent has none of this context until it loads its skill
-- pass resolved paths (the `<name>`-keyed `.opentaint/...` paths from Working directory layout), never the placeholder tokens
-- confirm the named output artifact exists and looks right (present, non-empty, expected counts) — a quick check is enough; trust the subagent's summary for contents, don't re-read full SARIF bodies or code-flows it already digested
-- only run-scan scans the main project model; rule/approximation/triage subagents don't — the one exception is a create-rule agent running a diagnostic `--track-external-methods` scan of its own test project (never the main model)
-- only you write `.opentaint/vulnerabilities.md` and `.opentaint/tracking/state.yaml`
-- never swap the project model mid-analysis; every run uses the same model
-- never triage yourself — verdicts come only from analyze-findings subagents
+Universal rules:
 
-Orchestration practices:
+- trust the returned summary. Confirm a step landed with `get_status.py`, not by opening the artifact; open a file yourself only when its output doesn't resolve the situation
+- don't read a leaf skill's contents unless you genuinely need to
 
-- Units fan out in parallel — independent `<name>` paths, no races
-- the sole sequential exception is PoC (shared app state and ports); see references/poc.md
-- Steps within a unit are sequential via the artifact on disk — dispatch step N only after step N−1's named artifact exists; never bundle steps into one dispatch
-- write `state.yaml` at each fan-out join — a phase flips to `done` only once every unit's artifact exists on disk
-- delete the `test-compiled/` models at the end of the stage that built them (rules, approximations) — large and unused once the tests pass
-- delete the disposable partition plans once their fan-out group has finished and its durable output exists — `rules/plans/` after `mark-safe` records the ledger, `approximations/plans/` after the analyze agents have written their batch files; partition re-derives them on the next run, so they're regenerable clutter
-- never let one unit halt the run — a rule or approximation that won't work after its skill's retries and the escalation flow (references/escalation.md) is recorded and skipped, not blocked on: note the cause in the unit's tracking (and file it with report-analyzer-issue when the cause is the engine), leave its stage un-`done`, and carry on through to triage. A skipped unit costs coverage (a possible false negative), never the run. Only a blocker to every remaining step (`opentaint` missing, no project model at all) stops the workflow
+Fan-out and caps:
 
-## Resource limits
+- `get_status.py --full` prints the caps in its header — `global` (any agent) and `heavy` (the RAM-heavy ones: build-project, run-scan, create-rule, create-dataflow-approximation, sometimes debug-rule). Never dispatch more than the cap at once; drop `global` by 1 for the rest of the run each time an agent comes back rate-limited
+- units fan out in parallel — partition hands each agent a disjoint slice, so there are no races. PoC generation is the one sequential exception (shared app state and ports)
+- block on the harness's native agent-completion signal instead of busy-waiting with filler turns or polling commands, dispatching the next queued unit as each slot frees so you never idle below the cap
+- never bundle steps into one dispatch — a step usually depends on the artifact the previous one wrote
+- delete the `test-compiled/` models at the end of the stage that built them (rules, approximations)
+- never let one unit halt the run — a rule or approximation that won't work after its skill's retries and escalation is recorded and skipped, not blocked on (the leaf records the cause in the unit's `blocker`). A skipped unit costs coverage, never the run; only a blocker to every remaining step (e.g. `opentaint` missing) stops the workflow
 
-Two limits apply to every fan-out — a global one against rate-limiting, and a tighter one against memory:
+## Working tree and tracking
 
-- Global cap of 10 — never dispatch more than 10 subagents at once, of any kind. Bursting more reliably trips transient rate-limiting. It binds light and heavy agents alike. Treat 10 as a starting ceiling: each time a subagent comes back rate-limited, drop the cap by 1 for the rest of the run
-- RAM-heavy agents each spawn a heavy `opentaint` JVM, so they take a tighter memory bound on top of the global cap. The heavy set is exactly `build-project`, `run-scan`, `create-rule`, `create-dataflow-approximation`, and sometimes `debug-rule` (when it traces a real scan). Compute the bound at run start and never dispatch more than this many heavy subagents at once:
-  - cores — `nproc` (Linux) / `sysctl -n hw.ncpu` (macOS)
-  - free memory in GB — `free -g` (Linux, the `available` column) / `sysctl -n hw.memsize` ÷ 1024³ (macOS)
-  - `cap_heavy = max(1, min(cores, floor(free_GB / 2), 10))` — budget ~2 GB per concurrent JVM
-- Every other agent is not RAM-bound — discover-attack-surface, create-test-project (compiles once), triage-dependencies, analyze-external-methods, analyze-findings, create-pass-through-approximation, assemble-lib-rules, generate-poc. They're held only by the global cap of 10
-
-It's machine state, not run state — recompute on resume, don't track it. PoC is already sequential.
-
-## State and resumption
-
-You are the only writer of `.opentaint/tracking/state.yaml` — it records the chosen levels, the commit the current project model was built from, and every phase's status, written after each fan-out join. When the chosen levels differ from the recorded ones, rewrite the `phases` map from scratch for the new levels — don't carry the prior type's entries over; a phase the new levels don't include must be absent, not left `done`.
-
-Append one entry to `tracking/history.yaml` when a fresh run starts (model commit + levels), not on resume — a short audit log of what ran.
-
-On start, and after any compaction or re-invocation, reconstruct position from the artifacts on disk before doing anything. Read `state.yaml` and the `tracking/` tree, then tell two situations apart by the phase statuses:
-
-- Resuming an interrupted run — a phase is `in_progress` or left pending mid-pipeline. Skip the phases already `done` and continue from the stop point, reusing their artifacts as-is: `project.yaml` → build; every flagged package's used members verdicted in `classification.yaml` → discover; a source/sink unit's `tests_passing: done` → that package's lib rules, and a `rules/joins/<class>.yaml` per vuln class → joins assembled; `report.sarif` → scan; an approximation batch whose every `passthrough`/`dataflow` entry is in `build.done` → built, an entry not yet there → still to build; a finding with `verdict` set → triaged; with `poc` set → PoC'd
-- Re-invoking a completed run — every phase the chosen levels cover was already `done` (a re-run over evolved code, or a new level pair over a prior run's output, e.g. lite after deep). Do NOT skip the pipeline because last run's artifacts exist — re-enter build, scan and triage in reuse mode: build reuses or rebuilds the model (references/build.md); scan re-runs applying every existing rule and approximation (references/scan.md); triage re-runs and reconciles verdicts (references/triage.md). Set each covered phase back to `pending` as you re-enter it, and apply Reuse over regeneration (below) to every code-coupled artifact
-- detect new work from artifacts, not memory: finding files with `verdict: pending` (a fresh or reset scan) → triage; `check-coverage.py` reporting any UNCOVERED method (dropped, not yet in a batch bucket or `skipped.yaml`) → approximations
-
-### Reuse over regeneration
-
-The `.opentaint/` tree is long-lived — a run is as often a re-entry over a project that moved on (new commits, new dependencies) as a fresh start, and any level may run over another's output. Reuse what's there; re-derive only what the current code forces. Two trust classes decide how each artifact is reused, regardless of the chosen levels:
-
-- Trusted — the function approximations (`pass-through/`, `dataflow/`, and their `approximations/*` batch files). A built method (in `build.done`) is left untouched; a working model needs no re-validation. Add only what the current scan newly drops — never re-derive an approximation that already works, and apply every existing one on every scan (references/scan.md)
-- Code-coupled — everything that mirrors the current sources: the project model, the dependency/usage scope, the lib rules and joins, the findings. Reuse each as a baseline, then re-validate against the current code — the model rebuilds when sources changed; a newly-added dependency or a changed project usage reopens its package for expanded or new rules; a finding whose triaged flow still holds keeps its verdict. Refine in place; author from scratch only for genuinely new surface
-
-Findings carry their verdict across rescans. The SARIF→finding script carries verdicts by exact hash; when a hash shifts but the vulnerability is unchanged (code moved, flow nudged), it surfaces the new results as a fresh `pending` finding under the same rule — match those against the rule's already-triaged findings by flow and inherit the verdict, rather than re-triaging (references/triage.md)
-
-## Tracking layout
-
-The single source of truth for the tracking schema; each skill writes only its own slice (named in its block reference). The `#` comments in the YAML below are for understanding only — never copy them into produced files.
+Everything a run produces lives under one `.opentaint/` tree at the project root — fully self-contained.
 
 ```
-.opentaint/tracking/
-  state.yaml
-  coverage.yaml                           # flat list of packages triage flagged to drill for sources (deep)
-  rules/plans/<id>.yaml                   # discover fan-out plan (source recorded by agents); partition-generated, disposable once mark-safe has run (deep)
-  rules/classification.yaml               # durable source/safe verdict ledger, accumulated by mark-safe across runs; the next discover partition skips its members (deep)
-  rules/sources/<package-kebab>.yaml      # per-package source unit — discover-attack-surface writes sources, create-rule fills rule_id (deep)
-  rules/sinks/<package-kebab>.yaml        # per-package sink unit — analyze-external-methods writes sinks, create-rule fills rule_id (deep)
-  rules/joins/<class>.yaml                # per-vuln-class join tally — assemble-lib-rules (deep)
-  approximations/plans/<batch>.yaml       # analyze fan-out — one batch per plan (by library root, package-atomic), entries carry signature; partition-generated, disposable once the analyze group has written its batch files (normal/deep)
-  findings/<finding_name>.yaml
-  approximations/<batch>.yaml
-  approximations/skipped.yaml
-  poc-servers.yaml                        # generate-poc — instances it started; you reap them at end of PoC phase
-  history.yaml
+.opentaint/
+  project/                            # built project model
+  rules/<lang>/{lib/…,security}/      # custom lib source/sink defs + join rules
+  pass-through/<package-kebab>.yaml   # passThrough approximation configs
+  dataflow/<batch>/                   # code-based approximation sources, one dir per batch
+  test-projects/<name>/               # per-unit test project sources
+  test-compiled/<name>/               # per-unit compiled test model (delete when its stage ends)
+  test-results/<name>/                # per-unit test outputs
+  results/report.sarif                       # the scan report
+  results/dropped-external-methods.yaml      # taint-killing methods to approximate
+  results/approximated-external-methods.yaml # modeled external methods (built-in or custom)
+  pocs/<name>.py                      # PoC scripts, one per finding
+  issues/<slug>.md                    # engine-issue reports
+  vulnerabilities.md                  # final report written by you at the end of the run
+  tracking/                           # run state (below)
 ```
 
-history.yaml — append-only audit log, newest last:
+Each per-artifact file carries its own schema in the leaf that owns it, and `get_status.py` reads them for you — you neither restate nor re-open them. The tracking tree, with its writer:
 
-```yaml
-runs:
-  - commit: a1b2c3d4
-    type: deep/dynamic
+```
+tracking/
+  state.yaml                          # you: the run's knobs
+  history.yaml                        # generate.py init: append-only audit log
+  coverage.yaml                       # triage-dependencies: packages to drill
+  rules/plans/<id>.yaml               # partition discover: disposable, pruned at mark-safe
+  rules/classification.yaml           # mark-safe: durable source/safe ledger
+  rules/sources|sinks/<pkg>.yaml      # per-package source / sink unit
+  rules/joins/<class>.yaml            # per-vuln-class join tally
+  approximations/plans/<batch>.yaml   # partition analyze: disposable, pruned at merge-skipped
+  approximations/<batch>.yaml         # per-batch method classification + build
+  approximations/skipped.yaml         # merge-skipped: merged non-carriers + engine_issues
+  findings/<name>.yaml                # one per finding, seeded by the findings script
+  poc-servers.yaml                    # generate-poc: instances it started; you reap them
 ```
 
-state.yaml — `model_commit` is the model's HEAD, null when source is dirty or there's no repo (references/build.md); `build_jdk` the JDK the build needs; `max_memory` 16G once an OOM forces it (references/scan.md):
+state.yaml — the run's knobs, all you keep here. `model_commit` the full commit hash the model reflects, or null when built from a source-dirty tree (set at the build stage); `build_jdk` the toolchain the build needed; `max_memory` `16G` once an OOM forces it. No phase map — `get_status.py` derives every phase from the artifacts:
 
 ```yaml
 scan_level: deep
 triage_level: dynamic
+language: java
 model_commit: a1b2c3d4
 build_jdk: null
 max_memory: null
-phases:
-  build: done
-  discover: done
-  source_rules: done
-  scan: done
-  approximations: in_progress
-  sink_rules: pending
-  triage: pending
-  poc: pending
 ```
 
-coverage.yaml — written by triage-dependencies (deep): a flat list of the packages flagged to drill for sources. No status — a package stops being drilled once the discover partition finds all its used members verdicted in `classification.yaml`; a package fully covered by built-ins simply has its members marked `safe` there:
-
-```yaml
-packages:
-  - org.springframework.web.socket
-  - org.springframework.kafka
-```
-
-findings/<finding_name>.yaml — created by the SARIF→finding script; `verdict`/`notes` by analyze-findings; `poc`/`poc_script` by generate-poc:
-
-```yaml
-finding_name: brave-hopper
-sarif_hashes: [<hash>, ...]
-rule_id: java/security/sqli.yaml:sqli
-verdict: pending
-notes: >
-  <analyzer report>
-poc: pending
-poc_script: null
-```
-
-rules/sources/<package-kebab>.yaml — per-package source unit; `dependencies` + `sources` by discover-attack-surface, `test_project` by create-test-project, each source's `rule_id` + `tests_passing` by create-rule. `rule_id` is the created source rule ref, or a built-in ref when create-rule referenced one instead of authoring. Package = filename (not stored):
-
-```yaml
-dependencies: [org.springframework:spring-webflux:6.1.0]
-sources:
-  - { method: org.springframework.web.reactive.function.server.ServerRequest#bodyToMono, note: request body, rule_id: null }
-stages:
-  test_project: pending
-  tests_passing: pending
-```
-
-rules/sinks/<package-kebab>.yaml — per-package sink unit; `dependencies` + `sinks` by analyze-external-methods (deep, from the taint frontier), `test_project` by create-test-project, each sink's `rule_id` + `tests_passing` by create-rule. Each sink carries its own `vuln_class` (one package can host several); the tainted arg is not pinned — create-rule finds it from context:
-
-```yaml
-dependencies: [org.springframework:spring-webflux:6.1.0]
-sinks:
-  - { method: org.springframework.web.reactive.function.client.WebClient$RequestBodyUriSpec#uri, vuln_class: ssrf, note: request to an untrusted URL, rule_id: null }
-stages:
-  test_project: pending
-  tests_passing: pending
-```
-
-rules/joins/<class>.yaml — one file per vuln class, written by assemble-lib-rules after the lib rules exist and verified by the main scan. A join references exactly ONE sink rule, so a class with several sinks holds several joins. The sink is a plain ref (no new/builtin tag — assemble derives builtin-vs-created from the loaded builtin ruleset and wires accordingly: created sink ← all sources, builtin sink ← created sources only). Class = filename (not stored):
-
-```yaml
-sources:
-  - java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-  - java/lib/spring/webflux-request-source.yaml#webflux-request-source
-joins:
-  - rule_id: java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml:ssrf-webclient-ssrf-sink-lib-ext
-    sink: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
-  - rule_id: java/security/ssrf-java-ssrf-sink-lib-ext.yaml:ssrf-java-ssrf-sink-lib-ext
-    sink: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
-stages:
-  written: done
-  verified: pending
-```
-
-approximations/<batch>.yaml — the classification buckets written by analyze-external-methods, the `build` block by the build skills; `<batch>` is the plan's filename stem. Each entry carries `signature` (overload-precise); a passthrough entry a `note` (every position taint flows through, build settles the exact edges), a skipped/engine_issues entry a `reason`. Build appends finished `{method, signature}` to `build.done`, and dataflow's per-class test-project gate to `build.test_projects`; `dependencies` lists any GAVs a dataflow test project needs:
-
-```yaml
-passthrough:
-  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;", note: "this -> result" }
-dataflow:
-  - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
-skipped:
-  - { method: "org.slf4j.Logger#info", reason: "void side-effect" }
-engine_issues: []
-dependencies: []
-build:
-  test_projects: {}
-  done: []
-```
-
-approximations/skipped.yaml — `scripts/merge-skipped.py` rebuilds this from every batch file's `skipped` and `engine_issues` buckets (union). `methods` are non-carriers left to the engine's default — predicates, void side-effects, toString; `engine_issues` are carriers the engine can't model, escalated and filed with report-analyzer-issue:
-
-```yaml
-methods:
-  - "org.slf4j.Logger#info"
-engine_issues: []
-```
-
-## Working directory layout
-
-<project-root>/.opentaint/
-  project/                      # built project model (project.yaml)
-  rules/java/{lib/generic,lib/spring,security}/   # custom rules
-  pass-through/<package-kebab>.yaml   # passThrough approximation configs, one per package
-  dataflow/<class-kebab>/       # code-based (dataflow) approximation sources, one per target class
-  test-projects/<name>/         # per-unit test project sources; a rule unit holds sinks/ and sources/ sub-projects, each with a test-rules/ (the generic markers + that side's test join — test-only, never loaded by the main scan)
-  test-compiled/<name>/         # per-unit compiled test model (a rule unit: sinks/ and sources/ models)
-  test-results/<name>/          # per-unit test outputs
-  results/
-    report.sarif
-    dropped-external-methods.yaml       # taint-killing methods → approximate
-    approximated-external-methods.yaml  # already modeled
-  pocs/<finding_name>.py        # PoC scripts
-  issues/<slug>.md              # engine-issue reports
-  tracking/                     # see Tracking layout
-  vulnerabilities.md            # you assemble this from the TP findings (PoC-confirmed on dynamic runs)
+The `plans/` are disposable, pruned at their join, never hand-edited. Every other tracking file is owned by the leaf or script noted beside it — consult a stage's reference or `get_status.py`, not this section, for a field.
 
 ## Key constraints
 
+- read pipeline state through `get_status.py`, not by hand — don't re-derive it with glob/grep/`python3 -c`/yaml scans over `.opentaint/tracking`, `results`, or the `*.yaml`. If its output doesn't settle the question, re-run `get_status.py --full` before opening any file; hand-scanning the tree is what balloons the run's context
+- don't author or edit a tracking file a script or subagent owns — approximation batches, source/sink units, findings, classification, plans, joins. Your only direct writes are `.opentaint/vulnerabilities.md` and `state.yaml` knob updates (`model_commit`, `build_jdk`, `max_memory`); `state.yaml` and `history.yaml` themselves are seeded by `generate.py init`, every join-merge by a `generate.py` command
+- never assign a finding verdict yourself — verdicts come only from analyze-findings subagents
+- never swap the project model mid-analysis; every scan in a single run uses the same untouched model
 - the project model is generated by `opentaint` — never hand-edit `project.yaml` or any file under the model dir; to change what's analyzed, fix the build and rebuild (references/build.md), never patch the model
-- the engine models stored / second-order injection (data persisted then read back) on its own — no source, sink-side, or propagator needs to be added for the store→read path
-- the engine is path-insensitive — it doesn't reason about which control-flow branch a value arrived on; don't expect a finding to hinge on a specific path
-- the engine drops constants/literals as an optimization — a value that is a compile-time constant (any type) carries no taint, so a source or carrier whose output is only a constant introduces nothing; model only genuinely computed/attacker-derived data
+- the engine drops constants/literals as an optimization — a value that is a compile-time constant carries no taint, so a source or carrier whose output is only a constant introduces nothing
 - approximations target methods the analyzer can't see through: external library methods, and an application-internal method only when it surfaces in `dropped-external-methods.yaml` (its body was opaque — native, abstract, generated) — never one the analyzer already analyzes from source
 - `--passthrough-approximations` merges with built-ins at the rule level; a provided rule overrides a built-in only when it matches one already there — it does not replace the built-in set
 - both approximation dir flags walk the tree recursively, so the final scan points at the parent dirs and applies every unit
 - `--rule-id` drops every rule not named, including library `refs` — list them all when restricting
-- a custom DATAFLOW approximation targeting a class that already has a built-in dataflow approximation errors at load (one class, one approximation); passThrough configs never error this way — they merge at the rule level (see above)
-- a custom dataflow approximation overrides a passThrough for the same method — the passThrough→dataflow fallback when a passThrough won't converge; remove that method's passThrough config when re-planning it as dataflow, before the dataflow one is tested or scanned, to avoid override issues
+- a custom dataflow approximation targeting a class that already has a built-in dataflow approximation errors at load; passThrough configs merge at the rule level
+- a custom dataflow approximation overrides a passThrough for the same method — the passThrough→dataflow fallback when a passThrough won't converge

@@ -1,90 +1,95 @@
 ---
 name: discover-attack-surface
-description: Analyze project-used members of dependency packages for potential taint sources not covered by the built-in rules. Use for the depth pass of source discovery, working a balanced plan of project-used members, after triage-dependencies flags the libraries
+description: Classify project-used dependency members and record the taint sources among them not covered by the built-in rules. Use for the source-discovery depth pass
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.3"
 ---
 
 # Skill: Discover Attack Surface
 
-Take one library the triage flagged, settle what the built-in source rules already cover for the package members this project uses, and write that project-used source plan — the untrusted-data sources actually relevant to this project — for the next phase to build. Sinks are not your job; they're found later from the taint frontier
+Work one assignment of project-used dependency members and pick out the taint sources among them — the methods where untrusted data first enters. The concrete inspection commands and value formats are language-specific — read `references/<language>.md` per Inputs and follow its numbered steps, which key to the ones below
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Plan `<plan>` — a partition plan (`tracking/rules/plans/<id>.yaml`) assigning the project-used members this agent classifies, grouped by scope; each member's owning package is its FQN's package
-- Dependency jars `<deps-dir>` — the project's resolved dependency jars, one per library. Default: `.opentaint/project/dependencies`
-- Project model `<model-dir>` — the built model. Default: `.opentaint/project`
-- Tracking directory `<tracking-dir>` — where the per-package source units and the verdict ledger live. Default: `.opentaint/tracking`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `language` (required) — target language for this project and language-specific instructions
+- `plan` (required) — path to this agent's partition plan `.opentaint/tracking/rules/plans/<id>.yaml`: the project-used members to classify
 
 ## Workflow
 
-The `<plan>` holds only members not classified in a prior run. Where a package already has a `rules/sources/<package-kebab>.yaml`, add to it rather than rewriting it, leave its existing entries and their `done` stages as-is.
-
 ### 1. Settle built-in coverage first
 
-Before planning anything, for each package the plan touches see what the built-in source rules already match for its members — browse the rules dir (`opentaint health --rules` prints its path) plus `.opentaint/rules`. This decides whether you write a source unit:
+Before anything, for each package the plan touches see what the built-in source rules already match for its members — browse the built-in rules dir at `opentaint health --rules`, plus the project's own (per language reference). This decides whether you write a source unit:
 
-- full — existing rules already match the project-used package sources → write no source unit and stop. Don't drill further
-- partial — existing rules match some project-used sources but miss others → plan only the missing used members
+- full — existing rules already match the project-used sources → write no unit, stop, don't drill further
+- partial — some project-used sources matched, others missed → plan only the missing used members
 - none — plan the package's project-used sources from scratch
 
 ### 2. Classify the plan's members
 
-The plan's members are the FQNs under its `scopes` map, the project-used scope already extracted — don't re-enumerate the package API. Find each package's jar in `<deps-dir>` to confirm the dependency identity and inspect signatures/docs while classifying (`unzip -l <jar> | grep <package-as-path>` confirms it owns the package). The bytecode list misses members reached through annotations, class literals, casts, reflection, dynamic proxies, framework dispatch, config strings, or generated code — inspect app source, dependency API/source, and framework config to classify the listed members and to add indirectly-reached ones the list can't show. Never disassemble the analyzer jar.
+The members are the FQNs under the plan's `scopes` — the project-used scope, already extracted, and only the members not yet classified in a prior run. Confirm each package's dependency identity and inspect its signatures/docs while classifying (per the language reference); read app source, dependency API/docs, and framework config to classify the listed members.
 
-Find the **sources** among them — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution and more): a method that *returns* attacker-controlled data. NOT a method that merely passes data it was handed along — that's a propagator the engine already handles, not a source. General, not class-tagged
+Find the sources among them — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution and more): a method that returns attacker-controlled data. NOT a method that merely passes along data it was handed — that's a propagator the engine already handles. General, not class-tagged.
 
-Better safe than sorry — when in doubt, record a borderline source rather than drop it: a false positive is filtered out later at the scan and triage stages, but a real one dropped here is a false negative the run can never recover. Note the doubt, and verify in the package jar when it's quick
+Better safe than sorry — when in doubt, record a borderline source rather than drop it: a false positive is filtered out later at the scan and triage stages, but a real one dropped here is a false negative the run can never recover. Note the doubt, and verify in the dependency when it's quick.
 
-Record every source you find under the `<plan>`'s `source` list — that's the only thing you write to the plan. The rest you leave: once all discover agents finish, the orchestrator's `mark-safe` script records every member no agent flagged a source as `safe` into the durable `rules/classification.yaml` ledger. That ledger (source + safe) is only what the next run's source partition excludes, never affects sink discovery
+### 3. Write the source units
 
-### 3. Write the rule plans
+Two writes, both per Tracking: record every source under the plan's top-level `source` list, and write each package's sources into its source unit. Always write the `source` list — an empty list when the plan yields no source — so the reconcile join can tell your finished plan from one whose agent never returned (a plan still carrying `source: null` is left for re-dispatch, not merged). Where a package already has a unit from a prior run, add to it rather than rewriting — leave its existing entries and stages as-is.
 
-For each package the plan touches, write its new sources into `<tracking-dir>/rules/sources/<package-kebab>.yaml` — the dependency GAV and each source as `{ method, note, rule_id: null }`: the FQN the plan listed, a few-word note on why it's untrusted, `rule_id` left for create-rule. `<package-kebab>` is the dotted package with `.` → `-` (the orchestrator passes the dotted name). Sinks are a separate unit analyze-external-methods writes — not here. The `coverage.yaml` drill-list is the orchestrator's — leave it to the caller
+### 4. Verify before returning
+
+Re-check the full plan against your classification: confirm every plan member is accounted for, then re-read the ones you did NOT record as sources and make sure none of them is actually a source. A source left out here is a false negative the run can never recover. Add any you missed to the `source` list and its unit.
 
 ## Output
 
-- A `<tracking-dir>/rules/sources/<package-kebab>.yaml` source unit per package the plan touched (none for a `full`-coverage package)
-- The `<plan>` with every source you found recorded under `source` (the orchestrator merges it into the classification ledger afterwards)
-- A brief summary to the caller: the sources planned (one line each) and any package found already fully covered (wrote nothing). The unit holds the detail — don't paste it back
+Short and concise report of what was done
+
+### Artifacts:
+
+- `.opentaint/tracking/rules/sources/<package-kebab>.yaml` — the source unit(s), one per package the plan touched (none for a fully-covered package)
+- `.opentaint/tracking/rules/plans/<id>.yaml` — your plan, with the sources recorded under `source`
+
+### Summary:
+
+- the sources found, one line each, and any package already fully covered
+- anything blocked or left uncertain
 
 ## Tracking
 
-`<plan>` — read your assigned members from the `scopes` map the partition wrote; record the sources you find under a top-level `source` list. The orchestrator's `mark-safe` script then merges your `source` and the computed `safe` (members − sources) into the durable `rules/classification.yaml` ledger:
-
-```yaml
-scopes:
-  org-springframework-web-socket:
-    - "org.springframework.web.socket.TextMessage#getPayload"
-    - "org.springframework.web.socket.WebSocketSession#getId"
-source:
-  - "org.springframework.web.socket.TextMessage#getPayload"
-```
-
-`<tracking-dir>/rules/sources/<package-kebab>.yaml` — the source unit; fill only `dependencies` + `sources` (create-test-project and create-rule fill the stages and each `rule_id`):
+`.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sources` each an entry point `{ method, signature, note, rule_id }` (`signature` the member's JVM descriptor, always quoted so array types `[…` stay valid YAML in a flow mapping), `stages` tracks the unit through rule authoring, and a `blocker` string is added under it when the unit can't be made to pass. Keep it clear from comments
 
 ```yaml
 dependencies:
   - org.springframework:spring-websocket:6.1.0
 sources:
-  - { method: org.springframework.web.socket.TextMessage#getPayload, note: untrusted WebSocket frame data, rule_id: null }
+  - { method: org.springframework.web.socket.TextMessage#getPayload, signature: "()Ljava/lang/String;", note: untrusted WebSocket frame data, rule_id: null }
 stages:
   test_project: pending
   tests_passing: pending
 ```
 
-## Engine notes
+This skill fills `dependencies` (the package's dependency identifier) and one `sources` entry per source it found — `{ method, signature, note, rule_id }` with `method` + `signature` copied from the plan and `note` a few words on why the data is untrusted; leave `rule_id: null` and the `stages` for the rule-authoring stage. One unit per package the plan touched.
 
-- Generic projects: the analyzer treats all public/protected methods of public classes as entry points
-- Stored / second-order injection (data persisted then read back) is modeled by the engine on its own — don't plan a source for the read-back or a propagator for the store→read path
+The plan `.opentaint/tracking/rules/plans/<id>.yaml` — read your members from its `scopes` map, record the sources you find under a top-level `source` list; the join then ledgers `source` + `safe` (members − source), keyed per method+signature so an overload stays distinct. It is regenerable and disposable, not durable state:
 
-## Gotchas
+```yaml
+id: lib-001
+scopes:
+  <package-kebab>:
+    - { method: org.springframework.web.socket.TextMessage#getPayload, signature: "()Ljava/lang/String;" }
+    - { method: org.springframework.web.socket.WebSocketSession#getId, signature: "()Ljava/lang/String;" }
+source:
+  - { method: org.springframework.web.socket.TextMessage#getPayload, signature: "()Ljava/lang/String;" }
+```
 
-- Plan, don't write — record the source methods only; the rules are written and tested in the next phase
-- Don't re-declare a source a built-in already matches — list only the missing used methods, or fold it into the package's `full` coverage (create-rule references the built-in itself)
-- Classify only the plan's members — they are already the project-used scope; don't enumerate the rest of the package API
-- Record only the sources; don't hand-list `safe` — the orchestrator's mark-safe script ledgers every member you didn't flag a source
+## Constraints
+
+- This stage finds only sources — the methods where untrusted data enters; sinks are found later from the taint frontier.
+- Work only your own plan and the source units its packages map to — never another agent's plan or unit, and never `coverage.yaml` (the orchestrator's). Plans partition packages disjointly, so each source unit has a single writer.
+- Stored / second-order injection (data persisted then read back) is modeled by the engine itself — don't record a source for the read-back or a propagator for the store→read path.
+- For a generic project the analyzer treats every public/protected method of a public class as an entry point.

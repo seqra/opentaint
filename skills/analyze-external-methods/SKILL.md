@@ -1,108 +1,130 @@
 ---
 name: analyze-external-methods
-description: Analyze and group an OpenTaint scan's dropped external methods and decide what to approximate or skip. Use when a dropped-external-methods.yaml needs turning into approximation targets
+description: Analyze an OpenTaint scan's dropped external methods and decide which of them are propagators and optionally sinks. Use when a dropped-external-methods.yaml needs classification for dropped method type
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.3"
 ---
 
 # Skill: Analyze External Methods
 
-Read the methods where the analyzer lost track of the data, group them by library and kind, and record per group what to model and how — so the right skill can build each approximation.
+OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a method that carries it nowhere (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a method whose body the analyzer can't see, typically an external dependency. That opaque method may itself be taint-killing (e.g. the same `size()`), or it may in fact carry the data onward — and then it needs an approximation telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
 
-Think how taint flows through each method intrinsically — which inputs (receiver, arguments) reach the result, an output argument, or the receiver — independent of this project's usages. Whether that method's data reaches a sink in this codebase, or sits on any trace, is the analyzer's job, not yours: never reason about per-project usage and never gate modeling on it
+You are handed the list of those dropped methods. Decide which ones actually carry data and which don't, and for each carrier determine the kind of approximation it needs, so the build stage can restore the flow.
+
+On a deep run these same methods carry a second, independent question — whether the call is itself a dangerous operation (a sink); that pass is step 2.
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Plan `<plan>` — a batch plan (`tracking/approximations/plans/<batch>.yaml`) assigning this agent's methods, grouped by class scope. Work only its methods
-- Tracking directory `<tracking-dir>` — where approximation tracking files are written. Default: `.opentaint/tracking`
-- Sinks directory `<sinks-dir>` (optional) — when set, also record possible sinks among these methods into the owning package's sink unit `<sinks-dir>/<package-kebab>.yaml`. Default: `.opentaint/tracking/rules/sinks`. With none, classify propagation only
-- Project root `<project-root>` — sources and build files, to resolve which library owns each method. Default: current directory
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `language` (required) — target language for this project and language-specific instructions
+- `plan` (required) — path to this agent's batch plan `.opentaint/tracking/approximations/plans/<batch>.yaml`: the dropped methods to classify
+- `sinks` (optional) — a flag whether to classify sinks per step 2 or not
 
 ## Workflow
 
-Classify every method the `<plan>` assigns
+### 1. Classify propagation
 
-### 1. Work the plan, group by kind
+Take the members from the plan's `scopes`, judge each one, and write the verdict to the batch file `.opentaint/tracking/approximations/<batch>.yaml` — `<batch>` is your plan's filename stem, the batch id, reused for the coverage check below.
 
-Each method is either modeled (passthrough/dataflow) or skipped. Decide kind by the method's intrinsic propagation shape:
+Always classify from the method's real code, never from its name. Start by reading the method's source — the language reference describes how to get it. Then answer, for each method: where does its input data go? Data that arrives on the receiver or an argument — does it come back out, through the return value, an argument the method writes into, the receiver, or an object or field it stores the data in? That answer picks the bucket:
 
-- passthrough — data moves by a simple from→to copy: a getter, arg→result, builder, container field, collection `add`/`get`, `StringBuilder.append`, `Stream.collect`, and so on
-- dataflow — data flows through a lambda/callback/functional interface or an async chain
+- `passthrough` — the method carries the data by a plain copy from one place to another: a getter, a simple arg-to-result copy, a builder, a writer that stashes the argument into the receiver or another object, a collection put-then-get, and the like
+- `dataflow` — the method carries the data through a function, lambda, or callback parameter, or an async chain. Any method that takes a function goes here
+- `skipped` — the method carries the data nowhere, give a short `reason`. This is exactly where a flow ends. A few examples: a predicate or inspector that only tests, compares, or measures its input (handing back a boolean or a number); a conversion that collapses the data into a scalar that no longer holds it (a size, a parse into a number, a one-way hash — the `size()` from the preamble); a side-effect that keeps none of the data. These are illustrations of the idea, not a closed list — many methods and cases fall outside it, so decide each on what its code does
 
-Write one file for the whole batch — `<tracking-dir>/approximations/<batch>.yaml`, where `<batch>` is the plan's filename stem — bucketing every method under `passthrough`, `dataflow`, `skipped`, or `engine_issues`. Each entry keeps the method's `signature` from the plan (overloads are separate entries). A passthrough entry adds a `note` listing every position taint flows through — check `this` and each argument, and name each real copy edge compactly (`arg(0) -> result, arg(1) -> this`) — not field/slot detail, which the build skill decides. A position the note omits is one the method doesn't propagate; the build skill pins those in place. Dataflow entries take no note
+The common trap is skipping an implicit carrier — a method that moves its data somewhere other than the plain return value. A `void` method that writes its argument into the receiver or another object still carries the data: it lives on in that object and the flow continues. A sanitizer or encoder is a carrier too — it returns a transformed copy of its input, so the data flows through it; model it, never skip it (whether the transform actually neutralizes the taint is settled later by the rules, not here). When in doubt, model it: over-approximating an inert method is cheap, dropping a real carrier is a false negative the run can't recover.
 
-A dropped method may be application-internal, not only library code — the analyzer drops it when its body is opaque to it (native, abstract, generated). Classify it the same way, by its intrinsic propagation
+An opaque external key-value store — a cache, a Redis/DB template, a session map, anything whose data lives outside the process — is a carrier too, not a dead end: a value written by a `put`/`set` survives the round trip, so a later `get` can hand attacker-controlled data back. Model both ends as `passthrough`. Only the key-only or boolean operations that move no value — `delete`, `exists`, `hasKey`, `size` — are skipped.
 
-### 2. Model carriers, skip only non-carriers
+Every entry records the method's `signature` from the plan, so overloads stay distinct — a differently-propagating overload is its own entry. Placing each method in its bucket is all that's needed here; the build stage reads the method's own code to model exactly how the data moves.
 
-A method is a carrier when taint on its receiver or an argument reaches its result, an output argument, or the receiver — model it. Put in the `skipped` bucket (with a short `reason`) only methods that move no taint at all: boolean/int predicates and inspectors (`equals`, `contains`, `isEmpty`, `is*`, `hashCode` — the ones that merely test an object), void side-effects (e.g. loggers), one-way non-injectable transforms (e.g. hashes), and methods whose result is only a constant (the engine drops constants, so they carry nothing). Confirm the skip from the source — a `contains`/`find` that actually runs a query or lookup is a carrier or a sink, not an inspector. Judge each on its intrinsic behavior, and when unsure, model it — over-approximating an inert method is cheap, skipping a real carrier hides findings. Skip an FQN only when every overload is a non-carrier; if any overload carries taint, model the FQN — the passThrough matcher and dataflow `@Approximate` cover all overloads by name.
+A dropped method may be application-internal, not only library code — the analyzer drops it when its body is opaque to it (native, abstract, generated). Classify it the same way, by what its code does.
 
-A method that takes a function, lambda, or callback parameter is always a dataflow carrier — model it as dataflow, never skip it, even when its own propagation looks inert
-Any `toString()` always goes in `skipped` (unless it overrides default `toString()` for Object)
+### 2. Classify sinks (deep run only)
 
-A method the engine can't model — a built-in dataflow approximation you can't override, or one escalation could not make work — goes in the `engine_issues` bucket: a carrier the engine drops, kept apart from genuine non-carriers
+When the `sinks` input is set, make a second pass over the same members for a different property: is the method a sink? A sink is a security-sensitive operation that turns into a vulnerability once attacker-controlled data reaches it — the call executes or interprets its input, or acts on it against a sensitive resource, in a way that can be abused: running it as a query or OS command, using it as a file path or URL, deserializing it, rendering it into output, or resolving it through reflection or a naming/directory lookup, among many others.
 
-Sink-ness is a second, independent axis (deep only, when `<sinks-dir>` is set) — judge it separately from the approximation type; one verdict never decides the other. Every dropped method here is already reached by source-derived taint; the question is only whether the method is itself a dangerous operation (query/command/file/path, deserialization, template/EL, LDAP/JNDI, reflection, request-out/SSRF, and more — don't focus only on those). The two axes don't exclude each other:
+Judge sink-ness from the method's own code and behaviour, independent of how the project uses it — don't trace whether taint can actually reach the call, that is the analyzer's job. And judge it apart from propagation: the propagation verdict never settles sink-ness, and finding a sink never changes it. Sinks might sit among the carriers you just modeled, and a `skipped` method can be a sink too — carrying nothing onward says nothing about whether the call itself is dangerous.
 
-- a method can be a sink AND a carrier — the engine doesn't stop tracking at a sink, so if taint also flows through it, model it (passthrough/dataflow) so the flow continues past, AND record it as a sink
-- a `skipped` method can still be a sink — being a non-carrier says nothing about whether it's dangerous
-
-Record a sink in the owning package's sink unit `<sinks-dir>/<package-kebab>.yaml` — a `dependencies` list (the owning library GAV) and a `sinks` entry `{ method, vuln_class, note, rule_id: null }`. One package can host several vuln classes, so each entry carries its own `vuln_class`. Don't pin the tainted argument — create-rule finds it from context (taint may land on a different arg after later approximation rounds). `rule_id` is filled later by create-rule. This is race-free: the partition keeps a whole package in one batch, so you're the only writer of its sink unit
-
-```yaml
-dependencies:
-  - cn.hutool:hutool-core:5.8.20
-sinks:
-  - { method: cn.hutool.core.io.FileUtil#writeBytes, vuln_class: path-traversal, note: writes data to an untrusted path, rule_id: null }
-stages:
-  test_project: pending
-  tests_passing: pending
-```
+Record each sink in its owning package's sink unit `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` (per Tracking).
 
 ### 3. Verify coverage
 
 After classifying, run the bundled check from the project root over your plan:
 
 ```bash
-uv run scripts/check-coverage.py --batch <id>
+uv run scripts/check-coverage.py --batch <batch>
 ```
 
-It lists every batch method not yet in a classification bucket of `<batch>.yaml`. Classify each one it prints and re-run until it reports `0 UNCOVERED`. Don't return while anything is uncovered — an unclassified method is a silent taint kill.
+Pass your `<batch>`. It lists every batch method not yet in a classification bucket. Classify each one it prints and re-run until it reports `0 UNCOVERED`. Don't return while anything is uncovered.
 
 ### 4. Re-verify the skips
 
-Before returning, open each method you skipped and confirm from the library source or its dependency jar that it truly moves no data — the name is not good enough evidence. Move any method that on inspection touches its input into the passthrough or dataflow bucket. A good result is a small, source-verified skip list: keep only methods proven non-carriers by their code
+Before returning, review each method you skipped and confirm that it truly moves no data — the name is not good enough evidence. Get back to step 1 to reclassify any method that appeared to be carrier and remove it from `skipped`. Keep only methods proven non-carriers by their code
 
 ## Output
 
-- One `<tracking-dir>/approximations/<batch>.yaml` with `passthrough`/`dataflow`/`skipped`/`engine_issues` buckets; passthrough entries carry `note`, skipped/engine_issues carry `reason`. Add `dependencies` (the GAVs a dataflow test project needs) when the batch has dataflow and you know them. Leave the `build` block to the build skills
-- When `<sinks-dir>` is set, the possible sinks written to each owning sink unit `<sinks-dir>/<package-kebab>.yaml`
-- `check-coverage.py --batch <id>` reporting `0 UNCOVERED`
-- A brief summary to the caller: per-kind method counts plus the skip count. Don't paste the method lists back — the file holds them
+Short and concise report of what was done
+
+### Artifacts:
+
+- `.opentaint/tracking/approximations/<batch>.yaml` — the batch classification (per Tracking)
+- `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — the per-package sink units, when `sinks` was set (per Tracking)
+
+### Summary:
+
+- per-kind method counts (passthrough / dataflow / skipped) and the sink count when `sinks` was set
+- that `check-coverage.py --batch <batch>` reports `0 UNCOVERED`
 
 ## Tracking
 
-Create one file per batch — `<batch>.yaml` (the plan's filename stem). The classification buckets are yours; leave the `build` block to the build skills. `signature` distinguishes overloads (a differently-propagating overload is its own entry); `note` (passthrough only) lists every position taint flows through, not slot detail; `reason` (skipped/engine_issues) is a few words.
+### Batch classification
+
+`.opentaint/tracking/approximations/<batch>.yaml` — one batch's method classification, `<batch>` the plan's filename stem. Every method sits in exactly one verdict bucket, keyed with its `signature` (the JVM descriptor, always quoted so array types `[…` stay valid YAML) so overloads stay distinct:
+- `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
+- `skipped` — terminal non-carriers; each `{ method, signature, reason }`
+- `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
+
+`dependencies` lists the dependency identifiers a dataflow test project needs. The `build` block tracks the build — `test_project` records each dataflow method's test-project status (`done` if a sample was written into the batch's test project, `failed` if none could be written so the method was excluded from it), and `done` holds the finished `{ method, signature }`. Keep it clear from comments
 
 ```yaml
 passthrough:
-  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;", note: "this -> result" }
+  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;" }
 dataflow:
   - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
 skipped:
-  - { method: "org.slf4j.Logger#info", reason: "void side-effect" }
+  - { method: "org.slf4j.Logger#info", signature: "(Ljava/lang/String;)V", reason: "void side-effect" }
 engine_issues: []
 dependencies: []
+build:
+  test_project:
+    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;", status: done }
+  done: []
 ```
 
-Append a newly-dropped method to its kind bucket; never touch the `build` block — the build skills move finished methods into `build.done`.
+This skill writes `passthrough`/`dataflow`/`skipped` and `dependencies`; leave the `build` block and `engine_issues` alone — they are filled later in the approximation stage.
 
-## Gotchas
+### Sink units (only when `sinks` is set)
 
-- Classify every method in your `<plan>`, and only those — each is a real place data is lost. Model carriers; move genuine non-carriers and `toString` to the `skipped` bucket. `check-coverage.py --batch` must report `0 UNCOVERED` before you return
-- Describe intrinsic propagation, never per-project flow — don't skip a carrier because its data doesn't seem to reach a sink here (the possible-sink call is the method's own danger, also intrinsic)
-- One batch = one file = one agent; each method goes in exactly one bucket
+`.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — one sink unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sinks` each a dangerous operation reached by the taint frontier `{ method, signature, vuln_class, note, rule_id }` — `signature` the member's JVM descriptor so overloads stay distinct, always quoted (array types contain `[`, which is invalid unquoted in a flow mapping), `vuln_class` per entry since one package can host several, `note` a few words on the danger, the tainted argument left unpinned. `stages` tracks the unit through rule authoring. Keep it clear from comments
+
+```yaml
+dependencies:
+  - cn.hutool:hutool-core:5.8.20
+sinks:
+  - { method: cn.hutool.core.io.FileUtil#writeBytes, signature: "([BLjava/lang/String;)Ljava/io/File;", vuln_class: path-traversal, note: writes data to an untrusted path, rule_id: null }
+stages:
+  test_project: pending
+  tests_passing: pending
+```
+
+This skill fills `dependencies` and one `sinks` entry per sink it found — `{ method, signature, vuln_class, note, rule_id: null }`, `signature` the method's JVM descriptor from the plan so overloads stay distinct, `vuln_class` per entry, `note` a few words on the danger. Leave `rule_id: null` and the `stages` for the rule-authoring stage. One unit per package; the partition keeps a whole package in one batch, so you are its only writer. Where a package already has a unit from a prior round, add to it rather than rewriting.
+
+## Constraints
+
+- Judge intrinsic propagation only, never per-project flow. Don't skip a carrier because its data doesn't seem to reach a sink here, and don't gate a sink on where its data goes — whether a flow reaches a sink is the analyzer's job, not yours
+- Classify every method the plan assigns and only those — each is a real place data was lost, don't invent methods outside the plan. `check-coverage.py --batch` must report `0 UNCOVERED` before you return

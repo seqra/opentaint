@@ -4,8 +4,9 @@
 # ///
 """
 Report dropped external methods not yet classified (run with uv from the project root).
-UNCOVERED = dropped - (classification buckets + build.done + skipped.yaml), matched FQN-level.
-With `--batch <id>` it checks one batch plan's methods instead — the per-agent done check.
+UNCOVERED = dropped - (classification buckets + build.done + skipped.yaml), matched by
+method+signature (overload-precise: one classified overload does not mask another still dropped).
+With `--batch <batch>` (the plan's filename stem, or a plan path) it checks one batch plan's methods instead — the per-agent done check.
 """
 import argparse
 import glob
@@ -21,47 +22,44 @@ APPROX_DIR = Path(".opentaint/tracking/approximations")
 CLASSIFIED_KEYS = {"passthrough", "dataflow", "skipped", "methods", "engine_issues"}
 
 
-def fqn(s):
-    s = str(s).strip().strip('"').strip("'")
-    i = s.find("(")
-    if i != -1:
-        s = s[:i]
-    return s.strip()
-
-
-def fqn_of(item):
-    return fqn(item["method"] if isinstance(item, dict) else item)
+def member_key(item):
+    # overload-precise key: method + signature (the descriptor follows the fqn, so it also reads
+    # as a stable identifier). A bare string (legacy) is taken as-is.
+    if isinstance(item, dict):
+        m = str(item.get("method", "")).strip().strip('"').strip("'")
+        return m + str(item.get("signature", "")).strip()
+    return str(item).strip().strip('"').strip("'")
 
 
 def dropped_methods():
     doc = yaml.safe_load(DROPPED.read_text(encoding="utf-8")) or []
-    return {fqn(e["method"]) for e in doc if isinstance(e, dict) and e.get("method")}
+    return {member_key(e) for e in doc if isinstance(e, dict) and e.get("method")}
 
 
 def classified_methods():
-    # every FQN in a classification bucket, build.done, or skipped.yaml across the batch files
+    # every method+signature in a classification bucket, build.done, or skipped.yaml
     out = set()
     for p in sorted(glob.glob(str(APPROX_DIR / "*.yaml"))):
         doc = yaml.safe_load(Path(p).read_text(encoding="utf-8")) or {}
         for key in CLASSIFIED_KEYS:
             for item in doc.get(key, []) or []:
                 if str(item).strip():
-                    out.add(fqn_of(item))
+                    out.add(member_key(item))
         for item in (doc.get("build") or {}).get("done", []) or []:
             if str(item).strip():
-                out.add(fqn_of(item))
+                out.add(member_key(item))
     return out
 
 
 def batch_methods(batch_arg):
-    # the FQNs a batch plan assigned (scopes: {class: [{method, signature}]}); id or path
+    # the members a batch plan assigned (scopes: {class: [{method, signature}]}); id or path
     p = Path(batch_arg)
     if not p.is_file():
         p = APPROX_DIR / "plans" / f"{batch_arg}.yaml"
     if not p.is_file():
         return None
     doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-    return {fqn_of(m)
+    return {member_key(m)
             for members in (doc.get("scopes") or {}).values() for m in members}
 
 
