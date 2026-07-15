@@ -1,0 +1,138 @@
+================================================================
+BASE-ONLY delta/concat PIN — mode fieldSensitive=true
+slots=(static,field,suffix)  suffix: -2=abstract(*) 3=value($) >=0-other=mark  (empty is not a fact)
+================================================================
+
+## FACTS (31)
+  F00 = x.*            (-1,-1,-2) [ap@2]
+  F01 = x.!t1.$        (-1,-1, 2) [mark]
+  F02 = x.!t2.$        (-1,-1, 6) [mark]
+  F03 = x.f1.*         (-1, 0,-2) [ap@2]
+  F04 = x.f1.!t1.$     (-1, 0, 2) [mark]
+  F05 = x.f1.!t2.$     (-1, 0, 6) [mark]
+  F06 = x.f2.*         (-1, 4,-2) [ap@2]
+  F07 = x.f2.!t1.$     (-1, 4, 2) [mark]
+  F08 = x.f2.!t2.$     (-1, 4, 6) [mark]
+  F09 = x.s1.*         ( 1,-1,-2) [ap@2]
+  F10 = x.s1.!t1.$     ( 1,-1, 2) [mark]
+  F11 = x.s1.!t2.$     ( 1,-1, 6) [mark]
+  F12 = x.s1.f1.*      ( 1, 0,-2) [ap@2]
+  F13 = x.s1.f1.!t1.$  ( 1, 0, 2) [mark]
+  F14 = x.s1.f1.!t2.$  ( 1, 0, 6) [mark]
+  F15 = x.s1.f2.*      ( 1, 4,-2) [ap@2]
+  F16 = x.s1.f2.!t1.$  ( 1, 4, 2) [mark]
+  F17 = x.s1.f2.!t2.$  ( 1, 4, 6) [mark]
+  F18 = x.s2.*         ( 5,-1,-2) [ap@2]
+  F19 = x.s2.!t1.$     ( 5,-1, 2) [mark]
+  F20 = x.s2.!t2.$     ( 5,-1, 6) [mark]
+  F21 = x.s2.f1.*      ( 5, 0,-2) [ap@2]
+  F22 = x.s2.f1.!t1.$  ( 5, 0, 2) [mark]
+  F23 = x.s2.f1.!t2.$  ( 5, 0, 6) [mark]
+  F24 = x.s2.f2.*      ( 5, 4,-2) [ap@2]
+  F25 = x.s2.f2.!t1.$  ( 5, 4, 2) [mark]
+  F26 = x.s2.f2.!t2.$  ( 5, 4, 6) [mark]
+  F27 = x.*s           (-2,-1,-1) [ap@0]
+  F28 = x.*f           (-1,-2,-1) [ap@1]
+  F29 = x.s1.*f        ( 1,-2,-1) [ap@1]
+  F30 = x.s2.*f        ( 5,-2,-1) [ap@1]
+
+## DISTINCT DELTAS (29)  [from all 31x31 ordered pairs final.delta(initial)]
+  D00 = ε
+  D01 = Δ.!t1.$
+  D02 = Δ.!t2.$
+  D03 = Δ.f1.*
+  D04 = Δ.f1.!t1.$
+  D05 = Δ.f1.!t2.$
+  D06 = Δ.f2.*
+  D07 = Δ.f2.!t1.$
+  D08 = Δ.f2.!t2.$
+  D09 = Δ.s1.*
+  D10 = Δ.s1.!t1.$
+  D11 = Δ.s1.!t2.$
+  D12 = Δ.s1.f1.*
+  D13 = Δ.s1.f1.!t1.$
+  D14 = Δ.s1.f1.!t2.$
+  D15 = Δ.s1.f2.*
+  D16 = Δ.s1.f2.!t1.$
+  D17 = Δ.s1.f2.!t2.$
+  D18 = Δ.s2.*
+  D19 = Δ.s2.!t1.$
+  D20 = Δ.s2.!t2.$
+  D21 = Δ.s2.f1.*
+  D22 = Δ.s2.f1.!t1.$
+  D23 = Δ.s2.f1.!t2.$
+  D24 = Δ.s2.f2.*
+  D25 = Δ.s2.f2.!t1.$
+  D26 = Δ.s2.f2.!t2.$
+  D27 = Δ.s1.*f
+  D28 = Δ.s2.*f
+  ('-' in the matrix below = NO-MATCH, empty delta list)
+
+## DELTA MATRIX  cell = F_row.delta(F_col)
+        | F00    | F01    | F02    | F03    | F04    | F05    | F06    | F07    | F08    | F09    | F10    | F11    | F12    | F13    | F14    | F15    | F16    | F17    | F18    | F19    | F20    | F21    | F22    | F23    | F24    | F25    | F26    | F27    | F28    | F29    | F30    
+  F00   | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      
+  F01   | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      
+  F02   | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      
+  F03   | -      | -      | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D3     | -      | -      
+  F04   | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D4     | -      | -      
+  F05   | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D5     | -      | -      
+  F06   | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D6     | -      | -      
+  F07   | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D7     | -      | -      
+  F08   | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D8     | -      | -      
+  F09   | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D9     | -      | -      | -      
+  F10   | -      | -      | -      | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D10    | -      | -      | -      
+  F11   | -      | -      | -      | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D11    | -      | -      | -      
+  F12   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D12    | -      | D3     | -      
+  F13   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D13    | -      | D4     | -      
+  F14   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D14    | -      | D5     | -      
+  F15   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D15    | -      | D6     | -      
+  F16   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D16    | -      | D7     | -      
+  F17   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | -      | D17    | -      | D8     | -      
+  F18   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      | -      | -      | -      | -      | -      | D18    | -      | -      | -      
+  F19   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | -      | -      | -      | D19    | -      | -      | -      
+  F20   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | -      | -      | -      | D20    | -      | -      | -      
+  F21   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      | -      | -      | D21    | -      | -      | D3     
+  F22   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | -      | -      | -      | D22    | -      | -      | D4     
+  F23   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | -      | -      | -      | D23    | -      | -      | D5     
+  F24   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | D24    | -      | -      | D6     
+  F25   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D1     | D0     | -      | D25    | -      | -      | D7     
+  F26   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D2     | -      | D0     | D26    | -      | -      | D8     
+  F27   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      | -      
+  F28   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D0     | -      | -      
+  F29   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D27    | -      | D0     | -      
+  F30   | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | -      | D28    | -      | -      | D0     
+
+## CONCAT MATRIX  cell = F_row.concat(D_col)
+        | D00           | D01           | D02           | D03           | D04           | D05           | D06           | D07           | D08           | D09           | D10           | D11           | D12           | D13           | D14           | D15           | D16           | D17           | D18           | D19           | D20           | D21           | D22           | D23           | D24           | D25           | D26           | D27           | D28           
+  F00   | x.*           | x.!t1.$       | x.!t2.$       | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F01   | x.!t1.$       | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F02   | x.!t2.$       | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F03   | x.f1.*        | x.f1.!t1.$    | x.f1.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F04   | x.f1.!t1.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F05   | x.f1.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F06   | x.f2.*        | x.f2.!t1.$    | x.f2.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F07   | x.f2.!t1.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F08   | x.f2.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F09   | x.s1.*        | x.s1.!t1.$    | x.s1.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F10   | x.s1.!t1.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F11   | x.s1.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F12   | x.s1.f1.*     | x.s1.f1.!t1.$ | x.s1.f1.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F13   | x.s1.f1.!t1.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F14   | x.s1.f1.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F15   | x.s1.f2.*     | x.s1.f2.!t1.$ | x.s1.f2.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F16   | x.s1.f2.!t1.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F17   | x.s1.f2.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F18   | x.s2.*        | x.s2.!t1.$    | x.s2.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F19   | x.s2.!t1.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F20   | x.s2.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F21   | x.s2.f1.*     | x.s2.f1.!t1.$ | x.s2.f1.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F22   | x.s2.f1.!t1.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F23   | x.s2.f1.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F24   | x.s2.f2.*     | x.s2.f2.!t1.$ | x.s2.f2.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F25   | x.s2.f2.!t1.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F26   | x.s2.f2.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F27   | x.*s          | null          | null          | null          | null          | null          | null          | null          | null          | x.s1.*        | x.s1.!t1.$    | x.s1.!t2.$    | x.s1.f1.*     | x.s1.f1.!t1.$ | x.s1.f1.!t2.$ | x.s1.f2.*     | x.s1.f2.!t1.$ | x.s1.f2.!t2.$ | x.s2.*        | x.s2.!t1.$    | x.s2.!t2.$    | x.s2.f1.*     | x.s2.f1.!t1.$ | x.s2.f1.!t2.$ | x.s2.f2.*     | x.s2.f2.!t1.$ | x.s2.f2.!t2.$ | x.s1.*f       | x.s2.*f       
+  F28   | x.*f          | null          | null          | x.f1.*        | x.f1.!t1.$    | x.f1.!t2.$    | x.f2.*        | x.f2.!t1.$    | x.f2.!t2.$    | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F29   | x.s1.*f       | null          | null          | x.s1.f1.*     | x.s1.f1.!t1.$ | x.s1.f1.!t2.$ | x.s1.f2.*     | x.s1.f2.!t1.$ | x.s1.f2.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+  F30   | x.s2.*f       | null          | null          | x.s2.f1.*     | x.s2.f1.!t1.$ | x.s2.f1.!t2.$ | x.s2.f2.*     | x.s2.f2.!t1.$ | x.s2.f2.!t2.$ | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          | null          
+

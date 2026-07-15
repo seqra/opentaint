@@ -1,0 +1,96 @@
+================================================================
+BASE-ONLY contains PIN — mode fieldSensitive=false
+cell = F_row(final).contains(F_col(initial));  T = contained, . = not
+contains(i) = sameBase && containsAccess(access, i.access)   [identity | abstract-prefix wildcard | symmetric field-[any] w/ suffix+static exact]
+================================================================
+
+## FACTS (16)
+  F00 = x.*            (-1   -1   *   ) [ap@2]
+  F01 = x.$            (-1   -1   $   ) [value]
+  F02 = x.!t1.$        (-1   -1   t1  ) [mark]
+  F03 = x.!t2.$        (-1   -1   t2  ) [mark]
+  F04 = x.s1.*         (s1   -1   *   ) [ap@2]
+  F05 = x.s1.$         (s1   -1   $   ) [value]
+  F06 = x.s1.!t1.$     (s1   -1   t1  ) [mark]
+  F07 = x.s1.!t2.$     (s1   -1   t2  ) [mark]
+  F08 = x.s2.*         (s2   -1   *   ) [ap@2]
+  F09 = x.s2.$         (s2   -1   $   ) [value]
+  F10 = x.s2.!t1.$     (s2   -1   t1  ) [mark]
+  F11 = x.s2.!t2.$     (s2   -1   t2  ) [mark]
+  F12 = x.*s           (*    -1   -1  ) [ap@0]
+  F13 = x.*f           (-1   *    -1  ) [ap@1]
+  F14 = x.s1.*f        (s1   *    -1  ) [ap@1]
+  F15 = x.s2.*f        (s2   *    -1  ) [ap@1]
+
+## CONTAINS MATRIX  cell = F_row.contains(F_col)
+          F00 F01 F02 F03 F04 F05 F06 F07 F08 F09 F10 F11 F12 F13 F14 F15 
+  F00     T   T   T   T   .   .   .   .   .   .   .   .   .   T   .   .   
+  F01     .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F02     .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F03     .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   
+  F04     .   .   .   .   T   T   T   T   .   .   .   .   .   .   T   .   
+  F05     .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   
+  F06     .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   
+  F07     .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   
+  F08     .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   T   
+  F09     .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   
+  F10     .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   
+  F11     .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   
+  F12     T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   
+  F13     T   T   T   T   .   .   .   .   .   .   .   .   .   T   .   .   
+  F14     .   .   .   .   T   T   T   T   .   .   .   .   .   .   T   .   
+  F15     .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   T   
+
+## PER-FACT BREAKDOWN  (initials each final contains; self omitted)
+  x.*            contains: x.$, x.!t1.$, x.!t2.$, x.*f
+  x.s1.*         contains: x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.*f
+  x.s2.*         contains: x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.*f
+  x.*s           contains: x.*, x.$, x.!t1.$, x.!t2.$, x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.*f, x.s1.*f, x.s2.*f
+  x.*f           contains: x.*, x.$, x.!t1.$, x.!t2.$
+  x.s1.*f        contains: x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$
+  x.s2.*f        contains: x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$
+
+## OFF-DIAGONAL TRUE CELLS (mechanism)
+  x.*            contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.*f           : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.*f        : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.*f        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.*f           : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.*f        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.*f        : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+
+## CROSS-BASE PROBE  x-fact.contains(y-same-access)
+  cross-base identical-access contained count = 0 / 16
+

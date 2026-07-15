@@ -1,0 +1,438 @@
+================================================================
+BASE-ONLY contains PIN — mode fieldSensitive=true
+cell = F_row(final).contains(F_col(initial));  T = contained, . = not
+contains(i) = sameBase && containsAccess(access, i.access)   [identity | abstract-prefix wildcard | symmetric field-[any] w/ suffix+static exact]
+================================================================
+
+## FACTS (52)
+  F00 = x.*            (-1   -1   *   ) [ap@2]
+  F01 = x.$            (-1   -1   $   ) [value]
+  F02 = x.!t1.$        (-1   -1   t1  ) [mark]
+  F03 = x.!t2.$        (-1   -1   t2  ) [mark]
+  F04 = x.f1.*         (-1   f1   *   ) [ap@2]
+  F05 = x.f1.$         (-1   f1   $   ) [value]
+  F06 = x.f1.!t1.$     (-1   f1   t1  ) [mark]
+  F07 = x.f1.!t2.$     (-1   f1   t2  ) [mark]
+  F08 = x.f2.*         (-1   f2   *   ) [ap@2]
+  F09 = x.f2.$         (-1   f2   $   ) [value]
+  F10 = x.f2.!t1.$     (-1   f2   t1  ) [mark]
+  F11 = x.f2.!t2.$     (-1   f2   t2  ) [mark]
+  F12 = x.[el].*       (-1   [el] *   ) [ap@2]
+  F13 = x.[el].$       (-1   [el] $   ) [value]
+  F14 = x.[el].!t1.$   (-1   [el] t1  ) [mark]
+  F15 = x.[el].!t2.$   (-1   [el] t2  ) [mark]
+  F16 = x.s1.*         (s1   -1   *   ) [ap@2]
+  F17 = x.s1.$         (s1   -1   $   ) [value]
+  F18 = x.s1.!t1.$     (s1   -1   t1  ) [mark]
+  F19 = x.s1.!t2.$     (s1   -1   t2  ) [mark]
+  F20 = x.s1.f1.*      (s1   f1   *   ) [ap@2]
+  F21 = x.s1.f1.$      (s1   f1   $   ) [value]
+  F22 = x.s1.f1.!t1.$  (s1   f1   t1  ) [mark]
+  F23 = x.s1.f1.!t2.$  (s1   f1   t2  ) [mark]
+  F24 = x.s1.f2.*      (s1   f2   *   ) [ap@2]
+  F25 = x.s1.f2.$      (s1   f2   $   ) [value]
+  F26 = x.s1.f2.!t1.$  (s1   f2   t1  ) [mark]
+  F27 = x.s1.f2.!t2.$  (s1   f2   t2  ) [mark]
+  F28 = x.s1.[el].*    (s1   [el] *   ) [ap@2]
+  F29 = x.s1.[el].$    (s1   [el] $   ) [value]
+  F30 = x.s1.[el].!t1.$ (s1   [el] t1  ) [mark]
+  F31 = x.s1.[el].!t2.$ (s1   [el] t2  ) [mark]
+  F32 = x.s2.*         (s2   -1   *   ) [ap@2]
+  F33 = x.s2.$         (s2   -1   $   ) [value]
+  F34 = x.s2.!t1.$     (s2   -1   t1  ) [mark]
+  F35 = x.s2.!t2.$     (s2   -1   t2  ) [mark]
+  F36 = x.s2.f1.*      (s2   f1   *   ) [ap@2]
+  F37 = x.s2.f1.$      (s2   f1   $   ) [value]
+  F38 = x.s2.f1.!t1.$  (s2   f1   t1  ) [mark]
+  F39 = x.s2.f1.!t2.$  (s2   f1   t2  ) [mark]
+  F40 = x.s2.f2.*      (s2   f2   *   ) [ap@2]
+  F41 = x.s2.f2.$      (s2   f2   $   ) [value]
+  F42 = x.s2.f2.!t1.$  (s2   f2   t1  ) [mark]
+  F43 = x.s2.f2.!t2.$  (s2   f2   t2  ) [mark]
+  F44 = x.s2.[el].*    (s2   [el] *   ) [ap@2]
+  F45 = x.s2.[el].$    (s2   [el] $   ) [value]
+  F46 = x.s2.[el].!t1.$ (s2   [el] t1  ) [mark]
+  F47 = x.s2.[el].!t2.$ (s2   [el] t2  ) [mark]
+  F48 = x.*s           (*    -1   -1  ) [ap@0]
+  F49 = x.*f           (-1   *    -1  ) [ap@1]
+  F50 = x.s1.*f        (s1   *    -1  ) [ap@1]
+  F51 = x.s2.*f        (s2   *    -1  ) [ap@1]
+
+## CONTAINS MATRIX  cell = F_row.contains(F_col)
+          F00 F01 F02 F03 F04 F05 F06 F07 F08 F09 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21 F22 F23 F24 F25 F26 F27 F28 F29 F30 F31 F32 F33 F34 F35 F36 F37 F38 F39 F40 F41 F42 F43 F44 F45 F46 F47 F48 F49 F50 F51 
+  F00     T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   
+  F01     .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F02     .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F03     .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F04     T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F05     .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F06     .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F07     .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F08     T   T   T   T   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F09     .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F10     .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F11     .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F12     T   T   T   T   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F13     .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F14     .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F15     .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F16     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   
+  F17     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F18     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F19     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F20     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F21     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F22     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F23     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F24     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F25     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F26     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F27     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F28     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F29     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F30     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F31     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F32     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   .   .   .   T   
+  F33     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   .   
+  F34     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   .   
+  F35     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   T   .   .   .   .   
+  F36     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   
+  F37     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F38     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   
+  F39     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   
+  F40     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   
+  F41     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   
+  F42     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   
+  F43     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   
+  F44     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   .   
+  F45     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   
+  F46     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   
+  F47     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   
+  F48     T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   
+  F49     T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   .   
+  F50     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   .   
+  F51     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   .   .   .   T   
+
+## PER-FACT BREAKDOWN  (initials each final contains; self omitted)
+  x.*            contains: x.$, x.!t1.$, x.!t2.$, x.f1.*, x.f1.$, x.f1.!t1.$, x.f1.!t2.$, x.f2.*, x.f2.$, x.f2.!t1.$, x.f2.!t2.$, x.[el].*, x.[el].$, x.[el].!t1.$, x.[el].!t2.$, x.*f
+  x.$            contains: x.f1.$, x.f2.$, x.[el].$
+  x.!t1.$        contains: x.f1.!t1.$, x.f2.!t1.$, x.[el].!t1.$
+  x.!t2.$        contains: x.f1.!t2.$, x.f2.!t2.$, x.[el].!t2.$
+  x.f1.*         contains: x.*, x.$, x.!t1.$, x.!t2.$, x.f1.$, x.f1.!t1.$, x.f1.!t2.$
+  x.f1.$         contains: x.$
+  x.f1.!t1.$     contains: x.!t1.$
+  x.f1.!t2.$     contains: x.!t2.$
+  x.f2.*         contains: x.*, x.$, x.!t1.$, x.!t2.$, x.f2.$, x.f2.!t1.$, x.f2.!t2.$
+  x.f2.$         contains: x.$
+  x.f2.!t1.$     contains: x.!t1.$
+  x.f2.!t2.$     contains: x.!t2.$
+  x.[el].*       contains: x.*, x.$, x.!t1.$, x.!t2.$, x.[el].$, x.[el].!t1.$, x.[el].!t2.$
+  x.[el].$       contains: x.$
+  x.[el].!t1.$   contains: x.!t1.$
+  x.[el].!t2.$   contains: x.!t2.$
+  x.s1.*         contains: x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.f1.*, x.s1.f1.$, x.s1.f1.!t1.$, x.s1.f1.!t2.$, x.s1.f2.*, x.s1.f2.$, x.s1.f2.!t1.$, x.s1.f2.!t2.$, x.s1.[el].*, x.s1.[el].$, x.s1.[el].!t1.$, x.s1.[el].!t2.$, x.s1.*f
+  x.s1.$         contains: x.s1.f1.$, x.s1.f2.$, x.s1.[el].$
+  x.s1.!t1.$     contains: x.s1.f1.!t1.$, x.s1.f2.!t1.$, x.s1.[el].!t1.$
+  x.s1.!t2.$     contains: x.s1.f1.!t2.$, x.s1.f2.!t2.$, x.s1.[el].!t2.$
+  x.s1.f1.*      contains: x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.f1.$, x.s1.f1.!t1.$, x.s1.f1.!t2.$
+  x.s1.f1.$      contains: x.s1.$
+  x.s1.f1.!t1.$  contains: x.s1.!t1.$
+  x.s1.f1.!t2.$  contains: x.s1.!t2.$
+  x.s1.f2.*      contains: x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.f2.$, x.s1.f2.!t1.$, x.s1.f2.!t2.$
+  x.s1.f2.$      contains: x.s1.$
+  x.s1.f2.!t1.$  contains: x.s1.!t1.$
+  x.s1.f2.!t2.$  contains: x.s1.!t2.$
+  x.s1.[el].*    contains: x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.[el].$, x.s1.[el].!t1.$, x.s1.[el].!t2.$
+  x.s1.[el].$    contains: x.s1.$
+  x.s1.[el].!t1.$ contains: x.s1.!t1.$
+  x.s1.[el].!t2.$ contains: x.s1.!t2.$
+  x.s2.*         contains: x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.f1.*, x.s2.f1.$, x.s2.f1.!t1.$, x.s2.f1.!t2.$, x.s2.f2.*, x.s2.f2.$, x.s2.f2.!t1.$, x.s2.f2.!t2.$, x.s2.[el].*, x.s2.[el].$, x.s2.[el].!t1.$, x.s2.[el].!t2.$, x.s2.*f
+  x.s2.$         contains: x.s2.f1.$, x.s2.f2.$, x.s2.[el].$
+  x.s2.!t1.$     contains: x.s2.f1.!t1.$, x.s2.f2.!t1.$, x.s2.[el].!t1.$
+  x.s2.!t2.$     contains: x.s2.f1.!t2.$, x.s2.f2.!t2.$, x.s2.[el].!t2.$
+  x.s2.f1.*      contains: x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.f1.$, x.s2.f1.!t1.$, x.s2.f1.!t2.$
+  x.s2.f1.$      contains: x.s2.$
+  x.s2.f1.!t1.$  contains: x.s2.!t1.$
+  x.s2.f1.!t2.$  contains: x.s2.!t2.$
+  x.s2.f2.*      contains: x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.f2.$, x.s2.f2.!t1.$, x.s2.f2.!t2.$
+  x.s2.f2.$      contains: x.s2.$
+  x.s2.f2.!t1.$  contains: x.s2.!t1.$
+  x.s2.f2.!t2.$  contains: x.s2.!t2.$
+  x.s2.[el].*    contains: x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.[el].$, x.s2.[el].!t1.$, x.s2.[el].!t2.$
+  x.s2.[el].$    contains: x.s2.$
+  x.s2.[el].!t1.$ contains: x.s2.!t1.$
+  x.s2.[el].!t2.$ contains: x.s2.!t2.$
+  x.*s           contains: x.*, x.$, x.!t1.$, x.!t2.$, x.f1.*, x.f1.$, x.f1.!t1.$, x.f1.!t2.$, x.f2.*, x.f2.$, x.f2.!t1.$, x.f2.!t2.$, x.[el].*, x.[el].$, x.[el].!t1.$, x.[el].!t2.$, x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.f1.*, x.s1.f1.$, x.s1.f1.!t1.$, x.s1.f1.!t2.$, x.s1.f2.*, x.s1.f2.$, x.s1.f2.!t1.$, x.s1.f2.!t2.$, x.s1.[el].*, x.s1.[el].$, x.s1.[el].!t1.$, x.s1.[el].!t2.$, x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.f1.*, x.s2.f1.$, x.s2.f1.!t1.$, x.s2.f1.!t2.$, x.s2.f2.*, x.s2.f2.$, x.s2.f2.!t1.$, x.s2.f2.!t2.$, x.s2.[el].*, x.s2.[el].$, x.s2.[el].!t1.$, x.s2.[el].!t2.$, x.*f, x.s1.*f, x.s2.*f
+  x.*f           contains: x.*, x.$, x.!t1.$, x.!t2.$, x.f1.*, x.f1.$, x.f1.!t1.$, x.f1.!t2.$, x.f2.*, x.f2.$, x.f2.!t1.$, x.f2.!t2.$, x.[el].*, x.[el].$, x.[el].!t1.$, x.[el].!t2.$
+  x.s1.*f        contains: x.s1.*, x.s1.$, x.s1.!t1.$, x.s1.!t2.$, x.s1.f1.*, x.s1.f1.$, x.s1.f1.!t1.$, x.s1.f1.!t2.$, x.s1.f2.*, x.s1.f2.$, x.s1.f2.!t1.$, x.s1.f2.!t2.$, x.s1.[el].*, x.s1.[el].$, x.s1.[el].!t1.$, x.s1.[el].!t2.$
+  x.s2.*f        contains: x.s2.*, x.s2.$, x.s2.!t1.$, x.s2.!t2.$, x.s2.f1.*, x.s2.f1.$, x.s2.f1.!t1.$, x.s2.f1.!t2.$, x.s2.f2.*, x.s2.f2.$, x.s2.f2.!t1.$, x.s2.f2.!t2.$, x.s2.[el].*, x.s2.[el].$, x.s2.[el].!t1.$, x.s2.[el].!t2.$
+
+## OFF-DIAGONAL TRUE CELLS (mechanism)
+  x.*            contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f1.*         : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f1.$         : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f2.*         : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f2.$         : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.f2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.[el].*       : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.[el].$       : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.[el].!t1.$   : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.[el].!t2.$   : containsAccess(abstract-prefix wildcard)
+  x.*            contains x.*f           : containsAccess(abstract-prefix wildcard)
+  x.$            contains x.f1.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.$            contains x.f2.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.$            contains x.[el].$       : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.!t1.$        contains x.f1.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.!t1.$        contains x.f2.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.!t1.$        contains x.[el].!t1.$   : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.!t2.$        contains x.f1.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.!t2.$        contains x.f2.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.!t2.$        contains x.[el].!t2.$   : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.f1.*         contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.f1.*         contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.f1.*         contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.f1.*         contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.f1.*         contains x.f1.$         : containsAccess(abstract-prefix wildcard)
+  x.f1.*         contains x.f1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.f1.*         contains x.f1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.f1.$         contains x.$            : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.f1.!t1.$     contains x.!t1.$        : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.f1.!t2.$     contains x.!t2.$        : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.f2.*         contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.f2.*         contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.f2.*         contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.f2.*         contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.f2.*         contains x.f2.$         : containsAccess(abstract-prefix wildcard)
+  x.f2.*         contains x.f2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.f2.*         contains x.f2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.f2.$         contains x.$            : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.f2.!t1.$     contains x.!t1.$        : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.f2.!t2.$     contains x.!t2.$        : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.[el].*       contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.[el].*       contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.[el].*       contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.[el].*       contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.[el].*       contains x.[el].$       : containsAccess(abstract-prefix wildcard)
+  x.[el].*       contains x.[el].!t1.$   : containsAccess(abstract-prefix wildcard)
+  x.[el].*       contains x.[el].!t2.$   : containsAccess(abstract-prefix wildcard)
+  x.[el].$       contains x.$            : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.[el].!t1.$   contains x.!t1.$        : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.[el].!t2.$   contains x.!t2.$        : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.*         contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f1.*      : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f2.*      : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.[el].*    : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.s1.*         contains x.s1.*f        : containsAccess(abstract-prefix wildcard)
+  x.s1.$         contains x.s1.f1.$      : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.$         contains x.s1.f2.$      : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.$         contains x.s1.[el].$    : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.!t1.$     contains x.s1.f1.!t1.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.!t1.$     contains x.s1.f2.!t1.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.!t1.$     contains x.s1.[el].!t1.$ : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.!t2.$     contains x.s1.f1.!t2.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.!t2.$     contains x.s1.f2.!t2.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.!t2.$     contains x.s1.[el].!t2.$ : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.f1.*      contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.*      contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.*      contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.*      contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.*      contains x.s1.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.*      contains x.s1.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.*      contains x.s1.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.f1.$      contains x.s1.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.f1.!t1.$  contains x.s1.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.f1.!t2.$  contains x.s1.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.f2.*      contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.*      contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.*      contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.*      contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.*      contains x.s1.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.*      contains x.s1.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.*      contains x.s1.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.f2.$      contains x.s1.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.f2.!t1.$  contains x.s1.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.f2.!t2.$  contains x.s1.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.[el].*    contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].*    contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].*    contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].*    contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].*    contains x.s1.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].*    contains x.s1.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].*    contains x.s1.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.s1.[el].$    contains x.s1.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.[el].!t1.$ contains x.s1.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s1.[el].!t2.$ contains x.s1.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.*         contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f1.*      : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f2.*      : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.[el].*    : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.s2.*         contains x.s2.*f        : containsAccess(abstract-prefix wildcard)
+  x.s2.$         contains x.s2.f1.$      : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.$         contains x.s2.f2.$      : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.$         contains x.s2.[el].$    : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.!t1.$     contains x.s2.f1.!t1.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.!t1.$     contains x.s2.f2.!t1.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.!t1.$     contains x.s2.[el].!t1.$ : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.!t2.$     contains x.s2.f1.!t2.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.!t2.$     contains x.s2.f2.!t2.$  : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.!t2.$     contains x.s2.[el].!t2.$ : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.f1.*      contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.*      contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.*      contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.*      contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.*      contains x.s2.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.*      contains x.s2.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.*      contains x.s2.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.f1.$      contains x.s2.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.f1.!t1.$  contains x.s2.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.f1.!t2.$  contains x.s2.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.f2.*      contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.*      contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.*      contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.*      contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.*      contains x.s2.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.*      contains x.s2.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.*      contains x.s2.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.f2.$      contains x.s2.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.f2.!t1.$  contains x.s2.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.f2.!t2.$  contains x.s2.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.[el].*    contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].*    contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].*    contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].*    contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].*    contains x.s2.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].*    contains x.s2.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].*    contains x.s2.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.s2.[el].$    contains x.s2.$         : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.[el].!t1.$ contains x.s2.!t1.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.s2.[el].!t2.$ contains x.s2.!t2.$     : containsAccess(symmetric field-[any]; suffix+static exact)
+  x.*s           contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f1.*         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f1.$         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f2.*         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f2.$         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.f2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.[el].*       : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.[el].$       : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.[el].!t1.$   : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.[el].!t2.$   : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f1.*      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f2.*      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.[el].*    : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f1.*      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f2.*      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.[el].*    : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.*f           : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s1.*f        : containsAccess(abstract-prefix wildcard)
+  x.*s           contains x.s2.*f        : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.*            : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.$            : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.!t1.$        : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.!t2.$        : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f1.*         : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f1.$         : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f2.*         : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f2.$         : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.f2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.[el].*       : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.[el].$       : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.[el].!t1.$   : containsAccess(abstract-prefix wildcard)
+  x.*f           contains x.[el].!t2.$   : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.*         : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.$         : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f1.*      : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f2.*      : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.[el].*    : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.s1.*f        contains x.s1.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.*         : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.$         : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.!t1.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.!t2.$     : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f1.*      : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f1.$      : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f1.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f1.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f2.*      : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f2.$      : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f2.!t1.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.f2.!t2.$  : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.[el].*    : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.[el].$    : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.[el].!t1.$ : containsAccess(abstract-prefix wildcard)
+  x.s2.*f        contains x.s2.[el].!t2.$ : containsAccess(abstract-prefix wildcard)
+
+## CROSS-BASE PROBE  x-fact.contains(y-same-access)
+  cross-base identical-access contained count = 0 / 52
+
