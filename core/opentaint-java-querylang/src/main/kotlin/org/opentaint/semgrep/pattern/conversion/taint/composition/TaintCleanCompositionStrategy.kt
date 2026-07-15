@@ -10,6 +10,7 @@ import org.opentaint.semgrep.pattern.conversion.taint.TaintAutomataEdges
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleGenerationCtx
 import org.opentaint.semgrep.pattern.conversion.taint.base
+import org.opentaint.semgrep.pattern.conversion.taint.withAnyField
 
 class TaintCleanCompositionStrategy<Item, Cond, Assign, Clean>(
     private val rule: TaintAutomataEdges,
@@ -30,11 +31,14 @@ class TaintCleanCompositionStrategy<Item, Cond, Assign, Clean>(
             cleanerPos += PositionBase.AnyArgument(classifier = "tainted").base()
             cleanerPos += PositionBase.This.base()
         }
-        if (pos is PositionBaseWithModifiers.WithModifiers && pos.modifiers.contains(PositionModifier.AnyField)) {
-            cleanerPos += pos
-        }
 
-        return cleans.flatMap { c -> cleanerPos.map { strategy.createCleanAction(c, it) } }
+        val isStar = pos is PositionBaseWithModifiers.WithModifiers &&
+            pos.modifiers.contains(PositionModifier.AnyField)
+        // star ($X*): clean the any-field of each cleaner position (Result.*, etc.),
+        // on the SAME base as the plain value clean — not the raw metavar position.
+        val emitPositions = if (isStar) cleanerPos.map { it.withAnyField() } else cleanerPos
+
+        return cleans.flatMap { c -> emitPositions.map { strategy.createCleanAction(c, it) } }
     }
 
     override fun stateAccessedMarks(

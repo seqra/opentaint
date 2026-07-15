@@ -9,6 +9,7 @@ import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.semgrep.pattern.createTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SourceRule
@@ -104,16 +105,21 @@ class StarOperatorRuleGenTest {
             """.trimIndent()
         )
         val positions = cleanPositions(cfg)
+        val plain = positions.filterIsInstance<PositionBaseWithModifiers.BaseOnly>()
+        val anyField = positions.filterIsInstance<PositionBaseWithModifiers.WithModifiers>()
+            .filter { it.modifiers.contains(PositionModifier.AnyField) }
+        assertTrue(plain.isNotEmpty(), "expected a plain-value clean; got $positions")
+        assertTrue(anyField.isNotEmpty(), "expected an any-field clean; got $positions")
+        // Base coherence: the any-field clean must sit on the SAME base as the
+        // plain value clean (both PositionBase.Result), not the raw metavar
+        // argument position — otherwise field taint survives the sanitizer.
         assertTrue(
-            positions.any { it is PositionBaseWithModifiers.BaseOnly },
-            "expected a plain-value clean; got $positions"
+            plain.any { it.base == PositionBase.Result },
+            "expected plain clean on Result; got $positions"
         )
         assertTrue(
-            positions.any {
-                it is PositionBaseWithModifiers.WithModifiers &&
-                    it.modifiers.contains(PositionModifier.AnyField)
-            },
-            "expected an any-field clean; got $positions"
+            anyField.any { it.base == PositionBase.Result },
+            "expected any-field clean on Result (same base as plain value clean); got $positions"
         )
     }
 
