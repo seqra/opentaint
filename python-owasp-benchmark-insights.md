@@ -921,3 +921,43 @@ vs secrets/os.urandom (FALSE, auto-excluded) vs `random.SystemRandom().<fn>()` (
 (b) add a new `str(random.<fn>(...))` branch if a weak fn outside the five appears (e.g. `uniform`, `choice`,
 `shuffle`, `sample`, `betavariate`, `gauss`, `randrange`); (c) watch for any TRUE entry NOT wrapped in `str`
 (would need a different outer sink). os.urandom FALSE need no handling (name never matches).
+
+## Crutch removal — bare structural sinks (securecookie / hash / weakrand)
+
+The three structural no-flow categories were refactored to REMOVE the self-source / downstream-use
+"crutch" and use the correct form: **a bare structural sink on the dangerous call itself**, which fires
+on the call match alone — NO source, NO `ContainsMark` predicate. VERIFIED FACT: a structural sink
+whose lowered condition is a specific-function target (with or without a positive const-compare) survives
+sink-discard and fires without any data-flow source. All 516 rule files regenerated (uniform per category);
+`OwaspBenchmarkTest` verdicts held identically (full suite failures=0).
+
+**Before → after (rule body):**
+- **securecookie (39):** `$RESP = flask.make_response(...) ... $RESP.set_cookie(..., secure=False, ...)`
+  → **`$RESP.set_cookie(..., secure=False, ...)`** (single `pattern:`). Emit: 1 sink `set_cookie`,
+  `ConstantCmp(kwarg(secure)==False)`, NO source, NO `ContainsMark`.
+- **hash (151):** `$H = hashlib.new('md5')/... ... $H.update(...)` (pattern-either) → **`pattern-either` of
+  bare `hashlib.new('md5')`, `hashlib.new('sha1')`, `hashlib.md5(...)`, `hashlib.sha1(...)`**. Emit: 4 sinks,
+  NO source; the two `hashlib.new` sinks carry `ConstantCmp(arg(0)==algo)`, the `hashlib.md5/sha1` sinks have
+  a trivially-true (null) condition (kept — specific function target).
+- **weakrand (326):** `str(random.<fn>(...))` (pattern-either) → **`pattern-either` of bare
+  `random.<fn>(...)`**. Emit: 5 sinks `random.{normalvariate,randint,getrandbits,random,randbytes}`, all with
+  null condition, NO source.
+
+**Verification (CARDINAL 5):**
+- Emit dump (scratch `SpikeDumpTest` on candidate probes): every category emits ONLY `SerializedPythonSink`s,
+  ZERO `SerializedPythonSource`s. securecookie 1 sink; hash 4 sinks; weakrand 5 sinks. Locked permanently in
+  the rewritten `PythonRuleEmitTest` (`… lowers to a source-less structural sink` / `… source-less structural
+  sinks`) which now assert `SerializedPythonSource` is empty and no `ContainsMark`.
+- Firing spike (11 real entries, verdict = firing signal): securecookie TRUE 00064/00065 reach, FALSE 00337
+  excluded; hash TRUE 00054/00057 reach, FALSE 00055/00061 excluded; weakrand TRUE 00025/00026 reach, FALSE
+  00032 excluded. All PASS.
+- SystemRandom re-check: temporarily enabled 00044 (weakrand SystemRandom `@Disabled`) under the crutch-free
+  form → still FIRES (FP), assertNotReachable FAILED. The last-segment callee collision
+  (`PIRSimpleNameUnknownFunction:getrandbits` vs target `random.getrandbits`) is identical whether the weak
+  call is a source or a bare sink → the 100 SystemRandom entries stay `@Disabled` (inv 38). Reverted.
+- Full suite: `OwaspBenchmarkTest` 1181 tests, 775 pass / 0 fail / 406 skipped — unchanged vs before
+  (only rule bodies, probes, and docs were touched; no `@Disabled` annotation changed).
+
+**Tripwires updated to the new form:** `python-rules/{securecookie,hash,weakrand}-probe.yaml` +
+their `PythonRuleEmitTest` assertions. Session-2 doc inv 36/37/38 rewritten to describe the bare structural
+sink as the correct form (crutch history noted).

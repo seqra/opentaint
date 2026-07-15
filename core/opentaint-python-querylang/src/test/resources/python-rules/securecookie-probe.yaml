@@ -6,7 +6,4 @@ rules:
     metadata:
       cwe: CWE-614
     patterns:
-      - pattern: |
-          $RESP = flask.make_response(...)
-          ...
-          $RESP.set_cookie(..., secure=False, ...)
+      - pattern: $RESP.set_cookie(..., secure=False, ...)

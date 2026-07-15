@@ -47,9 +47,11 @@ fixes accumulate cleanly.
   **1181 tests: 775 pass / 0 fail / 406 skipped**. The 406 skipped are `@Disabled`-with-verified-reason:
   xss 89 + trustbound 37 (blocked sink-kind gaps inv 35/28); ~113 weakrand SystemRandom (inv 38); and the
   approximation-limited pathtraver/xpathi FPs+FNs (inv 16/18/19/20/23/27/34). The three structural no-flow
-  categories used the self-source recipe: securecookie (make_response self-source + positive `secure=False`
-  kwarg sink), hash (weak-digest `pattern-either` + `.update` sink), weakrand (weak `random.<fn>` in `str()`
-  sink) — all POSITIVE matches, never `pattern-not` cleaners (avoids inv 27).
+  categories use the **crutch-free BARE STRUCTURAL SINK recipe** (a structural sink fires on the call match
+  alone — no source, no `ContainsMark`): securecookie (bare `set_cookie(..., secure=False, ...)` sink), hash
+  (`pattern-either` of bare `hashlib.md5(...)`/`hashlib.new('md5')` sinks), weakrand (`pattern-either` of bare
+  `random.<fn>(...)` sinks) — POSITIVE const-compares where needed, never `pattern-not` cleaners (avoids inv 27).
+  The former self-source/downstream-use crutches (make_response, `.update`, `str(...)`) were REMOVED.
 - **Next batch: NONE — authoring is DONE. Only the ENGINE PHASE remains** (tackle centrally with the user;
   each has a reproducer/tripwire). Reactivating the 406 skipped is now pure engine work:
   **inv 35** return-value-sink → unblocks xss (89); **inv 28** subscript-store-sink → unblocks trustbound (37);
@@ -311,96 +313,90 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     Same shape as inv 28. All 40 xss entries `@Disabled` (no yaml). Fix = emit+fire a return sink; then triage
     FALSE half (`escape_for_html`/`html.escape`/`markupsafe.escape` sanitizers). **HOLD all ~89 xss until fixed.**
 
-36. **securecookie / CWE-614 is EXPRESSIBLE structurally — self-source + positive kwarg const-compare sink**
-    (VERIFIED, spike-pilot; all 39 entries active-pass, 0 `@Disabled`). No data-flow source exists (the vuln is
-    the call *configuration*, not taint), so make the response object a **self-source** and let the sink's kwarg
-    constant do the discrimination. Working rule (identical for every entry — `make_response` is universal, all
-    TRUE = `secure=False`, all FALSE = `secure=True`):
+36. **securecookie / CWE-614 is EXPRESSIBLE as a BARE STRUCTURAL SINK — no source, no ContainsMark**
+    (VERIFIED, spike + full suite; all 39 entries active-pass, 0 `@Disabled`). No data-flow source exists (the vuln
+    is the call *configuration*, not taint). **CORRECT crutch-free form: a bare structural sink on the dangerous
+    call itself** — a single `pattern:` on `$RESP.set_cookie(..., secure=False, ...)` with NO assignment, NO
+    self-source, NO downstream-use. A structural sink fires on the call match alone; the kwarg constant does the
+    discrimination:
     ```yaml
     patterns:
-      - pattern: |
-          $RESP = flask.make_response(...)
-          ...
-          $RESP.set_cookie(..., secure=False, ...)
+      - pattern: $RESP.set_cookie(..., secure=False, ...)
     ```
-    Lowers (`PythonRuleEmitTest` `securecookie make_response self-source…`) to source `flask.make_response`→`Result`
-    (taints `$RESP`) + sink `set_cookie` with `ContainsMark(This)` (receiver, inv 30) AND a **positive**
-    `ConstantCmp(kwarg(secure)==False)`. FIRES: 00064 (secure=False) reaches; 00337 (secure=True) fails the
-    const-compare → excluded — VERIFIED by suite + `applySinkRules` trace (`callee=[set_cookie] rules=1`).
-    **Key: the secure=True/False distinction is a POSITIVE `secure=False` match in the SINK, NOT a `pattern-not`
-    cleaner** — the kwarg gap is fixed for structural const-compares (inv, `kwarg-structural`), and a positive
-    match sidesteps the RuleCookie/inv-27 receiver-cleaner gap (`RuleCookie` is `@Ignore`d precisely because its
-    `$C.set_secure(True)` cleaner needs must-alias to kill the receiver fact — we never need a cleaner here). The
-    make_response self-source is robust because taint on the response object flows to the immediate `set_cookie`
-    receiver regardless of whether the cookie *value* is tainted (no reliance on the fragile request→value chain
-    through `escape_for_html`/`encode`/`decode`). Tripwire: `python-rules/securecookie-probe.yaml`. **Corollary:
-    hash (CWE-328) / weakrand (CWE-330) are likely just as expressible** — both are "dangerous call configuration"
-    with a self-source shape (`$H = hashlib.md5(...)` / `random.random(...)`), no data-flow needed; the only open
-    question is the sink (a call like `hashlib.md5(...)` is a plain call sink, easier than set_cookie's kwarg).
+    Lowers (`PythonRuleEmitTest` `securecookie secure=False lowers to a source-less structural sink`) to **exactly
+    one sink** `set_cookie` guarded ONLY by a **positive** `ConstantCmp(kwarg(secure)==False)` — **NO
+    `SerializedPythonSource` and NO `ContainsMark`**. FIRES: 00064/00065 (secure=False) reach; 00337 (secure=True)
+    fails the const-compare → excluded — VERIFIED by full suite (failures=0). The secure=True/False distinction is
+    a POSITIVE `secure=False` match in the sink, NOT a `pattern-not` cleaner (kwarg gap fixed for structural
+    const-compares, `kwarg-structural`; positive match sidesteps the RuleCookie/inv-27 receiver-cleaner gap).
+    Tripwire: `python-rules/securecookie-probe.yaml`.
+    **HISTORY:** the earlier form used a self-source crutch `$RESP = flask.make_response(...) ... $RESP.set_cookie(...)`
+    (make_response as a self-source, set_cookie's `ContainsMark(This)` as the sink-reach). The crutch was REMOVED —
+    a bare structural sink fires on the call match without any `ContainsMark` predicate.
 
-37. **hash / CWE-328 is EXPRESSIBLE structurally — self-source on the hash object + `.update` receiver sink**
-    (VERIFIED, spike + suite; batch-1 = all 50 entries active-pass, 0 `@Disabled`). Confirms the inv-36 corollary.
-    No data-flow source (the vuln is the *algorithm choice*, not taint). Make the hash object a self-source and
-    let the sink check `ContainsMark(This)` on the receiver. ONE canonical `pattern-either` rule is identical for
-    every entry (TRUE and FALSE) — the four weak shapes:
+37. **hash / CWE-328 is EXPRESSIBLE as BARE STRUCTURAL SINKS — no source, no `.update` crutch**
+    (VERIFIED, spike + full suite; all 151 entries active-pass, 0 `@Disabled`). No data-flow source (the vuln is
+    the *algorithm choice*, not taint). **CORRECT crutch-free form: a `pattern-either` of BARE dangerous calls** —
+    no `$H` assignment, no `.update` downstream-use. Each branch is a source-less structural sink on the weak call:
     ```yaml
     patterns:
       - pattern-either:
-          - pattern: |
-              $H = hashlib.new('md5')
-              ...
-              $H.update(...)
-          - pattern: | ... $H = hashlib.new('sha1') ... $H.update(...)   # (shape A, sha1)
-          - pattern: | ... $H = hashlib.md5(...)   ... $H.update(...)     # (shape B, md5)
-          - pattern: | ... $H = hashlib.sha1(...)  ... $H.update(...)     # (shape B, sha1)
+          - pattern: hashlib.new('md5')
+          - pattern: hashlib.new('sha1')
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
     ```
-    `pattern-either` lowers to N INDEPENDENT source+sink pairs (VERIFIED, `PythonRuleEmitTest`
-    `hash weak-digest rule lowers…`, tripwire `python-rules/hash-probe.yaml`). Two shapes:
-    - **Shape A** `hashlib.new('md5'/'sha1')` — source `hashlib.new`→`Result` guarded by a **POSITIVE**
-      `ConstantCmp(arg(0)=='md5') AND NumberOfArgs(1)`. SHA-384/512 fail the const-compare → source never fires →
-      not reached. (Same positive-const-match trick as inv 36's `secure=False`, here on a positional arg not kwarg;
-      no `pattern-not`/cleaner.)
-    - **Shape B** `hashlib.md5(...)`/`hashlib.sha1(...)` — source is the FUNCTION NAME itself (`hashlib.md5`→
-      `Result`, no condition). SHA-256/512 simply don't match the source callee → not reached.
-    Sink `$H.update(...)` = `ContainsMark(This)` (receiver, inv 30). The self-source rides to the immediate
-    `.update` regardless of whether the hashed *value* is tainted. FIRES: 00054 (`new('md5')`), 00057
-    (`hashlib.md5()`) reach; 00055 (`new('sha384')`), 00061 (`hashlib.sha384()`) excluded — VERIFIED by suite.
+    `pattern-either` lowers to N INDEPENDENT source-less sinks (VERIFIED, `PythonRuleEmitTest`
+    `hash weak-digest rule lowers to source-less structural sinks`, tripwire `python-rules/hash-probe.yaml` —
+    asserts **NO `SerializedPythonSource`** and no `ContainsMark`). Two shapes:
+    - **Shape A** `hashlib.new('md5'/'sha1')` — sink `hashlib.new` guarded by a **POSITIVE**
+      `ConstantCmp(arg(0)=='md5') AND NumberOfArgs(1)`. SHA-384/512 fail the const-compare → never fire.
+    - **Shape B** `hashlib.md5(...)`/`hashlib.sha1(...)` — the FUNCTION NAME itself is the discriminator: sink
+      target `hashlib.md5`, trivially-true condition (kept because the target is a specific — not empty — function).
+      SHA-256/512 simply don't match the target → never fire.
+    FIRES: 00054 (`new('md5')`), 00057 (`hashlib.md5()`) reach; 00055 (`new('sha384')`), 00061 (`hashlib.sha384()`)
+    excluded — VERIFIED by full suite (failures=0).
+    **HISTORY:** the earlier form threaded a self-source on the hash object into a receiver-position `.update` sink
+    (`$H = hashlib.md5(...) ... $H.update(...)`, `ContainsMark(This)`). Both the `$H` self-source AND the `.update`
+    downstream-use were crutches — REMOVED; a structural sink fires on the call match alone.
 
-38. **weakrand / CWE-330 is EXPRESSIBLE structurally for weak module calls + secrets FALSE, but SystemRandom
-    FALSE is NOT (last-segment collision)** (VERIFIED, spike + suite; batch-1 = 34 active-pass, 16 `@Disabled`).
-    Confirms the inv-36/37 corollary with a category limitation. No data-flow source (the vuln is the RNG
-    *choice*: Mersenne-Twister `random.<fn>` vs CSPRNG). There is NO `.update`-style receiver sink — the weak
-    call is consumed inline (`value = str(random.normalvariate())[2:]`). Sink = the **universal `str(...)`
-    wrapper** (all 11 TRUE wrap the RNG in `str`; randbytes' `str(base64.b64encode(random.randbytes(32)))`
-    reaches `str` via the `base64.b64encode` arg(0)→result passthrough already in config.yaml). ONE canonical
-    `pattern-either` for every entry — each weak fn nested in `str`:
+38. **weakrand / CWE-330 is EXPRESSIBLE as BARE STRUCTURAL SINKS for weak module calls + secrets FALSE, but
+    SystemRandom FALSE is NOT (last-segment collision → `@Disabled`)** (VERIFIED, spike + full suite; 226
+    active-pass, 100 `@Disabled`). No data-flow source (the vuln is the RNG *choice*: Mersenne-Twister
+    `random.<fn>` vs CSPRNG). **CORRECT crutch-free form: a `pattern-either` of BARE dangerous calls** — no
+    `str(...)` wrapper. Each branch is a source-less structural sink on the weak `random.<fn>` call (the function
+    name IS the discriminator):
     ```yaml
     patterns:
       - pattern-either:
-          - pattern: str(random.normalvariate(...))
-          - pattern: str(random.randint(...))
-          - pattern: str(random.getrandbits(...))
-          - pattern: str(random.random(...))
-          - pattern: str(random.randbytes(...))
+          - pattern: random.normalvariate(...)
+          - pattern: random.randint(...)
+          - pattern: random.getrandbits(...)
+          - pattern: random.random(...)
+          - pattern: random.randbytes(...)
     ```
-    Each branch lowers (`PythonRuleEmitTest` `weakrand rule lowers…`, tripwire `python-rules/weakrand-probe.yaml`)
-    to a self-source `random.<fn>`→`Result` (no condition) threaded into a generic `str($T)` sink =
-    `ContainsMark(Argument(0))`. The nested inner call becomes the source, the outer call the sink — same
-    flatten as hash's two-line form (converter binds the inner Result to an artificial metavar the outer call
-    consumes).
+    Each branch lowers (`PythonRuleEmitTest` `weakrand rule lowers to source-less structural sinks per weak
+    function`, tripwire `python-rules/weakrand-probe.yaml`) to a **source-less structural sink** `random.<fn>`
+    with a trivially-true condition (**NO `SerializedPythonSource`, NO `ContainsMark`**). Fires on the call match.
     - **TRUE (weak module calls) FIRE**: `random.getrandbits(32)` resolves to `PIRQualifiedUnknownFunction:
-      random.getrandbits`, `matchesName` `qn==targetName` → source fires (VERIFIED trace `srcRules=1`).
-    - **secrets.\* FALSE cleanly excluded**: `randbelow`/`randbits`/`token_bytes`/`token_hex`/`token_urlsafe`
-      share no last segment with the five weak fns → source never matches → no mark → `str` sink silent.
+      random.getrandbits`, `matchesName` `qn==targetName` → sink fires (VERIFIED full suite).
+    - **secrets.\* / os.urandom FALSE cleanly excluded**: distinct last segments from the five weak fns → sink
+      target never matches → silent.
     - **⚠️ SystemRandom (CSPRNG) FALSE NOT excludable → `@Disabled`**: `random.SystemRandom().getrandbits(32)`
-      resolves to `PIRSimpleNameUnknownFunction:getrandbits` (the constructor's return type is unresolved, so
-      the method falls to a simple-name callee). `matchesName` line 260 unconditionally matches a
-      `PIRSimpleNameUnknownFunction` by last segment against ANY target → collides with `random.getrandbits` →
-      source FIRES → FP. Structurally inseparable from the module call (no rule knob forces qualified-only
-      matching; inv 3 last-segment fallback, inv 7 QN resolution). VERIFIED: spike 00044 fired; trace showed
-      `PIRSimpleNameUnknownFunction:getrandbits srcRules=1`. The 16 SystemRandom entries are `@Disabled` with
-      this reason. (Note: the batch prompt's guessed SystemRandom list was WRONG — verified per-file: SR =
-      00044–00053, 00129–00134; the rest of the FALSE are secrets.\*.)
+      resolves to `PIRSimpleNameUnknownFunction:getrandbits` (constructor return type unresolved → simple-name
+      callee). `matchesName` unconditionally matches a `PIRSimpleNameUnknownFunction` by last segment against ANY
+      target → collides with `random.getrandbits` → sink FIRES → FP. **The sink/source distinction does NOT change
+      this**: last-segment callee matching is identical whether the weak call is a source or a bare sink — RE-VERIFIED
+      under the crutch-free form (temporarily enabled 00044 → still fires → FP). Structurally inseparable; the 100
+      SystemRandom entries stay `@Disabled`. **A `pattern-not: random.SystemRandom().<fn>(...)` exclusion does NOT
+      help — VERIFIED it is silently DROPPED in conversion**: the emitted rules are byte-identical with/without it
+      (no `SerializedPythonSource` for `SystemRandom()`, no `Not` condition), because a source-less structural sink
+      engages no mark machinery and a two-call-chain `pattern-not` never lowers to a `Not(ContainsMark)`. Excluding
+      SystemRandom would require an engine change (emit a source for `random.SystemRandom()` + lower a chain
+      `pattern-not` to a mark-gated negative). Not supported — do not re-attempt at the rule level.
+    **HISTORY:** the earlier form nested each weak call in a `str(...)` wrapper crutch (self-source `random.<fn>`
+    threaded into a generic `str($T)` sink). The `str(...)` wrapper was REMOVED — a structural sink fires on the
+    weak call directly.
 
 ## Category → sink / CWE reference
 

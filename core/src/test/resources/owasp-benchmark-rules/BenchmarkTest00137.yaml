@@ -7,8 +7,8 @@ rules:
       cwe: CWE-330
     patterns:
       - pattern-either:
-          - pattern: str(random.normalvariate(...))
-          - pattern: str(random.randint(...))
-          - pattern: str(random.getrandbits(...))
-          - pattern: str(random.random(...))
-          - pattern: str(random.randbytes(...))
+          - pattern: random.normalvariate(...)
+          - pattern: random.randint(...)
+          - pattern: random.getrandbits(...)
+          - pattern: random.random(...)
+          - pattern: random.randbytes(...)
