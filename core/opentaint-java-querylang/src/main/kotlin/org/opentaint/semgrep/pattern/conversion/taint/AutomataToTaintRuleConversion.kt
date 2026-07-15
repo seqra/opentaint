@@ -183,6 +183,7 @@ private fun SerializedCondition.rewriteAsEndCondition(): SerializedCondition = w
     is SerializedCondition.IsNull -> copy(isNull = isNull.rewriteAsEndPosition())
     is SerializedCondition.ConstantMatches -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedCondition.ContainsMark -> copy(pos = pos.rewriteAsEndPosition())
+    is SerializedCondition.ContainsMarkOnAnyField -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedCondition.IsConstant -> copy(isConstant = isConstant.rewriteAsEndPosition())
     is SerializedCondition.IsType -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedCondition.ParamAnnotated -> copy(pos = pos.rewriteAsEndPosition())

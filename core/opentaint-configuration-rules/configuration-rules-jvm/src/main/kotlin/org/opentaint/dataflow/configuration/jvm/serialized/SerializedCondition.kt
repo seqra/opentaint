@@ -142,6 +142,12 @@ sealed interface SerializedCondition {
     ): SerializedCondition
 
     @Serializable
+    data class ContainsMarkOnAnyField(
+        val tainted: String,
+        val pos: PositionBaseWithModifiers,
+    ): SerializedCondition
+
+    @Serializable
     data class NumberOfArgs(val numberOfArgs: Int): SerializedCondition
 
     sealed interface AnnotationParamMatcher {
