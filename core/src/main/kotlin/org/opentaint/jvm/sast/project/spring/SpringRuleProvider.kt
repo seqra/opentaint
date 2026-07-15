@@ -27,6 +27,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
+import org.opentaint.ir.api.jvm.JIRMethod
 
 class SpringRuleProvider(
     private val base: TaintRulesProvider,
@@ -196,8 +197,21 @@ class SpringRuleProvider(
         fact: FactAp?,
         initialFacts: Set<InitialFactAp>?,
         allRelevant: Boolean
-    ): Iterable<TaintMethodExitSink> =
-        base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant)
+    ): Iterable<TaintMethodExitSink> {
+        if (method is SpringGeneratedMethod) return emptyList()
+        if (method !is JIRMethod || !method.isSpringControllerMethod()) {
+            return base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant)
+        }
+
+        // Pass initialFacts = null for controller-return sinks to bypass the Z2F gate in
+        // JIRMethodExitRuleProvider (which drops exit rules when initialFacts is non-empty).
+        // Controller-return XSS sinks must still fire on F2F edges, i.e. STORED / second-order
+        // flows where taint enters the GET handler as an initial fact (e.g. POST writes tainted
+        // data into a repository, GET returns repo.findById(...)). This reproduces the load-bearing
+        // null bypass of the removed unfoldSpringExitObject hack; the $VAR* stars in the rules now
+        // handle the any-field widening that the deleted ContainsMarkRewriter used to do.
+        return base.sinkRulesForMethodExit(method, statement, fact, initialFacts = null, allRelevant)
+    }
 
     companion object {
         private const val javaObject = "java.lang.Object"
