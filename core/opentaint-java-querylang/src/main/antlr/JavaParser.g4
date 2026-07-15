@@ -263,7 +263,8 @@ variableDeclarator
     ;
 
 variableDeclaratorId
-    : identifier ('[' ']')*
+    : {metavarStarAdjacent()}? METAVAR '*'
+    | identifier ('[' ']')*
     ;
 
 variableInitializer

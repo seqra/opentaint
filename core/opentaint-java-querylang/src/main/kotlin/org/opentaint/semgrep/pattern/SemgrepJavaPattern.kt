@@ -148,8 +148,10 @@ data class FormalArgument(
     val name: Name,
     val type: TypeName,
     val modifiers: List<Modifier>,
+    val star: Boolean = false,
 ) : SemgrepJavaPattern {
-    override val children: List<SemgrepJavaPattern> = emptyList()
+    override val children: List<SemgrepJavaPattern> =
+        if (star && name is MetavarName) listOf(Metavar(name.metavarName, star = true)) else emptyList()
 }
 
 data class NamedValue(

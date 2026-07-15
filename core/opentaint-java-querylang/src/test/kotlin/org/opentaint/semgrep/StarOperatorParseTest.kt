@@ -48,4 +48,20 @@ class StarOperatorParseTest {
         assertEquals(0, starredMetavarCount("sink(\$Y * z);"), "\$Y * z must not be a star")
         assertEquals(1, starredMetavarCount("sink(\$Y*);"), "\$Y* must be a star")
     }
+
+    @Test
+    fun `starred formal parameter metavar`() {
+        val mvs = metavars(
+            "@\$ANNOTATION(...) \$RT \$M(..., \$TYPE \$UNTRUSTED*, ...) { ... }"
+        )
+        val u = mvs.single { it.name == "\$UNTRUSTED" }
+        assertTrue(u.star, "expected formal-parameter \$UNTRUSTED* to be starred")
+    }
+
+    @Test
+    fun `starred bare return value`() {
+        val mvs = metavars("return \$UNTRUSTED*;")
+        val u = mvs.single { it.name == "\$UNTRUSTED" }
+        assertTrue(u.star)
+    }
 }

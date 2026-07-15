@@ -348,10 +348,17 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
     override fun visitFormalParameter(ctx: FormalParameterContext): SemgrepJavaPattern = ctx.withRule {
         tryRule(FormalParameterContext::ellipsisExpression) { return Ellipsis }
         tryRule(FormalParameterContext::formalParameterMetavar) { return parseFormalParameterMetavar(it) }
-        tryRule(FormalParameterContext::variableDeclaratorId) {
-            val name = it.identifier().parseName()
+        tryRule(FormalParameterContext::variableDeclaratorId) { declaratorId ->
             val type = value(FormalParameterContext::typeType).accept(typenameParser) ?: ctx.parsingFailed()
             val modifiers = value(FormalParameterContext::variableModifier).mapNotNull { parseModifier(it) }
+
+            // Starred declarator alternative `METAVAR '*'`: the `identifier` subrule is absent.
+            if (declaratorId.identifier() == null) {
+                val name = MetavarName(declaratorId.METAVAR().text)
+                return FormalArgument(name, type, modifiers, star = true)
+            }
+
+            val name = declaratorId.identifier().parseName()
             return FormalArgument(name, type, modifiers)
         }
         unreachable()
