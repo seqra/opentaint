@@ -4,13 +4,9 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.configuration.CommonConditionRewriter
 import org.opentaint.dataflow.configuration.jvm.Argument
 import org.opentaint.dataflow.configuration.jvm.ClassStatic
-import org.opentaint.dataflow.configuration.jvm.Condition
-import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
-import org.opentaint.dataflow.configuration.jvm.JirCondition
 import org.opentaint.dataflow.configuration.jvm.Position
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
@@ -27,12 +23,10 @@ import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.configuration.jvm.This
 import org.opentaint.dataflow.configuration.mkTrue
-import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
-import org.opentaint.ir.api.jvm.JIRMethod
 
 class SpringRuleProvider(
     private val base: TaintRulesProvider,
@@ -202,29 +196,8 @@ class SpringRuleProvider(
         fact: FactAp?,
         initialFacts: Set<InitialFactAp>?,
         allRelevant: Boolean
-    ): Iterable<TaintMethodExitSink> {
-        if (method !is JIRMethod || !method.isSpringControllerMethod()) {
-            return base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant)
-        }
-
-        val allBaseRules = base.sinkRulesForMethodExit(method, statement, fact, initialFacts = null, allRelevant)
-        return allBaseRules.map { unfoldSpringExitObject(it) }
-    }
-
-    private fun unfoldSpringExitObject(rule: TaintMethodExitSink): TaintMethodExitSink =
-        rule.copy(condition = unfoldObjectContainsMark(position = Result, rule.condition))
-
-    private fun unfoldObjectContainsMark(position: Position, condition: Condition): Condition =
-        condition.accept(ContainsMarkRewriter(position))
-
-    private class ContainsMarkRewriter(val position: Position) : CommonConditionRewriter<JirCondition> {
-        override fun rewriteAtom(atom: JirCondition): JirCondition {
-            if (atom !is ContainsMark) return atom
-
-            if (atom.position != position) return atom
-            return ContainsMarkOnAnyField(position, atom.mark)
-        }
-    }
+    ): Iterable<TaintMethodExitSink> =
+        base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant)
 
     companion object {
         private const val javaObject = "java.lang.Object"
