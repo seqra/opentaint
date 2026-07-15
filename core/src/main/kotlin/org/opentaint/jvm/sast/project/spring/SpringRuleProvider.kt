@@ -6,7 +6,6 @@ import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.configuration.CommonConditionRewriter
 import org.opentaint.dataflow.configuration.jvm.Argument
-import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.ClassStatic
 import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
@@ -30,13 +29,10 @@ import org.opentaint.dataflow.configuration.jvm.This
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
-import org.opentaint.ir.api.jvm.TypeName
-import org.opentaint.ir.impl.cfg.util.isClass
 
 class SpringRuleProvider(
     private val base: TaintRulesProvider,
@@ -44,36 +40,7 @@ class SpringRuleProvider(
 ) : TaintRulesProvider by base {
     override fun entryPointRulesForMethod(method: CommonMethod, fact: FactAp?, allRelevant: Boolean): Iterable<TaintEntryPointSource> {
         if (method is SpringGeneratedMethod) return emptyList()
-
-        val baseRules =  base.entryPointRulesForMethod(method, fact, allRelevant)
-        if (method !is JIRMethod || method.isStatic || method.isPrivate || !method.isSpringControllerMethod()) {
-            return baseRules
-        }
-
-        return baseRules.map { taintObjectFields(method, it) }
-    }
-
-    private fun taintObjectFields(method: JIRMethod, rule: TaintEntryPointSource): TaintEntryPointSource {
-        val actions = rule.actionsAfter.flatMap { taintObjectFields(method, it) }
-        return rule.copy(actionsAfter = actions)
-    }
-
-    private fun taintObjectFields(method: JIRMethod, assign: AssignMark): List<AssignMark> {
-        val base = assign.position.resolveBaseAp()
-        if (base !is AccessPathBase.Argument) return listOf(assign)
-
-        val paramTypeName = method.parameters.getOrNull(base.idx)?.type
-            ?: return emptyList()
-
-        if (!paramTypeName.isClass) return listOf(assign)
-
-        // todo: better handling of suspend functions
-        if (paramTypeName.isKotlinContinuation()) return emptyList()
-
-        val allFieldsPosition = PositionWithAccess(assign.position, PositionAccessor.AnyFieldAccessor)
-        val allFieldsAssign = AssignMark(assign.mark, allFieldsPosition)
-
-        return listOf(assign, allFieldsAssign)
+        return base.entryPointRulesForMethod(method, fact, allRelevant)
     }
 
     override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintMethodSource> {
@@ -259,11 +226,8 @@ class SpringRuleProvider(
         }
     }
 
-    private fun TypeName.isKotlinContinuation(): Boolean = typeName == kotlinContinuation
-
     companion object {
         private const val javaObject = "java.lang.Object"
-        private const val kotlinContinuation = "kotlin.coroutines.Continuation"
 
         private val iterableElement = PositionAccessor.FieldAccessor(
             className = "java.lang.Iterable",
