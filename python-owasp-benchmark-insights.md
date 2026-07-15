@@ -825,3 +825,45 @@ recipe and should be pursued — likely EASIER than securecookie:
   sources (dump emit + trace, as here). If a single-call self-sink doesn't fire, fall back to sourcing the
   hashed/random VALUE and sinking where it's used (`.hexdigest()`, `.update(...)`, etc.). Either way the
   sink is a call, so neither is blocked by the inv 28/35 sink-kind gaps. Worth a spike-pilot each.
+
+---
+
+## hash (CWE-328) — batch 1 (50 entries), spike + round (inv 37)
+
+**VERDICT: EXPRESSIBLE, all 50 active-pass, 0 @Disabled.** Confirms the inv-36 corollary. The self-source
+recipe works; the "one call is BOTH source and sink" open question did NOT arise — the vuln spans two calls
+(`$H = hashlib.<algo>(...)` then `$H.update(...)`), so source (the hash-object constructor) and sink
+(`.update` on the receiver) are naturally distinct. No self-loop needed.
+
+**Working rule (identical for every entry — TRUE and FALSE):** one `pattern-either` over the four weak
+shapes (see inv 37 for the yaml). `pattern-either` lowers to N independent source+sink pairs.
+- Shape A `hashlib.new('md5'/'sha1')`: source `hashlib.new`→Result guarded by POSITIVE
+  `ConstantCmp(arg(0)==algo) AND NumberOfArgs(1)`. Strong algos fail the compare → not sourced.
+- Shape B `hashlib.md5()`/`hashlib.sha1()`: source is the function name; strong algos don't match the callee.
+- Sink `$H.update(...)` = `ContainsMark(This)` (receiver).
+
+**Batch shape/algo survey (all 50):**
+- Shape A (`hashlib.new('...')`): TRUE 00054(md5) 00244(sha1) 00319(md5) 00320-00323(sha1) 00409(md5)
+  00410(sha1); FALSE 00055(sha384) 00056(sha512) 00245-00246(sha384) 00247(sha512) 00324-00325(sha512)
+  00411(sha384).
+- Shape B (`hashlib.md5()/sha1()`): TRUE 00057(md5) 00058-00060(sha1) 00140-00141(md5) 00142-00143(sha1)
+  00248-00249(md5) 00250-00251(sha1) 00326-00327(md5) 00328-00329(sha1) 00412(md5); FALSE all sha384/sha512.
+- No sub-shape needed special handling; no kwargs involved (positional const on shape A, callee name on B).
+
+**VERIFICATION (CARDINAL 5):**
+- Emit dump (`emitAll` on `hash-probe.yaml`): shape-A source `hashlib.new`→Result +
+  `ConstantCmp(arg(0)=='md5'/'sha1')`; shape-B source `hashlib.md5`/`hashlib.sha1`→Result (no cond); every
+  sink `update` with `ContainsMark(This)`. `pattern-either` → one independent pair per branch.
+- Suite (firing proof): full OwaspBenchmarkTest 754 tests, 461 pass / 0 fail / 293 skipped (was 411 pass
+  post-securecookie; +50 all active). All 50 hash IDs pass; 0 skipped among them.
+
+**Tripwire:** `python-rules/hash-probe.yaml` +
+`PythonRuleEmitTest.hash weak-digest rule lowers to per-algo self-source and update sink pairs` (POSITIVE
+lock — asserts the per-algo const-compare sources and the receiver `.update` sink lower).
+
+**Recommended next hash batch.** This batch = the 50 entries listed in the task ground truth. The hash
+category has ~151 total; the remaining ~101 IDs (all outside the 50 above, in the hash-* benchmark routes)
+should reuse the identical `hash-probe`-style `pattern-either` rule verbatim — survey each only to confirm
+it's shape A or B with md5/sha1 (TRUE) vs sha256/384/512/blake2 (FALSE); no new rule form expected. Watch
+for any `.hexdigest()`-only entry with no `.update()` call (add a `$H.hexdigest(...)` sink branch if found)
+and any `hashlib.new(<algo-in-a-variable>)` non-literal (const-compare can't fire → would need @Disable).

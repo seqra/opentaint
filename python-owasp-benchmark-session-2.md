@@ -334,6 +334,34 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     with a self-source shape (`$H = hashlib.md5(...)` / `random.random(...)`), no data-flow needed; the only open
     question is the sink (a call like `hashlib.md5(...)` is a plain call sink, easier than set_cookie's kwarg).
 
+37. **hash / CWE-328 is EXPRESSIBLE structurally — self-source on the hash object + `.update` receiver sink**
+    (VERIFIED, spike + suite; batch-1 = all 50 entries active-pass, 0 `@Disabled`). Confirms the inv-36 corollary.
+    No data-flow source (the vuln is the *algorithm choice*, not taint). Make the hash object a self-source and
+    let the sink check `ContainsMark(This)` on the receiver. ONE canonical `pattern-either` rule is identical for
+    every entry (TRUE and FALSE) — the four weak shapes:
+    ```yaml
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $H = hashlib.new('md5')
+              ...
+              $H.update(...)
+          - pattern: | ... $H = hashlib.new('sha1') ... $H.update(...)   # (shape A, sha1)
+          - pattern: | ... $H = hashlib.md5(...)   ... $H.update(...)     # (shape B, md5)
+          - pattern: | ... $H = hashlib.sha1(...)  ... $H.update(...)     # (shape B, sha1)
+    ```
+    `pattern-either` lowers to N INDEPENDENT source+sink pairs (VERIFIED, `PythonRuleEmitTest`
+    `hash weak-digest rule lowers…`, tripwire `python-rules/hash-probe.yaml`). Two shapes:
+    - **Shape A** `hashlib.new('md5'/'sha1')` — source `hashlib.new`→`Result` guarded by a **POSITIVE**
+      `ConstantCmp(arg(0)=='md5') AND NumberOfArgs(1)`. SHA-384/512 fail the const-compare → source never fires →
+      not reached. (Same positive-const-match trick as inv 36's `secure=False`, here on a positional arg not kwarg;
+      no `pattern-not`/cleaner.)
+    - **Shape B** `hashlib.md5(...)`/`hashlib.sha1(...)` — source is the FUNCTION NAME itself (`hashlib.md5`→
+      `Result`, no condition). SHA-256/512 simply don't match the source callee → not reached.
+    Sink `$H.update(...)` = `ContainsMark(This)` (receiver, inv 30). The self-source rides to the immediate
+    `.update` regardless of whether the hashed *value* is tainted. FIRES: 00054 (`new('md5')`), 00057
+    (`hashlib.md5()`) reach; 00055 (`new('sha384')`), 00061 (`hashlib.sha384()`) excluded — VERIFIED by suite.
+
 ## Category → sink / CWE reference
 
 | category | CWE | typical sink pattern |
