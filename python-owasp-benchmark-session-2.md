@@ -42,10 +42,11 @@ fixes accumulate cleanly.
   deserialization (54), **pathtraver COMPLETE (168, batches 1–4)**, **xpathi COMPLETE (186, batches 1–5)**,
   **xss batch 1 (40, all `@Disabled` — return-value-sink gap inv 35)**. Each entry has a hand-written rule +
   hardcoded ground-truth `@Test`; unfixable FALSE entries are `@Disabled` with a one-line reason. OWASP
-  suite currently **665 tests: 366 pass / 0 fail / 299 skipped**. pathtraver b2/b3/b4 = 18+18+18 active
-  (inv 16/18/19/20/23/30/33) + 22/23/22/6 `@Disabled`; xpathi b1–b5 = 14+18+17+18+22 active
-  (inv 34 sink; 16/18/19/20/23 limits) — high `@Disabled` from replace-not-cleaner + StringIO drop (inv 34);
-  xss b1 = 0 active, all 40 `@Disabled` (inv 35).
+  suite currently **665 tests: 372 pass / 0 fail / 293 skipped**. pathtraver b2/b3/b4 = 18+18+18 active
+  (inv 16/18/19/20/23/30/33) + 22/23/22/6 `@Disabled`; xpathi b1–b5 = active + `@Disabled` (inv 34 sink;
+  16/18/19/20/23 limits), remaining `@Disabled` FPs are the apostrophe-escape `str.replace` receiver-cleaner
+  case (inv 27, NOT a new reason); the `io.StringIO`-drop FNs were FIXED this session (missing passThrough,
+  +9 re-enabled, −3 StringIO-masked FALSE now @Disabled on inv 16/18); xss b1 = 0 active, all 40 `@Disabled` (inv 35).
 - **Next batch: NONE runnable without an engine phase.** xss (89) is BLOCKED (inv 35 return-value-sink):
   ~49 xss entries HELD (do not author doomed `@Disabled` stubs). trustbound (37) BLOCKED (inv 28). Only
   remaining categories are structural-only weakrand (326) / hash (151) / securecookie (39) — **discuss
@@ -68,9 +69,11 @@ fixes accumulate cleanly.
   - **inv 28** — subscript-STORE sinks unsupported → all 37 trustbound `@Disabled`.
     Fix: emit + fire a store-sink for subscript/attr targets. Tripwire:
     `PythonRuleEmitTest.subscript-assignment sink emits no sink`.
-  - **inv 34** — xpathi FP/FN: `str.replace("'",…)` resolves to a passThrough and PROPAGATES (apostrophe-escape
-    sanitizer isn't a cleaner); `io.StringIO` write/getvalue DROPS taint (arg→receiver→result unexpressible as
-    a passThrough). ~40+ xpathi `@Disabled`. Reproducers = the `@Disabled` entries.
+  - **inv 34 → inv 27** — the xpathi apostrophe-escape `str.replace("'",…)` FP is NOT a standalone gap: it's
+    an **inv 27** instance. `bar.replace(...)` is receiver-position, so the sanitizing cleaner can't clean the
+    base `bar` (only the `$PIR_SELF` may-alias); the `copy.replace` passThrough is merely the propagation path.
+    Fixing inv 27 (propagate receiver-cleans to may-aliases) covers these too. (`io.StringIO` half is FIXED —
+    see Pass-throughs; no longer a gap.)
   - **inv 27** — receiver-position (`This`) cleaners clean only the `$PIR_SELF` may-alias → ~14 codeinj
     FALSE `@Disabled`. Fix: propagate receiver-cleans to may-aliases.
   - **inv 25/29** — a proper NextIter propagation fix would remove the manual `[...]` workaround + help xss.
@@ -85,7 +88,8 @@ fixes accumulate cleanly.
   `PythonPatternToActionListConverter.transformAssignmentValue` preserves the subscript element modifier
   so `$A = src(...)[...]` taints `Result[*]` (inv 25).
 - **Pass-throughs committed** — base64 (`b64encode`/`b64decode`/`urlsafe_b64decode`) +
-  `builtins.bytes.decode` in `config.yaml`.
+  `builtins.bytes.decode`; **`io.StringIO.write` (`arg(0)`/`kwarg(s)`→`this`) + `io.StringIO.getvalue`
+  (`this`→`result`)** (write-into-object/read-back, mirrors `queue.Queue.put`/`get`) in `config.yaml`.
 - **Known unrelated red test:** `PythonSampleBasedTest.allowedSpecificConstant` fails on this branch
   independently of the benchmark work (a `Positive_iter_proc` sample; converter-independent). The OWASP
   suite is unaffected — don't mistake it for a regression.
@@ -273,9 +277,19 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     query-arg sink never binds it → FALSE passes free (00023/00111). **`str.replace` is NOT a cleaner:**
     `bar.replace("'", "&apos;")` resolves by last-segment `replace` to the `copy.replace` passThrough and
     PROPAGATES taint (VERIFIED — 00199 has ONLY replace between param and the sink, still reaches), so the
-    apostrophe-escape sanitizer FPs (00108/00109/00199/00200/00202 @Disabled). **`io.StringIO` DROPS taint:**
-    `strIO.write(bar); q = strIO.getvalue()` loses the mark (unmodeled, needs arg→receiver→result which
-    passThrough can't express) → StringIO-built queries FN (00112/00113 TRUE @Disabled; 00024 FALSE free).
+    apostrophe-escape sanitizer FPs (00108/00109/00199/00200/00202 @Disabled). **This FP is an inv-27
+    instance** (the sanitizer `bar.replace(...)` is receiver-position — `str.replace` returns a new value and
+    the escaped result is what flows to the sink, but the structural cleaner can only key on `bar`'s receiver
+    occurrence, which inv 27 can't clean); the `copy.replace` passThrough is just the propagation path, not the
+    blocker — a working receiver-cleaner (inv-27 fix) would clean it regardless. **`io.StringIO` — FIXED
+    (was NOT unexpressible, was a missing passThrough).** `strIO.write(bar); q = strIO.getvalue()` used to
+    drop the mark, but the write-into-object/read-back pattern IS expressible exactly like `queue.Queue`:
+    added `io.StringIO.write` → `from arg(0)/kwarg(s) to this` and `io.StringIO.getvalue` → `from this to result`
+    to `config.yaml`. StringIO queries now propagate. Re-triage: TRUE FN re-enabled as `assertReachable`
+    (00112/00113/00217/00304/00554/00555/00858/00944/01218); FALSE entries that only passed because StringIO
+    dropped now FP on the underlying approximation and are @Disabled with that reason (00024 configparser
+    key-insensitivity inv 16; 00471 path-insensitive match arm inv 18; 00764 dict key-insensitivity inv 16);
+    00472 stays @Disabled but on inv 20 alone (ThingFactory getattr leaves bar untainted regardless of StringIO).
 
 31. **RESOLVED (`a4d733729`).** The read_text serialization gap ("Entry point not found" on the 6 entries
     00009/00010/00092/00093/00094/00182) was caused by `ClosureAnalyzer` treating unresolved free names — the

@@ -853,9 +853,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00101() = assertReachable("00101")
     @Test fun benchmarkTest00104() = assertReachable("00104")
     @Test fun benchmarkTest00107() = assertReachable("00107")
-    @Disabled("FN: io.StringIO write/getvalue builds the query but drops taint (unmodeled, no arg->receiver->result passthrough)")
     @Test fun benchmarkTest00112() = assertReachable("00112")
-    @Disabled("FN: io.StringIO write/getvalue builds the query but drops taint (unmodeled, no arg->receiver->result passthrough)")
     @Test fun benchmarkTest00113() = assertReachable("00113")
     @Test fun benchmarkTest00197() = assertReachable("00197")
     @Test fun benchmarkTest00198() = assertReachable("00198")
@@ -871,6 +869,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     // FALSE that pass free: parameterized xpath(query, name=bar) (bar in kwarg, query const -> not bound);
     // io.StringIO drops taint; ThingFactory getattr FN leaves bar untainted (inv 20).
     @Test fun benchmarkTest00023() = assertNotReachable("00023")
+    @Disabled("FP inv 16: configparser key-insensitivity (set keyB(param), get keyA(const)); StringIO now propagates so bar reaches")
     @Test fun benchmarkTest00024() = assertNotReachable("00024")
     @Test fun benchmarkTest00111() = assertNotReachable("00111")
     @Test fun benchmarkTest00201() = assertNotReachable("00201")
@@ -944,9 +943,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00464() = assertReachable("00464")
     @Test fun benchmarkTest00466() = assertReachable("00466")
 
-    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint (no arg->receiver->result passthrough)")
     @Test fun benchmarkTest00217() = assertReachable("00217")
-    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint (no arg->receiver->result passthrough)")
     @Test fun benchmarkTest00304() = assertReachable("00304")
     @Disabled("FN inv 20: ThingFactory getattr -> Any receiver, thing.doSomething(param) unresolved")
     @Test fun benchmarkTest00374() = assertReachable("00374")
@@ -1015,11 +1012,9 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00682() = assertReachable("00682")
     @Test fun benchmarkTest00760() = assertReachable("00760")
 
-    @Disabled("FN inv 20 + 34: ThingFactory getattr (Any receiver, doSomething unresolved) + io.StringIO drop")
+    @Disabled("FN inv 20: ThingFactory getattr -> Any receiver, thing.doSomething(param) unresolved (StringIO now propagates; bar still untainted)")
     @Test fun benchmarkTest00472() = assertReachable("00472")
-    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint (no arg->receiver->result passthrough)")
     @Test fun benchmarkTest00554() = assertReachable("00554")
-    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint (no arg->receiver->result passthrough)")
     @Test fun benchmarkTest00555() = assertReachable("00555")
     @Disabled("FN inv 20: ThingFactory getattr -> Any receiver, thing.doSomething(param) unresolved")
     @Test fun benchmarkTest00761() = assertReachable("00761")
@@ -1028,6 +1023,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     // StringIO drop (00471); ThingFactory getattr FN leaves bar untainted (00677, inv 20 corollary).
     @Test fun benchmarkTest00469() = assertNotReachable("00469")
     @Test fun benchmarkTest00470() = assertNotReachable("00470")
+    @Disabled("FP inv 18: path-insensitive match arm (const guess 'B' picks safe arm, tainted 'A'/'C' arms explored); StringIO now propagates so bar reaches")
     @Test fun benchmarkTest00471() = assertNotReachable("00471")
     @Test fun benchmarkTest00553() = assertNotReachable("00553")
     @Test fun benchmarkTest00677() = assertNotReachable("00677")
@@ -1086,14 +1082,13 @@ class OwaspBenchmarkTest : AnalysisTest() {
 
     @Disabled("FN inv 20: ThingFactory getattr -> Any receiver, thing.doSomething(param) unresolved")
     @Test fun benchmarkTest00844() = assertReachable("00844")
-    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint")
     @Test fun benchmarkTest00858() = assertReachable("00858")
-    @Disabled("FN inv 34: io.StringIO write/getvalue builds the query but drops taint")
     @Test fun benchmarkTest00944() = assertReachable("00944")
 
     // FALSE that pass free: StringIO drop (00764); kwarg xpath(query, name=bar) const query, bar in kwarg
     // (00856/00857/00939/00940/00941/00942/00943, inv 34); request.path not-a-source, never tainted
     // (01022/01023/01026/01027/01028/01029/01030, inv 17/33).
+    @Disabled("FP inv 16: dict key-insensitivity (store keyB(param), read keyA(const)); StringIO now propagates so bar reaches")
     @Test fun benchmarkTest00764() = assertNotReachable("00764")
     @Test fun benchmarkTest00856() = assertNotReachable("00856")
     @Test fun benchmarkTest00857() = assertNotReachable("00857")
@@ -1178,7 +1173,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest01204() = assertNotReachable("01204")
     @Disabled("FP inv 23: query_string source tainted, safe only via `'` apostrophe substring guard (not unifiable)")
     @Test fun benchmarkTest01217() = assertNotReachable("01217")
-    @Disabled("FN inv 34: io.StringIO write/getvalue drops taint (unmodeled arg->receiver->result), query never tainted")
     @Test fun benchmarkTest01218() = assertReachable("01218")
     @Test fun benchmarkTest01225() = assertNotReachable("01225")
     @Test fun benchmarkTest01226() = assertNotReachable("01226")

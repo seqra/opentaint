@@ -253,6 +253,16 @@ passThrough:
     to: result
   - from: kwarg(path)
     to: result
+- function: io.StringIO.write
+  copy:
+  - from: arg(0)
+    to: this
+  - from: kwarg(s)
+    to: this
+- function: io.StringIO.getvalue
+  copy:
+  - from: this
+    to: result
 - function: logging.getLevelName
   copy:
   - from: arg(0)

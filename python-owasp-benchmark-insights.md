@@ -690,6 +690,25 @@ wrapper → `flask.request.args.get` (01214, inv 26). Suite after round: **439 t
   inv 18 (00762/00763/00847/00852/00929/00935); `'` apostrophe substring guard (operator, not unifiable) inv 23 (00848/
   00849/00855/00928/00929). Several stack two mechanisms (key-insens + replace, path-insens + apostrophe).
 
+## io.StringIO passThrough fix (supersedes "StringIO DROPS taint" in inv 34 / batches 1-4)
+
+- **Root cause corrected:** the StringIO drop was NOT unexpressible — it was a MISSING passThrough. The
+  write-into-object / read-back pattern is the same one `queue.Queue.put`/`.get` already model. Added to
+  `config.yaml` (pass-through-only file):
+  - `io.StringIO.write` → `from arg(0) to this`, `from kwarg(s) to this`
+  - `io.StringIO.getvalue` → `from this to result`
+  Last-segment matching (inv 3) means these fire on any `.write(...)`/`.getvalue(...)` call; no over-tainting
+  observed in the re-run (suite stayed green). No BytesIO entry exists in the benchmark, so BytesIO not added.
+- **TRUE FN re-enabled as `assertReachable` (all pass):** 00112 00113 (b1), 00217 00304 (b2), 00554 00555 (b3),
+  00858 00944 (b4), 01218 (b5). StringIO was their sole blocker; they now reach.
+- **FALSE that only passed because StringIO dropped — now FP, @Disabled on the underlying approximation:**
+  00024 (configparser key-insens, set keyB(param)/get keyA(const), inv 16); 00471 (path-insens match arm,
+  const guess 'B' safe, tainted 'A'/'C' arms explored, inv 18); 00764 (dict key-insens, store keyB(param)/read
+  keyA(const), inv 16).
+- **00472 stays @Disabled but reason narrowed to inv 20 alone:** `bar = thing.doSomething(param)` (ThingFactory
+  getattr, Any receiver, doSomething unresolved) leaves bar untainted regardless of StringIO.
+- **Suite after fix:** 665 tests, 372 pass, 293 skipped, 0 fail, 0 error.
+
 ## xpathi batch 5 (CWE-643, FINAL — completes all 186) — 22 active pass / 4 @Disabled / 0 fail
 
 All verdicts re-confirm existing invariants; no new invariant discovered.
