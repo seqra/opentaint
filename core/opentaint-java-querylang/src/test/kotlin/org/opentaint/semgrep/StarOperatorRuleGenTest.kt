@@ -33,7 +33,15 @@ class StarOperatorRuleGenTest {
             addAll(cfg.methodExitSink.orEmpty())
             addAll(cfg.methodEntrySink.orEmpty())
         }
-        return sinkRules.mapNotNull { it.condition }.flatMap { flatten(it) }
+        val sourceRules: List<SourceRule> = buildList {
+            addAll(cfg.source.orEmpty())
+            addAll(cfg.methodExitSource.orEmpty())
+            addAll(cfg.entryPoint.orEmpty())
+        }
+        val conditions = sinkRules.mapNotNull { it.condition } +
+            sourceRules.mapNotNull { it.condition } +
+            cfg.passThrough.orEmpty().mapNotNull { it.condition }
+        return conditions.flatMap { flatten(it) }
     }
 
     private fun flatten(c: SerializedCondition): List<SerializedCondition> = when (c) {
@@ -156,5 +164,59 @@ class StarOperatorRuleGenTest {
                 "any-field check $af has no paired plain ContainsMark on the same mark/base; plain=$plain"
             )
         }
+    }
+
+    @Test
+    fun `starred propagator copies over any-field`() {
+        val cfg = config(
+            """
+            rules:
+              - id: star-prop
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: ${'$'}X = src();
+                pattern-propagators:
+                  - patterns:
+                      - pattern: ${'$'}TO = wrap(${'$'}X*);
+                    from: ${'$'}X
+                    to: ${'$'}TO
+                pattern-sinks:
+                  - pattern: sink(${'$'}TO);
+            """.trimIndent()
+        )
+        // A starred propagator source occurrence must reference an any-field position
+        val anyField = allConditions(cfg).any { it is SerializedCondition.ContainsMarkOnAnyField } ||
+            sourceAssignPositions(cfg).any {
+                it is PositionBaseWithModifiers.WithModifiers && it.modifiers.contains(PositionModifier.AnyField)
+            }
+        assertTrue(anyField, "expected any-field involvement in starred propagator")
+    }
+
+    @Test
+    fun `starred pattern-not sink still generates any-field check`() {
+        val cfg = config(
+            """
+            rules:
+              - id: star-not
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: ${'$'}X = src();
+                pattern-sinks:
+                  - patterns:
+                      - pattern: sink(${'$'}Y*);
+                      - pattern-not: sink(safe());
+                      - focus-metavariable: ${'$'}Y
+            """.trimIndent()
+        )
+        assertTrue(
+            allConditions(cfg).any { it is SerializedCondition.ContainsMarkOnAnyField },
+            "pattern-not sink must still carry the any-field check"
+        )
     }
 }
