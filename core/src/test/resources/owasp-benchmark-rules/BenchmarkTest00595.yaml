@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-securecookie-00595
+    languages: [python]
+    severity: ERROR
+    message: "Cookie set without the Secure flag (CWE-614)"
+    metadata:
+      cwe: CWE-614
+    patterns:
+      - pattern: |
+          $RESP = flask.make_response(...)
+          ...
+          $RESP.set_cookie(..., secure=False, ...)

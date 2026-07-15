@@ -307,6 +307,33 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     Same shape as inv 28. All 40 xss entries `@Disabled` (no yaml). Fix = emit+fire a return sink; then triage
     FALSE half (`escape_for_html`/`html.escape`/`markupsafe.escape` sanitizers). **HOLD all ~89 xss until fixed.**
 
+36. **securecookie / CWE-614 is EXPRESSIBLE structurally — self-source + positive kwarg const-compare sink**
+    (VERIFIED, spike-pilot; all 39 entries active-pass, 0 `@Disabled`). No data-flow source exists (the vuln is
+    the call *configuration*, not taint), so make the response object a **self-source** and let the sink's kwarg
+    constant do the discrimination. Working rule (identical for every entry — `make_response` is universal, all
+    TRUE = `secure=False`, all FALSE = `secure=True`):
+    ```yaml
+    patterns:
+      - pattern: |
+          $RESP = flask.make_response(...)
+          ...
+          $RESP.set_cookie(..., secure=False, ...)
+    ```
+    Lowers (`PythonRuleEmitTest` `securecookie make_response self-source…`) to source `flask.make_response`→`Result`
+    (taints `$RESP`) + sink `set_cookie` with `ContainsMark(This)` (receiver, inv 30) AND a **positive**
+    `ConstantCmp(kwarg(secure)==False)`. FIRES: 00064 (secure=False) reaches; 00337 (secure=True) fails the
+    const-compare → excluded — VERIFIED by suite + `applySinkRules` trace (`callee=[set_cookie] rules=1`).
+    **Key: the secure=True/False distinction is a POSITIVE `secure=False` match in the SINK, NOT a `pattern-not`
+    cleaner** — the kwarg gap is fixed for structural const-compares (inv, `kwarg-structural`), and a positive
+    match sidesteps the RuleCookie/inv-27 receiver-cleaner gap (`RuleCookie` is `@Ignore`d precisely because its
+    `$C.set_secure(True)` cleaner needs must-alias to kill the receiver fact — we never need a cleaner here). The
+    make_response self-source is robust because taint on the response object flows to the immediate `set_cookie`
+    receiver regardless of whether the cookie *value* is tainted (no reliance on the fragile request→value chain
+    through `escape_for_html`/`encode`/`decode`). Tripwire: `python-rules/securecookie-probe.yaml`. **Corollary:
+    hash (CWE-328) / weakrand (CWE-330) are likely just as expressible** — both are "dangerous call configuration"
+    with a self-source shape (`$H = hashlib.md5(...)` / `random.random(...)`), no data-flow needed; the only open
+    question is the sink (a call like `hashlib.md5(...)` is a plain call sink, easier than set_cookie's kwarg).
+
 ## Category → sink / CWE reference
 
 | category | CWE | typical sink pattern |

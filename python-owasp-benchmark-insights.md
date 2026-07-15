@@ -757,3 +757,71 @@ enable the xss block and triage the FALSE half (model the html-escape sanitizers
 
 **Next xss batch: HOLD — category blocked, defer all ~89 xss entries until the return-value-sink engine
 phase.** Do not spend rounds authoring xss rules that cannot fire.
+
+---
+
+## securecookie (CWE-614) — SPIKE-PILOT, EXPRESSIBLE, 39/39 active-pass (inv 36)
+
+**Verdict: YES — structural securecookie both LOWERS and FIRES.** Unlike trustbound (inv 28 store-sink) and
+xss (inv 35 return-sink), which are blocked by unsupported sink KINDS, securecookie's sink is an ordinary
+call (`RESPONSE.set_cookie(...)`) with a distinguishing kwarg. All 39 entries pass as active `@Test`s
+(24 assertReachable / 15 assertNotReachable); zero `@Disabled`.
+
+**The shape (uniform across all 39, auto-generated OWASP files).** Every POST handler:
+`RESPONSE = make_response(RESPONSE)` then `RESPONSE.set_cookie(cookie, value, path=request.path,
+secure=False|True, httponly=True)`. TRUE (vulnerable) = `secure=False` (all 24, explicit — none absent);
+FALSE (safe) = `secure=True` (all 15). A request-derived `value` flows in, but CWE-614 is about the flag,
+not the value — so we do NOT rely on the value taint (which passes through `escape_for_html`/`encode`/
+`decode`, fragile).
+
+**Working rule (identical for every entry, only the `id` differs):**
+```yaml
+patterns:
+  - pattern: |
+      $RESP = flask.make_response(...)
+      ...
+      $RESP.set_cookie(..., secure=False, ...)
+```
+
+**Why it works — self-source + positive kwarg const-compare (the two design keys):**
+1. **Self-source on the response object.** There is no taint source, so we declare `flask.make_response`
+   one: it lowers to a source tainting its `Result` (bound to `$RESP`). The mark rides the response object
+   to the immediate `set_cookie` receiver (same var, no intervening rebind) — robust, independent of the
+   cookie value's taint. This is the "self-contained sink" idea (prompt step 1) realized via the receiver.
+2. **Positive `secure=False` match in the SINK, not a `pattern-not` cleaner.** The emit
+   (`PythonRuleEmitTest.securecookie make_response self-source…`) shows the sink checks `ContainsMark(This)`
+   (receiver, inv 30) AND `ConstantCmp(kwarg(secure)==False)`. Because all TRUE are `secure=False` and all
+   FALSE are `secure=True`, a positive const-compare discriminates perfectly: TRUE fires, FALSE fails the
+   compare and is excluded — no cleaner required. This deliberately AVOIDS the `pattern-not`/cleaner path
+   that `@Ignore`s `RuleCookie` (its `$C.set_secure(True)` cleaner needs must-alias to kill the receiver
+   fact — inv 27 receiver-cleaner gap). We never hit that gap.
+
+**Kwarg gap — NOT hit.** The "semgrep kwarg gap" (kwarg names dropped to AnyArgument) is FIXED for
+structural const-compares: the emit test confirms `secure=False` lands on `kwarg(secure)`, not `arg(*)`
+(same fix as `kwarg-structural`/`kwarg-not-cleaner`). So True/False are distinguishable.
+
+**VERIFICATION performed (CARDINAL 5):**
+- Emit dump (`emitAll`): `sources=1 sinks=1 cleaners=0`; source `flask.make_response`→`Result`; sink
+  `set_cookie` `marks=[This]` + `consts=[KwArgument(secure)]`.
+- Engine trace (`System.err.println` in `applySinkRules`): `callee=[set_cookie] rules=1` — the sink rule
+  reaches the `set_cookie` call.
+- Suite: 00064 (secure=False) assertReachable PASS; 00337 (secure=True) assertNotReachable PASS; then all
+  39 PASS. Full OWASP suite: 704 tests, 411 pass / 0 fail / 293 skipped (was 372 pass; +39 all active).
+
+**Reproducer / tripwire:** `python-rules/securecookie-probe.yaml` +
+`PythonRuleEmitTest.securecookie make_response self-source and secure=False sink lower` (a POSITIVE lock —
+asserts the source and the receiver+kwarg sink DO lower, the inverse of the inv 28/35 "emits no sink"
+tripwires).
+
+**Recommendation on hash (CWE-328) / weakrand (CWE-330).** Both look expressible with the SAME self-source
+recipe and should be pursued — likely EASIER than securecookie:
+- These are "dangerous call configuration", not data flow. Model the dangerous call as its own self-source
+  AND sink, e.g. `$H = hashlib.md5(...)` (weak-hash) or `random.random()`/`random.randint(...)` used for a
+  security value. The sink is a plain call (or the constructor call itself), with NO kwarg discrimination
+  needed — simpler than set_cookie's `secure=` compare.
+- Open question to verify first (spike, don't assume): whether a single call must be BOTH source and sink
+  (self-loop) — if `hashlib.md5(x)` is the whole vuln, the "source" and "sink" coincide on one call. Test
+  whether the loader lowers a one-call source+sink and whether the engine fires a sink on the same call it
+  sources (dump emit + trace, as here). If a single-call self-sink doesn't fire, fall back to sourcing the
+  hashed/random VALUE and sinking where it's used (`.hexdigest()`, `.update(...)`, etc.). Either way the
+  sink is a call, so neither is blocked by the inv 28/35 sink-kind gaps. Worth a spike-pilot each.

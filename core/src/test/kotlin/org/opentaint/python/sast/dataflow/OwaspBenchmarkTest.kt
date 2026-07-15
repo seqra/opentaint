@@ -1269,6 +1269,51 @@ class OwaspBenchmarkTest : AnalysisTest() {
 
     // ─── Plumbing ─────────────────────────────────────────────────────────────────
 
+    // ─── securecookie (CWE-614). Structural (no data-flow): self-source on the response object
+    //   (`$RESP = flask.make_response(...)`) threads into a receiver-position `$RESP.set_cookie`
+    //   sink guarded by a POSITIVE `secure=False` kwarg const-compare. TRUE = secure=False fires;
+    //   FALSE = secure=True fails the const-compare (no cleaner / pattern-not needed). See inv 36. ───
+    @Test fun benchmarkTest00064() = assertReachable("00064")
+    @Test fun benchmarkTest00065() = assertReachable("00065")
+    @Test fun benchmarkTest00066() = assertReachable("00066")
+    @Test fun benchmarkTest00336() = assertReachable("00336")
+    @Test fun benchmarkTest00494() = assertReachable("00494")
+    @Test fun benchmarkTest00592() = assertReachable("00592")
+    @Test fun benchmarkTest00593() = assertReachable("00593")
+    @Test fun benchmarkTest00650() = assertReachable("00650")
+    @Test fun benchmarkTest00651() = assertReachable("00651")
+    @Test fun benchmarkTest00652() = assertReachable("00652")
+    @Test fun benchmarkTest00718() = assertReachable("00718")
+    @Test fun benchmarkTest00719() = assertReachable("00719")
+    @Test fun benchmarkTest00720() = assertReachable("00720")
+    @Test fun benchmarkTest00808() = assertReachable("00808")
+    @Test fun benchmarkTest00885() = assertReachable("00885")
+    @Test fun benchmarkTest00886() = assertReachable("00886")
+    @Test fun benchmarkTest00980() = assertReachable("00980")
+    @Test fun benchmarkTest00981() = assertReachable("00981")
+    @Test fun benchmarkTest01085() = assertReachable("01085")
+    @Test fun benchmarkTest01086() = assertReachable("01086")
+    @Test fun benchmarkTest01087() = assertReachable("01087")
+    @Test fun benchmarkTest01088() = assertReachable("01088")
+    @Test fun benchmarkTest01177() = assertReachable("01177")
+    @Test fun benchmarkTest01187() = assertReachable("01187")
+
+    @Test fun benchmarkTest00337() = assertNotReachable("00337")
+    @Test fun benchmarkTest00415() = assertNotReachable("00415")
+    @Test fun benchmarkTest00416() = assertNotReachable("00416")
+    @Test fun benchmarkTest00594() = assertNotReachable("00594")
+    @Test fun benchmarkTest00595() = assertNotReachable("00595")
+    @Test fun benchmarkTest00653() = assertNotReachable("00653")
+    @Test fun benchmarkTest00721() = assertNotReachable("00721")
+    @Test fun benchmarkTest00809() = assertNotReachable("00809")
+    @Test fun benchmarkTest00810() = assertNotReachable("00810")
+    @Test fun benchmarkTest00811() = assertNotReachable("00811")
+    @Test fun benchmarkTest00812() = assertNotReachable("00812")
+    @Test fun benchmarkTest00813() = assertNotReachable("00813")
+    @Test fun benchmarkTest01089() = assertNotReachable("01089")
+    @Test fun benchmarkTest01090() = assertNotReachable("01090")
+    @Test fun benchmarkTest01207() = assertNotReachable("01207")
+
     private fun assertReachable(id: String) {
         val vulns = runAnalysis(rulesFor(id), entryFunction(id))
         assertTrue(vulns.isNotEmpty(), "[$id] sink was not reached")
