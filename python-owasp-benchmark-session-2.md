@@ -42,9 +42,10 @@ fixes accumulate cleanly.
   deserialization (54), **pathtraver COMPLETE (168)**, **xpathi COMPLETE (186)**,
   **xss batch 1 (40, all `@Disabled` — return-value-sink gap inv 35)**, **securecookie COMPLETE (39, inv 36)**,
   **hash COMPLETE (151, inv 37)**, **weakrand COMPLETE (326, inv 38)**. **All 14 OWASP categories are now
-  authored: 1181 of 1230 entries have a rule + ground-truth `@Test`;** the 49 uncovered are the HELD xss
-  entries — deliberately NOT stubbed (all doomed by inv 35 until the return-sink lands). OWASP suite
-  **1181 tests: 775 pass / 0 fail / 406 skipped**. The 406 skipped are `@Disabled`-with-verified-reason:
+  authored: 1230 of 1230 entries have a rule + ground-truth `@Test`;** xss is now FULLY STUBBED at 89/89
+  (the 49 previously-HELD xss entries were added as `@Disabled` stubs — all still doomed by inv 35 until the
+  return-sink lands). Coverage is 1230/1230. OWASP suite
+  **1230 tests: 775 pass / 0 fail / 455 skipped**. The 406 skipped are `@Disabled`-with-verified-reason:
   xss 89 + trustbound 37 (blocked sink-kind gaps inv 35/28); ~113 weakrand SystemRandom (inv 38); and the
   approximation-limited pathtraver/xpathi FPs+FNs (inv 16/18/19/20/23/27/34). The three structural no-flow
   categories use the **crutch-free BARE STRUCTURAL SINK recipe** (a structural sink fires on the call match
