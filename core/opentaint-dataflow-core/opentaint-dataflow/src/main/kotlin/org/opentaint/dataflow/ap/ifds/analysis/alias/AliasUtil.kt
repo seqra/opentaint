@@ -41,20 +41,39 @@ fun <AliasInfo, AliasAccessor> LocalAliasAnalysis<AliasInfo, AliasAccessor>.forE
     body: (FinalFactAp) -> Unit
 ) {
     val base = fact.base as? AccessPathBase.LocalVar ?: return
-    forEachHeapAlias(base, statement, fact, { f ->
-        val next = mutableListOf<Pair<AliasAccessor, FinalFactAp>>()
-        val accessors = f.getStartAccessors()
-        for (accessor in accessors) {
-            val aa = accessor.aliasAccessor() ?: continue
-            val nexFact = f.readAccessor(accessor) ?: continue
-            next.add(aa to nexFact)
-        }
-        next
-    }) { alias, f ->
+    forEachHeapAlias(base, statement, fact, { it.heapNext(aliasAccessor) }) { alias, f ->
         alias.relevantAlias()?.let {
             applyAlias(f, it, apAccessor, body)
         }
     }
+}
+
+fun <AliasInfo, AliasAccessor> LocalAliasAnalysis<AliasInfo, AliasAccessor>.forEachHeapAliasAfterStatement(
+    statement: CommonInst,
+    fact: FinalFactAp,
+    aliasAccessor: Accessor.() -> AliasAccessor?,
+    relevantAlias: AliasInfo.() -> CommonAliasApInfo<AliasAccessor>?,
+    apAccessor: AliasAccessor.() -> Accessor,
+    body: (FinalFactAp) -> Unit
+) {
+    val base = fact.base as? AccessPathBase.LocalVar ?: return
+    forEachHeapAliasAfter(base, statement, fact, { it.heapNext(aliasAccessor) }) { alias, f ->
+        alias.relevantAlias()?.let {
+            applyAlias(f, it, apAccessor, body)
+        }
+    }
+}
+
+private fun <AliasAccessor> FinalFactAp.heapNext(
+    aliasAccessor: Accessor.() -> AliasAccessor?,
+): List<Pair<AliasAccessor, FinalFactAp>> {
+    val next = mutableListOf<Pair<AliasAccessor, FinalFactAp>>()
+    for (accessor in getStartAccessors()) {
+        val aa = accessor.aliasAccessor() ?: continue
+        val nextFact = readAccessor(accessor) ?: continue
+        next.add(aa to nextFact)
+    }
+    return next
 }
 
 inline fun <F : FactAp, AliasInfo, AliasAccessor> LocalAliasAnalysis<AliasInfo, AliasAccessor>.forEachAliasAtStatement(

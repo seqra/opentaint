@@ -40,6 +40,18 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
         }
     }
 
+    fun <F> forEachHeapAliasAfter(
+        base: AccessPathBase.LocalVar,
+        statement: CommonInst,
+        fact: F,
+        next: (F) -> List<Pair<AliasAccessor, F>>,
+        handle: (AliasInfo, F) -> Unit,
+    ) {
+        withStateAfterStatement(statement) { state, stateId ->
+            state.findHeapAlias(stateId, base.idx, fact, next, handle)
+        }
+    }
+
     private inline fun <T> withStateBeforeStatement(statement: CommonInst, body: (State, Int) -> T): T? =
         withStatementState(statement, stateIdOffset = 0, { statesBeforeStmt }, body)
 

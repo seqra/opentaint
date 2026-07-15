@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfoManager
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ImmutableState
@@ -62,12 +63,6 @@ class PIRDSUAliasAnalysis(
         override fun compare(a: Int, b: Int): Int =
             manager.getElementUncheck(a).compareTo(manager.getElementUncheck(b))
     }
-
-    class AnalysisResult(
-        val manager: AAInfoManager,
-        val statesBeforeStmt: Array<ImmutableState?>,
-        val statesAfterStmt: Array<ImmutableState?>,
-    )
 
     private fun AAInfo.index(): Int = aliasManager.getOrAdd(this)
 

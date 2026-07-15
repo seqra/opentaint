@@ -1,12 +1,12 @@
 package org.opentaint.dataflow.python.alias
 
-import kotlinx.collections.immutable.PersistentList
-import kotlinx.collections.immutable.persistentListOf
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.analysis.alias.applyAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasAfterStatement
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.ir.api.python.PIRInstruction
 
@@ -14,6 +14,9 @@ import org.opentaint.ir.api.python.PIRInstruction
  * Consumer helpers mirroring the JVM `JIRAliasUtil`: expand a fact onto all
  * aliases of its (local-var) base. Accessors are minted name-only via the shared
  * [mkFieldAccessor] util, matching the engine's name-only attribute matching.
+ *
+ * These query the after-statement state (Python's chosen semantics), so they use
+ * the shared base's `findAliasAfterStatement` / `forEachHeapAliasAfterStatement`.
  */
 fun PIRLocalAliasAnalysis.forEachAliasAfterStatement(
     statement: PIRInstruction,
@@ -22,25 +25,8 @@ fun PIRLocalAliasAnalysis.forEachAliasAfterStatement(
 ) {
     val base = fact.base as? AccessPathBase.LocalVar ?: return
     val aliases = findAliasAfterStatement(base, statement) ?: return
-    aliases.filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { applyAlias(fact, it, body) }
-}
-
-fun PIRLocalAliasAnalysis.forEachHeapAliasAfterStatement(
-    statement: PIRInstruction,
-    fact: FinalFactAp,
-    accessors: List<Accessor>,
-    body: (FinalFactAp) -> Unit
-) {
-    val base = fact.base as? AccessPathBase.LocalVar ?: return
-    val aliasAccessors = accessors.map { it.aliasAccessor() ?: return }
-    val child = accessors.fold(fact) { f, accessor ->
-        f.readAccessor(accessor) ?: return
-    }
-
-    val aliases = findHeapAliasAfterStatement(base, aliasAccessors, statement) ?: return
-    aliases.filterNot { alias -> alias.base is AccessPathBase.Constant }
-        .forEach { alias -> applyAlias(child, alias, body) }
+    aliases.mapNotNull { it.relevantApInfo() }
+        .forEach { applyAlias(fact, it, AliasAccessor::apAccessor, body) }
 }
 
 fun PIRLocalAliasAnalysis.forEachAliasAfterCallStatement(
@@ -49,37 +35,13 @@ fun PIRLocalAliasAnalysis.forEachAliasAfterCallStatement(
     body: (FinalFactAp) -> Unit,
 ) {
     forEachAliasAfterStatement(statement, fact, body)
-
-    collectCallFacts(fact).forEach { accessorList ->
-        forEachHeapAliasAfterStatement(statement, fact, accessorList, body)
-    }
+    forEachHeapAliasAfterStatement(
+        statement, fact, Accessor::aliasAccessor, AliasApInfo::relevantApInfo, AliasAccessor::apAccessor, body
+    )
 }
 
-private fun collectCallFacts(fact: FinalFactAp): List<List<Accessor>> {
-    val accessorLists = mutableListOf<List<Accessor>>()
-    collectCallFacts(fact, depth = 0, accessorLists = accessorLists, curList = persistentListOf())
-
-    return accessorLists
-}
-
-private fun collectCallFacts(fact: FinalFactAp, depth: Int, accessorLists: MutableList<List<Accessor>>, curList: PersistentList<Accessor>) {
-    if (depth > ACCESSOR_DEPTH) return
-
-    fact.getStartAccessors().forEach { accessor ->
-        val readFact = fact.readAccessor(accessor) ?: return@forEach
-        val newList = curList.add(accessor)
-
-        accessorLists += newList
-        collectCallFacts(readFact, depth + 1, accessorLists, newList)
-    }
-}
-
-private fun applyAlias(fact: FinalFactAp, alias: AliasApInfo, body: (FinalFactAp) -> Unit) {
-    val result = alias.accessors.foldRight(fact.rebase(alias.base)) { accessor, f ->
-        f.prependAccessor(accessor.apAccessor())
-    }
-    body(result)
-}
+private fun AliasApInfo.relevantApInfo(): AliasApInfo? =
+    takeIf { it.base !is AccessPathBase.Constant }
 
 fun AliasAccessor.apAccessor(): Accessor = when (this) {
     is AliasAccessor.Array -> ElementAccessor
@@ -91,5 +53,3 @@ private fun Accessor.aliasAccessor(): AliasAccessor? = when (this) {
     is FieldAccessor -> AliasAccessor.Field(fieldName)
     else -> null
 }
-
-private const val ACCESSOR_DEPTH = 3
