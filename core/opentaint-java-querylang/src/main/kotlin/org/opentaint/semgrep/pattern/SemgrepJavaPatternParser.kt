@@ -142,6 +142,11 @@ private fun IdentifierContext.parseName(): Name = withRule {
     return ConcreteName(text)
 }
 
+// The starred `variableDeclaratorId` alternative (`METAVAR '*'`) has no `identifier` subrule.
+// Returns the metavar name for that alternative, or null for the plain `identifier ('[' ']')*` one.
+private fun JavaParser.VariableDeclaratorIdContext.starredMetavarName(): String? =
+    if (identifier() == null) METAVAR().text else null
+
 private fun TypeIdentifierContext.parseTypeIdentifierName(): Name = withRule {
     tryRule(TypeIdentifierContext::METAVAR) { return MetavarName(it.text) }
     tryRule(TypeIdentifierContext::ANONYMOUS_METAVAR) { this@parseTypeIdentifierName.todo() }
@@ -300,7 +305,10 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
     }
 
     override fun visitVariableDeclarator(ctx: VariableDeclaratorContext): VariableAssignment = ctx.withRule {
-        val variable = value(VariableDeclaratorContext::variableDeclaratorId).parse("Can't parse variable name")
+        val declaratorId = value(VariableDeclaratorContext::variableDeclaratorId)
+        // Starred declarator (`$X* = ...`): whole-object taint on the declared variable.
+        val variable = declaratorId.starredMetavarName()?.let { Metavar(it, star = true) }
+            ?: declaratorId.parse("Can't parse variable name")
         val initializer = get(VariableDeclaratorContext::variableInitializer)
         val value = initializer?.parse("Can't parse initializer")
         return VariableAssignment(type = null, variable, value)
@@ -353,9 +361,8 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
             val modifiers = value(FormalParameterContext::variableModifier).mapNotNull { parseModifier(it) }
 
             // Starred declarator alternative `METAVAR '*'`: the `identifier` subrule is absent.
-            if (declaratorId.identifier() == null) {
-                val name = MetavarName(declaratorId.METAVAR().text)
-                return FormalArgument(name, type, modifiers, star = true)
+            declaratorId.starredMetavarName()?.let { starName ->
+                return FormalArgument(MetavarName(starName), type, modifiers, star = true)
             }
 
             val name = declaratorId.identifier().parseName()
