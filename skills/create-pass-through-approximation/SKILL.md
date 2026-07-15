@@ -33,9 +33,14 @@ passThrough:
 ```
 
 Write the `language: java` header, then the `passThrough:` copies, into `<config-file>`. When an object carries taint between calls — a setter stores it and a getter returns it later, or a builder holds it — route through a virtual slot, an access path `[<base>, .<DeclaringClass>#<slot>#java.lang.Object]`:
-- the slot name is nominal — the engine never resolves it, so it need not be a real field
-- type it `java.lang.Object` — a concrete type can fail the read-out type-check and drop the taint
+- the slot NAME is nominal — the engine never resolves it, so it need not be a real field. The DECLARING CLASS is not: it is type-checked against the node the slot rides on (see "How copies move facts" below), so declare the slot on the class (or a supertype) of the position it is written to — a `.Builder#x#…` slot cannot ride on the product `build()` returns
+- type it `java.lang.Object` — an Object-typed slot accepts any deeper accessors beneath it, while a concrete type can fail the read-out type-check and drop the taint
 - the writer and reader must name the identical `Class#slot#java.lang.Object` triple, or the taint drops
+
+How copies move facts — a copy is a suffix transplant with a destination type-check:
+- a `from`/`to` copy takes the fact's WHOLE remaining path below `from` and re-roots it at `to`: `from: arg(0), to: result` turns a fact `arg(0).<slot>` into `result.<slot>` — you do not need to spell out suffixes that stay on the same type
+- the transplanted path is then type-checked at the destination, accessor by accessor: a field/slot accessor survives only if the destination node's type may be a subtype of the accessor's declaring class; `[*]` survives only on an array-compatible type. A rejected transplant is SILENT — the copy behaves as if it never matched and the method stays in `dropped-external-methods.yaml` even though the matcher and positions look right
+- so when `from` and `to` differ in type, don't let a typed suffix cross the boundary: either spell the full deep path on the `from` side so the delta is empty (multi-modifier paths chain: `from: [arg(0), '[*]', .kotlin.Pair#second#java.lang.Object], to: result` reads a Pair slot out of an array element and taints the whole result), or rename the slot to one declared on the destination's class (as the cross-type builder example below does)
 
 Getter / setter pair — the writer stores into the slot, the getter reads the same slot back to `result`:
 ```yaml
@@ -97,7 +102,7 @@ passThrough:
     - .org.springframework.ldap.query.LdapQuery#filter#java.lang.Object
 ```
 
-Builder terminal — a no-arg `build()` / `toX()` that returns a new object carrying what the builder accumulated; no argument is involved, so copy each slot from `this` to the matching slot on `result` (the setters that filled the builder slot are separate rules of their own):
+Builder terminal — a no-arg `build()` / `toX()` that returns a new object carrying what the builder accumulated; no argument is involved, so copy each slot from `this` to the matching slot on `result` (the setters that filled the builder slot are separate rules of their own). Carry slot→slot (renaming to a slot declared on the PRODUCT's class) when the product has field-differentiated reads that downstream models consume; when the product is an atomic aggregate consumed whole (a built request/URL — every meaningful read derives from all its parts), collapse instead with `[this, <builder-slot>] → result`, so downstream consumers need no slot-aware copies:
 ```yaml
 language: java
 passThrough:
@@ -177,9 +182,9 @@ A config error aborts the scan with the parse/load message — fix the YAML and 
 There's no test project for passThrough. The main scan applies `<config-file>` and the scan agent reports back. You're re-invoked to fix the config when that scan shows:
 
 - *every* method you modeled still in `dropped-external-methods.yaml`, with no load error → the whole file was silently skipped: check it starts with the `language: java` header (a headerless or mis-headered file loads to nothing)
-- a *single* method you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check package, class, name, `overrides`), or the `from`/`to` doesn't land on the tainted position
+- a *single* method you modeled still in `dropped-external-methods.yaml` → the `function` matcher didn't match (check package, class, name, `overrides`), or the `from`/`to` doesn't land on the tainted position, or the copy matched but its transplanted suffix was type-rejected at the destination (a typed slot/`[*]` crossing onto an incompatible type — read "How copies move facts"; consume the deep path on the `from` side). Note the file's `factPositions` truncate access paths: a listed `arg(1)` may really be `arg(1)[*]` (vararg element) or `arg(1).<slot>` — cover those with multi-modifier `from` paths
 - the flow still doesn't surface though the method is no longer dropped → most often a broken channel: the writer and reader name different `Class#slot#java.lang.Object` triples, or the slot isn't typed `java.lang.Object`
-- a config load / parse error → fix the YAML (an unknown `condition` key, a bad position, or a 2-part field modifier all fail to load)
+- a config load / parse error → fix the YAML (an unknown `condition` key, a bad position, or a field modifier missing its `#<fieldType>` part — `.Class#field` instead of `.Class#field#Type` — all fail to load)
 
 Never invoke or grep the analyzer JAR — its internals aren't a stable API; for built-in rules use `opentaint health --rules`, for everything else the CLI
 
@@ -211,9 +216,10 @@ Position bases
 - `this`, `result`, `arg(0)`, `arg(1)`, …
 - `any(<classifier>)` — expands to every argument matching the classifier (a cartesian product across positions, bound consistently), not a single argument. Rare — prefer an explicit `arg(N)`
 
-Access-path modifiers (list form `[<base>, <modifier>]`)
-- `.<DeclaringClass>#<slot>#<fieldType>` — a field or virtual slot; type it `java.lang.Object`. The slot name is arbitrary (a descriptive name, or the conventional `<rule-storage>` for a generic carrier)
+Access-path modifiers (list form `[<base>, <modifier>, <modifier>, …]` — modifiers chain to any depth, e.g. `[arg(0), '[*]', .kotlin.Pair#second#java.lang.Object]`)
+- `.<DeclaringClass>#<slot>#<fieldType>` — a field or virtual slot; type it `java.lang.Object`. The slot name is arbitrary (a descriptive name, or the conventional `<rule-storage>` for a generic carrier); the declaring class is type-checked against the node it rides on
 - `[*]` — array element (no leading dot). For `java.util` collections this does *not* carry element taint; route it through the conventional `.java.lang.Iterable#Element#java.lang.Object` slot instead (as the built-in `List`/`Collection` models do)
+- `.*` — any field of the node; loads and matches any field/slot accessor. Use sparingly (a wildcard read is over-broad for the same reason `arg(*)` is)
 
 Function matching
 - Simple: `package.Class#method`
