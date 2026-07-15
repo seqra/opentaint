@@ -1314,6 +1314,87 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest01090() = assertNotReachable("01090")
     @Test fun benchmarkTest01207() = assertNotReachable("01207")
 
+    // ─── weakrand (CWE-330, insecure randomness). Structural (no data-flow): the vuln is the dangerous
+    //   call *choice* (Mersenne-Twister `random.<fn>`), not taint. A `pattern-either` over the weak funcs
+    //   nests each in `str(random.<fn>(...))`, lowering to a self-source `random.<fn>` -> Result threaded
+    //   into a generic `str($T)` sink (the universal `str(...)` wrapper; randbytes reaches str via the
+    //   base64.b64encode arg->result passthrough). TRUE = weak module calls fire; secrets.* FALSE excluded
+    //   (distinct last segments). SystemRandom FALSE is NOT excludable: `random.SystemRandom().<fn>()`
+    //   resolves to a simple-name callee (constructor return type unresolved) that collides by last segment
+    //   with `random.<fn>` (matchesName; inv 3/7) -> @Disabled. See inv 38 (template inv 37). ───
+    @Test fun benchmarkTest00025() = assertReachable("00025")
+    @Test fun benchmarkTest00026() = assertReachable("00026")
+    @Test fun benchmarkTest00027() = assertReachable("00027")
+    @Test fun benchmarkTest00028() = assertReachable("00028")
+    @Test fun benchmarkTest00029() = assertReachable("00029")
+    @Test fun benchmarkTest00030() = assertReachable("00030")
+    @Test fun benchmarkTest00031() = assertReachable("00031")
+    @Test fun benchmarkTest00114() = assertReachable("00114")
+    @Test fun benchmarkTest00115() = assertReachable("00115")
+    @Test fun benchmarkTest00116() = assertReachable("00116")
+    @Test fun benchmarkTest00117() = assertReachable("00117")
+
+    @Test fun benchmarkTest00032() = assertNotReachable("00032")
+    @Test fun benchmarkTest00033() = assertNotReachable("00033")
+    @Test fun benchmarkTest00034() = assertNotReachable("00034")
+    @Test fun benchmarkTest00035() = assertNotReachable("00035")
+    @Test fun benchmarkTest00036() = assertNotReachable("00036")
+    @Test fun benchmarkTest00037() = assertNotReachable("00037")
+    @Test fun benchmarkTest00038() = assertNotReachable("00038")
+    @Test fun benchmarkTest00039() = assertNotReachable("00039")
+    @Test fun benchmarkTest00040() = assertNotReachable("00040")
+    @Test fun benchmarkTest00041() = assertNotReachable("00041")
+    @Test fun benchmarkTest00042() = assertNotReachable("00042")
+    @Test fun benchmarkTest00043() = assertNotReachable("00043")
+    @Test fun benchmarkTest00118() = assertNotReachable("00118")
+    @Test fun benchmarkTest00119() = assertNotReachable("00119")
+    @Test fun benchmarkTest00120() = assertNotReachable("00120")
+    @Test fun benchmarkTest00121() = assertNotReachable("00121")
+    @Test fun benchmarkTest00122() = assertNotReachable("00122")
+    @Test fun benchmarkTest00123() = assertNotReachable("00123")
+    @Test fun benchmarkTest00124() = assertNotReachable("00124")
+    @Test fun benchmarkTest00125() = assertNotReachable("00125")
+    @Test fun benchmarkTest00126() = assertNotReachable("00126")
+    @Test fun benchmarkTest00127() = assertNotReachable("00127")
+    @Test fun benchmarkTest00128() = assertNotReachable("00128")
+
+    // SystemRandom (CSPRNG) FALSE: `random.SystemRandom().<fn>()` collides by last segment with the weak
+    // `random.<fn>` source (constructor return type unresolved -> simple-name callee, matchesName inv 3/7).
+    // Structurally inseparable from the module call -> FP. VERIFIED by spike (00044 fired; trace showed
+    // PIRSimpleNameUnknownFunction:getrandbits matching source random.getrandbits). See inv 38.
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00044() = assertNotReachable("00044")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00045() = assertNotReachable("00045")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00046() = assertNotReachable("00046")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00047() = assertNotReachable("00047")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00048() = assertNotReachable("00048")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00049() = assertNotReachable("00049")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00050() = assertNotReachable("00050")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00051() = assertNotReachable("00051")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00052() = assertNotReachable("00052")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00053() = assertNotReachable("00053")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00129() = assertNotReachable("00129")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00130() = assertNotReachable("00130")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00131() = assertNotReachable("00131")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00132() = assertNotReachable("00132")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00133() = assertNotReachable("00133")
+    @Disabled("SystemRandom CSPRNG last-segment collision with weak random.<fn> source (inv 38): unresolved receiver type")
+    @Test fun benchmarkTest00134() = assertNotReachable("00134")
+
     // ─── hash (CWE-328, weak message digest). Structural (no data-flow): weak-digest is a dangerous call
     //   *configuration*, not taint. A `pattern-either` over the four weak shapes makes the hash object a
     //   self-source that threads into a receiver-position `$H.update(...)` sink. Shape A

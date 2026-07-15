@@ -362,6 +362,42 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     `.update` regardless of whether the hashed *value* is tainted. FIRES: 00054 (`new('md5')`), 00057
     (`hashlib.md5()`) reach; 00055 (`new('sha384')`), 00061 (`hashlib.sha384()`) excluded — VERIFIED by suite.
 
+38. **weakrand / CWE-330 is EXPRESSIBLE structurally for weak module calls + secrets FALSE, but SystemRandom
+    FALSE is NOT (last-segment collision)** (VERIFIED, spike + suite; batch-1 = 34 active-pass, 16 `@Disabled`).
+    Confirms the inv-36/37 corollary with a category limitation. No data-flow source (the vuln is the RNG
+    *choice*: Mersenne-Twister `random.<fn>` vs CSPRNG). There is NO `.update`-style receiver sink — the weak
+    call is consumed inline (`value = str(random.normalvariate())[2:]`). Sink = the **universal `str(...)`
+    wrapper** (all 11 TRUE wrap the RNG in `str`; randbytes' `str(base64.b64encode(random.randbytes(32)))`
+    reaches `str` via the `base64.b64encode` arg(0)→result passthrough already in config.yaml). ONE canonical
+    `pattern-either` for every entry — each weak fn nested in `str`:
+    ```yaml
+    patterns:
+      - pattern-either:
+          - pattern: str(random.normalvariate(...))
+          - pattern: str(random.randint(...))
+          - pattern: str(random.getrandbits(...))
+          - pattern: str(random.random(...))
+          - pattern: str(random.randbytes(...))
+    ```
+    Each branch lowers (`PythonRuleEmitTest` `weakrand rule lowers…`, tripwire `python-rules/weakrand-probe.yaml`)
+    to a self-source `random.<fn>`→`Result` (no condition) threaded into a generic `str($T)` sink =
+    `ContainsMark(Argument(0))`. The nested inner call becomes the source, the outer call the sink — same
+    flatten as hash's two-line form (converter binds the inner Result to an artificial metavar the outer call
+    consumes).
+    - **TRUE (weak module calls) FIRE**: `random.getrandbits(32)` resolves to `PIRQualifiedUnknownFunction:
+      random.getrandbits`, `matchesName` `qn==targetName` → source fires (VERIFIED trace `srcRules=1`).
+    - **secrets.\* FALSE cleanly excluded**: `randbelow`/`randbits`/`token_bytes`/`token_hex`/`token_urlsafe`
+      share no last segment with the five weak fns → source never matches → no mark → `str` sink silent.
+    - **⚠️ SystemRandom (CSPRNG) FALSE NOT excludable → `@Disabled`**: `random.SystemRandom().getrandbits(32)`
+      resolves to `PIRSimpleNameUnknownFunction:getrandbits` (the constructor's return type is unresolved, so
+      the method falls to a simple-name callee). `matchesName` line 260 unconditionally matches a
+      `PIRSimpleNameUnknownFunction` by last segment against ANY target → collides with `random.getrandbits` →
+      source FIRES → FP. Structurally inseparable from the module call (no rule knob forces qualified-only
+      matching; inv 3 last-segment fallback, inv 7 QN resolution). VERIFIED: spike 00044 fired; trace showed
+      `PIRSimpleNameUnknownFunction:getrandbits srcRules=1`. The 16 SystemRandom entries are `@Disabled` with
+      this reason. (Note: the batch prompt's guessed SystemRandom list was WRONG — verified per-file: SR =
+      00044–00053, 00129–00134; the rest of the FALSE are secrets.\*.)
+
 ## Category → sink / CWE reference
 
 | category | CWE | typical sink pattern |

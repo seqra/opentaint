@@ -867,3 +867,57 @@ should reuse the identical `hash-probe`-style `pattern-either` rule verbatim —
 it's shape A or B with md5/sha1 (TRUE) vs sha256/384/512/blake2 (FALSE); no new rule form expected. Watch
 for any `.hexdigest()`-only entry with no `.update()` call (add a `$H.hexdigest(...)` sink branch if found)
 and any `hashlib.new(<algo-in-a-variable>)` non-literal (const-compare can't fire → would need @Disable).
+
+---
+
+## weakrand (CWE-330, insecure randomness) — batch 1 (50 entries), inv 38
+
+**Rule form (structural, identical for every entry — template inv 37):** `pattern-either` over the weak
+Mersenne-Twister fns, each nested in the universal `str(...)` wrapper:
+```yaml
+patterns:
+  - pattern-either:
+      - pattern: str(random.normalvariate(...))
+      - pattern: str(random.randint(...))
+      - pattern: str(random.getrandbits(...))
+      - pattern: str(random.random(...))
+      - pattern: str(random.randbytes(...))
+```
+Lowers to a self-source `random.<fn>`→Result (no condition) + a generic `str($T)` sink =
+`ContainsMark(Argument(0))`. No `.update`-style receiver sink exists (RNG consumed inline as
+`value = str(random.<fn>(...))[...]`); `str` is the common outer wrapper for all 11 TRUE. randbytes
+(`str(base64.b64encode(random.randbytes(32)))`) reaches the `str` sink via the pre-existing
+`base64.b64encode` arg(0)→result passthrough in config.yaml.
+
+**Weak fns matched (this batch):** `normalvariate`, `randint`, `getrandbits`, `random`, `randbytes`.
+
+**Per-entry disposition (verified by reading each `value =` line — the prompt's SystemRandom guess was WRONG):**
+- **TRUE (11, active pass):** 00025/00026 normalvariate · 00027/00028/00116 randbytes(+b64) · 00029/00030/00031
+  randint · 00114/00115 getrandbits · 00117 random.
+- **FALSE secrets.\* (23, active pass — cleanly excluded, distinct last segments):** 00032/00033/00034/00035
+  /00118/00119 randbelow · 00036/00037/00038 randbits · 00039/00040/00041/00120–00125 token_bytes ·
+  00042/00126/00127 token_hex · 00043/00128 token_urlsafe.
+- **FALSE SystemRandom CSPRNG (16, `@Disabled` — last-segment collision, inv 38):** 00044/00045/00046/00129
+  /00130/00131 getrandbits · 00047/00048/00132/00133 normalvariate · 00049/00134 randbytes · 00050/00051
+  randint · 00052/00053 random. `random.SystemRandom().<fn>()` → `PIRSimpleNameUnknownFunction:<fn>` (ctor
+  return type unresolved) → `matchesName` last-segment match vs `random.<fn>` → source FIRES → FP. No
+  rule-level knob forces qualified-only matching → unfixable structurally.
+
+**VERIFICATION (CARDINAL 5):**
+- Emit dump (`emitAll` on `weakrand-probe.yaml`): 5 self-sources `random.{normalvariate,randint,getrandbits,
+  random,randbytes}`→Result; `str` sinks with `ContainsMark(Argument(0))`. `pattern-either` → one pair per branch.
+- Spike suite+trace (4 entries): 00114 (getrandbits TRUE) PASS, 00025 (normalvariate TRUE) PASS, 00032
+  (secrets FALSE) PASS, 00044 (SystemRandom FALSE) FAILED → collision. Trace: `random.getrandbits` →
+  `PIRQualifiedUnknownFunction srcRules=1`; SystemRandom → `PIRSimpleNameUnknownFunction:getrandbits srcRules=1`.
+- Full suite: OwaspBenchmarkTest 905 tests, 596 pass / 0 fail / 309 skipped. All 34 active weakrand IDs pass;
+  16 SystemRandom skipped.
+
+**Tripwire:** `python-rules/weakrand-probe.yaml` +
+`PythonRuleEmitTest.weakrand rule lowers to per-function random self-source and str sink pairs`.
+
+**Recommended next weakrand batch (~50 of the remaining ~276).** Reuse the identical `weakrand-probe`-style
+`pattern-either` verbatim. Survey each entry's `value =` line only to (a) confirm weak `random.<fn>` (TRUE)
+vs secrets/os.urandom (FALSE, auto-excluded) vs `random.SystemRandom().<fn>()` (FALSE → `@Disable` inv 38);
+(b) add a new `str(random.<fn>(...))` branch if a weak fn outside the five appears (e.g. `uniform`, `choice`,
+`shuffle`, `sample`, `betavariate`, `gauss`, `randrange`); (c) watch for any TRUE entry NOT wrapped in `str`
+(would need a different outer sink). os.urandom FALSE need no handling (name never matches).
