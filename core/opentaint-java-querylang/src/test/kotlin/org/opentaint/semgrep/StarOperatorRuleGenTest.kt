@@ -46,6 +46,11 @@ class StarOperatorRuleGenTest {
             .flatMap { it.taint }
             .map { it.pos }
 
+    private fun cleanPositions(cfg: SerializedTaintConfig): List<PositionBaseWithModifiers> =
+        cfg.cleaner.orEmpty()
+            .flatMap { it.cleans }
+            .map { it.pos }
+
     @Test
     fun `starred source assigns value and any-field`() {
         val cfg = config(
@@ -75,6 +80,40 @@ class StarOperatorRuleGenTest {
                     it.modifiers.contains(PositionModifier.AnyField)
             },
             "expected an any-field assign; got $positions"
+        )
+    }
+
+    @Test
+    fun `starred sanitizer cleans value and any-field`() {
+        val cfg = config(
+            """
+            rules:
+              - id: star-sanitizer
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: ${'$'}X = src();
+                pattern-sanitizers:
+                  - patterns:
+                      - pattern: clean(${'$'}X*);
+                      - focus-metavariable: ${'$'}X
+                pattern-sinks:
+                  - pattern: sink(${'$'}X);
+            """.trimIndent()
+        )
+        val positions = cleanPositions(cfg)
+        assertTrue(
+            positions.any { it is PositionBaseWithModifiers.BaseOnly },
+            "expected a plain-value clean; got $positions"
+        )
+        assertTrue(
+            positions.any {
+                it is PositionBaseWithModifiers.WithModifiers &&
+                    it.modifiers.contains(PositionModifier.AnyField)
+            },
+            "expected an any-field clean; got $positions"
         )
     }
 

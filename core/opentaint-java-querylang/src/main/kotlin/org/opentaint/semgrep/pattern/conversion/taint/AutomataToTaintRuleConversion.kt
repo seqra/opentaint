@@ -369,7 +369,13 @@ private fun JavaTaintRuleGenerationCtx.buildStateCleanAction(
 ): List<SerializedTaintCleanAction> {
     val result = edgeCondition.accessedVarPosition.values.flatMapTo(mutableListOf()) { varPosition ->
         varPosition.positions.flatMap { sp ->
-            stateCleanMark(varPosition.varName, state, stateBefore, sp.position.base())
+            val base = sp.position.base()
+            val cleans = stateCleanMark(varPosition.varName, state, stateBefore, base)
+            if (sp.star) {
+                cleans + stateCleanMark(varPosition.varName, state, stateBefore, base.withAnyField())
+            } else {
+                cleans
+            }
         }
     }
 

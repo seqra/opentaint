@@ -2,6 +2,7 @@ package org.opentaint.semgrep.pattern.conversion.taint.composition
 
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.semgrep.pattern.Mark
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.TaintRuleStrategy
@@ -28,6 +29,9 @@ class TaintCleanCompositionStrategy<Item, Cond, Assign, Clean>(
         if (bySideEffect) {
             cleanerPos += PositionBase.AnyArgument(classifier = "tainted").base()
             cleanerPos += PositionBase.This.base()
+        }
+        if (pos is PositionBaseWithModifiers.WithModifiers && pos.modifiers.contains(PositionModifier.AnyField)) {
+            cleanerPos += pos
         }
 
         return cleans.flatMap { c -> cleanerPos.map { strategy.createCleanAction(c, it) } }
