@@ -400,6 +400,9 @@ private fun EvaluatedEdgeCondition.addStateCheck(
         for (metaVar in state.register.assignedVars.keys) {
             for (sp in accessedVarPosition[metaVar]?.positions.orEmpty()) {
                 stateChecks += ctx.containsStateMark(metaVar, state, sp.position.base())
+                if (sp.star) {
+                    stateChecks += ctx.containsStateMarkOnAnyField(metaVar, state, sp.position.base())
+                }
             }
         }
     }
@@ -1107,7 +1110,12 @@ private fun JavaTaintRuleGenerationCtx.evaluateParamCondition(
                 semgrepRuleTrace.error(IgnoredMetavarConstraint(condition.metavar))
             }
 
-            return containsMarkWithAnyStateBefore(state, condition.metavar, position.base())
+            val contains = containsMarkWithAnyStateBefore(state, condition.metavar, position.base())
+            if (!condition.star) return contains
+
+            val containsAnyField =
+                containsMarkOnAnyFieldWithAnyStateBefore(state, condition.metavar, position.base())
+            return taintRuleStrategy.conditionBuilder.or(listOf(contains, containsAnyField))
         }
 
         is ParamCondition.TypeIs -> {

@@ -23,6 +23,15 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
             pos: PositionBaseWithModifiers
         ): Cond? = null
 
+        // Any-field variant of [stateContains] for starred ($X*) sinks. Must emit the SAME mark(s)
+        // as [stateContains] on the SAME position, lifted to "contains on any field", so the plain
+        // and any-field arms of a starred sink stay coherent. Default mirrors stateContains == null.
+        fun stateContainsOnAnyField(
+            state: TaintRegisterStateAutomata.State,
+            varName: MetavarAtom,
+            pos: PositionBaseWithModifiers
+        ): Cond? = null
+
         fun stateAssign(
             state: TaintRegisterStateAutomata.State,
             varName: MetavarAtom,
@@ -98,6 +107,19 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
             ?: return taintRuleStrategy.conditionBuilder.mkFalse()
 
         return taintRuleStrategy.posContainsAnyMark(position, setOf(markName))
+    }
+
+    fun containsStateMarkOnAnyField(
+        varName: MetavarAtom,
+        state: TaintRegisterStateAutomata.State,
+        position: PositionBaseWithModifiers
+    ): Cond {
+        compositionStrategy?.stateContainsOnAnyField(state, varName, position)?.let { return it }
+
+        val markName = stateMarkName(varName, state)
+            ?: return taintRuleStrategy.conditionBuilder.mkFalse()
+
+        return taintRuleStrategy.conditionBuilder.checkTaintMarkOnAnyField(markName, position)
     }
 
     private fun usedTaintMarks(state: TaintRegisterStateAutomata.State): Set<Mark.GeneratedMark> =
@@ -191,6 +213,16 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
     ): Cond {
         val varStates = metaVarRelevantStates(state, varName)
         val conditions = varStates.map { containsStateMark(varName, it, position) }
+        return taintRuleStrategy.conditionBuilder.or(conditions)
+    }
+
+    fun containsMarkOnAnyFieldWithAnyStateBefore(
+        state: TaintRegisterStateAutomata.State,
+        varName: MetavarAtom,
+        position: PositionBaseWithModifiers
+    ): Cond {
+        val varStates = metaVarRelevantStates(state, varName)
+        val conditions = varStates.map { containsStateMarkOnAnyField(varName, it, position) }
         return taintRuleStrategy.conditionBuilder.or(conditions)
     }
 

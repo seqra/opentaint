@@ -124,13 +124,11 @@ class StarOperatorRuleGenTest {
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled("enabled in Task 8")
     fun `starred sink produces ContainsMarkOnAnyField`() {
         val cfg = config(
             """
             rules:
               - id: star-sink
-                options: { lib: true }
                 severity: NOTE
                 message: x
                 languages: [java]
@@ -143,7 +141,20 @@ class StarOperatorRuleGenTest {
                       - focus-metavariable: ${'$'}Y
             """.trimIndent()
         )
-        val hasAnyField = allConditions(cfg).any { it is SerializedCondition.ContainsMarkOnAnyField }
-        assertTrue(hasAnyField, "expected a ContainsMarkOnAnyField in the starred sink config")
+        val conditions = allConditions(cfg)
+        val anyField = conditions.filterIsInstance<SerializedCondition.ContainsMarkOnAnyField>()
+        assertTrue(anyField.isNotEmpty(), "expected a ContainsMarkOnAnyField in the starred sink config")
+
+        // Base coherence: every any-field check must be paired with a plain
+        // ContainsMark on the SAME mark and SAME position base — a starred sink
+        // matches the value OR any of its nested fields, both anchored to the
+        // metavar's resolved position. A base/mark mismatch would be a silent bug.
+        val plain = conditions.filterIsInstance<SerializedCondition.ContainsMark>()
+        anyField.forEach { af ->
+            assertTrue(
+                plain.any { it.tainted == af.tainted && it.pos.base == af.pos.base },
+                "any-field check $af has no paired plain ContainsMark on the same mark/base; plain=$plain"
+            )
+        }
     }
 }
