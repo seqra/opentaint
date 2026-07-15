@@ -1,0 +1,25 @@
+rules:
+  - id: owasp-hash-00482
+    languages: [python]
+    severity: ERROR
+    message: "Weak message digest (CWE-328)"
+    metadata:
+      cwe: CWE-328
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $H = hashlib.new('md5')
+              ...
+              $H.update(...)
+          - pattern: |
+              $H = hashlib.new('sha1')
+              ...
+              $H.update(...)
+          - pattern: |
+              $H = hashlib.md5(...)
+              ...
+              $H.update(...)
+          - pattern: |
+              $H = hashlib.sha1(...)
+              ...
+              $H.update(...)
