@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
@@ -13,15 +14,12 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionF
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
-import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.InitialFactReader
@@ -43,10 +41,7 @@ class JIRMethodCallPrecondition(
 ) : MethodCallPrecondition.Default {
     private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
 
-    private val jIRValueResolver = CallPositionToJIRValueResolver(callExpr, returnValue)
-    private val method = callExpr.callee
-
-    private val taintConfig get() = analysisContext.taint.taintConfig as TaintRulesProvider
+    private val taintCtx get() = analysisContext.taint
 
     override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
         val results = mutableListOf<CallPrecondition>()
@@ -127,17 +122,10 @@ class JIRMethodCallPrecondition(
         startBase: AccessPathBase,
     ) {
         val entryFactReader = InitialFactReader(fact.rebase(startBase), apManager)
-        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(
-            entryFactReader
-        )
+        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(entryFactReader)
 
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            jIRValueResolver,
-            analysisContext, statement
-        )
-
-        for (rule in taintConfig.sourceRulesForMethod(method, statement, fact = null)) {
-            evaluateSourceRulePrecondition(rule, sourcePreconditionEvaluator, conditionRewriter)
+        for (rule in taintCtx.sourceRulesForCallStatement(statement, callExpr, returnValue, fact = null)) {
+            evaluateSourceRulePrecondition(rule, sourcePreconditionEvaluator)
         }
     }
 
@@ -145,49 +133,38 @@ class JIRMethodCallPrecondition(
         fact: InitialFactAp,
         startBase: AccessPathBase,
     ) {
-        val passRules = taintConfig.passTroughRulesForMethod(method, statement, fact = null).toList()
+        val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, fact = null).toList()
         if (passRules.isEmpty()) return
 
         val entryFactReader = InitialFactReader(fact.rebase(startBase), apManager)
         val rulePreconditionEvaluator = TaintPassActionPreconditionEvaluator(entryFactReader)
 
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            jIRValueResolver,
-            analysisContext, statement
-        )
-
         for (rule in passRules) {
-            evaluatePassRulePrecondition(rule, rulePreconditionEvaluator, conditionRewriter)
+            evaluatePassRulePrecondition(rule, rulePreconditionEvaluator)
         }
     }
 
     private fun MutableList<TaintRulePrecondition>.evaluateSourceRulePrecondition(
-        rule: TaintMethodSource,
+        rule: RuleWithCondition<TaintMethodSource>,
         sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
-        conditionRewriter: JIRMarkAwareConditionRewriter,
     ) {
         this += evaluateSourceRulePrecondition(
             rule,
-            rule.actionsAfter,
-            ruleCondition = { this.condition },
+            rule.rule.actionsAfter,
             sourcePreconditionEvaluator = sourcePreconditionEvaluator,
             evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
-            conditionRewriter = conditionRewriter,
         )
     }
 
     private fun MutableList<TaintRulePrecondition>.evaluatePassRulePrecondition(
-        rule: TaintPassThrough,
+        rule: RuleWithCondition<TaintPassThrough>,
         rulePreconditionEvaluator: TaintPassActionPreconditionEvaluator,
-        conditionRewriter: JIRMarkAwareConditionRewriter
     ) {
         this += evaluatePassRulePrecondition(
             rule,
-            rule.actionsAfter,
-            { condition },
+            rule.rule.actionsAfter,
             rulePreconditionEvaluator,
             evalAction = { r, a -> accept(r, a) },
-            conditionRewriter,
             { mapExit2Return(it) }
         )
     }

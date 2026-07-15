@@ -8,7 +8,6 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo.Rule
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.VulnerabilityTriggerPosition
-import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.JirCondition
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
@@ -28,9 +27,6 @@ class JIRSequentTaintUtil(
     val methodResult: AccessPathBase,
 ) : TaintUtil<JirCondition, TaintMethodExitSource, TaintMethodExitSink, TraceInfo>(apManager) {
     private val sinkTracker get() = analysisContext.taint.taintSinkTracker
-
-    override fun TaintMethodExitSource.srcCondition(): CommonCondition<JirCondition> = condition
-    override fun TaintMethodExitSink.sinkCondition(): CommonCondition<JirCondition> = condition
 
     override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintMethodExitSource> =
         object : RuleAssumptionsManager<TaintMethodExitSource> {

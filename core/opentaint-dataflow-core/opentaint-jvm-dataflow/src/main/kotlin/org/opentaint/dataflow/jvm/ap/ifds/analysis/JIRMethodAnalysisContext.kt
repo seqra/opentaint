@@ -19,6 +19,10 @@ class JIRMethodAnalysisContext(
     val aliasAnalysis: JIRLocalAliasAnalysis?,
     val taint: JIRTaintAnalysisContext,
 ) : MethodAnalysisContext {
+    init {
+        taint.bindAnalysisContext(this)
+    }
+
     override val methodCallFactMapper: MethodCallFactMapper
         get() = JIRMethodCallFactMapper
 

@@ -7,7 +7,6 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
-import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.JirCondition
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
@@ -35,9 +34,6 @@ class JIRMethodCallTaintUtil(
     val generateTrace: Boolean,
 ) : TaintUtil<JirCondition, TaintMethodSource, TaintMethodSink, TraceInfo>(apManager) {
     private val sinkTracker get() = analysisContext.taint.taintSinkTracker
-
-    override fun TaintMethodSource.srcCondition(): CommonCondition<JirCondition> = condition
-    override fun TaintMethodSink.sinkCondition(): CommonCondition<JirCondition> = condition
 
     override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintMethodSource> =
         object : RuleAssumptionsManager<TaintMethodSource> {

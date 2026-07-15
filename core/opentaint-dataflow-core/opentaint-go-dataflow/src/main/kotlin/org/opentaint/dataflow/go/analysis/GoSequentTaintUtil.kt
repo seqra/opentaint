@@ -28,12 +28,12 @@ inline fun <T> applyGlobalOrFieldReadSourceRules(
 
     val fieldName = GoFlowFunctionUtils.detectFieldReadName(inst)
     if (fieldName != null) {
-        sourceRules += context.taint.taintConfig.sourceRulesForFieldRead(fieldName)
+        sourceRules += context.taint.sourceRulesForFieldRead(fieldName)
     }
 
     val globalName = GoFlowFunctionUtils.detectGlobalReadName(inst)
     if (globalName != null) {
-        sourceRules += context.taint.taintConfig.sourceRulesForGlobal(globalName)
+        sourceRules += context.taint.sourceRulesForGlobal(globalName)
     }
 
     if (sourceRules.isEmpty()) return

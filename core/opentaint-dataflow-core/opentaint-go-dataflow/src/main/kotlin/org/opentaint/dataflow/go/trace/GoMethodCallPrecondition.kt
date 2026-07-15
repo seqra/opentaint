@@ -4,13 +4,13 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFunctionSignature
@@ -21,8 +21,6 @@ import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
 import org.opentaint.dataflow.go.analysis.forEachAliasAtStatement
 import org.opentaint.dataflow.go.analysis.forEachPossibleAliasAtStatement
 import org.opentaint.dataflow.go.analysis.resolvePosAccess
-import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
-import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.rules.accept
 import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.taint.InitialFactReader
@@ -41,9 +39,6 @@ class GoMethodCallPrecondition(
     private val statement: GoIRInst,
     private val analysisContext: GoMethodAnalysisContext,
 ) : MethodCallPrecondition.Default {
-    private val rulesProvider: GoTaintRulesProvider
-        get() = analysisContext.taint.taintConfig
-
     private val returnValue: GoIRValue?
         get() = GoFlowFunctionUtils.extractResultRegister(statement)
 
@@ -130,7 +125,7 @@ class GoMethodCallPrecondition(
         startBase: AccessPathBase,
     ): List<TaintRulePrecondition> {
         val signature = callSignature ?: return emptyList()
-        val sourceRules = rulesProvider.sourceRulesForCall(signature)
+        val sourceRules = analysisContext.taint.sourceRulesForCallStatement(signature, statement, callExpr, returnValue)
         if (sourceRules.isEmpty()) return emptyList()
 
         val entryFactReader = InitialFactReader(fact.rebase(startBase), apManager)
@@ -141,11 +136,9 @@ class GoMethodCallPrecondition(
         for (rule in sourceRules) {
             result += evaluateSourceRulePrecondition(
                 rule,
-                rule.actionsAfter,
-                ruleCondition = { condition },
+                rule.rule.actionsAfter,
                 sourcePreconditionEvaluator = sourcePreconditionEvaluator,
                 evalAction = { r, a -> evaluate(r, a, a.resolvePosAccess(), TaintMarkAccessor(a.mark)) },
-                conditionRewriter = GoRuleConditionRewriter(callExpr, statement, returnValue),
             )
         }
 
@@ -157,7 +150,7 @@ class GoMethodCallPrecondition(
         startFactBase: AccessPathBase,
     ): List<TaintRulePrecondition> {
         val signature = callSignature ?: return emptyList()
-        val passRules = rulesProvider.passThroughRulesForCall(signature)
+        val passRules = analysisContext.taint.passRulesForCallStatement(signature)
         if (passRules.isEmpty()) return emptyList()
 
         val entryFactReader = InitialFactReader(fact.rebase(startFactBase), apManager)
@@ -167,12 +160,10 @@ class GoMethodCallPrecondition(
 
         for (rule in passRules) {
             result += evaluatePassRulePrecondition(
-                rule,
+                RuleWithCondition(rule, RuleConditionRewriter.trueExpr),
                 rule.actionsAfter,
-                { mkTrue() },
                 rulePreconditionEvaluator,
                 evalAction = { r, a -> accept(r, a) },
-                RuleConditionRewriter.Unconditional,
                 { mapExit2Return(it) }
             )
         }
