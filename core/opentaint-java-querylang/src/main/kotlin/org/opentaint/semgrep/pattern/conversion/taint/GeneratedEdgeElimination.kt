@@ -393,7 +393,7 @@ fun eliminateStringConcat(
             val predCondition = it.asConditionOnStringConcat<Position.Result>()
                 ?: return@any false
 
-            check(predCondition == IsMetavar(metavar)) { "Unexpected condition" }
+            check(predCondition is IsMetavar && predCondition.metavar == metavar) { "Unexpected condition" }
             !it.negated
         }
 
@@ -405,7 +405,7 @@ fun eliminateStringConcat(
             val predCondition = it.asConditionOnStringConcat<Position.Argument>()
                 ?: return@any false
 
-            check(predCondition == IsMetavar(metavar)) { "Unexpected condition" }
+            check(predCondition is IsMetavar && predCondition.metavar == metavar) { "Unexpected condition" }
             !it.negated
         }
 
