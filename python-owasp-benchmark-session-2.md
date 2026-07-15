@@ -39,22 +39,26 @@ fixes accumulate cleanly.
   next session in a fresh worktree off `saloed/python-support`.**
 - **Rounds committed (all suite green-or-documented):** sqli (16), cmdi (20), ldapi (29), xxe (28),
   redirect (34), codeinj (53), trustbound (37, all `@Disabled` — store-sink gap inv 28),
-  deserialization (54), **pathtraver COMPLETE (168, batches 1–4)**, **xpathi COMPLETE (186, batches 1–5)**,
-  **xss batch 1 (40, all `@Disabled` — return-value-sink gap inv 35)**. Each entry has a hand-written rule +
-  hardcoded ground-truth `@Test`; unfixable FALSE entries are `@Disabled` with a one-line reason. OWASP
-  suite currently **665 tests: 372 pass / 0 fail / 293 skipped**. pathtraver b2/b3/b4 = 18+18+18 active
-  (inv 16/18/19/20/23/30/33) + 22/23/22/6 `@Disabled`; xpathi b1–b5 = active + `@Disabled` (inv 34 sink;
-  16/18/19/20/23 limits), remaining `@Disabled` FPs are the apostrophe-escape `str.replace` receiver-cleaner
-  case (inv 27, NOT a new reason); the `io.StringIO`-drop FNs were FIXED this session (missing passThrough,
-  +9 re-enabled, −3 StringIO-masked FALSE now @Disabled on inv 16/18); xss b1 = 0 active, all 40 `@Disabled` (inv 35).
-- **Next batch: NONE runnable without an engine phase.** xss (89) is BLOCKED (inv 35 return-value-sink):
-  ~49 xss entries HELD (do not author doomed `@Disabled` stubs). trustbound (37) BLOCKED (inv 28). Only
-  remaining categories are structural-only weakrand (326) / hash (151) / securecookie (39) — **discuss
-  before investing**. **Recommended: a dedicated engine phase for inv 28 (store-sink) + inv 35
-  (return-value-sink)** — together they unblock trustbound (37) + xss (89), high leverage. This branch:
-  `owasp-pathtraver-b2-work` (off `saloed/python-support` tip `1a5a8ac48`); worktree
-  `/home/pvl/folder/projects/explyt/opentaint-owasp-pt2`. Untracked `core/opentaint-sast-test-util` must be
-  copied into any fresh worktree off this branch for gradle to configure.
+  deserialization (54), **pathtraver COMPLETE (168)**, **xpathi COMPLETE (186)**,
+  **xss batch 1 (40, all `@Disabled` — return-value-sink gap inv 35)**, **securecookie COMPLETE (39, inv 36)**,
+  **hash COMPLETE (151, inv 37)**, **weakrand COMPLETE (326, inv 38)**. **All 14 OWASP categories are now
+  authored: 1181 of 1230 entries have a rule + ground-truth `@Test`;** the 49 uncovered are the HELD xss
+  entries — deliberately NOT stubbed (all doomed by inv 35 until the return-sink lands). OWASP suite
+  **1181 tests: 775 pass / 0 fail / 406 skipped**. The 406 skipped are `@Disabled`-with-verified-reason:
+  xss 89 + trustbound 37 (blocked sink-kind gaps inv 35/28); ~113 weakrand SystemRandom (inv 38); and the
+  approximation-limited pathtraver/xpathi FPs+FNs (inv 16/18/19/20/23/27/34). The three structural no-flow
+  categories used the self-source recipe: securecookie (make_response self-source + positive `secure=False`
+  kwarg sink), hash (weak-digest `pattern-either` + `.update` sink), weakrand (weak `random.<fn>` in `str()`
+  sink) — all POSITIVE matches, never `pattern-not` cleaners (avoids inv 27).
+- **Next batch: NONE — authoring is DONE. Only the ENGINE PHASE remains** (tackle centrally with the user;
+  each has a reproducer/tripwire). Reactivating the 406 skipped is now pure engine work:
+  **inv 35** return-value-sink → unblocks xss (89); **inv 28** subscript-store-sink → unblocks trustbound (37);
+  **inv 38** resolve `random.SystemRandom()` return type so `.<fn>()` gets a qualified name instead of a
+  last-segment-colliding `PIRSimpleNameUnknownFunction` → reactivates ~113 weakrand FALSE (inv-7 QN-resolution
+  improvement, likely small); **inv 27** propagate receiver-cleans to may-aliases → ~14 codeinj + the xpathi
+  apostrophe-escape FPs. This branch: `owasp-pathtraver-b2-work` (off `saloed/python-support` tip
+  `1a5a8ac48`); worktree `/home/pvl/folder/projects/explyt/opentaint-owasp-pt2`. Untracked
+  `core/opentaint-sast-test-util` must be copied into any fresh worktree off this branch for gradle to configure.
 - **RESOLVED this session:** **inv 29** (char-rebuild NextIter drop) — per-entry workaround: deepen the
   collection source one `[...]` (`getlist(...)[...][...]` → `Result[*][*]`) so char-level taint survives;
   per-entry SAFE, NEVER where the char-rebuild is a real sanitizer (xss). **inv 31** (read_text
