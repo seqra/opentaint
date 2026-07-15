@@ -7,19 +7,7 @@ rules:
       cwe: CWE-328
     patterns:
       - pattern-either:
-          - pattern: |
-              $H = hashlib.new('md5')
-              ...
-              $H.update(...)
-          - pattern: |
-              $H = hashlib.new('sha1')
-              ...
-              $H.update(...)
-          - pattern: |
-              $H = hashlib.md5(...)
-              ...
-              $H.update(...)
-          - pattern: |
-              $H = hashlib.sha1(...)
-              ...
-              $H.update(...)
+          - pattern: hashlib.new('md5')
+          - pattern: hashlib.new('sha1')
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
