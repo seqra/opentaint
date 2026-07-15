@@ -343,7 +343,7 @@ data class StringConcatCtx(
         return when (condition) {
             is IsMetavar -> {
                 val newMetavars = metavarMapping[condition.metavar] ?: return listOf(condition)
-                val modified = newMetavars.map(::IsMetavar)
+                val modified = newMetavars.map { IsMetavar(it, condition.star) }
 
                 if (condition.metavar !in newMetavars || newMetavars.size > 1) {
                     return modified + ParamCondition.TypeIs(stringType)
