@@ -71,7 +71,7 @@ class TestAnalysisRunner(
     private fun setupEngine(configProvider: TaintRulesProvider): TaintAnalyzer<JIRMethod, JIRInst> {
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = ApMode.Tree
+            ifdsApMode = ApMode.BaseOnlyField,
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {

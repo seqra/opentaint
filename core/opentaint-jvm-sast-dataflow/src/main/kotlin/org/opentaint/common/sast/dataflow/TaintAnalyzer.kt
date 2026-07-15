@@ -23,6 +23,7 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccess
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
@@ -90,6 +91,8 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation)
             ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation)
             ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation)
+            ApMode.BaseOnly -> BaseOnlyApManager(unrollStrategy, fieldSensitive = false)
+            ApMode.BaseOnlyField -> BaseOnlyApManager(unrollStrategy, fieldSensitive = true)
         }
     }
 
