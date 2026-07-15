@@ -122,7 +122,8 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertAutomataToTaint
     return strategy.generateTaintRules(ctx, this, SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION)
 }
 
-private data class RegisterVarPosition(val varName: MetavarAtom, val positions: MutableSet<PositionBase>)
+private data class StarredPosition(val position: PositionBase, val star: Boolean)
+private data class RegisterVarPosition(val varName: MetavarAtom, val positions: MutableSet<StarredPosition>)
 
 private data class RuleCondition(
     val enclosingClassPackage: SerializedSimpleNameMatcher,
@@ -343,8 +344,14 @@ private fun JavaTaintRuleGenerationCtx.buildStateAssignAction(
     val requiredVariables = state.register.assignedVars.keys
     val result = requiredVariables.flatMapTo(mutableListOf()) { varName ->
         val varPosition = edgeCondition.accessedVarPosition[varName] ?: return@flatMapTo emptyList()
-        varPosition.positions.flatMap {
-            stateAssignMark(varPosition.varName, state, it.base())
+        varPosition.positions.flatMap { sp ->
+            val base = sp.position.base()
+            val assigns = stateAssignMark(varPosition.varName, state, base)
+            if (sp.star) {
+                assigns + stateAssignMark(varPosition.varName, state, base.withAnyField())
+            } else {
+                assigns
+            }
         }
     }
 
@@ -361,8 +368,8 @@ private fun JavaTaintRuleGenerationCtx.buildStateCleanAction(
     edgeCondition: EvaluatedEdgeCondition
 ): List<SerializedTaintCleanAction> {
     val result = edgeCondition.accessedVarPosition.values.flatMapTo(mutableListOf()) { varPosition ->
-        varPosition.positions.flatMap {
-            stateCleanMark(varPosition.varName, state, stateBefore, it.base())
+        varPosition.positions.flatMap { sp ->
+            stateCleanMark(varPosition.varName, state, stateBefore, sp.position.base())
         }
     }
 
@@ -385,8 +392,8 @@ private fun EvaluatedEdgeCondition.addStateCheck(
         stateChecks += ctx.globalStateMarkName(state).mkContainsMark(ctx.stateVarPosition)
     } else {
         for (metaVar in state.register.assignedVars.keys) {
-            for (pos in accessedVarPosition[metaVar]?.positions.orEmpty()) {
-                stateChecks += ctx.containsStateMark(metaVar, state, pos.base())
+            for (sp in accessedVarPosition[metaVar]?.positions.orEmpty()) {
+                stateChecks += ctx.containsStateMark(metaVar, state, sp.position.base())
             }
         }
     }
@@ -1075,7 +1082,7 @@ private fun findMetaVarPosition(
     val varPosition = varPositions.getOrPut(condition.metavar) {
         RegisterVarPosition(condition.metavar, hashSetOf())
     }
-    varPosition.positions.add(position)
+    varPosition.positions.add(StarredPosition(position, condition.star))
 }
 
 private fun JavaTaintRuleGenerationCtx.evaluateParamCondition(

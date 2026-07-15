@@ -9,6 +9,9 @@ import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.semgrep.pattern.createTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
+import org.opentaint.dataflow.configuration.jvm.serialized.SourceRule
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -36,6 +39,43 @@ class StarOperatorRuleGenTest {
         is SerializedCondition.Or -> listOf(c) + c.anyOf.flatMap { flatten(it) }
         is SerializedCondition.And -> listOf(c) + c.allOf.flatMap { flatten(it) }
         else -> listOf(c)
+    }
+
+    private fun sourceAssignPositions(cfg: SerializedTaintConfig): List<PositionBaseWithModifiers> =
+        (cfg.source.orEmpty() + cfg.entryPoint.orEmpty()).filterIsInstance<SourceRule>()
+            .flatMap { it.taint }
+            .map { it.pos }
+
+    @Test
+    fun `starred source assigns value and any-field`() {
+        val cfg = config(
+            """
+            rules:
+              - id: star-source
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - patterns:
+                      - pattern: sink(${'$'}X*);
+                      - focus-metavariable: ${'$'}X
+                pattern-sinks:
+                  - pattern: other(${'$'}Y);
+            """.trimIndent()
+        )
+        val positions = sourceAssignPositions(cfg)
+        assertTrue(
+            positions.any { it is PositionBaseWithModifiers.BaseOnly },
+            "expected a plain-value assign; got $positions"
+        )
+        assertTrue(
+            positions.any {
+                it is PositionBaseWithModifiers.WithModifiers &&
+                    it.modifiers.contains(PositionModifier.AnyField)
+            },
+            "expected an any-field assign; got $positions"
+        )
     }
 
     @Test
