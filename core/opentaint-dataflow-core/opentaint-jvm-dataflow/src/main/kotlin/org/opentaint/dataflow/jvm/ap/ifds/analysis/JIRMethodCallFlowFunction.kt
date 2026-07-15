@@ -2,6 +2,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -116,7 +117,8 @@ class JIRMethodCallFlowFunction(
                 final.forEachSourceFactWithAliases {
                     addUnchecked(CallToReturnNonDistributiveFact(initial, it, trace))
                 }
-            }
+            },
+            markAfterAnyFieldResolver = markAfterAnyFieldResolver,
         )
 
         JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
@@ -129,7 +131,8 @@ class JIRMethodCallFlowFunction(
         ) { callerFact, startFactBase ->
             applyCleanersOrCallToStart(
                 factReader, callerFact, startFactBase,
-                addCallToReturn, addCallToStart, addUnchecked
+                addCallToReturn, addCallToStart, addUnchecked,
+                markAfterAnyFieldResolver
             )
         }
 
@@ -145,6 +148,7 @@ class JIRMethodCallFlowFunction(
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
         addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
         addCallToReturnUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+        markAfterAnyFieldResolver: FactWithMarkAfterAnyAccessorResolver?,
     ) {
         val method = callExpr.callee
 
@@ -153,7 +157,7 @@ class JIRMethodCallFlowFunction(
 
         val conditionEvaluator = TaintFactAwareConditionEvaluator(
             listOf(conditionFactReader),
-            markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
+            markAfterAnyAccessorResolver = markAfterAnyFieldResolver
         )
 
         val typeResolver = JIRMethodPositionBaseTypeResolver(method)
@@ -235,6 +239,7 @@ class JIRMethodCallFlowFunction(
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
         createEdge: (InitialFactAp, FinalFactAp, TraceInfo) -> Unit,
         createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
+        markAfterAnyFieldResolver: FactWithMarkAfterAnyAccessorResolver? = null,
     ) {
         val sourceRules = taintCtx.sourceRulesForCallStatement(statement, callExpr, returnValue, factReader?.factAp)
         if (sourceRules.isEmpty()) return
@@ -242,20 +247,27 @@ class JIRMethodCallFlowFunction(
         val taintUtil = JIRMethodCallTaintUtil(apManager, statement, callExpr, analysisContext, generateTrace)
         taintUtil.applySourceRules(
             sourceRules, initialFacts, factReader, exclusion,
-            createFinalFact, createEdge, createNDEdge
+            createFinalFact, createEdge, createNDEdge,
+            markAfterAnyFieldResolver
         )
     }
 
     override fun propagateUnresolvedCallFact(
         factAp: FinalFactAp,
+        initialFacts: Set<InitialFactAp>,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
-        addSideEffectRequirement: (FinalFactReader) -> Unit
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addSideEffect: (InitialFactAp, SideEffectKind) -> Unit,
     ) {
         val factReader = FinalFactReader(factAp, apManager)
 
         unresolvedCallDefaultFactPropagation(factAp, addCallToReturn)
 
         val method = callExpr.callee
+
+        val markAfterAnyFieldResolver = createMarkAfterAccessorResolver(
+            analysisContext.methodEntryPoint, initialFacts, addSideEffect
+        )
         JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
             statement,
             callee = method,
@@ -268,7 +280,7 @@ class JIRMethodCallFlowFunction(
 
             val conditionEvaluator = TaintFactAwareConditionEvaluator(
                 listOf(passFactReader),
-                markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
+                markAfterAnyAccessorResolver = markAfterAnyFieldResolver
             )
             val typeResolver = JIRMethodPositionBaseTypeResolver(method)
             val passEvaluator = TaintPassActionEvaluator(
