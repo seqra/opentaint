@@ -70,6 +70,22 @@ class BaseOnlyDeltaTest {
     }
 
     @Test
+    fun `split delta preserves concrete field between field and suffix abstractions`() {
+        val m = mgr(fieldSensitive = true)
+        val callerFact = m.abstractInitialOf(field, AnyAccessor) as BaseOnlyInitialFactAp
+        val fieldAbstractAccess = BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 1)
+        val summaryFinal = BaseOnlyFinalFactAp(m, arg0, fieldAbstractAccess, ExclusionSet.Empty)
+
+        val (matched, delta) = callerFact.splitDelta(summaryFinal).single()
+        assertEquals(fieldAbstractAccess, (matched as BaseOnlyInitialFactAp).access)
+        assertTrue(delta is BaseOnlyNodeInitialDelta)
+        assertEquals(callerFact.access, delta.access)
+
+        val mappedSummaryInitial = BaseOnlyInitialFactAp(m, arg0, fieldAbstractAccess, ExclusionSet.Empty)
+        assertEquals(callerFact, mappedSummaryInitial.concat(delta))
+    }
+
+    @Test
     fun `value fact against abstract prefix yields a value delta not empty`() {
         val m = mgr()
         val f = m.finalOf()                        // arg0.$  (value itself)

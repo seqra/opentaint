@@ -112,13 +112,13 @@ Alignment invariant: no X, no S.
   F46     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   .   .   .   .   .   .   .   .   .   .   .   e   .   .   .   .   .   
   F47     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   .   .   .   .   .   .   .   .   .   .   .   e   .   .   .   .   
   F48     e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   e   e   e   e   
-  F49     e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   .   .   
-  F50     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   .   
-  F51     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   d   d   d   e   d   d   d   e   d   d   d   e   d   d   d   .   .   .   e   
+  F49     e   d   d   d   d   d   d   d   d   d   d   d   d   d   d   d   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   .   .
+  F50     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   d   d   d   d   d   d   d   d   d   d   d   d   d   d   d   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   .
+  F51     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   e   d   d   d   d   d   d   d   d   d   d   d   d   d   d   d   .   .   .   e
 
 ## SUMMARY (symbol counts)
-  'e' : 154
-  'd' : 162
+  'e' : 145
+  'd' : 171
   '.' : 2388
 
 ## CONTAINMENT PAIRS (contained, off-diagonal) — residual per pair
@@ -343,15 +343,15 @@ Alignment invariant: no X, no S.
   x.*f            x.$             |  d  | [m.*f]Δ.$
   x.*f            x.!t1.$         |  d  | [m.*f]Δ.!t1.$
   x.*f            x.!t2.$         |  d  | [m.*f]Δ.!t2.$
-  x.*f            x.f1.*          |  e  | [m.*f]ε
+  x.*f            x.f1.*          |  d  | [m.*f]Δ.f1.*
   x.*f            x.f1.$          |  d  | [m.*f]Δ.f1.$
   x.*f            x.f1.!t1.$      |  d  | [m.*f]Δ.f1.!t1.$
   x.*f            x.f1.!t2.$      |  d  | [m.*f]Δ.f1.!t2.$
-  x.*f            x.f2.*          |  e  | [m.*f]ε
+  x.*f            x.f2.*          |  d  | [m.*f]Δ.f2.*
   x.*f            x.f2.$          |  d  | [m.*f]Δ.f2.$
   x.*f            x.f2.!t1.$      |  d  | [m.*f]Δ.f2.!t1.$
   x.*f            x.f2.!t2.$      |  d  | [m.*f]Δ.f2.!t2.$
-  x.*f            x.[el].*        |  e  | [m.*f]ε
+  x.*f            x.[el].*        |  d  | [m.*f]Δ.[el].*
   x.*f            x.[el].$        |  d  | [m.*f]Δ.[el].$
   x.*f            x.[el].!t1.$    |  d  | [m.*f]Δ.[el].!t1.$
   x.*f            x.[el].!t2.$    |  d  | [m.*f]Δ.[el].!t2.$
@@ -359,15 +359,15 @@ Alignment invariant: no X, no S.
   x.s1.*f         x.s1.$          |  d  | [m.s1.*f]Δ.$
   x.s1.*f         x.s1.!t1.$      |  d  | [m.s1.*f]Δ.!t1.$
   x.s1.*f         x.s1.!t2.$      |  d  | [m.s1.*f]Δ.!t2.$
-  x.s1.*f         x.s1.f1.*       |  e  | [m.s1.*f]ε
+  x.s1.*f         x.s1.f1.*       |  d  | [m.s1.*f]Δ.f1.*
   x.s1.*f         x.s1.f1.$       |  d  | [m.s1.*f]Δ.f1.$
   x.s1.*f         x.s1.f1.!t1.$   |  d  | [m.s1.*f]Δ.f1.!t1.$
   x.s1.*f         x.s1.f1.!t2.$   |  d  | [m.s1.*f]Δ.f1.!t2.$
-  x.s1.*f         x.s1.f2.*       |  e  | [m.s1.*f]ε
+  x.s1.*f         x.s1.f2.*       |  d  | [m.s1.*f]Δ.f2.*
   x.s1.*f         x.s1.f2.$       |  d  | [m.s1.*f]Δ.f2.$
   x.s1.*f         x.s1.f2.!t1.$   |  d  | [m.s1.*f]Δ.f2.!t1.$
   x.s1.*f         x.s1.f2.!t2.$   |  d  | [m.s1.*f]Δ.f2.!t2.$
-  x.s1.*f         x.s1.[el].*     |  e  | [m.s1.*f]ε
+  x.s1.*f         x.s1.[el].*     |  d  | [m.s1.*f]Δ.[el].*
   x.s1.*f         x.s1.[el].$     |  d  | [m.s1.*f]Δ.[el].$
   x.s1.*f         x.s1.[el].!t1.$ |  d  | [m.s1.*f]Δ.[el].!t1.$
   x.s1.*f         x.s1.[el].!t2.$ |  d  | [m.s1.*f]Δ.[el].!t2.$
@@ -375,16 +375,15 @@ Alignment invariant: no X, no S.
   x.s2.*f         x.s2.$          |  d  | [m.s2.*f]Δ.$
   x.s2.*f         x.s2.!t1.$      |  d  | [m.s2.*f]Δ.!t1.$
   x.s2.*f         x.s2.!t2.$      |  d  | [m.s2.*f]Δ.!t2.$
-  x.s2.*f         x.s2.f1.*       |  e  | [m.s2.*f]ε
+  x.s2.*f         x.s2.f1.*       |  d  | [m.s2.*f]Δ.f1.*
   x.s2.*f         x.s2.f1.$       |  d  | [m.s2.*f]Δ.f1.$
   x.s2.*f         x.s2.f1.!t1.$   |  d  | [m.s2.*f]Δ.f1.!t1.$
   x.s2.*f         x.s2.f1.!t2.$   |  d  | [m.s2.*f]Δ.f1.!t2.$
-  x.s2.*f         x.s2.f2.*       |  e  | [m.s2.*f]ε
+  x.s2.*f         x.s2.f2.*       |  d  | [m.s2.*f]Δ.f2.*
   x.s2.*f         x.s2.f2.$       |  d  | [m.s2.*f]Δ.f2.$
   x.s2.*f         x.s2.f2.!t1.$   |  d  | [m.s2.*f]Δ.f2.!t1.$
   x.s2.*f         x.s2.f2.!t2.$   |  d  | [m.s2.*f]Δ.f2.!t2.$
-  x.s2.*f         x.s2.[el].*     |  e  | [m.s2.*f]ε
+  x.s2.*f         x.s2.[el].*     |  d  | [m.s2.*f]Δ.[el].*
   x.s2.*f         x.s2.[el].$     |  d  | [m.s2.*f]Δ.[el].$
   x.s2.*f         x.s2.[el].!t1.$ |  d  | [m.s2.*f]Δ.[el].!t1.$
   x.s2.*f         x.s2.[el].!t2.$ |  d  | [m.s2.*f]Δ.[el].!t2.$
-

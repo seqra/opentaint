@@ -180,6 +180,17 @@ object BaseOnlyAccessOps {
     ): List<Pair<BaseOnlyAccess, BaseOnlyInitialDelta>> {
         if (fact.hasAp) {
             if (!containsAccess(pattern, fact)) return emptyList()
+
+            // A suffix-abstract fact with a concrete field refines a field-abstract summary
+            // pattern. Preserve that representable field so mapping the summary initial and
+            // concatenating the delta reconstructs the caller fact:
+            // <field-*> matched against field.* must retain delta field.*.
+            if (pattern.apSlot == 1 && fact.apSlot == 2 && fact.fieldIdx >= 0) {
+                val delta = dropCorePrefix(fact, pattern.apSlot)
+                if (manager.suffixExcluded(delta, exclusions)) return emptyList()
+                return listOf(pattern to BaseOnlyNodeInitialDelta(manager, delta))
+            }
+
             return listOf(pattern to BaseOnlyEmptyInitialDelta)
         }
 

@@ -214,7 +214,13 @@ class BaseOnlySplitDeltaAlignmentTest {
         if (golden == null) {
             println("PIN splitdelta-align mode$mode: no golden resource yet — wrote actual to ${scratch.path}")
         } else {
-            assertEquals(golden.readText().trimEnd(), actual.trimEnd(), "split-delta alignment behaviour changed for mode $mode")
+            fun String.normalizeLineEnds(): String =
+                lineSequence().joinToString("\n") { it.trimEnd() }.trimEnd()
+            assertEquals(
+                golden.readText().normalizeLineEnds(),
+                actual.normalizeLineEnds(),
+                "split-delta alignment behaviour changed for mode $mode",
+            )
         }
     }
 
