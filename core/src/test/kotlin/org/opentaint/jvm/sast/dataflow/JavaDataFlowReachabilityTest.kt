@@ -3,6 +3,7 @@ package org.opentaint.jvm.sast.dataflow
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
@@ -20,6 +21,7 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
         private const val STREAM_RULE_ID = "stream-flow-rule"
         private const val ASYNC_RULE_ID = "async-flow-rule"
         private const val BASE_ONLY_SETTER_RULE_ID = "base-only-setter-regression"
+        private const val BASE_ONLY_NESTED_REFERENCE_RULE_ID = "base-only-nested-reference-regression"
     }
 
     override val sourceFileExtension: String = "java"
@@ -91,6 +93,39 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             entryPointName = "taintedLocalSurvivesUnrelatedSetters",
             ruleId = BASE_ONLY_SETTER_RULE_ID,
             testName = "BaseOnly unrelated setter regression"
+        )
+    }
+
+    @Test
+    fun `base-only flow - tainted child survives installation into an outer field`() {
+        val testCls = "$SAMPLE_PACKAGE.BaseOnlyNestedReferenceRegressionSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(
+                    testCls,
+                    "sink",
+                    BASE_ONLY_NESTED_REFERENCE_RULE_ID,
+                    listOf(Argument(0) to TAINT_MARK),
+                )
+            )
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nestedReferenceFlow",
+            ruleId = BASE_ONLY_NESTED_REFERENCE_RULE_ID,
+            testName = "Nested reference installation Tree control",
+            apMode = ApMode.Tree,
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nestedReferenceFlow",
+            ruleId = BASE_ONLY_NESTED_REFERENCE_RULE_ID,
+            testName = "BaseOnly nested reference installation regression"
         )
     }
 
