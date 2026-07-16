@@ -358,7 +358,12 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             val t = transformType(recv.type)
             Triple(
                 emptyList(),
-                ParamCondition.And(listOf(IsMetavar(MetavarAtom.create(recv.name)), ParamCondition.TypeIs(t))),
+                ParamCondition.And(
+                    listOf(
+                        IsMetavar(MetavarAtom.create(recv.name), star = recv.star),
+                        ParamCondition.TypeIs(t),
+                    ),
+                ),
                 null,
             )
         }
@@ -461,7 +466,7 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         is Metavar -> IsMetavar(MetavarAtom.create(pattern.name), star = pattern.star)
         is TypedMetavar -> ParamCondition.And(
             listOf(
-                IsMetavar(MetavarAtom.create(pattern.name)),
+                IsMetavar(MetavarAtom.create(pattern.name), star = pattern.star),
                 ParamCondition.TypeIs(transformType(pattern.type)),
             ),
         )
@@ -504,8 +509,9 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         return transformAssignmentValue(conditions, value)
     }
 
-    // Name + star of an assignment target. Only a bare `Metavar` can be starred (`$X*`); other
-    // target shapes carry star = false. Threading star lets `$X* = src()` taint every nested field.
+    // Name + star of an assignment target. A bare `Metavar` (`$X*`) or a typed metavar (`($X* : T)`)
+    // can be starred; other target shapes carry star = false. Threading star lets `$X* = src()` (or
+    // its typed form) taint every nested field.
     private data class AssignmentTarget(val name: String, val star: Boolean)
 
     private fun SemgrepGoPattern.assignmentTargetName(
@@ -514,7 +520,7 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         this is Metavar -> AssignmentTarget(name, star)
         this is TypedMetavar -> {
             conditions += ParamCondition.TypeIs(transformType(type))
-            AssignmentTarget(name, star = false)
+            AssignmentTarget(name, star = star)
         }
 
         this is Identifier && name is MetavarName -> AssignmentTarget(name.name, star = false)

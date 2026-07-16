@@ -664,7 +664,9 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
     private fun parseOperand(ctx: GoParser.OperandContext): SemgrepGoPattern {
         // Starred metavar `$X*` (STAR is an unambiguous discriminator; matched by the
         // `metavarStarAdjacent()` grammar predicate, so `$X * y` / `*p` never reach here).
-        if (ctx.STAR() != null && ctx.METAVAR_IDENT() != null) {
+        // A starred TYPED metavar `($X* : T)` also carries STAR but has a type_, so exclude it here
+        // and let the typed branch below produce a starred TypedMetavar.
+        if (ctx.STAR() != null && ctx.METAVAR_IDENT() != null && ctx.type_() == null) {
             return Metavar(ctx.METAVAR_IDENT().text, star = true)
         }
         ctx.literal()?.let { return parseLiteral(it) }
@@ -673,9 +675,9 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
             ctx.typeArgs()?.let { /* ignore type args on operand */ }
             return base
         }
-        // typed metavar ($X : T)
+        // typed metavar `($X : T)`, or starred typed metavar `($X* : T)` when STAR is present.
         if (ctx.METAVAR_IDENT() != null && ctx.type_() != null) {
-            return TypedMetavar(ctx.METAVAR_IDENT().text, parseType(ctx.type_()))
+            return TypedMetavar(ctx.METAVAR_IDENT().text, parseType(ctx.type_()), star = ctx.STAR() != null)
         }
         ctx.expression()?.let { return parseExpression(it) }
         throw UnsupportedGoElement(ctx)

@@ -137,6 +137,38 @@ class SemgrepGoPatternParserTest {
         assertTrue(x.star, "expected LHS \$X* to be starred")
     }
 
+    private fun typedMetavars(pattern: String): List<org.opentaint.semgrep.go.pattern.TypedMetavar> =
+        collect(parse(pattern)).filterIsInstance<org.opentaint.semgrep.go.pattern.TypedMetavar>()
+
+    @Test fun starredTypedMetavar() {
+        // `($Y* : SomeType)` parses to a starred typed metavar carrying its type constraint.
+        val tm = typedMetavars("Sink((\$Y* : SomeType))").single { it.name == "\$Y" }
+        assertTrue(tm.star, "expected (\$Y* : SomeType) to be a starred typed metavar")
+    }
+
+    @Test fun plainTypedMetavarIsNotStarred() {
+        // `($Y : SomeType)` stays an unstarred typed metavar (byte-identical to before).
+        val tm = typedMetavars("Sink((\$Y : SomeType))").single { it.name == "\$Y" }
+        assertTrue(!tm.star, "plain (\$Y : SomeType) must not be starred")
+    }
+
+    @Test fun whitespaceTypedMetavarIsNotStarred() {
+        // `($Y * : T)` has a gap between the metavar and `*`, so the adjacency predicate must not
+        // fire. Unlike the bare `$Y * z` (valid multiplication), the trailing `: T` makes the spaced
+        // form a genuine parse error -- crucially the star alt does NOT silently claim it.
+        val r = parser.parseSemgrepGoPattern("Sink((\$Y * : SomeType))")
+        assertTrue(
+            r !is SemgrepGoPatternParsingResult.Ok,
+            "spaced (\$Y * : T) must not parse as a starred typed metavar; got $r",
+        )
+    }
+
+    @Test fun starredTypedReceiverParses() {
+        // Typed receiver form `($C* : *exec.Cmd).Run()` parses with both star and the type restored.
+        val tm = typedMetavars("(\$C* : *exec.Cmd).Run()").single { it.name == "\$C" }
+        assertTrue(tm.star, "expected (\$C* : *exec.Cmd) receiver to be a starred typed metavar")
+    }
+
     @Test fun prefixDerefStillParses() {
         // `*p` is a prefix deref (STAR precedes the operand), not a starred metavar.
         val ast = parse("*p")

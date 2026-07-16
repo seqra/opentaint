@@ -302,12 +302,13 @@
      ;
  
  conversion
-@@ -424,6 +478,8 @@
+@@ -424,6 +478,9 @@
  operand
 -    : literal
 +    : {this.metavarStarAdjacent()}? METAVAR_IDENT STAR
 +    | literal
      | operandName typeArgs?
++    | L_PAREN {this.metavarStarAdjacent()}? METAVAR_IDENT STAR COLON type_ R_PAREN
 +    | L_PAREN METAVAR_IDENT COLON type_ R_PAREN
      | L_PAREN expression R_PAREN
      ;

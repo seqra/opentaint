@@ -154,6 +154,45 @@ class GoStarOperatorEmitTest {
     }
 
     @Test
+    fun `starred TYPED sink checks base and any-accessor with the type constraint retained`() {
+        // `($Y* : string)` is a starred TYPED metavar. It lowers to And(IsMetavar(star), TypeIs),
+        // which the automata flattens into two per-position atoms; the starred IsMetavar atom must
+        // still thread the any-accessor arm, and the TypeIs atom must still emit an IsType check.
+        val items = emitItems(
+            """
+            rules:
+              - id: go-star-typed-sink
+                languages: [go]
+                mode: taint
+                message: x
+                severity: ERROR
+                pattern-sources:
+                  - pattern: "util.Source(...)"
+                pattern-sinks:
+                  - patterns:
+                      - pattern: "util.Sink((${'$'}Y* : string))"
+                      - focus-metavariable: ${'$'}Y
+            """.trimIndent()
+        )
+        val conditions = sinkConditions(items)
+        val base = conditions.filterIsInstance<GoSerializedCondition.ContainsMark>()
+        val anyAccessor = conditions.filterIsInstance<GoSerializedCondition.ContainsMarkOnAnyAccessor>()
+
+        assertTrue(anyAccessor.isNotEmpty(), "expected a ContainsMarkOnAnyAccessor for the starred typed sink; got $conditions")
+        assertTrue(base.isNotEmpty(), "expected a plain ContainsMark for the starred typed sink; got $conditions")
+        assertTrue(
+            conditions.any { it is GoSerializedCondition.IsType },
+            "expected the type constraint (IsType) to survive alongside the star; got $conditions"
+        )
+        anyAccessor.forEach { af ->
+            assertTrue(
+                base.any { it.tainted == af.tainted && it.pos == af.pos },
+                "any-accessor check $af has no paired plain ContainsMark on same mark/pos; base=$base"
+            )
+        }
+    }
+
+    @Test
     fun `non-star sink checks base only`() {
         val items = emitItems(
             """

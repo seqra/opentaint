@@ -44,7 +44,7 @@ data class DeepExpr(val nested: SemgrepGoPattern) : SemgrepGoPattern {
     override val children: List<SemgrepGoPattern> get() = listOf(nested)
 }
 
-data class TypedMetavar(val name: String, val type: TypeName) : SemgrepGoPattern {
+data class TypedMetavar(val name: String, val type: TypeName, val star: Boolean = false) : SemgrepGoPattern {
     override val children: List<SemgrepGoPattern> get() = emptyList()
 }
 
