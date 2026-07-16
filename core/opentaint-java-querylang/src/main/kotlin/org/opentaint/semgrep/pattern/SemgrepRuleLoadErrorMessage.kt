@@ -233,6 +233,11 @@ class JoinSinkMetavarConflict(itemId: String) : RuleIssueBlockingMessage() {
         "Join sink '$itemId' is referenced with conflicting metavariables across 'on' conditions; a sink must be joined on a single metavariable"
 }
 
+class JoinMetavarNotReferenced(itemId: String, metavar: String) : RuleIssueBlockingMessage() {
+    override val message: String =
+        "Join condition references metavariable '$metavar' for '$itemId', but that metavariable is not referenced by the joined rule"
+}
+
 class JoinOnTaintRuleWithNonEmptySources : RuleIssueBlockingMessage() {
     override val message: String = "The right-hand rule in a join must not define pattern-sources; taint sources are inherited from the left-hand rule"
 }
@@ -249,8 +254,8 @@ class ComplexMetavarInJoin : RuleIssueBlockingMessage() {
     override val message: String = "Join condition references a complex metavariable expression; only simple metavariable names are supported in join conditions"
 }
 
-class JoinIsImpossibleNoLabelFound(label: String) : RuleIssueBlockingMessage() {
-    override val message: String = "Join is impossible: taint label '$label' required by the join condition was not found in the left-hand rule"
+class JoinIsImpossibleNoLabelFound(itemId: String, label: String) : RuleIssueBlockingMessage() {
+    override val message: String = "Join is impossible: taint label '$label' required by the join condition was not found in the left-hand rule $itemId"
 }
 
 class EmptyTagExpansion(tag: String, language: String?) : RuleIssueBlockingMessage() {

@@ -13,7 +13,7 @@ import java.util.BitSet
 data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
     val prefix: RuleUniqueMarkPrefix,
     private val automataEdges: TaintAutomataEdges,
-    private val compositionStrategy: CompositionStrategy<Item, Cond, Assign, Clean>?,
+    val compositionStrategy: CompositionStrategy<Item, Cond, Assign, Clean>?,
     val taintRuleStrategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
 ) {
     interface CompositionStrategy<Item, Cond, Assign, Clean> {

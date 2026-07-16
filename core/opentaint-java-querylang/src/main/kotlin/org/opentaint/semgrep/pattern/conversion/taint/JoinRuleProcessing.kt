@@ -4,6 +4,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.semgrep.pattern.ComplexMetavarInJoin
 import org.opentaint.semgrep.pattern.GeneratedTaintMark
 import org.opentaint.semgrep.pattern.JoinIsImpossibleNoLabelFound
+import org.opentaint.semgrep.pattern.JoinMetavarNotReferenced
 import org.opentaint.semgrep.pattern.JoinOnTaintRuleWithNonEmptySources
 import org.opentaint.semgrep.pattern.JoinRuleWithChainedOperations
 import org.opentaint.semgrep.pattern.JoinRuleWithNoOperations
@@ -112,7 +113,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
 
         val leftCtx = RuleConversionCtx("$ruleId#${leftItemRef.itemId}", modeModifier, meta, trace, typeOps)
         val (leftRules, leftFinalMarks) = leftCtx.convertCompositionLeftRule(
-            strategy, leftAutomata, leftItemRef.metaVar
+            leftItemRef.itemId, strategy, leftAutomata, leftItemRef.metaVar
         ) ?: return null
 
         allLeftRules.addAll(leftRules)
@@ -123,7 +124,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
     val rightAutomata = rightItem.rule
     val rightRules = when (rightAutomata) {
         is SemgrepMatchingRule -> convertCompositionRightMatchingRule(
-            strategy, rightAutomata, rightItemRef.metaVar, allLeftFinalMarks
+            rightItemRef.itemId, strategy, rightAutomata, rightItemRef.metaVar, allLeftFinalMarks
         )
 
         is SemgrepTaintRule -> convertCompositionRightTaintRule(
@@ -135,21 +136,23 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeftRule(
+    itemId: String,
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalVar: MetavarAtom,
 ): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>>? {
     return when (automata) {
-        is SemgrepMatchingRule -> convertCompositionLeftMatchingRule(strategy, automata, finalVar)
-        is SemgrepTaintRule -> convertCompositionLeftTaintRule(strategy, automata, finalVar)
+        is SemgrepMatchingRule -> convertCompositionLeftMatchingRule(itemId, strategy, automata, finalVar)
+        is SemgrepTaintRule -> convertCompositionLeftTaintRule(itemId, strategy, automata, finalVar)
     }
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeftMatchingRule(
+    itemId: String,
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepMatchingRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalVar: MetavarAtom,
-): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>> {
+): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>>? {
     val leftEdges = automata.flatMap { r ->
         val automataWithVars = TaintRegisterStateAutomataWithStateVars(
             r.rule, initialStateVars = emptySet(), acceptStateVars = setOf(finalVar)
@@ -189,10 +192,16 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
         }
     }
 
+    if (leftFinalMarks.isEmpty()) {
+        trace.error(JoinMetavarNotReferenced(itemId, finalVar.toString()))
+        return null
+    }
+
     return leftRules to leftFinalMarks
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRightMatchingRule(
+    itemId: String,
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepMatchingRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     initialVar: MetavarAtom,
@@ -215,6 +224,13 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
     val rightRules = rightCtx.mapNotNull {
         safeConvertToTaintRules {
             val generatedRules = strategy.generateTaintRules(it, this, SinkDiscardMode.TRIVIAL_CONDITION)
+
+            val joinVarReferenced = (it.compositionStrategy as JoinRightCompositionStrategy).joinVarReferenced
+            if (!joinVarReferenced) {
+                trace.error(JoinMetavarNotReferenced(itemId, initialVar.toString()))
+                return@safeConvertToTaintRules null
+            }
+
             TaintRuleFromSemgrep.TaintRuleGroup(generatedRules)
         }
     }
@@ -262,6 +278,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeftTaintRule(
+    itemId: String,
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalVar: MetavarAtom,
@@ -286,7 +303,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
         .filter { it.label == finalVar.name }
 
     if (finalLabels.isEmpty()) {
-        trace.error(JoinIsImpossibleNoLabelFound(finalVar.name))
+        trace.error(JoinIsImpossibleNoLabelFound(itemId, finalVar.name))
         return null
     }
 

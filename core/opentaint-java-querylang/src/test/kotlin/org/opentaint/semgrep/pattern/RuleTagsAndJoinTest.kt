@@ -110,7 +110,7 @@ class RuleTagsAndJoinTest {
             message: src
             languages: [java]
             patterns:
-              - pattern: servletSource()
+              - pattern: ${'$'}X = servletSource()
     """.trimIndent()
 
     private val untrustedJoin = "ssrf.yaml" to """
@@ -401,6 +401,122 @@ class RuleTagsAndJoinTest {
         )
         assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
         assertTrue("multi-sink" in loadedRuleIds(result), "join rule should load; loaded=${loadedRuleIds(result)}")
+    }
+
+    @Test
+    fun `join rejects a missing left mark`() {
+        val (_, trace) = load(
+            "lib/marks.yaml" to """
+                rules:
+                  - id: src
+                    options: { lib: true }
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: src(${'$'}ACTUAL) } ]
+                  - id: sink
+                    options: { lib: true }
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: sink(${'$'}VALUE) } ]
+            """.trimIndent(),
+            "j.yaml" to """
+                rules:
+                  - id: j
+                    severity: ERROR
+                    message: m
+                    languages: [java]
+                    mode: join
+                    join:
+                      refs:
+                        - rule: lib/marks.yaml#src
+                          as: src
+                        - rule: lib/marks.yaml#sink
+                          as: sink
+                      on: [ 'src.${'$'}MISSING -> sink.${'$'}VALUE' ]
+            """.trimIndent()
+        )
+        assertTrue(trace.errorMessages().any { it.contains("metavariable '${'$'}MISSING'") }, trace.errorMessages().toString())
+    }
+
+    @Test
+    fun `join rejects a missing right mark`() {
+        val (_, trace) = load(
+            "lib/marks.yaml" to """
+                rules:
+                  - id: src
+                    options: { lib: true }
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: src(${'$'}VALUE) } ]
+                  - id: sink
+                    options: { lib: true }
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: sink(${'$'}ACTUAL) } ]
+            """.trimIndent(),
+            "j.yaml" to """
+                rules:
+                  - id: j
+                    severity: ERROR
+                    message: m
+                    languages: [java]
+                    mode: join
+                    join:
+                      refs:
+                        - rule: lib/marks.yaml#src
+                          as: src
+                        - rule: lib/marks.yaml#sink
+                          as: sink
+                      on: [ 'src.${'$'}VALUE -> sink.${'$'}MISSING' ]
+            """.trimIndent()
+        )
+        assertTrue(trace.errorMessages().any { it.contains("metavariable '${'$'}MISSING'") }, trace.errorMessages().toString())
+    }
+
+    @Test
+    fun `taint source label is a valid left join mark`() {
+        val (result, trace) = load(
+            "lib/marks.yaml" to """
+                rules:
+                  - id: src
+                    options: { lib: true }
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    mode: taint
+                    pattern-sources:
+                      - label: ${'$'}UNTRUSTED
+                        pattern: source()
+                    pattern-sinks: []
+                  - id: sink
+                    options: { lib: true }
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: sink(${'$'}VALUE) } ]
+            """.trimIndent(),
+            "j.yaml" to """
+                rules:
+                  - id: j
+                    severity: ERROR
+                    message: m
+                    languages: [java]
+                    mode: join
+                    join:
+                      refs:
+                        - rule: lib/marks.yaml#src
+                          as: src
+                        - rule: lib/marks.yaml#sink
+                          as: sink
+                      on: [ 'src.${'$'}UNTRUSTED -> sink.${'$'}VALUE' ]
+            """.trimIndent()
+        )
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        assertTrue("j" in loadedRuleIds(result))
     }
 
     @Test
