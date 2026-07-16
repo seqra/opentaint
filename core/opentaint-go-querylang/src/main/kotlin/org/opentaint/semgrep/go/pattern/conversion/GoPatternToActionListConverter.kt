@@ -482,7 +482,7 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         if (names.size == 1) {
             val name = names.first()
             if (name != null) {
-                conditions += IsMetavar(MetavarAtom.create(name))
+                conditions += IsMetavar(MetavarAtom.create(name.name), star = name.star)
             }
 
             return transformAssignmentValue(conditions, value)
@@ -498,22 +498,26 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         }
 
         val assignedName = names[assignedNameIdx]!!
-        conditions += IsMetavar(MetavarAtom.create(assignedName))
+        conditions += IsMetavar(MetavarAtom.create(assignedName.name), star = assignedName.star)
         conditions += createFieldModifier(prevModifier = null, "tuple$$assignedNameIdx")
 
         return transformAssignmentValue(conditions, value)
     }
 
+    // Name + star of an assignment target. Only a bare `Metavar` can be starred (`$X*`); other
+    // target shapes carry star = false. Threading star lets `$X* = src()` taint every nested field.
+    private data class AssignmentTarget(val name: String, val star: Boolean)
+
     private fun SemgrepGoPattern.assignmentTargetName(
         conditions: MutableList<ParamCondition>
-    ): String? = when {
-        this is Metavar -> name
+    ): AssignmentTarget? = when {
+        this is Metavar -> AssignmentTarget(name, star)
         this is TypedMetavar -> {
             conditions += ParamCondition.TypeIs(transformType(type))
-            name
+            AssignmentTarget(name, star = false)
         }
 
-        this is Identifier && name is MetavarName -> name.name
+        this is Identifier && name is MetavarName -> AssignmentTarget(name.name, star = false)
         this is Identifier && name is ConcreteName && name.name == "_" -> null
 
         else -> transformationFailed("Assignment_target_not_metavar")

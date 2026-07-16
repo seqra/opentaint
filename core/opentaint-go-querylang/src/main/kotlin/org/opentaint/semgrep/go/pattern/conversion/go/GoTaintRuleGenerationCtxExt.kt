@@ -43,7 +43,15 @@ internal data class GoEvaluatedEdgeCondition(
 
 internal data class GoRegisterVarPosition(
     val varName: MetavarAtom,
-    val positions: MutableSet<PositionBaseWithModifiers>,
+    val positions: MutableSet<GoStarredPosition>,
+)
+
+// Mirrors Java's StarredPosition: carries whether the metavar occurrence was starred (`$X*`), so
+// the emitter can add the any-accessor arm (assign/check/clean) alongside the base one. Go models
+// "any field" as a distinct action/condition variant on the SAME position, not a position modifier.
+internal data class GoStarredPosition(
+    val position: PositionBaseWithModifiers,
+    val star: Boolean,
 )
 
 data class FieldModifierCtx(
