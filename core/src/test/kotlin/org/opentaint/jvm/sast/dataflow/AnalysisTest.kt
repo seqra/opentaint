@@ -26,6 +26,7 @@ import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
+import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
@@ -156,7 +157,8 @@ abstract class AnalysisTest : BasicTestUtils() {
             taintConfig.loadConfig(defaultPassRules)
         }
 
-        val rulesProvider = JIRMethodExitRuleProvider(JIRTaintRulesProvider(taintConfig))
+        var rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
+        rulesProvider = JIRMethodExitRuleProvider(rulesProvider)
 
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
