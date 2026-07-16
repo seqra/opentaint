@@ -91,6 +91,19 @@ class AnyAccessorCleanTest {
     }
 
     @Test
+    fun `any-accessor clean on a base-only final fact does not crash`() {
+        // A summary fact that is just base.Final (no accessors, no mark) has empty start accessors.
+        // An any-accessor clean position (base.ANY.mark.Final) must resolve to "not contained",
+        // NOT throw error("Impossible") in the any-accessor read split.
+        val bareFinal = fact()
+        assertEquals(
+            listOf(bareFinal),
+            clean(bareFinal, complexAny),
+            "any-accessor clean must leave an unrelated base-only final fact untouched",
+        )
+    }
+
+    @Test
     fun `the two positions are distinct - base clean does not touch whole-object, any clean does not touch a concrete base mark`() {
         // Guards that the onAnyAccessor flag actually changes the position handed to removeFinalFact.
         val baseMark = fact(mark)

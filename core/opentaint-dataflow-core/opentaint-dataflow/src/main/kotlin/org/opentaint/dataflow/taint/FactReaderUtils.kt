@@ -79,8 +79,11 @@ inline fun <F, R> readWithAnyAccessorSplit(
         return matchedNode(resultNode)
     }
 
+    // The split can exhaust every path without recording a mismatch: an AnyAccessor expanded
+    // against a node with no start accessors (e.g. a bare base.Final fact) skips its loop body
+    // entirely. That is simply "position not contained" with no concrete accessor to refine on.
     val firstMismatch = mismatchedNodes.firstOrNull()
-        ?: error("Impossible")
+        ?: return onMismatch(ap, null)
 
     return onMismatch(firstMismatch.first, firstMismatch.second)
 }
