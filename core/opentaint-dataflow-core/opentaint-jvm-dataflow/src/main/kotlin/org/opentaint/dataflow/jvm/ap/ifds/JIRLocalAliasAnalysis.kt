@@ -110,7 +110,7 @@ class JIRLocalAliasAnalysis(
             is PositionAccessor.FieldAccessor -> FieldAlias(
                 AliasAccessor.Field(className, fieldName, fieldType),
                 isImmutable = false
-            )
+            ).takeIf { it.field.fieldName != "<rule-storage>" }
         }
     }
 
