@@ -35,8 +35,8 @@ class BaseOnlyMixedFuzzTest : AnalysisTest() {
             assertReachable(
                 config, testClass, method, ruleId, "$method Tree control", ApMode.Tree,
             )
-            assertNotReachable(
-                config, testClass, method, "$method BaseOnlyField regression", ApMode.BaseOnlyField,
+            assertReachable(
+                config, testClass, method, ruleId, "$method BaseOnlyField regression", ApMode.BaseOnlyField,
             )
         }
     }

@@ -32,10 +32,11 @@ class ReceiverGetterRegressionTest : AnalysisTest() {
             testName = "whole receiver through getter Tree control",
             apMode = ApMode.Tree
         )
-        assertNotReachable(
+        assertReachable(
             config = config,
             testCls = TEST_CLASS,
             entryPointName = "wholeReceiverThroughGetter",
+            ruleId = RULE_ID,
             testName = "whole receiver through getter BaseOnly regression",
             apMode = ApMode.BaseOnlyField
         )

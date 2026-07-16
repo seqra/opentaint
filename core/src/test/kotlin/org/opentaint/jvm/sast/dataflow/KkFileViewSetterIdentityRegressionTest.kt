@@ -27,10 +27,11 @@ class KkFileViewSetterIdentityRegressionTest : AnalysisTest() {
             apMode = ApMode.Tree,
         )
 
-        assertNotReachable(
+        assertReachable(
             config = config,
             testCls = testClass,
             entryPointName = "taintedLocalSurvivesUnrelatedSetters",
+            ruleId = ruleId,
             testName = "kkFileView setter identity BaseOnly regression",
             apMode = ApMode.BaseOnlyField,
         )

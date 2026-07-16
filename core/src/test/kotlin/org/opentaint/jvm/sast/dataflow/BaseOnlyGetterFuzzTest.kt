@@ -77,10 +77,11 @@ class BaseOnlyGetterFuzzTest : AnalysisTest() {
                     testName = "$methodName Tree control",
                     apMode = ApMode.Tree,
                 )
-                assertNotReachable(
+                assertReachable(
                     config = config,
                     testCls = TEST_CLASS,
                     entryPointName = methodName,
+                    ruleId = RULE_ID,
                     testName = "$methodName BaseOnlyField regression",
                     apMode = ApMode.BaseOnlyField,
                 )
