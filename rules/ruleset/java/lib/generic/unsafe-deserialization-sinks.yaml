@@ -22,17 +22,38 @@ rules:
         #   - metavariable-regex:
         #       metavariable: $TYPE
         #       regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
-        - pattern: |
-            (com.fasterxml.jackson.databind.ObjectMapper $OM).enableDefaultTyping(...);
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS, ...);
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS, ...);
+        - patterns:
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).enableDefaultTyping(...);
+                ...
+            - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
+        - patterns:
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS, ...);
+                ...
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).setDefaultTyping($RB);
+                ...
+            - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
+        - patterns:
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS, ...);
+                ...
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).setDefaultTyping($RB);
+                ...
+            - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
         # TODO: support $TYPE.class
         # - patterns:
         #     - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping($B.builder(...). ... .allowIfBaseType($TYPE.class). ... );
         #     - metavariable-regex:
         #         metavariable: $TYPE
         #         regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping((com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator $LFSTV), ObjectMapper.DefaultTyping.EVERYTHING);
+        - patterns:
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping((com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator $LFSTV), ObjectMapper.DefaultTyping.EVERYTHING);
+                ...
+            - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
       - pattern-not-inside: |
           (com.fasterxml.jackson.databind.ObjectMapper $OM).enable(MapperFeature.BLOCK_UNSAFE_POLYMORPHIC_BASE_TYPES); ...
       - pattern-not-inside: |
