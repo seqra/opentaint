@@ -51,6 +51,17 @@ class BaseOnlyFinalFactAp(
     override fun removeAbstraction(): FinalFactAp? =
         BaseOnlyAccessOps.collapse(access).takeIf { !it.isEmpty }?.let(::rewrap)
 
+    override fun abstractOnly(): FinalFactAp {
+        val resultAccess = access.withBaseOnlyAccessUnpacked { s, f, _ ->
+            when {
+                s == ABSTRACT_MARK -> packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR)
+                f == ABSTRACT_MARK -> packBaseOnlyAccess(NO_ACCESSOR, ABSTRACT_MARK, NO_ACCESSOR)
+                else -> packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, ABSTRACT_MARK)
+            }
+        }
+        return rewrap(resultAccess)
+    }
+
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? =
         if (accessPathAccepted(filter)) this else null
 

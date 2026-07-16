@@ -52,9 +52,6 @@ class BaseOnlyApManager(
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
         BaseOnlyFinalFactAp(this, base, finalAccessorAccess, exclusions)
 
-    override fun createAbstractAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        BaseOnlyFinalFactAp(this, base, ABSTRACT_EMPTY_ACCESS, exclusions)
-
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         BaseOnlyInitialFactAp(this, base, finalAccessorAccess, exclusions)
 
