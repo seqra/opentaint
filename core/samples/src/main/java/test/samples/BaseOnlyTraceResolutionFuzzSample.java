@@ -12,13 +12,13 @@ public class BaseOnlyTraceResolutionFuzzSample {
     }
 
     private static final class Box {
-        private final String value;
+        String value;
 
         private Box(String value) { this.value = value; }
     }
 
     private static final class Envelope {
-        private final Box box;
+        final Box box;
 
         private Envelope(Box box) { this.box = box; }
     }

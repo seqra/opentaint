@@ -36,6 +36,8 @@ class BaseOnlyNodeFinalDelta(
         this === other || (other is BaseOnlyNodeFinalDelta && access == other.access)
 
     override fun hashCode(): Int = access.hashCode()
+
+    override fun toString(): String = manager.renderAccess(access)
 }
 
 sealed interface BaseOnlyInitialDelta : InitialFactAp.Delta
@@ -82,4 +84,6 @@ class BaseOnlyNodeInitialDelta(
         this === other || (other is BaseOnlyNodeInitialDelta && access == other.access)
 
     override fun hashCode(): Int = access.hashCode()
+
+    override fun toString(): String = manager.renderAccess(access)
 }
