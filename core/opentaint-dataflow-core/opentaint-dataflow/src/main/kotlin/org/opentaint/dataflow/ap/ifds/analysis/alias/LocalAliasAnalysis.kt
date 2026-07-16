@@ -15,7 +15,7 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
 
     val aliasInfo: AnalysisResult? by lazy { compute() }
 
-    val convertedAliases = Long2ObjectOpenHashMap<List<AliasInfo>>()
+    val convertedAliases = Long2ObjectOpenHashMap<Pair<Int, List<AliasInfo>>>()
 
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
         withStateBeforeStatement(statement) { state, stateId -> state.findLocalAlias(stateId, base.idx) }
@@ -136,10 +136,16 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
 
     private fun State.convert(stateId: Int, infoIdx: Int, depth: Int): List<AliasInfo> =
         synchronized(convertedAliases) {
-            convertedAliases.getOrCreate(pair(infoIdx, stateId)) {
-                convert(stateId, manager.getElementUncheck(infoIdx), depth)
+            val cacheId = pair(infoIdx, stateId)
+            var cacheResult = convertedAliases.getOrCreate(cacheId) {
+                depth to convert(stateId, manager.getElementUncheck(infoIdx), depth)
             }
-        }
+            if (depth < cacheResult.first) {
+                cacheResult = depth to convert(stateId, manager.getElementUncheck(infoIdx), depth)
+                convertedAliases.put(cacheId, cacheResult)
+            }
+            cacheResult
+        }.second
 
     private fun State.convert(stateId: Int, info: AAInfo, depth: Int): List<AliasInfo> =
         convert(info, depth) { instance ->
