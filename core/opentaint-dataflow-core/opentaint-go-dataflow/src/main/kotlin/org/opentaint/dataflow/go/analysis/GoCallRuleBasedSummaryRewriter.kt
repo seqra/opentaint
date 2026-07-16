@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.go.analysis
 
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -13,6 +14,7 @@ import org.opentaint.dataflow.go.rules.TaintRule
 import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintCleanActionEvaluator
 import org.opentaint.dataflow.taint.applyCleanerActions
 import org.opentaint.ir.go.inst.GoIRInst
@@ -30,9 +32,14 @@ class GoCallRuleBasedSummaryRewriter(
     private val callSignature: GoFunctionSignature?
         get() = callExpr.signature()
 
+    private data class CleanPosition(
+        val pos: Position,
+        val onAnyAccessor: Boolean,
+    )
+
     private data class UserRuleDefinedAction(
         val rule: TaintRule,
-        val positions: Set<Position>,
+        val positions: Set<CleanPosition>,
         val controlledMarks: Set<String>
     )
 
@@ -46,7 +53,7 @@ class GoCallRuleBasedSummaryRewriter(
 
             if (sourceRuleWithCond.condition.isFalse) continue
 
-            val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.rawPosition() }
+            val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { CleanPosition(it.rawPosition(), onAnyAccessor = false) }
             result += UserRuleDefinedAction(sourceRule, positions, ruleInfo.relevantTaintMarks)
         }
 
@@ -56,7 +63,8 @@ class GoCallRuleBasedSummaryRewriter(
 
             if (cleanRuleWithCond.condition.isFalse) continue
 
-            val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>().mapTo(hashSetOf()) { it.pos }
+            val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>()
+                .mapTo(hashSetOf()) { CleanPosition(it.pos, it.onAnyAccessor) }
             result += UserRuleDefinedAction(cleanRule, positions, ruleInfo.relevantTaintMarks)
         }
 
@@ -70,13 +78,14 @@ class GoCallRuleBasedSummaryRewriter(
 
         val cleanedFact = userRuleDefinedActions.applyCleanerActions(
             evalAction = { f, rule, action ->
-                val pos = action.pos.resolvePosAccess()
+                val base = action.pos.resolvePosAccess()
+                val pos = if (action.onAnyAccessor) PositionAccess.Complex(base, AnyAccessor) else base
                 cleanEvaluator.removeFinalFact(f, pos, TaintMarkAccessor(action.mark), rule, action)
             },
             itemRule = { it.rule },
             itemActions = { action ->
                 action.controlledMarks.flatMap { mark ->
-                    action.positions.map { RemoveMark(mark, it) }
+                    action.positions.map { RemoveMark(mark, it.pos, it.onAnyAccessor) }
                 }
             },
             initial = EvaluatedCleanAction.initial(startFactReader)

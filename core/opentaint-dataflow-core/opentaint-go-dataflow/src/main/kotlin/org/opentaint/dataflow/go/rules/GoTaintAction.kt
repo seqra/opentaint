@@ -19,6 +19,7 @@ data class CopyData(
 data class RemoveMark(
     val mark: String,
     val pos: Position,
+    val onAnyAccessor: Boolean = false,
 ) : GoTaintAction
 
 data class RemoveAllMarks(
