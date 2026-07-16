@@ -2,17 +2,17 @@
 
 ## Result
 
-All six nested-factory cases have the same trace-side root cause. They are not forward-analysis misses:
+Six nested-factory variants were investigated and all had the same trace-side root cause. The minimal `nestedFactory` variant is retained as the regression test. It is not a forward-analysis miss:
 
-- Tree creates one pre-trace vulnerability and resolves one path for every case.
-- BaseOnlyField also creates one pre-trace vulnerability for every case.
+- Tree creates one pre-trace vulnerability and resolves its path.
+- BaseOnlyField also creates one pre-trace vulnerability.
 - BaseOnlyField then logs `Trace has no resolved paths` and filters that vulnerability.
 
-The incorrect operation is the `fact.hasAp` branch of `BaseOnlyAccessOps.splitDelta`. When an abstract caller fact equals an abstract mapped summary final, it always returns `BaseOnlyEmptyInitialDelta`. `MethodTraceResolver.resolveCallPassSummary` concatenates that empty delta onto the mapped summary initial. If the summary moves a nested value from a constructor argument into a receiver field, this changes a fact such as `var(1).value.*` or `var(1).box.*` into the bare fact `var(1)`. The reconstructed fact is not present in the recorded forward edge, so trace resolution stops.
+The incorrect operation is the `fact.hasAp` branch of `BaseOnlyAccessOps.splitDelta`. When an abstract caller fact equals an abstract mapped summary final, it always returns `BaseOnlyEmptyInitialDelta`. `MethodTraceResolver.resolveCallPassSummary` concatenates that empty delta onto the mapped summary initial. If the summary moves a nested value from a constructor argument into a receiver field, this changes `var(1).value.*` into the bare fact `var(1)`. The reconstructed fact is not present in the recorded forward edge, so trace resolution stops.
 
 ## Exact operation evidence
 
-The two-level cases reach the synthetic `Envelope` constructor call with this BaseOnly state:
+The retained case reaches the synthetic `Envelope` constructor call with this BaseOnly state:
 
 ```text
 statement       = %0.<init>(%1, null)
@@ -37,45 +37,9 @@ mapped initial  = var(1).*/{}
 result          = var(1).value.*/{}
 ```
 
-The three-level cases fail one wrapper earlier, at the synthetic `Outer` constructor call:
+The BaseOnly result is unsound for trace reconstruction. The abstract suffix in `box.*` denotes a descendant that has not necessarily been consumed by the summary. Returning an empty residual and substituting the bare argument asserts that no descendant remains. The expected result must remain compatible with the recorded `var(1).value.*` forward fact. An implementation may recover that compatible representative from the stored forward edges, or propagate a sound abstract residual and refine it against those edges, but it must not produce bare `var(1)`.
 
-```text
-statement       = %0.<init>(%1, null)
-callerFact      = var(0).envelope.*/{}
-summary initial = arg(0)/{}
-summary final   = <this>.envelope.*/{}
-mapped final    = var(0).envelope.*/{}
-splitDelta      = [(var(0).envelope.*/{}, BaseOnlyEmptyInitialDelta)]
-mapped initial  = var(1)/{}
-result          = var(1)/{}
-stored edge fact= var(1).box.*/{}
-contains        = false
-```
-
-Tree again retains the structural remainder:
-
-```text
-callerFact      = var(0).envelope.box.value.*/{}
-summary final   = <this>.envelope/*
-splitDelta      = [(var(0).envelope.*/{}, Delta(.box.value))]
-mapped initial  = var(1).*/{}
-result          = var(1).box.value.*/{}
-```
-
-The BaseOnly result is unsound for trace reconstruction. The abstract suffix in `box.*` or `envelope.*` denotes a descendant that has not necessarily been consumed by the summary. Returning an empty residual and substituting the bare argument asserts that no descendant remains. The expected result must remain compatible with the corresponding recorded forward fact: `var(1).value.*` in the two-level flows and `var(1).box.*` in the three-level flows. An implementation may recover that compatible representative from the stored forward edges, or propagate a sound abstract residual and refine it against those edges, but it must not produce bare `var(1)`.
-
-## Per-case evidence
-
-| fuzz case | faulty summary application | fact before | incorrect reconstructed fact | recorded forward fact | first predecessor that cannot be crossed |
-|---|---|---|---|---|---|
-| `nestedFactory` | `envelope`: `new Envelope(new Box(value))`, `Envelope.<init>` | `var(0).box.*` | `var(1)` | `var(1).value.*` | `%1.<init>(value, null)` (`Box.<init>`) |
-| `nestedFactoryViaBoxFactory` | `envelopeViaBox`: `new Envelope(box(value))`, `Envelope.<init>` | `var(0).box.*` | `var(1)` | `var(1).value.*` | `%1 = BaseOnlyTraceResolutionFuzzSample.box(value)` |
-| `delegatedNestedFactory` | delegated call reaches `envelope`, then `Envelope.<init>` | `var(0).box.*` | `var(1)` | `var(1).value.*` | `%1.<init>(value, null)` (`Box.<init>`) |
-| `threeLevelFactory` | `outer`: `new Outer(new Envelope(...))`, `Outer.<init>` | `var(0).envelope.*` | `var(1)` | `var(1).box.*` | `%1.<init>(%2, null)` (`Envelope.<init>`) |
-| `threeLevelFactoryViaEnvelopeFactory` | `outerViaEnvelope`: `new Outer(envelope(value))`, `Outer.<init>` | `var(0).envelope.*` | `var(1)` | `var(1).box.*` | `%1 = BaseOnlyTraceResolutionFuzzSample.envelope(value)` |
-| `delegatedThreeLevelFactory` | delegated call reaches `outer`, then `Outer.<init>` | `var(0).envelope.*` | `var(1)` | `var(1).box.*` | `%1.<init>(%2, null)` (`Envelope.<init>`) |
-
-The “first predecessor” column is where the trace builder finally reports that it has no applicable action. The fact was already corrupted at the preceding wrapper-constructor summary application: the resolver requests bare `var(1)`, while its forward edge store contains the field-qualified fact shown in the previous column.
+The trace builder finally reports no applicable action at `%1.<init>(value, null)` (`Box.<init>`). The fact was already corrupted at the preceding `Envelope.<init>` summary application: the resolver requests bare `var(1)`, while its forward edge store contains `var(1).value.*`.
 
 ## Incorrect code path
 
@@ -104,12 +68,12 @@ The branch conflates “the abstract caller is covered by the summary final” w
 ```bash
 cd core
 ./gradlew :test \
-  --tests 'org.opentaint.jvm.sast.dataflow.JavaDataFlowReachabilityTest.base-only flow - traces resolve through nested factory results*' \
+  --tests 'org.opentaint.jvm.sast.dataflow.JavaDataFlowReachabilityTest.base-only flow - trace resolves through nested factory result' \
   -x :opentaint-ir:go:buildGoServer \
   --no-daemon --max-workers=1
 ```
 
-Observed for all six BaseOnly runs:
+Observed for the BaseOnly run:
 
 ```text
 Total vulnerabilities: 1

@@ -1,9 +1,7 @@
 package org.opentaint.jvm.sast.dataflow
 
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
@@ -123,38 +121,29 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
         )
     }
 
-    @TestFactory
-    fun `base-only flow - traces resolve through nested factory results`() = listOf(
-        "nestedFactory",
-        "nestedFactoryViaBoxFactory",
-        "delegatedNestedFactory",
-        "threeLevelFactory",
-        "threeLevelFactoryViaEnvelopeFactory",
-        "delegatedThreeLevelFactory",
-    ).map { entryPointName ->
-        DynamicTest.dynamicTest(entryPointName) {
-            val testCls = "$SAMPLE_PACKAGE.BaseOnlyTraceResolutionFuzzSample"
-            val config = SerializedTaintConfig(
-                source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
-                sink = listOf(
-                    sinkRule(
-                        testCls,
-                        "sink",
-                        BASE_ONLY_TRACE_RESOLUTION_RULE_ID,
-                        listOf(Argument(0) to TAINT_MARK),
-                    )
-                ),
-            )
+    @Test
+    fun `base-only flow - trace resolves through nested factory result`() {
+        val testCls = "$SAMPLE_PACKAGE.BaseOnlyTraceResolutionFuzzSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(
+                    testCls,
+                    "sink",
+                    BASE_ONLY_TRACE_RESOLUTION_RULE_ID,
+                    listOf(Argument(0) to TAINT_MARK),
+                )
+            ),
+        )
 
-            assertReachable(
-                config = config,
-                testCls = testCls,
-                entryPointName = entryPointName,
-                ruleId = BASE_ONLY_TRACE_RESOLUTION_RULE_ID,
-                testName = "BaseOnly nested factory trace resolution: $entryPointName",
-                apMode = ApMode.BaseOnlyField,
-            )
-        }
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nestedFactory",
+            ruleId = BASE_ONLY_TRACE_RESOLUTION_RULE_ID,
+            testName = "BaseOnly nested factory trace resolution",
+            apMode = ApMode.BaseOnlyField,
+        )
     }
 
     @Test
