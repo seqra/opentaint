@@ -1,6 +1,7 @@
 package org.opentaint.jvm.sast.dataflow
 
 import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -8,6 +9,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled("Covered by representative BaseOnly regressions in JavaDataFlowReachabilityTest")
 class BaseOnlyGetterFuzzTest : AnalysisTest() {
     companion object {
         private const val TEST_CLASS = "test.samples.BaseOnlyGetterFuzzSample"

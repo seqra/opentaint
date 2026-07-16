@@ -1,5 +1,6 @@
 package org.opentaint.jvm.sast.dataflow
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -7,6 +8,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled("Moved to JavaDataFlowReachabilityTest")
 class ReceiverGetterRegressionTest : AnalysisTest() {
     companion object {
         private const val TEST_CLASS = "test.samples.ReceiverGetterRegressionSample"

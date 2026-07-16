@@ -144,6 +144,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointClass: String,
         entryPointMethod: String,
         apMode: ApMode = ApMode.BaseOnlyField,
+        useDefaultUnrollStrategy: Boolean = this.useDefaultUnrollStrategy,
     ): List<VulnerabilityWithTrace> {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
@@ -194,8 +195,9 @@ abstract class AnalysisTest : BasicTestUtils() {
         ruleId: String,
         testName: String,
         apMode: ApMode = ApMode.BaseOnlyField,
+        useDefaultUnrollStrategy: Boolean = this.useDefaultUnrollStrategy,
     ) {
-        val traces = runAnalysis(config, testCls, entryPointName, apMode)
+        val traces = runAnalysis(config, testCls, entryPointName, apMode, useDefaultUnrollStrategy)
         assertTrue(traces.isNotEmpty(), "$testName: expected taint to reach the sink, but no vulnerability was found")
         traces.forEach { vt ->
             assertEquals(

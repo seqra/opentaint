@@ -19,6 +19,8 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
         private const val OPTIONAL_RULE_ID = "optional-flow-rule"
         private const val STREAM_RULE_ID = "stream-flow-rule"
         private const val ASYNC_RULE_ID = "async-flow-rule"
+        private const val BASE_ONLY_SETTER_RULE_ID = "base-only-setter-regression"
+        private const val BASE_ONLY_GETTER_RULE_ID = "base-only-getter-regression"
     }
 
     override val sourceFileExtension: String = "java"
@@ -71,6 +73,45 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             testCls = testCls,
             entryPointName = "fieldReadKillFlow",
             testName = "field read kill flow"
+        )
+    }
+
+    @Test
+    fun `base-only flow - tainted field survives an unrelated setter`() {
+        val testCls = "$SAMPLE_PACKAGE.KkFileViewSetterIdentityRegressionSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", BASE_ONLY_SETTER_RULE_ID, listOf(Argument(0) to TAINT_MARK))
+            )
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "taintedLocalSurvivesUnrelatedSetters",
+            ruleId = BASE_ONLY_SETTER_RULE_ID,
+            testName = "BaseOnly unrelated setter regression"
+        )
+    }
+
+    @Test
+    fun `base-only flow - whole receiver taint propagates through a getter`() {
+        val testCls = "$SAMPLE_PACKAGE.ReceiverGetterRegressionSample"
+        val config = SerializedTaintConfig(
+            source = listOf(wholeObjectSourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", BASE_ONLY_GETTER_RULE_ID, listOf(Argument(0) to TAINT_MARK))
+            )
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "wholeReceiverThroughGetter",
+            ruleId = BASE_ONLY_GETTER_RULE_ID,
+            testName = "BaseOnly receiver getter regression",
+            useDefaultUnrollStrategy = true,
         )
     }
 
