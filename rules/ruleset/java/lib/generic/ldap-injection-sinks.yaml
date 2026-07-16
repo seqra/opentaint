@@ -10,13 +10,13 @@ rules:
       - java
     mode: taint
     pattern-sinks:
-      - pattern: new javax.naming.ldap.LdapName(...)
-      - pattern: (javax.naming.directory.Context $C).lookup(...)
-      - pattern: (javax.naming.Context $C).lookup(...)
+      - pattern: new javax.naming.ldap.LdapName(..., $QUERY, ...)
+      - pattern: (javax.naming.directory.Context $C).lookup(..., $QUERY, ...)
+      - pattern: (javax.naming.Context $C).lookup(..., $QUERY, ...)
       - pattern: (com.unboundid.ldap.sdk.LDAPConnection $C).search($QUERY, ...)
       - patterns:
           - pattern-either:
-              - pattern: ($CTXTYPE $CTX).lookup(...)
+              - pattern: ($CTXTYPE $CTX).lookup(..., $QUERY, ...)
               - pattern: ($CTXTYPE $CTX).search($QUERY, ...)
               - pattern: ($CTXTYPE $CTX).search($NAME, $QUERY, ...)
           - metavariable-pattern:

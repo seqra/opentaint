@@ -16,14 +16,14 @@ rules:
               import "net/http"
               ...
           - pattern-either:
-              - pattern: "http.Get($U)"
-              - pattern: "http.Head($U)"
-              - pattern: "http.Post($U, ...)"
-              - pattern: "http.PostForm($U, ...)"
-              - pattern: "($C : *http.Client).Get($U)"
-              - pattern: "($C : *http.Client).Head($U)"
-              - pattern: "($C : *http.Client).Post($U, ...)"
-              - pattern: "($C : *http.Client).PostForm($U, ...)"
-              - pattern: "http.NewRequest($M, $U, ...)"
-              - pattern: "http.NewRequestWithContext($CTX, $M, $U, ...)"
-          - focus-metavariable: $U
+              - pattern: "http.Get($UNTRUSTED)"
+              - pattern: "http.Head($UNTRUSTED)"
+              - pattern: "http.Post($UNTRUSTED, ...)"
+              - pattern: "http.PostForm($UNTRUSTED, ...)"
+              - pattern: "($C : *http.Client).Get($UNTRUSTED)"
+              - pattern: "($C : *http.Client).Head($UNTRUSTED)"
+              - pattern: "($C : *http.Client).Post($UNTRUSTED, ...)"
+              - pattern: "($C : *http.Client).PostForm($UNTRUSTED, ...)"
+              - pattern: "http.NewRequest($M, $UNTRUSTED, ...)"
+              - pattern: "http.NewRequestWithContext($CTX, $M, $UNTRUSTED, ...)"
+          - focus-metavariable: $UNTRUSTED

@@ -24,6 +24,8 @@ rules:
         #       regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
         - pattern: |
             (com.fasterxml.jackson.databind.ObjectMapper $OM).enableDefaultTyping(...);
+            ...
+            $OM.readValue($JSON, ...);
         - pattern: (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS, ...);
         - pattern: (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS, ...);
         # TODO: support $TYPE.class
