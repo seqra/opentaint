@@ -118,6 +118,8 @@ class JIRIntraProcAliasAnalysis(
             cancellation?.checkpoint()
 
             val instances = resolveHeapInstance(instance)
+                .filterNot { it is AliasApInfo && it.accessors.size >= HEAP_CHAIN_LIMIT }
+
             val accessor = when (val a = this.heapAccessor) {
                 is ArrayAlias -> AliasAccessor.Array
                 is FieldAlias -> a.field
