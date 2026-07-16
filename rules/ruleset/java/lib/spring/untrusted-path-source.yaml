@@ -62,7 +62,7 @@ rules:
                             }
                         - pattern-not: |
                             @$ANNOTATION(...)
-                            $RETURNTYPE $METHODNAME(..., @PathVariable $TYPE $PATHVAR,...) {
+                            $RETURNTYPE $METHODNAME(..., @PathVariable $TYPE $UNTRUSTED*,...) {
                               ...
                             }
               - metavariable-regex:
