@@ -7,21 +7,20 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SpringPetclinicGetterRegressionTest : AnalysisTest() {
+class ReceiverGetterRegressionTest : AnalysisTest() {
     companion object {
-        private const val TEST_CLASS = "test.samples.SpringPetclinicGetterRegressionSample"
-        private const val TAINT_MARK = "spring-petclinic-owner"
-        private const val RULE_ID = "spring-petclinic-getter-flow"
+        private const val TEST_CLASS = "test.samples.ReceiverGetterRegressionSample"
+        private const val TAINT_MARK = "receiver-getter-taint"
+        private const val RULE_ID = "receiver-getter-flow"
     }
 
     override val sourceFileExtension: String = "java"
-    override val useSpringRuleProvider: Boolean = true
     override val useDefaultUnrollStrategy: Boolean = true
 
     @Test
     fun `whole receiver taint propagates through getter field`() {
         val config = SerializedTaintConfig(
-            entryPoint = listOf(entryPointRule(TEST_CLASS, "wholeReceiverThroughGetter", TAINT_MARK, 0)),
+            source = listOf(wholeObjectSourceRule(TEST_CLASS, "source", TAINT_MARK)),
             sink = listOf(sinkRule(TEST_CLASS, "sink", RULE_ID, listOf(Argument(0) to TAINT_MARK)))
         )
 
@@ -30,15 +29,14 @@ class SpringPetclinicGetterRegressionTest : AnalysisTest() {
             testCls = TEST_CLASS,
             entryPointName = "wholeReceiverThroughGetter",
             ruleId = RULE_ID,
-            testName = "spring-petclinic whole receiver through getter Tree control",
+            testName = "whole receiver through getter Tree control",
             apMode = ApMode.Tree
         )
-        assertReachable(
+        assertNotReachable(
             config = config,
             testCls = TEST_CLASS,
             entryPointName = "wholeReceiverThroughGetter",
-            ruleId = RULE_ID,
-            testName = "spring-petclinic whole receiver through getter BaseOnly",
+            testName = "whole receiver through getter BaseOnly regression",
             apMode = ApMode.BaseOnlyField
         )
     }

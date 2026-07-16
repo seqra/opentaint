@@ -1,13 +1,15 @@
 package test.samples;
 
-import org.springframework.web.bind.annotation.PostMapping;
+public class ReceiverGetterRegressionSample {
+    private static Owner source() {
+        return null;
+    }
 
-public class SpringPetclinicGetterRegressionSample {
     public static void sink(Integer value) {
     }
 
-    @PostMapping
     public void wholeReceiverThroughGetter(Owner owner) {
+        owner = source();
         sink(owner.getId());
     }
 

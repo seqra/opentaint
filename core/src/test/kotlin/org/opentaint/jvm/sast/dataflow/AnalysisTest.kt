@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedCondition
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedFunctionNameMatcher
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
@@ -25,7 +26,6 @@ import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
@@ -35,8 +35,6 @@ import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.ast.BasicTestUtils
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
-import org.opentaint.jvm.sast.project.spring.SpringRuleProvider
-import org.opentaint.jvm.sast.project.spring.SpringWebProjectContext
 import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.time.Duration.Companion.minutes
 
@@ -68,6 +66,20 @@ abstract class AnalysisTest : BasicTestUtils() {
             )
         )
     )
+
+    fun wholeObjectSourceRule(fqn: String, methodName: String, taintMark: String): SerializedRule.Source =
+        SerializedRule.Source(
+            function = functionMatcher(fqn, methodName),
+            taint = listOf(
+                SerializedTaintAssignAction(
+                    kind = taintMark,
+                    pos = PositionBaseWithModifiers.WithModifiers(
+                        PositionBase.Result,
+                        listOf(PositionModifier.AnyField),
+                    ),
+                )
+            ),
+        )
 
     fun entryPointRule(fqn: String, methodName: String, taintMark: String, argIndex: Int) =
         SerializedRule.EntryPoint(
@@ -108,7 +120,6 @@ abstract class AnalysisTest : BasicTestUtils() {
     }
 
     open val useDefaultConfig = false
-    open val useSpringRuleProvider = false
     open val useDefaultUnrollStrategy = false
 
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
@@ -145,11 +156,7 @@ abstract class AnalysisTest : BasicTestUtils() {
             taintConfig.loadConfig(defaultPassRules)
         }
 
-        var rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
-        rulesProvider = JIRMethodExitRuleProvider(rulesProvider)
-        if (useSpringRuleProvider) {
-            rulesProvider = SpringRuleProvider(rulesProvider, SpringWebProjectContext(setOf(ep), cp))
-        }
+        val rulesProvider = JIRMethodExitRuleProvider(JIRTaintRulesProvider(taintConfig))
 
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
