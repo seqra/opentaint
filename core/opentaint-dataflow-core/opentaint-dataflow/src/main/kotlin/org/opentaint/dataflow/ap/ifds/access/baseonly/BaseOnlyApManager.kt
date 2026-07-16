@@ -36,6 +36,14 @@ class BaseOnlyApManager(
 ) : ApManager {
     val interner = AccessorInterner()
 
+    private var useNormalizedEdges = false
+
+    fun enableNormalizedEdges() {
+        useNormalizedEdges = true
+    }
+
+    fun normalizedEdgesEnabled(): Boolean = useNormalizedEdges
+
     val Accessor.idx: AccessorIdx get() = interner.index(this)
 
     val AccessorIdx.accessor: Accessor

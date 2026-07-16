@@ -48,6 +48,14 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
             finalPattern: BaseOnlyAccess,
         ) {
             perInitial[initial]?.collectAt(statement) { dst.add(it) }
+
+            if (apManager.normalizedEdgesEnabled()) {
+                // Summary storage exposes field-AP initials as suffix-AP aliases. Resolve that alias
+                // against the original key used by the intraprocedural edge store.
+                if (initial.apSlot != 2 || finalPattern.apSlot != 2) return
+                val fieldInitialAlias = packBaseOnlyAccess(initial.staticIdx, ABSTRACT_MARK, NO_ACCESSOR)
+                perInitial[fieldInitialAlias]?.collectAt(statement) { dst.add(it) }
+            }
         }
     }
 

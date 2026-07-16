@@ -18,9 +18,12 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
     override val apManager: BaseOnlyApManager,
 ) : CommonF2FSummary<BaseOnlyAccess, BaseOnlyAccess>(methodInitialStatement),
     BaseOnlyInitialApAccess, BaseOnlyFinalApAccess {
-    override fun createStorage(): Storage<BaseOnlyAccess, BaseOnlyAccess> = F2FStorage(apManager)
+    override fun createStorage(): Storage<BaseOnlyAccess, BaseOnlyAccess> = F2FStorage(apManager, F2FStorage(apManager, normalizedStorage = null))
 
-    private class F2FStorage(private val manager: BaseOnlyApManager) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
+    private class F2FStorage(
+        private val manager: BaseOnlyApManager,
+        private val normalizedStorage: F2FStorage?
+    ) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
         private val idEdges = IdEdgeStorage(manager)
         private val perInitial = Long2ObjectOpenHashMap<MergingStorage>()
 
@@ -30,15 +33,35 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         ) {
             val modified = mutableListOf<MergingStorage>()
             for (edge in edges) {
-                if (edge.initial == edge.final) {
-                    idEdges.add(edge.initial, edge.exclusion)
-                } else {
-                    val ms = perInitial.getOrCreate(edge.initial) { MergingStorage(manager, edge.initial) }
-                    if (ms.add(edge.final, edge.exclusion)) modified += ms
+                add(edge.initial, edge.final, edge.exclusion, modified)
+
+                if (normalizedStorage != null) {
+                    // The normalized alias lets backward resolution match a concrete stored field via
+                    // fieldsCompatible(concreteField, NO_ACCESSOR).
+                    val normalizedInitial = normalizeSummaryInitialAccess(edge.initial, edge.final)
+                    if (normalizedInitial != edge.initial) {
+                        normalizedStorage.add(normalizedInitial, edge.final, edge.exclusion, modified = null)
+                    }
                 }
             }
             modified.forEach { it.getAndResetDelta(added) }
             idEdges.getAndResetDelta(added)
+        }
+
+        private fun add(
+            initial: BaseOnlyAccess,
+            final: BaseOnlyAccess,
+            exclusion: ExclusionSet,
+            modified: MutableList<MergingStorage>?,
+        ) {
+            if (initial == final) {
+                idEdges.add(initial, exclusion)
+            } else {
+                val ms = perInitial.getOrCreate(initial) { MergingStorage(manager, initial) }
+                if (ms.add(final, exclusion)) {
+                    modified?.add(ms)
+                }
+            }
         }
 
         override fun collectSummariesTo(
@@ -47,6 +70,10 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         ) {
             idEdges.collectAll(dst)
             perInitial.values.forEach { it.collectAll(dst) }
+
+            if (normalizedStorage != null && manager.normalizedEdgesEnabled()) {
+                normalizedStorage.collectSummariesTo(dst, initialFactPatter)
+            }
         }
     }
 
@@ -310,4 +337,9 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>(), BaseOnlyInitialApAccess, BaseOnlyFinalApAccess {
         override fun nonNullIAP(iap: BaseOnlyAccess?): BaseOnlyAccess = iap ?: ABSTRACT_EMPTY_ACCESS
     }
+}
+
+internal fun normalizeSummaryInitialAccess(initial: BaseOnlyAccess, final: BaseOnlyAccess): BaseOnlyAccess {
+    if (initial.apSlot != 1 || final.apSlot != 2) return initial
+    return packBaseOnlyAccess(initial.staticIdx, NO_ACCESSOR, ABSTRACT_MARK)
 }
