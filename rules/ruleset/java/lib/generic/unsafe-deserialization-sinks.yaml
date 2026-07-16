@@ -51,7 +51,7 @@ rules:
         #         regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
         - patterns:
             - pattern-inside: |
-                (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping((com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator $LFSTV), ObjectMapper.DefaultTyping.EVERYTHING);
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping(com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator.instance, com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.EVERYTHING);
                 ...
             - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
       - pattern-not-inside: |
