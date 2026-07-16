@@ -108,6 +108,48 @@ class SemgrepGoPatternParserTest {
         assertNotNull(find(ast) { it is FuncDecl })
     }
 
+    /** Collects every pattern node in the AST (self + descendants). */
+    private fun collect(p: SemgrepGoPattern): List<SemgrepGoPattern> =
+        listOf(p) + p.children.flatMap { collect(it) }
+
+    private fun metavars(pattern: String): List<Metavar> =
+        collect(parse(pattern)).filterIsInstance<Metavar>()
+
+    @Test fun starredMetavarInCallArgument() {
+        val y = metavars("Sink(\$Y*)").single { it.name == "\$Y" }
+        assertTrue(y.star, "expected \$Y* to be starred")
+    }
+
+    @Test fun whitespaceSeparatesMultiplicationFromStar() {
+        // `$Y * z` is multiplication, NOT a starred metavar: no Metavar may carry star=true,
+        // while the adjacent `$Y*` yields exactly one starred metavar.
+        assertEquals(0, metavars("Sink(\$Y * z)").count { it.star }, "\$Y * z must not be a star")
+        assertEquals(1, metavars("Sink(\$Y*)").count { it.star }, "\$Y* must be a star")
+    }
+
+    @Test fun plainMetavarIsNotStarred() {
+        val y = metavars("Sink(\$Y)").single { it.name == "\$Y" }
+        assertTrue(!y.star, "plain \$Y must not be starred")
+    }
+
+    @Test fun starredMetavarOnAssignmentLhs() {
+        val x = metavars("\$X* = Source()").single { it.name == "\$X" }
+        assertTrue(x.star, "expected LHS \$X* to be starred")
+    }
+
+    @Test fun prefixDerefStillParses() {
+        // `*p` is a prefix deref (STAR precedes the operand), not a starred metavar.
+        val ast = parse("*p")
+        assertEquals(0, collect(ast).filterIsInstance<Metavar>().count { it.star })
+    }
+
+    @Test fun binaryMulStillParses() {
+        // `a*b` is multiplication; no starred metavars and still a valid parse.
+        val ast = parse("a*b")
+        assertTrue(ast !is SemgrepGoPattern.Raw)
+        assertEquals(0, collect(ast).filterIsInstance<Metavar>().count { it.star })
+    }
+
     @Test fun structuralSmokeTest() {
         // 5 representative patterns -> AST non-Raw
         val patterns = listOf(

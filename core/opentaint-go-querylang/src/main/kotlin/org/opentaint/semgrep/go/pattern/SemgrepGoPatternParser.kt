@@ -662,6 +662,11 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
     }
 
     private fun parseOperand(ctx: GoParser.OperandContext): SemgrepGoPattern {
+        // Starred metavar `$X*` (STAR is an unambiguous discriminator; matched by the
+        // `metavarStarAdjacent()` grammar predicate, so `$X * y` / `*p` never reach here).
+        if (ctx.STAR() != null && ctx.METAVAR_IDENT() != null) {
+            return Metavar(ctx.METAVAR_IDENT().text, star = true)
+        }
         ctx.literal()?.let { return parseLiteral(it) }
         ctx.operandName()?.let {
             val base = parseOperandName(it)

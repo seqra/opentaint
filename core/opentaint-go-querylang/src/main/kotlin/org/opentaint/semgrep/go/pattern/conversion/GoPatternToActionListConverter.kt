@@ -353,7 +353,7 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             is MetavarName -> Triple(emptyList(), IsMetavar(MetavarAtom.create(n.name)), null)
         }
 
-        is Metavar -> Triple(emptyList(), IsMetavar(MetavarAtom.create(recv.name)), null)
+        is Metavar -> Triple(emptyList(), IsMetavar(MetavarAtom.create(recv.name), star = recv.star), null)
         is TypedMetavar -> {
             val t = transformType(recv.type)
             Triple(
@@ -458,7 +458,7 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
             is MetavarName -> ParamCondition.StringValueMetaVar(MetavarAtom.create(c.name))
         }
         is StringEllipsis -> ParamCondition.AnyStringLiteral
-        is Metavar -> IsMetavar(MetavarAtom.create(pattern.name))
+        is Metavar -> IsMetavar(MetavarAtom.create(pattern.name), star = pattern.star)
         is TypedMetavar -> ParamCondition.And(
             listOf(
                 IsMetavar(MetavarAtom.create(pattern.name)),
