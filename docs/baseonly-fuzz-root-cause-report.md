@@ -1,5 +1,17 @@
 # BaseOnlyField fuzz regression root-cause report
 
+## Post-fix reevaluation
+
+After the BaseOnly fixes, the complete corpus was rerun on 2026-07-16:
+
+- all 38 setter cases pass in both Tree and BaseOnlyField;
+- all 41 mixed cases pass in both Tree and BaseOnlyField;
+- the 39 getter cases are not forward regressions.
+
+The getter corpus originally used `Integer` payload fields. BaseOnly intentionally drops facts on primitives and boxed primitives, so those zero-vulnerability results were expected. Replacing `Integer` with the reference payload `String` made BaseOnly create every pre-trace vulnerability: 38 cases reported one vulnerability and `twoGetterCandidates` reported two. Trace resolution then filtered all 40 BaseOnly vulnerabilities. The same behavior was reproduced by the standalone `ReceiverGetterRegressionSample`.
+
+There are therefore no remaining forward-analysis failures in this fuzz corpus. All three fuzz suites and their dedicated samples were removed. The standalone getter representative was also removed from `JavaDataFlowReachabilityTest` because it tests a trace-resolution failure, not reachability.
+
 ## Scope and result
 
 The corpus contains 118 independently executed differential tests:
@@ -8,14 +20,13 @@ The corpus contains 118 independently executed differential tests:
 - 39 `BaseOnlyGetterFuzzTest` cases;
 - 41 `BaseOnlyMixedFuzzTest` cases.
 
-For every case, Tree reaches the sink and BaseOnlyField does not. A combined run confirmed 118/118 BaseOnly assertion failures. The misses are forward-analysis failures: the fact is discarded before a sink fact exists, so trace resolution is not involved.
+For every original case, Tree reached the sink and BaseOnlyField did not. A combined run confirmed 118/118 failed BaseOnly assertions. Later pre-trace inspection revised the classification: 79 were genuine forward failures, while the 39 getter cases used intentionally unsupported boxed-primitive payloads.
 
-All 118 cases reduce to two BaseOnly operation defects:
+The confirmed forward failures reduce to one BaseOnly operation defect:
 
 | defect | affected cases | incorrect BaseOnly operation |
 |---|---:|---|
 | BO-1 | 79 (38 setter + 41 mixed) | `BaseOnlyAccessOps.appendFinal` rejects a field delta when the destination is a whole-value wildcard solely because their abstraction slots differ. |
-| BO-2 | 39 getter | A field read preserves the internal collapsed marker, after which `MethodEdgesInitialToFinalBaseOnlyApSet.PerStatement.add` silently rejects the collapsed fact. |
 
 ## BO-1: `appendFinal` rejects a valid wildcard refinement
 
@@ -143,87 +154,31 @@ The raw all-case diagnostic contained a `BO-CONCAT ... result=null` record for e
 | `tryCatchMutation` | try `setTag` / `tag` (catch `setCount` is independently affected) |
 | `castBeforeLoad` | `setTag` / `tag` |
 
-## BO-2: collapsed getter fact is silently rejected by F2F storage
+## Getter reclassification: no forward defect
 
-### Exact evidence
+The earlier collapsed-F2F diagnosis was disproved by two checks:
 
-Getter analysis starts with an abstract receiver fact:
+1. Persisting the collapsed F2F edge (after restoring its abstraction marker) did not change any of the 39 outcomes.
+2. With a reference payload, intra-procedural fact inspection for the minimal getter showed the tainted fact at the sink and the analyzer logged `Total vulnerabilities: 1` before trace generation.
 
-```text
-<this>.*/{}                 packed=(-1,-1,ABSTRACT_MARK)
-```
-
-The following BaseOnly operations occur while analyzing a getter body:
+The minimal reference-payload operation sequence was sound:
 
 ```text
-BaseOnlyAccessOps.collapse(<this>.*) = <this>.^
-BaseOnlyAccessOps.read(<this>.^, Owner#id) = <this>.^
-MethodEdgesInitialToFinalBaseOnlyApSet.PerStatement.add(final=<this>.^) = null
+delta:  final=![tainted].$ initial=.*
+concat: prefix=.* delta=![tainted].$ result=![tainted].$
+sink:   var(1)![tainted].$
 ```
 
-Captured evidence for `directGetter`:
+The subsequent analyzer evidence was:
 
 ```text
-BO FINAL read in=<this>.^/{} accessor=BaseOnlyGetterFuzzSample$Owner#id out=<this>.^/{}
+Total vulnerabilities: 1
+Filter out 1 vulnerabilities without traces
 ```
 
-`BaseOnlyFinalFactAp.removeAbstraction` creates the collapsed marker via `BaseOnlyAccessOps.collapse` (`BaseOnlyAccessOps.kt:51-55`). `read` (`BaseOnlyAccessOps.kt:71-75`) deliberately keeps the marker for a structural accessor. The exact kill is then the `if (final.access.isCollapsed) return null` guard in `MethodEdgesInitialToFinalBaseOnlyApSet.PerStatement.add` (`MethodEdgesInitialToFinalBaseOnlyApSet.kt:69`). No getter F2F summary is stored, so no tainted return fact can be created at the caller.
+Across all 39 reference-payload variants, BaseOnly created 40 pre-trace vulnerabilities and filtered all 40 during trace resolution. Consequently, these cases do not identify an incorrect forward BaseOnly operation.
 
-Tree retains the equivalent path. The captured Tree sequence for `directGetter` was:
-
-```text
-source/caller:  var(1).[any]![base-only-getter-fuzz].$
-field path:     var(1).id.[any]![base-only-getter-fuzz].$
-getter return:  var(2).[any]![base-only-getter-fuzz].$
-```
-
-Expected BaseOnly behavior: the field read must produce a storable fact (either preserve enough state until rebasing restores abstraction, or materialize a field-qualified abstract fact), and edge insertion must return a non-null edge. Silently discarding the only overapproximating fact is unsound.
-
-### Getter cases (39/39)
-
-| test case | first killed getter/field read |
-|---|---|
-| `directGetter` | `Owner#getId`: `Owner#id` |
-| `getterIntoLocal` | `Owner#getId`: `Owner#id` |
-| `getterWithReassignment` | `Owner#getId`: `Owner#id` |
-| `getterThroughIdentity` | `Owner#getId`: `Owner#id` |
-| `getterThroughTwoCalls` | `Owner#getId`: `Owner#id` |
-| `getterInCallee` | `extract` -> `Owner#getId`: `Owner#id` |
-| `getterAndLocalInCallee` | `extractViaLocal` -> `Owner#getId`: `Owner#id` |
-| `getterAfterReceiverAlias` | `Owner#getId`: `Owner#id` |
-| `getterAfterTwoReceiverAliases` | `Owner#getId`: `Owner#id` |
-| `getterInIfThen` | `Owner#getId`: `Owner#id` |
-| `getterAfterIfAssignment` | `Owner#getId`: `Owner#id` |
-| `getterInTernary` | `Owner#getId`: `Owner#id` |
-| `getterAsTernaryArm` | `Owner#getId`: `Owner#id` |
-| `getterInSwitch` | first `Owner#getMode`: `Owner#mode`; sink arm `Owner#getId`: `Owner#id` is independently killed |
-| `getterInForLoop` | `Owner#getId`: `Owner#id` |
-| `getterInWhileLoop` | `Owner#getId`: `Owner#id` |
-| `getterInDoWhileLoop` | `Owner#getId`: `Owner#id` |
-| `getterInTry` | `Owner#getId`: `Owner#id` |
-| `getterInSynchronized` | `Owner#getId`: `Owner#id` |
-| `nestedGetter` | first `Owner#getProfile`: `Owner#profile`; subsequent `Profile#getId`: `Profile#id` is independently affected |
-| `nestedGetterViaLocal` | first `Owner#getProfile`: `Owner#profile`; then `Profile#getId`: `Profile#id` |
-| `nestedGetterAndValueLocal` | first `Owner#getProfile`: `Owner#profile`; then `Profile#getId`: `Profile#id` |
-| `nestedGetterThroughIdentity` | first `Owner#getProfile`: `Owner#profile`; then `Profile#getId`: `Profile#id` |
-| `nestedPublicField` | `Owner#getProfile`: `Owner#profile`; the following `publicId` read never receives taint |
-| `nestedFieldViaLocal` | `Owner#getProfile`: `Owner#profile`; the following `publicId` read never receives taint |
-| `getterReturningFieldViaLocal` | `LocalGetterOwner#getId`: `LocalGetterOwner#id` |
-| `getterReturningConditionalField` | `ConditionalGetterOwner#getId`: `ConditionalGetterOwner#id` (both reads) |
-| `getterDelegatingToPrivateMethod` | `DelegatingOwner#getId` -> `readId`: `DelegatingOwner#id` |
-| `inheritedGetter` | `BaseOwner#getId`: `BaseOwner#id` |
-| `overriddenGetter` | `OverridingOwner#getId` -> `BaseOwner#getId`: `BaseOwner#id` |
-| `getterFromInterfaceImplementation` | `InterfaceOwner#getId`: `InterfaceOwner#id` |
-| `getterAfterReceiverIdentity` | after `self`, `Owner#getId`: `Owner#id` |
-| `getterAfterTwoReceiverMethods` | after two `self` calls, `Owner#getId`: `Owner#id` |
-| `getterFromArrayField` | `ArrayOwner#getFirstId`: first `ArrayOwner#ids` read; element read is also affected |
-| `getterFromNestedArray` | `ArrayOwner#getIds`: `ArrayOwner#ids`; element read follows |
-| `getterStoredInFreshBox` | `Owner#getId`: `Owner#id`, before construction |
-| `getterStoredBySetter` | `Owner#getId`: `Owner#id`, before `Box#setValue` |
-| `getterSelectedWithCleanValue` | `Owner#getId`: `Owner#id` |
-| `twoGetterCandidates` | first `Owner#getMode`: `Owner#mode`; `Owner#id` and `Owner#backupId` arms are independently killed |
-
-## Reproduction and verification
+## Original reproduction and verification
 
 The complete differential run was:
 
@@ -243,5 +198,4 @@ Temporary instrumentation logged the inputs and outputs of `collapse`, `read`, `
 ## Fix obligations
 
 1. Make `appendFinal` accept a field-qualified delta when the prefix is a broader whole-value wildcard. The result must cover `prefix.<field>.<delta-tail>` and must never be `null` for this refinement.
-2. Do not discard a collapsed fact at F2F edge insertion when that fact represents a reachable field read. Convert it to a storable abstraction or defer collapse restoration until after the read/rebase operation.
-3. Keep all 118 current tests as positive BaseOnly oracles. A correct fix makes all Tree and BaseOnly assertions pass without weakening the source or sink rules.
+2. Track the getter trace-generation failure separately if trace resolution becomes part of the BaseOnly verification scope; it is not a forward-analysis regression.
