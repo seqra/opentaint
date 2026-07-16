@@ -19,6 +19,7 @@ import org.opentaint.semgrep.pattern.RuleWithMetaVars
 import org.opentaint.semgrep.pattern.SemgrepJoinOnOperation
 import org.opentaint.semgrep.pattern.SemgrepMatchingRule
 import org.opentaint.semgrep.pattern.SemgrepRule
+import org.opentaint.semgrep.pattern.SemgrepSinkTaintRequirement
 import org.opentaint.semgrep.pattern.SemgrepTaintLabel
 import org.opentaint.semgrep.pattern.SemgrepTaintRule
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
@@ -128,7 +129,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
         )
 
         is SemgrepTaintRule -> convertCompositionRightTaintRule(
-            strategy, rightAutomata, rightItemRef.metaVar, allLeftFinalMarks
+            rightItemRef.itemId, strategy, rightAutomata, rightItemRef.metaVar, allLeftFinalMarks
         ) ?: return null
     }
 
@@ -250,14 +251,26 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.composeRuleJoinRight(
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRightTaintRule(
+    itemId: String,
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
-    @Suppress("UNUSED_PARAMETER") initialVar: MetavarAtom,
+    initialVar: MetavarAtom,
     leftFinalMarks: Set<GeneratedMark>,
 ): List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>? {
     if (automata.sources.isNotEmpty()) {
         trace.error(JoinOnTaintRuleWithNonEmptySources())
         return null
+    }
+
+    val initialVarName = initialVar.toString()
+    for (sink in automata.sinks) {
+        val requirement = (sink.requires as? SemgrepSinkTaintRequirement.Simple)?.requirement
+        if (requirement is SemgrepTaintLabel && requirement.label == initialVarName) continue
+
+        val focus = sink.pattern.metaVarInfo.focusMetaVars
+        if (focus.any { it == initialVarName }) continue
+
+        trace.error(JoinMetavarNotReferenced(itemId, initialVarName))
     }
 
     // note: we always treat initial var as taint source
