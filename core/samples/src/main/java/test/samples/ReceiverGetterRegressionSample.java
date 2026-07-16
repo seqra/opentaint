@@ -5,7 +5,7 @@ public class ReceiverGetterRegressionSample {
         return null;
     }
 
-    public static void sink(Integer value) {
+    public static void sink(String value) {
     }
 
     public void wholeReceiverThroughGetter(Owner owner) {
@@ -14,9 +14,9 @@ public class ReceiverGetterRegressionSample {
     }
 
     public static class Owner {
-        private Integer id;
+        private String id;
 
-        public Integer getId() {
+        public String getId() {
             return this.id;
         }
     }
