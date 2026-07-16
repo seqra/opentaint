@@ -22,24 +22,24 @@ class BaseOnlyAppendFinalTest {
     // same-kind splices succeed (receiver hole slot == delta first-accessor slot)
     @Test fun `AP@static receiver accepts a static-leading delta`() {
         val recv = ai.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 0)          // (-2,-1,-1)
-        assertEquals(chain(stat, mark), ai.appendFinal(recv, chain(stat, mark), fieldSensitive = true))
+        assertEquals(chain(stat, mark), ai.appendFinal(recv, chain(stat, mark)))
     }
     @Test fun `AP@suffix receiver accepts a terminal-leading delta`() {
         val recv = ai.abstractAt(NO_ACCESSOR, i(field), 2)            // (-1,f,-2)
-        assertEquals(chain(field, mark), ai.appendFinal(recv, chain(mark), fieldSensitive = true))
+        assertEquals(chain(field, mark), ai.appendFinal(recv, chain(mark)))
     }
     @Test fun `empty delta is identity`() {
         val recv = ai.abstractEmpty
-        assertEquals(recv, ai.appendFinal(recv, ai.empty, fieldSensitive = true))
+        assertEquals(recv, ai.appendFinal(recv, ai.empty))
     }
 
     // cross-kind splices are rejected (INV-C): a field-leading delta cannot attach at a suffix hole
     @Test fun `AP@suffix receiver rejects a field-leading delta`() {
         val recv = ai.abstractAt(NO_ACCESSOR, i(field), 2)           // (-1,f,-2), hole at slot 2
-        assertNull(ai.appendFinal(recv, chain(field2, mark), fieldSensitive = true))  // delta leads at slot 1
+        assertNull(ai.appendFinal(recv, chain(field2, mark)))  // delta leads at slot 1
     }
     @Test fun `AP@field receiver rejects a static-leading delta`() {
         val recv = ai.abstractAt(i(stat), NO_ACCESSOR, 1)            // (s,-2,-1), hole at slot 1
-        assertNull(ai.appendFinal(recv, chain(stat, mark), fieldSensitive = true))    // delta leads at slot 0
+        assertNull(ai.appendFinal(recv, chain(stat, mark)))    // delta leads at slot 0
     }
 }

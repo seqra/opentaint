@@ -98,13 +98,30 @@ object BaseOnlyAccessOps {
         return packNormalized(staticIdx, fieldIdx, suffixIdx)
     }
 
-    fun appendFinal(prefix: BaseOnlyAccess, suffix: BaseOnlyAccess, fieldSensitive: Boolean): BaseOnlyAccess? {
+    fun appendFinal(prefix: BaseOnlyAccess, suffix: BaseOnlyAccess): BaseOnlyAccess? {
         if (suffix.isEmpty) return prefix
-        if (prefix.apSlot != slotOfFirstAccessor(suffix)) return null
+        val suffixFirst = slotOfFirstAccessor(suffix)
+
         return when (prefix.apSlot) {
-            0 -> fillWhole(suffix, fieldSensitive)
-            1 -> fillField(prefix.staticIdx, suffix, fieldSensitive)
-            2 -> fillSuffix(prefix.staticIdx, prefix.fieldIdx, suffix)
+            0 -> {
+                if (suffixFirst != 0) return null
+                packNormalized(suffix.staticIdx, suffix.fieldIdx, suffix.suffixIdx)
+            }
+
+            1 -> {
+                if (suffixFirst != 1) return null
+                packNormalized(prefix.staticIdx, suffix.fieldIdx, suffix.suffixIdx)
+            }
+
+            2 -> when (suffixFirst) {
+                2 -> packNormalized(prefix.staticIdx, prefix.fieldIdx, suffix.suffixIdx)
+
+                // note: we have [any] after prefix field, which consumes the suffix.field
+                1 -> packNormalized(prefix.staticIdx, prefix.fieldIdx, suffix.suffixIdx)
+
+                else -> null
+            }
+
             else -> null
         }
     }
@@ -239,29 +256,6 @@ object BaseOnlyAccessOps {
         suffix.suffixIdx == ABSTRACT_MARK -> ABSTRACT_MARK
         prefix.suffixIdx == ABSTRACT_MARK -> ABSTRACT_MARK
         else -> NO_ACCESSOR
-    }
-
-    private fun fillWhole(suffix: BaseOnlyAccess, fieldSensitive: Boolean): BaseOnlyAccess =
-        if (!fieldSensitive && suffix.fieldIdx >= 0)
-            packNormalized(suffix.staticIdx, NO_ACCESSOR, suffix.suffixIdx)
-        else suffix
-
-    private fun fillField(staticIdx: AccessorIdx, suffix: BaseOnlyAccess, fieldSensitive: Boolean): BaseOnlyAccess {
-        val fieldIdx = when {
-            suffix.fieldIdx == ABSTRACT_MARK -> ABSTRACT_MARK
-            suffix.fieldIdx >= 0 -> if (!fieldSensitive) NO_ACCESSOR else suffix.fieldIdx
-            else -> NO_ACCESSOR
-        }
-        return packNormalized(staticIdx, fieldIdx, suffix.suffixIdx)
-    }
-
-    private fun fillSuffix(staticIdx: AccessorIdx, fieldIdx: AccessorIdx, suffix: BaseOnlyAccess): BaseOnlyAccess {
-        val terminal = when {
-            suffix.hasSemanticMark -> suffix.suffixIdx
-            suffix.suffixIdx == FINAL_ACCESSOR_IDX -> FINAL_ACCESSOR_IDX
-            else -> ABSTRACT_MARK
-        }
-        return packNormalized(staticIdx, fieldIdx, terminal)
     }
 
     private fun dropCorePrefix(access: BaseOnlyAccess, dropSlots: Int): BaseOnlyAccess {

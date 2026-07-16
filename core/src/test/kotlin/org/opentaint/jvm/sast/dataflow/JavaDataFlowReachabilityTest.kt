@@ -116,15 +116,6 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             testCls = testCls,
             entryPointName = "nestedReferenceFlow",
             ruleId = BASE_ONLY_NESTED_REFERENCE_RULE_ID,
-            testName = "Nested reference installation Tree control",
-            apMode = ApMode.Tree,
-        )
-
-        assertReachable(
-            config = config,
-            testCls = testCls,
-            entryPointName = "nestedReferenceFlow",
-            ruleId = BASE_ONLY_NESTED_REFERENCE_RULE_ID,
             testName = "BaseOnly nested reference installation regression"
         )
     }

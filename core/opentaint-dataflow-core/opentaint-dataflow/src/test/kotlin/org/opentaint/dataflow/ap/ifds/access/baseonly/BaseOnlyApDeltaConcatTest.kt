@@ -30,15 +30,15 @@ class BaseOnlyApDeltaConcatTest {
     @Test
     fun `concat closed fact rejects non-empty delta`() {
         val markFact = chain(mark)
-        assertNull(ai.appendFinal(markFact, chain(mark), fieldSensitive = true))
-        assertEquals(markFact, ai.appendFinal(markFact, ai.empty, fieldSensitive = true))
+        assertNull(ai.appendFinal(markFact, chain(mark)))
+        assertEquals(markFact, ai.appendFinal(markFact, ai.empty))
     }
 
     @Test
     fun `concat suffix-AP rejects a cross-kind delta`() {
         val f0Abstract = ai.abstractAt(NO_ACCESSOR, i(field), 2)
         val deltaFieldMark = chain(field2, mark)
-        assertNull(ai.appendFinal(f0Abstract, deltaFieldMark, fieldSensitive = true))
+        assertNull(ai.appendFinal(f0Abstract, deltaFieldMark))
     }
 
     @Test

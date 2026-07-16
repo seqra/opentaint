@@ -113,7 +113,7 @@ class BaseOnlyFinalFactAp(
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? =
         when (val d = delta as BaseOnlyFinalDelta) {
             BaseOnlyEmptyFinalDelta -> this
-            is BaseOnlyNodeFinalDelta -> BaseOnlyAccessOps.appendFinal(access, d.access, manager.fieldSensitive)?.let(::rewrap)
+            is BaseOnlyNodeFinalDelta -> BaseOnlyAccessOps.appendFinal(access, d.access)?.let(::rewrap)
         }
 
     override fun equals(other: Any?): Boolean {
