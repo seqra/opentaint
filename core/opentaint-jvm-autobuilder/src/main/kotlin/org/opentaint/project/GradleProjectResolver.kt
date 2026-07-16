@@ -78,7 +78,10 @@ class GradleProjectResolver(
             val report = json.decodeFromString<ClassesReport>(reportFile.readText())
 
             val classDirs = report.classDirs.map { Path(it) }.filter { it.isDirectory() }
-            if (classDirs.isEmpty()) return@forEach
+            if (classDirs.isEmpty()) {
+                logger.warn { "No class directories resolved for module: ${report.projectPath}" }
+                return@forEach
+            }
 
             val moduleRoot = Path(report.projectPath)
             registerModule(moduleRoot) { snapshotDir ->
@@ -309,15 +312,36 @@ class GradleProjectResolver(
                         dependsOn lifecycle
                         doLast {
                             def dirs = [] as Set
-                            lifecycle.taskDependencies.getDependencies(lifecycle).each { t ->
-                                if (t.hasProperty("destinationDirectory")) {
+
+                            // Compile tasks are not necessarily direct dependencies of the lifecycle
+                            // task. In particular, Kotlin compilation can be wired behind another task,
+                            // so traverse the complete dependency graph.
+                            def pending = [lifecycle]
+                            def visited = [] as Set
+                            while (!pending.isEmpty()) {
+                                def task = pending.remove(pending.size() - 1)
+                                if (!visited.add(task)) continue
+
+                                if (task.hasProperty("destinationDirectory")) {
                                     try {
-                                        def f = t.destinationDirectory.get().asFile
+                                        def f = task.destinationDirectory.get().asFile
                                         if (f.exists()) dirs.add(f.absolutePath)
                                     } catch (Exception e) {
-                                        println "opentaint: failed to read destinationDirectory for " + t.path + ": " + e
+                                        println "opentaint: failed to read destinationDirectory for " + task.path + ": " + e
                                     }
                                 }
+
+                                try {
+                                    task.taskDependencies.getDependencies(task).each { dependency ->
+                                        if (!visited.contains(dependency)) pending.add(dependency)
+                                    }
+                                } catch (Exception e) {
+                                    println "opentaint: failed to traverse dependencies for " + task.path + ": " + e
+                                }
+                            }
+
+                            if (dirs.isEmpty()) {
+                                println "opentaint: no class directories resolved for " + p.path
                             }
                             def name = "classes-" + p.path.replace(":", "_") + ".json"
                             new File(reportDir, name).text = JsonOutput.toJson([projectPath: p.projectDir.absolutePath, classDirs: new ArrayList(dirs)])
