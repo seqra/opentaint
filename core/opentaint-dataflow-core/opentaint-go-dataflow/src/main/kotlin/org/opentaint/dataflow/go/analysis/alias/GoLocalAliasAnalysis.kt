@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.go.analysis.alias
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
@@ -58,8 +59,8 @@ class GoLocalAliasAnalysis(
     override fun convert(
         info: AAInfo,
         depth: Int,
-        convertInstance: (Int) -> List<GoAliasInfoNoRef>
-    ): List<GoAliasInfoNoRef> = convertInfo(info, depth, convertInstance)
+        convertInstance: (Int) -> List<Pair<IntArrayList, GoAliasInfoNoRef>>,
+    ): List<Pair<IntArrayList, GoAliasInfoNoRef>> = emptyList()
 
     override fun convertAliasAccessor(aa: GoAliasAccessor.NoRef): List<AAHeapAccessor> = when (aa) {
         is GoAliasAccessor.Array -> listOf(GoArrayAlias)
