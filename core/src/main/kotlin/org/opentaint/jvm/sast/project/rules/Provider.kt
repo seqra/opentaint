@@ -9,7 +9,6 @@ import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationMode
 import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationOptions
 import org.opentaint.jvm.sast.dataflow.JIRMethodExitRuleProvider
-import org.opentaint.jvm.sast.dataflow.JIRMethodGetDefaultProvider
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.ProjectAnalysisContext
@@ -55,7 +54,6 @@ fun JIRTaintRulesProvider.withApproximationConfigs(
 fun ProjectAnalysisContext.analysisConfig(initialConfig: TaintRulesProvider): TaintRulesProvider {
     var config = initialConfig
     config = JIRMethodExitRuleProvider(config)
-    config = JIRMethodGetDefaultProvider(config, projectClasses.locationChecker())
     if (springWebProjectContext != null) {
         config = SpringRuleProvider(config, springWebProjectContext)
     }
