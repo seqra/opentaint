@@ -271,6 +271,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
         if (focus.any { it == initialVarName }) continue
 
         trace.error(JoinMetavarNotReferenced(itemId, initialVarName))
+        return null
     }
 
     // note: we always treat initial var as taint source
