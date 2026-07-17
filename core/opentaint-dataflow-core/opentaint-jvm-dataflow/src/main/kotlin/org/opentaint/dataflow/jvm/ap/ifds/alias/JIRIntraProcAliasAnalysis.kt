@@ -108,6 +108,9 @@ class JIRIntraProcAliasAnalysis(
         private fun IntArrayList.hasTwoOfInstance(instance: Int) =
             count { it == instance } >= 2
 
+        private fun AliasInfo.isHeapAllowedBase() =
+            this is AliasApInfo && base !is AccessPathBase.Constant
+
         fun AAInfo.convertToAliasInfo(
             depth: Int,
             cancellation: AnalysisCancellation?,
@@ -126,7 +129,7 @@ class JIRIntraProcAliasAnalysis(
 
             val instances = resolveHeapInstance(instance)
                 .filterNot { it.second.willDepthExceedLimit(depth) || it.first.hasTwoOfInstance(instance) }
-                .filter { it.second is AliasApInfo && (it.second as AliasApInfo).base !is AccessPathBase.Constant }
+                .filter { it.second.isHeapAllowedBase() }
 
             val accessor = when (val a = this.heapAccessor) {
                 is ArrayAlias -> AliasAccessor.Array
