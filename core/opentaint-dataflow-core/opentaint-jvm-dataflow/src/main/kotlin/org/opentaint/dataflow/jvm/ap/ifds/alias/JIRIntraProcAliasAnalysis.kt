@@ -115,7 +115,7 @@ class JIRIntraProcAliasAnalysis(
         ): List<Pair<IntArrayList, AliasInfo>> {
             if (this !is HeapAlias) {
                 val base = convertBaseAccessor(this) ?: return emptyList()
-                return listOf(IntArrayList() to base)
+                return listOf(IntArrayList(0) to base)
             }
 
             if (depth > HEAP_CHAIN_LIMIT) {
@@ -126,7 +126,7 @@ class JIRIntraProcAliasAnalysis(
 
             val instances = resolveHeapInstance(instance)
                 .filterNot { it.second.willDepthExceedLimit(depth) || it.first.hasTwoOfInstance(instance) }
-                .filter { it.second is AliasApInfo }
+                .filter { it.second is AliasApInfo && (it.second as AliasApInfo).base !is AccessPathBase.Constant }
 
             val accessor = when (val a = this.heapAccessor) {
                 is ArrayAlias -> AliasAccessor.Array
