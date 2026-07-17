@@ -386,6 +386,7 @@ tests:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGet
     negative:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGetSafe
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGetFixedDispatcher
   - rule-id: java/security/sensitive-data-exposure.yaml#jsp-file-disclosure
     positive:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$JspFileDisclosureController#mvcVulnerable
