@@ -317,6 +317,7 @@ rules:
           - pattern-inside: |
               $REQ = $HTTP.getRequestDispatcher($UNTRUSTED);
               ...
+          - focus-metavariable: $UNTRUSTED
           - pattern-either:
             - pattern: $REQ.include(...)
             - pattern: $REQ.forward(...)

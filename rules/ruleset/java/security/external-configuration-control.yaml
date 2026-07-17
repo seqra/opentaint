@@ -141,9 +141,11 @@ rules:
         from: $REQ
         to: $MAP
     pattern-sinks:
-      - pattern-either:
-          - pattern: (BeanUtilsBean $B).populate(..., $UNTRUSTED);
-          - pattern: org.apache.commons.beanutils.BeanUtils.populate(..., $UNTRUSTED);
+      - patterns:
+          - pattern-either:
+              - pattern: (BeanUtilsBean $B).populate(..., $UNTRUSTED);
+              - pattern: org.apache.commons.beanutils.BeanUtils.populate(..., $UNTRUSTED);
+          - focus-metavariable: $UNTRUSTED
 
   - id: sql-catalog-external-manipulation
     severity: ERROR

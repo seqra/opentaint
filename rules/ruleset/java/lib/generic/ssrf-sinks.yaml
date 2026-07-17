@@ -40,6 +40,12 @@ rules:
       - pattern: java.net.URLEncoder.encode($UNTRUSTED)
       - pattern: com.google.common.net.UrlEscapers.urlPathSegmentEscaper().escape($UNTRUSTED)
     pattern-sinks:
-      - pattern: new org.apache.http.client.methods.HttpGet(..., $UNTRUSTED, ...)
-      - pattern: new org.apache.commons.httpclient.methods.GetMethod(..., $UNTRUSTED, ...)
-      - pattern: (org.apache.commons.httpclient.methods.GetMethod $GM).setQueryString(..., $UNTRUSTED, ...)
+      - patterns:
+          - pattern: new org.apache.http.client.methods.HttpGet(..., $UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED
+      - patterns:
+          - pattern: new org.apache.commons.httpclient.methods.GetMethod(..., $UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED
+      - patterns:
+          - pattern: (org.apache.commons.httpclient.methods.GetMethod $GM).setQueryString(..., $UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED

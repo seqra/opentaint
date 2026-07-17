@@ -16,6 +16,7 @@ rules:
           - pattern-either:
               - pattern: $STATIC_LOGGER.$METHOD(...,$DATA,...);
               - pattern: (Logger $LOG).$METHOD(..., $DATA,...);
+          - focus-metavariable: $DATA
           - metavariable-regex:
               metavariable: $METHOD
               regex: ^(log|logp|logrb|entering|exiting|fine|finer|finest|info|debug|trace|warn|warning|config|error|severe)$

@@ -10,10 +10,18 @@ rules:
       - java
     mode: taint
     pattern-sinks:
-      - pattern: new javax.naming.ldap.LdapName(..., $QUERY, ...)
-      - pattern: (javax.naming.directory.Context $C).lookup(..., $QUERY, ...)
-      - pattern: (javax.naming.Context $C).lookup(..., $QUERY, ...)
-      - pattern: (com.unboundid.ldap.sdk.LDAPConnection $C).search($QUERY, ...)
+      - patterns:
+          - pattern: new javax.naming.ldap.LdapName(..., $QUERY, ...)
+          - focus-metavariable: $QUERY
+      - patterns:
+          - pattern: (javax.naming.directory.Context $C).lookup(..., $QUERY, ...)
+          - focus-metavariable: $QUERY
+      - patterns:
+          - pattern: (javax.naming.Context $C).lookup(..., $QUERY, ...)
+          - focus-metavariable: $QUERY
+      - patterns:
+          - pattern: (com.unboundid.ldap.sdk.LDAPConnection $C).search($QUERY, ...)
+          - focus-metavariable: $QUERY
       - patterns:
           - pattern-either:
               - pattern: ($CTXTYPE $CTX).lookup(..., $QUERY, ...)
@@ -27,6 +35,7 @@ rules:
                 - pattern: javax.naming.ldap.LdapContext
                 - pattern: javax.naming.event.EventDirContext
                 - pattern: com.sun.jndi.ldap.LdapCtx
+          - focus-metavariable: $QUERY
       - patterns:
           - pattern-either:
               - pattern: ($CTXTYPE $CTX).list($QUERY, ...)
@@ -38,3 +47,4 @@ rules:
               pattern-either:
                 - pattern: org.springframework.ldap.core.LdapTemplate
                 - pattern: org.springframework.ldap.core.LdapOperations
+          - focus-metavariable: $QUERY
