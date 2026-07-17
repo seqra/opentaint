@@ -94,6 +94,36 @@ class PythonRuleEmitTest {
         assertTrue(entryPoint.taint.isNotEmpty(), "entry-point taints at least one parameter position")
     }
 
+    // A `def` pattern with no decorator must stay unconstrained, else it would gate on a decorator
+    // nothing carries and never fire.
+    @Test fun `undecorated function-def source has no decorator condition`() {
+        val entryPoint = emit("python-rules/entrypoint-def.yaml")
+            .filterIsInstance<SerializedPythonEntryPointSource>()
+            .single()
+
+        assertTrue(
+            entryPoint.condition.decoratorNames().isEmpty(),
+            "an undecorated `def` pattern must not gate on any decorator",
+        )
+    }
+
+    // `@entry_point def $METHOD(...)` must gate the entry-point source on the decorator. Without it the
+    // rule targets `.*` with no condition, so EVERY function becomes an entry point and its arg0 gets
+    // tainted — the Python-vs-JVM divergence (Java emits MethodAnnotated for the same constraint).
+    @Test fun `decorated function-def source is gated on the decorator`() {
+        val entryPoint = emit("python-rules/return-sink.yaml")
+            .filterIsInstance<SerializedPythonEntryPointSource>()
+            .single()
+
+        assertEquals(".*", entryPoint.functionTarget(), "the decorator gate lives in the condition, not the target")
+        assertTrue(entryPoint.taint.isNotEmpty(), "entry-point taints at least one position")
+        assertEquals(
+            listOf("entry_point"),
+            entryPoint.condition.decoratorNames(),
+            "the entry point is gated on @entry_point",
+        )
+    }
+
     @Test fun `subscript source taints the result element`() {
         // `source()[0]`: the subscript adds an element accessor onto the subscripted call's result,
         // so the source marks `Result[*]` rather than the whole result.
@@ -265,26 +295,26 @@ class PythonRuleEmitTest {
         )
     }
 
-    private fun SerializedPythonCondition.constantCmpPositions(): List<PythonPosition> = when (this) {
-        is SerializedPythonCondition.ConstantCmp -> listOf(pos)
-        is SerializedPythonCondition.And -> allOf.flatMap { it.constantCmpPositions() }
-        is SerializedPythonCondition.Or -> anyOf.flatMap { it.constantCmpPositions() }
-        is SerializedPythonCondition.Not -> not.constantCmpPositions()
-        is SerializedPythonCondition.ContainsMark,
-        is SerializedPythonCondition.ContainsMarkOnAnyAccessor,
-        is SerializedPythonCondition.NumberOfArgs,
-        is SerializedPythonCondition.ConstantMatches -> emptyList()
+    /** Flattens a condition tree to its leaves, so a test can assert on one kind of predicate. */
+    private fun SerializedPythonCondition?.atoms(): List<SerializedPythonCondition> = when (this) {
+        null -> emptyList()
+        is SerializedPythonCondition.And -> allOf.flatMap { it.atoms() }
+        is SerializedPythonCondition.Or -> anyOf.flatMap { it.atoms() }
+        is SerializedPythonCondition.Not -> not.atoms()
+        else -> listOf(this)
     }
 
-    private fun SerializedPythonCondition.markPositions(): List<PythonPosition> = when (this) {
-        is SerializedPythonCondition.ContainsMark -> listOf(pos)
-        is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> listOf(pos)
-        is SerializedPythonCondition.And -> allOf.flatMap { it.markPositions() }
-        is SerializedPythonCondition.Or -> anyOf.flatMap { it.markPositions() }
-        is SerializedPythonCondition.Not -> not.markPositions()
-        is SerializedPythonCondition.NumberOfArgs,
-        is SerializedPythonCondition.ConstantCmp,
-        is SerializedPythonCondition.ConstantMatches -> emptyList()
-        is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> listOf(pos)
+    private fun SerializedPythonCondition?.decoratorNames(): List<String> =
+        atoms().filterIsInstance<SerializedPythonCondition.MethodDecorated>().map { it.decorator }
+
+    private fun SerializedPythonCondition.constantCmpPositions(): List<PythonPosition> =
+        atoms().filterIsInstance<SerializedPythonCondition.ConstantCmp>().map { it.pos }
+
+    private fun SerializedPythonCondition.markPositions(): List<PythonPosition> = atoms().mapNotNull {
+        when (it) {
+            is SerializedPythonCondition.ContainsMark -> it.pos
+            is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> it.pos
+            else -> null
+        }
     }
 }

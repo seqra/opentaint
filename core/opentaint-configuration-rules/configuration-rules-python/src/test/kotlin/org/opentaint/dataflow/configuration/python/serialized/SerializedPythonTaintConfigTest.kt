@@ -11,6 +11,15 @@ import kotlin.test.assertTrue
 
 class SerializedPythonTaintConfigTest {
 
+    /** Flattens a condition tree to its leaves, so a test can assert one predicate is present. */
+    private fun SerializedPythonCondition?.atoms(): List<SerializedPythonCondition> = when (this) {
+        null -> emptyList()
+        is SerializedPythonCondition.And -> allOf.flatMap { it.atoms() }
+        is SerializedPythonCondition.Or -> anyOf.flatMap { it.atoms() }
+        is SerializedPythonCondition.Not -> not.atoms()
+        else -> listOf(this)
+    }
+
     @Test
     fun `NumberOfArgs condition round-trips and dispatches on n`() {
         val yaml = Yaml.default
@@ -34,6 +43,33 @@ class SerializedPythonTaintConfigTest {
         val args = nested.allOf
         assertEquals(SerializedPythonCondition.NumberOfArgs(1), args[0])
         assertTrue(args[1] is SerializedPythonCondition.ContainsMark)
+    }
+
+    // Both mark predicates carry a mark name, so they can only be told apart by the key they
+    // serialize under: `tainted` is checked first and would otherwise swallow every `taintedAny`.
+    @Test
+    fun `mark conditions round-trip without collapsing into each other`() {
+        val yaml = Yaml.default
+        val pos = PythonPosition.BaseOnly(PythonPositionBase.Argument(0))
+
+        val onAny: SerializedPythonCondition = SerializedPythonCondition.ContainsMarkOnAnyAccessor("cmdi", pos)
+        assertEquals(onAny, yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(onAny)))
+
+        val plain: SerializedPythonCondition = SerializedPythonCondition.ContainsMark("cmdi", pos)
+        assertEquals(plain, yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(plain)))
+    }
+
+    // The gate this diff moved off the action and into the condition: a structural predicate must
+    // survive a round-trip and dispatch on its own key.
+    @Test
+    fun `structural conditions round-trip and dispatch on their own keys`() {
+        val yaml = Yaml.default
+
+        val decorated: SerializedPythonCondition = SerializedPythonCondition.MethodDecorated("flask.Flask.route")
+        assertEquals(decorated, yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(decorated)))
+
+        val extends: SerializedPythonCondition = SerializedPythonCondition.ClassExtends("flask.views.View")
+        assertEquals(extends, yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(extends)))
     }
 
     @Test
@@ -69,13 +105,13 @@ class SerializedPythonTaintConfigTest {
         assertTrue(config.passThrough.isNotEmpty())
         assertTrue(config.cleaner.isNotEmpty())
 
-        // EntryPoint: `function: .*` regex + per-action `decoratedWith` scope.
+        // EntryPoint: `function: .*` regex narrowed by a `decorator:` condition.
         val flaskEntryPoint = config.entryPoint.single {
             (it.target as? PythonTarget.Function)?.function == ".*"
         }
-        assertTrue(flaskEntryPoint.taint.any { action ->
-            action.decoratedWith == "flask.Flask.route"
-        })
+        assertTrue(
+            SerializedPythonCondition.MethodDecorated("flask.Flask.route") in flaskEntryPoint.condition.atoms()
+        )
         // class(flask.request) appears as a ClassRef position.
         assertTrue(flaskEntryPoint.taint.any { action ->
             (action.pos as? PythonPosition.BaseOnly)?.base is PythonPositionBase.ClassRef
@@ -84,9 +120,9 @@ class SerializedPythonTaintConfigTest {
         val viewEntryPoint = config.entryPoint.single {
             (it.target as? PythonTarget.Function)?.function == "dispatch_request"
         }
-        assertTrue(viewEntryPoint.taint.any { action ->
-            action.baseClass == "flask.views.View"
-        })
+        assertTrue(
+            SerializedPythonCondition.ClassExtends("flask.views.View") in viewEntryPoint.condition.atoms()
+        )
 
         // Source: Function vs Attribute target.
         assertTrue(config.source.any { (it.target as? PythonTarget.Function)?.function == "os.getenv" })

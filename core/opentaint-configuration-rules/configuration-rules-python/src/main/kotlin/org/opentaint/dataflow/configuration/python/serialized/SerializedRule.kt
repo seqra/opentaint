@@ -34,8 +34,8 @@ sealed interface SerializedPythonSourceRule : SerializedPythonRule {
  * Entry-point source — fires when control reaches a function matched by the rule,
  * tainting the listed positions before the function executes. Distinct from a regular
  * [SerializedPythonSource] because the rule's `function:` matcher is typically a regex
- * or unqualified name (e.g. `.*`, `dispatch_request`) and the actions usually carry
- * per-action scope conditions (`decoratedWith`, `baseClass`).
+ * or unqualified name (e.g. `.*`, `dispatch_request`), narrowed by a structural
+ * condition such as [SerializedPythonCondition.MethodDecorated].
  */
 @Serializable(with = SerializedPythonEntryPointSerializer::class)
 data class SerializedPythonEntryPointSource(

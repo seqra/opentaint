@@ -4,6 +4,7 @@ import com.charleskorn.kaml.YamlContentPolymorphicSerializer
 import com.charleskorn.kaml.YamlMap
 import com.charleskorn.kaml.YamlNode
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -31,15 +32,28 @@ sealed interface SerializedPythonCondition {
         val pos: PythonPosition,
     ) : SerializedPythonCondition
 
+    /** `taintedAny:` — the key the serializer dispatches on; `tainted:` already selects [ContainsMark]. */
     @Serializable
     data class ContainsMarkOnAnyAccessor(
-        val tainted: String,
+        @SerialName("taintedAny") val tainted: String,
         val pos: PythonPosition,
     ) : SerializedPythonCondition
 
     /** Call-arity predicate: the matched call passes exactly `n` positional arguments. */
     @Serializable
     data class NumberOfArgs(val n: Int) : SerializedPythonCondition
+
+    /**
+     * The matched function carries the given decorator. A dotted name matches the decorator's
+     * qualified name, a bare one its simple name — the same convention function targets use.
+     * Mirrors the JVM `SerializedCondition.MethodAnnotated`.
+     */
+    @Serializable
+    data class MethodDecorated(val decorator: String) : SerializedPythonCondition
+
+    /** The matched function's enclosing class has [baseClass] in its MRO. */
+    @Serializable
+    data class ClassExtends(val baseClass: String) : SerializedPythonCondition
 
     /** The argument at [pos] is a constant literal comparing [cmp] to [value]. */
     @Serializable
@@ -84,6 +98,8 @@ class SerializedPythonConditionSerializer :
             "n" to SerializedPythonCondition.NumberOfArgs.serializer(),
             "cmp" to SerializedPythonCondition.ConstantCmp.serializer(),
             "pattern" to SerializedPythonCondition.ConstantMatches.serializer(),
+            "decorator" to SerializedPythonCondition.MethodDecorated.serializer(),
+            "baseClass" to SerializedPythonCondition.ClassExtends.serializer(),
         )
     }
 }

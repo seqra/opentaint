@@ -2,6 +2,8 @@ package org.opentaint.dataflow.python.rules
 
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.isFalse
+import org.opentaint.dataflow.configuration.mkFalse
 import org.opentaint.dataflow.configuration.mkOr
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.python.AnyArgument
@@ -27,6 +29,7 @@ import org.opentaint.dataflow.configuration.python.StrConstantValue
 import org.opentaint.dataflow.configuration.python.TaintAssignAction
 import org.opentaint.dataflow.configuration.python.TaintCleanAction
 import org.opentaint.dataflow.configuration.python.TaintCleaner
+import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.python.TaintExitSink
 import org.opentaint.dataflow.configuration.python.TaintMark
@@ -71,13 +74,13 @@ import kotlin.contracts.contract
  * [PIRFunction] (function-targeted rules) or, when constructed via
  * [forAttribute], against an attribute name (attribute-targeted rules).
  * Mirrors the JVM `MethodTaintConfigurationResolver` — one instance per
- * matched method — name matching, signature matching and structural scope
- * predicates (`decoratedWith`, `baseClass`) are resolved here against the
- * matched method and used to drop non-matching rules / scope groups, so the
- * runtime [PIRCondition] AST attached to compiled rules carries value-level
- * predicates (`ConstantTrue | Not | And | Or | ContainsMark | NumberOfArgs |
- * ConstantCmp | ConstantMatches`). Arity (`NumberOfArgs`) and the positional
- * indices of ordinary (call-site) rules are decided at the call site against
+ * matched method — name matching, signature matching and structural predicates
+ * (`MethodDecorated`, `ClassExtends`) are resolved here against the matched
+ * method: non-matching rules are dropped and the predicates fold to a literal,
+ * so the runtime [PIRCondition] AST attached to compiled rules carries only
+ * value-level predicates (`ConstantTrue | Not | And | Or | ContainsMark |
+ * NumberOfArgs | ConstantCmp | ConstantMatches`). Arity (`NumberOfArgs`) and
+ * the positional indices of ordinary (call-site) rules are decided at the call site against
  * the concrete `PIRCall`, not here: Python keeps the `*args` spread at the call
  * site, so the signature can't be trusted for arity (unlike Go, which compiles
  * varargs into a single array). Entry-point rules are the exception — they fire
@@ -93,14 +96,24 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
 
     fun resolveEntryPoints(
         serialized: List<SerializedPythonEntryPointSource>,
-    ): List<TaintEntryPointSource> = resolveSourceRule(serialized, ::convertEntryPointAssignActions) { condition, actions, method, info ->
-        TaintEntryPointSource(Target.Function(method), condition, actions, info)
+    ): List<TaintEntryPointSource> = resolveFunctionTargeted(serialized) { rule, _, method ->
+        TaintEntryPointSource(
+            target = Target.Function(method),
+            condition = resolveCondition(rule.condition),
+            taint = rule.taint.flatMap(::convertEntryPointAssignActions),
+            info = rule.info,
+        )
     }
 
     fun resolveSources(
         serialized: List<SerializedPythonSource>,
-    ): List<TaintSource> = resolveSourceRule(serialized, ::convertAssignActions) { condition, actions, method, info ->
-        TaintSource(Target.Function(method), condition, actions, info)
+    ): List<TaintSource> = resolveFunctionTargeted(serialized) { rule, _, method ->
+        TaintSource(
+            target = Target.Function(method),
+            condition = resolveCondition(rule.condition),
+            taint = rule.taint.flatMap(::convertAssignActions),
+            info = rule.info,
+        )
     }
 
     fun resolveSinks(
@@ -155,7 +168,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         serialized: List<SerializedPythonSource>,
         name: String,
     ): List<TaintSource> = resolveAttributeTargeted(serialized, name) { rule ->
-        rule.taint.forEach { it.requireNoMethodScope(name) }
         TaintSource(
             target = Target.Attribute(name),
             condition = resolveCondition(rule.condition),
@@ -202,32 +214,8 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
 
     // endregion
 
-    private inline fun <S : SerializedPythonSourceRule, T> resolveSourceRule(
-        serialized: List<S>,
-        convertAction: (SerializedPythonTaintAssignAction) -> List<TaintAssignAction>,
-        build: (PIRCondition, List<TaintAssignAction>, PIRFunction, ItemInfo?) -> T,
-    ): List<T> {
-        requireMethod(method)
-
-        return serialized.flatMap { rule ->
-            val fn = rule.target as? PythonTarget.Function ?: return@flatMap emptyList()
-            if (!fn.matches(method)) return@flatMap emptyList()
-
-            val baseCondition = resolveCondition(rule.condition)
-            rule.taint.groupBy { it.decoratedWith to it.baseClass }
-                .mapNotNull { (scope, actions) ->
-                    val (decoratedWith, baseClass) = scope
-                    if (decoratedWith != null && !method.hasDecorator(decoratedWith)) return@mapNotNull null
-                    if (baseClass != null && !method.hasBaseClass(baseClass)) return@mapNotNull null
-
-                    val convertedActions = actions.flatMap(convertAction)
-                    build(baseCondition, convertedActions, method, rule.info)
-                }
-        }
-    }
-
-    /** Match a function-target rule (sinks / passthrough / cleaners) against [method]. */
-    private inline fun <S : SerializedPythonRule, T> resolveFunctionTargeted(
+    /** Match a function-target rule against [method]. */
+    private inline fun <S : SerializedPythonRule, T : TaintConfigurationItem> resolveFunctionTargeted(
         serialized: List<S>,
         build: (S, PythonTarget.Function, PIRFunction) -> T,
     ): List<T> {
@@ -236,12 +224,13 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         return serialized.mapNotNull { rule ->
             val fn = rule.target as? PythonTarget.Function ?: return@mapNotNull null
             if (!fn.matches(method)) return@mapNotNull null
-            build(rule, fn, method)
+
+            build(rule, fn, method).takeUnless { it.condition.isFalse() }
         }
     }
 
     /** Match an attribute-target rule against the attribute [name]. */
-    private inline fun <S : SerializedPythonRule, T> resolveAttributeTargeted(
+    private inline fun <S : SerializedPythonRule, T : TaintConfigurationItem> resolveAttributeTargeted(
         serialized: List<S>,
         name: String,
         build: (S) -> T,
@@ -249,7 +238,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         val attr = rule.target as? PythonTarget.Attribute ?: return@mapNotNull null
         if (!matchesName(attr, name)) return@mapNotNull null
 
-        build(rule)
+        build(rule).takeUnless { it.condition.isFalse() }
     }
 
     // region Matching
@@ -271,8 +260,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         val targetName = target.function
         val targetSimpleName = targetName.substringAfterLast(".")
 
-        if (method is PIRSimpleNameUnknownFunction) return targetSimpleName == method.name
-
         val qn = method.qualifiedName.let {
             if (method.enclosingClass != null) it.removeSuffix(".${PythonNames.INIT_METHOD}") else it
         }
@@ -283,6 +270,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
                 val rx = Regex(targetName)
                 rx.matches(qn)
             }
+            method is PIRSimpleNameUnknownFunction -> targetSimpleName == method.name
             '.' !in targetName || bySimpleName -> simpleName == targetSimpleName
             else -> qn == targetName
         }
@@ -323,8 +311,15 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
      */
     private fun PIRFunction.argumentIndices(): List<Int> = declaredParameters().indices.toList()
 
-    private fun PIRFunction.hasDecorator(fqn: String): Boolean =
-        decorators.any { it.qualifiedName == fqn }
+    /**
+     * Bare names match the decorator's simple name, as [matchesName] does. Dotted names match its
+     * qualified name, but only as a suffix: a rule names the decorator as it is written at the
+     * definition (`app.route`), while the IR qualifies it with the defining module
+     * (`myapp.app.route`); a config FQN (`flask.Flask.route`) still matches outright.
+     */
+    private fun PIRFunction.hasDecorator(name: String): Boolean = decorators.any {
+        if ('.' in name) it.qualifiedName == name || it.qualifiedName.endsWith(".$name") else it.name == name
+    }
 
     private fun PIRFunction.hasBaseClass(fqn: String): Boolean =
         enclosingClass?.let { fqn in it.mro } == true
@@ -410,7 +405,11 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
             mkOr(expandPositions(c.pos).map { atom(ConstantCmp(it, c.value.toEngineValue(), c.cmp.toEngineCmp())) })
         is SerializedPythonCondition.ConstantMatches ->
             mkOr(expandPositions(c.pos).map { atom(ConstantMatches(it, Regex(c.pattern))) })
+        is SerializedPythonCondition.MethodDecorated -> (method?.hasDecorator(c.decorator) == true).asCondition()
+        is SerializedPythonCondition.ClassExtends -> (method?.hasBaseClass(c.baseClass) == true).asCondition()
     }
+
+    private fun Boolean.asCondition(): PIRCondition = if (this) mkTrue() else mkFalse()
 
     private fun atom(a: PythonRuleCondition): PIRCondition = CommonCondition.Atom(a)
 
@@ -434,18 +433,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         mkOr(expandPositions(c.pos).map { atom(ContainsMarkOnAnyAccessor(mark = TaintMark(c.tainted), pos = it)) })
 
     // endregion
-
-    /**
-     * Attribute rules cannot meaningfully scope by `decoratedWith` / `baseClass` — those
-     * are properties of a function's enclosing class / decorators, neither of which an
-     * attribute access has. Treat a non-null scope on an attribute action as a config bug.
-     */
-    private fun SerializedPythonTaintAssignAction.requireNoMethodScope(attributeName: String) {
-        require(decoratedWith == null && baseClass == null) {
-            "attribute rule '$attributeName' has a method-only scope " +
-                "(decoratedWith=$decoratedWith, baseClass=$baseClass) on a taint action"
-        }
-    }
 
     private fun sinkMeta(meta: PythonSinkMetaData?): TaintSinkMeta = TaintSinkMeta(
         message = meta?.note ?: DEFAULT_SINK_MESSAGE,

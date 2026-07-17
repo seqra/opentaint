@@ -12,10 +12,9 @@ import org.opentaint.dataflow.configuration.CommonTaintAssignAction
  *  - positions are converted to the local [Position] model, which makes the
  *    `arg(*)` wildcard a distinct [PositionBase.AllArguments] case.
  *
- * The serialized [org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction]
- * also carries `decoratedWith` / `baseClass` scope fields — those are lifted
- * out of the action and into the enclosing rule's [Condition] at conversion
- * time, so actions here are just (mark, position) pairs.
+ * Decorator / base-class predicates never reach this model: the resolver compiles
+ * against one concrete `PIRFunction`, so it folds them to a `true` / `false` literal
+ * at conversion time — the same way the JVM discharges `MethodAnnotated`.
  */
 
 sealed interface Action: CommonTaintAction

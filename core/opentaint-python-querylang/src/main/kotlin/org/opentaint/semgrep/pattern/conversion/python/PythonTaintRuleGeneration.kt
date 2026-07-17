@@ -18,17 +18,23 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSo
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintCleanAction
 import org.opentaint.semgrep.pattern.FailedToCreateTaintRules
+import org.opentaint.semgrep.pattern.IgnoredClassConstraint
+import org.opentaint.semgrep.pattern.IgnoredDecoratorArguments
 import org.opentaint.semgrep.pattern.IgnoredMetavarConstraint
 import org.opentaint.semgrep.pattern.NonMethodCallCleaner
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition
+import org.opentaint.semgrep.pattern.conversion.PythonConcreteType
 import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifier
+import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureModifierValue
 import org.opentaint.semgrep.pattern.conversion.SpecificBoolValue
 import org.opentaint.semgrep.pattern.conversion.SpecificIntValue
 import org.opentaint.semgrep.pattern.conversion.SpecificNullValue
 import org.opentaint.semgrep.pattern.conversion.SpecificStringValue
+import org.opentaint.semgrep.pattern.conversion.TypeConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.ClassModifierConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.MethodModifierConstraint
@@ -305,10 +311,35 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
             if (cond != PYTHON_TRUE) conditions += cond
         }
         is NumberOfArgsConstraint -> conditions += SerializedPythonCondition.NumberOfArgs(constraint.num) // TODO kw-args are not supported
-        // Class/method modifier (annotation) predicates have no Python mark-condition form.
-        is ClassModifierConstraint,
-        is MethodModifierConstraint -> {}
+        is MethodModifierConstraint -> conditions += pythonDecoratorCondition(constraint.modifier, trace)
+
+        // TODO
+        is ClassModifierConstraint -> trace.error(IgnoredClassConstraint())
     }
+}
+
+/**
+ * Gates the rule on the decorator a `@dec def f(...)` pattern requires, named as the pattern writes
+ * it (`entry_point`, `app.route`). An unresolvable name (`@$DEC`) yields a never-matching rule rather
+ * than an ungated one: dropping the gate would make `@dec def f($P)` taint the parameter of *every*
+ * function. Decorator arguments (`@app.route("/p")`) have no condition form, so the name alone
+ * matches and the rule widens to every use of the decorator instead of being dropped.
+ */
+private fun pythonDecoratorCondition(
+    modifier: SignatureModifier,
+    trace: SemgrepRuleLoadStepTrace,
+): SerializedPythonCondition {
+    val name = ((modifier.type as? TypeConstraint.Concrete)?.type as? PythonConcreteType.Named)?.name
+
+    if (name == null) {
+        trace.error(FailedToCreateTaintRules("Decorator name is not concrete and cannot be scoped"))
+        return PYTHON_FALSE
+    }
+
+    if (modifier.value !is SignatureModifierValue.NoValue && modifier.value !is SignatureModifierValue.AnyValue) {
+        trace.error(IgnoredDecoratorArguments(name))
+    }
+    return SerializedPythonCondition.MethodDecorated(name)
 }
 
 private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
@@ -393,6 +424,9 @@ private fun SerializedPythonCondition.rewriteAsEndCondition(): SerializedPythonC
     is SerializedPythonCondition.ConstantMatches -> copy(pos = pos.rewriteAsEndPosition())
     // Call arity is meaningless at method exit.
     is SerializedPythonCondition.NumberOfArgs -> PYTHON_TRUE
+    // Predicates of the enclosing function itself: no position to rewrite, and they still hold at exit.
+    is SerializedPythonCondition.MethodDecorated,
+    is SerializedPythonCondition.ClassExtends -> this
 }
 
 private fun PythonPosition.rewriteAsEndPosition(): PythonPosition = when (this) {

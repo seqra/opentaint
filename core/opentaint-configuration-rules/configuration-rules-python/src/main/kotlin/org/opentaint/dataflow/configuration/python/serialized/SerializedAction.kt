@@ -6,16 +6,15 @@ import kotlinx.serialization.Serializable
  * `taint:` entry attached to entry-point and source rules. Marks the given position
  * with a taint of the given `kind`.
  *
- * `decoratedWith` / `baseClass` scope the action to functions decorated with the given
- * FQN / methods whose enclosing class extends the given base. They are structural
- * properties of the matched code site, not value-level predicates, so they live as
- * dedicated fields here rather than inside [SerializedPythonCondition].
+ * Decorator / base-class scoping is a predicate on the matched function, not a property
+ * of the action, so it lives in the rule's [SerializedPythonCondition]
+ * ([SerializedPythonCondition.MethodDecorated] / [SerializedPythonCondition.ClassExtends]),
+ * where it composes with `not` / `anyOf` and applies to every rule kind — not just those
+ * that carry `taint:` actions.
  */
 @Serializable
 data class SerializedPythonTaintAssignAction(
     val kind: String,
-    val decoratedWith: String? = null,
-    val baseClass: String? = null,
     val pos: PythonPosition,
 )
 
