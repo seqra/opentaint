@@ -477,6 +477,93 @@ class RuleTagsAndJoinTest {
         assertTrue(trace.errorMessages().any { it.contains("metavariable '${'$'}MISSING'") }, trace.errorMessages().toString())
     }
 
+    private fun loadRightSearchJoin(sinkPatterns: String) = load(
+        "lib/marks.yaml" to """
+            rules:
+              - id: src
+                options: { lib: true }
+                severity: NOTE
+                message: m
+                languages: [java]
+                pattern: src(${'$'}VALUE)
+              - id: sink
+                options: { lib: true }
+                severity: NOTE
+                message: m
+                languages: [java]
+${sinkPatterns.prependIndent("                ")}
+        """.trimIndent(),
+        "j.yaml" to """
+            rules:
+              - id: j
+                severity: ERROR
+                message: m
+                languages: [java]
+                mode: join
+                join:
+                  refs:
+                    - rule: lib/marks.yaml#src
+                      as: src
+                    - rule: lib/marks.yaml#sink
+                      as: sink
+                  on: [ 'src.${'$'}VALUE -> sink.${'$'}VALUE' ]
+        """.trimIndent()
+    )
+
+    @Test
+    fun `search join accepts when every pattern-either alternative uses the mark`() {
+        val (result, trace) = loadRightSearchJoin(
+            """
+                pattern-either:
+                  - pattern: sink(${'$'}VALUE)
+                  - pattern: otherSink(${'$'}VALUE)
+            """.trimIndent()
+        )
+
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        assertTrue("j" in loadedRuleIds(result))
+    }
+
+    @Test
+    fun `search join rejects when one pattern-either alternative omits the mark`() {
+        val (_, trace) = loadRightSearchJoin(
+            """
+                pattern-either:
+                  - pattern: sink(${'$'}VALUE)
+                  - pattern: otherSink(${'$'}OTHER)
+            """.trimIndent()
+        )
+
+        assertTrue(trace.errorMessages().any { it.contains("metavariable '${'$'}VALUE'") }, trace.errorMessages().toString())
+    }
+
+    @Test
+    fun `search join accepts when one conjunctive pattern uses the mark`() {
+        val (result, trace) = loadRightSearchJoin(
+            """
+                patterns:
+                  - pattern: sink(${'$'}VALUE)
+                  - pattern: sink(${'$'}OTHER)
+            """.trimIndent()
+        )
+
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        assertTrue("j" in loadedRuleIds(result))
+    }
+
+    @Test
+    fun `search focus-metavariable does not rescue a pattern missing the mark`() {
+        val (_, trace) = loadRightSearchJoin(
+            """
+                patterns:
+                  - pattern: sink(${'$'}OTHER)
+                  - focus-metavariable: ${'$'}VALUE
+            """.trimIndent()
+        )
+
+        assertTrue(trace.errorMessages().any { it.contains("metavariable '${'$'}VALUE'") }, trace.errorMessages().toString())
+    }
+
     @Test
     fun `taint join rejects a sink branch focused on another mark`() {
         val (_, trace) = load(
