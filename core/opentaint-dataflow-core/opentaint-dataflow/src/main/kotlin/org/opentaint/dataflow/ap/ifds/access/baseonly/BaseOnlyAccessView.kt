@@ -1,13 +1,20 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 
 fun BaseOnlyApManager.startsWithAccessor(access: BaseOnlyAccess, accessor: Accessor): Boolean =
     BaseOnlyAccessOps.startsWith(access, interner.index(accessor))
 
 fun BaseOnlyApManager.startAccessors(access: BaseOnlyAccess): Set<Accessor> {
     val head = access.headOrNull ?: return emptySet()
-    return setOf(interner.accessor(head) ?: error("Accessor not found: $head"))
+    val concreteHead = interner.accessor(head) ?: error("Accessor not found: $head")
+    return if (access.hasSemanticMark && access.suffixIdx.isTaintMarkAccessor()) {
+        setOf(AnyAccessor, concreteHead)
+    } else {
+        setOf(concreteHead)
+    }
 }
 
 fun BaseOnlyApManager.allAccessors(access: BaseOnlyAccess): Set<Accessor> =

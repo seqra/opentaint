@@ -100,11 +100,20 @@ class BaseOnlyFactOpsTest {
     }
 
     @Test
-    fun `start accessors expose the head terminal`() {
+    fun `start accessors expose any and the head for a semantic mark`() {
         val m = mgr(false)
-        assertEquals(setOf<Accessor>(mark), m.finalOf(AnyAccessor, mark).getStartAccessors())
-        assertEquals(setOf<Accessor>(mark), m.finalOf(mark).getStartAccessors())
+        assertEquals(setOf<Accessor>(AnyAccessor, mark), m.finalOf(AnyAccessor, mark).getStartAccessors())
+        assertEquals(setOf<Accessor>(AnyAccessor, mark), m.finalOf(mark).getStartAccessors())
         assertEquals(setOf<Accessor>(FinalAccessor), m.finalOf().getStartAccessors())
+    }
+
+    @Test
+    fun `start accessors expose any and the structural head before a semantic mark`() {
+        val m = mgr(true)
+        assertEquals(
+            setOf<Accessor>(AnyAccessor, field),
+            m.finalOf(field, AnyAccessor, mark).getStartAccessors(),
+        )
     }
 
     @Test
