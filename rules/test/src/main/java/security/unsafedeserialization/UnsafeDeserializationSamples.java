@@ -31,6 +31,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 
@@ -209,13 +210,13 @@ public class UnsafeDeserializationSamples {
         }
 
         @PostMapping(path = "/unsafe/laissez-faire", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-        public ResponseEntity<Object> unsafeLaissezFaire(@RequestBody String json) throws IOException {
+        public ResponseEntity<JsonNode> unsafeLaissezFaire(@RequestBody String json) throws IOException {
             ObjectMapper mapper = new ObjectMapper();
             // VULNERABLE: unrestricted subtype validation is applied to untrusted JSON
             mapper.activateDefaultTyping(
                     LaissezFaireSubTypeValidator.instance,
                     ObjectMapper.DefaultTyping.EVERYTHING);
-            return ResponseEntity.ok(mapper.readValue(json, Object.class));
+            return ResponseEntity.ok(mapper.readTree(json));
         }
 
         @PostMapping(path = "/safe", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
