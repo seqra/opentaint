@@ -31,6 +31,9 @@ class PIRCombinedTaintRulesProvider(
     override fun sinksForMethod(method: PIRFunction) =
         combine(options.sink, base.sinksForMethod(method), combined.sinksForMethod(method))
 
+    override fun exitSinksForMethod(method: PIRFunction) =
+        combine(options.sink, base.exitSinksForMethod(method), combined.exitSinksForMethod(method))
+
     override fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean) =
         combine(options.passThrough, base.passThroughForMethod(method, bySimpleName), combined.passThroughForMethod(method, bySimpleName))
 

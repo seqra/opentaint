@@ -2,6 +2,7 @@ package org.opentaint.dataflow.python.rules
 
 import org.opentaint.dataflow.configuration.python.TaintCleaner
 import org.opentaint.dataflow.configuration.python.TaintEntryPointSource
+import org.opentaint.dataflow.configuration.python.TaintExitSink
 import org.opentaint.dataflow.configuration.python.TaintPassThrough
 import org.opentaint.dataflow.configuration.python.TaintSink
 import org.opentaint.dataflow.configuration.python.TaintSource
@@ -22,6 +23,7 @@ class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
     private val entryPointsByMethod = ConcurrentHashMap<PIRFunction, List<TaintEntryPointSource>>()
     private val sourcesByMethod = ConcurrentHashMap<PIRFunction, List<TaintSource>>()
     private val sinksByMethod = ConcurrentHashMap<PIRFunction, List<TaintSink>>()
+    private val exitSinksByMethod = ConcurrentHashMap<PIRFunction, List<TaintExitSink>>()
     private val passThroughByMethod = ConcurrentHashMap<PIRFunction, List<TaintPassThrough>>()
     private val passThroughBySimpleMethod = ConcurrentHashMap<PIRFunction, List<TaintPassThrough>>()
     private val cleanersByMethod = ConcurrentHashMap<PIRFunction, List<TaintCleaner>>()
@@ -39,6 +41,9 @@ class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
 
     fun sinksForMethod(method: PIRFunction): List<TaintSink> =
         sinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveSinks(config.sink) }
+
+    fun exitSinksForMethod(method: PIRFunction): List<TaintExitSink> =
+        exitSinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveExitSinks(config.methodExitSink) }
 
     fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean): List<TaintPassThrough> =
         if (bySimpleName) {

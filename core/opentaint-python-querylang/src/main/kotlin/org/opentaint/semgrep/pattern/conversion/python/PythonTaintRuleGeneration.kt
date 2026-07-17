@@ -4,11 +4,14 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
+import org.opentaint.dataflow.configuration.python.serialized.PythonPosition
+import org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase
 import org.opentaint.dataflow.configuration.python.serialized.PythonSinkMetaData
 import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCleaner
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonExitSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
@@ -75,9 +78,14 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
                     meta = ctx.meta.toPythonSinkMeta(),
                 )
 
-                TaintRuleEdge.Kind.MethodEnter,
-                TaintRuleEdge.Kind.MethodExit ->
-                    ctx.trace.error(FailedToCreateTaintRules("Non method call sinks are not supported yet"))
+                TaintRuleEdge.Kind.MethodExit -> rules += SerializedPythonExitSink(
+                    target = PythonTarget.Function(ANY_PYTHON_FUNCTION),
+                    condition = condition.ruleCondition.condition.rewriteAsEndCondition().nullIfTrue(),
+                    meta = ctx.meta.toPythonSinkMeta(),
+                )
+
+                TaintRuleEdge.Kind.MethodEnter ->
+                    ctx.trace.error(FailedToCreateTaintRules("Method-enter sinks are not supported yet"))
             }
         }
     }
@@ -373,4 +381,29 @@ private fun Position.toAbstractPosition(): PositionBase = when (this) {
     }
     is Position.Object -> PositionBase.This
     is Position.Result -> PositionBase.Result
+}
+
+private fun SerializedPythonCondition.rewriteAsEndCondition(): SerializedPythonCondition = when (this) {
+    is SerializedPythonCondition.And -> SerializedPythonCondition.And(allOf.map { it.rewriteAsEndCondition() })
+    is SerializedPythonCondition.Or -> SerializedPythonCondition.Or(anyOf.map { it.rewriteAsEndCondition() })
+    is SerializedPythonCondition.Not -> SerializedPythonCondition.Not(not.rewriteAsEndCondition())
+    is SerializedPythonCondition.ContainsMark -> copy(pos = pos.rewriteAsEndPosition())
+    is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> copy(pos = pos.rewriteAsEndPosition())
+    is SerializedPythonCondition.ConstantCmp -> copy(pos = pos.rewriteAsEndPosition())
+    is SerializedPythonCondition.ConstantMatches -> copy(pos = pos.rewriteAsEndPosition())
+    // Call arity is meaningless at method exit.
+    is SerializedPythonCondition.NumberOfArgs -> PYTHON_TRUE
+}
+
+private fun PythonPosition.rewriteAsEndPosition(): PythonPosition = when (this) {
+    is PythonPosition.BaseOnly -> PythonPosition.BaseOnly(base.rewriteAsEndPosition())
+    is PythonPosition.WithModifiers -> PythonPosition.WithModifiers(base.rewriteAsEndPosition(), modifiers)
+}
+
+private fun PythonPositionBase.rewriteAsEndPosition(): PythonPositionBase = when (this) {
+    is PythonPositionBase.Argument -> PythonPositionBase.Result
+    is PythonPositionBase.KwArgument -> PythonPositionBase.Result
+    PythonPositionBase.This -> this
+    PythonPositionBase.Result -> this
+    is PythonPositionBase.ClassRef -> this
 }

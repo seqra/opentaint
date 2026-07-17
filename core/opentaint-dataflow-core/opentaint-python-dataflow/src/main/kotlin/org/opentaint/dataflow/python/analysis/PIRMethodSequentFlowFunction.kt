@@ -23,6 +23,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.alias.forEachAliasAfterStatement
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
+import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
 import org.opentaint.ir.api.python.PIRAssign
@@ -150,7 +151,7 @@ class PIRMethodSequentFlowFunction(
                 instruction, initialFacts, currentFactAp, unchanged, propagateFact,
                 propagateFactWithAccessorExclude, addSideEffectRequirement, addUnchecked
             )
-            is PIRReturn -> handleReturn(instruction, currentFactAp, unchanged, propagateFact)
+            is PIRReturn -> handleReturn(instruction, initialFacts, currentFactAp, unchanged, propagateFact, addUnchecked)
             is PIRStoreAttr -> handleStoreAttr(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             is PIRStoreSubscript -> handleStoreSubscript(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             is PIRStoreGlobal -> handleStoreGlobal(instruction, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
@@ -331,7 +332,7 @@ class PIRMethodSequentFlowFunction(
         }
         val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, PIRAttrLoadAtomEvaluator)
 
-        val taintUtil = PIRAttributeLoadTaintUtil(ctx, inst, apManager)
+        val taintUtil = PIRSequentTaintUtil(ctx, inst, apManager)
         taintUtil.applySourceRules(
             sourceRules = sourceRules,
             initialFacts = initialFacts,
@@ -575,16 +576,45 @@ class PIRMethodSequentFlowFunction(
 
     private fun handleReturn(
         ret: PIRReturn,
+        initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
         unchanged: (FinalFactAp) -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        addUnchecked: (Sequent) -> Unit
     ) {
         unchanged(currentFactAp)
+
         val retVal = ret.value ?: return
-        val retBase = PIRFlowFunctionUtils.accessPathBase(retVal) ?: return
+        val retBase = PIRFlowFunctionUtils.accessPathBase(retVal)
+
         if (currentFactAp.base == retBase) {
             propagateFact(currentFactAp.rebase(AccessPathBase.Return), TraceInfo.Flow)
         }
+
+        applyExitSinkRules(ret, initialFacts, currentFactAp, addUnchecked)
+    }
+
+    private fun applyExitSinkRules(ret: PIRReturn, initialFacts: Set<InitialFactAp>, fact: FinalFactAp, addUnchecked: (Sequent) -> Unit) {
+        // Return sinks fire only on the zero-to-fact path —
+        // a fact sourced inside the method reaching the exit
+        if (initialFacts.isNotEmpty()) return
+
+        val exitSinks = rulesProvider.exitSinksForMethod(ctx.method)
+        if (exitSinks.isEmpty()) return
+
+        val markAfterAnyAccessorResolver = createMarkAfterAccessorResolver(
+            ctx.methodEntryPoint, initialFacts
+        ) { i, k ->
+            addUnchecked(Sequent.FactSideEffect(i, k))
+        }
+
+        val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, PIRAttrLoadAtomEvaluator, call = null)
+        val taintUtil = PIRSequentTaintUtil(ctx, ret, apManager)
+
+        taintUtil.applySinkRules(
+            exitSinks, conditionRewriter, FinalFactReader(fact, apManager),
+            markAfterAnyAccessorResolver
+        )
     }
 
     // ==========================================================================

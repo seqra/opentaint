@@ -45,7 +45,7 @@ sealed interface TaintConfigurationCleaner : TaintConfigurationItem {
 }
 
 data class TaintEntryPointSource(
-    override val target: Target,
+    override val target: Target.Function,
     override val condition: PIRCondition,
     override val taint: List<TaintAssignAction>,
     override val info: ItemInfo? = null,
@@ -67,6 +67,14 @@ data class TaintSinkMeta(
 
 data class TaintSink(
     override val target: Target,
+    override val condition: PIRCondition,
+    override val id: String,
+    override val meta: TaintSinkMeta,
+    override val info: ItemInfo? = null,
+) : TaintConfigurationSink
+
+data class TaintExitSink(
+    override val target: Target.Function,
     override val condition: PIRCondition,
     override val id: String,
     override val meta: TaintSinkMeta,

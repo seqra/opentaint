@@ -2,6 +2,7 @@ package org.opentaint.semgrep.pattern.conversion
 
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCleaner
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonExitSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonPassThrough
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
@@ -15,6 +16,7 @@ fun TaintRuleFromSemgrep<SerializedPythonRule>.toSerializedPythonTaintConfig(): 
         entryPoint = items.filterIsInstance<SerializedPythonEntryPointSource>(),
         source = items.filterIsInstance<SerializedPythonSource>(),
         sink = items.filterIsInstance<SerializedPythonSink>(),
+        methodExitSink = items.filterIsInstance<SerializedPythonExitSink>(),
         passThrough = items.filterIsInstance<SerializedPythonPassThrough>(),
         cleaner = items.filterIsInstance<SerializedPythonCleaner>(),
     )

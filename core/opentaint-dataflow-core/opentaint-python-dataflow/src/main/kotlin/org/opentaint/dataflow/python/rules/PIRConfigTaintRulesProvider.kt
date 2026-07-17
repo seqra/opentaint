@@ -10,6 +10,7 @@ class PIRConfigTaintRulesProvider(private val config: PIRTaintConfiguration) : P
     override fun entryPointSourcesForMethod(method: PIRFunction) = config.entryPointSourcesForMethod(method)
     override fun sourcesForMethod(method: PIRFunction) = config.sourcesForMethod(method)
     override fun sinksForMethod(method: PIRFunction) = config.sinksForMethod(method)
+    override fun exitSinksForMethod(method: PIRFunction) = config.exitSinksForMethod(method)
     override fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean) = config.passThroughForMethod(method, bySimpleName)
     override fun cleanersForMethod(method: PIRFunction) = config.cleanersForMethod(method)
 

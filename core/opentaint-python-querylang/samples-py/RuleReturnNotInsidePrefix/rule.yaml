@@ -8,7 +8,7 @@ rules:
           $S = $SOURCE.mk_type2()
       - pattern-not-inside: |
           ...
-          $S.clean()
+          clean($S)
       - pattern-inside: |
           def $METHOD(..., $SOURCE, ...):
               ...

@@ -7,6 +7,7 @@ import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCleaner
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonExitSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
@@ -236,6 +237,31 @@ class PythonRuleEmitTest {
             listOf(PythonPositionBase.KwArgument("payload")),
             source.taint.map { it.pos.base },
             "a focused kwarg source marks kwarg(payload); without the fix this is arg(*) and crashes at runtime",
+        )
+    }
+
+    @Test fun `decorated method-signature return pattern lowers to a method-exit sink`() {
+        // `@entry_point def $METHOD(...): $SRC = source() ... return $SRC` combines a method-signature
+        // pattern (with decorator) and an in-body source whose value is returned. It lowers to three
+        // rules: the `source()` call source, the decorated-function entry-point gate, and the return
+        // (method-exit) sink that fires at the analyzed function's own return.
+        val rules = emit("python-rules/return-sink.yaml")
+
+        val source = rules.filterIsInstance<SerializedPythonSource>().single { it.functionTarget() == "source" }
+        assertTrue(source.taint.all { it.pos.base == PythonPositionBase.Result }, "the in-body source taints its result")
+
+        // The `@entry_point`-decorated `def $METHOD(...)` signature yields an entry-point rule.
+        assertTrue(
+            rules.filterIsInstance<SerializedPythonEntryPointSource>().isNotEmpty(),
+            "the decorated method signature yields an entry-point source",
+        )
+
+        val exitSink = rules.filterIsInstance<SerializedPythonExitSink>().single()
+        assertEquals(".*", exitSink.functionTarget(), "a return sink fires at any function's exit")
+        assertEquals(
+            setOf(PythonPositionBase.Result),
+            exitSink.condition!!.markPositions().map { it.base }.toSet(),
+            "the return sink checks containsMark(result)",
         )
     }
 

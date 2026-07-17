@@ -28,6 +28,7 @@ import org.opentaint.dataflow.configuration.python.TaintAssignAction
 import org.opentaint.dataflow.configuration.python.TaintCleanAction
 import org.opentaint.dataflow.configuration.python.TaintCleaner
 import org.opentaint.dataflow.configuration.python.TaintEntryPointSource
+import org.opentaint.dataflow.configuration.python.TaintExitSink
 import org.opentaint.dataflow.configuration.python.TaintMark
 import org.opentaint.dataflow.configuration.python.TaintPassAction
 import org.opentaint.dataflow.configuration.python.TaintPassThrough
@@ -42,8 +43,10 @@ import org.opentaint.dataflow.configuration.python.serialized.PythonPositionBase
 import org.opentaint.dataflow.configuration.python.serialized.PythonPositionModifier
 import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCleaner
+import org.opentaint.dataflow.configuration.python.serialized.PythonSinkMetaData
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCondition
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonExitSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonPassThrough
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSignatureMatcher
@@ -107,7 +110,18 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
             target = Target.Function(method),
             condition = resolveCondition(rule.condition),
             id = "function:${fn.function}",
-            meta = sinkMeta(rule),
+            meta = sinkMeta(rule.meta),
+        )
+    }
+
+    fun resolveExitSinks(
+        serialized: List<SerializedPythonExitSink>,
+    ): List<TaintExitSink> = resolveFunctionTargeted(serialized) { rule, fn, method ->
+        TaintExitSink(
+            target = Target.Function(method),
+            condition = resolveCondition(rule.condition),
+            id = "exit:${fn.function}",
+            meta = sinkMeta(rule.meta),
         )
     }
 
@@ -158,7 +172,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
             target = Target.Attribute(name),
             condition = resolveCondition(rule.condition),
             id = "attribute:$name",
-            meta = sinkMeta(rule),
+            meta = sinkMeta(rule.meta),
         )
     }
 
@@ -433,11 +447,11 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         }
     }
 
-    private fun sinkMeta(rule: SerializedPythonSink): TaintSinkMeta = TaintSinkMeta(
-        message = rule.meta?.note ?: DEFAULT_SINK_MESSAGE,
+    private fun sinkMeta(meta: PythonSinkMetaData?): TaintSinkMeta = TaintSinkMeta(
+        message = meta?.note ?: DEFAULT_SINK_MESSAGE,
         severity = CommonTaintConfigurationSinkMeta.Severity.Warning,
-        cwe = rule.meta?.cwe,
-        note = rule.meta?.note,
+        cwe = meta?.cwe,
+        note = meta?.note,
     )
 
     @OptIn(ExperimentalContracts::class)

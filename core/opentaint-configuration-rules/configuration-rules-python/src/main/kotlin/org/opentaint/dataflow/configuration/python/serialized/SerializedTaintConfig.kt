@@ -15,6 +15,7 @@ data class SerializedPythonTaintConfig(
     val entryPoint: List<SerializedPythonEntryPointSource> = emptyList(),
     val source: List<SerializedPythonSource> = emptyList(),
     val sink: List<SerializedPythonSink> = emptyList(),
+    val methodExitSink: List<SerializedPythonExitSink> = emptyList(),
     val passThrough: List<SerializedPythonPassThrough> = emptyList(),
     val cleaner: List<SerializedPythonCleaner> = emptyList(),
 )

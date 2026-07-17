@@ -62,6 +62,15 @@ data class SerializedPythonSink(
     override val info: ItemInfo? = null,
 ) : SerializedPythonRule
 
+/** Return (method-exit) sink — fires at the analyzed method's own `return`; mirrors JVM `MethodExitSink`. */
+@Serializable(with = SerializedPythonExitSinkSerializer::class)
+data class SerializedPythonExitSink(
+    override val target: PythonTarget,
+    val condition: SerializedPythonCondition? = null,
+    val meta: PythonSinkMetaData? = null,
+    override val info: ItemInfo? = null,
+) : SerializedPythonRule
+
 @Serializable(with = SerializedPythonPassThroughSerializer::class)
 data class SerializedPythonPassThrough(
     override val target: PythonTarget,
@@ -166,6 +175,19 @@ object SerializedPythonSinkSerializer : KSerializer<SerializedPythonSink> {
         )
     }
     override fun serialize(encoder: Encoder, value: SerializedPythonSink) = unsupported()
+}
+
+object SerializedPythonExitSinkSerializer : KSerializer<SerializedPythonExitSink> {
+    override val descriptor: SerialDescriptor = SinkSurrogate.serializer().descriptor
+    override fun deserialize(decoder: Decoder): SerializedPythonExitSink {
+        val raw = decoder.decodeSerializableValue(SinkSurrogate.serializer())
+        return SerializedPythonExitSink(
+            target = buildTarget(raw.function, raw.attribute, raw.signature),
+            condition = raw.condition,
+            meta = PythonSinkMetaData(raw.cwe, raw.note),
+        )
+    }
+    override fun serialize(encoder: Encoder, value: SerializedPythonExitSink) = unsupported()
 }
 
 @Serializable

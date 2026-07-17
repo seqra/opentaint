@@ -7,8 +7,8 @@ class CustomType2:
     def mk_type3(self):
         return CustomType3()
 
-    def clean(self):
-        pass
+def clean(arg):
+    return
 
 
 class CustomType3:
@@ -31,5 +31,5 @@ def Negative_entrypoint():
 
 def simple_negative(src):
     s = src.mk_type2()
-    s.clean()
+    clean(s)
     return s.mk_type3().mk_type1()

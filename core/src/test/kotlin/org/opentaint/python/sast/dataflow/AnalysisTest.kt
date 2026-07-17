@@ -19,6 +19,7 @@ import org.opentaint.dataflow.configuration.python.Position
 import org.opentaint.dataflow.configuration.python.TaintAssignAction
 import org.opentaint.dataflow.configuration.python.TaintCleaner
 import org.opentaint.dataflow.configuration.python.TaintEntryPointSource
+import org.opentaint.dataflow.configuration.python.TaintExitSink
 import org.opentaint.dataflow.configuration.python.TaintMark
 import org.opentaint.dataflow.configuration.python.TaintPassThrough
 import org.opentaint.dataflow.configuration.python.TaintSink
@@ -228,6 +229,8 @@ private class TestRulesProvider(
                 meta = TaintSinkMeta(it.id, CommonTaintConfigurationSinkMeta.Severity.Warning, cwe = null, note = it.id),
             )
         }
+
+    override fun exitSinksForMethod(method: PIRFunction): List<TaintExitSink> = emptyList()
 
     override fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource> = emptyList()
     override fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean): List<TaintPassThrough> = emptyList()

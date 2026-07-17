@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -13,32 +12,30 @@ import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.PIRCondition
 import org.opentaint.dataflow.configuration.python.PythonRuleCondition
+import org.opentaint.dataflow.configuration.python.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSource
-import org.opentaint.dataflow.configuration.python.TaintSink
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
-import org.opentaint.dataflow.taint.FactReader
+import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.FinalFactReader
-import org.opentaint.dataflow.taint.FinalFactReaderWithPrefix
-import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.dataflow.taint.TaintUtil
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRReturn
 import org.opentaint.util.onSome
-import kotlin.collections.plusAssign
 
 abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
     val context: PIRMethodAnalysisContext,
     val statement: I,
     apManager: ApManager
-) : TaintUtil<PythonRuleCondition, TaintConfigurationSource, TaintSink, TraceInfo>(apManager) {
+) : TaintUtil<PythonRuleCondition, TaintConfigurationSource, TaintConfigurationSink, TraceInfo>(apManager) {
     private val sinkTracker get() = context.taint.taintSinkTracker
 
     override fun TaintConfigurationSource.srcCondition(): PIRCondition = condition
 
-    override fun TaintSink.sinkCondition() = condition
+    override fun TaintConfigurationSink.sinkCondition() = condition
 
     override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintConfigurationSource> =
         object : RuleAssumptionsManager<TaintConfigurationSource> {
@@ -58,21 +55,21 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
             ) = sinkTracker.currentSourceRuleAssumptionsPreconditions(rule, statement, assumptions)
         }
 
-    override fun sinkAssumptionsManager(): RuleAssumptionsManager<TaintSink> =
-        object : RuleAssumptionsManager<TaintSink> {
+    override fun sinkAssumptionsManager(): RuleAssumptionsManager<TaintConfigurationSink> =
+        object : RuleAssumptionsManager<TaintConfigurationSink> {
             override fun storeAssumptions(
-                rule: TaintSink,
+                rule: TaintConfigurationSink,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) {
                 sinkTracker.addSinkRuleAssumptions(rule, statement, assumptions)
             }
 
-            override fun currentAssumptions(rule: TaintSink): Set<InitialFactAp> =
+            override fun currentAssumptions(rule: TaintConfigurationSink): Set<InitialFactAp> =
                 sinkTracker.currentSinkRuleAssumptions(rule, statement)
         }
 
     override fun handleReachedSink(
-        rule: TaintSink,
+        rule: TaintConfigurationSink,
         factReader: FinalFactReader?,
         evaluatedFacts: List<InitialFactAp>
     ) {
@@ -147,24 +144,54 @@ class PIRMethodCallTaintUtil(
     }
 }
 
-class PIRAttributeLoadTaintUtil(
+class PIRSequentTaintUtil(
     context: PIRMethodAnalysisContext,
-    statement: PIRLoadAttr,
+    statement: PIRInstruction,
     apManager: ApManager,
-) : PIRTaintUtil<PIRLoadAttr, MethodSequentFlowFunction.TraceInfo>(context, statement, apManager) {
+) : PIRTaintUtil<PIRInstruction, MethodSequentFlowFunction.TraceInfo>(context, statement, apManager) {
     private val callFactMapper get() = context.methodCallFactMapper
 
     override fun createRuleTraceInfo(rule: CommonTaintConfigurationItem, action: CommonTaintAction) =
         MethodSequentFlowFunction.TraceInfo.Rule(rule, action)
 
-    override fun mapFactToReturn(fact: FinalFactAp) =
-        listOfNotNull(callFactMapper.mapLoadAttributeFactToReturn(statement, fact))
+    override fun mapFactToReturn(fact: FinalFactAp) = when (statement) {
+        is PIRLoadAttr -> listOfNotNull(callFactMapper.mapLoadAttributeFactToReturn(statement, fact))
+        is PIRReturn -> listOfNotNull(fact.fromResultBase(statement))
+        else -> error("Unexpected statement: $statement")
+    }
 
-    override fun mapFactToReturn(fact: InitialFactAp) = TODO()
+    override fun mapFactToReturn(fact: InitialFactAp) = when (statement) {
+        // Attribute loads only apply source rules, which never reach handleReachedSink → this overload.
+        is PIRLoadAttr -> TODO()
+        is PIRReturn -> listOfNotNull(fact.fromResultBase(statement))
+        else -> error("Unexpected statement: $statement")
+    }
 
-    override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> = buildList {
-        callFactMapper.mapLoadAttributeFactToStart(statement, factReader.factAp) { fact, newBase ->
-            this += FinalFactReader(fact.rebase(newBase), apManager)
+    override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> = when (statement) {
+        is PIRLoadAttr -> buildList {
+            callFactMapper.mapLoadAttributeFactToStart(statement, factReader.factAp) { fact, newBase ->
+                this += FinalFactReader(fact.rebase(newBase), apManager)
+            }
         }
+        is PIRReturn -> listOfNotNull(factReader.factAp.toResultBase(statement)?.let { FinalFactReader(it, apManager) })
+        else -> error("Unexpected statement: $statement")
+    }
+
+    private fun FinalFactAp.toResultBase(statement: PIRReturn): FinalFactAp? {
+        val result = statement.value?.let { PIRFlowFunctionUtils.accessPathBase(it) }
+            ?: return null
+        return if (base == result) rebase(AccessPathBase.Return) else null
+    }
+
+    private fun FinalFactAp.fromResultBase(statement: PIRReturn): FinalFactAp? {
+        val result = statement.value?.let { PIRFlowFunctionUtils.accessPathBase(it) }
+            ?: return null
+        return if (base == AccessPathBase.Return) rebase(result) else null
+    }
+
+    private fun InitialFactAp.fromResultBase(statement: PIRReturn): InitialFactAp? {
+        val result = statement.value?.let { PIRFlowFunctionUtils.accessPathBase(it) }
+            ?: return null
+        return if (base == AccessPathBase.Return) rebase(result) else null
     }
 }
