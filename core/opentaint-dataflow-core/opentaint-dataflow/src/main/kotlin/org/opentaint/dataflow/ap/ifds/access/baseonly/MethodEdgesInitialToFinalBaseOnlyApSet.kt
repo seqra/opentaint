@@ -1,11 +1,14 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageIdx
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSet
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesInitialToFinalBaseOnlyApSet(
@@ -67,8 +70,40 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
     ) {
         private val apSlot = maxOf(initial.apSlot, 0)
 
-        private val entries =
-            arrayOfNulls<Long2ObjectOpenHashMap<Any>>(instructionStorageSize(maxInstIdx))
+        private val entries = arrayOfNulls<Long2ObjectOpenHashMap<ExclusionStorage>>(instructionStorageSize(maxInstIdx))
+
+        private class ExclusionStorage {
+            private var exclusion: ExclusionSet? = null
+            private var accessors: IntOpenHashSet? = null
+
+            fun exclusion(): ExclusionSet = exclusion ?: error("Impossible")
+
+            fun mergeAdd(ex: ExclusionSet, slot: Int, interner: AccessorInterner): Boolean {
+                val initial = exclusion
+
+                when (ex) {
+                    is ExclusionSet.Empty -> if (exclusion == null) exclusion = ex
+                    is ExclusionSet.Universe -> exclusion = ExclusionSet.Universe
+                    is ExclusionSet.Concrete -> mergeAddConcrete(ex, slot, interner)
+                }
+
+                return exclusion !== initial
+            }
+
+            private fun mergeAddConcrete(ex: ExclusionSet.Concrete, slot: Int, interner: AccessorInterner) {
+                var currentEx = exclusion ?: ExclusionSet.Empty.also { exclusion = it }
+                val currentAccess = accessors ?: IntOpenHashSet().also { accessors = it }
+
+                for (accessor in ex.set) {
+                    val idx = interner.index(accessor)
+                    if (slotOfIdx(idx) < slot) continue
+                    if (!currentAccess.add(idx)) continue
+                    currentEx = currentEx.add(accessor)
+                }
+
+                exclusion = currentEx
+            }
+        }
 
         fun add(
             statement: CommonInst,
@@ -76,23 +111,25 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
         ): AccessWithExclusion<BaseOnlyAccess>? {
             if (final.access.isCollapsed) return null
             val idx = instructionStorageIdx(statement, languageManager)
-            val map = entries[idx] ?: Long2ObjectOpenHashMap<Any>().also { entries[idx] = it }
+            val map = entries[idx] ?: Long2ObjectOpenHashMap<ExclusionStorage>().also { entries[idx] = it }
+
             val access = final.access
-            val incoming = BaseOnlyExclusionOps.fromExclusionSet(final.exclusion, manager.interner, apSlot)
             val cur = map.get(access)
             if (cur == null) {
-                map.put(access, incoming)
-                return AccessWithExclusion(access, BaseOnlyExclusionOps.toExclusionSet(incoming, manager.interner))
+                val exStorage = ExclusionStorage()
+                map.put(access, exStorage)
+                exStorage.mergeAdd(final.exclusion, apSlot, manager.interner)
+                return AccessWithExclusion(access, exStorage.exclusion())
             }
-            val merged = BaseOnlyExclusionOps.mergeInPlace(cur, incoming)
-            if (!merged.grew) return null
-            map.put(access, merged.value)
-            return AccessWithExclusion(access, BaseOnlyExclusionOps.toExclusionSet(merged.value, manager.interner))
+
+            if (!cur.mergeAdd(final.exclusion, apSlot, manager.interner)) return null
+
+            return AccessWithExclusion(access, cur.exclusion())
         }
 
         fun collectAt(statement: CommonInst, out: (AccessWithExclusion<BaseOnlyAccess>) -> Unit) {
             entries[instructionStorageIdx(statement, languageManager)]?.forEach { (access, value) ->
-                out(AccessWithExclusion(access, BaseOnlyExclusionOps.toExclusionSet(value, manager.interner)))
+                out(AccessWithExclusion(access, value.exclusion()))
             }
         }
     }
