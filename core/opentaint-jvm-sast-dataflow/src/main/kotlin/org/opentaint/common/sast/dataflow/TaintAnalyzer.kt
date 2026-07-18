@@ -367,6 +367,6 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     companion object {
         private val logger = object : KLogging() {}.logger
-        private const val SKIP_PATH_SAMPLING = false
+        private const val SKIP_PATH_SAMPLING = true
     }
 }
