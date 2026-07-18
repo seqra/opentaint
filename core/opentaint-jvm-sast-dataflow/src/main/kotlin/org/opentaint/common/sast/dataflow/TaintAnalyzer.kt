@@ -250,6 +250,13 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             cancellationTimeout = 30.seconds
         )
 
+        if (SKIP_PATH_SAMPLING) {
+            return interProcTraces.map {
+                val res = if (it.trace != null) TracePathGenerationResult.Simple else TracePathGenerationResult.Failure
+                VulnerabilityWithTrace(it.vulnerability, res)
+            }
+        }
+
         return resolveVulnerabilityTraces(
             interProcTraces,
             resolverParams = TracePathResolveParams(
@@ -360,5 +367,6 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     companion object {
         private val logger = object : KLogging() {}.logger
+        private const val SKIP_PATH_SAMPLING = false
     }
 }
