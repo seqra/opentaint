@@ -1585,10 +1585,6 @@ class MethodTraceResolver(
         for (summaryEdge in applicableMethodSummaries) {
             val mappedSummaryFact = summaryEdge.factAp.rebase(callerFact.base)
             val deltas = callerFact.splitDelta(mappedSummaryFact)
-            if (callee.method.name == "bytesToWebResponse") {
-                println("STIRLING F2F caller=$callerFact initial=${summaryEdge.initialFactAp} final=$mappedSummaryFact deltas=$deltas")
-            }
-
             if (deltas.isEmpty()) continue
 
             // it is ok to map call arguments via exit2return
@@ -1625,10 +1621,6 @@ class MethodTraceResolver(
 
         for (summaryEdge in applicableNDSummaries) {
             val mappedSummaryFact = summaryEdge.factAp.rebase(callerFact.base)
-            if (callee.method.name == "bytesToWebResponse") {
-                println("STIRLING ND caller=$callerFact initials=${summaryEdge.initialFacts} final=$mappedSummaryFact contains=${mappedSummaryFact.contains(callerFact)}")
-            }
-
             if (!mappedSummaryFact.contains(callerFact)) continue
 
             val mappedSummaryInitialFacts = summaryEdge.initialFacts.map {
