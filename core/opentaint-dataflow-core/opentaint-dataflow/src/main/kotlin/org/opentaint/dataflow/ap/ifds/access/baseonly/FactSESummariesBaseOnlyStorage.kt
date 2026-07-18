@@ -1,9 +1,10 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
+import org.opentaint.dataflow.util.forEachEntry
+import org.opentaint.dataflow.util.long2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class FactSESummariesBaseOnlyStorage(
@@ -14,7 +15,7 @@ class FactSESummariesBaseOnlyStorage(
     override fun createStorage(): Storage<BaseOnlyAccess, BaseOnlyAccess> = SEStorage(apManager)
 
     private class SEStorage(private val manager: BaseOnlyApManager) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
-        private val perInitial = Long2ObjectOpenHashMap<MergeStorage>()
+        private val perInitial = long2ObjectMap<MergeStorage>()
 
         override fun add(
             iap: BaseOnlyAccess,
@@ -31,7 +32,7 @@ class FactSESummariesBaseOnlyStorage(
             dst: MutableList<FactSEBuilder<BaseOnlyAccess>>,
             initialFactPattern: BaseOnlyAccess?,
         ) {
-            perInitial.values.forEach { dst += it.summaries() }
+            perInitial.forEachEntry { _, storage -> dst += storage.summaries() }
         }
     }
 

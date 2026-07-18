@@ -1,7 +1,8 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonZ2FSummary
+import org.opentaint.dataflow.util.forEachLong
+import org.opentaint.dataflow.util.longSet
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodFinalBaseOnlyApSummariesStorage(
@@ -11,7 +12,7 @@ class MethodFinalBaseOnlyApSummariesStorage(
     override fun createStorage(): Storage<BaseOnlyAccess> = SummaryStorage(apManager)
 
     private class SummaryStorage(private val manager: BaseOnlyApManager) : Storage<BaseOnlyAccess> {
-        private val edges = LongOpenHashSet()
+        private val edges = longSet()
 
         override fun add(edges: List<BaseOnlyAccess>, added: MutableList<Z2FBBuilder<BaseOnlyAccess>>) {
             for (edge in edges) {
@@ -21,7 +22,7 @@ class MethodFinalBaseOnlyApSummariesStorage(
         }
 
         override fun collectEdges(dst: MutableList<Z2FBBuilder<BaseOnlyAccess>>) {
-            edges.forEach { dst += Builder(manager).setNode(it) }
+            edges.forEachLong { dst += Builder(manager).setNode(it) }
         }
     }
 

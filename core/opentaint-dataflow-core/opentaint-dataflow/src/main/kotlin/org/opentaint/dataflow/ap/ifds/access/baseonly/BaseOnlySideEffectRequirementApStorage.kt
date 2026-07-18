@@ -5,6 +5,8 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
+import org.opentaint.dataflow.util.forEachEntry
+import org.opentaint.dataflow.util.long2ObjectMap
 import java.util.concurrent.ConcurrentHashMap
 
 class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
@@ -26,15 +28,17 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
 
     override fun filterTo(dst: MutableList<InitialFactAp>, fact: FinalFactAp) {
         val storage = based[fact.base] ?: return
-        dst.addAll(storage.requirements.values)
+        storage.requirements.forEachEntry { _, requirement -> dst.add(requirement) }
     }
 
     override fun collectAllRequirementsTo(dst: MutableList<InitialFactAp>) {
-        based.values.forEach { dst.addAll(it.requirements.values) }
+        based.values.forEach { storage ->
+            storage.requirements.forEachEntry { _, requirement -> dst.add(requirement) }
+        }
     }
 
     private class RequirementStorage {
-        val requirements = Long2ObjectOpenHashMap<BaseOnlyInitialFactAp>()
+        val requirements = long2ObjectMap<BaseOnlyInitialFactAp>()
         private val delta = Long2ObjectOpenHashMap<BaseOnlyInitialFactAp>()
 
         fun mergeAdd(requirement: BaseOnlyInitialFactAp): BaseOnlyInitialFactAp? {

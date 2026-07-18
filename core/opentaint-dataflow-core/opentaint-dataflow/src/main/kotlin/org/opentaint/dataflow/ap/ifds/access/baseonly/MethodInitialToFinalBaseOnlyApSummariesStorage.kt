@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongArrayList
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
@@ -11,6 +10,7 @@ import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.dataflow.util.getOrCreateNullable
 import org.opentaint.dataflow.util.int2ObjectMap
+import org.opentaint.dataflow.util.long2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodInitialToFinalBaseOnlyApSummariesStorage(
@@ -18,14 +18,19 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
     override val apManager: BaseOnlyApManager,
 ) : CommonF2FSummary<BaseOnlyAccess, BaseOnlyAccess>(methodInitialStatement),
     BaseOnlyInitialApAccess, BaseOnlyFinalApAccess {
-    override fun createStorage(): Storage<BaseOnlyAccess, BaseOnlyAccess> = F2FStorage(apManager, F2FStorage(apManager, normalizedStorage = null))
+    override fun createStorage(): Storage<BaseOnlyAccess, BaseOnlyAccess> = F2FStorage(
+        apManager,
+        normalizedStorage = F2FStorage(apManager, normalizedStorage = null, trackDelta = false),
+        trackDelta = true,
+    )
 
     private class F2FStorage(
         private val manager: BaseOnlyApManager,
-        private val normalizedStorage: F2FStorage?
+        private val normalizedStorage: F2FStorage?,
+        private val trackDelta: Boolean,
     ) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
-        private val idEdges = IdEdgeStorage(manager)
-        private val perInitial = Long2ObjectOpenHashMap<MergingStorage>()
+        private val idEdges = IdEdgeStorage(manager, trackDelta)
+        private val perInitial = long2ObjectMap<MergingStorage>()
 
         override fun add(
             edges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
@@ -57,7 +62,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             if (initial == final) {
                 idEdges.add(initial, exclusion)
             } else {
-                val ms = perInitial.getOrCreate(initial) { MergingStorage(manager, initial) }
+                val ms = perInitial.getOrCreate(initial) { MergingStorage(manager, initial, trackDelta) }
                 if (ms.add(final, exclusion)) {
                     modified?.add(ms)
                 }
@@ -69,7 +74,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             initialFactPatter: BaseOnlyAccess?,
         ) {
             idEdges.collectAll(dst)
-            perInitial.values.forEach { it.collectAll(dst) }
+            perInitial.forEachEntry { _, storage -> storage.collectAll(dst) }
 
             if (normalizedStorage != null && manager.normalizedEdgesEnabled()) {
                 normalizedStorage.collectSummariesTo(dst, initialFactPatter)
@@ -77,8 +82,8 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         }
     }
 
-    private class IdEdgeStorage(private val manager: BaseOnlyApManager) {
-        val storage = StaticLayer()
+    private class IdEdgeStorage(private val manager: BaseOnlyApManager, trackDelta: Boolean) {
+        val storage = StaticLayer(trackDelta)
 
         fun add(access: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
             if (access.isCollapsed) return false
@@ -96,7 +101,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         }
     }
 
-    private abstract class LayerBase<S : Any> {
+    private abstract class LayerBase<S : Any>(private val trackDelta: Boolean) {
         var apExclusion: ExclusionSet? = null
         var noAccessor: S? = null
         val concrete = int2ObjectMap<S?>()
@@ -130,7 +135,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
 
                 val next = concrete.getOrCreateNullable(el) { createNext() }
                 if (!next.addNext()) return false
-                modifiedTracked().add(el)
+                if (trackDelta) modifiedTracked().add(el)
                 return true
             }
         }
@@ -138,7 +143,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         private fun handleExclusionUpdate(manager: BaseOnlyApManager, prev: ExclusionSet?, new: ExclusionSet): Boolean {
             if (prev != null && prev === new) return false
 
-            modifiedTracked().add(ABSTRACT_MARK)
+            if (trackDelta) modifiedTracked().add(ABSTRACT_MARK)
             apExclusion = new
 
             concrete.keys.toIntArray().forEach { accessorIdx ->
@@ -195,8 +200,8 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             delta?.also { delta = null }
     }
 
-    private class StaticLayer : LayerBase<FieldLayer>() {
-        override fun createNext(): FieldLayer = FieldLayer()
+    private class StaticLayer(private val trackDelta: Boolean) : LayerBase<FieldLayer>(trackDelta) {
+        override fun createNext(): FieldLayer = FieldLayer(trackDelta)
 
         fun add(
             manager: BaseOnlyApManager,
@@ -226,8 +231,8 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
     }
 
-    private class FieldLayer : LayerBase<SuffixLayer>() {
-        override fun createNext(): SuffixLayer = SuffixLayer()
+    private class FieldLayer(private val trackDelta: Boolean) : LayerBase<SuffixLayer>(trackDelta) {
+        override fun createNext(): SuffixLayer = SuffixLayer(trackDelta)
 
         fun add(manager: BaseOnlyApManager, f: AccessorIdx, x: AccessorIdx, exclusion: ExclusionSet): Boolean =
             add(manager, f, exclusion) { add(manager, x, exclusion) }
@@ -253,7 +258,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
     }
 
-    private class SuffixLayer : LayerBase<SuffixLayer.MutableExclusion>() {
+    private class SuffixLayer(trackDelta: Boolean) : LayerBase<SuffixLayer.MutableExclusion>(trackDelta) {
         private class MutableExclusion(var ex: ExclusionSet)
 
         override fun createNext(): MutableExclusion = MutableExclusion(ExclusionSet.Universe)
@@ -295,29 +300,39 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
     }
 
-    private class MergingStorage(private val manager: BaseOnlyApManager, private val initial: BaseOnlyAccess) {
-        private val finals = Long2ObjectOpenHashMap<ExclusionSet>()
-        private val deltaFinals = LongArrayList()
-        private val deltaExclusions = ArrayList<ExclusionSet>()
+    private class MergingStorage(
+        private val manager: BaseOnlyApManager,
+        private val initial: BaseOnlyAccess,
+        private val trackDelta: Boolean,
+    ) {
+        private val finals = long2ObjectMap<ExclusionSet>()
+        private val deltaFinals = if (trackDelta) LongArrayList() else null
+        private val deltaExclusions = if (trackDelta) ArrayList<ExclusionSet>() else null
 
         fun add(final: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
             if (final.isCollapsed) return false
             val cur = finals[final]
             if (cur == null) {
                 finals.put(final, exclusion)
-                deltaFinals.add(final)
-                deltaExclusions.add(exclusion)
+                if (trackDelta) {
+                    deltaFinals!!.add(final)
+                    deltaExclusions!!.add(exclusion)
+                }
                 return true
             }
             val merged = cur.union(exclusion)
             if (merged === cur) return false
             finals.put(final, merged)
-            deltaFinals.add(final)
-            deltaExclusions.add(merged)
+            if (trackDelta) {
+                deltaFinals!!.add(final)
+                deltaExclusions!!.add(merged)
+            }
             return true
         }
 
         fun getAndResetDelta(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
+            val deltaFinals = deltaFinals ?: return
+            val deltaExclusions = deltaExclusions!!
             for (k in 0 until deltaFinals.size) {
                 dst += Builder(manager).setInitialAp(initial).setExitAp(deltaFinals.getLong(k))
                     .setExclusion(deltaExclusions[k])
@@ -327,7 +342,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         }
 
         fun collectAll(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
-            finals.forEach { (final, exclusion) ->
+            finals.forEachEntry { final, exclusion ->
                 dst += Builder(manager).setInitialAp(initial).setExitAp(final).setExclusion(exclusion)
             }
         }
