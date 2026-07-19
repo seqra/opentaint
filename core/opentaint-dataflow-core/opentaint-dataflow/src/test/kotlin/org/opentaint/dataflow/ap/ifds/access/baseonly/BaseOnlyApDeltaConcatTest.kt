@@ -1,10 +1,17 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
+import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
+import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -77,6 +84,78 @@ class BaseOnlyApDeltaConcatTest {
         val split = ai.splitConcreteInitial(fieldAbstract, closedInitial)!!
         assertEquals(fieldAbstract, split.matched)
         assertEquals(chain(mark), split.delta)
+    }
+
+    @Test
+    fun `BaseOnly resolves the Stirling semantic sink branch after lossy normalization`() {
+        val manager = BaseOnlyApManager(
+            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            fieldSensitive = true,
+        )
+        val body = FieldAccessor("Response", "Body", "Token")
+        val sink = TaintMarkAccessor("sink_35")
+        val bodyIdx = manager.interner.index(body)
+        val sinkIdx = manager.interner.index(sink)
+        val summaryAccess = ai.build(intArrayOf(bodyIdx), isAbstract = true)
+        val callerAccess = ai.build(intArrayOf(sinkIdx), isAbstract = false)
+        val base = AccessPathBase.Argument(0)
+        // BaseOnly normalized the Tree union `Body.* | sink_35.$` to
+        // `Body.* / {sink_35}`, dropping the explicit semantic-mark branch.
+        val summaryFinal = BaseOnlyFinalFactAp(
+            manager,
+            base,
+            summaryAccess,
+            ExclusionSet.Concrete(sink),
+        )
+        val callerFact = BaseOnlyInitialFactAp(
+            manager,
+            base,
+            callerAccess,
+            ExclusionSet.Empty,
+        )
+        val splits = callerFact.splitDelta(summaryFinal)
+
+        assertEquals(1, splits.size, "the structural summary exclusion must not reject a semantic trace mark")
+        assertEquals(summaryAccess, (splits.single().first as BaseOnlyInitialFactAp).access)
+        assertEquals(
+            callerAccess,
+            (splits.single().second as BaseOnlyNodeInitialDelta).access,
+            "the sink-only caller suffix must survive as the trace delta",
+        )
+    }
+
+    @Test
+    fun `Tree resolves the Stirling semantic sink branch retained beside the open body branch`() {
+        val manager = TreeApManager(
+            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            RefManager(),
+        )
+        val body = FieldAccessor("Response", "Body", "Token")
+        val sink = TaintMarkAccessor("sink_35")
+        val bodyIdx = manager.interner.index(body)
+        val sinkIdx = manager.interner.index(sink)
+        val base = AccessPathBase.Argument(0)
+
+        // This is the Tree summary observed for the same call boundary: the open
+        // response-body branch and the explicit semantic sink branch coexist.
+        val bodyBranch = manager.abstractNode.addParent(bodyIdx)
+        val sinkBranch = manager.finalNode.addParent(sinkIdx)
+        val summaryFinal = AccessTree(
+            manager,
+            base,
+            bodyBranch.mergeAdd(sinkBranch),
+            ExclusionSet.Empty,
+        )
+        val callerAccess = AccessPath.AccessNode(
+            manager,
+            sinkIdx,
+            AccessPath.AccessNode(manager, manager.interner.index(FinalAccessor), null),
+        )
+        val callerFact = AccessPath(manager, base, callerAccess, ExclusionSet.Empty)
+
+        val (matched, delta) = callerFact.splitDelta(summaryFinal).single()
+        assertEquals(callerFact, matched)
+        assertTrue(delta.isEmpty)
     }
 
     @Test

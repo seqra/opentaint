@@ -123,6 +123,11 @@ abstract class AnalysisTest : BasicTestUtils() {
     open val useDefaultConfig = false
     open val useDefaultUnrollStrategy = false
 
+    open fun customizeRulesProvider(rulesProvider: TaintRulesProvider): TaintRulesProvider = rulesProvider
+
+    open fun unitResolver(projectLocation: RegisteredLocation): JIRUnitResolver =
+        SingleLocationUnit(projectLocation)
+
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -159,6 +164,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         var rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
         rulesProvider = JIRMethodExitRuleProvider(rulesProvider)
+        rulesProvider = customizeRulesProvider(rulesProvider)
 
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
@@ -179,7 +185,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
             override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
-            override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
+            override fun unitResolver() = this@AnalysisTest.unitResolver(cls.declaration.location)
         }
 
         return analyzer.use {
