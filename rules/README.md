@@ -4,6 +4,8 @@
 
 A curated collection of security rules for [OpenTaint](https://github.com/seqra/opentaint), a static analysis engine for Java and Kotlin that combines Semgrep-style pattern matching with dataflow/taint analysis.
 
+For practical authoring guidance, start with [Writing high-quality rules](../docs/writing-rules.md), then use the focused references for [AST patterns](../docs/ast-patterns.md), [pattern clauses, taint rules, and joins](../docs/rule-pattern-clauses.md), [the whole-object star operator](../docs/star-operator.md), and [rule metadata](../docs/rule-metadata.md). Flows through external libraries may also need [pass-through models](../docs/passthrough-models.md) or [dataflow approximations](../docs/dataflow-models.md).
+
 The repository provides:
 
 - A logically structured set of executable security rules for real-world Java/Kotlin applications
@@ -20,8 +22,9 @@ The repository provides:
 │  ├─ security/       # Executable rules run against user code (one file per vulnerability class)
 │  └─ lib/            # Reusable rule fragments, not executed directly (marked as lib: true)
 └─ test/
+   ├─ rule-test.yaml  # Maps each rule id to positive/negative sample methods
    └─ src/main/java/
-      └─ security/  # Rule tests with @PositiveRuleSample / @NegativeRuleSample
+      └─ security/    # Sample code referenced by rule-test.yaml entries
 ```
 
 ### `ruleset/`: Executable Security Rules
@@ -159,28 +162,20 @@ Rules follow Semgrep syntax and concepts:
 
 ## Testing and Rule Coverage
 
-Rule behavior is validated via Java test snippets under:
+Rule behavior is validated via Java sample code under `test/src/main/java/security/`, wired to rules by entries in `test/rule-test.yaml`:
 
-```text
-test/src/main/java/security/
+```yaml
+tests:
+  - rule-id: java/security/code-injection.yaml#el-injection-in-servlet-app
+    positive:
+      - security.codeinjection.ElInjectionSamples$UnsafeElServlet#doGet
+    negative:
+      - security.codeinjection.ElInjectionSamples$SafeElServlet#doGet
 ```
 
-Each test class declares **inline code samples** annotated with:
-
-- `@PositiveRuleSample(...)` — code that **must** trigger a specific rule
-- `@NegativeRuleSample(...)` — code that **must not** trigger that rule (not shown above but typically paired with positives)
-
-Annotation usage (conceptually):
-
-```java
-@PositiveRuleSample(
-    value = "java/security/xss.yaml",
-    id = "xss-in-servlet-app"
-)
-class SomeServletXssSample {
-    // vulnerable code here
-}
-```
+- `rule-id` is `<ruleset-relative-path>#<rule-id>`.
+- `positive` lists sample methods that **must** trigger the rule.
+- `negative` lists sample methods that **must not** trigger it (typically paired with positives).
 
 ### Rule Coverage Enforcement
 
@@ -193,9 +188,9 @@ The CI helper `RuleCoverageCheck` (in `test/src/main/java/rules/RuleCoverageChec
    - Active rules are those in `ruleset/` where:
      - `options.disabled` is not `true`, and
      - `options.lib` is not `true`
-   - Each such rule must have at least one `@PositiveRuleSample` referencing:
-     - `value = "<relative-path-to-rule-yaml>"` (e.g. `java/security/xss.yaml`)
-     - `id = "<rule-id>"` (the rule's `id` value)
+   - Each such rule must have at least one `rule-test.yaml` entry whose `rule-id` is
+     `<relative-path-to-rule-yaml>#<rule-id>` (e.g. `java/security/xss.yaml#xss-in-servlet-app`)
+     with at least one `positive` sample.
 
 If any active rule is not covered by a positive sample, or if any YAML is invalid, the checker:
 
@@ -208,20 +203,20 @@ If any active rule is not covered by a positive sample, or if any YAML is invali
 
 This repository exposes a Gradle verification task:
 
-- **`verification/checkRulesCoverage`**
+- **`checkRulesCoverage`** (in the `verification` group)
 
 Behavior:
 
 - Runs the `RuleCoverageCheck` helper
 - Ensures:
-   - All rule YAMLs in `ruleset/` are syntactically valid
+  - All rule YAMLs in `ruleset/` are syntactically valid
   - Every enabled, non-lib rule has at least one positive test sample
 
-Usage (from the `test/root` subdirectory):
+Usage (from the `test` subdirectory):
 
 ```bash
-cd test/root
-../gradlew verification/checkRulesCoverage
+cd test
+./gradlew checkRulesCoverage
 ```
 
 On success:
@@ -250,13 +245,12 @@ When introducing or changing rules, follow these guidelines:
    - Reference join sources and sinks by `tag`, and tag each new library source or sink.
 
 4. **Update tests**
-   - Add at least one `@PositiveRuleSample` (and typically `@NegativeRuleSample`) under `test/src/main/java/security/`.
-   - Reference the rule by:
-     - `value = "<relative YAML path under project root>"`
-     - `id = "<rule id>"`
+   - Add sample code under `test/src/main/java/security/` and reference it from a
+     `test/rule-test.yaml` entry with at least one `positive` (and typically `negative`) method.
+   - Reference the rule by `rule-id: <relative YAML path>#<rule id>`.
 
 5. **Run coverage checks**
-   - From the `test/root` subdirectory execute `../gradlew verification/checkRulesCoverage` to ensure:
+   - From the `test` subdirectory execute `./gradlew checkRulesCoverage` to ensure:
      - No YAML errors
      - All executable rules are covered by tests
 

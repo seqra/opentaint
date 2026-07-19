@@ -17,6 +17,13 @@
 - [Installation Guide](installation.md) - Full installation instructions
 - [Usage Guide](usage.md) - Comprehensive usage reference
 - [Configuration Guide](configuration.md) - All configuration options
+- [Writing High-Quality Rules](writing-rules.md) - Practical workflow, real-world recipes, testing, and review guidance
+  - [AST Patterns](ast-patterns.md) - Metavariables, explicit dataflow normal forms, ellipses, and Java/Go syntax
+  - [Pattern Clauses, Taint Rules, and Joins](rule-pattern-clauses.md) - Formula composition, negatives, taint roles, reuse, and graph restrictions
+  - [Whole-Object Star Operator](star-operator.md) - Field-sensitive base/any-field semantics with source, sink, sanitizer, propagator, and join examples
+  - [Rule Metadata and Lifecycle](rule-metadata.md) - IDs, languages, messages, severity, metadata, tags, options, and inactive fields
+- [Pass-Through Models](passthrough-models.md) - YAML models for argument, result, receiver, field, builder, and container propagation
+- [Dataflow Approximations](dataflow-models.md) - Java models for callbacks, streams, futures, async code, and coroutines
 - [Docker](docker.md) - Run OpenTaint in containers and CI/CD pipelines
 - [Precompiled Classes and JARs Analysis](classes-and-jars-analysis.md) - Analyze pre-built artifacts when source compilation isn't available
 - [Spring Boot Endpoint Extraction](spring-boot-endpoints.md) - Automatic HTTP endpoint mapping for Spring applications
