@@ -2,7 +2,6 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
-import base.TaintRuleFalsePositive;
 
 /**
  * Doc validation: documents that a pattern-not-inside whose metavariables
@@ -25,7 +24,6 @@ public abstract class NegOnlyNotInsideDoc implements RuleSample {
         }
     }
 
-    @TaintRuleFalsePositive("negative-only metavariables have no positive domain to subtract from")
     static class Negative extends NegOnlyNotInsideDoc {
         @Override
         public void entrypoint() {

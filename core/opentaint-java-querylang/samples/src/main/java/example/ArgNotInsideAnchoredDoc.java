@@ -2,7 +2,6 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
-import base.TaintRuleFalsePositive;
 
 /**
  * Doc validation: argument-position pattern-not-inside does not anchor even
@@ -29,7 +28,6 @@ public abstract class ArgNotInsideAnchoredDoc implements RuleSample {
         }
     }
 
-    @TaintRuleFalsePositive("negative clauses do not anchor on argument-position events")
     static class Negative extends ArgNotInsideAnchoredDoc {
         @Override
         public void entrypoint() {

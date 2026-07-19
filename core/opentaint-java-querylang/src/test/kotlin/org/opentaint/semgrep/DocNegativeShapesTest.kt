@@ -6,6 +6,14 @@ import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.opentaint.semgrep.util.SampleBasedTest
 import kotlin.test.Test
 
+/**
+ * Pins negative-clause anchoring behavior. The failing tests are intentional:
+ * their Negative samples assert the desired exclusion semantics, and they stay
+ * red while negative clauses do not anchor on argument-position events (or on
+ * metavariables without a positive domain). The passing tests are the positive
+ * controls proving the same events match positively, and the receiver-position
+ * counterparts proving the exclusions work in receiver shape.
+ */
 @TestInstance(PER_CLASS)
 class DocNegativeShapesTest : SampleBasedTest() {
 

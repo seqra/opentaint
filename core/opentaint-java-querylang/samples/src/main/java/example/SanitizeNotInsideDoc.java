@@ -2,7 +2,6 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
-import base.TaintRuleFalsePositive;
 
 /**
  * Doc validation: pattern-not-inside whose excluded event is the
@@ -27,7 +26,6 @@ public abstract class SanitizeNotInsideDoc implements RuleSample {
         }
     }
 
-    @TaintRuleFalsePositive("negative clauses do not anchor on argument-position events")
     static class Negative extends SanitizeNotInsideDoc {
         @Override
         public void entrypoint() {

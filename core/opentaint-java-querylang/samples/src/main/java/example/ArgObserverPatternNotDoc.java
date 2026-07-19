@@ -2,7 +2,6 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
-import base.TaintRuleFalsePositive;
 
 /**
  * Doc validation: documents the current argument-position restriction: an
@@ -24,7 +23,6 @@ public abstract class ArgObserverPatternNotDoc implements RuleSample {
         }
     }
 
-    @TaintRuleFalsePositive("negative clauses do not anchor on argument-position events")
     static class Negative extends ArgObserverPatternNotDoc {
         @Override
         public void entrypoint() {

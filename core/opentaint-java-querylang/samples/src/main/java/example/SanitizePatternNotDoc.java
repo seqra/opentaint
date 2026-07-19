@@ -2,7 +2,6 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
-import base.TaintRuleFalsePositive;
 
 /**
  * Doc validation: documents the current argument-position restriction: a
@@ -25,7 +24,6 @@ public abstract class SanitizePatternNotDoc implements RuleSample {
         }
     }
 
-    @TaintRuleFalsePositive("negative clauses do not anchor on argument-position events")
     static class Negative extends SanitizePatternNotDoc {
         @Override
         public void entrypoint() {

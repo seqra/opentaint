@@ -2,7 +2,6 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
-import base.TaintRuleFalsePositive;
 
 /**
  * Doc validation: full-form pattern-not whose added event uses the produced
@@ -26,7 +25,6 @@ public abstract class ArgFullPatternNotDoc implements RuleSample {
         }
     }
 
-    @TaintRuleFalsePositive("negative clauses do not anchor on argument-position events")
     static class Negative extends ArgFullPatternNotDoc {
         @Override
         public void entrypoint() {
