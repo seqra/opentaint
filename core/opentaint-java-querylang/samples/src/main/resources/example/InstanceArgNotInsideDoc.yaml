@@ -5,10 +5,10 @@ rules:
     severity: ERROR
     message: match example/InstanceArgNotInsideDoc
     patterns:
-      - pattern: |
+      - pattern-inside: |
           $RESULT = decode($INPUT);
           ...
-          consume($RESULT);
+      - pattern: consume($RESULT)
       - pattern-not-inside: |
           $_.verify($RESULT);
           ...

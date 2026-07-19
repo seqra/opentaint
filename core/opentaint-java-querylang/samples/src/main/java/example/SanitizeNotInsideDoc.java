@@ -5,10 +5,11 @@ import base.RuleSet;
 
 /**
  * Doc validation: pattern-not-inside whose excluded event is the
- * self-sanitizing reassignment does not anchor the exclusion — the tracked
- * value sits in argument position of the static call. The identical event
- * matches positively (SanitizeEventSanityDoc), and the receiver-position
- * counterpart excludes (ReceiverSanitizePatternNotDoc).
+ * self-sanitizing reassignment, in the anchored shape: producer in
+ * pattern-inside, single-event main pattern, so the excluded context can
+ * enclose the match. The identical event matches positively
+ * (SanitizeEventSanityDoc); the receiver-position counterpart excludes
+ * (ReceiverSanitizePatternNotDoc).
  */
 @RuleSet("example/SanitizeNotInsideDoc.yaml")
 public abstract class SanitizeNotInsideDoc implements RuleSample {

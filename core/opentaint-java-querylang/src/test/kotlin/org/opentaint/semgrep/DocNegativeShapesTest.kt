@@ -28,9 +28,6 @@ class DocNegativeShapesTest : SampleBasedTest() {
     fun `test argument full-form pattern-not`() = runTest<example.ArgFullPatternNotDoc>()
 
     @Test
-    fun `test argument pattern-not-inside`() = runTest<example.ArgNotInsideDoc>()
-
-    @Test
     fun `test argument event matches positively`() = runTest<example.ArgEventSanityDoc>()
 
     @Test

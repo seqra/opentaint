@@ -5,8 +5,9 @@ import base.RuleSet;
 
 /**
  * Doc validation: pattern-not-inside whose excluded event is an instance
- * call taking the produced value as an argument (anonymous receiver) does
- * not anchor the exclusion; the receiver-position counterparts do.
+ * call taking the produced value as an argument (anonymous receiver), in
+ * the anchored shape: producer in pattern-inside, single-event main
+ * pattern.
  */
 @RuleSet("example/InstanceArgNotInsideDoc.yaml")
 public abstract class InstanceArgNotInsideDoc implements RuleSample {
