@@ -1,0 +1,14 @@
+rules:
+  - id: example-ReceiverNotInsideSpanDoc
+    languages:
+      - java
+    severity: ERROR
+    message: match example/ReceiverNotInsideSpanDoc
+    patterns:
+      - pattern: |
+          $CLIENT = Client.builder();
+          ...
+          $CLIENT.connect($URL);
+      - pattern-not-inside: |
+          $CLIENT.allowHost("trusted.example");
+          ...

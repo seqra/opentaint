@@ -1,0 +1,14 @@
+rules:
+  - id: example-InstanceArgNotInsideDoc
+    languages:
+      - java
+    severity: ERROR
+    message: match example/InstanceArgNotInsideDoc
+    patterns:
+      - pattern: |
+          $RESULT = decode($INPUT);
+          ...
+          consume($RESULT);
+      - pattern-not-inside: |
+          $_.verify($RESULT);
+          ...
