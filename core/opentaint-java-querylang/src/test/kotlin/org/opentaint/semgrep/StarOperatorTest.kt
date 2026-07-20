@@ -24,6 +24,39 @@ class StarOperatorTest : SampleBasedTest() {
     @Test
     fun `star sanitizer clears field taint`() = runTest<taint.StarSanitizer>()
 
+    // ---- Deep-nesting matrix: taint hidden 5+ fields deep and/or 5+ calls deep ----
+
+    // Starred source, taint 5 fields deep, unhidden by a nested field read. Needs the
+    // any-accessor unroll (like `star source field flow`) so the source star reaches a
+    // concrete deep field read.
+    @Test
+    fun `star deep source field flow`() =
+        runTest<taint.StarDeepSource>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
+
+    // Starred sink observes taint written 5 fields deep (default unroll).
+    @Test
+    fun `star deep sink any field`() = runTest<taint.StarDeepSink>()
+
+    // Starred sanitizer must clear taint 5 fields deep (default unroll).
+    @Test
+    fun `star deep sanitizer clears field taint`() = runTest<taint.StarDeepSanitizer>()
+
+    // Starred source threaded through a 5+ hop interprocedural chain that alternately hides
+    // taint inside an object and exposes it. Needs the any-accessor unroll.
+    @Test
+    fun `star interprocedural chain`() =
+        runTest<taint.StarInterproc>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
+
+    // Both ends starred: whole-object source + whole-object sink, nested object in between.
+    @Test
+    fun `star source and sink`() =
+        runTest<taint.StarSourceAndSink>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
+
+    // Starred source + starred sanitizer over a deep field chain.
+    @Test
+    fun `star source and sanitizer`() =
+        runTest<taint.StarSourceAndSanitizer>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
+
     @AfterAll
     fun close() {
         closeRunner()

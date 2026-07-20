@@ -638,5 +638,22 @@ class GoMassiveSampleTest : GoSampleBasedTestBase("GO_MASSIVE_SAMPLES_DIR") {
     @Test
     fun star03SanitizerField() = runSampleDefault("star_03_sanitizer_field")
 
+    // ─── Deep-nesting matrix: taint hidden 5+ fields deep and/or 5+ calls deep ───
+
+    @Test
+    fun star04DeepSinkField() = runSampleDefault("star_04_deep_sink_field")
+
+    @Test
+    fun star05DeepSourceField() = runSampleDefault("star_05_deep_source_field")
+
+    @Test
+    fun star06DeepSanitizerField() = runSampleDefault("star_06_deep_sanitizer_field")
+
+    @Test
+    fun star07InterprocChain() = runSampleDefault("star_07_interproc_chain")
+
+    @Test
+    fun star08SourceAndSink() = runSampleDefault("star_08_source_and_sink")
+
     private fun runSampleDefault(name: String) = runSample(name, useDefaultConfig = true)
 }
