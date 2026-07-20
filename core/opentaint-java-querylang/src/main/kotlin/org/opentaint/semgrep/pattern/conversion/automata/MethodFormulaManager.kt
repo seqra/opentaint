@@ -6,7 +6,7 @@ import org.opentaint.semgrep.pattern.conversion.automata.MethodFormula.Or
 import org.opentaint.semgrep.pattern.conversion.automata.MethodFormula.True
 
 /**
- * A positive whole-object taint occurrence `$X*` (star = true) that coincides, at the SAME
+ * A positive whole-object taint occurrence `$*X` (star = true) that coincides, at the SAME
  * parameter position, with an unstarred `pattern-not $X` (star = false) — the T/F cell of the
  * star/pattern-not coincidence matrix. The "keep field, drop base" scoped semantics this would
  * imply is NOT implemented; the combination is treated as a full (exclude-all) match, same as the

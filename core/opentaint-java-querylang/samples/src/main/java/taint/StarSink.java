@@ -14,7 +14,7 @@ public abstract class StarSink implements RuleSample {
             String data = src();
             Box b = new Box();
             b.value = data;   // taints a field
-            sink(b);          // $Y* sink fires on tainted field
+            sink(b);          // $*Y sink fires on tainted field
         }
     }
 

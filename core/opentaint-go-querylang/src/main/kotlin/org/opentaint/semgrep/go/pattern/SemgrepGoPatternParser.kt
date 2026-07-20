@@ -662,12 +662,12 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
     }
 
     private fun parseOperand(ctx: GoParser.OperandContext): SemgrepGoPattern {
-        // Starred metavar `$X*` (STAR is an unambiguous discriminator; matched by the
-        // `metavarStarAdjacent()` grammar predicate, so `$X * y` / `*p` never reach here).
-        // A starred TYPED metavar `($X* : T)` also carries STAR but has a type_, so exclude it here
-        // and let the typed branch below produce a starred TypedMetavar.
-        if (ctx.STAR() != null && ctx.METAVAR_IDENT() != null && ctx.type_() == null) {
-            return Metavar(ctx.METAVAR_IDENT().text, star = true)
+        // Starred metavar `$*X`: the `METAVAR_STAR_IDENT` token (`$*` prefix) is an unambiguous
+        // discriminator, so `$X * y` (multiplication) / `*p` (deref) never reach here. A starred
+        // TYPED metavar `($*X : T)` also carries METAVAR_STAR_IDENT but has a type_, so exclude it
+        // here and let the typed branch below produce a starred TypedMetavar.
+        if (ctx.METAVAR_STAR_IDENT() != null && ctx.type_() == null) {
+            return Metavar(ctx.METAVAR_STAR_IDENT().text.stripStar(), star = true)
         }
         ctx.literal()?.let { return parseLiteral(it) }
         ctx.operandName()?.let {
@@ -675,13 +675,22 @@ private class SemgrepGoPatternParserVisitor : GoParserBaseVisitor<SemgrepGoPatte
             ctx.typeArgs()?.let { /* ignore type args on operand */ }
             return base
         }
-        // typed metavar `($X : T)`, or starred typed metavar `($X* : T)` when STAR is present.
-        if (ctx.METAVAR_IDENT() != null && ctx.type_() != null) {
-            return TypedMetavar(ctx.METAVAR_IDENT().text, parseType(ctx.type_()), star = ctx.STAR() != null)
+        // typed metavar `($X : T)` (METAVAR_IDENT), or starred typed metavar `($*X : T)`
+        // (METAVAR_STAR_IDENT, star prefix stripped) when the type_ is present.
+        if (ctx.type_() != null) {
+            ctx.METAVAR_STAR_IDENT()?.let {
+                return TypedMetavar(it.text.stripStar(), parseType(ctx.type_()), star = true)
+            }
+            ctx.METAVAR_IDENT()?.let {
+                return TypedMetavar(it.text, parseType(ctx.type_()), star = false)
+            }
         }
         ctx.expression()?.let { return parseExpression(it) }
         throw UnsupportedGoElement(ctx)
     }
+
+    // `$*X` -> `$X`: drop the `*` that follows the leading `$`, yielding the plain metavar name.
+    private fun String.stripStar(): String = "$" + substring(2)
 
     private fun parseOperandName(ctx: GoParser.OperandNameContext): SemgrepGoPattern {
         ctx.qualifiedIdent()?.let {

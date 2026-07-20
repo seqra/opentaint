@@ -34,7 +34,7 @@ class TaintCleanCompositionStrategy<Item, Cond, Assign, Clean>(
 
         val isStar = pos is PositionBaseWithModifiers.WithModifiers &&
             pos.modifiers.contains(PositionModifier.AnyField)
-        // star ($X*): clean the any-field of each cleaner position (Result.*, etc.),
+        // star ($*X): clean the any-field of each cleaner position (Result.*, etc.),
         // on the SAME base as the plain value clean — not the raw metavar position.
         val emitPositions = if (isStar) cleanerPos.map { it.withAnyField() } else cleanerPos
 

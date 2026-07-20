@@ -180,11 +180,15 @@ class MetavarConstraintParsingFailure : UnsupportedFeatureNonBlockingMessage() {
 }
 
 class StarPatternNotCoincidenceUnsupported(metavar: String) : UnsupportedFeatureNonBlockingMessage() {
+    // Prefix-star form of the metavar: `$NAME` -> `$*NAME` (the star binds right after the `$`).
+    private val starred: String =
+        if (metavar.startsWith("$")) "\$*" + metavar.substring(1) else "\$*$metavar"
+
     override val message: String =
-        "A positive whole-object taint occurrence `$metavar*` coincides at the same position with an " +
+        "A positive whole-object taint occurrence `$starred` coincides at the same position with an " +
             "unstarred `pattern-not $metavar`. The scoped 'keep field, drop base' semantics of this " +
             "combination is unsupported and reserved; it is treated as a full (exclude-all) match. " +
-            "To keep the current behavior explicitly, star the pattern-not occurrence as `$metavar*`."
+            "To keep the current behavior explicitly, star the pattern-not occurrence as `$starred`."
 }
 
 class TaintAutomataCreationFailure(causeMessage: String?) : InternalWarningBlockingMessage() {

@@ -142,10 +142,14 @@ private fun IdentifierContext.parseName(): Name = withRule {
     return ConcreteName(text)
 }
 
-// The starred `variableDeclaratorId` alternative (`METAVAR '*'`) has no `identifier` subrule.
-// Returns the metavar name for that alternative, or null for the plain `identifier ('[' ']')*` one.
+// The starred `variableDeclaratorId` alternative (`STARRED_METAVAR`, i.e. `$*VAR`) has no
+// `identifier` subrule. Returns the metavar name (`$VAR`, star prefix stripped) for that
+// alternative, or null for the plain `identifier ('[' ']')*` one.
 private fun JavaParser.VariableDeclaratorIdContext.starredMetavarName(): String? =
-    if (identifier() == null) METAVAR().text else null
+    if (identifier() == null) STARRED_METAVAR().text.stripStar() else null
+
+// `$*VAR` -> `$VAR`: drop the `*` that follows the leading `$`, yielding the plain metavar name.
+private fun String.stripStar(): String = "$" + substring(2)
 
 private fun TypeIdentifierContext.parseTypeIdentifierName(): Name = withRule {
     tryRule(TypeIdentifierContext::METAVAR) { return MetavarName(it.text) }
@@ -306,7 +310,7 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
 
     override fun visitVariableDeclarator(ctx: VariableDeclaratorContext): VariableAssignment = ctx.withRule {
         val declaratorId = value(VariableDeclaratorContext::variableDeclaratorId)
-        // Starred declarator (`$X* = ...`): whole-object taint on the declared variable.
+        // Starred declarator (`$*X = ...`): whole-object taint on the declared variable.
         val variable = declaratorId.starredMetavarName()?.let { Metavar(it, star = true) }
             ?: declaratorId.parse("Can't parse variable name")
         val initializer = get(VariableDeclaratorContext::variableInitializer)
@@ -360,7 +364,7 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
             val type = value(FormalParameterContext::typeType).accept(typenameParser) ?: ctx.parsingFailed()
             val modifiers = value(FormalParameterContext::variableModifier).mapNotNull { parseModifier(it) }
 
-            // Starred declarator alternative `METAVAR '*'`: the `identifier` subrule is absent.
+            // Starred declarator alternative `STARRED_METAVAR` (`$*VAR`): the `identifier` subrule is absent.
             declaratorId.starredMetavarName()?.let { starName ->
                 return FormalArgument(MetavarName(starName), type, modifiers, star = true)
             }
@@ -714,7 +718,7 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
         ctx.primary().parse()
 
     override fun visitPrimaryStarredMetavar(ctx: JavaParser.PrimaryStarredMetavarContext): SemgrepJavaPattern =
-        Metavar(ctx.METAVAR().text, star = true)
+        Metavar(ctx.STARRED_METAVAR().text.stripStar(), star = true)
 
     override fun visitPrimaryClassLiteral(ctx: JavaParser.PrimaryClassLiteralContext): SemgrepJavaPattern = ctx.todo()
 

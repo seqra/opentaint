@@ -72,7 +72,7 @@ class StarOperatorRuleGenTest {
                 mode: taint
                 pattern-sources:
                   - patterns:
-                      - pattern: sink(${'$'}X*);
+                      - pattern: sink(${'$'}*X);
                       - focus-metavariable: ${'$'}X
                 pattern-sinks:
                   - pattern: other(${'$'}Y);
@@ -94,7 +94,7 @@ class StarOperatorRuleGenTest {
 
     @Test
     fun `starred assignment-LHS source assigns value and any-field`() {
-        // F1: the star sits on the assignment LHS metavar (`$X* = src()`), not a call argument.
+        // F1: the star sits on the assignment LHS metavar (`$*X = src()`), not a call argument.
         // The whole-object taint must still emit BOTH a plain-value assign and an any-field assign.
         val cfg = config(
             """
@@ -105,7 +105,7 @@ class StarOperatorRuleGenTest {
                 languages: [java]
                 mode: taint
                 pattern-sources:
-                  - pattern: ${'$'}X* = src();
+                  - pattern: ${'$'}*X = src();
                 pattern-sinks:
                   - pattern: sink(${'$'}Y);
             """.trimIndent()
@@ -126,7 +126,7 @@ class StarOperatorRuleGenTest {
 
     @Test
     fun `starred typed-declaration source assigns value and any-field`() {
-        // F5: a starred TYPED declaration (`String $X* = src()`) must load and thread the star
+        // F5: a starred TYPED declaration (`String $*X = src()`) must load and thread the star
         // through the assignment path, emitting both a plain-value and an any-field assign.
         val cfg = config(
             """
@@ -137,7 +137,7 @@ class StarOperatorRuleGenTest {
                 languages: [java]
                 mode: taint
                 pattern-sources:
-                  - pattern: String ${'$'}X* = src();
+                  - pattern: String ${'$'}*X = src();
                 pattern-sinks:
                   - pattern: sink(${'$'}Y);
             """.trimIndent()
@@ -170,7 +170,7 @@ class StarOperatorRuleGenTest {
                   - pattern: ${'$'}X = src();
                 pattern-sanitizers:
                   - patterns:
-                      - pattern: clean(${'$'}X*);
+                      - pattern: clean(${'$'}*X);
                       - focus-metavariable: ${'$'}X
                 pattern-sinks:
                   - pattern: sink(${'$'}X);
@@ -209,7 +209,7 @@ class StarOperatorRuleGenTest {
                   - pattern: ${'$'}X = src();
                 pattern-sinks:
                   - patterns:
-                      - pattern: sink(${'$'}Y*);
+                      - pattern: sink(${'$'}*Y);
                       - focus-metavariable: ${'$'}Y
             """.trimIndent()
         )
@@ -244,7 +244,7 @@ class StarOperatorRuleGenTest {
                   - pattern: ${'$'}X = src();
                 pattern-propagators:
                   - patterns:
-                      - pattern: ${'$'}TO = wrap(${'$'}X*);
+                      - pattern: ${'$'}TO = wrap(${'$'}*X);
                     from: ${'$'}X
                     to: ${'$'}TO
                 pattern-sinks:
@@ -273,7 +273,7 @@ class StarOperatorRuleGenTest {
                   - pattern: ${'$'}X = src();
                 pattern-sinks:
                   - patterns:
-                      - pattern: sink(${'$'}Y*);
+                      - pattern: sink(${'$'}*Y);
                       - pattern-not: sink(safe());
                       - focus-metavariable: ${'$'}Y
             """.trimIndent()

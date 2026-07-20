@@ -7,7 +7,7 @@ import base.RuleSet;
 public abstract class StarSanitizer implements RuleSample {
     String src() { return "tainted"; }
     static final class Box { String value; String getValue() { return value; } }
-    Box clean(Box b) { return b; }   // $C* sanitizer: cleans the object + all its fields
+    Box clean(Box b) { return b; }   // $*C sanitizer: cleans the object + all its fields
     void sink(String data) {}
 
     // Positive: tainted field reaches sink with NO sanitizer between
@@ -19,13 +19,13 @@ public abstract class StarSanitizer implements RuleSample {
         }
     }
 
-    // Negative: the $C* sanitizer must clean the field taint on the value flowing onward
+    // Negative: the $*C sanitizer must clean the field taint on the value flowing onward
     final static class NegativeSanitizedField extends StarSanitizer {
         @Override public void entrypoint() {
             Box b = new Box();
             b.value = src();
             Box cleaned = clean(b);
-            sink(cleaned.getValue());   // field taint must be gone after $C* sanitizer
+            sink(cleaned.getValue());   // field taint must be gone after $*C sanitizer
         }
     }
 }

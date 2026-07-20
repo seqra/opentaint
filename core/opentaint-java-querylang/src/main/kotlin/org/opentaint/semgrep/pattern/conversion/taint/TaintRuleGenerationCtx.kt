@@ -23,7 +23,7 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
             pos: PositionBaseWithModifiers
         ): Cond? = null
 
-        // Any-field variant of [stateContains] for starred ($X*) sinks. Must emit the SAME mark(s)
+        // Any-field variant of [stateContains] for starred ($*X) sinks. Must emit the SAME mark(s)
         // as [stateContains] on the SAME position, lifted to "contains on any field", so the plain
         // and any-field arms of a starred sink stay coherent. Default mirrors stateContains == null.
         fun stateContainsOnAnyField(

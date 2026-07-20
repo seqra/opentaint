@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Guards the $VAR* star-operator serialization footgun: ContainsMarkOnAnyField is
+ * Guards the $*VAR star-operator serialization footgun: ContainsMarkOnAnyField is
  * field-shape-identical to ContainsMark, so before it got a distinct discriminating
  * key a YAML round-trip silently demoted it to plain ContainsMark, losing the
  * any-field/field-sensitive semantics.

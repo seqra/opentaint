@@ -627,7 +627,7 @@ class GoMassiveSampleTest : GoSampleBasedTestBase("GO_MASSIVE_SAMPLES_DIR") {
     @Test
     fun xss20VariadicSprintf() = runSampleDefault("xss_20_variadic_sprintf")
 
-    // ─── Star-operator ($VAR*) field-taint e2e samples (parity with Java StarSource/StarSink/StarSanitizer) ───
+    // ─── Star-operator ($*VAR) field-taint e2e samples (parity with Java StarSource/StarSink/StarSanitizer) ───
 
     @Test
     fun star01SinkField() = runSampleDefault("star_01_sink_field")
