@@ -182,12 +182,14 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
                     transformationFailed("Array access index is not ellipsis")
                 }
 
-                when (pattern.obj) {
-                    is Metavar,
-                    is TypedMetavar -> {
-                        // todo: dirty hack. We can ignore array access here due to the `hackResultArray` in taint configuration
-                        return transformPatternIntoParamCondition(pattern.obj)
-                    }
+                when (val obj = pattern.obj) {
+                    // `$X[...]` array-element access: we don't model the concrete index. Force the
+                    // metavar starred so it compiles to whole-object / any-field taint, which
+                    // subsumes array-element (`[*]`) taint via the any-accessor machinery — the same
+                    // mechanism that now backs array/vararg sinks in the taint config (the old
+                    // runtime array-element condition reader has been replaced by an any-field check).
+                    is Metavar -> return transformPatternIntoParamCondition(obj.copy(star = true))
+                    is TypedMetavar -> return transformPatternIntoParamCondition(obj.copy(star = true))
                     else -> transformationFailed("Array access object is not metavar")
                 }
             }
