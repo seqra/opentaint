@@ -63,9 +63,7 @@ the two calls happen on different clients or only one of them occurs.
 
 The join works in any occurrence position. Two conjuncts that observe the
 shared value as a call argument — `register($X)` in one, `activate($X)` in
-the other — unify the same way. (The receiver/argument restriction described
-under [Negative clauses and metavariable domains](#negative-clauses-and-metavariable-domains)
-applies to negative clauses only.)
+the other — unify the same way.
 
 Note the shape: when a conjunction contains more than one positive `pattern`,
 each conjunct must be a statement sequence wrapped in **both** a leading and a
@@ -301,14 +299,11 @@ repeated producer may be replaced by a leading ellipsis:
       consume($RESULT);
 ```
 
-Current restriction: the added event must use the tracked value as a call
-receiver — `$RESULT.sanitized()`, `$MAPPER.enable(...)` — or narrow one of
-the producing events. An added event that uses the value only as a call
-argument, such as `sanitize($RESULT)` or `check($RESULT)`, does not yet
-anchor the exclusion, and the failure is silent over-reporting. Until that
-restriction is lifted, model argument-shaped safety APIs with
-`pattern-sanitizers` — which is also the right tool whenever safety should
-apply to the rule's taint semantics rather than to one structural match.
+The added event may use the tracked value in any position — as a call
+receiver like `$RESULT.sanitized()` or `$MAPPER.enable(...)`, or as a call
+argument like `sanitize($RESULT)`. Use `pattern-sanitizers` instead whenever
+safety should apply to the rule's taint semantics rather than to one
+structural match.
 
 ### `pattern-not-inside`
 
@@ -456,59 +451,32 @@ This workaround is valid only when the positive producers are required by the re
 
 ### How the negative may use a produced value
 
-Producing the metavariable positively is necessary but not sufficient. In the
-current representation, the negative — whether a `pattern-not` trace filter
-or a `pattern-not-inside` context — must use the produced value in one of
-these ways:
+Once the metavariable is produced positively, the negative — whether a
+`pattern-not` trace filter or a `pattern-not-inside` context — may use it in
+any occurrence position:
 
 - **as the receiver of the excluded call** — `$CLIENT.allowHost("trusted.example")`,
-  `$CLIENT.audit()`, `$RESULT = $RESULT.sanitized()`; the excluded event may
-  lie directly on the value's dataflow path;
+  `$RESULT = $RESULT.sanitized()`; the excluded event may lie directly on the
+  value's dataflow path;
+- **as an argument of the excluded call** — `check($RESULT)`;
 - **as a narrowed re-description of its producing events** — the
   trusted-policy rule above repeats `$CLIENT = Client.builder($POLICY)` with a
   more specific producer for `$POLICY`.
-
-A negative event that mentions the produced value only as a **call argument**
-currently does not anchor the exclusion, in either clause form:
-
-```yaml
-# Currently has no effect, even though $RESULT is positively produced and
-# the excluded context can enclose the single-event match.
-patterns:
-  - pattern-inside: |
-      $RESULT = decode($INPUT);
-      ...
-  - pattern: consume($RESULT)
-  - pattern-not-inside: |
-      check($RESULT);
-      ...
-```
-
-The sample that calls `check(value)` before `consume(value)` is still
-reported. The restriction is specific to negative anchoring, not to the
-event: the same `check($RESULT)` event matches normally when the rule
-requires it positively, and the failure is the same for static and instance
-calls and for every negative form (`pattern-not` full and leading-ellipsis
-forms, `pattern-not-inside`). This is a temporal restriction; until it is
-lifted, shape the excluded event around the value as a receiver, narrow the
-producing event itself, or — when the argument-shaped call makes the value
-safe — use `pattern-sanitizers`.
 
 ### Validated shape summary
 
 | Negative shape | Effect |
 |---|---|
 | `pattern-not`: same events, narrowed (literal, name, annotation argument — fresh metavariable allowed inside the narrowing) | Excludes |
-| `pattern-not`: repeated sequence plus an on-path receiver call on the produced value (producer repetition or leading `...`) | Excludes (trace filter) |
-| `pattern-not-inside`: produced value as receiver of the excluded call | Excludes |
+| `pattern-not`: repeated sequence plus one on-path event using the produced value (producer repetition or leading `...`) | Excludes (trace filter) |
+| `pattern-not-inside`: produced value used in the excluded call | Excludes |
 | `pattern-not-inside`: narrowed re-description of the producing events | Excludes |
-| Either form: produced value only as a call argument in the excluded event | Silently no effect |
 | Any negative with a metavariable that is not positively produced | Silently no effect |
-| Argument-shaped safety call, or safety that must span the whole rule | Use `pattern-sanitizers` |
+| Safety that must span the whole rule rather than one structural match | Use `pattern-sanitizers` |
 
-Every "silently no effect" row loads without diagnostics and over-reports.
-Give each negative a test sample that it must suppress; a failing negative is
-invisible any other way.
+A negative whose metavariables are not positively produced loads without
+diagnostics and over-reports. Give each negative a test sample that it must
+suppress; a failing negative is invisible any other way.
 
 ### When there is no workaround
 
