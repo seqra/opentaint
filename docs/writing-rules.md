@@ -391,7 +391,7 @@ pattern-sanitizers:
   - pattern: $SAFE = validateProgram(...)
 ```
 
-Choose by scope and shape. A structural negative filters this rule's own matches, and its excluded event must use the tracked value as a receiver or narrow a producing event — an argument-shaped call such as `sanitize($VALUE)` does not yet anchor a structural exclusion. A sanitizer clause changes the rule's taint semantics wherever the flow goes, and handles argument-shaped safety APIs naturally.
+Choose by scope. A structural negative filters this rule's own matches: it subtracts a specific shape you can point at. A sanitizer clause changes the rule's taint semantics wherever the flow goes, so it also covers paths this rule's patterns never spell out.
 
 Negative metavariables need special care. Every metavariable used by a negative pattern must be introduced by a positive pattern in a producing position—defined, as by a factory result assignment or a parameter declaration, not merely observed at a use site. The detailed rules and correct builder examples are in [Negative clauses and metavariable domains](rule-pattern-clauses.md#negative-clauses-and-metavariable-domains).
 
