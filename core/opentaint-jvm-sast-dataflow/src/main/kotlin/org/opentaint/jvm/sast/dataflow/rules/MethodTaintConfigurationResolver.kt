@@ -446,17 +446,8 @@ class MethodTaintConfigurationResolver(
         }
 
         is SerializedCondition.ContainsMark -> mkOr(
-            pos.resolvePosition(ctx).flatMap { p ->
-                val mark = taintMarkManager.taintMark(tainted)
-                buildList {
-                    add(ContainsMark(p, mark).atom())
-                    // Star-model replacement for the array/vararg element-taint machinery: an
-                    // array/vararg-typed position observes element (`arg[*]`) taint via the
-                    // recursive any-field check, which the production unroll bridges to concrete
-                    // element/field reads. Subsumes the old element-only `[*]` condition twin.
-                    if (p.isArrayOrObjectTyped()) add(ContainsMarkOnAnyField(p, mark).atom())
-                }
-            }
+            pos.resolvePosition(ctx)
+                .map { ContainsMark(it, taintMarkManager.taintMark(tainted)).atom() }
         )
 
         is SerializedCondition.ContainsMarkOnAnyField -> mkOr(
@@ -579,16 +570,6 @@ class MethodTaintConfigurationResolver(
         // that need no any-accessor unroll (harness-safe under AnyAccessorDisabled); the sink-side
         // any-field CONDITION (ContainsMarkOnAnyField) is what recovers element/vararg reads.
         return listOf(position, PositionWithAccess(position, PositionAccessor.ElementAccessor))
-    }
-
-    private fun TypeName?.isArrayOrObject(): Boolean =
-        this != null && (isArray || this == objectTypeName)
-
-    private fun Position.isArrayOrObjectTyped(): Boolean = when (this) {
-        is ClassStatic, is This -> false
-        is PositionWithAccess -> false
-        is Argument -> method.parameters.getOrNull(index)?.type.isArrayOrObject()
-        is Result -> method.returnType.isArrayOrObject()
     }
 
     private fun SerializedTaintPassAction.resolve(ctx: AnyArgSpecializationCtx): List<Action> =
