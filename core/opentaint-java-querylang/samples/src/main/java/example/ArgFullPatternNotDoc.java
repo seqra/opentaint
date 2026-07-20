@@ -11,16 +11,16 @@ import base.RuleSet;
 @RuleSet("example/ArgFullPatternNotDoc.yaml")
 public abstract class ArgFullPatternNotDoc implements RuleSample {
 
-    static Object decode(Object o) { return o; }
+    static String decode(Object o) { return String.valueOf(o); }
     static int checksum;
 
-    static void check(Object o) { checksum += o.hashCode(); }
-    static void consume(Object o) {}
+    static void check(String o) { checksum += o.hashCode(); }
+    static void consume(String o) {}
 
     static class Positive extends ArgFullPatternNotDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             consume(r);
         }
     }
@@ -28,7 +28,7 @@ public abstract class ArgFullPatternNotDoc implements RuleSample {
     static class Negative extends ArgFullPatternNotDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             check(r);
             consume(r);
         }

@@ -14,14 +14,14 @@ import base.RuleSet;
 @RuleSet("example/SanitizeNotInsideDoc.yaml")
 public abstract class SanitizeNotInsideDoc implements RuleSample {
 
-    static Object decode(Object o) { return o; }
-    static Object sanitize(Object o) { return o; }
-    static void consume(Object o) {}
+    static String decode(Object o) { return String.valueOf(o); }
+    static String sanitize(String o) { return o; }
+    static void consume(String o) {}
 
     static class Positive extends SanitizeNotInsideDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             consume(r);
         }
     }
@@ -29,7 +29,7 @@ public abstract class SanitizeNotInsideDoc implements RuleSample {
     static class Negative extends SanitizeNotInsideDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             r = sanitize(r);
             consume(r);
         }

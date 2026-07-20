@@ -7,42 +7,81 @@ import org.opentaint.semgrep.util.SampleBasedTest
 import kotlin.test.Test
 
 /**
- * Pins negative-clause anchoring behavior. The failing tests are intentional:
- * their Negative samples assert the desired exclusion semantics, and they stay
- * red while negative clauses do not anchor on argument-position events. The
- * passing tests are the positive
- * controls proving the same events match positively, and the receiver-position
- * counterparts proving the exclusions work in receiver shape.
+ * Pins negative-clause exclusion behavior.
+ *
+ * The open defect: when the tracked value's declared type is
+ * `java.lang.Object`, a structural negative that observes the value does not
+ * exclude the match. `ObjectTypedValueDoc` and `ObjectTypedValueCastDoc`
+ * assert the desired semantics and stay red until it is fixed.
+ *
+ * Everything else passes and isolates the defect: the same rule shapes with a
+ * declared type (String, a custom class) exclude correctly, the excluded
+ * call's own parameter type is irrelevant, and an Object-typed value is
+ * excluded correctly when the negative rebinds it through a receiver call.
  */
 @TestInstance(PER_CLASS)
 class DocNegativeShapesTest : SampleBasedTest() {
 
-    @Test
-    fun `test sanitize pattern-not`() = runTest<example.SanitizePatternNotDoc>()
+    // --- the defect ---
 
     @Test
-    fun `test argument observer pattern-not`() = runTest<example.ArgObserverPatternNotDoc>()
+    fun `test Object-typed value is not excluded`() = runTest<example.ObjectTypedValueDoc>()
 
     @Test
-    fun `test allowlist pattern-not-inside`() = runTest<example.AllowlistNotInsideDoc>()
+    fun `test Object-typed value is not excluded through a cast`() =
+        runTest<example.ObjectTypedValueCastDoc>()
+
+    // --- controls isolating it ---
 
     @Test
-    fun `test receiver sanitize pattern-not`() = runTest<example.ReceiverSanitizePatternNotDoc>()
+    fun `test declared-type value is excluded`() = runTest<example.TypedValueControlDoc>()
 
     @Test
-    fun `test argument full-form pattern-not`() = runTest<example.ArgFullPatternNotDoc>()
+    fun `test excluded call parameter type is irrelevant`() =
+        runTest<example.ObjectParameterControlDoc>()
 
     @Test
-    fun `test argument event matches positively`() = runTest<example.ArgEventSanityDoc>()
+    fun `test Object-typed value is excluded when the negative rebinds it`() =
+        runTest<example.ObjectTypedValueReceiverDoc>()
+
+    // --- clause shapes, all with declared-type values ---
 
     @Test
-    fun `test sanitize reassignment event matches positively`() = runTest<example.SanitizeEventSanityDoc>()
+    fun `test full-form pattern-not with an observing event`() =
+        runTest<example.ArgFullPatternNotDoc>()
 
     @Test
-    fun `test sanitize reassignment pattern-not-inside`() = runTest<example.SanitizeNotInsideDoc>()
+    fun `test leading-ellipsis pattern-not with an observing event`() =
+        runTest<example.ArgObserverPatternNotDoc>()
 
     @Test
-    fun `test argument not-inside with satisfiable containment`() = runTest<example.ArgNotInsideAnchoredDoc>()
+    fun `test pattern-not with a self-sanitizing reassignment`() =
+        runTest<example.SanitizePatternNotDoc>()
+
+    @Test
+    fun `test pattern-not with a receiver-call reassignment`() =
+        runTest<example.ReceiverSanitizePatternNotDoc>()
+
+    @Test
+    fun `test pattern-not-inside with an observing event`() =
+        runTest<example.ArgNotInsideAnchoredDoc>()
+
+    @Test
+    fun `test pattern-not-inside with a self-sanitizing reassignment`() =
+        runTest<example.SanitizeNotInsideDoc>()
+
+    @Test
+    fun `test pattern-not-inside excluding a configured receiver`() =
+        runTest<example.AllowlistNotInsideDoc>()
+
+    // --- positive controls: the excluded events match when required ---
+
+    @Test
+    fun `test observing event matches positively`() = runTest<example.ArgEventSanityDoc>()
+
+    @Test
+    fun `test reassignment event matches positively`() =
+        runTest<example.SanitizeEventSanityDoc>()
 
     @AfterAll
     fun close() {

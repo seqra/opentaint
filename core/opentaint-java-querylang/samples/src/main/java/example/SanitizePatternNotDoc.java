@@ -12,14 +12,14 @@ import base.RuleSet;
 @RuleSet("example/SanitizePatternNotDoc.yaml")
 public abstract class SanitizePatternNotDoc implements RuleSample {
 
-    static Object decode(Object o) { return o; }
-    static Object sanitize(Object o) { return o; }
-    static void consume(Object o) {}
+    static String decode(Object o) { return String.valueOf(o); }
+    static String sanitize(String o) { return o; }
+    static void consume(String o) {}
 
     static class Positive extends SanitizePatternNotDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             consume(r);
         }
     }
@@ -27,7 +27,7 @@ public abstract class SanitizePatternNotDoc implements RuleSample {
     static class Negative extends SanitizePatternNotDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             r = sanitize(r);
             consume(r);
         }

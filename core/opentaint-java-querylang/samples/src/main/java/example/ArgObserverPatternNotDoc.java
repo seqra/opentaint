@@ -11,14 +11,14 @@ import base.RuleSet;
 @RuleSet("example/ArgObserverPatternNotDoc.yaml")
 public abstract class ArgObserverPatternNotDoc implements RuleSample {
 
-    static Object decode(Object o) { return o; }
-    static void check(Object o) {}
-    static void consume(Object o) {}
+    static String decode(Object o) { return String.valueOf(o); }
+    static void check(String o) {}
+    static void consume(String o) {}
 
     static class Positive extends ArgObserverPatternNotDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             consume(r);
         }
     }
@@ -26,7 +26,7 @@ public abstract class ArgObserverPatternNotDoc implements RuleSample {
     static class Negative extends ArgObserverPatternNotDoc {
         @Override
         public void entrypoint() {
-            Object r = decode("x");
+            String r = decode("x");
             check(r);
             consume(r);
         }
