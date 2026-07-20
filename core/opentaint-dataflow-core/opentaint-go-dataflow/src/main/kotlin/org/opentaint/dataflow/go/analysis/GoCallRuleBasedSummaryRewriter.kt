@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.go.analysis
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -69,6 +70,60 @@ class GoCallRuleBasedSummaryRewriter(
         }
 
         result
+    }
+
+    // Only the sanitizer clean actions (no sources) — used at call-to-start where the concrete
+    // argument-keyed fact exists but the result position does not.
+    private val cleanOnlyActions: List<UserRuleDefinedAction> by lazy {
+        val signature = callSignature ?: return@lazy emptyList()
+
+        buildList {
+            for (cleanRuleWithCond in config.allRelevantCleanRulesForCallStatement(signature, statement, callExpr, returnValue)) {
+                val cleanRule = cleanRuleWithCond.rule
+                val ruleInfo = cleanRule.info as? GoUserDefinedRuleInfo ?: continue
+                if (cleanRuleWithCond.condition.isFalse) continue
+
+                val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>()
+                    .mapTo(hashSetOf()) { CleanPosition(it.pos, it.onAnyAccessor) }
+                add(UserRuleDefinedAction(cleanRule, positions, ruleInfo.relevantTaintMarks))
+            }
+        }
+    }
+
+    /**
+     * Applies ONLY the sanitizer clean actions to a concrete call-to-start fact, mirroring the JVM's
+     * call-to-start cleaner ([JIRMethodCallFlowFunction.applyCleanersOrCallToStart]). The Go summary
+     * handler only cleans abstract summary edges, which carry no concrete mark, so a resolved
+     * pass-through sanitizer (`Clean($C) { return $C }`) never cleared the field taint flowing through.
+     *
+     * [fact] is in the caller frame with [startBase] the callee entry base; the clean positions
+     * (e.g. `Argument(0)`) resolve against the call frame, so the fact is rebased onto [startBase]
+     * for the clean and back afterwards. Returns the surviving facts (empty == fully sanitized).
+     */
+    fun cleanCallToStartFact(fact: FinalFactAp, startBase: AccessPathBase): List<FinalFactAp> {
+        if (cleanOnlyActions.isEmpty()) return listOf(fact)
+
+        val originalBase = fact.base
+        val callFrameFact = fact.rebase(startBase)
+        val startFactReader = FinalFactReader(callFrameFact, apManager)
+        val cleanEvaluator = TaintCleanActionEvaluator()
+
+        val cleanedFact = cleanOnlyActions.applyCleanerActions(
+            evalAction = { f, rule, action ->
+                val base = action.pos.resolvePosAccess()
+                val pos = if (action.onAnyAccessor) PositionAccess.Complex(base, AnyAccessor) else base
+                cleanEvaluator.removeFinalFact(f, pos, TaintMarkAccessor(action.mark), rule, action)
+            },
+            itemRule = { it.rule },
+            itemActions = { action ->
+                action.controlledMarks.flatMap { mark ->
+                    action.positions.map { RemoveMark(mark, it.pos, it.onAnyAccessor) }
+                }
+            },
+            initial = EvaluatedCleanAction.initial(startFactReader)
+        )
+
+        return cleanedFact.mapNotNull { it.fact?.factAp?.rebase(originalBase) }
     }
 
     fun rewriteSummaryFact(fact: FinalFactAp): List<Pair<FinalFactAp, FinalFactReader>> {

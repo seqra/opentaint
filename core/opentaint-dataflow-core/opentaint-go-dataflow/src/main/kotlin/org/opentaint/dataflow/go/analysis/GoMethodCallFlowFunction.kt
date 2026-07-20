@@ -114,7 +114,12 @@ class GoMethodCallFlowFunction(
         )
 
         factAp.mapCall2Start { fact, startBase ->
-            addCallToStart(factReader, fact, startBase, TraceInfo.Flow)
+            // Apply the sanitizer clean at call-to-start on the concrete argument-keyed fact. The Go
+            // summary handler only cleans abstract summary edges (no concrete mark), so a resolved
+            // pass-through sanitizer would otherwise let the field taint flow through uncleaned.
+            for (cleanedFact in summaryRewriter.cleanCallToStartFact(fact, startBase)) {
+                addCallToStart(factReader, cleanedFact, startBase, TraceInfo.Flow)
+            }
         }
 
         if (factReader.hasRefinement) {
