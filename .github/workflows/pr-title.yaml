@@ -132,6 +132,7 @@ jobs:
             "public/"
             "docs/"
             "skills/"
+            "skills-templates/"
             "scripts/"
             "(.*/)?README\.md"
             "(.*/)?CHANGELOG\.md"
