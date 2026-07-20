@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
 
 /**
  * Characterises the shared [TaintCleanActionEvaluator.removeFinalFact] under an any-accessor position,
- * which is what the Go `$VAR*` sanitizer-clean path asks for via `RemoveMark(onAnyAccessor = true)`
+ * which is what the Go `$*VAR` sanitizer-clean path asks for via `RemoveMark(onAnyAccessor = true)`
  * (see GoCallRuleBasedSummaryRewriter: `PositionAccess.Complex(base, AnyAccessor)`).
  *
  * Whole-object taint is stored as `base.ANY.mark`; a plain base clean uses `Simple(base)`.
@@ -74,6 +74,18 @@ class AnyAccessorCleanTest {
         // AND every nested field it exposes. The any-accessor clean removes it entirely.
         val wholeObject = fact(AnyAccessor, mark)
         assertTrue(clean(wholeObject, complexAny).isEmpty(), "any-accessor clean must drop whole-object taint")
+    }
+
+    @Test
+    fun `any-accessor clean removes a concrete nested-field mark`() {
+        // The whole-object ($*C) sanitizer must clear taint stored on a CONCRETE nested field,
+        // e.g. base.field.mark, not only the abstract base.ANY.mark. This is the shape a real
+        // field-taint fact takes when it reaches a starred sanitizer.
+        val nestedField = fact(field, mark)
+        assertTrue(
+            clean(nestedField, complexAny).isEmpty(),
+            "any-accessor clean must remove a concrete nested-field mark",
+        )
     }
 
     @Test

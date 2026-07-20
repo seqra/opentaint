@@ -2,6 +2,7 @@ package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
@@ -67,6 +68,18 @@ class TaintCleanActionEvaluator {
     private fun clearPosition(accessors: List<Accessor>, fact: FinalFactAp): Pair<List<FinalFactAp>, Boolean> {
         val head = accessors.first()
         val tail = accessors.drop(1)
+
+        // Any-field clean (`base.ANY.mark`): remove `mark` from every nested field of the fact at
+        // depth >= 1, leaving the base value untouched. Concrete field taint (e.g. `base.field.mark`)
+        // reaches a starred sanitizer as a plain access path, so the AnyAccessor must expand over the
+        // fact's real fields, not be read literally -- `fact.readAccessor(AnyAccessor)` is null for
+        // such facts, which previously left the field taint uncleaned. `tail` is always a single
+        // mark accessor here (the clean position is `<base>.ANY` plus the mark restriction).
+        if (head is AnyAccessor && tail.size == 1) {
+            val cleaned = fact.filterFact(AnyFieldMarkStripFilter(tail.single(), atRoot = true))
+            return listOfNotNull(cleaned) to (cleaned != fact)
+        }
+
         if (tail.isEmpty()) {
             if (fact.startsWithAccessor(AnyAccessor)) {
                 val factAfterAny = fact.readAccessor(AnyAccessor)
@@ -107,6 +120,24 @@ class TaintCleanActionEvaluator {
     private fun PositionAccess.accessorList(): List<Accessor> = when (this) {
         is PositionAccess.Simple -> emptyList()
         is PositionAccess.Complex -> base.accessorList() + accessor
+    }
+
+    /**
+     * Strips [markToClean] from every nested field of a fact at depth >= 1, leaving the base value
+     * (root level) untouched -- the removal semantics of an any-field clean position `base.ANY.mark`.
+     * At the root every child is descended into (so the base-value mark is preserved); below the root
+     * the mark node is rejected wherever it appears, and every other field is descended recursively.
+     */
+    private class AnyFieldMarkStripFilter(
+        private val markToClean: Accessor,
+        private val atRoot: Boolean,
+    ) : FactTypeChecker.FactApFilter {
+        override fun check(accessor: Accessor): FactTypeChecker.FilterResult {
+            if (!atRoot && accessor == markToClean) {
+                return FactTypeChecker.FilterResult.Reject
+            }
+            return FactTypeChecker.FilterResult.FilterNext(AnyFieldMarkStripFilter(markToClean, atRoot = false))
+        }
     }
 }
 
