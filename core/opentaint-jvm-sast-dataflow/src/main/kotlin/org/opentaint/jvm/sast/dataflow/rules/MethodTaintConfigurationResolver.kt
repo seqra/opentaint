@@ -75,9 +75,7 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.JIRTypedMethod
 import org.opentaint.ir.api.jvm.PredefinedPrimitives
-import org.opentaint.ir.api.jvm.TypeName
 import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
-import org.opentaint.ir.impl.cfg.util.isArray
 import org.opentaint.jvm.sast.dataflow.matchedAnnotations
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -85,7 +83,6 @@ class MethodTaintConfigurationResolver(
     val patternManager: PatternManager,
     val taintMarkManager: TaintMarkManager,
     val cp: JIRClasspath,
-    val objectTypeName: TypeName,
     val method: JIRMethod
 ) {
     private val typedMethod by lazy { resolveTypedMethod() }
@@ -186,21 +183,21 @@ class MethodTaintConfigurationResolver(
         ctx: AnyArgSpecializationCtx,
     ): TaintConfigurationItem = when (this) {
         is SerializedRule.EntryPoint -> {
-            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintEntryPointSource(method, condition, taint.flatMap { it.resolve(ctx) }, info)
         }
 
         is SerializedRule.Source -> {
-            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintMethodSource(method, condition, taint.flatMap { it.resolve(ctx) }, info)
         }
 
         is SerializedRule.MethodExitSource -> {
-            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintMethodExitSource(method, condition, taint.flatMap { it.resolve(ctx) }, info)
         }
 
         is SerializedRule.Sink -> {
             TaintMethodSink(
                 method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
+                trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
                 ruleId(), meta(), info
             )
         }
@@ -208,7 +205,7 @@ class MethodTaintConfigurationResolver(
         is SerializedRule.MethodExitSink -> {
             TaintMethodExitSink(
                 method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
+                trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
                 ruleId(), meta(), info
             )
         }
@@ -216,7 +213,7 @@ class MethodTaintConfigurationResolver(
         is SerializedRule.MethodEntrySink -> {
             TaintMethodEntrySink(
                 method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
+                trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
                 ruleId(), meta(), info
             )
         }
@@ -540,37 +537,9 @@ class MethodTaintConfigurationResolver(
         return classType.declaredMethods.find { it.method == method }
     }
 
-    private fun SerializedTaintAssignAction.resolveWithArray(ctx: AnyArgSpecializationCtx): List<AssignMark> =
+    private fun SerializedTaintAssignAction.resolve(ctx: AnyArgSpecializationCtx): List<AssignMark> =
         pos.resolvePositionWithAnnotationConstraint(ctx, annotatedWith?.asAnnotationConstraint())
-            .flatMap { it.resolveArrayPosition() }
             .map { AssignMark(taintMarkManager.taintMark(kind), it) }
-
-    private fun SerializedTaintAssignAction.resolveNoArray(ctx: AnyArgSpecializationCtx): List<AssignMark> =
-        pos.resolvePositionWithAnnotationConstraint(ctx, annotatedWith?.asAnnotationConstraint())
-            .flatMap { it.resolveArrayPosition() }
-            .map { AssignMark(taintMarkManager.taintMark(kind), it) }
-
-    private fun Position.resolveArrayPosition(): List<Position> = when (this) {
-        is ClassStatic -> listOf(this)
-        is PositionWithAccess -> base.resolveArrayPosition().map { PositionWithAccess(it, access) }
-        is This -> listOf(this)
-        is Argument -> resolveArrayPosition(this, method.parameters.getOrNull(index)?.type)
-        is Result -> resolveArrayPosition(this, method.returnType)
-    }
-
-    private fun resolveArrayPosition(position: Position, positionType: TypeName?): List<Position> {
-        if (positionType == null) return listOf(position)
-
-        if (!positionType.isArray && positionType != objectTypeName) {
-            return listOf(position)
-        }
-
-        // Array/vararg-typed source assigns the whole object AND its element taint. Kept as a
-        // concrete element (`[*]`) rather than any-field so the assign produces concrete facts
-        // that need no any-accessor unroll (harness-safe under AnyAccessorDisabled); the sink-side
-        // any-field CONDITION (ContainsMarkOnAnyField) is what recovers element/vararg reads.
-        return listOf(position, PositionWithAccess(position, PositionAccessor.ElementAccessor))
-    }
 
     private fun SerializedTaintPassAction.resolve(ctx: AnyArgSpecializationCtx): List<Action> =
         from.resolvePosition(ctx).flatMap { fromPos ->

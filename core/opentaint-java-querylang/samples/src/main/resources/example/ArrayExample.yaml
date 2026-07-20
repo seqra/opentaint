@@ -6,34 +6,26 @@ rules:
     message: match example/Rule
     patterns:
       - pattern-either:
+          # Star the array source ($*PARAM) so the whole array AND its elements are tainted;
+          # a whole-array sink observes the base and an element read (data[0]) observes the
+          # element via the any-accessor unroll. Replaces the old implicit resolveArrayPosition
+          # `[*]` source twin with the explicit star operator.
           - pattern: |-
               @EntryPoint
-              $RETURNTYPE $METHOD(String[] $PARAM) {
+              $RETURNTYPE $METHOD(String[] $*PARAM) {
                   arraySink($PARAM);
               }
 
-# todo: array access
-#          - pattern: |-
-#              @EntryPoint
-#              $RETURNTYPE $METHOD(String[] $PARAM) {
-#                  elementSink($PARAM[...]);
-#              }
-
           - pattern: |-
               @EntryPoint
-              $RETURNTYPE $METHOD(String[] $PARAM) {
+              $RETURNTYPE $METHOD(String[] $*PARAM) {
                   otherElementSink($PARAM);
               }
 
           - pattern: |-
-              $PARAM = src();
+              $*PARAM = src();
               arraySink($PARAM);
 
-# todo: array access
-#          - pattern: |-
-#              $PARAM = src();
-#              elementSink($PARAM[...]);
-
           - pattern: |-
-              $PARAM = src();
+              $*PARAM = src();
               otherElementSink($PARAM);
