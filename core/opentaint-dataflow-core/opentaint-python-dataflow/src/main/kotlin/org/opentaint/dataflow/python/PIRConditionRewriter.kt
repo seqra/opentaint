@@ -29,7 +29,7 @@ import org.opentaint.ir.api.python.PIRCallArgKind
 class PIRConditionRewriter(
     private val anyArgumentResolver: AnyArgumentResolver,
     private val atomEvaluator: PIRBasicAtomEvaluator,
-    private val call: PIRCall? = null,
+    private val call: PIRCall? = null, // TODO ap resolver
 ) : RuleConditionRewriter<PythonRuleCondition> {
 
     override fun rewriteAtom(atom: PythonRuleCondition, negated: Boolean): ExprOrConstant {

@@ -26,30 +26,15 @@ import org.opentaint.ir.api.python.PIRStrConst
 import org.opentaint.ir.api.python.PIRValue
 
 interface PIRBasicAtomEvaluator : PIRConditionVisitor<Boolean> {
+    fun numberOrArgs(): IntRange
+
+    fun valueAt(pos: Position): PIRValue?
+
     override fun visit(c: ContainsMark): Boolean =
         error("ContainsMark is a taint-fact atom; handle it in condition rewriter, not the evaluator")
 
     override fun visit(c: ContainsMarkOnAnyAccessor): Boolean =
         error("ContainsMarkOnAnyAccessor is a taint-fact atom; handle it in condition rewriter, not the evaluator")
-}
-
-/**
- * Evaluates the statically-decidable atoms of a [org.opentaint.dataflow.configuration.python.PythonRuleCondition]
- * against the concrete [call] — mirrors `GoBasicAtomEvaluator` / `JIRBasicAtomEvaluator`. The taint-fact atom
- * [ContainsMark] is not basic: it is handled by [PIRConditionRewriter], so visiting it here is a bug.
- */
-class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
-    override fun visit(c: NumberOfArgs): Boolean {
-        val explicit = call.args.count {
-            it.kind == PIRCallArgKind.POSITIONAL || it.kind == PIRCallArgKind.KEYWORD
-        }
-        val hasSplat = call.args.any {
-            it.kind == PIRCallArgKind.STAR || it.kind == PIRCallArgKind.DOUBLE_STAR
-        }
-        val max = if (hasSplat) Int.MAX_VALUE else explicit
-
-        return c.n in explicit..max
-    }
 
     override fun visit(c: ConstantCmp): Boolean {
         val v = valueAt(c.pos) ?: return false
@@ -73,11 +58,34 @@ class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
     }
 
     override fun visit(c: ConstantMatches): Boolean {
-        val v = valueAt(c.pos)
+        val v = valueAt(c.pos) ?: return false
         return v is PIRStrConst && c.pattern.matches(v.value)
     }
 
-    private fun valueAt(pos: Position): PIRValue? = when (pos) {
+    override fun visit(c: NumberOfArgs): Boolean {
+        return c.n in numberOrArgs()
+    }
+}
+
+/**
+ * Evaluates the statically-decidable atoms of a [org.opentaint.dataflow.configuration.python.PythonRuleCondition]
+ * against the concrete [call] — mirrors `GoBasicAtomEvaluator` / `JIRBasicAtomEvaluator`. The taint-fact atom
+ * [ContainsMark] is not basic: it is handled by [PIRConditionRewriter], so visiting it here is a bug.
+ */
+class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
+    override fun numberOrArgs(): IntRange {
+        val explicit = call.args.count {
+            it.kind == PIRCallArgKind.POSITIONAL || it.kind == PIRCallArgKind.KEYWORD
+        }
+        val hasSplat = call.args.any {
+            it.kind == PIRCallArgKind.STAR || it.kind == PIRCallArgKind.DOUBLE_STAR
+        }
+        val max = if (hasSplat) Int.MAX_VALUE else explicit
+
+        return explicit..max
+    }
+
+    override fun valueAt(pos: Position): PIRValue? = when (pos) {
         is Argument -> call.args.getOrNull(pos.index)?.value
         is KwArgument -> call.args.firstOrNull { it.kind == PIRCallArgKind.KEYWORD && it.keyword == pos.name }?.value
         is Result -> call.target
@@ -90,16 +98,21 @@ class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
     }
 }
 
-object PIRAttrLoadAtomEvaluator : PIRBasicAtomEvaluator {
-    override fun visit(c: NumberOfArgs): Boolean {
-        return c.n == 0
-    }
+class PIRSequentAtomEvaluator(
+    val returnValue: PIRValue? = null,
+) : PIRBasicAtomEvaluator {
 
-    override fun visit(c: ConstantCmp): Boolean {
-        error("Unexpected atom for attribute load rule: $c")
-    }
+    override fun numberOrArgs(): IntRange = 0..0
 
-    override fun visit(c: ConstantMatches): Boolean {
-        error("Unexpected atom for attribute load rule: $c")
+    override fun valueAt(pos: Position): PIRValue? = when (pos) {
+        is Result -> {
+            check(returnValue != null) {
+                "Return value is required for Result position"
+            }
+
+            returnValue
+        }
+
+        else -> error("Unexpected position: $pos")
     }
 }

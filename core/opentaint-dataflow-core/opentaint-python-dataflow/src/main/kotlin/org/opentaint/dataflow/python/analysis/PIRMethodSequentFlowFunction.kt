@@ -13,7 +13,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.python.PIRAttrLoadAnyArgumentResolver
-import org.opentaint.dataflow.python.PIRAttrLoadAtomEvaluator
+import org.opentaint.dataflow.python.PIRSequentAtomEvaluator
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.DummyPositionTypeResolver
@@ -64,9 +64,15 @@ class PIRMethodSequentFlowFunction(
     override fun propagateZeroToZero(): Set<Sequent> = buildSet {
         this += Sequent.ZeroToZero
 
+        if (instruction is PIRReturn) {
+            applyExitSinkRules(instruction, initialFacts = emptySet(), fact = null) {
+                this += it
+            }
+        }
+
         if (instruction !is PIRLoadAttr) return@buildSet
 
-        applySourceRules(instruction, emptySet(), null, ExclusionSet.Universe,
+        applyLoadAttrSourceRules(instruction, emptySet(), null, ExclusionSet.Universe,
             createFinalFact = { it, trace ->
                 this += Sequent.ZeroToFact(factAp = it, trace)
             },
@@ -286,7 +292,7 @@ class PIRMethodSequentFlowFunction(
         val factReader = FinalFactReader(currentFactAp, apManager)
         applyLoadAttrPassRules(inst, factReader, propagateFact)
 
-        applySourceRules(
+        applyLoadAttrSourceRules(
             inst, initialFacts, factReader, currentFactAp.exclusions,
             createFinalFact = { it, trace ->
                 propagateFact(it, trace)
@@ -318,7 +324,7 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    private fun applySourceRules(
+    private fun applyLoadAttrSourceRules(
         inst: PIRLoadAttr,
         initialFacts: Set<InitialFactAp>,
         factReader: FinalFactReader?,
@@ -330,7 +336,7 @@ class PIRMethodSequentFlowFunction(
         val sourceRules = resolvedNames.flatMapTo(mutableListOf()) { attr ->
             rulesProvider.sourcesForAttribute(attr)
         }
-        val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, PIRAttrLoadAtomEvaluator)
+        val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, PIRSequentAtomEvaluator())
 
         val taintUtil = PIRSequentTaintUtil(ctx, inst, apManager)
         taintUtil.applySourceRules(
@@ -591,10 +597,10 @@ class PIRMethodSequentFlowFunction(
             propagateFact(currentFactAp.rebase(AccessPathBase.Return), TraceInfo.Flow)
         }
 
-        applyExitSinkRules(ret, initialFacts, currentFactAp, addUnchecked)
+        applyExitSinkRules(ret, initialFacts, FinalFactReader(currentFactAp, apManager), addUnchecked)
     }
 
-    private fun applyExitSinkRules(ret: PIRReturn, initialFacts: Set<InitialFactAp>, fact: FinalFactAp, addUnchecked: (Sequent) -> Unit) {
+    private fun applyExitSinkRules(ret: PIRReturn, initialFacts: Set<InitialFactAp>, fact: FinalFactReader?, addUnchecked: (Sequent) -> Unit) {
         // Return sinks fire only on the zero-to-fact path —
         // a fact sourced inside the method reaching the exit
         if (initialFacts.isNotEmpty()) return
@@ -608,13 +614,11 @@ class PIRMethodSequentFlowFunction(
             addUnchecked(Sequent.FactSideEffect(i, k))
         }
 
-        val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, PIRAttrLoadAtomEvaluator, call = null)
+        val atomEvaluator = PIRSequentAtomEvaluator(ret.value)
+        val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, atomEvaluator, call = null)
         val taintUtil = PIRSequentTaintUtil(ctx, ret, apManager)
 
-        taintUtil.applySinkRules(
-            exitSinks, conditionRewriter, FinalFactReader(fact, apManager),
-            markAfterAnyAccessorResolver
-        )
+        taintUtil.applySinkRules(exitSinks, conditionRewriter, fact, markAfterAnyAccessorResolver)
     }
 
     // ==========================================================================

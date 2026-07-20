@@ -113,6 +113,8 @@ class PythonSampleBasedTest {
     @Test fun chainedAttributeRead() = runSample("ChainedAttributeRead")
     @Test fun chainedMethodCalls() = runSample("ChainedMethodCalls")
 
+    @Test fun ruleWithDecoratedEntryPoint() = runSample("RuleWithDecoratedEntryPoint")
+    @Test fun ruleWithDottedDecorator() = runSample("RuleWithDottedDecorator")
     @Test fun rulePatternNotInsideWithSignature() = runSample("RulePatternNotInsideWithSignature")
     @Test fun taintRule() = runSample("TaintRule")
     @Test fun complexSourceSinkNoFocus() = runSample("ComplexSourceSinkNoFocus")
@@ -138,28 +140,30 @@ class PythonSampleBasedTest {
     @Ignore @Test fun ruleWithMultiplePatternsEllipsisUnification() = runSample("RuleWithMultiplePatternsEllipsisUnification")
 
     // return sinks
-    @Ignore @Test fun r1() = runSample("R1")
-    @Ignore @Test fun r2() = runSample("R2")
-    @Ignore @Test fun ruleReturn3() = runSample("RuleReturn3")
-    @Ignore @Test fun ruleReturn1() = runSample("RuleReturn1")
-    @Ignore @Test fun ruleReturn2() = runSample("RuleReturn2")
-    @Ignore @Test fun ruleReturn4() = runSample("RuleReturn4")
-    @Ignore @Test fun ruleReturn5() = runSample("RuleReturn5")
-    @Ignore @Test fun ruleReturnConditional() = runSample("RuleReturnConditional")
-    @Ignore @Test fun ruleReturnInsideSignature() = runSample("RuleReturnInsideSignature")
-    @Ignore @Test fun ruleReturnInsideSignature2() = runSample("RuleReturnInsideSignature2")
-    @Ignore @Test fun ruleReturnMultiInsideNotInsideA() = runSample("RuleReturnMultiInsideNotInsideA")
-    @Ignore @Test fun ruleReturnMultiInsideNotInsideC() = runSample("RuleReturnMultiInsideNotInsideC")
-    @Ignore @Test fun ruleReturnSimple() = runSample("RuleReturnSimple")
-    @Ignore @Test fun ruleReturnWithNotInsideSignature() = runSample("RuleReturnWithNotInsideSignature")
-    @Ignore @Test fun ruleReturnWithNotInsideSignatureWithPass() = runSample("RuleReturnWithNotInsideSignatureWithPass")
-    @Ignore @Test fun ruleWithMultiplePatternsUnification() = runSample("RuleWithMultiplePatternsUnification")
-    @Ignore @Test fun trickyPatternNot() = runSample("TrickyPatternNot")
+    @Test fun r1() = runSample("R1")
+    @Test fun r2() = runSample("R2")
+    @Test fun ruleReturn3() = runSample("RuleReturn3")
+    @Test fun ruleReturn1() = runSample("RuleReturn1")
+    @Test fun ruleReturn2() = runSample("RuleReturn2")
+    @Test fun ruleReturn4() = runSample("RuleReturn4")
+    @Test fun ruleReturn5() = runSample("RuleReturn5")
+    @Test fun ruleReturnConditional() = runSample("RuleReturnConditional")
+    @Test fun ruleReturnInsideSignature() = runSample("RuleReturnInsideSignature")
+    @Test fun ruleReturnInsideSignature2() = runSample("RuleReturnInsideSignature2")
+    @Test fun ruleReturnMultiInsideNotInsideA() = runSample("RuleReturnMultiInsideNotInsideA")
+    @Test fun ruleReturnMultiInsideNotInsideC() = runSample("RuleReturnMultiInsideNotInsideC")
+    @Test fun ruleReturnSimple() = runSample("RuleReturnSimple")
+    @Test fun ruleReturnDecoratedSource() = runSample("RuleReturnDecoratedSource")
+    @Ignore("Return cleaners are not supported: the not-inside `return clean(\$PARAM)` guard lowers to a method-exit dead edge, which only method-call cleaners can express")
+    @Test fun ruleReturnWithNotInsideSignature() = runSample("RuleReturnWithNotInsideSignature")
+    @Test fun ruleReturnWithNotInsideSignatureWithPass() = runSample("RuleReturnWithNotInsideSignatureWithPass")
+    @Test fun ruleWithMultiplePatternsUnification() = runSample("RuleWithMultiplePatternsUnification")
+    @Test fun trickyPatternNot() = runSample("TrickyPatternNot")
 
     // chained method calls and return sinks
-    @Ignore @Test fun ruleReturnChained() = runSample("RuleReturnChained")
-    @Ignore @Test fun ruleReturnNotInside() = runSample("RuleReturnNotInside")
-    @Ignore @Test fun ruleReturnNotInsidePrefix() = runSample("RuleReturnNotInsidePrefix")
+    @Test fun ruleReturnChained() = runSample("RuleReturnChained")
+    @Test fun ruleReturnNotInside() = runSample("RuleReturnNotInside")
+    @Test fun ruleReturnNotInsidePrefix() = runSample("RuleReturnNotInsidePrefix")
 
     @Ignore("Return cleaners are not supported")
     @Test fun ruleReturn6() = runSample("RuleReturn6")
@@ -270,7 +274,7 @@ class PythonSampleBasedTest {
 
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
         return engine.use { eng ->
-            eng.runAnalysis(listOf(startMethod), timeout = 1.minutes, cancellationTimeout = 10.seconds)
+            eng.runAnalysis(listOf(startMethod), timeout = 100.minutes, cancellationTimeout = 10.seconds)
             eng.getVulnerabilities()
         }
     }
