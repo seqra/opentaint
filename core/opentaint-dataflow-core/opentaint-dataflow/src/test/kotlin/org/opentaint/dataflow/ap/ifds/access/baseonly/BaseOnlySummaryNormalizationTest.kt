@@ -77,6 +77,30 @@ class BaseOnlySummaryNormalizationTest {
         assertTrue(normalizedAccess in queried, "the normalized alias remains available to trace resolution")
     }
 
+    @Test
+    fun `normalized aliases do not duplicate an exact primary summary`() {
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager)
+        val static = 41
+        val field = 73
+        val originalInitial = packBaseOnlyAccess(static, ABSTRACT_MARK, NO_ACCESSOR)
+        val normalizedInitial = packBaseOnlyAccess(static, NO_ACCESSOR, ABSTRACT_MARK)
+        val finalAccess = packBaseOnlyAccess(static, field, ABSTRACT_MARK)
+        fun edge(initial: BaseOnlyAccess) = Edge.FactToFact(
+            entryPoint,
+            BaseOnlyInitialFactAp(manager, AccessPathBase.Argument(0), initial, ExclusionSet.Empty),
+            inst,
+            BaseOnlyFinalFactAp(manager, AccessPathBase.Return, finalAccess, ExclusionSet.Empty),
+        )
+
+        storage.add(listOf(edge(originalInitial), edge(normalizedInitial)), mutableListOf())
+        manager.enableNormalizedEdges()
+
+        val result = mutableListOf<FactToFactEdgeBuilder>()
+        storage.filterEdgesTo(result, initialFactPattern = null, finalFactBase = AccessPathBase.Return)
+        assertEquals(2, result.size, "the normalized alias duplicates the second primary edge exactly")
+    }
+
     private fun MethodInitialToFinalBaseOnlyApSummariesStorage.initialAccesses(): Set<BaseOnlyAccess> {
         val result = mutableListOf<FactToFactEdgeBuilder>()
         filterEdgesTo(result, initialFactPattern = null, finalFactBase = AccessPathBase.Return)

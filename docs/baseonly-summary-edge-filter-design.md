@@ -4,15 +4,15 @@ Date: 2026-07-20
 
 ## Goal
 
-BaseOnly must return the same class of applicable summaries as Tree: for a non-null caller pattern `P`, return only summaries whose stored initial access `I` is contained by `P`. Today both BaseOnly fact-to-fact (F2F) and fact-side-effect (FactSE) storage ignore `P` and broadcast every summary for the selected fact base.
+BaseOnly must return the same class of applicable summaries as Tree: for a non-null caller pattern `P`, return only summaries whose stored initial access `I` overlaps `P` by containment. Tree's `filterContains` returns both stored prefixes of an exact pattern and stored descendants of an abstract pattern. Today both BaseOnly fact-to-fact (F2F) and fact-side-effect (FactSE) storage ignore `P` and broadcast every summary for the selected fact base.
 
 The filtering relation must be the existing AP operation, not a new approximation:
 
 ```kotlin
-BaseOnlyAccessOps.containsAccess(pattern = P, initial = I)
+BaseOnlyAccessOps.containsAccess(P, I) || BaseOnlyAccessOps.containsAccess(I, P)
 ```
 
-This is the BaseOnly equivalent of Tree's `filterContains(P)`. The direction matters: the caller's final pattern contains the stored summary initial. Exclusions do not participate in index selection; they remain attached to the returned summary and are checked by the normal edge operations.
+This is the BaseOnly equivalent of Tree's `filterContains(P)`. The two directions matter: an abstract caller pattern selects compatible stored descendants, while a stored abstract initial selects compatible concrete callers. Exclusions do not participate in index selection; they remain attached to the returned summary and are checked by the normal edge operations.
 
 For `P == null`, collection remains an explicit full scan.
 
@@ -21,7 +21,7 @@ For `P == null`, collection remains an explicit full scan.
 For every F2F and FactSE query:
 
 ```text
-applicable(P, I) = P == null || containsAccess(P, I)
+applicable(P, I) = P == null || containsAccess(P, I) || containsAccess(I, P)
 ```
 
 In particular:
@@ -33,7 +33,7 @@ In particular:
 - semantic suffix marks are compared by the existing suffix rule;
 - exclusions never make an otherwise applicable initial key disappear.
 
-Every indexed candidate should still pass `containsAccess(P, I)` before emission. That final predicate is cheap and protects correctness if index routing is later changed.
+Every indexed candidate should still pass the symmetric applicability predicate before emission. That final predicate is cheap and protects correctness if index routing is later changed.
 
 ## Storage layout
 
@@ -55,7 +55,7 @@ fun collectAll(consume: (BaseOnlyAccess, V) -> Unit)
 fun collectContainedBy(pattern: BaseOnlyAccess, consume: (BaseOnlyAccess, V) -> Unit)
 ```
 
-`collectContainedBy` performs pattern-directed traversal. Slot routing mirrors `containsAccess`:
+`collectContainedBy` performs pattern-directed traversal. Slot routing mirrors the symmetric applicability predicate:
 
 - `ABSTRACT_MARK`: traverse every child at that slot;
 - concrete static: traverse only the identical static child;
@@ -65,7 +65,7 @@ fun collectContainedBy(pattern: BaseOnlyAccess, consume: (BaseOnlyAccess, V) -> 
 - concrete suffix: traverse the identical suffix child;
 - suffix `NO_ACCESSOR`: only the exactly equal access can match.
 
-Early abstraction can stop inspecting later slots exactly as `containsAccess` does. The final predicate check remains authoritative, so a conservative traversal may visit extra candidates but may not emit them.
+At each concrete pattern slot, the traversal also checks the stored abstract node at that slot; this is how an abstract identity such as `*` remains applicable to a concrete semantic fact. Early abstraction in the pattern can stop inspecting later slots exactly as `containsAccess` does. The final predicate check remains authoritative, so a conservative traversal may visit extra candidates but may not emit them.
 
 ### F2F non-identity edges
 
@@ -75,7 +75,7 @@ Keep each `MergingStorage.finals` in `ConcurrentReadSafeLong2ObjectMap`: one ana
 
 ### F2F identity edges
 
-The existing identity storage already has a three-layer static/field/suffix trie. Add pattern-directed `collectContainedBy` operations to its layers using the same routing rules, then guard each emitted initial access with `containsAccess`.
+The existing identity storage already has a three-layer static/field/suffix trie. Add pattern-directed `collectContainedBy` operations to its layers using the same routing rules, then guard each emitted initial access with the symmetric summary-applicability predicate.
 
 Do not flatten identity summaries into the non-identity map: the identity trie performs exclusion intersection and subsumption while inserting, which must remain unchanged.
 
@@ -115,7 +115,7 @@ This matches the confirmed Tree/Automata workload rather than strengthening the 
 
 ## Safe implementation sequence
 
-1. Add a scan-and-predicate implementation first: retain the current indexes but emit only entries satisfying `containsAccess(P, I)`. This is the executable correctness oracle and immediately removes unrelated summaries, although lookup remains O(number of initials).
+1. Add a scan-and-predicate implementation first: retain the current indexes but emit only entries satisfying the symmetric applicability predicate. This is the executable correctness oracle and immediately removes unrelated summaries, although lookup remains O(number of initials).
 2. Add the shared trie index and run every filter test against both implementations.
 3. Switch F2F non-identity and FactSE storage to the trie.
 4. Add pattern-directed identity traversal.
@@ -141,7 +141,7 @@ Pin F2F and FactSE cases for:
 
 ### Differential oracle
 
-Generate random packed accesses, insert them into the scan reference and trie, and for every generated pattern compare the exact emitted key set. Compute the expected set directly with `BaseOnlyAccessOps.containsAccess(P, I)`. Also compare representative BaseOnly results with Tree `filterContains` after constructing equivalent APs.
+Generate random packed accesses, insert them into the scan reference and trie, and for every generated pattern compare the exact emitted key set. Compute the expected set directly with the symmetric applicability predicate. Also compare representative BaseOnly results with Tree `filterContains` after constructing equivalent APs.
 
 ### Concurrency
 

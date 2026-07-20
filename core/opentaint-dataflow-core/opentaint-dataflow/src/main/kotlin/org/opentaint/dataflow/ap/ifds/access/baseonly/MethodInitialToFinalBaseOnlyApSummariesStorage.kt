@@ -7,7 +7,6 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.util.forEachEntry
 import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.dataflow.util.getOrCreateNullable
 import org.opentaint.dataflow.util.int2ObjectMap
 import org.opentaint.dataflow.util.long2ObjectMap
@@ -30,7 +29,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         private val trackDelta: Boolean,
     ) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
         private val idEdges = IdEdgeStorage(manager, trackDelta)
-        private val perInitial = long2ObjectMap<MergingStorage>()
+        private val perInitial = BaseOnlyInitialAccessIndex<MergingStorage>()
 
         override fun add(
             edges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
@@ -73,14 +72,37 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
             initialFactPatter: BaseOnlyAccess?,
         ) {
-            idEdges.collectAll(dst)
-            perInitial.forEachEntry { _, storage -> storage.collectAll(dst) }
+            val normalizedEnabled = normalizedStorage != null && manager.normalizedEdgesEnabled()
+            val seen = if (normalizedEnabled) hashSetOf<SummaryKey>() else null
+            val emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit = { initial, final, exclusion ->
+                if (seen == null || seen.add(SummaryKey(initial, final, exclusion))) {
+                    dst += Builder(manager).setInitialAp(initial).setExitAp(final).setExclusion(exclusion)
+                }
+            }
 
-            if (normalizedStorage != null && manager.normalizedEdgesEnabled()) {
-                normalizedStorage.collectSummariesTo(dst, initialFactPatter)
+            collectSummaries(initialFactPatter, emit)
+            if (normalizedEnabled) normalizedStorage!!.collectSummaries(initialFactPatter, emit)
+        }
+
+        private fun collectSummaries(
+            initialFactPattern: BaseOnlyAccess?,
+            emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit,
+        ) {
+            if (initialFactPattern == null) {
+                idEdges.collectAll(emit)
+                perInitial.collectAll { _, storage -> storage.collectAll(emit) }
+            } else {
+                idEdges.collectContainedBy(initialFactPattern, emit)
+                perInitial.collectContainedBy(initialFactPattern) { _, storage -> storage.collectAll(emit) }
             }
         }
     }
+
+    private data class SummaryKey(
+        val initial: BaseOnlyAccess,
+        val final: BaseOnlyAccess,
+        val exclusion: ExclusionSet,
+    )
 
     private class IdEdgeStorage(private val manager: BaseOnlyApManager, trackDelta: Boolean) {
         val storage = StaticLayer(trackDelta)
@@ -96,8 +118,15 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             storage.getAndResetDelta(manager, dst)
         }
 
-        fun collectAll(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
-            storage.collectAll(manager, dst)
+        fun collectAll(emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit) {
+            storage.collectAll { access, exclusion -> emit(access, access, exclusion) }
+        }
+
+        fun collectContainedBy(
+            pattern: BaseOnlyAccess,
+            emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit,
+        ) {
+            storage.collectContainedBy(pattern) { access, exclusion -> emit(access, access, exclusion) }
         }
     }
 
@@ -177,15 +206,14 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         }
 
         fun collectAll(
-            manager: BaseOnlyApManager,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
             collectNext: S.(AccessorIdx) -> Unit,
             createThisLevel: () -> BaseOnlyAccess,
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
         ) {
             noAccessor?.collectNext(NO_ACCESSOR)
             apExclusion?.let { ex ->
                 val access = createThisLevel()
-                dst += Builder(manager).setInitialAp(access).setExitAp(access).setExclusion(ex)
+                emit(access, ex)
             }
 
             concrete.forEachEntry { el, next ->
@@ -222,13 +250,30 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
 
         fun collectAll(
-            manager: BaseOnlyApManager,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
         ) = collectAll(
-            manager, dst,
-            { collectAll(manager, it, dst) },
-            { packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR) }
+            { collectAll(it, emit) },
+            { packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR) },
+            emit,
         )
+
+        fun collectContainedBy(pattern: BaseOnlyAccess, emit: (BaseOnlyAccess, ExclusionSet) -> Unit) {
+            if (pattern.staticIdx == ABSTRACT_MARK) {
+                collectAll(emit)
+                return
+            }
+
+            apExclusion?.let { exclusion ->
+                val access = packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR)
+                if (baseOnlySummaryInitialMatches(pattern, access)) emit(access, exclusion)
+            }
+            val next = if (pattern.staticIdx == NO_ACCESSOR) {
+                noAccessor
+            } else {
+                concrete.get(pattern.staticIdx)
+            }
+            next?.collectContainedBy(pattern.staticIdx, pattern, emit)
+        }
     }
 
     private class FieldLayer(private val trackDelta: Boolean) : LayerBase<SuffixLayer>(trackDelta) {
@@ -248,14 +293,39 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
 
         fun collectAll(
-            manager: BaseOnlyApManager,
             s: AccessorIdx,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
         ) = collectAll(
-            manager, dst,
-            { collectAll(manager, s, it, dst) },
-            { packBaseOnlyAccess(s, ABSTRACT_MARK, NO_ACCESSOR) }
+            { collectAll(s, it, emit) },
+            { packBaseOnlyAccess(s, ABSTRACT_MARK, NO_ACCESSOR) },
+            emit,
         )
+
+        fun collectContainedBy(
+            s: AccessorIdx,
+            pattern: BaseOnlyAccess,
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
+        ) {
+            if (pattern.fieldIdx == ABSTRACT_MARK) {
+                collectAll(s, emit)
+                return
+            }
+
+            apExclusion?.let { exclusion ->
+                val access = packBaseOnlyAccess(s, ABSTRACT_MARK, NO_ACCESSOR)
+                if (baseOnlySummaryInitialMatches(pattern, access)) emit(access, exclusion)
+            }
+            if (pattern.fieldIdx == NO_ACCESSOR) {
+                noAccessor?.collectContainedBy(s, NO_ACCESSOR, pattern, emit)
+                concrete.forEachEntry { fieldIdx, next ->
+                    next?.collectContainedBy(s, fieldIdx, pattern, emit)
+                }
+                return
+            }
+
+            noAccessor?.collectContainedBy(s, NO_ACCESSOR, pattern, emit)
+            concrete.get(pattern.fieldIdx)?.collectContainedBy(s, pattern.fieldIdx, pattern, emit)
+        }
     }
 
     private class SuffixLayer(trackDelta: Boolean) : LayerBase<SuffixLayer.MutableExclusion>(trackDelta) {
@@ -286,18 +356,49 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
 
         fun collectAll(
-            manager: BaseOnlyApManager,
             s: AccessorIdx,
             f: AccessorIdx,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
         ) = collectAll(
-            manager, dst,
             {
                 val access = packBaseOnlyAccess(s, f, it)
-                dst += Builder(manager).setInitialAp(access).setExitAp(access).setExclusion(ex)
+                emit(access, ex)
             },
-            { packBaseOnlyAccess(s, f, ABSTRACT_MARK) }
+            { packBaseOnlyAccess(s, f, ABSTRACT_MARK) },
+            emit,
         )
+
+        fun collectContainedBy(
+            s: AccessorIdx,
+            f: AccessorIdx,
+            pattern: BaseOnlyAccess,
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
+        ) {
+            if (pattern.suffixIdx == ABSTRACT_MARK) {
+                collectAll(s, f, emit)
+                return
+            }
+
+            apExclusion?.let { exclusion ->
+                emitIfContained(packBaseOnlyAccess(s, f, ABSTRACT_MARK), exclusion, pattern, emit)
+            }
+            val access = packBaseOnlyAccess(s, f, pattern.suffixIdx)
+            val exclusion = if (pattern.suffixIdx == NO_ACCESSOR) {
+                noAccessor?.ex
+            } else {
+                concrete.get(pattern.suffixIdx)?.ex
+            }
+            if (exclusion != null) emitIfContained(access, exclusion, pattern, emit)
+        }
+
+        private fun emitIfContained(
+            access: BaseOnlyAccess,
+            exclusion: ExclusionSet,
+            pattern: BaseOnlyAccess,
+            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
+        ) {
+            if (baseOnlySummaryInitialMatches(pattern, access)) emit(access, exclusion)
+        }
     }
 
     private class MergingStorage(
@@ -341,9 +442,9 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             deltaExclusions.clear()
         }
 
-        fun collectAll(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
+        fun collectAll(emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit) {
             finals.forEachEntry { final, exclusion ->
-                dst += Builder(manager).setInitialAp(initial).setExitAp(final).setExclusion(exclusion)
+                emit(initial, final, exclusion)
             }
         }
     }

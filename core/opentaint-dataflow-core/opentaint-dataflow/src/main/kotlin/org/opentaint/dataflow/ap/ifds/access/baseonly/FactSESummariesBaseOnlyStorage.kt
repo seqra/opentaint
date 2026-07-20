@@ -3,8 +3,6 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
-import org.opentaint.dataflow.util.forEachEntry
-import org.opentaint.dataflow.util.long2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class FactSESummariesBaseOnlyStorage(
@@ -15,14 +13,14 @@ class FactSESummariesBaseOnlyStorage(
     override fun createStorage(): Storage<BaseOnlyAccess, BaseOnlyAccess> = SEStorage(apManager)
 
     private class SEStorage(private val manager: BaseOnlyApManager) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
-        private val perInitial = long2ObjectMap<MergeStorage>()
+        private val perInitial = BaseOnlyInitialAccessIndex<MergeStorage>()
 
         override fun add(
             iap: BaseOnlyAccess,
             se: Map<SideEffectKind, ExclusionSet>,
             added: MutableList<FactSEBuilder<BaseOnlyAccess>>,
         ) {
-            val storageNode = perInitial.get(iap) ?: MergeStorage(manager, iap).also { perInitial.put(iap, it) }
+            val storageNode = perInitial.getOrCreate(iap) { MergeStorage(manager, iap) }
             for ((kind, exclusion) in se) {
                 storageNode.add(kind, exclusion)?.let { added += it }
             }
@@ -32,7 +30,12 @@ class FactSESummariesBaseOnlyStorage(
             dst: MutableList<FactSEBuilder<BaseOnlyAccess>>,
             initialFactPattern: BaseOnlyAccess?,
         ) {
-            perInitial.forEachEntry { _, storage -> dst += storage.summaries() }
+            val collect: (BaseOnlyAccess, MergeStorage) -> Unit = { _, storage -> dst += storage.summaries() }
+            if (initialFactPattern == null) {
+                perInitial.collectAll(collect)
+            } else {
+                perInitial.collectContainedBy(initialFactPattern, collect)
+            }
         }
     }
 
