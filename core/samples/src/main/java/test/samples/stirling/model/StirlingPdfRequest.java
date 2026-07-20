@@ -1,9 +1,12 @@
 package test.samples.stirling.model;
 
-public final class StirlingPdfRequest {
-    private byte[] fileInput;
+import stirling.external.StirlingExternal.FileInput;
 
-    public byte[] getFileInput() {
+public final class StirlingPdfRequest {
+    private FileInput fileInput;
+
+    public FileInput getFileInput() {
         return fileInput;
     }
+
 }
