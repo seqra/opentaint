@@ -75,14 +75,11 @@ abstract class MethodAnalyzerEdgeSearcher(
             predecessorsIsEmpty = false
 
             val queryResult = factsForPrecondition(predecessor, fact)
-            if (queryResult.facts != null) {
-                result.addAll(queryResult.facts)
-                if (!queryResult.searchNext) {
-                    return@forEachPredecessor
-                }
-            }
+            result.addAll(queryResult.facts)
 
-            unprocessed.add(predecessor)
+            if (queryResult.searchNext) {
+                unprocessed.add(predecessor)
+            }
         }
 
         if (predecessorsIsEmpty) {
@@ -93,7 +90,7 @@ abstract class MethodAnalyzerEdgeSearcher(
     }
 
     private data class FactQueryResult(
-        val facts: List<InitialFactAp>?,
+        val facts: List<InitialFactAp>,
         val searchNext: Boolean,
     )
 
@@ -134,6 +131,6 @@ abstract class MethodAnalyzerEdgeSearcher(
                 }
             }
         }
-        return FactQueryResult(facts.takeIf { it.isNotEmpty() }, searchNext)
+        return FactQueryResult(facts, searchNext)
     }
 }
