@@ -43,7 +43,7 @@ public final class StirlingTraceResolutionRegressionSample {
         metadata.put("Title", applicationProperties.getValue());
         jsonOutput.set("Metadata", metadata);
         JsonNode basicInfo = mapper.createObjectNode();
-        long fileSizeInBytes = inputFile.getSize();
+        String fileSizeInBytes = inputFile.getSize();
         basicInfo.put("FileSizeInBytes", fileSizeInBytes);
         jsonOutput.set("BasicInfo", basicInfo);
         String jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonOutput);

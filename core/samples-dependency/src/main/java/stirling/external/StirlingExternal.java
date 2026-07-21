@@ -4,7 +4,7 @@ public final class StirlingExternal {
     private StirlingExternal() { }
 
     public static final class FileInput {
-        public long getSize() { return 0L; }
+        public String getSize() { return null; }
     }
 
     public static final class PdfDocumentFactory {
