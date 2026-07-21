@@ -7,6 +7,6 @@ rules:
       cwe: CWE-502
     patterns:
       - pattern: |
-          $A = flask.request.headers.getlist(...)[...][...]
+          $A = flask.request.headers.getlist(...)[...]
           ...
           pickle.loads($A)

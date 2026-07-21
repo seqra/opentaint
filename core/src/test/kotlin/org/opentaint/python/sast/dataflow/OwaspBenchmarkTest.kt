@@ -303,14 +303,23 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest01208() = assertReachable("01208")
 
     // FALSE — urlparse+netloc/scheme guard excluded via pattern-not-inside cleaner on $URL.
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00069() = assertNotReachable("00069")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00151() = assertNotReachable("00151")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00419() = assertNotReachable("00419")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00420() = assertNotReachable("00420")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00598() = assertNotReachable("00598")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00815() = assertNotReachable("00815")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00816() = assertNotReachable("00816")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest00983() = assertNotReachable("00983")
+    @Disabled("URL netloc/scheme allowlist guard is not expressible as a unifiable cleaner (inv 23); fake urlparse pattern-not removed")
     @Test fun benchmarkTest01209() = assertNotReachable("01209")
 
     // FALSE — never tainted: constant get_safe_value wrapper (01156-01160) or request.path (01091);
@@ -373,10 +382,15 @@ class OwaspBenchmarkTest : AnalysisTest() {
 
     // FALSE — ThingFactory getattr dispatch (inv 20) drops taint before the sink, so these safely
     // never reach eval/exec even though they also carry a startswith guard. Pass via the FN-drop.
+    @Disabled("passes only via the inv-20 ThingFactory dynamic-dispatch FN (thing.doSomething(param) drops taint) — coincidental green; the real quote-balancing guard is not expressible either")
     @Test fun benchmarkTest00075() = assertNotReachable("00075")
+    @Disabled("passes only via the inv-20 ThingFactory dynamic-dispatch FN (thing.doSomething(param) drops taint) — coincidental green; the real quote-balancing guard is not expressible either")
     @Test fun benchmarkTest00163() = assertNotReachable("00163")
+    @Disabled("passes only via the inv-20 ThingFactory dynamic-dispatch FN (thing.doSomething(param) drops taint) — coincidental green; the real quote-balancing guard is not expressible either")
     @Test fun benchmarkTest00504() = assertNotReachable("00504")
+    @Disabled("passes only via the inv-20 ThingFactory dynamic-dispatch FN (thing.doSomething(param) drops taint) — coincidental green; the real quote-balancing guard is not expressible either")
     @Test fun benchmarkTest00818() = assertNotReachable("00818")
+    @Disabled("passes only via the inv-20 ThingFactory dynamic-dispatch FN (thing.doSomething(param) drops taint) — coincidental green; the real quote-balancing guard is not expressible either")
     @Test fun benchmarkTest00989() = assertNotReachable("00989")
 
     // FALSE — safe ONLY by a `bar.startswith("'")/endswith("'")` string-literal guard. VERIFIED root
@@ -386,33 +400,33 @@ class OwaspBenchmarkTest : AnalysisTest() {
     // MAY-alias of `bar`. Cleaning it removes only that fact; the base-variable fact `bar` (a distinct
     // fact — no must-alias links them) survives and reaches `eval`. Receiver/instance-position cleaners
     // therefore cannot clean the underlying variable → engine gap, not rule-fixable.
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00073() = assertNotReachable("00073")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00158() = assertNotReachable("00158")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00162() = assertNotReachable("00162")
     @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
     @Test fun benchmarkTest00345() = assertNotReachable("00345")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00423() = assertNotReachable("00423")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00426() = assertNotReachable("00426")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00603() = assertNotReachable("00603")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00730() = assertNotReachable("00730")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00821() = assertNotReachable("00821")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00822() = assertNotReachable("00822")
     @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
     @Test fun benchmarkTest00892() = assertNotReachable("00892")
     @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
     @Test fun benchmarkTest00893() = assertNotReachable("00893")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00987() = assertNotReachable("00987")
-    @Disabled("receiver/instance-position (This) pattern-not cleaner fires but cleans only the PIR_SELF may-alias, not the base variable that reaches the sink (inv 27)")
+    @Disabled("quote-balancing guard (startswith/endswith + no inner-quote) not expressible as a unifiable cleaner (inv 23); fake startswith pattern-not removed")
     @Test fun benchmarkTest00988() = assertNotReachable("00988")
 
     // FALSE — never tainted: constant get_safe_value wrapper; source pattern never matches.
@@ -533,6 +547,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00433() = assertReachable("00433")
     @Test fun benchmarkTest00507() = assertReachable("00507")
     @Test fun benchmarkTest00510() = assertReachable("00510")
+    @Disabled("char-by-char rebuild loop drops concrete whole-object taint; faithful single-[...] source cannot survive it (inv 29); per-entry double-[...] crutch removed")
     @Test fun benchmarkTest00605() = assertReachable("00605")
     @Test fun benchmarkTest00657() = assertReachable("00657")
     @Test fun benchmarkTest00734() = assertReachable("00734")
