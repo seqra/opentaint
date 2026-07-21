@@ -11,6 +11,7 @@ import org.opentaint.ir.api.python.PIRClass
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRLocation
 import org.opentaint.ir.api.python.PIRParameter
+import org.opentaint.ir.api.python.PIRParameterKind
 import org.opentaint.ir.api.python.PIRStrConst
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -105,6 +106,7 @@ class PIRMethodCallFactMapperTest {
     private fun param(index: Int, name: String): PIRParameter = mockk {
         every { this@mockk.name } returns name
         every { this@mockk.index } returns index
+        every { this@mockk.kind } returns PIRParameterKind.POSITIONAL_OR_KEYWORD
     }
 
     private val unusedLocation = object : PIRLocation {
