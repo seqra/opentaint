@@ -33,19 +33,9 @@ private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature): C
     is GoSerializedCondition.Or -> mkOr(anyOf.map { it.resolveImpl(signature) })
     is GoSerializedCondition.Not -> CommonCondition.Not(not.resolveImpl(signature))
 
-    is GoSerializedCondition.ContainsMark -> mkOr(
-        listOf(
-            pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
-                GoRuleCondition.ContainsMark(it, tainted)
-            },
-            // Star-model replacement for the removed runtime element reader
-            // (GoMethodCallTaintUtil.patchSinkConditionFactReader): a position also observes
-            // element (`arg[*]`, incl. variadic `...T`) taint via the recursive any-accessor check.
-            pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
-                GoRuleCondition.ContainsMarkOnAnyAccessor(it, tainted)
-            }
-        )
-    )
+    is GoSerializedCondition.ContainsMark -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
+        GoRuleCondition.ContainsMark(it, tainted)
+    }
 
     is GoSerializedCondition.ContainsMarkOnAnyAccessor -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
         GoRuleCondition.ContainsMarkOnAnyAccessor(it, tainted)

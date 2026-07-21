@@ -19,7 +19,7 @@ rules:
               - pattern: "template.New($N).Parse($UNTRUSTED)"
               - pattern: "template.Must(template.New($N).Parse($UNTRUSTED))"
               - pattern: "($T : *template.Template).Parse($UNTRUSTED)"
-              - pattern: "template.New($N).ParseFiles($UNTRUSTED, ...)"
+              - pattern: "template.New($N).ParseFiles($*UNTRUSTED, ...)"
               - pattern: "template.New($N).ParseGlob($UNTRUSTED)"
           - focus-metavariable: $UNTRUSTED
       - patterns:
@@ -30,6 +30,6 @@ rules:
               - pattern: "template.New($N).Parse($UNTRUSTED)"
               - pattern: "template.Must(template.New($N).Parse($UNTRUSTED))"
               - pattern: "($T : *template.Template).Parse($UNTRUSTED)"
-              - pattern: "template.New($N).ParseFiles($UNTRUSTED, ...)"
+              - pattern: "template.New($N).ParseFiles($*UNTRUSTED, ...)"
               - pattern: "template.New($N).ParseGlob($UNTRUSTED)"
           - focus-metavariable: $UNTRUSTED
