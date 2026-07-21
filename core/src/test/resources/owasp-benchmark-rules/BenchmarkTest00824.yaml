@@ -1,16 +1,17 @@
 rules:
   - id: owasp-ldapi-00824
     languages: [python]
-    mode: taint
-    message: "Tainted request data reaches an LDAP search filter (LDAP injection)"
     severity: ERROR
+    message: "Tainted request data reaches an LDAP search filter (LDAP injection)"
     metadata:
       cwe: CWE-90
-    pattern-sources:
+    patterns:
       - pattern-either:
-          - pattern: "flask.request.args.getlist(...)"
-          - pattern: "flask.request.args.getlist(...)[...]"
-    pattern-sinks:
-      - patterns:
-          - pattern: "$CONN.search($BASE, $FILTER, ...)"
-          - focus-metavariable: $FILTER
+          - pattern: |
+              $FILTER = flask.request.args.getlist(...)
+              ...
+              $CONN.search($BASE, $FILTER, ...)
+          - pattern: |
+              $FILTER = flask.request.args.getlist(...)[...]
+              ...
+              $CONN.search($BASE, $FILTER, ...)

@@ -1,14 +1,12 @@
 rules:
   - id: owasp-sqli-00011
     languages: [python]
-    mode: taint
-    message: "Tainted request data reaches a SQL execute (SQL injection)"
     severity: ERROR
+    message: "Tainted request data reaches a SQL execute (SQL injection)"
     metadata:
       cwe: CWE-89
-    pattern-sources:
-      - pattern: "flask.request.cookies.get(...)"
-    pattern-sinks:
-      - patterns:
-          - pattern: "$DB.execute($Q, ...)"
-          - focus-metavariable: $Q
+    patterns:
+      - pattern: |
+          $Q = flask.request.cookies.get(...)
+          ...
+          $DB.execute($Q, ...)
