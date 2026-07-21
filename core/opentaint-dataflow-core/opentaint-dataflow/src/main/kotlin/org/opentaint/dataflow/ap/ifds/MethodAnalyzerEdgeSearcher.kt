@@ -5,10 +5,10 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.AnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPreconditionFacts
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -74,10 +74,12 @@ abstract class MethodAnalyzerEdgeSearcher(
         graph.forEachPredecessor(analysisManager, statement) { predecessor ->
             predecessorsIsEmpty = false
 
-            val facts = factsForPrecondition(predecessor, fact)
-            if (facts != null) {
-                result.addAll(facts)
-                return@forEachPredecessor
+            val queryResult = factsForPrecondition(predecessor, fact)
+            if (queryResult.facts != null) {
+                result.addAll(queryResult.facts)
+                if (!queryResult.searchNext) {
+                    return@forEachPredecessor
+                }
             }
 
             unprocessed.add(predecessor)
@@ -90,7 +92,12 @@ abstract class MethodAnalyzerEdgeSearcher(
         return result
     }
 
-    private fun factsForPrecondition(statement: CommonInst, fact: InitialFactAp): List<InitialFactAp>? {
+    private data class FactQueryResult(
+        val facts: List<InitialFactAp>?,
+        val searchNext: Boolean,
+    )
+
+    private fun factsForPrecondition(statement: CommonInst, fact: InitialFactAp): FactQueryResult {
         val statementCall = analysisManager.getCallExpr(statement)
         if (statementCall != null) {
             val returnValue: CommonValue? = (statement as? CommonAssignInst)?.lhv
@@ -100,43 +107,33 @@ abstract class MethodAnalyzerEdgeSearcher(
             )
 
             val preconditions = preconditionFunction.factPrecondition(fact)
-            val facts = mutableListOf<InitialFactAp>()
-            for (precondition in preconditions) {
-                when (precondition) {
-                    is CallPrecondition.Unchanged -> {
-                        // todo: handle unchanged + facts at the same statement
-                        return null
-                    }
-
-                    is MethodCallPrecondition.PreconditionFactsForInitialFact -> {
-                        // todo: use provided fact instead of this list?
-                        facts += precondition.initialFact
-                    }
-                }
-            }
-
-            return facts
+            return preconditions.queryResult<_, CallPrecondition.Unchanged, PreconditionFactsForInitialFact> { initialFact }
         } else {
             val preconditionFunction = analysisManager.getMethodSequentPrecondition(
                 apManager, analysisContext, statement
             )
             val preconditions = preconditionFunction.factPrecondition(fact)
-            val facts = mutableListOf<InitialFactAp>()
-            for (precondition in preconditions) {
-                when (precondition) {
-                    is SequentPrecondition.Unchanged -> {
-                        // todo: handle unchanged + facts at the same statement
-                        return null
-                    }
+            return preconditions.queryResult<_, SequentPrecondition.Unchanged, SequentPreconditionFacts> { fact }
+        }
+    }
 
-                    is MethodSequentPrecondition.SequentPreconditionFacts -> {
-                        // todo: use provided fact instead of this list?
-                        facts += precondition.fact
-                    }
+    private inline fun <reified T, reified U, reified F> Iterable<T>.queryResult(
+        initialFact: F.() -> InitialFactAp
+    ): FactQueryResult {
+        val facts = mutableListOf<InitialFactAp>()
+        var searchNext = false
+        for (precondition in this) {
+            when (precondition) {
+                is U -> {
+                    searchNext = true
+                }
+
+                is F -> {
+                    // todo: use provided fact instead of this list?
+                    facts += precondition.initialFact()
                 }
             }
-
-            return facts
         }
+        return FactQueryResult(facts.takeIf { it.isNotEmpty() }, searchNext)
     }
 }
