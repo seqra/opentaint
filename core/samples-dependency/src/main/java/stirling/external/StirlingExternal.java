@@ -3,7 +3,9 @@ package stirling.external;
 public final class StirlingExternal {
     private StirlingExternal() { }
 
-    public static final class FileInput { }
+    public static final class FileInput {
+        public long getSize() { return 0L; }
+    }
 
     public static final class PdfDocumentFactory {
         public PdfDocument load(FileInput input, boolean readOnly) { return null; }
@@ -24,6 +26,7 @@ public final class StirlingExternal {
 
     public static final class JsonNode {
         public JsonNode put(String name, String value) { return this; }
+        public JsonNode put(String name, long value) { return this; }
         public JsonNode set(String name, JsonNode value) { return this; }
     }
 

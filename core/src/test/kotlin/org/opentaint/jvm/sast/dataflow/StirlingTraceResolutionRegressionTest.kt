@@ -48,7 +48,7 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
 
     @Test
     fun `Tree reports Stirling response vulnerability`() {
-        assertReachable(config, DISPATCH_CLASS, "dispatch", RULE_ID, "Stirling Tree control", ApMode.Tree)
+        assertReachable(config, DISPATCH_CLASS, DISPATCH_METHOD, RULE_ID, "Stirling Tree control", ApMode.Tree)
     }
 
     @Test
@@ -56,7 +56,7 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         assertReachable(
             config,
             DISPATCH_CLASS,
-            "dispatch",
+            DISPATCH_METHOD,
             RULE_ID,
             "Stirling BaseOnly regression",
             ApMode.BaseOnlyField,
@@ -68,14 +68,14 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         generated.copy(
             passThrough = generated.passThrough.orEmpty() + listOf(
                 copyRule(EXTERNAL_FACTORY_CLASS, "load", PositionBase.Argument(0), PositionBase.Result),
-                copyRule(EXTERNAL_DOCUMENT_CLASS, "getDocumentInformation", PositionBase.This, PositionBase.Result),
-                copyRule(EXTERNAL_INFO_CLASS, "getTitle", PositionBase.This, PositionBase.Result),
+                copyRule(EXTERNAL_FILE_INPUT_CLASS, "getSize", PositionBase.This, PositionBase.Result),
+                copyRule(APPLICATION_PROPERTIES_CLASS, "getValue", PositionBase.This, PositionBase.Result),
                 SerializedRule.PassThrough(
                     function = functionMatcher(EXTERNAL_NODE_CLASS, "put"),
                     copy = listOf(
                         SerializedTaintPassAction(
                             from = PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(1)),
-                            to = jsonFields(PositionBase.This, "title"),
+                            to = jsonFields(PositionBase.This, "value"),
                         ),
                     ),
                 ),
@@ -83,8 +83,8 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
                     function = functionMatcher(EXTERNAL_NODE_CLASS, "set"),
                     copy = listOf(
                         SerializedTaintPassAction(
-                            from = jsonFields(PositionBase.Argument(1), "title"),
-                            to = jsonFields(PositionBase.This, "metadata", "title"),
+                            from = jsonFields(PositionBase.Argument(1), "value"),
+                            to = jsonFields(PositionBase.This, "value"),
                         ),
                     ),
                 ),
@@ -92,17 +92,8 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
                     function = functionMatcher(EXTERNAL_WRITER_CLASS, "writeValueAsString"),
                     copy = listOf(
                         SerializedTaintPassAction(
-                            from = jsonFields(PositionBase.Argument(0), "metadata", "title"),
+                            from = jsonFields(PositionBase.Argument(0), "value"),
                             to = PositionBaseWithModifiers.BaseOnly(PositionBase.Result),
-                        ),
-                    ),
-                ),
-                SerializedRule.PassThrough(
-                    function = functionMatcher(RESPONSE_ENTITY_CLASS, "<init>"),
-                    copy = listOf(
-                        SerializedTaintPassAction(
-                            from = PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(0)),
-                            to = responseBody(PositionBase.This),
                         ),
                     ),
                 ),
@@ -127,11 +118,6 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
             fields.map { PositionModifier.Field(EXTERNAL_NODE_CLASS, it, EXTERNAL_NODE_CLASS) },
         )
 
-    private fun responseBody(base: PositionBase) = PositionBaseWithModifiers.WithModifiers(
-        base,
-        listOf(PositionModifier.Field(HTTP_ENTITY_CLASS, "Body", "java.lang.Object")),
-    )
-
     private fun generatedJoinConfig(): SerializedTaintConfig =
         SemgrepRuleLoader(listOf(JavaLanguageStrategy())).run {
             val trace = SemgrepLoadTrace()
@@ -152,14 +138,14 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         }
 
     private companion object {
-        const val DISPATCH_CLASS = "test.samples.stirling.dispatch.StirlingDispatcher"
+        const val DISPATCH_CLASS = "__spring_dispatcher__"
+        const val DISPATCH_METHOD = "__dispatch__"
+        const val EXTERNAL_FILE_INPUT_CLASS = "stirling.external.StirlingExternal\$FileInput"
+        const val APPLICATION_PROPERTIES_CLASS =
+            "test.samples.StirlingTraceResolutionRegressionPolluter\$ApplicationProperties"
         const val EXTERNAL_FACTORY_CLASS = "stirling.external.StirlingExternal\$PdfDocumentFactory"
-        const val EXTERNAL_DOCUMENT_CLASS = "stirling.external.StirlingExternal\$PdfDocument"
-        const val EXTERNAL_INFO_CLASS = "stirling.external.StirlingExternal\$DocumentInfo"
         const val EXTERNAL_NODE_CLASS = "stirling.external.StirlingExternal\$JsonNode"
         const val EXTERNAL_WRITER_CLASS = "stirling.external.StirlingExternal\$JsonWriter"
-        const val RESPONSE_ENTITY_CLASS = "org.springframework.http.ResponseEntity"
-        const val HTTP_ENTITY_CLASS = "org.springframework.http.HttpEntity"
         const val SOURCE_RULE_PATH = "java/lib/spring/untrusted-data-source.yaml"
         const val SINK_RULE_PATH = "java/lib/spring/spring-xss-html-response-sinks.yaml"
         const val SECURITY_RULE_PATH = "java/security/xss.yaml"
