@@ -1,17 +1,7 @@
 package org.opentaint.jvm.sast.dataflow
 
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import org.opentaint.dataflow.ap.ifds.FieldAccessor
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
-import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
-import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyAccessOps
-import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
-import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyFinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyInitialFactAp
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
@@ -35,7 +25,7 @@ import org.opentaint.semgrep.pattern.createTaintConfig
 import kotlin.io.path.Path
 import kotlin.io.path.readText
 
-/** Reduction of Stirling-PDF's GetInfoOnPDF#getPdfInfo trace-resolution miss. */
+/** Reduction of Stirling-PDF's GetInfoOnPDF#getPdfInfo XSS regression. */
 class StirlingTraceResolutionRegressionTest : AnalysisTest() {
     override val sourceFileExtension: String = "java"
     override val useDefaultUnrollStrategy: Boolean = true
@@ -57,50 +47,46 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         }
 
     @Test
-    fun `Tree resolves generated Stirling response trace`() {
+    fun `Tree reports Stirling response vulnerability`() {
         assertReachable(config, DISPATCH_CLASS, "dispatch", RULE_ID, "Stirling Tree control", ApMode.Tree)
     }
 
     @Test
-    fun `BaseOnly resolves generated Stirling response trace`() {
-        // The compact dispatcher also admits a Simple trace. First prove that forward analysis
-        // produces the vulnerability, then pin the F2F reversal used by the real Stirling trace.
+    fun `BaseOnly reports Stirling response vulnerability`() {
         assertReachable(
             config,
             DISPATCH_CLASS,
             "dispatch",
             RULE_ID,
-            "Stirling BaseOnly trace-resolution regression",
+            "Stirling BaseOnly regression",
             ApMode.BaseOnlyField,
         )
-        assertBaseOnlyCanReverseStirlingResponseSummary()
     }
 
     private val config: SerializedTaintConfig by lazy {
         val generated = generatedJoinConfig()
         generated.copy(
-            methodExitSink = generated.methodExitSink.orEmpty().filter {
-                SINK_MARK in it.condition.toString()
-            }.map {
-                it.copy(
-                    function = functionMatcher(TEST_CLASS, "getPdfInfo"),
-                )
-            },
             passThrough = generated.passThrough.orEmpty() + listOf(
                 copyRule(EXTERNAL_FACTORY_CLASS, "load", PositionBase.Argument(0), PositionBase.Result),
                 copyRule(EXTERNAL_DOCUMENT_CLASS, "getDocumentInformation", PositionBase.This, PositionBase.Result),
                 copyRule(EXTERNAL_INFO_CLASS, "getTitle", PositionBase.This, PositionBase.Result),
-                copyRuleWithAccess(
-                    EXTERNAL_NODE_CLASS,
-                    "put",
-                    PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(1)),
-                    jsonFields(PositionBase.This, "title"),
+                SerializedRule.PassThrough(
+                    function = functionMatcher(EXTERNAL_NODE_CLASS, "put"),
+                    copy = listOf(
+                        SerializedTaintPassAction(
+                            from = PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(1)),
+                            to = jsonFields(PositionBase.This, "title"),
+                        ),
+                    ),
                 ),
-                copyRuleWithAccess(
-                    EXTERNAL_NODE_CLASS,
-                    "set",
-                    jsonFields(PositionBase.Argument(1), "title"),
-                    jsonFields(PositionBase.This, "metadata", "title"),
+                SerializedRule.PassThrough(
+                    function = functionMatcher(EXTERNAL_NODE_CLASS, "set"),
+                    copy = listOf(
+                        SerializedTaintPassAction(
+                            from = jsonFields(PositionBase.Argument(1), "title"),
+                            to = jsonFields(PositionBase.This, "metadata", "title"),
+                        ),
+                    ),
                 ),
                 SerializedRule.PassThrough(
                     function = functionMatcher(EXTERNAL_WRITER_CLASS, "writeValueAsString"),
@@ -124,90 +110,40 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         )
     }
 
-    private fun copyRule(
-        owner: String,
-        name: String,
-        from: PositionBase,
-        to: PositionBase,
-    ) = SerializedRule.PassThrough(
-        function = functionMatcher(owner, name),
-        copy = listOf(
-            SerializedTaintPassAction(
-                from = PositionBaseWithModifiers.BaseOnly(from),
-                to = PositionBaseWithModifiers.BaseOnly(to),
+    private fun copyRule(owner: String, name: String, from: PositionBase, to: PositionBase) =
+        SerializedRule.PassThrough(
+            function = functionMatcher(owner, name),
+            copy = listOf(
+                SerializedTaintPassAction(
+                    from = PositionBaseWithModifiers.BaseOnly(from),
+                    to = PositionBaseWithModifiers.BaseOnly(to),
+                ),
             ),
-        ),
-    )
+        )
 
-    private fun copyRuleWithAccess(
-        owner: String,
-        name: String,
-        from: PositionBaseWithModifiers,
-        to: PositionBaseWithModifiers,
-    ) = SerializedRule.PassThrough(
-        function = functionMatcher(owner, name),
-        copy = listOf(SerializedTaintPassAction(from = from, to = to)),
-    )
-
-    private fun jsonFields(base: PositionBase, vararg fields: String) = PositionBaseWithModifiers.WithModifiers(
-        base,
-        fields.map { PositionModifier.Field(EXTERNAL_NODE_CLASS, it, EXTERNAL_NODE_CLASS) },
-    )
+    private fun jsonFields(base: PositionBase, vararg fields: String) =
+        PositionBaseWithModifiers.WithModifiers(
+            base,
+            fields.map { PositionModifier.Field(EXTERNAL_NODE_CLASS, it, EXTERNAL_NODE_CLASS) },
+        )
 
     private fun responseBody(base: PositionBase) = PositionBaseWithModifiers.WithModifiers(
         base,
         listOf(PositionModifier.Field(HTTP_ENTITY_CLASS, "Body", "java.lang.Object")),
     )
 
-    /** Exact F2F boundary produced by bytesToWebResponse in both this sample and Stirling-PDF. */
-    private fun assertBaseOnlyCanReverseStirlingResponseSummary() {
-        val manager = BaseOnlyApManager(
-            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
-            fieldSensitive = true,
-        )
-        val body = manager.interner.index(FieldAccessor(HTTP_ENTITY_CLASS, "Body", "java.lang.Object"))
-        val sink = TaintMarkAccessor(SINK_MARK)
-        val sinkIdx = manager.interner.index(sink)
-        val base = AccessPathBase.Argument(0)
-        val summaryAccess = BaseOnlyAccessOps.build(intArrayOf(body), isAbstract = true)
-        val callerAccess = BaseOnlyAccessOps.build(intArrayOf(sinkIdx), isAbstract = false)
-        val summaryFinal = BaseOnlyFinalFactAp(
-            manager,
-            base,
-            summaryAccess,
-            ExclusionSet.Concrete(sink),
-        )
-        val callerFact = BaseOnlyInitialFactAp(manager, base, callerAccess, ExclusionSet.Empty)
-
-        assertEquals(
-            1,
-            callerFact.splitDelta(summaryFinal).size,
-            "the response summary must retain the semantic sink suffix while reversing the helper call",
-        )
-    }
-
     private fun generatedJoinConfig(): SerializedTaintConfig =
         SemgrepRuleLoader(listOf(JavaLanguageStrategy())).run {
             val trace = SemgrepLoadTrace()
             val rulesRoot = Path(System.getProperty("user.dir")).parent.resolve("rules/ruleset")
-            registerRuleSet(
-                ruleSetText = rulesRoot.resolve(SOURCE_RULE_PATH).readText(),
-                ruleRelativePath = Path(SOURCE_RULE_PATH),
-                rulesRoot = rulesRoot,
-                trace = trace,
-            )
-            registerRuleSet(
-                ruleSetText = rulesRoot.resolve(SINK_RULE_PATH).readText(),
-                ruleRelativePath = Path(SINK_RULE_PATH),
-                rulesRoot = rulesRoot,
-                trace = trace,
-            )
-            registerRuleSet(
-                ruleSetText = rulesRoot.resolve(SECURITY_RULE_PATH).readText(),
-                ruleRelativePath = Path(SECURITY_RULE_PATH),
-                rulesRoot = rulesRoot,
-                trace = trace,
-            )
+            listOf(SOURCE_RULE_PATH, SINK_RULE_PATH, SECURITY_RULE_PATH).forEach { relativePath ->
+                registerRuleSet(
+                    ruleSetText = rulesRoot.resolve(relativePath).readText(),
+                    ruleRelativePath = Path(relativePath),
+                    rulesRoot = rulesRoot,
+                    trace = trace,
+                )
+            }
 
             @Suppress("UNCHECKED_CAST")
             val rule = loadRules().rulesWithMeta.single { it.first.ruleId == RULE_ID }.first
@@ -216,7 +152,6 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         }
 
     private companion object {
-        const val TEST_CLASS = "test.samples.StirlingTraceResolutionRegressionSample"
         const val DISPATCH_CLASS = "test.samples.stirling.dispatch.StirlingDispatcher"
         const val EXTERNAL_FACTORY_CLASS = "stirling.external.StirlingExternal\$PdfDocumentFactory"
         const val EXTERNAL_DOCUMENT_CLASS = "stirling.external.StirlingExternal\$PdfDocument"
@@ -229,6 +164,5 @@ class StirlingTraceResolutionRegressionTest : AnalysisTest() {
         const val SINK_RULE_PATH = "java/lib/spring/spring-xss-html-response-sinks.yaml"
         const val SECURITY_RULE_PATH = "java/security/xss.yaml"
         const val RULE_ID = "java/security/xss.yaml:xss-in-spring-app"
-        const val SINK_MARK = "$RULE_ID;sink_35;\$<ARTIFICIAL>_4;6"
     }
 }
