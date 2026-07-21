@@ -41,7 +41,8 @@ rules:
       - java
     patterns:
       - pattern: |
-          (org.jboss.seam.log.Log $LOGGER).$LEVEL($DATA,...)
+          (org.jboss.seam.log.Log $LOGGER).$LEVEL($*DATA,...)
+      - focus-metavariable: $DATA
       - metavariable-regex:
           metavariable: $LEVEL
           regex: (debug|error|fatal|info|trace|warn)
