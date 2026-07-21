@@ -8,7 +8,6 @@ import org.opentaint.semgrep.pattern.EmptyAutomataAfterGeneratedEdgeElimination
 import org.opentaint.semgrep.pattern.TaintAutomataCreationFailure
 import org.opentaint.semgrep.pattern.SemgrepRule
 import org.opentaint.semgrep.pattern.SemgrepRuleLoadStepTrace
-import org.opentaint.semgrep.pattern.StarPatternNotCoincidenceUnsupported
 import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.automata.AutomataEdgeType
@@ -55,14 +54,6 @@ private fun TaintAutomataConversionCtx.createAutomataWithEdgeElimination(
 ): TaintRegisterStateAutomata? =
     runCatching {
         createAutomataWithEdgeEliminationUnsafe(formulaManager, metaVarInfo, initialNode)
-    }.also {
-        // Non-fatal: a positive `$*X` coinciding with an unstarred `pattern-not $X` at the same
-        // position is a reserved/unsupported combination, treated as full exclusion (unchanged
-        // behavior). Emitted here (not inside the unsafe body) so it surfaces even when the T/F
-        // arm collapses to an empty automata and the unsafe body throws.
-        for (coincidence in formulaManager.starPatternNotCoincidences) {
-            semgrepRuleTrace.error(StarPatternNotCoincidenceUnsupported(coincidence.metavar))
-        }
     }.onFailure { ex ->
         semgrepRuleTrace.error(TaintAutomataCreationFailure(ex.message))
     }.getOrNull()
