@@ -399,6 +399,35 @@ stable — the `@Disabled` reasons in `OwaspBenchmarkTest.kt` cite them.
     threaded into a generic `str($T)` sink). The `str(...)` wrapper was REMOVED — a structural sink fires on the
     weak call directly.
 
+39. **inv 35 RESOLVED — return-value sinks now WORK; XSS sink is `$A = <src>(...) ... return $A`** (VERIFIED,
+    xss batch 1). The rebase onto return-sink support (`17c205419`/`e122304b0`) makes a bare `return $A` lower
+    to a firing return-value sink (ContainsMark on the returned value at method exit, following rebinding
+    param→bar→RESPONSE). Template = `BenchmarkTest00096.yaml`. Corollaries for CWE-79:
+    - **XSS escape sanitizers are NOT modeled** (`markupsafe.escape`/`html.escape`/`escape_for_html` just
+      propagate). Model as an ARG-position structural cleaner `pattern-not: ... <escape>($A) ... return $A`
+      (inv 23) — WORKS for a CONCRETE source (getlist/scalar; 00186 markupsafe green) but the cleaner does NOT
+      stop ABSTRACT (interproc wrapper) taint, which survives it → wrapper+escape FALSE stays FP → @Disabled
+      (00282). char-rebuild `escape_for_html` still drops concrete via NextIter (inv 29; 00364 free pass).
+    - **Concrete taint drops at a COLLECTION-WRAPPED sink-side format** — `"{0[bar]}".format(dict)` (dict['bar']=bar)
+      and `"%s" % (bar,...)` (tuple) drop concrete element taint; deepening the SOURCE is inert (the dropping
+      collection is built at the sink side). VERIFIED differentially: `.format(bar,otherarg)` direct-arg reaches
+      (00187), `.format(dict)` ABSTRACT reaches (00281), but `.format(dict)`/`%` CONCRETE FN (00098/00188/00189/
+      00365/00097-split). All @Disabled as inv-25/29 FN. Same class as the make_response HEADER FALSE (make_response
+      is unmodeled: concrete drops → NOREACH passes 00149/00256; wrapper-ABSTRACT survives → FP @Disabled 00334/00335).
+    - **xss category (3 batches): 89/89, 62 active-pass / 27 @Disabled / 0 fail** (post inv-40 passThroughs; was
+      55/34). Confirmed b3: `request.query_string` CONCRETE source behaves identically to form/args.get concrete
+      (survives .decode/whole-slice/unquote_plus; `split()[i]`/`.format(dict)` now propagate via inv 40, `%`-tuple
+      still drops); `request.path` (inv 17) and `get_safe_value` (inv 33, returns literal) are non-sources → model
+      with a non-matching bare source.
+
+40. **Element-shaped config passThroughs recover sink-side collection-wrap concrete drops (inv 25/29 family)**
+    (VERIFIED, xss). `str.split` returns element-shaped taint via `from: this / to: [result, '[*]']` so `split()[i]`
+    survives; `str.format` reads the dict/tuple arg's element via `from: [arg(0), '[*]'] / to: result` so
+    `"{0[bar]}".format(dict)` survives. Both in `config.yaml` (global, 0 regressions across 1230). Fixed xss
+    00097/00098/00188/00365/00451/00754/00923. **Does NOT extend to `%`-tuple** (`"%s" % (bar,)`) — `%` is a native
+    operator (PIRBinOp), no call to key a passThrough on → those 6 stay @Disabled (00189/00366/00453/00533/00673/00925);
+    needs the engine to carry concrete taint through the binop (inv 25 core).
+
 ## Category → sink / CWE reference
 
 | category | CWE | typical sink pattern |

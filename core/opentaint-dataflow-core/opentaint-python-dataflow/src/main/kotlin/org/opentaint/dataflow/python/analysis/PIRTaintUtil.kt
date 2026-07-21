@@ -177,21 +177,37 @@ class PIRSequentTaintUtil(
         else -> error("Unexpected statement: $statement")
     }
 
+    // TODO move to fact mapper
     private fun FinalFactAp.toResultBase(statement: PIRReturn): FinalFactAp? {
         val result = statement.value?.let { PIRFlowFunctionUtils.accessPathBase(it) }
             ?: return null
-        return if (base == result) rebase(AccessPathBase.Return) else null
+
+        return when (base) {
+            result -> rebase(AccessPathBase.Return)
+            is AccessPathBase.ClassStatic -> this
+            else -> null
+        }
     }
 
     private fun FinalFactAp.fromResultBase(statement: PIRReturn): FinalFactAp? {
         val result = statement.value?.let { PIRFlowFunctionUtils.accessPathBase(it) }
             ?: return null
-        return if (base == AccessPathBase.Return) rebase(result) else null
+
+        return when (base) {
+            AccessPathBase.Return -> rebase(result)
+            is AccessPathBase.ClassStatic -> this
+            else -> null
+        }
     }
 
     private fun InitialFactAp.fromResultBase(statement: PIRReturn): InitialFactAp? {
         val result = statement.value?.let { PIRFlowFunctionUtils.accessPathBase(it) }
             ?: return null
-        return if (base == AccessPathBase.Return) rebase(result) else null
+
+        return when (base) {
+            AccessPathBase.Return -> rebase(result)
+            is AccessPathBase.ClassStatic -> this
+            else -> null
+        }
     }
 }

@@ -109,8 +109,7 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
     fun edgeRuleInfo(edge: TaintRuleEdge): UserRuleFromSemgrepInfo {
         val relevantTaintMarks = hashSetOf<Mark.GeneratedMark>()
         relevantTaintMarks += usedTaintMarks(edge.stateFrom)
-        relevantTaintMarks += usedTaintMarks(edge.stateTo)
-        if (edge.checkGlobalState || edge.stateTo in globalStateAssignStates) {
+        if (edge.checkGlobalState) {
             relevantTaintMarks += globalStateMarkName(edge.stateTo)
         }
 

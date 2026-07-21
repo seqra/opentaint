@@ -1,0 +1,12 @@
+rules:
+  - id: owasp-xss-00842
+    languages: [python]
+    severity: ERROR
+    message: "Tainted request data reaches the returned response body (XSS / CWE-79)"
+    metadata:
+      cwe: CWE-79
+    patterns:
+      - pattern: |
+          $A = flask.request.args.get(...)
+          ...
+          return $A

@@ -961,3 +961,160 @@ sink-discard and fires without any data-flow source. All 516 rule files regenera
 **Tripwires updated to the new form:** `python-rules/{securecookie,hash,weakrand}-probe.yaml` +
 their `PythonRuleEmitTest` assertions. Session-2 doc inv 36/37/38 rewritten to describe the bare structural
 sink as the correct form (crutch history noted).
+
+## xss round batch 1 (CWE-79, 30 entries) — return sinks now WORK (inv 35 stale), ALL STRUCTURAL
+Sink for every entry: the returned response body `$A = <src>(...) ... return $A` (template
+`BenchmarkTest00096.yaml`). Return-value sinks now fire after the return-sink rebase (17c205419/e122304b0);
+the old blanket inv-35 @Disabled reason is STALE. Sources: `request.form.get` (scalar), `getlist(...)[...]`
+(→values[0]), `get_form_parameter` wrapper → canonical `flask.request.form.get(...)` (inv 26, ABSTRACT taint),
+`for name in request.form.keys()` loop → `flask.request.form.keys(...)[...]` (inv 15). Suite after round:
+**1230 tests, 0 fail, 442 skipped (788 pass)** (+13 active-pass over the prior 775). Batch = 13 active-pass
+(6 TRUE reach + 7 FALSE not-reach) + 17 @Disabled.
+
+### Active TRUE reach (6): 00096 00169 00187 00272 00278 00281
+Direct/if-else/ternary tainted-arm/base64-roundtrip flows into an f-string or `.format(bar,otherarg)`
+(DIRECT-arg) response body. 00272/00278/00281 use the get_form_parameter wrapper (abstract source, inv 26).
+
+### Active FALSE not-reach (7): 00149 00150 00186 00190 00256 00257 00364
+- 00186 (getlist→markupsafe.escape→f-string): the escape sanitizer is NOT engine-modeled, so it was an FP
+  until an ARG-position structural cleaner `pattern-not: ... markupsafe.escape($A) ... return $A` (inv 23)
+  cleaned the CONCRETE mark. Now green for the right reason.
+- 00190 (getlist→html.escape→`%`) / 00364 (keys→escape_for_html→format(dict)): pass via a DOWNSTREAM concrete
+  drop (`%` tuple / dict-wrapped format / char-rebuild), NOT the sanitizer — masked passes (would FP once the
+  concrete-element gap is fixed), acceptable like prior-round `.resolve()` drops.
+- 00149/00150/00256/00257 (make_response HEADER write): tainted bar goes to the response HEADER not the body;
+  the unmodeled `make_response` DROPS the concrete source taint → returned RESPONSE untainted → NOREACH.
+
+### @Disabled — concrete-element FN at collection-wrapped sink-side format (inv 25/29, 5)
+00097 (`param.split(' ')[0]`), 00098/00188/00365 (`"{0[bar]}".format(dict)` where dict['bar']=bar),
+00189 (`"%s" % (bar, otherarg)` tuple). All TRUE; concrete taint reaches `bar` but DROPS when placed into a
+dict/tuple that is then format-expanded. Deepening the SOURCE `[...]`→`[...][...]` is INERT (verified: still
+FN) because the dropping collection is built at the SINK side, not the source. Proven differentially:
+`.format(bar,otherarg)` DIRECT-arg reaches (00187), `.format(dict)` ABSTRACT reaches (00281), only concrete
+dict/tuple-wrapped fails. Scalar `form.get` (00097/00098) can't deepen anyway (no code subscript). Engine-fix
+candidate = propagate concrete collection-element taint through format/`%`/subscript (inv 25 family).
+
+### @Disabled — abstract (wrapper) taint survives an unmodeled call / cleaner (inv 25/30, 3)
+- 00282 (wrapper→html.escape→`%`): the html.escape arg-cleaner cleans the CONCRETE mark but the ABSTRACT
+  wrapper taint survives it (cf. concrete getlist 00186 which cleaned green) → FP.
+- 00334/00335 (wrapper→if-else→make_response HEADER): wrapper ABSTRACT taint survives the unmodeled
+  make_response (concrete 00256/00257 DROP → pass) → returned RESPONSE tainted → FP.
+- 00279 (wrapper→copy-rebind `copy=str(''); s+=param; bar=copy`): abstract source over-propagates through the
+  immutable-string copy-rebind (copy never receives param concretely) → FP.
+
+### @Disabled — path-insensitive const branch (inv 18, 4): 00083 (if/else) 00084/00191 (match) 00363 (ternary)
+Const guard selects the safe arm but a tainted `bar=param` arm is also explored → FP. Unfixable (no validator CALL).
+
+### @Disabled — dict/configparser key-insensitivity (inv 16, 3): 00082/00280 (dict) 00185 (configparser)
+Store keyB(param), read keyA(const); key-insensitive read leaks tainted value → FP.
+
+### @Disabled — ThingFactory getattr FN (inv 20, 1): 00362
+`helpers.ThingFactory.createThing().doSomething(param)` — dynamic getattr → Any receiver → user method
+unresolved, arg→return lost → TRUE unreachable. Same reproducer class as ldapi 00896 / codeinj 00343.
+
+### No pass-throughs / engine changes this round.
+### Recommended for xss batches 2-3
+Reuse the return-sink template + the ARG-position escape cleaner (inv 23) for CONCRETE-source escape FALSE
+entries. Expect the same @Disabled buckets: concrete-element format(dict)/`%`/split FN (inv 25/29), abstract
+wrapper survives escape/make_response (inv 25/30), path-insensitive const arms (inv 18), key-insensitivity
+(inv 16), ThingFactory (inv 20). Batches with all-getlist/scalar (concrete) sources will strand fewer TRUE
+entries than wrapper-heavy batches.
+
+## xss round batch 2 (CWE-79, 30 entries) — 18 active-pass / 12 @Disabled / 0 fail
+Same return-sink template as batch 1 (`BenchmarkTest00096.yaml`). Sources: `headers.get`/`args.get` scalar,
+`headers.getlist(...)[...]`/`args.getlist(...)[...]`, `form.keys(...)[...]` (keys-loop, inv 15),
+`get_query_parameter` wrapper → canonical `flask.request.args.get(...)` (inv 26). Every predicted bucket
+held exactly (12/12 predicted failures matched). Suite after round: **1230 tests, 0 fail, 424 skipped**
+(+18 active-pass; 442→424).
+
+### Active TRUE reach (9): 00450 00515 00531 00532 00669 00753 00839 00841 00842
+Direct-arg `.format(bar, otherarg)` or f-string response body, fed by: tainted if/ternary/match arm
+(path-insensitive), configparser SAME-key set/get, list append/pop/`lst[0]`(=param, index-insensitive),
+whole-string concat+slice (`s+=param; s[4:-17]`, inv 32 no-drop). 00839/00841/00842 use the wrapper
+(abstract, inv 26). Confirms: f-string + direct-arg `.format` both propagate concrete AND abstract taint.
+
+### Active FALSE not-reach (9): 00367 00414 00437 00452 00493 00591 00670 00671 00672
+- 00437 (scalar headers→markupsafe.escape→f-string) / 00452 (scalar→html.escape→dict-format): ARG-position
+  escape cleaner (inv 23) cleans the CONCRETE mark → green for the right reason (00437 the only one where the
+  escape is the SOLE safety — f-string doesn't drop; 00452 also dict-drops).
+- 00414 (keys→html.escape→make_response header): escape cleaner + make_response drop; concrete → NOREACH.
+- 00367 (keys→ternary→`%`tuple) / 00671 (scalar→configparser keyB/keyA→`%`tuple) / 00672 (scalar→match→`%`tuple):
+  MASKED passes — the tainted arm / key-insensitive leak IS reached but the `%`-tuple sink-side wrap DROPS
+  concrete taint → NOREACH. Would FP once the inv-25/29 concrete-element gap is fixed (acceptable, like 00190).
+- 00493 (scalar→copy-rebind→make_response header) / 00591 (getlist→dict SAME-key→make_response header) /
+  00670 (scalar→copy-rebind→`.format` direct): genuinely-safe value (copy never gets param) and/or make_response
+  drop → NOREACH.
+
+### @Disabled — concrete-element FN at collection-wrapped sink-side format (inv 25/29, 6)
+00366/00453/00533/00673 (`%`-tuple `(bar, otherarg)`), 00451 (dict `{0[bar]}`.format(dict)),
+00754 (`split(...)[0]` THEN dict-format — double sink-side drop). All TRUE; concrete taint reaches `bar` but
+DROPS when placed into the tuple/dict that is then `%`/format-expanded. VERIFIED FN by the run (sink not
+reached). Deepening the SOURCE `[...]` is inert (drop is sink-side). Same class as batch-1 00189/00098/00097.
+
+### @Disabled — path-insensitive const branch into a NON-dropping sink (inv 18, 3)
+00668 (scalar→const ternary→f-string), 00830 (WRAPPER→const ternary→f-string), 00752 (getlist→match→f-string).
+Const guard selects the safe arm but the engine explores the tainted `bar=param` arm; the f-string sink does
+NOT drop → reaches → FP. (Contrast the `%`/dict batch-1+above entries whose tuple/dict wrap masks the same
+path-insensitivity into a pass.) Unfixable (no validator CALL).
+
+### @Disabled — list index-insensitivity (inv 19, 1): 00436
+scalar headers→`lst.append('safe'); lst.append(param); lst.append('moresafe'); lst.pop(0); bar=lst[1]` (safe
+slot 'moresafe' after pop). Append taints the whole list; `lst[1]` reads tainted → f-string → FP. Same as 00348.
+
+### @Disabled — dict key-insensitivity (inv 16, 1): 00840
+WRAPPER→dict store keyB(param), final `bar=map['keyA']`(const 'a-Value'); key-insensitive read leaks the
+keyB tainted value; `.format` direct-arg (no drop) → FP.
+
+### @Disabled — abstract (wrapper) taint survives escape cleaner (inv 25/30, 1): 00829
+wrapper→markupsafe.escape→f-string. The arg-position escape cleaner cleans the CONCRETE mark (cf concrete
+00437 green) but the ABSTRACT wrapper taint survives it; f-string doesn't drop → FP. Same as batch-1 00282.
+
+### No pass-throughs / engine changes this round.
+### Note for xss batch 3
+Prediction accuracy 12/12. The MASKED-pass pattern (path-insensitive/key-insensitive leak reached but a
+sink-side `%`-tuple / dict-format / make_response DROPS it → NOREACH passes) recurs — a NOREACH entry with a
+tuple/dict/make_response sink usually passes regardless of the safety mechanism; a NOREACH entry with an
+f-string / direct-arg `.format` sink and a tainted-but-unselected arm FPs (inv 18/19/16). REACH entries with
+tuple/dict/split sink wraps are inv-25/29 FN. Escape cleaner works ONLY for concrete sources.
+
+## xss round batch 3 (CWE-79, 29 entries) — 24 active-pass / 5 @Disabled / 0 fail
+Same return-sink template (`BenchmarkTest00096.yaml`). Sources this batch: `get_query_parameter` wrapper →
+`flask.request.args.get(...)` (ABSTRACT, inv 26); `request.query_string.decode('utf-8')` →
+`flask.request.query_string` (CONCRETE, survives .decode/whole-slice/unquote_plus, inv 32);
+`request.args.getlist(...)[...]`; and two NON-source families modeled with a deliberately-non-matching
+`flask.request.query_string` source: `request.path.split("/")` (inv 17, server-controlled route) and
+`scr.get_safe_value(...)` (inv 33, returns literal "bar" — VERIFIED in separate_request.py:18-19). Suite
+after round: **1230 tests, 0 fail, 400 skipped** (+24 active-pass; 424→400). Predicted buckets held 5/5.
+
+### Active TRUE reach (2): 00924 01210
+00924 query_string→`bar = param + '_SafeStuff'` (concat survives)→f-string. 01210 getlist→`values[0]`→f-string.
+Concrete taint survives concat / element-index into a non-dropping f-string body.
+
+### Active FALSE not-reach (22)
+- Non-source free passes (20): request.path entries 01000/01001/01002/01003/01014/01015/01016/01017/01018/
+  01019/01020/01082/01083/01084/01223/01224 (inv 17 — request.path is not a source) + get_safe_value entries
+  01103/01104/01115/01155 (inv 33 — literal return). The `flask.request.query_string` source pattern simply
+  doesn't bind → 0 sources → NOREACH for the RIGHT reason (accessor genuinely non-attacker-controlled).
+- 00926 (query_string→copy-rebind `copy=''; string+=param; copy+='OK'; bar=copy`→`%`tuple): bar never receives
+  param concretely → genuinely safe (+ %-tuple would drop anyway). NOREACH.
+- 01213 (getlist→`values[0]`→make_response HEADER, body const): concrete param goes to the header dict; unmodeled
+  make_response drops concrete → returned body untainted → NOREACH (masked, cf 00256).
+
+### @Disabled — wrapper (abstract) survives make_response HEADER (inv 25/30, 2): 00883 00884
+Both get_query_parameter (ABSTRACT) → bar → `make_response((RESPONSE,{header:bar}))`. 00883 via list
+append/pop/`lst[1]` (index-insensitive), 00884 via markupsafe.escape (cleans concrete only). Abstract wrapper
+taint survives the unmodeled make_response → returned RESPONSE tainted → FP. Same differential as 00334/00335
+(concrete make_response header 00256/01213 DROP → pass). VERIFIED by run (sink reached).
+
+### @Disabled — dict key-insensitivity into non-dropping f-string (inv 16, 1): 00905
+query_string (concrete)→dict store keyB(param), final read keyA(const 'a-Value')→f-string. Key-insensitive read
+leaks the keyB tainted value; f-string doesn't drop → FP. VERIFIED sink reached. Same as 00082/00840.
+
+### @Disabled — concrete-element FN at sink-side wrap (inv 25/29, 2): 00923 00925
+Both REACH ground truth, query_string CONCRETE source. 00923 `bar = param.split(' ')[0]` (element read drops
+concrete, cf 00097) → f-string not reached. 00925 configparser SAME-key set/get → `'...%s...%s' % (bar,otherarg)`
+(%-tuple drops concrete, cf 00189/00671) → not reached. VERIFIED FN by run (sink not reached). Confirms
+query_string concrete behaves identically to form/args.get concrete at split()[i] / %-tuple wraps.
+
+### No pass-throughs / engine changes / new invariants this round.
+### xss category COMPLETE (all 3 batches): 89/89 authored — 55 active-pass / 34 @Disabled / 0 fail.

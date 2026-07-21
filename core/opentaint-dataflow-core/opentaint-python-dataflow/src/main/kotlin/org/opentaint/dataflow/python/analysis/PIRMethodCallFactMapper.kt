@@ -91,12 +91,17 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         if (objBase == fact.base) {
             onMappedFact(fact, AccessPathBase.This)
         }
+
+        if (fact.base is AccessPathBase.ClassStatic) {
+            onMappedFact(fact, fact.base)
+        }
     }
 
     fun mapLoadAttributeFactToReturn(statement: PIRLoadAttr, fact: FinalFactAp): FinalFactAp? =
         when (fact.base) {
             is AccessPathBase.Return -> valueToBase(statement.target)?.let { fact.rebase(it) }
             is AccessPathBase.This -> valueToBase(statement.obj)?.let { fact.rebase(it) }
+            is AccessPathBase.ClassStatic -> fact
             else -> null
         }
 

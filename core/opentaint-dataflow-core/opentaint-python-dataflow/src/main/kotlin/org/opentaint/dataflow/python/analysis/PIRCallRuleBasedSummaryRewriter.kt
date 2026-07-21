@@ -64,8 +64,9 @@ class PIRCallRuleBasedSummaryRewriter(
             val simplifiedCondition = conditionRewriter.rewrite(cleanRule.condition)
             if (simplifiedCondition.isFalse) continue
 
-            val positions = cleanRule.cleans.mapTo(hashSetOf()) { it.pos }
-            result += UserRuleDefinedAction(cleanRule, positions, ruleInfo.relevantTaintMarks)
+            cleanRule.cleans.forEach { action ->
+                result += UserRuleDefinedAction(cleanRule, setOf(action.pos), ruleInfo.relevantTaintMarks + action.mark.name)
+            }
         }
 
         result
