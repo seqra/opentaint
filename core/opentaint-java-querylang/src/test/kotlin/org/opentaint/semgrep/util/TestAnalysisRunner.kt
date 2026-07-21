@@ -11,6 +11,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaExpressionToAnonymousClassTransformerFeature
@@ -77,7 +78,14 @@ class TestAnalysisRunner(
                 get() = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
             override fun analysisGraph() = ifdsAnalysisGraph
-            override fun analysisManager() = JIRAnalysisManager(cp, configProvider)
+            override fun analysisManager() = JIRAnalysisManager(
+                cp, configProvider,
+                params = JIRAnalysisManager.Params(
+                    aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
+                        aliasAnalysisInterProcCallDepth = 2
+                    )
+                )
+            )
             override fun unitResolver() = object :JIRUnitResolver {
                 override fun locationIsUnknown(loc: RegisteredLocation): Boolean =
                     loc.isRuntime
