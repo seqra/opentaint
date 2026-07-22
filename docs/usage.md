@@ -114,8 +114,8 @@ These flags are to work with custom approximations:
 | Flag | Description |
 |------|-------------|
 | `--track-external-methods` | Write external-method coverage files next to the SARIF report |
-| `--passthrough-approximations` | Apply pass-through approximation YAML files or directories (repeatable) |
-| `--dataflow-approximations` | Apply dataflow approximation classes or Java source directories (Java analysis only, repeatable) |
+| `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
+| `--java-models` | Apply Java dataflow model classes or source directories (repeatable) |
 
 Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
 
@@ -163,7 +163,7 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 opentaint test approximation init .opentaint/test-projects/my-approximation
 opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
 opentaint test approximation run .opentaint/test-compiled/my-approximation \
-  --dataflow-approximations .opentaint/dataflow/my-approximation
+  --java-models .opentaint/dataflow/my-approximation
 ```
 
 | Command | Description |

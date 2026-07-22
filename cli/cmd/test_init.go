@@ -70,7 +70,7 @@ var testApproximationInitCmd = &cobra.Command{
 	Short: "Create a dataflow-approximation test project",
 	Long: `Create a Gradle test project for dataflow-approximation tests. The project pins a fixed source-to-sink rule that the samples are checked against.
 
-The output-dir argument is the directory the project is created in. Use --dependency to add compile-only Maven dependencies for the samples. The approximation under test is not baked in; supply it at run time with --dataflow-approximations.
+The output-dir argument is the directory the project is created in. Use --dependency to add compile-only Maven dependencies for the samples. The approximation under test is not baked in; supply it at run time with --java-models.
 
 The project ships a rule-test.yaml where you declare the positive and negative samples, plus a Taint.java source and sink and the fixed approximation-rule.yaml.
 
@@ -94,7 +94,7 @@ After editing rule-test.yaml, compile the project with opentaint compile and run
 		out.Suggestions(
 			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, "rule-test.yaml")},
 			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", dir, modelDir)},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test approximation run %s --dataflow-approximations <approximation>", modelDir)},
+			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test approximation run %s --java-models <approximation>", modelDir)},
 		)
 	},
 }

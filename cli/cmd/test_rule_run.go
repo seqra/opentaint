@@ -28,7 +28,7 @@ var testRuleRunCmd = &cobra.Command{
 	Short: "Run detection-rule tests on a compiled project model",
 	Long: `Run detection rules against the samples declared in rule-test.yaml and report which passed. The built-in rules are always included.
 
-The project-model argument is a compiled project model directory, produced by opentaint compile. Add your own rules with --ruleset, narrow the run to specific rules with --rule-id, and apply approximations with --dataflow-approximations or --passthrough-approximations.
+The project-model argument is a compiled project model directory, produced by opentaint compile. Add your own rules with --ruleset, narrow the run to specific rules with --rule-id, and apply models with --java-models or --passthrough-models.
 
 Results are written as test-result.json and a test-results.sarif report to --output, or to a temporary directory when unset.
 
@@ -206,5 +206,7 @@ func init() {
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Ruleset to test: a YAML file or a directory of .yml or .yaml files (repeatable)")
 	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-models", nil, "Pass-through models: a YAML file or a directory of them (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "Pass-through models: a YAML file or a directory of them (repeatable)")
+	_ = testRuleRunCmd.Flags().MarkDeprecated("passthrough-approximations", "use --passthrough-models")
 }
