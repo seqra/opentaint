@@ -31,9 +31,26 @@ internal fun compareArtifactVersions(left: String, right: String): Int {
 }
 
 /**
- * Keeps a single version of every artifact — the highest — the way a build tool resolves a conflict.
- * Without this the model carries every version any module resolved, which both inflates it and leaves
- * the choice between same-named classes to classpath lookup order.
+ * The major-version line a version belongs to, or null when it does not start with a number.
+ *
+ * Versions of one line are the same artifact evolving; versions of different lines are different
+ * artifacts that happen to share a name, and a multi-module build routinely uses several at once.
+ */
+private fun String.majorVersionLine(): String? =
+    takeWhile { it !in VERSION_SEPARATORS }.takeIf { it.isNumeric() }
+
+/**
+ * Keeps a single version of every artifact per major-version line — the highest — the way a build
+ * tool resolves a conflict. Without this the model carries every version any module resolved, which
+ * both inflates it and leaves the choice between same-named classes to classpath lookup order.
+ *
+ * Collapsing stops at the major-version boundary. Drift inside a line is the same API at different
+ * patch levels, so the highest stands in for all of them; across lines the APIs are incompatible by
+ * construction, and a build that resolves two majors of one artifact genuinely needs both (conductor
+ * compiles one module against `opensearch-rest-client` 2.x and another against 3.x, whose callbacks
+ * take Apache HttpClient 4 and 5 types respectively). Keeping only the highest would leave every
+ * module on the older line compiled against classes the model no longer has. A version with no
+ * numeric major makes no compatibility claim at all and is never collapsed into another.
  *
  * Order is preserved: an artifact keeps the position of its first occurrence.
  */
@@ -42,10 +59,14 @@ internal fun <T> List<T>.singleVersionPerArtifact(
     version: (T) -> String,
     onDropped: (kept: T, dropped: T) -> Unit = { _, _ -> },
 ): List<T> {
-    val best = LinkedHashMap<Pair<String, String>, T>()
+    val best = LinkedHashMap<Triple<String, String, String>, T>()
 
     for (dependency in this) {
-        val key = artifact(dependency)
+        val (groupId, artifactId) = artifact(dependency)
+        val dependencyVersion = version(dependency)
+        // no numeric major: key on the whole version so the entry stands on its own
+        val line = dependencyVersion.majorVersionLine() ?: dependencyVersion
+        val key = Triple(groupId, artifactId, line)
         val current = best[key]
 
         if (current == null) {

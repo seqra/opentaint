@@ -38,11 +38,11 @@ class ArtifactVersionsTest {
     @Test
     fun `one version per artifact is kept, the highest`() {
         val deps = listOf(
-            Triple("com.google.guava", "guava", "31.0"),
+            Triple("com.google.guava", "guava", "33.0-jre"),
             Triple("ch.qos.logback", "logback-classic", "1.5.18"),
-            Triple("com.google.guava", "guava", "33.2"),
+            Triple("com.google.guava", "guava", "33.2-jre"),
             Triple("ch.qos.logback", "logback-classic", "1.5.21"),
-            Triple("com.google.guava", "guava", "30.1"),
+            Triple("com.google.guava", "guava", "33.1-jre"),
         )
         val dropped = mutableListOf<Triple<String, String, String>>()
 
@@ -54,13 +54,65 @@ class ArtifactVersionsTest {
 
         assertEquals(
             listOf(
-                Triple("com.google.guava", "guava", "33.2"),
+                Triple("com.google.guava", "guava", "33.2-jre"),
                 Triple("ch.qos.logback", "logback-classic", "1.5.21"),
             ),
             kept,
             "must keep the highest version of each artifact, in first-seen order"
         )
         assertEquals(3, dropped.size)
+    }
+
+    @Test
+    fun `versions of different major lines coexist`() {
+        // conductor builds os-persistence-v2 against opensearch-rest-client 2.x and os-persistence-v3
+        // against 3.x — different majors of one artifact, kept apart by the build itself (it shades
+        // them). Their APIs are incompatible: RestClientBuilder's callbacks take Apache HttpClient 4
+        // types in 2.x and HttpClient 5 types in 3.x. Collapsing the two loses the API a module
+        // actually compiles against.
+        val deps = listOf(
+            Triple("org.opensearch.client", "opensearch-rest-client", "2.18.0"),
+            Triple("org.opensearch.client", "opensearch-rest-client", "3.5.0"),
+        )
+
+        assertEquals(
+            deps,
+            deps.singleVersionPerArtifact({ it.first to it.second }, { it.third }),
+            "different majors are incompatible artifacts, not versions of one"
+        )
+    }
+
+    @Test
+    fun `the highest version of each major line is kept`() {
+        val deps = listOf(
+            Triple("com.fasterxml.jackson.core", "jackson-core", "2.14.2"),
+            Triple("com.fasterxml.jackson.core", "jackson-core", "2.18.0"),
+            Triple("com.fasterxml.jackson.core", "jackson-core", "1.9.13"),
+            Triple("com.fasterxml.jackson.core", "jackson-core", "2.15.3"),
+        )
+
+        assertEquals(
+            listOf(
+                Triple("com.fasterxml.jackson.core", "jackson-core", "2.18.0"),
+                Triple("com.fasterxml.jackson.core", "jackson-core", "1.9.13"),
+            ),
+            deps.singleVersionPerArtifact({ it.first to it.second }, { it.third }),
+            "drift inside a major line collapses; the 1.x line survives on its own"
+        )
+    }
+
+    @Test
+    fun `a non-numeric version is never collapsed into another`() {
+        val deps = listOf(
+            Triple("com.example", "lib", "RELEASE"),
+            Triple("com.example", "lib", "MILESTONE"),
+        )
+
+        assertEquals(
+            deps,
+            deps.singleVersionPerArtifact({ it.first to it.second }, { it.third }),
+            "without a numeric major there is no compatibility claim to make"
+        )
     }
 
     @Test
