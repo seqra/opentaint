@@ -31,7 +31,7 @@ import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.ir.api.common.cfg.CommonInst
 
-class TreeApManager(
+open class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     val refManager: SoftReferenceManager = SoftReferenceManager(),
     override val cancellation: Cancellation = Cancellation(),

@@ -25,10 +25,10 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
 
         if (modificationDelta == null) return false
 
-        if (modifiedEdges.size > COMPRESSION_THRESHOLD) {
+        if (modifiedEdges.size > SUMMARY_TREE_COMPRESSION_THRESHOLD) {
             interner.withInterner { interner, cache ->
                 val currentInterned = modifiedEdges.internNodes(interner, cache)
-                val compressed = currentInterned.compressNode()
+                val compressed = currentInterned.compressSummaryCycles(manager)
 
                 if (compressed !== currentInterned) {
                     val interned = compressed.internNodes(interner, cache)
@@ -56,40 +56,40 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
         }
     }
 
-    private fun AccessNode.compressNode(): AccessNode {
-        val components = connectedAccessorComponents()
+}
 
-        var result = this
-        for (component in components) {
-            if (component.cardinality() < 2) continue
+internal const val SUMMARY_TREE_COMPRESSION_THRESHOLD = 10_000
 
-            result = result.removeAllAccessorChains(
-                component.toIntSet(), chainLengthToRemove = 2, IdentityHashMap(), manager.cancellation
-            )
+/** Shared cycle abstraction used by Tree and SuffixTree final-prefix summary states. */
+internal fun AccessNode.compressSummaryCycles(manager: TreeApManager): AccessNode {
+    val components = connectedAccessorComponents()
+
+    var result = this
+    for (component in components) {
+        if (component.cardinality() < 2) continue
+
+        result = result.removeAllAccessorChains(
+            component.toIntSet(), chainLengthToRemove = 2, IdentityHashMap(), manager.cancellation
+        )
+    }
+    if (this === result) return this
+
+    return result.compressSummaryCycles(manager)
+}
+
+private fun AccessNode.connectedAccessorComponents(): List<BitSet> {
+    val graph = IntGraph()
+    buildAccessorGraph(graph, IdentityHashMap())
+    return graph.nonTrivialSccs()
+}
+
+private fun AccessNode.buildAccessorGraph(graph: IntGraph, visited: IdentityHashMap<AccessNode, Unit>) {
+    if (visited.put(this, Unit) != null) return
+
+    forEachAccessor { outer, node ->
+        node.forEachAccessor { inner, _ ->
+            graph.addEdge(outer, inner)
         }
-        if (this === result) return this
-
-        return result.compressNode()
-    }
-
-    private fun AccessNode.connectedAccessorComponents(): List<BitSet> {
-        val graph = IntGraph()
-        buildAccessorGraph(graph, IdentityHashMap())
-        return graph.nonTrivialSccs()
-    }
-
-    private fun AccessNode.buildAccessorGraph(graph: IntGraph, visited: IdentityHashMap<AccessNode, Unit>) {
-        if (visited.put(this, Unit) != null) return
-
-        forEachAccessor { outer, node ->
-            node.forEachAccessor { inner, _ ->
-                graph.addEdge(outer, inner)
-            }
-            node.buildAccessorGraph(graph, visited)
-        }
-    }
-
-    companion object {
-        private const val COMPRESSION_THRESHOLD = 10_000
+        node.buildAccessorGraph(graph, visited)
     }
 }

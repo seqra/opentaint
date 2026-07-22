@@ -14,6 +14,14 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryE
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.suffix.FinalPrefixMarkers
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixRelationTrie
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixTreeApManager
+import org.opentaint.dataflow.ap.ifds.access.suffix.buildFinalPrefixTree
+import org.opentaint.dataflow.ap.ifds.access.suffix.buildInitialPath
+import org.opentaint.dataflow.ap.ifds.access.suffix.materializeSuffixes
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
@@ -262,14 +270,16 @@ class NormalMethodAnalyzer(
         val startFacts = flowFunction.propagateFact(factAp)
 
         startFacts.forEach { startFact ->
-            initialFacts.addAbstractedInitialFact(startFact.fact, analysisManager.factTypeChecker).forEach { (initialFact, delta) ->
+            val identityFacts = initialFacts
+                .addAbstractedInitialFact(startFact.fact, analysisManager.factTypeChecker)
+                .map { (initialFact, delta) ->
                 if (delta.isEmpty) {
-                    addInitialEdge(initialFact, initialFact.toFinalFact())
+                    initialFact
                 } else {
-                    val refinedInitial = initialFact.concat(delta).replaceExclusions(ExclusionSet.Empty)
-                    addInitialEdge(refinedInitial, refinedInitial.toFinalFact())
+                    initialFact.concat(delta).replaceExclusions(ExclusionSet.Empty)
                 }
             }
+            addInitialIdentityFacts(identityFacts)
         }
     }
 
@@ -327,6 +337,11 @@ class NormalMethodAnalyzer(
     }
 
     private fun simpleStatementStep(edge: Edge) {
+        if (edge is FactToFact && edge.suffixBundle != null) {
+            edge.materializeSuffixes().forEach(::simpleStatementStep)
+            return
+        }
+
         // Simple (sequential) propagation to the next instruction:
         val flowFunction = analysisManager.getMethodSequentFlowFunction(apManager, analysisContext, edge.statement)
         val sequentialFacts = when (edge) {
@@ -371,6 +386,11 @@ class NormalMethodAnalyzer(
     }
 
     private fun callStatementStep(callExpr: CommonCallExpr, edge: Edge) {
+        if (edge is FactToFact && edge.suffixBundle != null) {
+            edge.materializeSuffixes().forEach { callStatementStep(callExpr, it) }
+            return
+        }
+
         val returnValue: CommonValue? = (edge.statement as? CommonAssignInst)?.lhv
 
         val flowFunction = analysisManager.getMethodCallFlowFunction(
@@ -561,6 +581,67 @@ class NormalMethodAnalyzer(
         addInitialF2FEdge(edge)
     }
 
+    /**
+     * Surface one context-abstraction batch as diagonal suffix bundles. This is the SuffixTree
+     * integration point for the fourth fact store: Tree mode keeps emitting individual identity
+     * facts, while SuffixTree mode transfers the complete batch to the method queue without first
+     * expanding it into one edge per path.
+     */
+    private fun addInitialIdentityFacts(facts: List<InitialFactAp>) {
+        if (facts.isEmpty()) return
+        val suffixManager = apManager as? SuffixTreeApManager
+        if (suffixManager == null) {
+            facts.forEach { addInitialEdge(it, it.toFinalFact()) }
+            return
+        }
+
+        for ((base, sameBaseFacts) in facts.groupBy { it.base }) {
+            val relation = SuffixRelationTrie()
+            for (fact in sameBaseFacts) {
+                val treeFact = fact as? AccessPath
+                    ?: error("SuffixTree context abstraction received non-tree fact: ${fact::class}")
+                val access = treeFact.access
+                val values = access?.toList()
+                val path = if (values == null) {
+                    IntArray(0)
+                } else {
+                    IntArray(values.size) { values.getInt(it) }
+                }
+                relation.add(
+                    path,
+                    path,
+                    exclusions = emptySet(),
+                    finalMarkers = FinalPrefixMarkers(isFinal = false, isAbstract = true),
+                )
+            }
+
+            for (bundle in relation.bundles()) {
+                val initial = AccessPath(
+                    suffixManager,
+                    base,
+                    suffixManager.buildInitialPath(bundle.initialPrefix),
+                    ExclusionSet.Empty,
+                )
+                val final = AccessTree(
+                    suffixManager,
+                    base,
+                    suffixManager.buildFinalPrefixTree(bundle.finalPrefixTree)
+                        ?: suffixManager.abstractNode,
+                    ExclusionSet.Empty,
+                )
+                addInitialF2FEdge(
+                    FactToFact(
+                        methodEntryPoint,
+                        initial,
+                        methodEntryPoint.statement,
+                        final,
+                        bundle,
+                    )
+                )
+            }
+        }
+    }
+
     private fun addInitialF2FEdge(edge: FactToFact) {
         if (delayInitialEdge(edge)) return
         addSequentialEdge(edge)
@@ -598,6 +679,9 @@ class NormalMethodAnalyzer(
     }
 
     private fun edgeExceedLimit(edge: FactToFact): Boolean {
+        if (edge.suffixBundle != null) {
+            return edge.materializeSuffixes().any(::edgeExceedLimit)
+        }
         if (edge.initialFactAp.depth > factDepthLimit) return true
         if (edge.factAp.depth > factDepthLimit + 2) return true
         return false
@@ -664,11 +748,13 @@ class NormalMethodAnalyzer(
             }
         }
 
+        val identityFacts = ArrayList<InitialFactAp>(matches.size)
         for ((initialFact, delta) in matches) {
             val refinedInitial = initialFact.concat(delta).replaceExclusions(ExclusionSet.Empty)
-            addInitialEdge(refinedInitial, refinedInitial.toFinalFact())
+            identityFacts.add(refinedInitial)
             if (!delta.isEmpty) fireSubsFor(initialFact, delta)
         }
+        addInitialIdentityFacts(identityFacts)
     }
 
     private fun handleStatementEdge(edgeBeforeStatement: Edge, edgeAfterStatement: Edge) {

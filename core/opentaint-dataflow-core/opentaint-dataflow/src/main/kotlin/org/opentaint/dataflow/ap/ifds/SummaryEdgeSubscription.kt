@@ -11,6 +11,8 @@ import org.opentaint.dataflow.ap.ifds.SideEffectSummary.ZeroSideEffectSummary
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixEdgeBundle
+import org.opentaint.dataflow.ap.ifds.access.suffix.materializeSuffixes
 import org.opentaint.dataflow.ap.ifds.access.MethodAccessPathSubscription
 import org.opentaint.dataflow.ap.ifds.serialization.MethodEntryPointSummaries
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -115,38 +117,38 @@ class SummaryEdgeSubscriptionManager(
     ): Boolean {
         val methodSubscriptions = methodSubscriptions(methodEntryPoint)
 
-        val addedSubscription = methodSubscriptions.addFactToFact(calleeInitialFactBase, callerPathEdge) ?: return false
+        val addedSubscriptions = methodSubscriptions.addFactToFact(calleeInitialFactBase, callerPathEdge)
+        if (addedSubscriptions.isEmpty()) return false
         val callerAnalyzer = processingCtx.getMethodAnalyzer(callerPathEdge.methodEntryPoint)
 
-        val calleeInitialFactAp = addedSubscription.callerPathEdge.factAp.rebase(addedSubscription.calleeInitialFactBase)
-        val summaries = manager.findFactSummaryEdges(methodEntryPoint, calleeInitialFactAp)
+        for (addedSubscription in addedSubscriptions) {
+            for (materializedEdge in addedSubscription.callerPathEdge.materializeSuffixes()) {
+                val calleeInitialFactAp = materializedEdge.factAp.rebase(addedSubscription.calleeInitialFactBase)
+                val sub = FactToFactSub(materializedEdge, addedSubscription.calleeInitialFactBase)
+                val summaries = manager.findFactSummaryEdges(methodEntryPoint, calleeInitialFactAp)
+                if (summaries.isNotEmpty()) {
+                    callerAnalyzer.handleFactToFactMethodSummaryEdge(listOf(sub), summaries)
+                }
 
-        val sub = FactToFactSub(addedSubscription.callerPathEdge, addedSubscription.calleeInitialFactBase)
+                val ndSummaries = manager.findFactNDSummaryEdges(methodEntryPoint, calleeInitialFactAp)
+                if (ndSummaries.isNotEmpty()) {
+                    callerAnalyzer.handleFactToFactMethodNDSummaryEdge(listOf(sub), ndSummaries)
+                }
 
-        if (summaries.isNotEmpty()) {
-            callerAnalyzer.handleFactToFactMethodSummaryEdge(listOf(sub), summaries)
-        }
+                val sideEffectRequirements = manager.findSideEffectRequirements(methodEntryPoint, calleeInitialFactAp)
+                if (sideEffectRequirements.isNotEmpty()) {
+                    callerAnalyzer.handleMethodSideEffectRequirement(
+                        materializedEdge,
+                        addedSubscription.calleeInitialFactBase,
+                        sideEffectRequirements,
+                    )
+                }
 
-        val ndSummaries = manager.findFactNDSummaryEdges(methodEntryPoint, calleeInitialFactAp)
-        if (ndSummaries.isNotEmpty()) {
-            callerAnalyzer.handleFactToFactMethodNDSummaryEdge(listOf(sub), ndSummaries)
-        }
-
-        val sideEffectRequirements = manager.findSideEffectRequirements(methodEntryPoint, calleeInitialFactAp)
-        if (sideEffectRequirements.isNotEmpty()) {
-            callerAnalyzer.handleMethodSideEffectRequirement(
-                addedSubscription.callerPathEdge,
-                addedSubscription.calleeInitialFactBase,
-                sideEffectRequirements
-            )
-        }
-
-        val sideEffectSummaries = manager.findFactSideEffectSummaries(methodEntryPoint, calleeInitialFactAp)
-        if (sideEffectSummaries.isNotEmpty()) {
-            callerAnalyzer.handleFactToFactMethodSideEffectSummary(
-                listOf(sub),
-                sideEffectSummaries
-            )
+                val sideEffectSummaries = manager.findFactSideEffectSummaries(methodEntryPoint, calleeInitialFactAp)
+                if (sideEffectSummaries.isNotEmpty()) {
+                    callerAnalyzer.handleFactToFactMethodSideEffectSummary(listOf(sub), sideEffectSummaries)
+                }
+            }
         }
 
         return true
@@ -195,7 +197,7 @@ class SummaryEdgeSubscriptionManager(
         fun addFactToFact(
             calleeInitialFactBase: AccessPathBase,
             callerPathEdge: FactToFact
-        ): FactEdgeSummarySubscription? =
+        ): List<FactEdgeSummarySubscription> =
             taintedFactSubscriptions
                 .addFactToFact(calleeInitialFactBase, callerPathEdge)
 
@@ -294,15 +296,20 @@ class SummaryEdgeSubscriptionManager(
         fun addFactToFact(
             calleeInitialFactBase: AccessPathBase,
             callerPathEdge: FactToFact
-        ): FactEdgeSummarySubscription? =
+        ): List<FactEdgeSummarySubscription> =
             subscriptions.getOrPut(callerPathEdge.methodEntryPoint) {
                 Object2ObjectOpenHashMap()
             }.getOrPut(callerPathEdge.statement) {
                 apManager.accessPathSubscription()
-            }?.addFactToFact(
+            }?.addFactToFactEdges(
                 callerPathEdge.methodEntryPoint.statement,
-                calleeInitialFactBase, callerPathEdge.initialFactAp, callerPathEdge.factAp
-            )?.setStatements(callerPathEdge.methodEntryPoint, callerPathEdge.statement)
+                calleeInitialFactBase,
+                callerPathEdge.initialFactAp,
+                callerPathEdge.factAp,
+                callerPathEdge.suffixBundle,
+            )?.onEach {
+                it.setStatements(callerPathEdge.methodEntryPoint, callerPathEdge.statement)
+            }.orEmpty()
 
         fun addNDFactToFact(
             calleeInitialFactBase: AccessPathBase,
@@ -396,6 +403,7 @@ class SummaryEdgeSubscriptionManager(
         private var callerInitialFactAp: InitialFactAp? = null,
         private var callerStatement: CommonInst? = null,
         private var callerFactAp: FinalFactAp? = null,
+        private var suffixBundle: SuffixEdgeBundle? = null,
     ) {
         val calleeInitialFactBase: AccessPathBase
             get() = calleeInitialFactApBase!!
@@ -405,7 +413,8 @@ class SummaryEdgeSubscriptionManager(
                 callerEntryPoint!!,
                 callerInitialFactAp!!,
                 callerStatement!!,
-                callerFactAp!!
+                callerFactAp!!,
+                suffixBundle,
             )
 
         fun setCalleeBase(base: AccessPathBase) = this.also {
@@ -418,6 +427,10 @@ class SummaryEdgeSubscriptionManager(
 
         fun setCallerAp(ap: FinalFactAp) = this.also {
             callerFactAp = ap
+        }
+
+        fun setSuffixBundle(bundle: SuffixEdgeBundle?) = this.also {
+            suffixBundle = bundle
         }
 
         fun setStatements(callerEntryPoint: MethodEntryPoint, callerExitStmt: CommonInst) = this.also {
@@ -547,7 +560,8 @@ class SummaryEdgeSubscriptionManager(
             subscriptionStorage: MethodSummarySubscription,
             summaryEdges: List<FactToFact>
         ) {
-            val sameInitialFactEdges = summaryEdges.groupBy { it.initialFactAp }
+            val materializedEdges = summaryEdges.flatMap { it.materializeSuffixes() }
+            val sameInitialFactEdges = materializedEdges.groupBy { it.initialFactAp }
             for ((summaryInitialFact, summaries) in sameInitialFactEdges) {
                 applySummaries(
                     subscriptionStorage, summaryInitialFact, summaries,
@@ -878,7 +892,7 @@ class SummaryEdgeStorageWithSubscribers(
         val summariesStorage = taintedFactSummaryEdges
 
         val initialFacts = mutableListOf<InitialFactAp>()
-        edges.forEach { initialFacts.add(it.initialFactAp) }
+        edges.forEach { edge -> edge.materializeSuffixes().forEach { initialFacts.add(it.initialFactAp) } }
         sideEffectRequirement(initialFacts)
 
         synchronized(summariesStorage) {
@@ -941,7 +955,7 @@ class SummaryEdgeStorageWithSubscribers(
             taintedFactSummaryEdges.filterEdgesTo(it, initialFactAp, finalFactBase = null)
         }, {
             it.setEntryPoint(methodEntryPoint).build()
-        })
+        }).flatMap { it.materializeSuffixes() }
 
     fun factNDEdges(initialFactAp: FinalFactAp): List<Edge.NDFactToFact> =
         collectToListWithPostProcess(mutableListOf(), {
@@ -957,7 +971,7 @@ class SummaryEdgeStorageWithSubscribers(
             taintedFactSummaryEdges.filterEdgesTo(it, initialFactPattern = null, finalFactBase)
         }, {
             it.setEntryPoint(methodEntryPoint).build()
-        })
+        }).flatMap { it.materializeSuffixes() }
 
     fun factNDEdges(finalFactBase: AccessPathBase): List<Edge.NDFactToFact> =
         collectToListWithPostProcess(mutableListOf(), {
@@ -967,11 +981,12 @@ class SummaryEdgeStorageWithSubscribers(
         })
 
     private fun collectAllFactToFactSummariesTo(dst: MutableList<in FactToFact>) {
-        collectToListWithPostProcess(dst, {
+        val bundled = collectToListWithPostProcess(mutableListOf(), {
             taintedFactSummaryEdges.filterEdgesTo(it, initialFactPattern = null, finalFactBase = null)
         }, {
             it.setEntryPoint(methodEntryPoint).build()
         })
+        bundled.forEach { edge -> edge.materializeSuffixes().forEach(dst::add) }
     }
 
     fun sideEffectRequirement(initialFactAp: FinalFactAp): List<InitialFactAp> {
@@ -1035,12 +1050,14 @@ data class FactToFactEdgeBuilder(
     private var exitStatement: CommonInst? = null,
     private var initialAp: InitialFactAp? = null,
     private var exitAp: FinalFactAp? = null,
+    private var suffixBundle: SuffixEdgeBundle? = null,
 ) : EdgeBuilder<FactToFactEdgeBuilder> {
     fun build(): FactToFact = FactToFact(
         entryPoint!!,
         initialAp!!,
         exitStatement!!,
-        exitAp!!
+        exitAp!!,
+        suffixBundle,
     )
 
     override fun setEntryPoint(entryPoint: MethodEntryPoint) = this.also {
@@ -1057,6 +1074,10 @@ data class FactToFactEdgeBuilder(
 
     fun setExitAp(ap: FinalFactAp) = this.also {
         exitAp = ap
+    }
+
+    fun setSuffixBundle(bundle: SuffixEdgeBundle?) = this.also {
+        suffixBundle = bundle
     }
 }
 

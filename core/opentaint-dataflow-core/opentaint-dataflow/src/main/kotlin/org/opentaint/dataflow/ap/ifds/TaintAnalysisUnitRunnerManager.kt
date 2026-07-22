@@ -17,6 +17,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import mu.KotlinLogging
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixTreeApManager
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixTreeDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
@@ -177,6 +179,9 @@ class TaintAnalysisUnitRunnerManager(
 
                 reportRunnerProgress(currentProgress)
                 logger.info { "Analysis done in ${timeStart.elapsedNow()}" }
+                if (apManager is SuffixTreeApManager) {
+                    logger.info { "SuffixTree facts: ${SuffixTreeDiagnostics.snapshot()}" }
+                }
             }
         }
     }

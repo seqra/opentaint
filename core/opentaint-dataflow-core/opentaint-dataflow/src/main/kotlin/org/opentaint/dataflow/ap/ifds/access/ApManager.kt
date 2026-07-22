@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.ZeroEdgeSum
 import org.opentaint.dataflow.ap.ifds.ZeroToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixEdgeBundle
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -79,6 +80,20 @@ interface MethodAccessPathSubscription {
         callerExitAp: FinalFactAp
     ): FactEdgeSummarySubscription?
 
+    /** Edge-level insertion hook used by SuffixTree subscription stores. */
+    fun addFactToFactEdges(
+        callerEp: CommonInst,
+        calleeInitialBase: AccessPathBase,
+        callerInitialAp: InitialFactAp,
+        callerExitAp: FinalFactAp,
+        suffixBundle: SuffixEdgeBundle?,
+    ): List<FactEdgeSummarySubscription> {
+        check(suffixBundle == null) { "Suffix bundle passed to a non-suffix subscription store" }
+        return listOfNotNull(
+            addFactToFact(callerEp, calleeInitialBase, callerInitialAp, callerExitAp)
+        )
+    }
+
     fun addNDFactToFact(
         callerEp: CommonInst,
         calleeInitialBase: AccessPathBase,
@@ -108,7 +123,29 @@ interface MethodEdgesFinalApSet {
 }
 
 interface MethodEdgesInitialToFinalApSet {
+    data class Addition(
+        val initial: InitialFactAp,
+        val final: FinalFactAp,
+        val suffixBundle: SuffixEdgeBundle? = null,
+    )
+
     fun add(statement: CommonInst, initialAp: InitialFactAp, finalAp: FinalFactAp): Pair<InitialFactAp, FinalFactAp>?
+
+    /**
+     * Edge-level insertion hook. Tree-like stores use the legacy pair result; SuffixTree stores can
+     * return grouped diagonal bundles without forcing them through independent fact wrappers.
+     */
+    fun addFactToFact(
+        statement: CommonInst,
+        initialAp: InitialFactAp,
+        finalAp: FinalFactAp,
+        suffixBundle: SuffixEdgeBundle?,
+    ): List<Addition> {
+        check(suffixBundle == null) { "Suffix bundle passed to a non-suffix F2F store" }
+        val added = add(statement, initialAp, finalAp) ?: return emptyList()
+        return listOf(Addition(added.first, added.second))
+    }
+
     fun collectApAtStatement(collection: MutableList<Pair<InitialFactAp, FinalFactAp>>, statement: CommonInst)
     fun collectApAtStatement(collection: MutableList<Pair<InitialFactAp, FinalFactAp>>, statement: CommonInst, finalFactPattern: InitialFactAp)
     fun collectApAtStatement(collection: MutableList<FinalFactAp>, statement: CommonInst, initialAp: InitialFactAp, finalFactPattern: InitialFactAp)

@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds
 
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixEdgeBundle
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 sealed interface Edge {
@@ -82,7 +83,8 @@ sealed interface Edge {
         override val methodEntryPoint: MethodEntryPoint,
         val initialFactAp: InitialFactAp,
         override val statement: CommonInst,
-        val factAp: FinalFactAp
+        val factAp: FinalFactAp,
+        val suffixBundle: SuffixEdgeBundle? = null,
     ) : Edge {
 
         init {
@@ -92,9 +94,14 @@ sealed interface Edge {
         }
 
         override fun replaceStatement(newStatement: CommonInst): Edge =
-            FactToFact(methodEntryPoint, initialFactAp, newStatement, factAp)
+            FactToFact(methodEntryPoint, initialFactAp, newStatement, factAp, suffixBundle)
 
-        override fun toString(): String = "($initialFactAp -> $factAp)[$methodEntryPoint -> $statement]"
+        override fun toString(): String = if (suffixBundle == null) {
+            "($initialFactAp -> $factAp)[$methodEntryPoint -> $statement]"
+        } else {
+            "($initialFactAp -> $factAp, suffix=${suffixBundle.suffixTree.cones()})" +
+                "[$methodEntryPoint -> $statement]"
+        }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -106,6 +113,7 @@ sealed interface Edge {
             if (initialFactAp != other.initialFactAp) return false
             if (statement != other.statement) return false
             if (factAp != other.factAp) return false
+            if (suffixBundle != other.suffixBundle) return false
 
             return true
         }
@@ -115,6 +123,7 @@ sealed interface Edge {
             result = 31 * result + initialFactAp.hashCode()
             result = 31 * result + statement.hashCode()
             result = 31 * result + factAp.hashCode()
+            result = 31 * result + (suffixBundle?.hashCode() ?: 0)
             return result
         }
     }

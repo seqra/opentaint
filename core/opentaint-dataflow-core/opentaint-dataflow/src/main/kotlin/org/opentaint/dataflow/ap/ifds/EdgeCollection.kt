@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixEdgeBundle
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 object EdgeCollection {
@@ -107,18 +108,32 @@ object EdgeCollection {
             private val initial = arrayListOf<InitialFactAp>()
             private val statement = arrayListOf<CommonInst>()
             private val finalFact = manager.finalFactList()
+            private val suffixBundles = arrayListOf<SuffixEdgeBundle?>()
 
             fun add(edge: Edge.FactToFact) {
                 initial.add(edge.initialFactAp)
                 statement.add(edge.statement)
                 finalFact.add(edge.factAp)
+                suffixBundles.add(edge.suffixBundle)
             }
 
             override fun get(idx: Int, methodEntryPoint: MethodEntryPoint) =
-                Edge.FactToFact(methodEntryPoint, initial[idx], statement[idx], finalFact.get(idx))
+                Edge.FactToFact(
+                    methodEntryPoint,
+                    initial[idx],
+                    statement[idx],
+                    finalFact.get(idx),
+                    suffixBundles[idx],
+                )
 
             override fun removeLast(methodEntryPoint: MethodEntryPoint) =
-                Edge.FactToFact(methodEntryPoint, initial.removeLast(), statement.removeLast(), finalFact.removeLast())
+                Edge.FactToFact(
+                    methodEntryPoint,
+                    initial.removeLast(),
+                    statement.removeLast(),
+                    finalFact.removeLast(),
+                    suffixBundles.removeLast(),
+                )
 
         }
 

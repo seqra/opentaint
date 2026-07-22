@@ -2,15 +2,17 @@ package org.opentaint.dataflow.ap.ifds.access
 
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
+import org.opentaint.dataflow.ap.ifds.access.suffix.SuffixTreeApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 
 enum class ApMode {
-    Tree, Cactus, Automata;
+    Tree, Cactus, Automata, SuffixTree;
 
     fun createApManager(unrollStrategy: AnyAccessorUnrollStrategy): ApManager = when (this) {
         Tree -> TreeApManager(unrollStrategy)
         Cactus -> CactusApManager(unrollStrategy)
         Automata -> AutomataApManager(unrollStrategy)
+        SuffixTree -> SuffixTreeApManager(unrollStrategy)
     }
 
     companion object {

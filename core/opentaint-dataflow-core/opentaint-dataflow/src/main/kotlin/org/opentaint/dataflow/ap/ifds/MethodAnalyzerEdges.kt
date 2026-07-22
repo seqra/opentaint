@@ -96,18 +96,27 @@ class MethodAnalyzerEdges(
         val initialAp = edge.initialFactAp
         val finalAp = edge.factAp
 
-        val (addedInitial, addedFinal) = taintedToFactEdges.add(edge.statement, initialAp, finalAp) ?: return emptyList()
-
-        if (addedInitial === initialAp && addedFinal === finalAp) return listOf(edge)
-
-        return listOf(
+        val additions = taintedToFactEdges.addFactToFact(
+            edge.statement,
+            initialAp,
+            finalAp,
+            edge.suffixBundle,
+        )
+        return additions.map { addition ->
+            if (
+                addition.initial === initialAp && addition.final === finalAp &&
+                addition.suffixBundle === edge.suffixBundle
+            ) {
+                return@map edge
+            }
             Edge.FactToFact(
                 methodEntryPoint = edge.methodEntryPoint,
-                initialFactAp = addedInitial,
+                initialFactAp = addition.initial,
                 statement = edge.statement,
-                factAp = addedFinal
+                factAp = addition.final,
+                suffixBundle = addition.suffixBundle,
             )
-        )
+        }
     }
 
     fun allZeroToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<FinalFactAp> {
