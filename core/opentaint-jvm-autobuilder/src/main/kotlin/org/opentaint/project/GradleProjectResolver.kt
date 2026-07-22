@@ -157,15 +157,30 @@ class GradleProjectResolver(
         fun resolveDependenciesJars(): List<Path> {
             val allDependenciesInfo = dependenciesInfo.entries.sortedBy { it.key }
 
-            val resolvedDirectDependencies = allDependenciesInfo
-                .filter { it.key in directDependencies }
-                .mapNotNull { resolveJarPath(it.value) }
+            val directFirst = allDependenciesInfo.filter { it.key in directDependencies }.map { it.value } +
+                allDependenciesInfo.filterNot { it.key in directDependencies }.map { it.value }
 
-            val resolvedIndirectDependencies = allDependenciesInfo
-                .filter { it.key !in directDependencies }
-                .mapNotNull { resolveJarPath(it.value) }
+            // Dependencies are collected across every module of the build, so the same artifact shows
+            // up at each version any module resolved. Resolve that conflict the way the build tool
+            // does — one version per artifact — instead of handing the analyzer several copies of the
+            // same classes and leaving the choice to classpath lookup order.
+            val conflictFree = directFirst.singleVersionPerArtifact(
+                artifact = { it.groupId to it.artifactId },
+                version = { it.version },
+                onDropped = { kept, dropped ->
+                    logger.debug {
+                        "Dependency conflict on ${dropped.groupId}:${dropped.artifactId}: " +
+                            "keeping ${kept.version}, dropping ${dropped.version}"
+                    }
+                }
+            )
 
-            return resolvedDirectDependencies + resolvedIndirectDependencies
+            val droppedCount = directFirst.size - conflictFree.size
+            if (droppedCount > 0) {
+                logger.info { "Resolved dependency version conflicts: dropped $droppedCount duplicate artifact versions" }
+            }
+
+            return conflictFree.mapNotNull { resolveJarPath(it) }
         }
 
         private fun resolveJarPath(dependency: GradleDependencyInfo): Path? {
