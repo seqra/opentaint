@@ -23,9 +23,13 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 
 Read `.opentaint/project/project.yaml` — the `dependencies` list under each per-language projects entry is every third-party dependency the model resolved. Resolve each to the library it is. Most of a large project's dependencies are transitive infrastructure
 
+A `goProjects:` entry carries no such list — read the module's own `go.mod` (`require` blocks) and `go.sum` for its dependency modules instead, and identify each by module path rather than by a coordinate
+
 ### 2. Mark each library
 
 For each library decide: could it introduce an attacker-controlled source — a method returning untrusted data (HTTP/RPC request data, message-broker payloads, deserialized untrusted input and so on)? Judge by the library's identity itself, read sources to get overviews, docs
+
+Dismiss the obvious infrastructure by identity — logging (logback/slf4j; Go `go.uber.org/zap`, `log/slog`), build plugins, annotations, bytecode tooling (ASM, byte-buddy) or codegen runtimes (`google.golang.org/protobuf`), test libraries (Go `github.com/stretchr/testify`), pure data structures. When unsure, peek: grep the project's sources for the library's imports or call sites — for Go that grep on the import path is the only peek available, there is no jar to inspect
 
 ### 3. Write the flag list
 

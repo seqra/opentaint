@@ -15,7 +15,7 @@ Header (both kinds):
 - Type — `analysis` or `resource`
 - Setup — the exact command that reproduces it: the `opentaint test rule …` / `test approximation run` for `analysis`, or the failed `opentaint scan` for `resource`, each with its model, rulesets, and approximation dirs (plus final memory and timeout/backstop outcome for `resource`)
 - Run logs — the run's log files, by path: for `analysis`, any debug log or fact-reachability SARIF the caller cited, if present; for `resource`, the scan's output log
-- Minimal repro — the smallest set of files/folders that demonstrates it: for `analysis`, the test project `.opentaint/test-projects/<name>` if one was named; for `resource`, the project model, rulesets, and approximation dirs in play (with their rough size)
+- Minimal repro — the smallest set of files/folders that demonstrates it: for `analysis`, the test project `.opentaint/test-projects/<name>` if one was named; for `resource`, the project model, rulesets, and approximation dirs in play (with their rough size). A Go passThrough has no test project — cite the scan evidence instead: the config under test, the modeled method now absent from `dropped-external-methods.yaml` (and present in `approximated-external-methods.yaml`), the flow still missing from the scan SARIF, and a minimal standalone Go module wiring the modeled call between a real source and sink
 - TL;DR — 2–3 sentences: the symptom, and for `analysis` where taint appears to die and what the engine should do instead
 
 Below the header, free-form — whatever makes the case, at least:

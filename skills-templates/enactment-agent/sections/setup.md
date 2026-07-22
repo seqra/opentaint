@@ -19,7 +19,9 @@ The supplied findings are this run's input and the only thing it is measured aga
 
 ### 4. Determine the language
 
-Read the project's build files to fix the target language — Maven/Gradle → java, `go.mod` → go, and so on. Record it at bootstrap; stage orchestrators pass it to language-coupled leaves.
+Read the project's build files to fix the target language — Maven/Gradle → java, `go.mod` → go, and so on. Record it at bootstrap; stage orchestrators pass it to language-coupled leaves. When a repo carries build markers for more than one, ask the user which to analyze.
+
+For `go`, also confirm `go` is on PATH (`command -v go`) before bootstrapping — the analyzer drives the Go toolchain at both build and scan time, so a Go run hard-fails without it. Tell the user and stop if it's missing. Two pipeline branches are Java-only and simply don't run for Go: dataflow approximations (Go has only passThrough) and everything that depends on them.
 
 ### 5. Choose the workflow
 
