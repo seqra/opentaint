@@ -27,10 +27,18 @@ class MethodSuffixTreeAccessPathSubscription(
         val callerFinalBase: AccessPathBase,
     )
 
-    private data class SeenPremise(val key: CellKey, val accessors: List<Int>)
+    private data class SeenPremise(
+        val key: CellKey,
+        val accessors: List<Int>,
+        val exclusions: Set<Int>,
+    )
 
     private val treeDelegate = MethodTreeAccessPathSubscription(apManager)
     private val cells = HashMap<CellKey, SuffixRelationTrie>()
+    // Cone annihilation is correct for the propagated relation, but a later callee summary lookup
+    // still needs the concrete caller witness that introduced a covered cone. Keep those exact
+    // generators as a lookup index; results are materialized only at this summary-application seam.
+    private val lookupGenerators = HashMap<CellKey, LinkedHashSet<SuffixGenerator>>()
     private val seenPremises = HashSet<SeenPremise>()
 
     override fun addZeroToFact(
@@ -79,11 +87,21 @@ class MethodSuffixTreeAccessPathSubscription(
             callerExitAp.base,
         )
         val relation = cells.getOrPut(key, ::SuffixRelationTrie)
+        val lookup = lookupGenerators.getOrPut(key, ::LinkedHashSet)
         val changedGenerators = ArrayList<SuffixGenerator>()
+        val premiseGenerators = ArrayList<SuffixGenerator>()
         var premiseNew = false
 
         if (suffixBundle != null) {
             for (cone in suffixBundle.suffixTree.cones()) {
+                val coneIsNewPremise = seenPremises.add(
+                    SeenPremise(
+                        key,
+                        suffixBundle.initialPrefix + cone.suffix,
+                        cone.exclusions,
+                    )
+                )
+                premiseNew = coneIsNewPremise || premiseNew
                 for (terminal in suffixBundle.finalPrefixTree.terminals()) {
                     val generator = SuffixGenerator(
                         suffixBundle.initialPrefix,
@@ -92,14 +110,9 @@ class MethodSuffixTreeAccessPathSubscription(
                         cone.exclusions,
                         terminal.markers,
                     )
+                    lookup += generator
                     if (relation.add(generator)) changedGenerators += generator
-                    premiseNew = seenPremises.add(
-                        SeenPremise(
-                            key,
-                            apManager.buildInitialPath(generator.initialPrefix + generator.suffix)
-                                .toAccessorList(),
-                        )
-                    ) || premiseNew
+                    if (coneIsNewPremise) premiseGenerators += generator
                 }
             }
         } else {
@@ -108,8 +121,8 @@ class MethodSuffixTreeAccessPathSubscription(
             val final = callerExitAp as? AccessTree
                 ?: error("SuffixTree subscription received non-tree final fact")
             val initialPath = initial.access.toAccessorList()
-            premiseNew = seenPremises.add(SeenPremise(key, initialPath))
             val exclusions = final.exclusions.toAccessorIndices()
+            premiseNew = seenPremises.add(SeenPremise(key, initialPath, exclusions))
             for (terminal in final.access.terminals()) {
                 val generator = relation.factor(
                     initialPath.toIntArray(),
@@ -117,15 +130,15 @@ class MethodSuffixTreeAccessPathSubscription(
                     exclusions,
                     terminal.markers,
                 )
+                lookup += generator
                 if (relation.add(generator)) changedGenerators += generator
+                if (premiseNew) premiseGenerators += generator
             }
         }
 
         if (changedGenerators.isEmpty()) {
             if (!premiseNew) return emptyList()
-            return listOf(
-                subscription(key, callerInitialAp, callerExitAp, suffixBundle)
-            )
+            return suffixDeltaBundles(premiseGenerators).map { bundledSubscription(key, it) }
         }
 
         SuffixTreeDiagnostics.logStoredShape(
@@ -136,7 +149,18 @@ class MethodSuffixTreeAccessPathSubscription(
             site = { "subscription ${key.callerEp}" },
         )
 
-        return suffixDeltaBundles(changedGenerators)
+        val deltaBundles = suffixDeltaBundles(changedGenerators)
+        val publishedBundles = if (
+            key.callerInitialBase == key.callerFinalBase &&
+            changedGenerators.any { it.initialPrefix == it.finalPrefix }
+        ) {
+            deltaBundles.filterNot { it.isIdentityForSameBase() } +
+                relation.bundles().filter { it.isIdentityForSameBase() }
+        } else {
+            deltaBundles
+        }
+
+        return publishedBundles
             .map { bundle ->
                 SuffixTreeDiagnostics.recordPublished(
                     bundle,
@@ -154,31 +178,27 @@ class MethodSuffixTreeAccessPathSubscription(
     ) {
         val pattern = summaryInitialFactAp as? AccessPath
             ?: error("SuffixTree subscription received non-tree summary pattern")
-        for ((key, relation) in cells) {
+        for ((key, generators) in lookupGenerators) {
             if (key.calleeInitialBase != pattern.base) continue
-            for (bundle in relation.bundles()) {
-                for (cone in bundle.suffixTree.cones()) {
-                    val exclusions = apManager.exclusions(cone.exclusions)
-                    val initial = AccessPath(
-                        apManager,
-                        key.callerInitialBase,
-                        apManager.buildInitialPath(bundle.initialPrefix + cone.suffix),
-                        exclusions,
-                    )
-                    for (terminal in bundle.finalPrefixTree.terminals()) {
-                        val finalNode = apManager.buildFinalPath(
-                            terminal.prefix + cone.suffix,
-                            terminal.markers,
-                        ) ?: continue
-                        val filteredFinal = finalNode.filterStartsWith(pattern.access) ?: continue
-                        collection += subscription(
-                            key,
-                            initial,
-                            AccessTree(apManager, key.callerFinalBase, filteredFinal, exclusions),
-                            suffixBundle = null,
-                        )
-                    }
-                }
+            for (generator in generators) {
+                val exclusions = apManager.exclusions(generator.exclusions)
+                val initial = AccessPath(
+                    apManager,
+                    key.callerInitialBase,
+                    apManager.buildInitialPath(generator.initialPrefix + generator.suffix),
+                    exclusions,
+                )
+                val finalNode = apManager.buildFinalPath(
+                    generator.finalPrefix + generator.suffix,
+                    generator.finalMarkers,
+                ) ?: continue
+                val filteredFinal = finalNode.filterStartsWith(pattern.access) ?: continue
+                collection += subscription(
+                    key,
+                    initial,
+                    AccessTree(apManager, key.callerFinalBase, filteredFinal, exclusions),
+                    suffixBundle = null,
+                )
             }
         }
     }

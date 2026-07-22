@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -57,7 +58,12 @@ class MethodEdgesInitialToFinalSuffixTreeSetTest {
         val additions = store.addFactToFact(statement, initial(second), final(second, base), suffixBundle = null)
 
         val addition = additions.single()
-        assertEquals(setOf(listOf(second)), assertNotNull(addition.suffixBundle).suffixTree.cones().map { it.suffix }.toSet())
+        val publishedBundle = assertNotNull(addition.suffixBundle)
+        assertEquals(
+            setOf(listOf(first), listOf(second)),
+            publishedBundle.suffixTree.cones().map { it.suffix }.toSet(),
+        )
+        assertTrue(publishedBundle.suffixTree.isBranching())
         val storedBundle = store.bundlesAt(statement).single()
         assertEquals(
             setOf(listOf(first), listOf(second)),
@@ -104,8 +110,12 @@ class MethodEdgesInitialToFinalSuffixTreeSetTest {
             storedBundle.suffixTree.cones().mapTo(hashSetOf()) { it.suffix },
         )
         assertTrue(storedBundle.suffixTree.isBranching())
-        val deltaBundle = assertNotNull(additions.single().setEntryPoint(entryPoint).build().suffixBundle)
-        assertEquals(setOf(listOf(second)), deltaBundle.suffixTree.cones().map { it.suffix }.toSet())
+        val publishedBundle = assertNotNull(additions.single().setEntryPoint(entryPoint).build().suffixBundle)
+        assertEquals(
+            setOf(listOf(first), listOf(second)),
+            publishedBundle.suffixTree.cones().map { it.suffix }.toSet(),
+        )
+        assertTrue(publishedBundle.suffixTree.isBranching())
         Unit
     }
 
@@ -138,14 +148,54 @@ class MethodEdgesInitialToFinalSuffixTreeSetTest {
             storedBundle.suffixTree.cones().mapTo(hashSetOf()) { it.suffix },
         )
         assertTrue(storedBundle.suffixTree.isBranching())
-        val deltaBundle = assertNotNull(
+        val publishedBundle = assertNotNull(
             additions.single()
                 .setStatements(MethodEntryPoint(EmptyMethodContext, statement), statement)
                 .callerPathEdge
                 .suffixBundle
         )
-        assertEquals(setOf(listOf(second)), deltaBundle.suffixTree.cones().map { it.suffix }.toSet())
+        assertEquals(
+            setOf(listOf(first), listOf(second)),
+            publishedBundle.suffixTree.cones().map { it.suffix }.toSet(),
+        )
+        assertTrue(publishedBundle.suffixTree.isBranching())
         Unit
+    }
+
+    @Test
+    fun `covered subscription keeps concrete witness for later summary lookup`() = with(manager) {
+        val field = FieldAccessor("T", "field", "T").idx
+        val subscriptions = MethodSuffixTreeAccessPathSubscription(manager)
+        val base = AccessPathBase.Argument(0)
+        val rootInitial = AccessPath(manager, base, access = null, ExclusionSet.Empty)
+        val rootFinal = AccessTree(manager, base, manager.abstractNode, ExclusionSet.Empty)
+
+        subscriptions.addFactToFactEdges(
+            statement,
+            base,
+            rootInitial,
+            rootFinal,
+            suffixBundle = null,
+        )
+        subscriptions.addFactToFactEdges(
+            statement,
+            base,
+            initial(field),
+            final(field, base),
+            suffixBundle = null,
+        )
+
+        // The propagated relation canonically annihilates the covered child cone.
+        assertEquals(listOf(emptyList()), subscriptions.allBundles().single().suffixTree.cones().map { it.suffix })
+
+        val matches = mutableListOf<FactEdgeSummarySubscription>()
+        subscriptions.collectFactEdge(matches, initial(field), emptyDeltaRequired = false)
+
+        val matched = matches.single()
+            .setStatements(MethodEntryPoint(EmptyMethodContext, statement), statement)
+            .callerPathEdge
+        val matchedAccess = (matched.initialFactAp as AccessPath).access!!.toList()
+        assertEquals(listOf(field), List(matchedAccess.size) { matchedAccess.getInt(it) })
     }
 
     @Test

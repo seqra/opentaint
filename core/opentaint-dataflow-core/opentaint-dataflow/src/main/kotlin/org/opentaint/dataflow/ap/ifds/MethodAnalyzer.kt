@@ -22,6 +22,7 @@ import org.opentaint.dataflow.ap.ifds.access.suffix.buildInitialPath
 import org.opentaint.dataflow.ap.ifds.access.suffix.materializeSuffixes
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
@@ -299,6 +300,8 @@ class NormalMethodAnalyzer(
 
         val edge = unprocessedEdges.removeLast()
 
+        FactPropagationTracer.propagation(methodEntryPoint, edge)
+
         val finalEdgeFact = when (edge) {
             is ZeroToZero -> null
             is ZeroToFact -> edge.factAp
@@ -338,7 +341,34 @@ class NormalMethodAnalyzer(
 
     private fun simpleStatementStep(edge: Edge) {
         if (edge is FactToFact && edge.suffixBundle != null) {
-            edge.materializeSuffixes().forEach(::simpleStatementStep)
+            val flowFunction = analysisManager.getMethodSequentFlowFunction(
+                apManager,
+                analysisContext,
+                edge.statement,
+            )
+            val materializedResults = edge.materializeSuffixes().map { materialized ->
+                materialized to flowFunction
+                    .propagateFactToFact(materialized.initialFactAp, materialized.factAp)
+                    .toList()
+            }
+            val postProcessor = analysisManager.getEdgePostProcessor(
+                apManager,
+                analysisContext,
+                methodInstGraph,
+                edge.statement,
+            )
+            if (
+                postProcessor == null && materializedResults.isNotEmpty() &&
+                materializedResults.all { (_, results) ->
+                    results.size == 1 && results.single() == Sequent.Unchanged
+                }
+            ) {
+                propagateEdge(edge, edgeUnchanged = true)
+            } else {
+                materializedResults.forEach { (materialized, results) ->
+                    handleSequentFact(materialized, results)
+                }
+            }
             return
         }
 
@@ -611,7 +641,10 @@ class NormalMethodAnalyzer(
                     path,
                     path,
                     exclusions = emptySet(),
-                    finalMarkers = FinalPrefixMarkers(isFinal = false, isAbstract = true),
+                    finalMarkers = FinalPrefixMarkers(
+                        isFinal = path.lastOrNull() == FINAL_ACCESSOR_IDX,
+                        isAbstract = path.lastOrNull() != FINAL_ACCESSOR_IDX,
+                    ),
                 )
             }
 
@@ -694,6 +727,13 @@ class NormalMethodAnalyzer(
     }
 
     private fun addSequentialUnchangedEdge(edge: Edge) {
+        // A legacy slice can be in flight when another slice has already established a suffix
+        // relation. Route it through the suffix store at the next statement so it rejoins the
+        // canonical bundle instead of reappearing later as a plain/list-like edge.
+        if (apManager is SuffixTreeApManager && edge is FactToFact && edge.suffixBundle == null) {
+            addSequentialEdge(edge)
+            return
+        }
         if (enqueuedUnchangedEdges.add(edge)) {
             enqueueNewEdge(edge)
         }
@@ -824,6 +864,8 @@ class NormalMethodAnalyzer(
     }
 
     private fun newSummaryEdge(edge: Edge) {
+        FactPropagationTracer.summary(methodEntryPoint, edge)
+
         if (edge is ZeroToZero) {
             runner.addNewSummaryEdges(methodEntryPoint, listOf(edge))
         } else {

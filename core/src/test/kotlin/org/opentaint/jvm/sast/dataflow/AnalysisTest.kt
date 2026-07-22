@@ -126,7 +126,8 @@ abstract class AnalysisTest : BasicTestUtils() {
     fun runAnalysis(
         config: SerializedTaintConfig,
         entryPointClass: String,
-        entryPointMethod: String
+        entryPointMethod: String,
+        apMode: ApMode = ApMode.fromTestProperty(),
     ): List<VulnerabilityWithTrace> {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
@@ -149,7 +150,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = ApMode.fromTestProperty()
+            ifdsApMode = apMode,
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {

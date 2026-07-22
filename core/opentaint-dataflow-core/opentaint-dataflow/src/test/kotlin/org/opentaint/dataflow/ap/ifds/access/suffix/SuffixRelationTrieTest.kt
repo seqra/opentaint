@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.suffix
 
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,6 +21,20 @@ class SuffixRelationTrieTest {
         assertEquals(listOf(9), generator.finalPrefix)
         assertEquals(listOf(2, 3, 4), generator.suffix)
         assertEquals(setOf(7), generator.exclusions)
+    }
+
+    @Test
+    fun `final marker participates in maximal common suffix`() {
+        val generator = SuffixRelationTrie().factor(
+            initialPath = intArrayOf(1, FINAL_ACCESSOR_IDX),
+            finalPath = intArrayOf(1),
+            exclusions = emptySet(),
+            finalMarkers = FinalPrefixMarkers(isFinal = true, isAbstract = false),
+        )
+
+        assertEquals(emptyList(), generator.initialPrefix)
+        assertEquals(emptyList(), generator.finalPrefix)
+        assertEquals(listOf(1, FINAL_ACCESSOR_IDX), generator.suffix)
     }
 
     @Test

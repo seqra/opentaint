@@ -23,6 +23,7 @@ class MethodEdgesInitialToFinalSuffixTreeSet(
         val statementIndex: Int,
         val bases: Bases,
         val accessors: List<Int>,
+        val exclusions: Set<Int>,
     )
 
     private val cells = HashMap<Bases, Array<SuffixRelationTrie?>>()
@@ -49,10 +50,20 @@ class MethodEdgesInitialToFinalSuffixTreeSet(
         val statementIndex = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
         val relation = relationFor(bases, statementIndex)
         val changedGenerators = ArrayList<SuffixGenerator>()
+        val premiseGenerators = ArrayList<SuffixGenerator>()
         var newPremise = false
 
         if (suffixBundle != null) {
             for (cone in suffixBundle.suffixTree.cones()) {
+                val coneIsNewPremise = seenPremises.add(
+                    SeenPremise(
+                        statementIndex,
+                        bases,
+                        suffixBundle.initialPrefix + cone.suffix,
+                        cone.exclusions,
+                    )
+                )
+                newPremise = coneIsNewPremise || newPremise
                 for (terminal in suffixBundle.finalPrefixTree.terminals()) {
                     val generator = SuffixGenerator(
                         initialPrefix = suffixBundle.initialPrefix,
@@ -62,14 +73,7 @@ class MethodEdgesInitialToFinalSuffixTreeSet(
                         finalMarkers = terminal.markers,
                     )
                     if (relation.add(generator)) changedGenerators.add(generator)
-                    newPremise = seenPremises.add(
-                        SeenPremise(
-                            statementIndex,
-                            bases,
-                            apManager.buildInitialPath(generator.initialPrefix + generator.suffix)
-                                .toAccessorList(),
-                        )
-                    ) || newPremise
+                    if (coneIsNewPremise) premiseGenerators.add(generator)
                 }
             }
         } else {
@@ -79,8 +83,10 @@ class MethodEdgesInitialToFinalSuffixTreeSet(
                 ?: error("SuffixTree store received a non-tree final fact: ${finalAp::class}")
             val initialPath = initial.access.toAccessorList()
             val exclusions = finalAp.exclusions.toAccessorIndices()
+            newPremise = seenPremises.add(
+                SeenPremise(statementIndex, bases, initialPath, exclusions)
+            )
 
-            newPremise = seenPremises.add(SeenPremise(statementIndex, bases, initialPath))
             for (terminal in final.access.terminals()) {
                 val generator = relation.factor(
                     initialPath.toIntArray(),
@@ -89,12 +95,13 @@ class MethodEdgesInitialToFinalSuffixTreeSet(
                     terminal.markers,
                 )
                 if (relation.add(generator)) changedGenerators.add(generator)
+                if (newPremise) premiseGenerators.add(generator)
             }
         }
 
         if (changedGenerators.isEmpty()) {
             if (!newPremise) return emptyList()
-            return listOf(MethodEdgesInitialToFinalApSet.Addition(initialAp, finalAp, suffixBundle))
+            return suffixDeltaBundles(premiseGenerators).map { bundleAddition(bases, it) }
         }
 
         SuffixTreeDiagnostics.logStoredShape(
@@ -103,7 +110,17 @@ class MethodEdgesInitialToFinalSuffixTreeSet(
             site = { "method $methodInitialStatement at $statement" },
         )
 
-        return suffixDeltaBundles(changedGenerators)
+        val deltaBundles = suffixDeltaBundles(changedGenerators)
+        val publishedBundles = if (
+            bases.initial == bases.final && changedGenerators.any { it.initialPrefix == it.finalPrefix }
+        ) {
+            deltaBundles.filterNot { it.isIdentityForSameBase() } +
+                relation.bundles().filter { it.isIdentityForSameBase() }
+        } else {
+            deltaBundles
+        }
+
+        return publishedBundles
             .asSequence()
             .map { bundle ->
                 SuffixTreeDiagnostics.recordPublished(

@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 
 /**
  * Lazily materialize a grouped diagonal edge for a legacy flow operation. Both sides use the same
@@ -64,7 +65,13 @@ internal fun TreeApManager.buildFinalPath(
         else -> emptyNode
     }
     for (index in accessors.indices.reversed()) {
-        node = node.addParentIfPossible(accessors[index]) ?: return null
+        node = when (val accessor = accessors[index]) {
+            // FinalAccessor terminates an AccessPath but is represented by the isFinal marker in
+            // an AccessTree. Rebuilding it as an ordinary parent is impossible and used to drop
+            // the complete diagonal slice at a legacy-operation boundary.
+            FINAL_ACCESSOR_IDX -> finalNode
+            else -> node.addParentIfPossible(accessor) ?: return null
+        }
     }
     return node
 }

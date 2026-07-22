@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.suffix
 
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
+
 /**
  * Immutable language of shared suffix cones.
  *
@@ -263,16 +265,30 @@ class SuffixRelationTrie {
         exclusions: Set<Int>,
         finalMarkers: FinalPrefixMarkers = FinalPrefixMarkers(isFinal = false, isAbstract = true),
     ): SuffixGenerator {
+        // AccessPath keeps FinalAccessor in its linear chain, whereas AccessTree normally stores
+        // the same terminator as an isFinal marker on the terminal node. Compare their logical
+        // paths, otherwise x.$ -> x.$ is mis-factored as two unequal prefixes with an empty suffix.
+        val logicalFinalPath = if (
+            finalMarkers.isFinal && finalPath.lastOrNull() != FINAL_ACCESSOR_IDX
+        ) {
+            finalPath + FINAL_ACCESSOR_IDX
+        } else {
+            finalPath
+        }
+
         var commonLength = 0
         while (
-            commonLength < initialPath.size && commonLength < finalPath.size &&
-            initialPath[initialPath.lastIndex - commonLength] == finalPath[finalPath.lastIndex - commonLength]
+            commonLength < initialPath.size && commonLength < logicalFinalPath.size &&
+            initialPath[initialPath.lastIndex - commonLength] ==
+            logicalFinalPath[logicalFinalPath.lastIndex - commonLength]
         ) {
             commonLength++
         }
         return SuffixGenerator(
             initialPrefix = initialPath.copyOfRange(0, initialPath.size - commonLength).toList(),
-            finalPrefix = finalPath.copyOfRange(0, finalPath.size - commonLength).toList(),
+            finalPrefix = logicalFinalPath
+                .copyOfRange(0, logicalFinalPath.size - commonLength)
+                .toList(),
             suffix = initialPath.copyOfRange(initialPath.size - commonLength, initialPath.size).toList(),
             exclusions = exclusions.toSet(),
             finalMarkers = finalMarkers,

@@ -12,6 +12,8 @@ import org.opentaint.dataflow.ap.ifds.access.MethodInitialToFinalApSummariesStor
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
 import org.opentaint.dataflow.ap.ifds.access.tree.MethodInitialToFinalApSummaries
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 /** Persistent F2F summary relation storing and publishing grouped suffix bundles. */
@@ -26,7 +28,12 @@ class MethodInitialToFinalSuffixTreeSummaries(
     )
     private val cells = HashMap<CellKey, SuffixRelationTrie>()
     private val finalSideCanonicalizers = HashMap<CellKey, FinalSideSummaryCanonicalizer>()
-    private val seenPremises = HashSet<Pair<CellKey, List<Int>>>()
+    private data class SeenPremise(
+        val key: CellKey,
+        val accessors: List<Int>,
+        val exclusions: Set<Int>,
+    )
+    private val seenPremises = HashSet<SeenPremise>()
     private val treeShadow = if (SuffixTreeDiagnostics.verifySummaries) {
         MethodInitialToFinalApSummaries(methodInitialStatement, apManager)
     } else {
@@ -65,11 +72,16 @@ class MethodInitialToFinalSuffixTreeSummaries(
         val key = CellKey(edge.statement, edge.initialFactAp.base, edge.factAp.base)
         val relation = cells.getOrPut(key, ::SuffixRelationTrie)
         val changedGenerators = ArrayList<SuffixGenerator>()
+        val premiseGenerators = ArrayList<SuffixGenerator>()
         var premiseNew = false
 
         val bundle = edge.suffixBundle
         if (bundle != null) {
             for (cone in bundle.suffixTree.cones()) {
+                val coneIsNewPremise = seenPremises.add(
+                    SeenPremise(key, bundle.initialPrefix + cone.suffix, cone.exclusions)
+                )
+                premiseNew = coneIsNewPremise || premiseNew
                 for (terminal in bundle.finalPrefixTree.terminals()) {
                     val generator = SuffixGenerator(
                         bundle.initialPrefix,
@@ -79,10 +91,7 @@ class MethodInitialToFinalSuffixTreeSummaries(
                         terminal.markers,
                     )
                     if (relation.add(generator)) changedGenerators.add(generator)
-                    val materializedInitial = apManager
-                        .buildInitialPath(generator.initialPrefix + generator.suffix)
-                        .toAccessorList()
-                    premiseNew = seenPremises.add(key to materializedInitial) || premiseNew
+                    if (coneIsNewPremise) premiseGenerators.add(generator)
                 }
             }
         } else {
@@ -91,8 +100,8 @@ class MethodInitialToFinalSuffixTreeSummaries(
             val final = edge.factAp as? AccessTree
                 ?: error("SuffixTree summary received a non-tree final fact: ${edge.factAp::class}")
             val initialPath = initial.access.toAccessorList()
-            premiseNew = seenPremises.add(key to initialPath)
             val exclusions = edge.factAp.exclusions.toAccessorIndices()
+            premiseNew = seenPremises.add(SeenPremise(key, initialPath, exclusions))
             for (terminal in final.access.terminals()) {
                 val generator = relation.factor(
                     initialPath.toIntArray(),
@@ -101,16 +110,13 @@ class MethodInitialToFinalSuffixTreeSummaries(
                     terminal.markers,
                 )
                 if (relation.add(generator)) changedGenerators.add(generator)
+                if (premiseNew) premiseGenerators.add(generator)
             }
         }
 
         if (changedGenerators.isEmpty()) {
             if (premiseNew) {
-                added += FactToFactEdgeBuilder()
-                    .setInitialAp(edge.initialFactAp)
-                    .setExitAp(edge.factAp)
-                    .setExitStatement(edge.statement)
-                    .setSuffixBundle(edge.suffixBundle)
+                suffixDeltaBundles(premiseGenerators).mapTo(added) { bundleBuilder(key, it) }
             }
             return
         }
@@ -133,7 +139,17 @@ class MethodInitialToFinalSuffixTreeSummaries(
             site = { "summary ${key.exitStatement}" },
         )
 
-        suffixDeltaBundles(changedGenerators)
+        val deltaBundles = suffixDeltaBundles(changedGenerators)
+        val publishedBundles = if (
+            key.initialBase == key.finalBase && changedGenerators.any { it.initialPrefix == it.finalPrefix }
+        ) {
+            deltaBundles.filterNot { it.isIdentityForSameBase() } +
+                relation.bundles().filter { it.isIdentityForSameBase() }
+        } else {
+            deltaBundles
+        }
+
+        publishedBundles
             .mapTo(added) {
                 SuffixTreeDiagnostics.recordPublished(
                     bundle = it,
@@ -149,6 +165,7 @@ class MethodInitialToFinalSuffixTreeSummaries(
         initialFactPattern: FinalFactAp?,
         finalFactBase: AccessPathBase?,
     ) {
+        val resultStart = dst.size
         for ((key, relation) in cells) {
             if (initialFactPattern != null && key.initialBase != initialFactPattern.base) continue
             if (finalFactBase != null && key.finalBase != finalFactBase) continue
@@ -161,6 +178,14 @@ class MethodInitialToFinalSuffixTreeSummaries(
                 }
                 dst += bundleBuilder(key, filtered)
             }
+        }
+        treeShadow?.let { shadow ->
+            verifyFilteredAgainstTreeShadow(
+                shadow,
+                dst.subList(resultStart, dst.size),
+                initialFactPattern,
+                finalFactBase,
+            )
         }
     }
 
@@ -194,9 +219,53 @@ class MethodInitialToFinalSuffixTreeSummaries(
                 val shadowRelation = shadowRelations[key]
                     ?: error("SuffixTree has an extra unsquashed summary cell $key")
                 for (generator in suffixRelation.generators()) {
-                    check(shadowRelation.isCovered(generator)) {
-                        "Unsquashed SuffixTree summary differs from Tree summary at $key: $generator"
+                    check(
+                        shadowRelation.isCovered(generator) ||
+                            shadowRelation.generators().any { it.treeIdentityGeneralizes(generator) }
+                    ) {
+                        "Unsquashed SuffixTree summary differs from Tree summary at $key: " +
+                            "$generator; Tree=${shadowRelation.generators()}"
                     }
+                }
+            }
+        }
+    }
+
+    /** Tree's abstract identity summary specializes to a concrete descendant at application time. */
+    private fun SuffixGenerator.treeIdentityGeneralizes(other: SuffixGenerator): Boolean {
+        if (!finalMarkers.isAbstract || initialPrefix != finalPrefix) return false
+        if (other.initialPrefix != other.finalPrefix) return false
+        if (initialPrefix != other.initialPrefix || suffix.size >= other.suffix.size) return false
+        if (other.suffix.subList(0, suffix.size) != suffix) return false
+        return other.suffix[suffix.size] !in exclusions
+    }
+
+    private fun verifyFilteredAgainstTreeShadow(
+        shadow: MethodInitialToFinalApSummaries,
+        suffixBuilders: List<FactToFactEdgeBuilder>,
+        initialFactPattern: FinalFactAp?,
+        finalFactBase: AccessPathBase?,
+    ) {
+        val shadowBuilders = mutableListOf<FactToFactEdgeBuilder>()
+        shadow.filterEdgesTo(shadowBuilders, initialFactPattern, finalFactBase)
+        val entryPoint = MethodEntryPoint(EmptyMethodContext, methodInitialStatement)
+        val suffixRelations = HashMap<CellKey, SuffixRelationTrie>()
+
+        for (builder in suffixBuilders) {
+            val edge = builder.setEntryPoint(entryPoint).build()
+            val key = CellKey(edge.statement, edge.initialFactAp.base, edge.factAp.base)
+            val relation = suffixRelations.getOrPut(key, ::SuffixRelationTrie)
+            edge.generators().forEach { relation.add(it) }
+        }
+
+        for (builder in shadowBuilders) {
+            val edge = builder.setEntryPoint(entryPoint).build()
+            val key = CellKey(edge.statement, edge.initialFactAp.base, edge.factAp.base)
+            val suffixRelation = suffixRelations[key]
+                ?: error("SuffixTree filtered lookup lost Tree summary cell $key for $initialFactPattern")
+            for (generator in edge.generators()) {
+                check(suffixRelation.isCovered(generator)) {
+                    "SuffixTree filtered lookup lost Tree summary at $key for $initialFactPattern: $generator"
                 }
             }
         }
@@ -237,18 +306,28 @@ class MethodInitialToFinalSuffixTreeSummaries(
     }
 
     private fun filterBundle(bundle: SuffixEdgeBundle, pattern: FinalFactAp): SuffixEdgeBundle? {
+        pattern as AccessTree
+        val patternPaths = pattern.access.terminals().map { terminal ->
+            if (terminal.markers.isFinal) terminal.accessors + FINAL_ACCESSOR_IDX else terminal.accessors
+        }
         val matchingCones = bundle.suffixTree.cones().filter { cone ->
-            val initial = AccessPath(
-                apManager,
-                pattern.base,
-                apManager.buildInitialPath(bundle.initialPrefix + cone.suffix),
-                apManager.exclusions(cone.exclusions),
-            )
-            pattern.contains(initial)
+            val storedPath = bundle.initialPrefix + cone.suffix
+            patternPaths.any { it.containsStoredPrefix(storedPath) }
         }
         if (matchingCones.isEmpty()) return null
         if (matchingCones.size == bundle.suffixTree.cones().size) return bundle
         return bundle.copy(suffixTree = SuffixTree.fromCones(matchingCones))
+    }
+
+    /** Mirrors Tree's prefix-index lookup: every stored premise along a pattern path matches. */
+    private fun List<Int>.containsStoredPrefix(storedPath: List<Int>): Boolean {
+        if (storedPath.size > size && ANY_ACCESSOR_IDX !in this) return false
+        for (index in storedPath.indices) {
+            val patternAccessor = getOrNull(index) ?: return false
+            if (patternAccessor == ANY_ACCESSOR_IDX) return true
+            if (patternAccessor != storedPath[index]) return false
+        }
+        return true
     }
 
     private fun bundleBuilder(key: CellKey, bundle: SuffixEdgeBundle): FactToFactEdgeBuilder {
