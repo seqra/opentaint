@@ -64,6 +64,27 @@ internal fun <T> List<T>.singleVersionPerArtifact(
     return best.values.toList()
 }
 
+/**
+ * Keeps a single *usable* version of every artifact: the highest one that actually resolves to a file.
+ *
+ * A version present in the dependency graph is no guarantee of a downloaded artifact — the graph is
+ * resolved from metadata alone, so a version no configuration ever compiled against leaves only a POM
+ * in the local cache. Picking the highest version before checking that it resolves therefore drops the
+ * artifact from the model entirely, taking its classes with it.
+ */
+internal fun <T, R : Any> List<T>.singleResolvedVersionPerArtifact(
+    artifact: (T) -> Pair<String, String>,
+    version: (T) -> String,
+    resolve: (T) -> R?,
+    onDropped: (kept: T, dropped: T) -> Unit = { _, _ -> },
+): List<R> = mapNotNull { dependency -> resolve(dependency)?.let { dependency to it } }
+    .singleVersionPerArtifact(
+        artifact = { artifact(it.first) },
+        version = { version(it.first) },
+        onDropped = { kept, dropped -> onDropped(kept.first, dropped.first) },
+    )
+    .map { it.second }
+
 private val VERSION_SEPARATORS = charArrayOf('.', '-', '_', '+')
 
 private fun String.isNumeric(): Boolean = isNotEmpty() && all { it.isDigit() }

@@ -163,10 +163,13 @@ class GradleProjectResolver(
             // Dependencies are collected across every module of the build, so the same artifact shows
             // up at each version any module resolved. Resolve that conflict the way the build tool
             // does — one version per artifact — instead of handing the analyzer several copies of the
-            // same classes and leaving the choice to classpath lookup order.
-            val conflictFree = directFirst.singleVersionPerArtifact(
+            // same classes and leaving the choice to classpath lookup order. Only versions that
+            // resolve to a jar take part: the graph also carries versions nothing ever compiled
+            // against, which have no artifact in the local caches.
+            val conflictFree = directFirst.singleResolvedVersionPerArtifact(
                 artifact = { it.groupId to it.artifactId },
                 version = { it.version },
+                resolve = { resolveJarPath(it) },
                 onDropped = { kept, dropped ->
                     logger.debug {
                         "Dependency conflict on ${dropped.groupId}:${dropped.artifactId}: " +
@@ -177,10 +180,13 @@ class GradleProjectResolver(
 
             val droppedCount = directFirst.size - conflictFree.size
             if (droppedCount > 0) {
-                logger.info { "Resolved dependency version conflicts: dropped $droppedCount duplicate artifact versions" }
+                logger.info {
+                    "Resolved dependencies: dropped $droppedCount entries " +
+                        "(duplicate artifact versions and versions with no artifact in the local caches)"
+                }
             }
 
-            return conflictFree.mapNotNull { resolveJarPath(it) }
+            return conflictFree
         }
 
         private fun resolveJarPath(dependency: GradleDependencyInfo): Path? {
