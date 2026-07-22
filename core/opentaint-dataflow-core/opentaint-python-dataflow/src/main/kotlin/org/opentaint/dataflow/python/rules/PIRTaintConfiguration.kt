@@ -9,6 +9,12 @@ import org.opentaint.dataflow.configuration.python.TaintSource
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
 import org.opentaint.ir.api.python.PIRFunction
 import java.util.concurrent.ConcurrentHashMap
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCleaner
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonExitSink
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonPassThrough
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
 
 /**
  * Per-method / per-attribute Python taint rule lookup. Holds the parsed
@@ -18,7 +24,13 @@ import java.util.concurrent.ConcurrentHashMap
  * `TaintConfiguration` shape — rules are not materialised eagerly, and
  * the result of each lookup is cached on the matched key.
  */
-class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
+class PIRTaintConfiguration() {
+    private val entryPoint: MutableList<SerializedPythonEntryPointSource> = mutableListOf()
+    private val source: MutableList<SerializedPythonSource> = mutableListOf()
+    private val sink: MutableList<SerializedPythonSink> = mutableListOf()
+    private val methodExitSink: MutableList<SerializedPythonExitSink> = mutableListOf()
+    private val passThrough: MutableList<SerializedPythonPassThrough> = mutableListOf()
+    private val cleaner: MutableList<SerializedPythonCleaner> = mutableListOf()
 
     private val entryPointsByMethod = ConcurrentHashMap<PIRFunction, List<TaintEntryPointSource>>()
     private val sourcesByMethod = ConcurrentHashMap<PIRFunction, List<TaintSource>>()
@@ -33,44 +45,53 @@ class PIRTaintConfiguration(private val config: SerializedPythonTaintConfig) {
     private val passThroughByAttribute = ConcurrentHashMap<String, List<TaintPassThrough>>()
     private val cleanersByAttribute = ConcurrentHashMap<String, List<TaintCleaner>>()
 
+    fun loadConfig(config: SerializedPythonTaintConfig) {
+        entryPoint += config.entryPoint
+        source += config.source
+        sink += config.sink
+        methodExitSink += config.methodExitSink
+        passThrough += config.passThrough
+        cleaner += config.cleaner
+    }
+
     fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource> =
-        entryPointsByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveEntryPoints(config.entryPoint) }
+        entryPointsByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveEntryPoints(entryPoint) }
 
     fun sourcesForMethod(method: PIRFunction): List<TaintSource> =
-        sourcesByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveSources(config.source) }
+        sourcesByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveSources(source) }
 
     fun sinksForMethod(method: PIRFunction): List<TaintSink> =
-        sinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveSinks(config.sink) }
+        sinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveSinks(sink) }
 
     fun exitSinksForMethod(method: PIRFunction): List<TaintExitSink> =
-        exitSinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveExitSinks(config.methodExitSink) }
+        exitSinksByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveExitSinks(methodExitSink) }
 
     fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean): List<TaintPassThrough> =
         if (bySimpleName) {
             passThroughBySimpleMethod.cached(method) {
-                MethodTaintConfigurationResolver(it, bySimpleName = true).resolvePassThrough(config.passThrough)
+                MethodTaintConfigurationResolver(it, bySimpleName = true).resolvePassThrough(passThrough)
             }
         } else {
             passThroughByMethod.cached(method) {
-                MethodTaintConfigurationResolver(it, bySimpleName = false).resolvePassThrough(config.passThrough)
+                MethodTaintConfigurationResolver(it, bySimpleName = false).resolvePassThrough(passThrough)
             }
         }
 
 
     fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> =
-        cleanersByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveCleaners(config.cleaner) }
+        cleanersByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveCleaners(cleaner) }
 
     fun sourcesForAttribute(name: String): List<TaintSource> =
-        sourcesByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeSources(config.source, it) }
+        sourcesByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeSources(source, it) }
 
     fun sinksForAttribute(name: String): List<TaintSink> =
-        sinksByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeSinks(config.sink, it) }
+        sinksByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeSinks(sink, it) }
 
     fun passThroughForAttribute(name: String): List<TaintPassThrough> =
-        passThroughByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributePassThrough(config.passThrough, it) }
+        passThroughByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributePassThrough(passThrough, it) }
 
     fun cleanersForAttribute(name: String): List<TaintCleaner> =
-        cleanersByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeCleaners(config.cleaner, it) }
+        cleanersByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeCleaners(cleaner, it) }
 
     /** Canonicalises empty results to the shared [emptyList] singleton to avoid per-key allocations. */
     private inline fun <K : Any, V> ConcurrentHashMap<K, List<V>>.cached(key: K, crossinline resolve: (K) -> List<V>): List<V> =

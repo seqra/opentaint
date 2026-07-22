@@ -36,17 +36,16 @@ class PIRTaintConfigurationTest {
             shortName = "sink",
             parameters = listOf(stubParam("data", index = 0)),
         )
-        val config = PIRTaintConfiguration(
-            SerializedPythonTaintConfig(
-                entryPoint = listOf(
-                    entryPoint(
-                        "sample.sink",
-                        assignAction("remote", PythonPositionBase.Argument(0)),
-                        assignAction("remote", PythonPositionBase.Argument(1)),
-                    ),
+        val serializedConfig = SerializedPythonTaintConfig(
+            entryPoint = listOf(
+                entryPoint(
+                    "sample.sink",
+                    assignAction("remote", PythonPositionBase.Argument(0)),
+                    assignAction("remote", PythonPositionBase.Argument(1)),
                 ),
-            ),
+            )
         )
+        val config = PIRTaintConfiguration().apply { loadConfig(serializedConfig) }
 
         val positions = config.entryPointSourcesForMethod(sink).flatMap { it.taint }.map { it.pos }
         assertEquals(listOf(Argument(0)), positions,
@@ -60,11 +59,10 @@ class PIRTaintConfigurationTest {
             shortName = "sink",
             parameters = listOf(stubParam("data", index = 0)),
         )
-        val config = PIRTaintConfiguration(
-            SerializedPythonTaintConfig(
-                entryPoint = listOf(entryPoint("sample.sink", assignAction("remote", PythonPositionBase.Argument(null)))),
-            ),
+        val serializedConfig = SerializedPythonTaintConfig(
+            entryPoint = listOf(entryPoint("sample.sink", assignAction("remote", PythonPositionBase.Argument(null)))),
         )
+        val config = PIRTaintConfiguration().apply { loadConfig(serializedConfig) }
 
         val positions = config.entryPointSourcesForMethod(sink).flatMap { it.taint }.map { it.pos }
         assertEquals(listOf(Argument(0)), positions, "arg(*) expands to exactly arg(0) for a single-arg method")

@@ -250,7 +250,7 @@ class PythonSampleBasedTest {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<SerializedPythonRule>
-        val config = PIRTaintConfiguration(typed.toSerializedPythonTaintConfig())
+        val config = PIRTaintConfiguration().apply { loadConfig(typed.toSerializedPythonTaintConfig()) }
         val defaultConfig = loadDefaultConfig()
         return PIRCombinedTaintRulesProvider(PIRConfigTaintRulesProvider(config), defaultConfig)
     }
