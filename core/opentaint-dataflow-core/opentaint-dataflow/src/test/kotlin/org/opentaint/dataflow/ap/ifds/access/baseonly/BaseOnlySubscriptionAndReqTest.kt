@@ -1,60 +1,291 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactEdgeSummarySubscription
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactNDEdgeSummarySubscription
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.ZeroEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.util.RefManager
+import org.opentaint.ir.api.common.CommonMethod
+import org.opentaint.ir.api.common.CommonMethodParameter
+import org.opentaint.ir.api.common.CommonTypeName
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
+import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BaseOnlySubscriptionAndReqTest {
-    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = true)
+    private val fieldA = FieldAccessor("Owner", "a", "Value")
+    private val fieldB = FieldAccessor("Owner", "b", "Value")
     private val mark = TaintMarkAccessor("m")
+
+    private val method = object : CommonMethod {
+        override val name: String = "baseOnlySubscription"
+        override val parameters: List<CommonMethodParameter> = listOf(object : CommonMethodParameter {
+            override val type: CommonTypeName = object : CommonTypeName {
+                override val typeName: String = "java.lang.Object"
+            }
+        })
+        override val returnType: CommonTypeName = object : CommonTypeName {
+            override val typeName: String = "void"
+        }
+
+        override fun flowGraph(): ControlFlowGraph<CommonInst> = object : ControlFlowGraph<CommonInst> {
+            override val instructions: List<CommonInst> = emptyList()
+            override val entries: List<CommonInst> = emptyList()
+            override val exits: List<CommonInst> = emptyList()
+            override fun successors(node: CommonInst): Set<CommonInst> = emptySet()
+            override fun predecessors(node: CommonInst): Set<CommonInst> = emptySet()
+        }
+    }
 
     private val inst = object : CommonInst {
         override fun toString(): String = "i0"
-        override val location: CommonInstLocation get() = error("unused")
+        override val location: CommonInstLocation = object : CommonInstLocation {
+            override val method: CommonMethod get() = this@BaseOnlySubscriptionAndReqTest.method
+        }
     }
 
+    private fun pattern(field: FieldAccessor): BaseOnlyAccess =
+        packBaseOnlyAccess(NO_ACCESSOR, manager.interner.index(field), ABSTRACT_MARK)
+
+    private fun marked(field: FieldAccessor): BaseOnlyAccess =
+        packBaseOnlyAccess(NO_ACCESSOR, manager.interner.index(field), manager.interner.index(mark))
+
+    private fun initial(
+        access: BaseOnlyAccess,
+        base: AccessPathBase = AccessPathBase.This,
+    ): BaseOnlyInitialFactAp = BaseOnlyInitialFactAp(manager, base, access, ExclusionSet.Empty)
+
+    private fun final(
+        access: BaseOnlyAccess,
+        base: AccessPathBase = AccessPathBase.Return,
+    ): BaseOnlyFinalFactAp = BaseOnlyFinalFactAp(manager, base, access, ExclusionSet.Universe)
+
     @Test
-    fun `subscription dedups fact to fact registration`() {
+    fun `fact subscription broadcasts conservative candidates for both residual modes`() {
         val sub = manager.accessPathSubscription()
-        val callerInitial = manager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(mark)
-        val callerExit = manager.createFinalAp(AccessPathBase.Return, ExclusionSet.Universe).prependAccessor(mark)
+        val callerInitial = initial(pattern(fieldA))
+        val exactExit = final(pattern(fieldA))
+        val extendedExit = final(marked(fieldA))
+        val unrelatedExit = final(marked(fieldB))
 
-        assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, callerExit))
-        assertNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, callerExit))
+        assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, exactExit))
+        assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, extendedExit))
+        assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, unrelatedExit))
+        assertNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, extendedExit))
 
-        val collected = mutableListOf<FactEdgeSummarySubscription>()
-        val summaryInitial = manager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(mark)
-        sub.collectFactEdge(collected, summaryInitial, emptyDeltaRequired = false)
-        assertTrue(collected.isNotEmpty(), "registered subscription is collected")
+        val summaryInitial = initial(pattern(fieldA))
+        val nonEmpty = mutableListOf<FactEdgeSummarySubscription>()
+        sub.collectFactEdge(nonEmpty, summaryInitial, emptyDeltaRequired = false)
+        assertEquals(3, nonEmpty.size, "the downstream residual operation filters conservative candidates")
+
+        val empty = mutableListOf<FactEdgeSummarySubscription>()
+        sub.collectFactEdge(empty, summaryInitial, emptyDeltaRequired = true)
+        assertEquals(3, empty.size, "a projected BaseOnly exit cannot soundly partition residual modes")
     }
 
     @Test
-    fun `side effect requirement dedups and filters by base`() {
-        val storage = manager.sideEffectRequirementApStorage()
-        val requirement = manager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(mark)
+    fun `zero subscription broadcasts conservative candidates`() {
+        val sub = manager.accessPathSubscription()
+        sub.addZeroToFact(inst, AccessPathBase.This, final(pattern(fieldA)))
+        sub.addZeroToFact(inst, AccessPathBase.This, final(marked(fieldA)))
+        sub.addZeroToFact(inst, AccessPathBase.This, final(marked(fieldB)))
 
-        assertTrue(storage.add(listOf(requirement)).isNotEmpty(), "first requirement is new")
-        assertTrue(storage.add(listOf(requirement)).isEmpty(), "same requirement subsumed")
+        val collected = mutableListOf<ZeroEdgeSummarySubscription>()
+        sub.collectZeroEdge(collected, initial(pattern(fieldA)))
+        assertEquals(3, collected.size, "the downstream residual operation rejects inapplicable candidates")
+    }
+
+    @Test
+    fun `ND subscription broadcasts conservative candidates for both residual modes`() {
+        val sub = manager.accessPathSubscription()
+        val callerInitial = setOf(
+            initial(pattern(fieldA)).replaceExclusions(ExclusionSet.Universe),
+            initial(pattern(fieldB), AccessPathBase.Argument(0)).replaceExclusions(ExclusionSet.Universe),
+        )
+        sub.addNDFactToFact(inst, AccessPathBase.This, callerInitial, final(pattern(fieldA)))
+        sub.addNDFactToFact(inst, AccessPathBase.This, callerInitial, final(marked(fieldA)))
+        sub.addNDFactToFact(inst, AccessPathBase.This, callerInitial, final(marked(fieldB)))
+
+        val nonEmpty = mutableListOf<FactNDEdgeSummarySubscription>()
+        sub.collectFactNDEdge(nonEmpty, initial(pattern(fieldA)), emptyDeltaRequired = false)
+        assertEquals(3, nonEmpty.size)
+
+        val empty = mutableListOf<FactNDEdgeSummarySubscription>()
+        sub.collectFactNDEdge(empty, initial(pattern(fieldA)), emptyDeltaRequired = true)
+        assertEquals(3, empty.size)
+    }
+
+    @Test
+    fun `ND subscription normalizes caller initial exclusions to Universe`() {
+        val sub = manager.accessPathSubscription()
+        val access = pattern(fieldA)
+        val emptyInitial = setOf(initial(access))
+        val universeInitial = setOf(initial(access).replaceExclusions(ExclusionSet.Universe))
+        val exit = final(marked(fieldA))
+
+        assertNotNull(sub.addNDFactToFact(inst, AccessPathBase.This, emptyInitial, exit))
+        assertNull(
+            sub.addNDFactToFact(inst, AccessPathBase.This, universeInitial, exit),
+            "exclusions are not part of an ND subscription identity",
+        )
+
+        val collected = mutableListOf<FactNDEdgeSummarySubscription>()
+        sub.collectFactNDEdge(collected, initial(access), emptyDeltaRequired = false)
+        assertEquals(1, collected.size)
+    }
+
+    @Test
+    fun `fact and ND subscription collection equals a conservative registration scan`() {
+        val exits = listOf(
+            pattern(fieldA),
+            marked(fieldA),
+            marked(fieldB),
+            packBaseOnlyAccess(NO_ACCESSOR, manager.interner.index(fieldA), manager.finalAccessorAccess.suffixIdx),
+        )
+        val summaryAccess = pattern(fieldA)
+        val callerInitial = initial(pattern(fieldA))
+        val ndInitial = setOf(
+            callerInitial.replaceExclusions(ExclusionSet.Universe),
+            initial(pattern(fieldB), AccessPathBase.Argument(0)).replaceExclusions(ExclusionSet.Universe),
+        )
+        val sub = manager.accessPathSubscription()
+        exits.forEach { exit ->
+            sub.addFactToFact(inst, AccessPathBase.This, callerInitial, final(exit))
+            sub.addNDFactToFact(inst, AccessPathBase.This, ndInitial, final(exit))
+        }
+
+        for (emptyRequired in listOf(false, true)) {
+            val factResult = mutableListOf<FactEdgeSummarySubscription>()
+            sub.collectFactEdge(factResult, initial(summaryAccess), emptyRequired)
+            assertEquals(exits.size, factResult.size, "F2F candidate scan, empty=$emptyRequired")
+
+            val ndResult = mutableListOf<FactNDEdgeSummarySubscription>()
+            sub.collectFactNDEdge(ndResult, initial(summaryAccess), emptyRequired)
+            assertEquals(exits.size, ndResult.size, "ND candidate scan, empty=$emptyRequired")
+        }
+    }
+
+    @Test
+    fun `side effect requirement filters same-base entries by overlap`() {
+        val storage = manager.sideEffectRequirementApStorage()
+        val requirementA = initial(pattern(fieldA))
+        val requirementB = initial(pattern(fieldB))
+
+        assertEquals(2, storage.add(listOf(requirementA, requirementB)).size)
+        assertTrue(storage.add(listOf(requirementA)).isEmpty(), "same requirement is subsumed")
 
         val matching = mutableListOf<InitialFactAp>()
-        storage.filterTo(matching, manager.createFinalAp(AccessPathBase.This, ExclusionSet.Universe))
-        assertTrue(matching.isNotEmpty(), "requirement filtered by matching base")
+        storage.filterTo(matching, final(marked(fieldA), AccessPathBase.This))
+        assertEquals(
+            listOf<InitialFactAp>(requirementA),
+            matching,
+            "same-base field-B requirement must not be broadcast",
+        )
 
-        val other = mutableListOf<InitialFactAp>()
-        storage.filterTo(other, manager.createFinalAp(AccessPathBase.Return, ExclusionSet.Universe))
-        assertTrue(other.isEmpty(), "no requirement for unrelated base")
+        val otherBase = mutableListOf<InitialFactAp>()
+        storage.filterTo(otherBase, final(marked(fieldA), AccessPathBase.Return))
+        assertTrue(otherBase.isEmpty(), "no requirement exists for the unrelated base")
 
         val all = mutableListOf<InitialFactAp>()
         storage.collectAllRequirementsTo(all)
-        assertTrue(all.isNotEmpty())
+        assertEquals(setOf<InitialFactAp>(requirementA, requirementB), all.toSet())
+    }
+
+    @Test
+    fun `side effect requirement filtering equals a scan reference`() {
+        val storage = manager.sideEffectRequirementApStorage()
+        val requirements = listOf(
+            initial(pattern(fieldA)),
+            initial(pattern(fieldB)),
+            initial(ABSTRACT_EMPTY_ACCESS),
+        )
+        storage.add(requirements)
+
+        val facts = listOf(marked(fieldA), marked(fieldB), pattern(fieldA), pattern(fieldB))
+        for (factAccess in facts) {
+            val expected = requirements.filter {
+                baseOnlySummaryInitialMatches(factAccess, (it as BaseOnlyInitialFactAp).access)
+            }.toSet()
+            val actual = mutableListOf<InitialFactAp>()
+            storage.filterTo(actual, final(factAccess, AccessPathBase.This))
+            assertEquals(expected, actual.toSet(), "scan reference for ${manager.renderAccess(factAccess)}")
+        }
+    }
+
+    @Test
+    fun `subscription filtering covers the corresponding Tree scenario`() {
+        val treeManager = TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, RefManager())
+        val treeSub = treeManager.accessPathSubscription()
+        val baseOnlySub = manager.accessPathSubscription()
+
+        val treeCallerInitial = treeManager.abstractInitialOf(AccessPathBase.Argument(0), fieldA)
+        val baseOnlyCallerInitial = manager.abstractInitialOf(AccessPathBase.Argument(0), fieldA)
+        treeSub.addFactToFact(
+            inst,
+            AccessPathBase.This,
+            treeCallerInitial,
+            treeManager.finalOf(AccessPathBase.Return, fieldA, mark),
+        )
+        treeSub.addFactToFact(
+            inst,
+            AccessPathBase.This,
+            treeCallerInitial,
+            treeManager.finalOf(AccessPathBase.Return, fieldB, mark),
+        )
+        baseOnlySub.addFactToFact(
+            inst,
+            AccessPathBase.This,
+            baseOnlyCallerInitial,
+            manager.finalOf(AccessPathBase.Return, fieldA, mark),
+        )
+        baseOnlySub.addFactToFact(
+            inst,
+            AccessPathBase.This,
+            baseOnlyCallerInitial,
+            manager.finalOf(AccessPathBase.Return, fieldB, mark),
+        )
+
+        val treeResult = mutableListOf<FactEdgeSummarySubscription>()
+        treeSub.collectFactEdge(
+            treeResult,
+            treeManager.abstractInitialOf(AccessPathBase.This, fieldA),
+            emptyDeltaRequired = false,
+        )
+        val baseOnlyResult = mutableListOf<FactEdgeSummarySubscription>()
+        baseOnlySub.collectFactEdge(
+            baseOnlyResult,
+            manager.abstractInitialOf(AccessPathBase.This, fieldA),
+            emptyDeltaRequired = false,
+        )
+
+        assertEquals(1, treeResult.size, "Tree scenario must select only field A")
+        assertTrue(baseOnlyResult.size >= treeResult.size, "BaseOnly dropped a Tree subscription match")
+    }
+
+    private fun ApManager.abstractInitialOf(base: AccessPathBase, vararg accessors: Accessor): InitialFactAp {
+        var fact = mostAbstractInitialAp(base)
+        accessors.reversed().forEach { fact = fact.prependAccessor(it) }
+        return fact
+    }
+
+    private fun ApManager.finalOf(base: AccessPathBase, vararg accessors: Accessor): FinalFactAp {
+        var fact = createFinalAp(base, ExclusionSet.Universe)
+        accessors.reversed().forEach { fact = fact.prependAccessor(it) }
+        return fact
     }
 }

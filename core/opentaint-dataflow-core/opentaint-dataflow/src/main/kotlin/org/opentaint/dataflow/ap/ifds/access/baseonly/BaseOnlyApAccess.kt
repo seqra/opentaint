@@ -15,6 +15,7 @@ interface BaseOnlyFinalApAccess : FinalApAccess<BaseOnlyAccess> {
 
     override fun createFinal(base: AccessPathBase, ap: BaseOnlyAccess, ex: ExclusionSet): FinalFactAp =
         BaseOnlyFinalFactAp(apManager, base, ap, ex)
+
 }
 
 interface BaseOnlyInitialApAccess : InitialApAccess<BaseOnlyAccess> {
@@ -25,4 +26,5 @@ interface BaseOnlyInitialApAccess : InitialApAccess<BaseOnlyAccess> {
 
     override fun createInitial(base: AccessPathBase, ap: BaseOnlyAccess, ex: ExclusionSet): InitialFactAp =
         BaseOnlyInitialFactAp(apManager, base, ap, ex)
+
 }

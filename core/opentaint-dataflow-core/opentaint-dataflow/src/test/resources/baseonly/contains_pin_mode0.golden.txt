@@ -1,7 +1,7 @@
 ================================================================
 BASE-ONLY contains PIN — mode fieldSensitive=false
 cell = F_row(final).contains(F_col(initial));  T = contained, . = not
-contains(i) = sameBase && containsAccess(access, i.access)   [identity | abstract-prefix wildcard | symmetric field-[any] w/ suffix+static exact]
+contains(i) = sameBase && containsProjected(access, i.access)   [directional coverage plus the documented missing-structural projection match]
 ================================================================
 
 ## FACTS (16)
@@ -23,23 +23,23 @@ contains(i) = sameBase && containsAccess(access, i.access)   [identity | abstrac
   F15 = x.s2.*f        (s2   *    -1  ) [ap@1]
 
 ## CONTAINS MATRIX  cell = F_row.contains(F_col)
-          F00 F01 F02 F03 F04 F05 F06 F07 F08 F09 F10 F11 F12 F13 F14 F15 
-  F00     T   T   T   T   .   .   .   .   .   .   .   .   .   T   .   .   
-  F01     .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-  F02     .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   
-  F03     .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   
-  F04     .   .   .   .   T   T   T   T   .   .   .   .   .   .   T   .   
-  F05     .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .   
-  F06     .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   
-  F07     .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   
-  F08     .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   T   
-  F09     .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .   
-  F10     .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   
-  F11     .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   
-  F12     T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   
-  F13     T   T   T   T   .   .   .   .   .   .   .   .   .   T   .   .   
-  F14     .   .   .   .   T   T   T   T   .   .   .   .   .   .   T   .   
-  F15     .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   T   
+          F00 F01 F02 F03 F04 F05 F06 F07 F08 F09 F10 F11 F12 F13 F14 F15
+  F00     T   T   T   T   .   .   .   .   .   .   .   .   .   T   .   .
+  F01     .   T   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+  F02     .   .   T   .   .   .   .   .   .   .   .   .   .   .   .   .
+  F03     .   .   .   T   .   .   .   .   .   .   .   .   .   .   .   .
+  F04     .   .   .   .   T   T   T   T   .   .   .   .   .   .   T   .
+  F05     .   .   .   .   .   T   .   .   .   .   .   .   .   .   .   .
+  F06     .   .   .   .   .   .   T   .   .   .   .   .   .   .   .   .
+  F07     .   .   .   .   .   .   .   T   .   .   .   .   .   .   .   .
+  F08     .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   T
+  F09     .   .   .   .   .   .   .   .   .   T   .   .   .   .   .   .
+  F10     .   .   .   .   .   .   .   .   .   .   T   .   .   .   .   .
+  F11     .   .   .   .   .   .   .   .   .   .   .   T   .   .   .   .
+  F12     T   T   T   T   T   T   T   T   T   T   T   T   T   T   T   T
+  F13     T   T   T   T   .   .   .   .   .   .   .   .   .   T   .   .
+  F14     .   .   .   .   T   T   T   T   .   .   .   .   .   .   T   .
+  F15     .   .   .   .   .   .   .   .   T   T   T   T   .   .   .   T
 
 ## PER-FACT BREAKDOWN  (initials each final contains; self omitted)
   x.*            contains: x.$, x.!t1.$, x.!t2.$, x.*f
@@ -93,4 +93,3 @@ contains(i) = sameBase && containsAccess(access, i.access)   [identity | abstrac
 
 ## CROSS-BASE PROBE  x-fact.contains(y-same-access)
   cross-base identical-access contained count = 0 / 16
-

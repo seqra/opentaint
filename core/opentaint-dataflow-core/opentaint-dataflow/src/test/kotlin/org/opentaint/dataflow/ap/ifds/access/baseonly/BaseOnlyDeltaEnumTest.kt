@@ -63,10 +63,10 @@ class BaseOnlyDeltaEnumTest {
         assertDelta(chain(field, mark), apFieldNoStat, chain(field, mark))     // (-1,f,t) -> (-1,f,t)
         assertNoMatch(chain(stat, field, mark), apFieldNoStat)                 // known-empty static strict
     }
-    @Test fun `AP@suffix empty yields terminal-leading delta and rejects static or field facts`() {
+    @Test fun `AP@suffix empty yields terminal-leading delta and covers a structural fact through Any`() {
         assertDelta(chain(mark), apSuffixEmpty, chain(mark))            // (-1,-1,t) -> (-1,-1,t)
         assertNoMatch(chain(stat, mark), apSuffixEmpty)                 // known-empty static strict
-        assertNoMatch(chain(field, mark), apSuffixEmpty)               // known-empty field strict
+        assertDelta(chain(field, mark), apSuffixEmpty, chain(mark))    // virtual Any consumes the field
         assertIdentity(apSuffixEmpty)
     }
     @Test fun `AP@suffix with static committed yields terminal-leading delta`() {

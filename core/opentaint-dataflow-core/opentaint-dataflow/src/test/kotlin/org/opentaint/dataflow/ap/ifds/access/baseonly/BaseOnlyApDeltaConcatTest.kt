@@ -42,10 +42,10 @@ class BaseOnlyApDeltaConcatTest {
     }
 
     @Test
-    fun `concat suffix-AP rejects a cross-kind delta`() {
+    fun `concat suffix-AP widens a field-leading cross-kind delta`() {
         val f0Abstract = ai.abstractAt(NO_ACCESSOR, i(field), 2)
         val deltaFieldMark = chain(field2, mark)
-        assertNull(ai.appendFinal(f0Abstract, deltaFieldMark))
+        assertEquals(chain(field, mark), ai.appendFinal(f0Abstract, deltaFieldMark))
     }
 
     @Test
@@ -182,10 +182,11 @@ class BaseOnlyApDeltaConcatTest {
     }
 
     @Test
-    fun `AP@suffix with committed field covers that field and bare terminals`() {
+    fun `AP@suffix containment is field-lenient after lossy projection`() {
         val apSuffixField = ai.abstractAt(NO_ACCESSOR, i(field), 2)
         assertTrue(ai.containsAccess(apSuffixField, chain(field, mark)))
         assertTrue(ai.containsAccess(apSuffixField, chain(mark)))
+        assertFalse(ai.covers(apSuffixField, chain(mark)), "storage subsumption remains directional")
     }
 
     @Test

@@ -9,12 +9,15 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.ir.api.common.CommonType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -52,12 +55,13 @@ class BaseOnlyDeltaTest {
     }
 
     @Test
-    fun `concat re-appends the delta to reconstruct the fact`() {
+    fun `concat re-appends the semantic delta at the supplied abstract root`() {
         val m = mgr()
         val f = m.finalOf(AnyAccessor, mark)
         val prefix = m.mostAbstractFinalAp(arg0)
         val d = f.delta(m.abstractInitialOf(AnyAccessor)).single()
-        assertEquals(f, prefix.concat(FactTypeChecker.Dummy, d))
+        val reconstructed = prefix.concat(FactTypeChecker.Dummy, d)
+        assertEquals(m.finalOf(mark), reconstructed)
     }
 
     @Test
@@ -102,6 +106,33 @@ class BaseOnlyDeltaTest {
     }
 
     @Test
+    fun `split delta retains implicit Any continuation after structural alignment`() {
+        val m = mgr(fieldSensitive = true)
+        var callerFact = m.createFinalInitialAp(arg0, ExclusionSet.Empty)
+        callerFact = callerFact.prependAccessor(mark)
+        callerFact = callerFact.prependAccessor(field)
+        val summaryAccess = BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, m.interner.index(field), 2)
+
+        val oneCompactBranchExcluded = BaseOnlyFinalFactAp(
+            m,
+            arg0,
+            summaryAccess,
+            ExclusionSet.Empty.add(mark),
+        )
+        val directRetained = callerFact.splitDelta(oneCompactBranchExcluded).single().second
+            as BaseOnlyNodeInitialDelta
+        assertEquals(BaseOnlyValueAccessorState.Normal, directRetained.access.valueAccessorState)
+
+        val allBranchesExcluded = BaseOnlyFinalFactAp(
+            m,
+            arg0,
+            summaryAccess,
+            ExclusionSet.Universe,
+        )
+        assertTrue(callerFact.splitDelta(allBranchesExcluded).isEmpty())
+    }
+
+    @Test
     fun `value fact against abstract prefix yields a value delta not empty`() {
         val m = mgr()
         val f = m.finalOf()                        // arg0.$  (value itself)
@@ -115,10 +146,10 @@ class BaseOnlyDeltaTest {
     }
 
     @Test
-    fun `AP@suffix prefix is kind-strict on fields and AP@suffix with the field committed still matches`() {
+    fun `AP@suffix Any prefix matches a retained concrete field`() {
         val m = mgr(fieldSensitive = true)
         val f = m.finalOf(field, AnyAccessor, mark)
-        assertTrue(f.delta(m.abstractInitialOf(AnyAccessor)).isEmpty())
+        assertTrue(f.delta(m.abstractInitialOf(AnyAccessor)).isNotEmpty())
         val d = f.delta(m.abstractInitialOf(field, AnyAccessor)).single()
         assertFalse(d.isEmpty)
     }
@@ -196,5 +227,103 @@ class BaseOnlyDeltaTest {
         val f = m.finalOf(AnyAccessor, mark)
         assertTrue(f.contains(m.abstractInitialOf(AnyAccessor, mark)))
         assertFalse(f.contains(m.abstractInitialOf(AnyAccessor)))
+    }
+
+    @Test
+    fun `final delta checks base before matching`() {
+        val m = mgr()
+        val initial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.Argument(1),
+            m.finalOf(mark).access,
+            ExclusionSet.Empty,
+        )
+        assertTrue(m.finalOf(mark).delta(initial).isEmpty())
+    }
+
+    @Test
+    fun `final concat uses path filter rather than compatibility filter`() {
+        val m = mgr()
+        val checker = object : FactTypeChecker {
+            override fun filterFactByLocalType(actualType: CommonType?, factAp: FinalFactAp): FinalFactAp? = factAp
+            override fun accessPathFilter(accessPath: List<Accessor>): FactTypeChecker.FactApFilter =
+                FactTypeChecker.AlwaysAcceptFilter
+            override fun accessPathCompatibilityFilter(accessPath: List<Accessor>): FactTypeChecker.FactCompatibilityFilter =
+                object : FactTypeChecker.FactCompatibilityFilter {
+                    override fun check(accessor: Accessor): FactTypeChecker.CompatibilityFilterResult =
+                        if (accessor == mark) FactTypeChecker.CompatibilityFilterResult.NotCompatible
+                        else FactTypeChecker.CompatibilityFilterResult.Compatible
+                }
+        }
+        val delta = BaseOnlyNodeFinalDelta(m, m.finalOf(mark).access)
+        assertEquals(m.finalOf(mark), m.mostAbstractFinalAp(arg0).concat(checker, delta))
+    }
+
+    @Test
+    fun `final concat advances the supplied path filter through the delta`() {
+        val m = mgr(fieldSensitive = true)
+        val seenPrefixes = mutableListOf<List<Accessor>>()
+        val rejectAfterMark = object : FactTypeChecker.FactApFilter {
+            override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
+                if (accessor == FinalAccessor) FactTypeChecker.FilterResult.Reject
+                else FactTypeChecker.FilterResult.Accept
+        }
+        val checker = object : FactTypeChecker {
+            override fun filterFactByLocalType(actualType: CommonType?, factAp: FinalFactAp): FinalFactAp? = factAp
+            override fun accessPathFilter(accessPath: List<Accessor>): FactTypeChecker.FactApFilter {
+                seenPrefixes += accessPath
+                return object : FactTypeChecker.FactApFilter {
+                    override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
+                        if (accessor == mark) FactTypeChecker.FilterResult.FilterNext(rejectAfterMark)
+                        else FactTypeChecker.FilterResult.Reject
+                }
+            }
+            override fun accessPathCompatibilityFilter(accessPath: List<Accessor>): FactTypeChecker.FactCompatibilityFilter =
+                FactTypeChecker.AlwaysCompatibleFilter
+        }
+        val receiver = BaseOnlyFinalFactAp(
+            m,
+            arg0,
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, m.interner.index(field), 2),
+            ExclusionSet.Empty,
+        )
+        val delta = BaseOnlyNodeFinalDelta(m, m.finalOf(mark).access)
+
+        assertNull(receiver.concat(checker, delta))
+        assertEquals(listOf<Accessor>(field), seenPrefixes.single())
+    }
+
+    @Test
+    fun `abstractOnly preserves existing AP position and collapsed facts are transient until rebase`() {
+        val m = mgr(fieldSensitive = true)
+        val fact = m.finalOf(field, AnyAccessor, mark)
+        assertEquals(m.mostAbstractFinalAp(arg0), fact.abstractOnly())
+
+        for (access in listOf(
+            packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR),
+            packBaseOnlyAccess(NO_ACCESSOR, ABSTRACT_MARK, NO_ACCESSOR),
+        )) {
+            val positioned = BaseOnlyFinalFactAp(m, arg0, access, ExclusionSet.Empty)
+            assertEquals(positioned, positioned.abstractOnly())
+        }
+
+        val rootTransient = fact.abstractOnly().removeAbstraction()
+        assertNotNull(rootTransient)
+        assertFalse(rootTransient.isAbstract())
+        assertEquals(fact.abstractOnly(), rootTransient.rebase(arg0))
+
+        val collapsed = packBaseOnlyAccess(NO_ACCESSOR, m.interner.index(field), COLLAPSED_MARK)
+        val transient = BaseOnlyFinalFactAp(m, arg0, collapsed, ExclusionSet.Empty)
+        assertFalse(transient.isAbstract())
+        assertEquals(
+            BaseOnlyFinalFactAp(
+                m,
+                arg0,
+                BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, m.interner.index(field), 2),
+                ExclusionSet.Empty,
+            ),
+            transient.rebase(arg0),
+        )
+        assertTrue(collapsed.isCollapsed)
     }
 }

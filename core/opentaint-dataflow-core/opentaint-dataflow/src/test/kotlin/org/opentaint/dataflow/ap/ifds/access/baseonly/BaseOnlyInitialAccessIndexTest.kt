@@ -1,7 +1,10 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
@@ -13,11 +16,32 @@ import kotlin.test.assertTrue
 class BaseOnlyInitialAccessIndexTest {
     @Test
     fun `pattern traversal agrees with summary applicability for every packed slot shape`() {
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val staticA = manager.interner.index(ClassStaticAccessor("S0"))
+        val staticB = manager.interner.index(ClassStaticAccessor("S1"))
+        val fieldA = manager.interner.index(FieldAccessor("C", "f0", "T"))
+        val fieldB = manager.interner.index(FieldAccessor("C", "f1", "T"))
+        val markA = manager.interner.index(TaintMarkAccessor("m0"))
+        val markB = manager.interner.index(TaintMarkAccessor("m1"))
         val accesses = buildList {
-            for (staticIdx in intArrayOf(ABSTRACT_MARK, NO_ACCESSOR, 10, 11)) {
-                for (fieldIdx in intArrayOf(ABSTRACT_MARK, NO_ACCESSOR, 20, 21)) {
-                    for (suffixIdx in intArrayOf(ABSTRACT_MARK, NO_ACCESSOR, 30, 31)) {
-                        add(packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx))
+            for (staticIdx in intArrayOf(ABSTRACT_MARK, NO_ACCESSOR, staticA, staticB)) {
+                for (fieldIdx in intArrayOf(ABSTRACT_MARK, NO_ACCESSOR, fieldA, fieldB)) {
+                    for (suffixIdx in intArrayOf(ABSTRACT_MARK, NO_ACCESSOR, markA, markB)) {
+                        val modes = if (suffixIdx == markA || suffixIdx == markB) {
+                            BaseOnlyValueAccessorState.entries
+                        } else {
+                            listOf(BaseOnlyValueAccessorState.Normal)
+                        }
+                        for (mode in modes) {
+                            if (staticIdx == ABSTRACT_MARK &&
+                                (fieldIdx != NO_ACCESSOR || suffixIdx != NO_ACCESSOR)
+                            ) continue
+                            if (fieldIdx == ABSTRACT_MARK && suffixIdx != NO_ACCESSOR) continue
+                            if (suffixIdx == NO_ACCESSOR && (staticIdx >= 0 || fieldIdx >= 0)) continue
+                            if (staticIdx == NO_ACCESSOR && fieldIdx == NO_ACCESSOR && suffixIdx == NO_ACCESSOR) continue
+                            val access = packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx, mode)
+                            add(access)
+                        }
                     }
                 }
             }
@@ -27,9 +51,9 @@ class BaseOnlyInitialAccessIndexTest {
 
         for (pattern in accesses) {
             val actual = hashSetOf<BaseOnlyAccess>()
-            index.collectContainedBy(pattern) { access, value ->
+            index.collectCandidates(pattern) { access, value ->
                 assertEquals(access, value)
-                actual += access
+                if (baseOnlySummaryInitialMatches(pattern, access)) actual += access
             }
             val expected = accesses.filterTo(hashSetOf()) { baseOnlySummaryInitialMatches(pattern, it) }
             assertEquals(expected, actual, "pattern=$pattern")
@@ -44,13 +68,19 @@ class BaseOnlyInitialAccessIndexTest {
     fun `f2f identity and non-identity summaries use the same pattern filter`() {
         val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(testInst, manager).createStorage()
-        val first = packBaseOnlyAccess(NO_ACCESSOR, 20, 30)
-        val second = packBaseOnlyAccess(NO_ACCESSOR, 21, 30)
-        val identity = packBaseOnlyAccess(NO_ACCESSOR, 22, 30)
+        val fieldA = manager.interner.index(FieldAccessor("C", "first", "T"))
+        val fieldB = manager.interner.index(FieldAccessor("C", "second", "T"))
+        val fieldC = manager.interner.index(FieldAccessor("C", "identity", "T"))
+        val mark = manager.interner.index(TaintMarkAccessor("initial"))
+        val finalA = manager.interner.index(TaintMarkAccessor("final-a"))
+        val finalB = manager.interner.index(TaintMarkAccessor("final-b"))
+        val first = packBaseOnlyAccess(NO_ACCESSOR, fieldA, mark)
+        val second = packBaseOnlyAccess(NO_ACCESSOR, fieldB, mark)
+        val identity = packBaseOnlyAccess(NO_ACCESSOR, fieldC, mark)
         storage.add(
             listOf(
-                edge(first, packBaseOnlyAccess(NO_ACCESSOR, 20, 31)),
-                edge(second, packBaseOnlyAccess(NO_ACCESSOR, 21, 32)),
+                edge(first, packBaseOnlyAccess(NO_ACCESSOR, fieldA, finalA)),
+                edge(second, packBaseOnlyAccess(NO_ACCESSOR, fieldB, finalB)),
                 edge(identity, identity),
             ),
             mutableListOf(),
@@ -67,11 +97,17 @@ class BaseOnlyInitialAccessIndexTest {
     fun `identity trie traversal agrees with summary applicability`() {
         val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(testInst, manager).createStorage()
+        val static = manager.interner.index(ClassStaticAccessor("S"))
+        val fieldA = manager.interner.index(FieldAccessor("C", "f0", "T"))
+        val fieldB = manager.interner.index(FieldAccessor("C", "f1", "T"))
+        val markA = manager.interner.index(TaintMarkAccessor("m0"))
+        val markB = manager.interner.index(TaintMarkAccessor("m1"))
         val initials = buildList {
-            for (staticIdx in intArrayOf(NO_ACCESSOR, 10)) {
-                for (fieldIdx in intArrayOf(NO_ACCESSOR, 20, 21)) {
-                    for (suffixIdx in intArrayOf(NO_ACCESSOR, 30, 31)) {
-                        add(packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx))
+            for (staticIdx in intArrayOf(NO_ACCESSOR, static)) {
+                for (fieldIdx in intArrayOf(NO_ACCESSOR, fieldA, fieldB)) {
+                    for (suffixIdx in intArrayOf(NO_ACCESSOR, markA, markB)) {
+                        val access = packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx)
+                        if (!access.isEmpty && suffixIdx != NO_ACCESSOR) add(access)
                     }
                 }
             }
@@ -81,9 +117,9 @@ class BaseOnlyInitialAccessIndexTest {
         val patterns = initials + listOf(
             packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR),
             packBaseOnlyAccess(NO_ACCESSOR, ABSTRACT_MARK, NO_ACCESSOR),
-            packBaseOnlyAccess(10, ABSTRACT_MARK, NO_ACCESSOR),
+            packBaseOnlyAccess(static, ABSTRACT_MARK, NO_ACCESSOR),
             packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, ABSTRACT_MARK),
-            packBaseOnlyAccess(NO_ACCESSOR, 20, ABSTRACT_MARK),
+            packBaseOnlyAccess(NO_ACCESSOR, fieldA, ABSTRACT_MARK),
         )
         patterns.forEach { pattern ->
             val expected = initials.count { baseOnlySummaryInitialMatches(pattern, it) }
@@ -96,8 +132,11 @@ class BaseOnlyInitialAccessIndexTest {
         val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
         val storage = FactSESummariesBaseOnlyStorage(testInst, manager).createStorage()
         val kind = object : SideEffectKind {}
-        val first = packBaseOnlyAccess(NO_ACCESSOR, 20, 30)
-        val second = packBaseOnlyAccess(NO_ACCESSOR, 21, 30)
+        val fieldA = manager.interner.index(FieldAccessor("C", "f0", "T"))
+        val fieldB = manager.interner.index(FieldAccessor("C", "f1", "T"))
+        val mark = manager.interner.index(TaintMarkAccessor("effect"))
+        val first = packBaseOnlyAccess(NO_ACCESSOR, fieldA, mark)
+        val second = packBaseOnlyAccess(NO_ACCESSOR, fieldB, mark)
         storage.add(first, mapOf(kind to ExclusionSet.Empty), mutableListOf())
         storage.add(second, mapOf(kind to ExclusionSet.Empty), mutableListOf())
 
@@ -109,10 +148,15 @@ class BaseOnlyInitialAccessIndexTest {
 
     @Test
     fun `single writer and concurrent readers survive repeated index rehashes`() {
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
         val index = BaseOnlyInitialAccessIndex<BaseOnlyAccess>()
         val accesses = (0 until 4_000).map { value ->
-            packBaseOnlyAccess(100 + value / 1_000, 1_000 + value, 10_000 + value)
+            val static = manager.interner.index(ClassStaticAccessor("S${value / 1_000}"))
+            val field = manager.interner.index(FieldAccessor("C", "f$value", "T"))
+            val mark = manager.interner.index(TaintMarkAccessor("m$value"))
+            packBaseOnlyAccess(static, field, mark)
         }
+        val readerStatics = IntArray(4) { reader -> manager.interner.index(ClassStaticAccessor("S$reader")) }
         val failures = ConcurrentLinkedQueue<Throwable>()
         val executor = Executors.newFixedThreadPool(5)
 
@@ -130,11 +174,11 @@ class BaseOnlyInitialAccessIndexTest {
                         val pattern = if (reader % 2 == 0) {
                             packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR)
                         } else {
-                            packBaseOnlyAccess(100 + reader, ABSTRACT_MARK, NO_ACCESSOR)
+                            packBaseOnlyAccess(readerStatics[reader], ABSTRACT_MARK, NO_ACCESSOR)
                         }
-                        index.collectContainedBy(pattern) { access, value ->
+                        index.collectCandidates(pattern) { access, value ->
                             assertEquals(access, value)
-                            assertTrue(baseOnlySummaryInitialMatches(pattern, access))
+                            // Routing may conservatively return false-positive candidates.
                         }
                     }
                 } catch (t: Throwable) {

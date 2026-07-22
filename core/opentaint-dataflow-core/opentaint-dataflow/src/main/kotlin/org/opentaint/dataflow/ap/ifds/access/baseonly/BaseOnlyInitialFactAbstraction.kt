@@ -12,6 +12,8 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.TYPE_INFO_GROUP_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.VALUE_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isFieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 
@@ -70,11 +72,31 @@ class BaseOnlyInitialFactAbstraction(
         state: BaseState,
         out: MutableList<Pair<InitialFactAp, FinalFactAp>>,
     ) {
+        abstractOneBranch(base, added, state, out)
+    }
+
+    private fun abstractOneBranch(
+        base: AccessPathBase,
+        added: BaseOnlyAccess,
+        state: BaseState,
+        out: MutableList<Pair<InitialFactAp, FinalFactAp>>,
+    ) {
         val prefix = ArrayList<Int>(3)
         var stopped = false
-        added.forEachCoreIdx { accessor ->
+        val core = buildList {
+            if (added.staticIdx >= 0) add(added.staticIdx)
+            if (added.fieldIdx >= 0) add(added.fieldIdx)
+            if (added.hasSemanticMark && added.valueAccessorState == BaseOnlyValueAccessorState.Value) {
+                add(if (added.hasTypeInfoSuffix) TYPE_INFO_GROUP_ACCESSOR_IDX else VALUE_ACCESSOR_IDX)
+            }
+            if (added.suffixIdx >= 0 && added.suffixIdx != FINAL_ACCESSOR_IDX) add(added.suffixIdx)
+        }
+        core.forEach { accessor ->
             if (!stopped) {
-                emit(base, prefix, slotOfIdx(accessor), isAbstract = true, exact = false, state, out)
+                emit(
+                    base, prefix, slotOfIdx(accessor), isAbstract = true, exact = false,
+                    valueAccessorState = BaseOnlyValueAccessorState.Normal, state, out,
+                )
                 if (state.excludes(accessor)) {
                     prefix.add(accessor)
                 } else {
@@ -84,9 +106,15 @@ class BaseOnlyInitialFactAbstraction(
         }
         if (!stopped) {
             if (added.hasAp) {
-                emit(base, prefix, apSlot = added.apSlot, isAbstract = true, exact = false, state, out)
+                emit(
+                    base, prefix, apSlot = added.apSlot, isAbstract = true, exact = false,
+                    valueAccessorState = BaseOnlyValueAccessorState.Normal, state, out,
+                )
             } else {
-                emit(base, prefix, apSlot = 2, isAbstract = false, exact = true, state, out)
+                emit(
+                    base, prefix, apSlot = 2, isAbstract = false, exact = true,
+                    valueAccessorState = added.valueAccessorState, state, out,
+                )
             }
         }
     }
@@ -97,6 +125,7 @@ class BaseOnlyInitialFactAbstraction(
         apSlot: Int,
         isAbstract: Boolean,
         exact: Boolean,
+        valueAccessorState: BaseOnlyValueAccessorState,
         state: BaseState,
         out: MutableList<Pair<InitialFactAp, FinalFactAp>>,
     ) {
@@ -116,7 +145,11 @@ class BaseOnlyInitialFactAbstraction(
                         to BaseOnlyFinalFactAp(manager, base, abstractAccess, ExclusionSet.Empty)
                 )
             }
-            val concreteAccess = BaseOnlyAccessOps.build((prefix + FINAL_ACCESSOR_IDX).toIntArray(), isAbstract = false)
+            var concreteAccess = BaseOnlyAccessOps.build(
+                (prefix + FINAL_ACCESSOR_IDX).toIntArray(),
+                isAbstract = false,
+            )
+            if (concreteAccess.hasSemanticMark) concreteAccess = concreteAccess.withValueAccessorState(valueAccessorState)
             if (state.emitted.add(concreteAccess)) {
                 out.add(
                     BaseOnlyInitialFactAp(manager, base, concreteAccess, ExclusionSet.Empty)

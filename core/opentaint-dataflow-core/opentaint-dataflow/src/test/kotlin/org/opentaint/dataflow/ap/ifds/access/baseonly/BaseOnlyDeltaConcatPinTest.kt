@@ -195,7 +195,13 @@ class BaseOnlyDeltaConcatPinTest {
         if (golden == null) {
             println("PIN mode$mode: no golden resource yet — wrote actual to ${scratch.path}")
         } else {
-            assertEquals(golden.readText().trimEnd(), actual.trimEnd(), "delta/concat behaviour changed for mode $mode")
+            fun String.normalizeLineEnds(): String =
+                lineSequence().joinToString("\n") { it.trimEnd() }.trimEnd()
+            assertEquals(
+                golden.readText().normalizeLineEnds(),
+                actual.normalizeLineEnds(),
+                "delta/concat behaviour changed for mode $mode",
+            )
         }
     }
 

@@ -18,6 +18,8 @@ const val COLLAPSED_MARK: AccessorIdx = -3
 const val BASE_ONLY_STATIC_BITS = 16
 const val BASE_ONLY_FIELD_BITS = 24
 const val BASE_ONLY_SUFFIX_BITS = 24
+const val BASE_ONLY_VALUE_ACCESSOR_STATE_BITS = 1
+const val BASE_ONLY_SUFFIX_VALUE_BITS = BASE_ONLY_SUFFIX_BITS - BASE_ONLY_VALUE_ACCESSOR_STATE_BITS
 
 const val BASE_ONLY_SUFFIX_SHIFT = 0
 const val BASE_ONLY_FIELD_SHIFT = BASE_ONLY_SUFFIX_BITS
@@ -26,17 +28,63 @@ const val BASE_ONLY_STATIC_SHIFT = BASE_ONLY_SUFFIX_BITS + BASE_ONLY_FIELD_BITS
 const val BASE_ONLY_STATIC_MASK = (1 shl BASE_ONLY_STATIC_BITS) - 1
 const val BASE_ONLY_FIELD_MASK = (1 shl BASE_ONLY_FIELD_BITS) - 1
 const val BASE_ONLY_SUFFIX_MASK = (1 shl BASE_ONLY_SUFFIX_BITS) - 1
+const val BASE_ONLY_SUFFIX_VALUE_MASK = (1 shl BASE_ONLY_SUFFIX_VALUE_BITS) - 1
+const val BASE_ONLY_VALUE_ACCESSOR_STATE_SHIFT = BASE_ONLY_SUFFIX_VALUE_BITS
+const val BASE_ONLY_VALUE_ACCESSOR_STATE_MASK = (1 shl BASE_ONLY_VALUE_ACCESSOR_STATE_BITS) - 1
 
 const val BASE_ONLY_BIAS = 3
 
-fun packBaseOnlyAccess(staticIdx: AccessorIdx, fieldIdx: AccessorIdx, suffixIdx: AccessorIdx): BaseOnlyAccess {
+/**
+ * How the semantic suffix is reached. [Value] encodes a preceding ValueAccessor;
+ * for a type suffix the same bit encodes its analogous TypeInfoGroupAccessor prefix.
+ */
+enum class BaseOnlyValueAccessorState(val encoded: Int) {
+    Normal(0),
+    Value(1);
+
+    companion object {
+        fun decode(encoded: Int): BaseOnlyValueAccessorState =
+            entries.firstOrNull { it.encoded == encoded }
+                ?: throw IllegalArgumentException("Invalid BaseOnly value-accessor state: $encoded")
+    }
+}
+
+fun packBaseOnlyAccess(
+    staticIdx: AccessorIdx,
+    fieldIdx: AccessorIdx,
+    suffixIdx: AccessorIdx,
+    valueAccessorState: BaseOnlyValueAccessorState = BaseOnlyValueAccessorState.Normal,
+): BaseOnlyAccess {
+    require(fieldIdx != ANY_ACCESSOR_IDX) { "AnyAccessor is implicit in BaseOnly and cannot occupy the field slot" }
     val s = staticIdx + BASE_ONLY_BIAS
     val f = fieldIdx + BASE_ONLY_BIAS
     val x = suffixIdx + BASE_ONLY_BIAS
     require(s in 0..BASE_ONLY_STATIC_MASK) { "BaseOnly static index out of range: $staticIdx" }
     require(f in 0..BASE_ONLY_FIELD_MASK) { "BaseOnly field index out of range: $fieldIdx" }
-    require(x in 0..BASE_ONLY_SUFFIX_MASK) { "BaseOnly suffix index out of range: $suffixIdx" }
-    return (s.toLong() shl BASE_ONLY_STATIC_SHIFT) or (f.toLong() shl BASE_ONLY_FIELD_SHIFT) or x.toLong()
+    require(x in 0..BASE_ONLY_SUFFIX_VALUE_MASK) { "BaseOnly suffix index out of range: $suffixIdx" }
+    val encodedSuffix = rawBaseOnlySuffixSlot(suffixIdx, valueAccessorState)
+    return (s.toLong() shl BASE_ONLY_STATIC_SHIFT) or
+        (f.toLong() shl BASE_ONLY_FIELD_SHIFT) or encodedSuffix.toLong()
+}
+
+fun rawBaseOnlySuffixSlot(suffixIdx: AccessorIdx, valueAccessorState: BaseOnlyValueAccessorState): Int {
+    val encodedSuffix = suffixIdx + BASE_ONLY_BIAS
+    require(encodedSuffix in 0..BASE_ONLY_SUFFIX_VALUE_MASK) {
+        "BaseOnly suffix index out of range: $suffixIdx"
+    }
+    return encodedSuffix or (valueAccessorState.encoded shl BASE_ONLY_VALUE_ACCESSOR_STATE_SHIFT)
+}
+
+fun packBaseOnlyAccessFromRawSuffix(
+    staticIdx: AccessorIdx,
+    fieldIdx: AccessorIdx,
+    rawSuffixSlot: Int,
+): BaseOnlyAccess {
+    val suffixIdx = (rawSuffixSlot and BASE_ONLY_SUFFIX_VALUE_MASK) - BASE_ONLY_BIAS
+    val state = BaseOnlyValueAccessorState.decode(
+        (rawSuffixSlot ushr BASE_ONLY_VALUE_ACCESSOR_STATE_SHIFT) and BASE_ONLY_VALUE_ACCESSOR_STATE_MASK
+    )
+    return packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx, state)
 }
 
 val EMPTY_ACCESS: BaseOnlyAccess = packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, NO_ACCESSOR)
@@ -48,7 +96,7 @@ inline fun <T> BaseOnlyAccess.withBaseOnlyAccessUnpacked(
 ): T = body(
     ((this ushr BASE_ONLY_STATIC_SHIFT).toInt() and BASE_ONLY_STATIC_MASK) - BASE_ONLY_BIAS,
     ((this ushr BASE_ONLY_FIELD_SHIFT).toInt() and BASE_ONLY_FIELD_MASK) - BASE_ONLY_BIAS,
-    (this.toInt() and BASE_ONLY_SUFFIX_MASK) - BASE_ONLY_BIAS,
+    (this.toInt() and BASE_ONLY_SUFFIX_VALUE_MASK) - BASE_ONLY_BIAS,
 )
 
 val BaseOnlyAccess.staticIdx: AccessorIdx
@@ -58,7 +106,18 @@ val BaseOnlyAccess.fieldIdx: AccessorIdx
     get() = ((this ushr BASE_ONLY_FIELD_SHIFT).toInt() and BASE_ONLY_FIELD_MASK) - BASE_ONLY_BIAS
 
 val BaseOnlyAccess.suffixIdx: AccessorIdx
-    get() = (this.toInt() and BASE_ONLY_SUFFIX_MASK) - BASE_ONLY_BIAS
+    get() = (this.toInt() and BASE_ONLY_SUFFIX_VALUE_MASK) - BASE_ONLY_BIAS
+
+val BaseOnlyAccess.rawSuffixSlot: Int
+    get() = this.toInt() and BASE_ONLY_SUFFIX_MASK
+
+val BaseOnlyAccess.valueAccessorState: BaseOnlyValueAccessorState
+    get() = BaseOnlyValueAccessorState.decode(
+        (rawSuffixSlot ushr BASE_ONLY_VALUE_ACCESSOR_STATE_SHIFT) and BASE_ONLY_VALUE_ACCESSOR_STATE_MASK
+    )
+
+fun BaseOnlyAccess.withValueAccessorState(state: BaseOnlyValueAccessorState): BaseOnlyAccess =
+    packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx, state)
 
 val BaseOnlyAccess.isSuffixAbstract: Boolean get() = suffixIdx == ABSTRACT_MARK
 
@@ -83,12 +142,12 @@ val BaseOnlyAccess.hasTerminalAccessor: Boolean get() = suffixIdx >= 0
 val BaseOnlyAccess.hasTypeInfoSuffix: Boolean get() = suffixIdx >= 0 && suffixIdx.isTypeInfoAccessor()
 
 val BaseOnlyAccess.size: Int
-    get() = withBaseOnlyAccessUnpacked { s, f, x ->
-        var n = 0
-        if (s >= 0) n++
-        if (f >= 0) n++
-        if (x >= 0) n++
-        n
+    get() = withBaseOnlyAccessUnpacked { staticIdx, fieldIdx, suffixIdx ->
+        var result = 0
+        if (staticIdx >= 0) result++
+        if (fieldIdx >= 0) result++
+        if (suffixIdx >= 0) result++
+        result
     }
 
 val BaseOnlyAccess.coreSize: Int
@@ -120,7 +179,7 @@ val BaseOnlyAccess.firstAccessorOrNull: AccessorIdx?
             f >= 0 -> f
             x < 0 -> null
             x == FINAL_ACCESSOR_IDX -> FINAL_ACCESSOR_IDX
-            x.isTypeInfoAccessor() -> TYPE_INFO_GROUP_ACCESSOR_IDX
+            x.isTypeInfoAccessor() && valueAccessorState == BaseOnlyValueAccessorState.Value -> TYPE_INFO_GROUP_ACCESSOR_IDX
             else -> x
         }
     }
@@ -147,7 +206,9 @@ inline fun BaseOnlyAccess.forEachAccessorIdx(action: (AccessorIdx) -> Unit) {
     if (f >= 0) action(f)
     if (x >= 0) {
         if (x != FINAL_ACCESSOR_IDX) {
-            if (x.isTypeInfoAccessor()) action(TYPE_INFO_GROUP_ACCESSOR_IDX)
+            if (x.isTypeInfoAccessor() && valueAccessorState == BaseOnlyValueAccessorState.Value) {
+                action(TYPE_INFO_GROUP_ACCESSOR_IDX)
+            }
             action(x)
         }
         action(FINAL_ACCESSOR_IDX)

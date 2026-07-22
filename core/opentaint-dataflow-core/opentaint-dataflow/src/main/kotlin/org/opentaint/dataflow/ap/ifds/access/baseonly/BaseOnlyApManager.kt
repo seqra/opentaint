@@ -36,13 +36,17 @@ class BaseOnlyApManager(
 ) : ApManager {
     val interner = AccessorInterner()
 
-    private var useNormalizedEdges = false
+    @Volatile
+    private var summaryQueryPhase = SummaryQueryPhase.Forward
 
+    /** One-way analyzer phase transition; individual queries capture the phase at entry. */
     fun enableNormalizedEdges() {
-        useNormalizedEdges = true
+        summaryQueryPhase = SummaryQueryPhase.TraceResolution
     }
 
-    fun normalizedEdgesEnabled(): Boolean = useNormalizedEdges
+    fun normalizedEdgesEnabled(): Boolean = summaryQueryPhase == SummaryQueryPhase.TraceResolution
+
+    private enum class SummaryQueryPhase { Forward, TraceResolution }
 
     val Accessor.idx: AccessorIdx get() = interner.index(this)
 
@@ -63,12 +67,22 @@ class BaseOnlyApManager(
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         BaseOnlyInitialFactAp(this, base, finalAccessorAccess, exclusions)
 
-    fun suffixExcluded(suffix: BaseOnlyAccess, exclusions: ExclusionSet): Boolean {
-        if (exclusions !is ExclusionSet.Concrete) return false
-        val head = suffix.headOrNull ?: return false
-        val accessor = interner.accessor(head) ?: return false
-        return exclusions.contains(accessor)
-    }
+    fun applyExclusions(suffix: BaseOnlyAccess, exclusions: ExclusionSet): BaseOnlyAccess? =
+        when (exclusions) {
+            ExclusionSet.Universe -> null
+            ExclusionSet.Empty -> suffix
+            is ExclusionSet.Concrete -> {
+                if (suffix.staticIdx == NO_ACCESSOR && suffix.fieldIdx == NO_ACCESSOR && suffix.hasSemanticMark) {
+                    // The missing field slot carries the implicit Any self-loop. Exact subtraction
+                    // is not representable, so retain the compact cover.
+                    suffix
+                } else {
+                    val head = suffix.firstAccessorOrNull
+                    val accessor = head?.let(interner::accessor)
+                    if (accessor == null) suffix else suffix.takeUnless { exclusions.contains(accessor) }
+                }
+            }
+        }
 
     fun renderAccess(access: BaseOnlyAccess): String {
         val sb = StringBuilder()

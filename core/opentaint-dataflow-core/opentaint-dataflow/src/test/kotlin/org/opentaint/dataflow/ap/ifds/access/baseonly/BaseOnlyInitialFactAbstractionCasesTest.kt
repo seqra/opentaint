@@ -11,10 +11,12 @@ import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
+import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -52,7 +54,7 @@ class BaseOnlyInitialFactAbstractionCasesTest {
     }
 
     @Test
-    fun `case A emits any-star always and any-mark when mark excluded`() {
+    fun `case A treats explicit any as the implicit structural projection`() {
         val m = mgr(false)
         val abstraction = BaseOnlyInitialFactAbstraction(m)
         abstraction.registerNewInitialFact(m.analyzedExcluding(mark), FactTypeChecker.Dummy)
@@ -193,7 +195,7 @@ class BaseOnlyInitialFactAbstractionCasesTest {
     }
 
     @Test
-    fun `refinement on type group keeps the type-carrying fact and abstracts it`() {
+    fun `refinement on type group retains the separate direct-type fact and still abstracts`() {
         val m = mgr(false)
         val typeInfo = TypeInfoAccessor("pkg.fn")
         val abstraction = BaseOnlyInitialFactAbstraction(m)
@@ -201,15 +203,16 @@ class BaseOnlyInitialFactAbstractionCasesTest {
         val demand = m.analyzedExcluding(TypeInfoGroupAccessor)
         abstraction.registerNewInitialFact(demand, FactTypeChecker.Dummy)
 
-        val typed = m.finalOf(TypeInfoGroupAccessor, typeInfo) as BaseOnlyFinalFactAp
-        assertTrue(typed.access == m.acc(typeInfo, FinalAccessor, abstract = false))
+        val wrapped = m.finalOf(TypeInfoGroupAccessor, typeInfo) as BaseOnlyFinalFactAp
+        val direct = m.finalOf(typeInfo) as BaseOnlyFinalFactAp
+        assertTrue(wrapped.access != direct.access)
 
         assertTrue(
-            typed.delta(demand).any { it is BaseOnlyNodeFinalDelta },
-            "excluding the info-less group must not drop the type-carrying delta",
+            direct.delta(demand).any { it is BaseOnlyNodeFinalDelta },
+            "the separate direct-type fact survives exclusion of the group branch",
         )
 
-        val produced = abstraction.addAbstractedInitialFact(typed, FactTypeChecker.Dummy)
+        val produced = abstraction.addAbstractedInitialFact(direct, FactTypeChecker.Dummy)
         assertTrue(contains(produced, m.acc(abstract = true), m.acc(abstract = true)))
     }
 
@@ -225,33 +228,38 @@ class BaseOnlyInitialFactAbstractionCasesTest {
             m.analyzedExcluding(TypeInfoGroupAccessor), FactTypeChecker.Dummy,
         )
 
-        val typeAp = m.acc(typeInfo, FinalAccessor, abstract = false)
+        val typeAp = m.acc(TypeInfoGroupAccessor, typeInfo, FinalAccessor, abstract = false)
         assertTrue(
             contains(produced, typeAp, typeAp),
-            "excluding the info-less group must walk past the collapsed type accessor and emit .{name}.\$",
+            "excluding the group must walk the wrapped branch and emit Group.Type.\$",
         )
     }
 
     @Test
-    fun `refinement on the type accessor itself drops the type-carrying fact`() {
+    fun `refinement on the type accessor retains the compact group-type sibling`() {
         val m = mgr(false)
         val typeInfo = TypeInfoAccessor("pkg.fn")
 
         val demandExcludingType = m.analyzedExcluding(typeInfo)
         val typed = m.finalOf(TypeInfoGroupAccessor, typeInfo) as BaseOnlyFinalFactAp
 
-        assertFalse(typed.delta(demandExcludingType).any { it is BaseOnlyNodeFinalDelta })
+        assertTrue(typed.delta(demandExcludingType).any { it is BaseOnlyNodeFinalDelta })
     }
 
     @Test
-    fun `delta drops a suffix whose head is excluded by the initial fact`() {
+    fun `delta retains each value accessor state when the mark survives behind implicit Any`() {
         val m = mgr(false)
-        val final = m.finalOf(AnyAccessor, mark)
         val initialNoExclusion = m.mostAbstractInitialAp(arg0).prependAccessor(AnyAccessor)
         val initialExcludingMark = initialNoExclusion.exclude(mark)
 
-        assertTrue(final.delta(initialNoExclusion).any { !it.isEmpty })
-        assertTrue(final.delta(initialExcludingMark).none { it is BaseOnlyNodeFinalDelta })
+        for (final in listOf(
+            m.finalOf(AnyAccessor, mark) as BaseOnlyFinalFactAp,
+            m.finalOf(AnyAccessor, ValueAccessor, mark) as BaseOnlyFinalFactAp,
+        )) {
+            assertTrue(final.delta(initialNoExclusion).any { !it.isEmpty })
+            val retained = final.delta(initialExcludingMark).single() as BaseOnlyNodeFinalDelta
+            assertEquals(final.access.valueAccessorState, retained.access.valueAccessorState)
+        }
     }
 
     private fun assertNoMixedEdge(produced: List<Pair<InitialFactAp, FinalFactAp>>) {

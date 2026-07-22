@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
+import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -84,7 +85,7 @@ class BaseOnlyFactOpsTest {
     }
 
     @Test
-    fun `plain base fact is field insensitive`() {
+    fun `plain semantic fact has an implicit structural branch`() {
         val m = mgr(false)
         val argMark = m.finalOf(mark)
         assertTrue(argMark.startsWithAccessor(field))
@@ -93,25 +94,31 @@ class BaseOnlyFactOpsTest {
     }
 
     @Test
-    fun `clear any consumes structural head`() {
+    fun `a concrete clear does not consume the implicit Any branch`() {
         val m = mgr(false)
         val argMark = m.finalOf(AnyAccessor, mark)
-        assertEquals(m.finalOf(mark), argMark.clearAccessor(field))
+        assertEquals(argMark, argMark.clearAccessor(field))
     }
 
     @Test
     fun `start accessors expose any and the head for a semantic mark`() {
         val m = mgr(false)
-        assertEquals(setOf<Accessor>(AnyAccessor, mark), m.finalOf(AnyAccessor, mark).getStartAccessors())
-        assertEquals(setOf<Accessor>(AnyAccessor, mark), m.finalOf(mark).getStartAccessors())
+        assertEquals(
+            setOf<Accessor>(AnyAccessor, mark),
+            m.finalOf(AnyAccessor, mark).getStartAccessors(),
+        )
+        assertEquals(
+            setOf<Accessor>(AnyAccessor, mark),
+            m.finalOf(mark).getStartAccessors(),
+        )
         assertEquals(setOf<Accessor>(FinalAccessor), m.finalOf().getStartAccessors())
     }
 
     @Test
-    fun `start accessors expose any and the structural head before a semantic mark`() {
+    fun `start accessors expose the structural head before a semantic mark`() {
         val m = mgr(true)
         assertEquals(
-            setOf<Accessor>(AnyAccessor, field),
+            setOf<Accessor>(field),
             m.finalOf(field, AnyAccessor, mark).getStartAccessors(),
         )
     }
@@ -125,25 +132,50 @@ class BaseOnlyFactOpsTest {
     }
 
     @Test
-    fun `type info group is transparent to read but is the head for clear`() {
+    fun `value type wrapper is distinct and group read exposes the normal residual`() {
         val m = mgr(true)
         val typed = m.finalOf(TypeInfoGroupAccessor, typeInfo)
-        assertEquals(m.finalOf(typeInfo), typed)
+        assertFalse(m.finalOf(typeInfo) == typed)
         assertTrue(typed.startsWithAccessor(TypeInfoGroupAccessor))
-        assertEquals(typed, typed.readAccessor(TypeInfoGroupAccessor))
-        assertEquals(setOf<Accessor>(typeInfo), typed.readAccessor(TypeInfoGroupAccessor)!!.getStartAccessors())
-        assertNull(typed.clearAccessor(TypeInfoGroupAccessor))
+        val residual = typed.readAccessor(TypeInfoGroupAccessor)!!
+        assertEquals(m.finalOf(typeInfo), residual)
+        assertEquals(
+            setOf<Accessor>(AnyAccessor, typeInfo),
+            residual.getStartAccessors(),
+        )
+        assertEquals(typed, typed.clearAccessor(TypeInfoGroupAccessor))
+        assertEquals(typed, typed.clearAccessor(typeInfo))
     }
 
     @Test
     fun `type info fact enumerates as the collapsed group-type pair`() {
         val m = mgr(true)
         val typed = m.finalOf(TypeInfoGroupAccessor, typeInfo)
-        assertEquals(3, typed.size)
+        assertEquals(1, typed.size)
         assertEquals(
             setOf<Accessor>(TypeInfoGroupAccessor, typeInfo, FinalAccessor),
             typed.getAllAccessors(),
         )
+    }
+
+    @Test
+    fun `value accessor states have exact read and clear behavior`() {
+        val m = mgr(true)
+        val directMark = m.finalOf(mark)
+        val valueMark = m.finalOf(ValueAccessor, mark)
+        assertEquals(setOf<Accessor>(AnyAccessor, mark), directMark.getStartAccessors())
+        assertEquals(setOf<Accessor>(AnyAccessor, ValueAccessor), valueMark.getStartAccessors())
+        assertEquals(directMark, valueMark.readAccessor(ValueAccessor))
+        assertEquals(directMark, directMark.clearAccessor(mark))
+        assertEquals(valueMark, valueMark.clearAccessor(ValueAccessor))
+
+        val directType = m.finalOf(typeInfo)
+        val groupedType = m.finalOf(TypeInfoGroupAccessor, typeInfo)
+        assertEquals(setOf<Accessor>(AnyAccessor, typeInfo), directType.getStartAccessors())
+        assertEquals(setOf<Accessor>(AnyAccessor, TypeInfoGroupAccessor), groupedType.getStartAccessors())
+        assertEquals(directType, groupedType.readAccessor(TypeInfoGroupAccessor))
+        assertEquals(directType, directType.clearAccessor(typeInfo))
+        assertEquals(groupedType, groupedType.clearAccessor(TypeInfoGroupAccessor))
     }
 
     @Test

@@ -107,7 +107,16 @@ interface MethodEdgesFinalApSet {
 }
 
 interface MethodEdgesInitialToFinalApSet {
-    fun add(statement: CommonInst, initialAp: InitialFactAp, finalAp: FinalFactAp): Pair<InitialFactAp, FinalFactAp>?
+    /**
+     * Adds an edge and returns the complete propagation delta. If insertion changes metadata
+     * shared by several stored finals, every affected final must be returned with that metadata.
+     * An empty list means that the represented edge set did not change.
+     */
+    fun add(
+        statement: CommonInst,
+        initialAp: InitialFactAp,
+        finalAp: FinalFactAp,
+    ): List<Pair<InitialFactAp, FinalFactAp>>
     fun collectApAtStatement(collection: MutableList<Pair<InitialFactAp, FinalFactAp>>, statement: CommonInst)
     fun collectApAtStatement(collection: MutableList<Pair<InitialFactAp, FinalFactAp>>, statement: CommonInst, finalFactPattern: InitialFactAp)
     fun collectApAtStatement(collection: MutableList<FinalFactAp>, statement: CommonInst, initialAp: InitialFactAp, finalFactPattern: InitialFactAp)

@@ -8,8 +8,8 @@ import org.opentaint.dataflow.util.int2ObjectMap
 /**
  * A single-writer/multiple-reader index over the three packed BaseOnly access slots.
  *
- * Patterned traversal is deliberately conservative. [baseOnlySummaryInitialMatches] remains the
- * authoritative predicate before a candidate is emitted.
+ * Patterned traversal is deliberately conservative and returns candidates only. Callers apply
+ * [baseOnlySummaryInitialMatches] as the authoritative semantic predicate before emission.
  */
 internal class BaseOnlyInitialAccessIndex<V : Any> {
     private class FieldNode<V : Any> {
@@ -25,7 +25,7 @@ internal class BaseOnlyInitialAccessIndex<V : Any> {
     fun getOrCreate(access: BaseOnlyAccess, create: () -> V): V {
         val fieldNode = statics.getOrCreateNullable(access.staticIdx) { FieldNode() }
         val suffixNode = fieldNode.fields.getOrCreateNullable(access.fieldIdx) { SuffixNode() }
-        return suffixNode.suffixes.getOrCreateNullable(access.suffixIdx, create)
+        return suffixNode.suffixes.getOrCreateNullable(access.rawSuffixSlot, create)
     }
 
     fun collectAll(consume: (BaseOnlyAccess, V) -> Unit) {
@@ -34,38 +34,33 @@ internal class BaseOnlyInitialAccessIndex<V : Any> {
         }
     }
 
-    fun collectContainedBy(pattern: BaseOnlyAccess, consume: (BaseOnlyAccess, V) -> Unit) {
+    fun collectCandidates(pattern: BaseOnlyAccess, consume: (BaseOnlyAccess, V) -> Unit) {
         if (pattern.staticIdx == ABSTRACT_MARK) {
-            collectAllChecked(pattern, consume)
+            collectAll(consume)
             return
         }
 
-        statics.get(ABSTRACT_MARK)?.collectAllChecked(ABSTRACT_MARK, pattern, consume)
+        statics.get(ABSTRACT_MARK)?.collectAll(ABSTRACT_MARK, consume)
         val fieldNode = statics.get(pattern.staticIdx) ?: return
         if (pattern.fieldIdx == ABSTRACT_MARK) {
-            fieldNode.collectAllChecked(pattern.staticIdx, pattern, consume)
+            fieldNode.collectAll(pattern.staticIdx, consume)
             return
         }
 
-        fieldNode.fields.get(ABSTRACT_MARK)?.collectAllChecked(
-            pattern.staticIdx,
-            ABSTRACT_MARK,
-            pattern,
-            consume,
-        )
+        fieldNode.fields.get(ABSTRACT_MARK)?.collectAll(pattern.staticIdx, ABSTRACT_MARK, consume)
         when (pattern.fieldIdx) {
             NO_ACCESSOR -> fieldNode.fields.forEachEntry { fieldIdx, suffixNode ->
-                suffixNode?.collectContainedBy(pattern.staticIdx, fieldIdx, pattern, consume)
+                suffixNode?.collectCandidates(pattern.staticIdx, fieldIdx, pattern, consume)
             }
 
             else -> {
-                fieldNode.fields.get(pattern.fieldIdx)?.collectContainedBy(
+                fieldNode.fields.get(pattern.fieldIdx)?.collectCandidates(
                     pattern.staticIdx,
                     pattern.fieldIdx,
                     pattern,
                     consume,
                 )
-                fieldNode.fields.get(NO_ACCESSOR)?.collectContainedBy(
+                fieldNode.fields.get(NO_ACCESSOR)?.collectCandidates(
                     pattern.staticIdx,
                     NO_ACCESSOR,
                     pattern,
@@ -75,44 +70,36 @@ internal class BaseOnlyInitialAccessIndex<V : Any> {
         }
     }
 
-    private fun collectAllChecked(pattern: BaseOnlyAccess, consume: (BaseOnlyAccess, V) -> Unit) {
-        collectAll { access, value ->
-            if (baseOnlySummaryInitialMatches(pattern, access)) consume(access, value)
-        }
-    }
-
     private fun FieldNode<V>.collectAll(staticIdx: Int, consume: (BaseOnlyAccess, V) -> Unit) {
         fields.forEachEntry { fieldIdx, suffixNode ->
             suffixNode?.collectAll(staticIdx, fieldIdx, consume)
         }
     }
 
-    private fun FieldNode<V>.collectAllChecked(
-        staticIdx: Int,
-        pattern: BaseOnlyAccess,
-        consume: (BaseOnlyAccess, V) -> Unit,
-    ) {
-        fields.forEachEntry { fieldIdx, suffixNode ->
-            suffixNode?.collectAllChecked(staticIdx, fieldIdx, pattern, consume)
-        }
-    }
-
-    private fun SuffixNode<V>.collectContainedBy(
+    private fun SuffixNode<V>.collectCandidates(
         staticIdx: Int,
         fieldIdx: Int,
         pattern: BaseOnlyAccess,
         consume: (BaseOnlyAccess, V) -> Unit,
     ) {
         if (pattern.suffixIdx == ABSTRACT_MARK) {
-            collectAllChecked(staticIdx, fieldIdx, pattern, consume)
+            collectAll(staticIdx, fieldIdx, consume)
             return
         }
 
-        suffixes.get(ABSTRACT_MARK)?.let { value ->
-            emitIfContained(staticIdx, fieldIdx, ABSTRACT_MARK, value, pattern, consume)
+        val abstractSuffix = rawBaseOnlySuffixSlot(ABSTRACT_MARK, BaseOnlyValueAccessorState.Normal)
+        suffixes.get(abstractSuffix)?.let { value ->
+            consume(packBaseOnlyAccessFromRawSuffix(staticIdx, fieldIdx, abstractSuffix), value)
         }
-        suffixes.get(pattern.suffixIdx)?.let { value ->
-            emitIfContained(staticIdx, fieldIdx, pattern.suffixIdx, value, pattern, consume)
+
+        val states =
+            if (pattern.hasSemanticMark) BaseOnlyValueAccessorState.entries
+            else listOf(BaseOnlyValueAccessorState.Normal)
+        for (state in states) {
+            val rawSuffix = rawBaseOnlySuffixSlot(pattern.suffixIdx, state)
+            suffixes.get(rawSuffix)?.let { value ->
+                consume(packBaseOnlyAccessFromRawSuffix(staticIdx, fieldIdx, rawSuffix), value)
+            }
         }
     }
 
@@ -121,35 +108,13 @@ internal class BaseOnlyInitialAccessIndex<V : Any> {
         fieldIdx: Int,
         consume: (BaseOnlyAccess, V) -> Unit,
     ) {
-        suffixes.forEachEntry { suffixIdx, value ->
-            value?.let { consume(packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx), it) }
+        suffixes.forEachEntry { rawSuffix, value ->
+            value?.let { consume(packBaseOnlyAccessFromRawSuffix(staticIdx, fieldIdx, rawSuffix), it) }
         }
     }
 
-    private fun SuffixNode<V>.collectAllChecked(
-        staticIdx: Int,
-        fieldIdx: Int,
-        pattern: BaseOnlyAccess,
-        consume: (BaseOnlyAccess, V) -> Unit,
-    ) {
-        suffixes.forEachEntry { suffixIdx, value ->
-            value?.let { emitIfContained(staticIdx, fieldIdx, suffixIdx, it, pattern, consume) }
-        }
-    }
-
-    private fun emitIfContained(
-        staticIdx: Int,
-        fieldIdx: Int,
-        suffixIdx: Int,
-        value: V,
-        pattern: BaseOnlyAccess,
-        consume: (BaseOnlyAccess, V) -> Unit,
-    ) {
-        val access = packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx)
-        if (baseOnlySummaryInitialMatches(pattern, access)) consume(access, value)
-    }
 }
 
-/** Tree's filterContains returns both stored prefixes and descendants of an abstract pattern. */
+/** Tree's filterContains is a symmetric applicability query, not directional containment. */
 internal fun baseOnlySummaryInitialMatches(pattern: BaseOnlyAccess, initial: BaseOnlyAccess): Boolean =
-    BaseOnlyAccessOps.containsAccess(pattern, initial) || BaseOnlyAccessOps.containsAccess(initial, pattern)
+    BaseOnlyAccessOps.mayOverlap(pattern, initial)

@@ -10,12 +10,13 @@ class BaseOnlyAccessPackingTest {
     private val sentinels = listOf(NO_ACCESSOR, ABSTRACT_MARK, COLLAPSED_MARK)
     private val staticReals = listOf(0, 1, 5, 100, BASE_ONLY_STATIC_MASK - BASE_ONLY_BIAS)
     private val wideReals = listOf(0, 1, 3, 7, 35, 1000, BASE_ONLY_FIELD_MASK - BASE_ONLY_BIAS)
+    private val suffixReals = listOf(0, 1, 3, 7, 35, 1000, BASE_ONLY_SUFFIX_VALUE_MASK - BASE_ONLY_BIAS)
 
     @Test
     fun `pack then unpack round-trips every slot including sentinels and max real indices`() {
         for (s in sentinels + staticReals) {
             for (f in sentinels + wideReals) {
-                for (x in sentinels + wideReals) {
+                for (x in sentinels + suffixReals) {
                     val packed = packBaseOnlyAccess(s, f, x)
                     assertEquals(s, packed.staticIdx, "static slot")
                     assertEquals(f, packed.fieldIdx, "field slot")
@@ -58,7 +59,7 @@ class BaseOnlyAccessPackingTest {
             packBaseOnlyAccess(NO_ACCESSOR, BASE_ONLY_FIELD_MASK - BASE_ONLY_BIAS + 1, NO_ACCESSOR)
         }
         assertFailsWith<IllegalArgumentException> {
-            packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, BASE_ONLY_SUFFIX_MASK - BASE_ONLY_BIAS + 1)
+            packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, BASE_ONLY_SUFFIX_VALUE_MASK - BASE_ONLY_BIAS + 1)
         }
     }
 }

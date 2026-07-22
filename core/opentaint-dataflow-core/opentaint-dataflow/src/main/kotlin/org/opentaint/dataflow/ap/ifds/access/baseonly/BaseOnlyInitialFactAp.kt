@@ -14,7 +14,7 @@ class BaseOnlyInitialFactAp(
     override val exclusions: ExclusionSet,
 ) : InitialFactAp {
     init {
-        require(!access.isEmpty) { "empty is not a fact: $base" }
+        BaseOnlyAccessOps.requireCanonical(access)
     }
 
     override val size: Int get() = access.size
@@ -64,10 +64,12 @@ class BaseOnlyInitialFactAp(
     override fun concat(delta: InitialFactAp.Delta): InitialFactAp =
         when (val d = delta as BaseOnlyInitialDelta) {
             BaseOnlyEmptyInitialDelta -> this
-            is BaseOnlyNodeInitialDelta -> rewrap(
-                BaseOnlyAccessOps.append(access, d.access)
-                    ?: error("static-first invariant violated: initial concat")
-            )
+            is BaseOnlyNodeInitialDelta -> {
+                rewrap(
+                    BaseOnlyAccessOps.append(access, d.access)
+                        ?: error("static-first invariant violated: initial concat")
+                )
+            }
         }
 
     override fun contains(factAp: InitialFactAp): Boolean {

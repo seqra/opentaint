@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
+import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import kotlin.test.Test
@@ -33,10 +34,14 @@ class BaseOnlyAppendFinalTest {
         assertEquals(recv, ai.appendFinal(recv, ai.empty))
     }
 
-    // cross-kind splices are rejected (INV-C): a field-leading delta cannot attach at a suffix hole
-    @Test fun `AP@suffix receiver rejects a field-leading delta`() {
+    // A representational category mismatch is widened rather than rejected.
+    @Test fun `AP@suffix receiver retains terminal after absorbing a field-leading semantic delta`() {
         val recv = ai.abstractAt(NO_ACCESSOR, i(field), 2)           // (-1,f,-2), hole at slot 2
-        assertNull(ai.appendFinal(recv, chain(field2, mark)))  // delta leads at slot 1
+        assertEquals(chain(field, mark), ai.appendFinal(recv, chain(field2, mark)))
+    }
+    @Test fun `AP@suffix receiver abstracts after retained field for a field-leading exact delta`() {
+        val recv = ai.abstractAt(NO_ACCESSOR, i(field), 2)
+        assertEquals(recv, ai.appendFinal(recv, chain(field2, FinalAccessor)))
     }
     @Test fun `AP@field receiver rejects a static-leading delta`() {
         val recv = ai.abstractAt(i(stat), NO_ACCESSOR, 1)            // (s,-2,-1), hole at slot 1

@@ -6,6 +6,10 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.TYPE_INFO_GROUP_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.VALUE_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 
 class BaseOnlyFinalFactAp(
     val manager: BaseOnlyApManager,
@@ -14,11 +18,11 @@ class BaseOnlyFinalFactAp(
     override val exclusions: ExclusionSet,
 ) : FinalFactAp {
     init {
-        require(!access.isEmpty) { "empty is not a fact: $base" }
+        BaseOnlyAccessOps.requireCanonical(access, allowTransientCollapsed = true)
     }
 
     override val size: Int get() = access.size
-    override val depth: Int get() = access.size
+    override val depth: Int get() = size
 
     override fun isAbstract(): Boolean = access.hasAp
 
@@ -52,31 +56,62 @@ class BaseOnlyFinalFactAp(
         BaseOnlyAccessOps.collapse(access).takeIf { !it.isEmpty }?.let(::rewrap)
 
     override fun abstractOnly(): FinalFactAp {
-        val resultAccess = access.withBaseOnlyAccessUnpacked { s, f, _ ->
+        val abstractAccess = access.withBaseOnlyAccessUnpacked { staticIdx, fieldIdx, _ ->
             when {
-                s == ABSTRACT_MARK -> packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR)
-                f == ABSTRACT_MARK -> packBaseOnlyAccess(NO_ACCESSOR, ABSTRACT_MARK, NO_ACCESSOR)
-                else -> packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, ABSTRACT_MARK)
+                staticIdx == ABSTRACT_MARK -> packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR)
+                fieldIdx == ABSTRACT_MARK -> packBaseOnlyAccess(NO_ACCESSOR, ABSTRACT_MARK, NO_ACCESSOR)
+                else -> ABSTRACT_EMPTY_ACCESS
             }
         }
-        return rewrap(resultAccess)
+        return rewrap(abstractAccess)
     }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? =
-        if (accessPathAccepted(filter)) this else null
+        filterAccess(filter)?.let { filtered -> if (filtered == access) this else rewrap(filtered) }
 
     override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp? {
         if (filter is FactTypeChecker.AlwaysCompatibleFilter) return this
-        access.forEachAccessorIdx { idx ->
-            val accessor = manager.interner.accessor(idx) ?: error("Accessor not found: $idx")
-            if (filter.check(accessor) == FactTypeChecker.CompatibilityFilterResult.NotCompatible) return null
+        if (!access.hasAp) return this
+
+        // Tree checks only an edge whose child node has direct abstract acceptance.
+        // Ancestor nodes that merely contain an abstract descendant are not checked.
+        val predecessor = when (access.apSlot) {
+            0 -> NO_ACCESSOR
+            1 -> access.staticIdx
+            2 -> if (access.fieldIdx >= 0) access.fieldIdx else access.staticIdx
+            else -> error("Canonical abstract fact has no abstraction slot: $access")
         }
-        return this
+        if (predecessor < 0) return this
+        val accessor = manager.interner.accessor(predecessor)
+            ?: error("Accessor not found: $predecessor")
+        return when (filter.check(accessor)) {
+            FactTypeChecker.CompatibilityFilterResult.Compatible -> this
+            FactTypeChecker.CompatibilityFilterResult.NotCompatible -> null
+        }
     }
 
-    private fun accessPathAccepted(filter: FactTypeChecker.FactApFilter): Boolean {
+    private fun filterAccess(
+        filter: FactTypeChecker.FactApFilter,
+        candidate: BaseOnlyAccess = access,
+    ): BaseOnlyAccess? {
+        if (!candidate.hasSemanticMark) {
+            return candidate.takeIf { logicalPaths(candidate).any { path -> pathAccepted(filter, path) } }
+        }
+        val common = logicalPrefix(candidate)
+        val path = when (candidate.valueAccessorState) {
+            BaseOnlyValueAccessorState.Normal -> common + intArrayOf(candidate.suffixIdx, FINAL_ACCESSOR_IDX)
+            BaseOnlyValueAccessorState.Value -> {
+                val valueAccessor =
+                    if (candidate.hasTypeInfoSuffix) TYPE_INFO_GROUP_ACCESSOR_IDX else VALUE_ACCESSOR_IDX
+                common + intArrayOf(valueAccessor, candidate.suffixIdx, FINAL_ACCESSOR_IDX)
+            }
+        }
+        return candidate.takeIf { pathAccepted(filter, path) }
+    }
+
+    private fun pathAccepted(filter: FactTypeChecker.FactApFilter, path: IntArray): Boolean {
         var current = filter
-        access.forEachAccessorIdx { idx ->
+        path.forEach { idx ->
             val accessor = manager.interner.accessor(idx) ?: error("Accessor not found: $idx")
             when (val result = current.check(accessor)) {
                 FactTypeChecker.FilterResult.Accept -> return true
@@ -85,6 +120,36 @@ class BaseOnlyFinalFactAp(
             }
         }
         return true
+    }
+
+    /** The single logical path represented by one compact access. */
+    private fun logicalPaths(candidate: BaseOnlyAccess): List<IntArray> {
+        val common = logicalPrefix(candidate)
+        val suffix = candidate.suffixIdx
+        if (suffix < 0) return listOf(common)
+        if (suffix == FINAL_ACCESSOR_IDX) return listOf(common + FINAL_ACCESSOR_IDX)
+        if (candidate.hasTypeInfoSuffix) {
+            return listOf(terminalLogicalPath(candidate, common, TYPE_INFO_GROUP_ACCESSOR_IDX))
+        }
+        if (suffix.isTaintMarkAccessor()) {
+            return listOf(terminalLogicalPath(candidate, common, VALUE_ACCESSOR_IDX))
+        }
+        return listOf(common + intArrayOf(suffix, FINAL_ACCESSOR_IDX))
+    }
+
+    private fun logicalPrefix(candidate: BaseOnlyAccess): IntArray = buildList {
+        if (candidate.staticIdx >= 0) add(candidate.staticIdx)
+        if (candidate.fieldIdx >= 0) add(candidate.fieldIdx)
+    }.toIntArray()
+
+    private fun terminalLogicalPath(
+        candidate: BaseOnlyAccess,
+        common: IntArray,
+        valueAccessor: Int,
+    ): IntArray = when (candidate.valueAccessorState) {
+        BaseOnlyValueAccessorState.Normal -> common + intArrayOf(candidate.suffixIdx, FINAL_ACCESSOR_IDX)
+        BaseOnlyValueAccessorState.Value ->
+            common + intArrayOf(valueAccessor, candidate.suffixIdx, FINAL_ACCESSOR_IDX)
     }
 
     override fun contains(factAp: InitialFactAp): Boolean {
@@ -101,20 +166,36 @@ class BaseOnlyFinalFactAp(
 
     override fun delta(other: InitialFactAp): List<FinalFactAp.Delta> {
         other as BaseOnlyInitialFactAp
+        if (base != other.base) return emptyList()
         val match = BaseOnlyAccessOps.matchPrefix(access, other.access)
         val result = ArrayList<FinalFactAp.Delta>(2)
         if (match.emptyDelta) result.add(BaseOnlyEmptyFinalDelta)
-        if (match.hasSuffix && !manager.suffixExcluded(match.suffix, other.exclusions)) {
-            result.add(BaseOnlyNodeFinalDelta(manager, match.suffix))
+        if (match.hasSuffix) {
+            manager.applyExclusions(match.suffix, other.exclusions)?.let { suffix ->
+                result.add(BaseOnlyNodeFinalDelta(manager, suffix))
+            }
         }
         return result
     }
 
-    override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? =
-        when (val d = delta as BaseOnlyFinalDelta) {
+    override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
+        return when (val d = delta as BaseOnlyFinalDelta) {
             BaseOnlyEmptyFinalDelta -> this
-            is BaseOnlyNodeFinalDelta -> BaseOnlyAccessOps.appendFinal(access, d.access)?.let(::rewrap)
+            is BaseOnlyNodeFinalDelta -> {
+                val filteredDelta = filterDelta(typeChecker, d.access) ?: return null
+                BaseOnlyAccessOps.appendFinal(access, filteredDelta)?.let(::rewrap)
+            }
         }
+    }
+
+    private fun filterDelta(typeChecker: FactTypeChecker, delta: BaseOnlyAccess): BaseOnlyAccess? {
+        val prefix = buildList {
+            access.forEachCoreIdx { idx ->
+                add(manager.interner.accessor(idx) ?: error("Accessor not found: $idx"))
+            }
+        }
+        return filterAccess(typeChecker.accessPathFilter(prefix), delta)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

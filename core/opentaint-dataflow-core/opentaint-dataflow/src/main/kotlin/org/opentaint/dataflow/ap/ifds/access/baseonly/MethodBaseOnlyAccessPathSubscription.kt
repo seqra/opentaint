@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.CommonAPSub
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactEdgeSubBuilder
@@ -34,7 +35,7 @@ class MethodBaseOnlyAccessPathSubscription(
         }
 
         override fun find(dst: MutableList<CommonZeroEdgeSubBuilder<BaseOnlyAccess>>, summaryInitialFact: BaseOnlyAccess) {
-            edges.forEach { dst += ZeroBuilder(manager).setNode(it) }
+            edges.forEach { exit -> dst += ZeroBuilder(manager).setNode(exit) }
         }
     }
 
@@ -59,7 +60,7 @@ class MethodBaseOnlyAccessPathSubscription(
             summaryInitialFact: BaseOnlyAccess,
             emptyDeltaRequired: Boolean,
         ) {
-            storage.forEach { (initial, exits) ->
+            for ((initial, exits) in storage) {
                 exits.forEach { exit ->
                     dst += FactBuilder(manager)
                         .setCallerNode(exit)
@@ -75,6 +76,14 @@ class MethodBaseOnlyAccessPathSubscription(
         override val apManager: BaseOnlyApManager get() = manager
 
         override fun createBuilder(): CommonFactNDEdgeSubBuilder<BaseOnlyAccess> = NDBuilder(manager)
+
+        override fun add(
+            callerInitial: Set<InitialFactAp>,
+            callerExitAp: BaseOnlyAccess,
+        ): CommonFactNDEdgeSubBuilder<BaseOnlyAccess>? = super.add(
+            callerInitial.mapTo(hashSetOf()) { it.replaceExclusions(ExclusionSet.Universe) },
+            callerExitAp,
+        )
 
         private var maxIdx = 0
 

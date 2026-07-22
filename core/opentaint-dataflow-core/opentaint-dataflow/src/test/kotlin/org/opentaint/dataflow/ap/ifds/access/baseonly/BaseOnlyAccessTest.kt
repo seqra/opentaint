@@ -5,10 +5,14 @@ import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
+import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
+import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -54,6 +58,15 @@ class BaseOnlyAccessTest {
     }
 
     @Test
+    fun `build and append retain the outermost structural accessor`() {
+        assertEquals(i(field), chain(field, field2, mark).fieldIdx)
+        assertEquals(
+            chain(field, mark),
+            ai.append(chain(field, abstract = true), chain(field2, mark)),
+        )
+    }
+
+    @Test
     fun `class static goes before field`() {
         val base = chain(field, AnyAccessor, mark)
         assertEquals(chain(stat, field, AnyAccessor, mark), ai.prepend(base, i(stat), fieldSensitive = true))
@@ -83,9 +96,8 @@ class BaseOnlyAccessTest {
     }
 
     @Test
-    fun `read field off taint stays covering`() {
-        val taint = chain(mark)
-        assertEquals(taint, ai.read(taint, i(field)))
+    fun `read field off bare taint follows implicit Any`() {
+        assertEquals(chain(mark), ai.read(chain(mark), i(field)))
     }
 
     @Test
@@ -100,7 +112,7 @@ class BaseOnlyAccessTest {
     }
 
     @Test
-    fun `startsWith any structural is true for abstract and taint but not value`() {
+    fun `startsWith structural is true for abstract and bare semantic facts`() {
         assertTrue(ai.startsWith(ai.abstractEmpty, i(field)))
         assertFalse(ai.startsWith(chain(final), i(field)))
         assertTrue(ai.startsWith(chain(mark), i(field)))
@@ -137,7 +149,7 @@ class BaseOnlyAccessTest {
 
         // value strict: read field off value -> null (getter-alias removed)
         assertNull(ai.read(chain(final), f1))
-        // mark fact: read field idempotent ([any] absorbs); read own mark -> value
+        // bare mark fact has an implicit structural branch; read own mark -> value
         assertEquals(chain(mark), ai.read(chain(mark), f1))
         assertEquals(chain(final), ai.read(chain(mark), t1))
         // suffix-AP: read field idempotent; read mark -> null (must refine, not fabricate)
@@ -179,7 +191,7 @@ class BaseOnlyAccessTest {
         assertTrue(ai.startsWith(suffAp, f1)); assertFalse(ai.startsWith(suffAp, t1))
         assertFalse(ai.startsWith(suffAp, s1))
 
-        // concrete mark x.!t1.$ : field true ([any]), own mark true, other mark false, $ false (behind mark)
+        // concrete bare mark x.!t1.$ : own mark and implicit structural reads are available
         val markFact = chain(mark)
         assertTrue(ai.startsWith(markFact, f1)); assertTrue(ai.startsWith(markFact, t1))
         assertFalse(ai.startsWith(markFact, t2)); assertFalse(ai.startsWith(markFact, dollar))
@@ -216,5 +228,33 @@ class BaseOnlyAccessTest {
         val concrete = chain(mark)
         assertEquals(-1, concrete.apSlot)
         assertEquals(concrete, ai.collapse(concrete))
+    }
+
+    @Test
+    fun `construction rejects malformed accessor grammar instead of reordering it`() {
+        val type = TypeInfoAccessor("T")
+        assertFailsWith<IllegalArgumentException> { chain(field, stat, mark) }
+        assertFailsWith<IllegalArgumentException> { chain(stat, stat2, mark) }
+        assertFailsWith<IllegalArgumentException> { chain(mark, field) }
+        assertFailsWith<IllegalArgumentException> { chain(ValueAccessor) }
+        assertFailsWith<IllegalArgumentException> {
+            ai.requireCanonical(packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, i(ValueAccessor)))
+        }
+        assertFailsWith<IllegalArgumentException> { chain(TypeInfoGroupAccessor) }
+        assertFailsWith<IllegalArgumentException> { chain(TypeInfoGroupAccessor, mark) }
+
+        assertFalse(chain(mark) == chain(ValueAccessor, mark))
+        assertEquals(BaseOnlyValueAccessorState.Normal, chain(mark).valueAccessorState)
+        assertEquals(BaseOnlyValueAccessorState.Value, chain(ValueAccessor, mark).valueAccessorState)
+        assertFalse(chain(type) == chain(TypeInfoGroupAccessor, type))
+        assertEquals(BaseOnlyValueAccessorState.Normal, chain(type).valueAccessorState)
+        assertEquals(BaseOnlyValueAccessorState.Value, chain(TypeInfoGroupAccessor, type).valueAccessorState)
+    }
+
+    @Test
+    fun `prepend rejects an invalid second static or standalone transparent semantic prefix`() {
+        assertFailsWith<IllegalArgumentException> { ai.prepend(chain(stat, mark), i(stat2), true) }
+        assertFailsWith<IllegalArgumentException> { ai.prepend(chain(final), i(ValueAccessor), true) }
+        assertFailsWith<IllegalArgumentException> { ai.prepend(chain(final), i(TypeInfoGroupAccessor), true) }
     }
 }

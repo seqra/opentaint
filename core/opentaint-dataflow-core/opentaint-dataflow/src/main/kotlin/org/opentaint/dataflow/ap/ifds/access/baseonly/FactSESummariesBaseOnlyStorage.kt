@@ -34,7 +34,9 @@ class FactSESummariesBaseOnlyStorage(
             if (initialFactPattern == null) {
                 perInitial.collectAll(collect)
             } else {
-                perInitial.collectContainedBy(initialFactPattern, collect)
+                perInitial.collectCandidates(initialFactPattern) { initial, storage ->
+                    if (baseOnlySummaryInitialMatches(initialFactPattern, initial)) collect(initial, storage)
+                }
             }
         }
     }

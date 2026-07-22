@@ -29,12 +29,12 @@ class MethodEdgesInitialToFinalCactusApSet(
             statement: CommonInst,
             initial: AccessPathWithCycles.AccessNode?,
             final: AccessWithExclusion<AccessCactus.AccessNode>
-        ): AccessWithExclusion<AccessCactus.AccessNode>? {
+        ): List<AccessWithExclusion<AccessCactus.AccessNode>> {
             val storage = sameInitialAccessEdges.getOrPut(initial) {
                 EdgeNonUniverseExclusionMergingStorage(maxInstIdx, languageManager)
             }
 
-            return storage.add(statement, final)
+            return storage.add(statement, final)?.let(::listOf) ?: emptyList()
         }
 
         override fun filter(
@@ -86,7 +86,10 @@ class MethodEdgesInitialToFinalCactusApSet(
             exclusions[edgeSetIdx] = mergedExclusion
 
             val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
-            if (mergedAccess === currentAccess) return null
+            if (mergedAccess === currentAccess) {
+                if (mergedExclusion === currentExclusion) return null
+                return AccessWithExclusion(currentAccess, mergedExclusion)
+            }
 
             edges[edgeSetIdx] = mergedAccess
             return AccessWithExclusion(mergedAccess, mergedExclusion)

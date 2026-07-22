@@ -17,6 +17,7 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
 
         for (requirement in requirements) {
             requirement as BaseOnlyInitialFactAp
+            if (requirement.access.isCollapsed) continue
             val storage = based.computeIfAbsent(requirement.base) { RequirementStorage() }
             if (storage.mergeAdd(requirement) != null) modified += storage
         }
@@ -27,18 +28,19 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
     }
 
     override fun filterTo(dst: MutableList<InitialFactAp>, fact: FinalFactAp) {
+        fact as BaseOnlyFinalFactAp
         val storage = based[fact.base] ?: return
-        storage.requirements.forEachEntry { _, requirement -> dst.add(requirement) }
+        storage.filterTo(dst, fact.access)
     }
 
     override fun collectAllRequirementsTo(dst: MutableList<InitialFactAp>) {
         based.values.forEach { storage ->
-            storage.requirements.forEachEntry { _, requirement -> dst.add(requirement) }
+            storage.collectAllTo(dst)
         }
     }
 
     private class RequirementStorage {
-        val requirements = long2ObjectMap<BaseOnlyInitialFactAp>()
+        private val requirements = long2ObjectMap<BaseOnlyInitialFactAp>()
         private val delta = Long2ObjectOpenHashMap<BaseOnlyInitialFactAp>()
 
         fun mergeAdd(requirement: BaseOnlyInitialFactAp): BaseOnlyInitialFactAp? {
@@ -51,6 +53,18 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
         fun getAndResetDelta(dst: MutableList<InitialFactAp>) {
             dst.addAll(delta.values)
             delta.clear()
+        }
+
+        fun filterTo(dst: MutableList<InitialFactAp>, fact: BaseOnlyAccess) {
+            requirements.forEachEntry { _, requirement ->
+                if (baseOnlySummaryInitialMatches(fact, requirement.access)) {
+                    dst.add(requirement)
+                }
+            }
+        }
+
+        fun collectAllTo(dst: MutableList<InitialFactAp>) {
+            requirements.forEachEntry { _, requirement -> dst.add(requirement) }
         }
     }
 }

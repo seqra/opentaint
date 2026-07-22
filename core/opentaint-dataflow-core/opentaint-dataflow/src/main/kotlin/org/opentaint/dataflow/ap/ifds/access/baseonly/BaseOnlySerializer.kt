@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.serialization.AccessPathBaseSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.ExclusionSetSerializer
@@ -38,26 +39,43 @@ internal class BaseOnlySerializer(
     }
 
     private fun DataOutputStream.writeFact(base: AccessPathBase, exclusions: ExclusionSet, access: BaseOnlyAccess) {
+        BaseOnlyAccessOps.requireCanonical(access)
         with(AccessPathBaseSerializer) { writeAccessPathBase(base) }
         with(exclusionSetSerializer) { writeExclusionSet(exclusions) }
-        writeInt(access.size)
-        access.forEachAccessorIdx { idx ->
-            val accessor = manager.interner.accessor(idx) ?: error("Accessor not found: $idx")
-            writeLong(context.getIdByAccessor(accessor))
-        }
-        writeBoolean(access.isSuffixAbstract)
+        writeSlot(access.staticIdx)
+        writeSlot(access.fieldIdx)
+        writeSlot(access.suffixIdx)
+        writeByte(access.valueAccessorState.encoded)
     }
 
     private fun DataInputStream.readFact(): DeserializedFact {
         val base = with(AccessPathBaseSerializer) { readAccessPathBase() }
         val exclusions = with(exclusionSetSerializer) { readExclusionSet() }
-        val size = readInt()
-        val accessors = IntArray(size) {
-            val accessor = context.getAccessorById(readLong())
-            manager.interner.index(accessor)
+        val staticIdx = readSlot()
+        val fieldIdx = readSlot()
+        val suffixIdx = readSlot()
+        val valueAccessorState = BaseOnlyValueAccessorState.decode(readUnsignedByte())
+        val access = BaseOnlyAccessOps.requireCanonical(
+            packBaseOnlyAccess(staticIdx, fieldIdx, suffixIdx, valueAccessorState)
+        )
+        return DeserializedFact(base, exclusions, access)
+    }
+
+    private fun DataOutputStream.writeSlot(idx: AccessorIdx) {
+        when (idx) {
+            NO_ACCESSOR, ABSTRACT_MARK -> writeByte(idx)
+            else -> {
+                writeByte(ACCESSOR_SLOT)
+                val accessor = manager.interner.accessor(idx) ?: error("Accessor not found: $idx")
+                writeLong(context.getIdByAccessor(accessor))
+            }
         }
-        val isAbstract = readBoolean()
-        return DeserializedFact(base, exclusions, BaseOnlyAccessOps.build(accessors, isAbstract))
+    }
+
+    private fun DataInputStream.readSlot(): AccessorIdx = when (val tag = readByte().toInt()) {
+        NO_ACCESSOR, ABSTRACT_MARK -> tag
+        ACCESSOR_SLOT -> manager.interner.index(context.getAccessorById(readLong()))
+        else -> error("Unexpected BaseOnly access slot tag: $tag")
     }
 
     private class DeserializedFact(
@@ -65,4 +83,8 @@ internal class BaseOnlySerializer(
         val exclusions: ExclusionSet,
         val access: BaseOnlyAccess,
     )
+
+    private companion object {
+        const val ACCESSOR_SLOT = 0
+    }
 }

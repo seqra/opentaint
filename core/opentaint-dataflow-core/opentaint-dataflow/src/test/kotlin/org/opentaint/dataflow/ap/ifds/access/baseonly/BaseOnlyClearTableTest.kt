@@ -5,11 +5,14 @@ import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
+import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.TYPE_INFO_GROUP_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.VALUE_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
 import java.io.File
 import kotlin.test.Test
@@ -18,10 +21,9 @@ import kotlin.test.assertEquals
 // Pin for BaseOnlyAccessOps.clear (the `clearAccessor` operation, spec:
 // docs/superpowers/specs/2026-07-13-baseonly-clearaccessor-spec.md). Over the full enumerated
 // fact x accessor universe (both modes) it asserts the implementation equals `expectedClear`,
-// the spec's denotational reference: clearAccessor(a) = drop every path that begins with `a`;
-// on a single BaseOnly path that is kill iff `a` equals the fact's first accessor (or a==ANY and
-// that first accessor is structural), else keep; head absent (wildcard/empty) keeps. The first
-// accessor of a type-info fact is the transparent type-info-group. Also writes a readable table.
+// the spec's denotational reference: clearAccessor(a) = drop every path that begins with `a`.
+// Ordinarily this kills a fact exactly when `a` is its first accessor. The compact value-accessor
+// state makes Normal and Value roots distinct, so clear removes exactly one fact.
 class BaseOnlyClearTableTest {
     private val base = AccessPathBase.Argument(0)
 
@@ -57,8 +59,8 @@ class BaseOnlyClearTableTest {
         listOf(NO_ACCESSOR, interner.index(s1), interner.index(s2))
 
     private fun BaseOnlyApManager.fields(): List<Int> =
-        if (fieldSensitive) listOf(NO_ACCESSOR, interner.index(f1), interner.index(f2), ELEMENT_ACCESSOR_IDX)
-        else listOf(NO_ACCESSOR)
+        if (fieldSensitive) listOf(NO_ACCESSOR, ANY_ACCESSOR_IDX, interner.index(f1), interner.index(f2), ELEMENT_ACCESSOR_IDX)
+        else listOf(NO_ACCESSOR, ANY_ACCESSOR_IDX)
 
     private fun BaseOnlyApManager.facts(): List<BaseOnlyAccess> {
         val out = LinkedHashSet<BaseOnlyAccess>()
@@ -80,6 +82,7 @@ class BaseOnlyClearTableTest {
         "\$" to FINAL_ACCESSOR_IDX,
         "!t1" to interner.index(t1),
         "!t2" to interner.index(t2),
+        "val" to interner.index(ValueAccessor),
         "tig" to TYPE_INFO_GROUP_ACCESSOR_IDX,
         "ty1" to interner.index(ty1),
     )
@@ -91,8 +94,10 @@ class BaseOnlyClearTableTest {
         interner.index(f2) -> "f2"
         interner.index(t1) -> "t1"
         interner.index(t2) -> "t2"
+        interner.index(ValueAccessor) -> "val"
         interner.index(ty1) -> "ty1"
         ELEMENT_ACCESSOR_IDX -> "[el]"
+        ANY_ACCESSOR_IDX -> "ANY"
         TYPE_INFO_GROUP_ACCESSOR_IDX -> "tig"
         else -> "#$idx"
     }
@@ -120,24 +125,28 @@ class BaseOnlyClearTableTest {
 
     // Reference clearAccessor, independent of the implementation: clearAccessor(a) removes every
     // ground path that begins with `a`. On a single BaseOnly path that is:
-    //   - head absent (wildcard-covered / empty core): still denotes non-`a` paths -> keep.
-    //   - a == first accessor, or a == ANY and the first accessor is structural -> null.
+    //   - head absent: the direct path is unaffected unless its own suffix is removed;
+    //   - a == first accessor -> null;
     //   - otherwise -> keep.
-    // The first accessor is the head of the canonical accessor sequence; for a type-info fact it
-    // is the transparent type-info-group. It NEVER strips-and-promotes a tail; that is readAccessor.
+    // Compact terminals retain their covering state when either one of their two root branches is
+    // removed. Clear never strips and promotes a tail; that is readAccessor.
     private fun firstAccessor(a: BaseOnlyAccess): Int? = when {
         a.staticIdx >= 0 -> a.staticIdx
         a.fieldIdx >= 0 -> a.fieldIdx
         a.suffixIdx < 0 -> null
         a.suffixIdx == FINAL_ACCESSOR_IDX -> FINAL_ACCESSOR_IDX
-        a.suffixIdx.isTypeInfoAccessor() -> TYPE_INFO_GROUP_ACCESSOR_IDX
+        a.suffixIdx.isTypeInfoAccessor() && a.valueAccessorState == BaseOnlyValueAccessorState.Value ->
+            TYPE_INFO_GROUP_ACCESSOR_IDX
         else -> a.suffixIdx
     }
 
     private fun expectedClear(access: BaseOnlyAccess, idx: Int): BaseOnlyAccess? {
+        if (access.staticIdx == NO_ACCESSOR && access.fieldIdx == NO_ACCESSOR && access.hasSemanticMark) {
+            return access
+        }
         val head = firstAccessor(access) ?: return access
-        val matched = if (idx == ANY_ACCESSOR_IDX) head.isStructuralIdx() else head == idx
-        return if (matched) null else access
+        if (head != idx) return access
+        return null
     }
 
     // cell text: current result, and "|ref" appended only when the reference differs.

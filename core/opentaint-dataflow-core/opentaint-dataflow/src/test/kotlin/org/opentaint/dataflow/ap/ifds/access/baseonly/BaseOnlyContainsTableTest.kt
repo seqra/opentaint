@@ -112,7 +112,7 @@ class BaseOnlyContainsTableTest {
         sb.appendLine("================================================================")
         sb.appendLine("BASE-ONLY contains PIN — mode fieldSensitive=${m.fieldSensitive}")
         sb.appendLine("cell = F_row(final).contains(F_col(initial));  T = contained, . = not")
-        sb.appendLine("contains(i) = sameBase && containsAccess(access, i.access)   [identity | abstract-prefix wildcard | symmetric field-[any] w/ suffix+static exact]")
+        sb.appendLine("contains(i) = sameBase && containsProjected(access, i.access)   [directional coverage plus the documented missing-structural projection match]")
         sb.appendLine("================================================================")
         sb.appendLine()
 
@@ -158,7 +158,7 @@ class BaseOnlyContainsTableTest {
             val mech = when {
                 !cc -> "identity (non-identity!)"
                 facts[fi].hasAp -> "containsAccess(abstract-prefix wildcard)"
-                else -> "containsAccess(symmetric field-[any]; suffix+static exact)"
+                else -> "covers(directional virtual field-[any]; suffix+static exact)"
             }
             sb.appendLine("  %-14s contains %-14s : %s".format(labels[fi], labels[ii], mech))
         }
@@ -188,7 +188,13 @@ class BaseOnlyContainsTableTest {
         if (golden == null) {
             println("PIN contains mode$mode: no golden resource yet — wrote actual to ${scratch.path}")
         } else {
-            assertEquals(golden.readText().trimEnd(), actual.trimEnd(), "contains behaviour changed for mode $mode")
+            fun String.normalizeLineEnds(): String =
+                lineSequence().joinToString("\n") { it.trimEnd() }.trimEnd()
+            assertEquals(
+                golden.readText().normalizeLineEnds(),
+                actual.normalizeLineEnds(),
+                "contains behaviour changed for mode $mode",
+            )
         }
     }
 
