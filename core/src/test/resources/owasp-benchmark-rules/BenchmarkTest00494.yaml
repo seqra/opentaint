@@ -1,9 +1,0 @@
-rules:
-  - id: owasp-securecookie-00494
-    languages: [python]
-    severity: ERROR
-    message: "Cookie set without the Secure flag (CWE-614)"
-    metadata:
-      cwe: CWE-614
-    patterns:
-      - pattern: $RESP.set_cookie(..., secure=False, ...)
