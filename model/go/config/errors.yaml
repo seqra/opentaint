@@ -36,6 +36,6 @@ passThrough:
   - from: arg(*)
     to: result
   - from:
-      - arg(*)
+      - arg(0)
       - '[*]'
     to: result
