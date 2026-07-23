@@ -7,9 +7,7 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.script.ScriptEngineFactory#getOutputStatement
   signature: (java.lang.String) java.lang.String
@@ -36,22 +34,23 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: javax.script.AbstractScriptEngine#getScriptContext
   signature: (javax.script.Bindings) javax.script.ScriptContext
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#<rule-storage>#java.lang.Object
-    to: result
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
+    to:
+    - result
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
   - from:
     - this
-    - .javax.script.ScriptEngine#<rule-storage>#java.lang.Object
-    to: result
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
+    to:
+    - result
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.ScriptEngineFactory#getProgram
   signature: (java.lang.String[]) java.lang.String
   taintCopyOnly: true
@@ -91,7 +90,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
     to: result
 - function: javax.script.ScriptContext#setBindings
   signature:
@@ -117,9 +116,7 @@ passThrough:
   signature: (javax.script.Bindings) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.script.ScriptEngineManager#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.script.Bindings#put
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
   copy:
@@ -128,10 +125,6 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
   - from: arg(1)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
 - function: javax.script.AbstractScriptEngine#<init>
   signature: (javax.script.Bindings) void
@@ -139,11 +132,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptEngine#<rule-storage>#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#<rule-storage>#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.Bindings#remove
   signature: (java.lang.Object) java.lang.Object
   copy:
@@ -151,16 +145,14 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.script.ScriptContext#getAttribute
   signature: (java.lang.String, int) java.lang.Object
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.Bindings#put
   signature: (java.lang.String, java.lang.Object) java.lang.Object
@@ -170,35 +162,25 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
   - from: arg(1)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
 - function: javax.script.ScriptContext#setAttribute
   signature: (java.lang.String, java.lang.Object, int) void
   copy:
-  - from: arg(0)
+  - from: arg(1)
     to:
     - this
-    - .javax.script.ScriptContext#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
 - function: javax.script.ScriptEngineManager#getBindings
   signature: () javax.script.Bindings
   copy:
-  - from:
-    - this
-    - .javax.script.ScriptEngineManager#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.script.AbstractScriptEngine#getContext
   signature: () javax.script.ScriptContext
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.script.ScriptEngine#<rule-storage>#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
     to: result
   - from:
     - this
@@ -231,20 +213,20 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptEngine#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptEngine#bindings#javax.script.Bindings
 - function: javax.script.ScriptContext#removeAttribute
   signature: (java.lang.String, int) java.lang.Object
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.ScriptContext#getAttribute
   signature: (java.lang.String) java.lang.Object
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.ScriptEngine#getBindings
   signature:
@@ -319,11 +301,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptEngine#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.AbstractScriptEngine#<rule-storage>#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
 - function: javax.script.AbstractScriptEngine#setContext
   signature:
     params:
@@ -342,14 +320,6 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .javax.script.Bindings#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.script.SimpleBindings#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: javax.script.ScriptContext#setBindings
   signature: (javax.script.Bindings, int) void
@@ -357,7 +327,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptContext#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.AbstractScriptEngine#getScriptContext
   signature:
     return: javax.script.ScriptContext
@@ -387,5 +357,5 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptEngine#<rule-storage>#java.lang.Object
+    - .javax.script.ScriptEngine#bindings#javax.script.Bindings
     to: result
