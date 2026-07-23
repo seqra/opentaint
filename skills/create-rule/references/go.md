@@ -117,3 +117,4 @@ Unchanged, with one Go difference: a dropped library function on the failing sam
 - The typed-receiver form needs the pointer where the API is pointer-receiver (`($R : *http.Request)`); a value receiver omits the `*`
 - Without the `pattern-inside: import "pkg"` guard a bare call pattern fires in unrelated files
 - A wrong argument position in a sink focuses the wrong parameter — point `focus-metavariable` at the tainted one
+- Don't unpack or grep the analyzer JAR or the go-ssa-server binary for built-in rules — their internals aren't a stable API; read the YAMLs from the path `opentaint health --rules` prints

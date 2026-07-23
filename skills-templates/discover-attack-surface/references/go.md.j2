@@ -24,6 +24,8 @@ Run `go` commands from a module directory (a `goProjects.projectDir` from `proje
 
 **The plan's scope is an entry scope, not the whole surface.** The extractor sees only package-qualified selectors (`gin.New`, `jwt.Parse`); it is structurally blind to method calls on receiver values (`c.Query(…)`, `db.QueryContext(…)`) — the dominant Go idiom and the exact shape of most accessor sources and sinks — and to members reached through interface dispatch, reflection, struct-embedding promotion, router/handler registration, config strings, or generated code absent from the source tree. Treat the plan as *which packages, constructors, and package-level functions the project touches*, then read the app source and the dependency's source to add the methods called on those values and the indirectly reached members, and classify those too. Do not enumerate the whole module API.
 
+Inspect only the project's own source and the dependency's source — never the analyzer JAR or the go-ssa-server binary.
+
 Classifying:
 
 - **sources** — where untrusted data first enters from a boundary: a method that *returns* attacker-controlled data (`(*http.Request).FormValue`, a framework context accessor, a message-broker payload). Not a method that merely passes along data it was handed — that is a propagator the engine already handles

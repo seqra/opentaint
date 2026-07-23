@@ -113,6 +113,18 @@ Beyond the body's checks, confirm the file still opens with `language: go` and t
 
 ## Verification is the scan
 
+Only when this skill runs standalone — never under the orchestrator, whose scan phase already verifies the config — a compiled model on hand catches YAML load/parse errors early. It proves the file loads, nothing about propagation:
+
+```bash
+opentaint scan --project-model <any-compiled-model> \
+  -o .opentaint/test-results/<name>/passthrough-loadcheck.sarif \
+  --ruleset builtin \
+  --passthrough-models <config-file>
+```
+
+A config error aborts the scan with the parse/load message.
+
+
 There is no test project for a passThrough. The project scan applies the config and the scan agent reports back; the failure shapes map to distinct causes:
 
 - *every* function in the file still dropped, with no load error → the whole file was silently skipped: check the `language: go` header
