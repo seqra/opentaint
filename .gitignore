@@ -16,6 +16,10 @@
 *.so
 *.dylib
 
+# Python specific
+__pycache__/
+*.py[cod]
+
 # Environment and configuration files
 .env
 .env.local
