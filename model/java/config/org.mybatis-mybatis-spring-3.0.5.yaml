@@ -5,11 +5,6 @@ dependencies:
 - org.springframework:spring-tx:6.1.5
 passThrough:
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
   copy:
   - from: arg(0)
     to:
@@ -32,11 +27,6 @@ passThrough:
     - this
     - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionFactory#org.apache.ibatis.session.SqlSessionFactory
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
   copy:
   - from:
     - this
@@ -52,8 +42,3 @@ passThrough:
     to:
     - this
     - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionTemplate#org.mybatis.spring.SqlSessionTemplate
-- function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionFactory
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
