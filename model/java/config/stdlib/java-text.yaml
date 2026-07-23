@@ -649,20 +649,6 @@ passThrough:
     to:
     - result
     - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
-- function:
-    package: java.text
-    class: DecimalFormatSymbols
-    name:
-      pattern: set.+
-  signature:
-    params:
-    - index: 0
-      type: java.util.Currency
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
 - function: java.text.DecimalFormatSymbols#<init>
   signature: (java.util.Locale) void
   copy:
@@ -1514,3 +1500,17 @@ passThrough:
     - arg(0)
     - '[*]'
     to: this
+- function: java.text.DecimalFormatSymbols#setCurrency
+  signature: (java.util.Currency) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+- function: java.text.DecimalFormatSymbols#getLocale
+  signature: () java.util.Locale
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    to: result
