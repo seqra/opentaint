@@ -42,8 +42,10 @@ abstract class SemgrepRuleProvider<RuleItem, ResolvedRule>(
         selectedRuleIds: Set<String>,
     ): Reduction {
         val sources = structure.sources.map { reduceGroup(it, selectedRuleIds) }.filter { it.applicable }
+        if (structure.sources.isNotEmpty() && sources.isEmpty()) return Reduction(false, emptySet())
+
         val sinks = structure.sinks.map { reduceGroup(it, selectedRuleIds) }.filter { it.applicable }
-        if (sources.isEmpty() || sinks.isEmpty()) return Reduction(false, emptySet())
+        if (structure.sinks.isNotEmpty() && sinks.isEmpty()) return Reduction(false, emptySet())
 
         val otherGroups = (structure.propagators + structure.sanitizers)
             .map { reduceGroup(it, selectedRuleIds) }

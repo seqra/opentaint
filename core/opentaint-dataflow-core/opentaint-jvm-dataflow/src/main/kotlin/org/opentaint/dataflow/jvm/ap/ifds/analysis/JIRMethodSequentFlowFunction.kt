@@ -62,6 +62,7 @@ class JIRMethodSequentFlowFunction(
         }
 
         applyUnconditionalSources()
+        applyUnconditionalSinks()
     }
 
     override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {
@@ -621,6 +622,17 @@ class JIRMethodSequentFlowFunction(
         // todo: hack to drop global state var after exit sink
         val factsToDrop = taintUtil.allEvaluatedFacts.filter { it.base is AccessPathBase.ClassStatic }
         factsToDrop to taintUtil.factsAfterSink
+    }
+
+    private fun applyUnconditionalSinks() = with(analysisContext.taint) {
+        if (currentInst !is JIRReturnInst) return
+
+        val sinkRules = sinkRulesForMethodExit(currentInst, fact = null, initialFacts = null).toList()
+        sinkRules.forEach {
+            if (it.condition.isTrue) {
+                // todo: unconditional exit sink
+            }
+        }
     }
 
     private fun applyMethodExitSourceRules(

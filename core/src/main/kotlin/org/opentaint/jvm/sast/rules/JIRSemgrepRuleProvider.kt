@@ -89,24 +89,24 @@ class JIRSemgrepRuleProvider(
     ): Iterable<TaintMethodExitSink> =
         base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant).select()
 
-    override fun passTroughRulesForMethod(
-        method: CommonMethod,
-        statement: CommonInst?,
-        fact: FactAp?,
-        allRelevant: Boolean
-    ) = base.passTroughRulesForMethod(method, statement, fact, allRelevant).select()
-
-    override fun cleanerRulesForMethod(
-        method: CommonMethod,
-        statement: CommonInst,
-        fact: FactAp?,
-        allRelevant: Boolean
-    ) = base.cleanerRulesForMethod(method, statement, fact, allRelevant).select()
-
     override fun sourceRulesForStaticField(
         field: JIRField,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
     ) = base.sourceRulesForStaticField(field, statement, fact, allRelevant).select()
+
+    override fun passTroughRulesForMethod(
+        method: CommonMethod,
+        statement: CommonInst?,
+        fact: FactAp?,
+        allRelevant: Boolean
+    ) = base.passTroughRulesForMethod(method, statement, fact, allRelevant)
+
+    override fun cleanerRulesForMethod(
+        method: CommonMethod,
+        statement: CommonInst,
+        fact: FactAp?,
+        allRelevant: Boolean
+    ) = base.cleanerRulesForMethod(method, statement, fact, allRelevant)
 }
