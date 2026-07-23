@@ -236,7 +236,9 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
   - from:
     - this
@@ -347,7 +349,9 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
   - from:
     - this
@@ -365,7 +369,9 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
 - function: javax.faces.model.DataModelEvent#getRowData
   signature: () java.lang.Object
   copy:

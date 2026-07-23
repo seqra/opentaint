@@ -21,16 +21,6 @@ passThrough:
     - this
     - .org.w3c.dom.Node#<rule-storage>#java.lang.Object
     to: result
-- function: org.w3c.dom.Node#setNodeValue
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: org.w3c.dom.Node#getPrefix
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.w3c.dom.Document#createElementNS
   taintCopyOnly: true
   copy:
@@ -67,11 +57,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-- function: org.w3c.dom.Node#getNodeName
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.w3c.dom.Document#createComment
   taintCopyOnly: true
   copy:
@@ -81,16 +66,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-- function: org.w3c.dom.Node#getAttributes
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getNodeValue
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.w3c.dom.Node#getNextSibling
   copy:
   - from: this
@@ -140,11 +115,6 @@ passThrough:
   - from:
     - this
     - .org.w3c.dom.Node#<rule-storage>#java.lang.Object
-    to: result
-- function: org.w3c.dom.Node#getChildNodes
-  taintCopyOnly: true
-  copy:
-  - from: this
     to: result
 - function: org.w3c.dom.Node#setNodeValue
   signature:
@@ -240,20 +210,10 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: org.w3c.dom.Node#getOwnerDocument
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.w3c.dom.Document#createProcessingInstruction
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: result
-- function: org.w3c.dom.Node#getTextContent
-  taintCopyOnly: true
-  copy:
-  - from: this
     to: result
 - function: org.w3c.dom.Document#createElement
   taintCopyOnly: true

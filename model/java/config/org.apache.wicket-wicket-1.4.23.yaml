@@ -3,7 +3,9 @@ library: org.apache.wicket:wicket:1.4.23
 passThrough:
 - function: org.apache.wicket.Component#setComponentBorder
   copy:
-  - from: this
+  - from:
+    - this
+    - .org.apache.wicket.Component#componentBorder#java.lang.Object
     to: result
   - from:
     - this
@@ -15,13 +17,17 @@ passThrough:
     to: result
 - function: org.apache.wicket.Component#locateMarkupStream
   copy:
-  - from: this
+  - from:
+    - this
+    - .org.apache.wicket.Component#markupStream#java.lang.Object
     to: result
   - from:
     - this
     - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .org.apache.wicket.Component#markupStream#java.lang.Object
     to: result
   - from:
     - this
@@ -29,7 +35,9 @@ passThrough:
     to: result
 - function: org.apache.wicket.Component#setMarkupStream
   copy:
-  - from: this
+  - from:
+    - this
+    - .org.apache.wicket.Component#markupStream#java.lang.Object
     to: result
   - from:
     - this
@@ -37,7 +45,9 @@ passThrough:
     to: result
 - function: org.apache.wicket.Component#findMarkupStream
   copy:
-  - from: this
+  - from:
+    - this
+    - .org.apache.wicket.Component#markupStream#java.lang.Object
     to: result
   - from:
     - this

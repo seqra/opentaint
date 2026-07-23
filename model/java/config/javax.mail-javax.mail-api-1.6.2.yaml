@@ -21,7 +21,9 @@ passThrough:
     - this
     - .javax.mail.Multipart#<rule-storage>#java.lang.Object
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
 - function: javax.mail.Folder#getMessages
   signature: (int[]) javax.mail.Message[]
   copy:
@@ -34,8 +36,6 @@ passThrough:
     - this
     - .javax.mail.Multipart#<rule-storage>#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: javax.mail.Part#getDisposition
   signature: () java.lang.String
   copy:
@@ -43,7 +43,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#disposition#java.lang.Object
     to: result
 - function: javax.mail.Multipart#getParent
   signature: () javax.mail.Part
@@ -52,7 +54,9 @@ passThrough:
     - this
     - .javax.mail.Multipart#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Multipart#parent#java.lang.Object
     to: result
 - function: javax.mail.Header#<init>
   signature: (java.lang.String, java.lang.String) void
@@ -85,7 +89,37 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#content#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#contentType#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#description#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#disposition#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#fileName#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#headers#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#inputStream#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#text#java.lang.Object
     to: result
 - function: javax.mail.Message#getReplyTo
   signature: () javax.mail.Address[]
@@ -98,7 +132,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Message#replyTo#java.lang.Object
     to: result
 - function: javax.mail.Part#getInputStream
   signature: () java.io.InputStream
@@ -107,7 +143,37 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#content#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#contentType#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#description#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#disposition#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#fileName#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#headers#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#inputStream#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#text#java.lang.Object
     to: result
 - function: javax.mail.Folder#getMessage
   signature: (int) javax.mail.Message
@@ -132,7 +198,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Message#recipients#java.lang.Object
     to: result
 - function: javax.mail.Folder#search
   signature: (javax.mail.search.SearchTerm) javax.mail.Message[]
@@ -176,7 +244,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Message#from#java.lang.Object
     to: result
 - function: javax.mail.Part#getAllHeaders
   signature: () java.util.Enumeration
@@ -185,7 +255,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
 - function: javax.mail.Message#getFolder
   signature: () javax.mail.Folder
@@ -198,7 +270,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Message#folder#java.lang.Object
     to: result
 - function: javax.mail.Header#getValue
   signature: () java.lang.String
@@ -221,7 +295,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
 - function: javax.mail.Folder#getParent
   signature: () javax.mail.Folder
@@ -231,7 +307,9 @@ passThrough:
 - function: javax.mail.Multipart#addBodyPart
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -243,7 +321,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#fileName#java.lang.Object
     to: result
 - function: javax.mail.Folder#getFullName
   signature: () java.lang.String
@@ -252,8 +332,6 @@ passThrough:
     to: result
 - function: javax.mail.Multipart#getBodyPart
   copy:
-  - from: this
-    to: result
   - from:
     - this
     - .javax.mail.Multipart#<rule-storage>#java.lang.Object
@@ -265,7 +343,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
 - function: javax.mail.Part#getHeader
   signature: (java.lang.String) java.lang.String[]
@@ -274,7 +354,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
 - function: javax.mail.Part#setText
   signature: (java.lang.String) void
@@ -284,7 +366,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.mail.Part#text#java.lang.Object
 - function: javax.mail.Message#addRecipient
   signature: (javax.mail.Message$RecipientType, javax.mail.Address) void
   copy:
@@ -297,7 +381,9 @@ passThrough:
     - this
     - .javax.mail.Message#<rule-storage>#java.lang.Object
   - from: arg(1)
-    to: this
+    to:
+    - this
+    - .javax.mail.Message#recipients#java.lang.Object
 - function:
     package: javax.mail
     class: Multipart
@@ -317,7 +403,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#description#java.lang.Object
     to: result
 - function: javax.mail.Message#getSubject
   signature: () java.lang.String
@@ -330,7 +418,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Message#subject#java.lang.Object
     to: result
 - function: javax.mail.Part#getContentType
   signature: () java.lang.String
@@ -339,7 +429,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Part#contentType#java.lang.Object
     to: result
 - function: javax.mail.Message#getRecipients
   signature: (javax.mail.Message$RecipientType) javax.mail.Address[]
@@ -352,7 +444,9 @@ passThrough:
     - this
     - .javax.mail.Part#<rule-storage>#java.lang.Object
     to: result
-  - from: this
+  - from:
+    - this
+    - .javax.mail.Message#recipients#java.lang.Object
     to: result
 - function: javax.mail.Folder#listSubscribed
   signature: (java.lang.String) javax.mail.Folder[]
@@ -394,7 +488,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
+    to:
+    - this
+    - .javax.mail.Message#recipients#java.lang.Object
   - from: arg(1)
     to:
     - this
@@ -404,7 +500,9 @@ passThrough:
     - this
     - .javax.mail.Message#<rule-storage>#java.lang.Object
   - from: arg(1)
-    to: this
+    to:
+    - this
+    - .javax.mail.Message#recipients#java.lang.Object
 - function: javax.mail.Folder#getName
   signature: () java.lang.String
   copy:
