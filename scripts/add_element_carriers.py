@@ -49,6 +49,10 @@ def add_carriers(doc: dict, file_rel: str):
             })
             added += 1
         entry["copy"] = new_copies
+    # `added` counts carriers emitted, which can be fewer than the raw I3
+    # finding count: two identical whole-copies in one entry produce two
+    # findings but need only one carrier. The repaired document satisfies the
+    # gate either way -- do not treat `added` as a finding count.
     return doc, added
 
 
