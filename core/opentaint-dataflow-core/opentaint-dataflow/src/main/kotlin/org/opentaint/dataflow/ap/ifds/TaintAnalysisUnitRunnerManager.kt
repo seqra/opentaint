@@ -68,6 +68,9 @@ class TaintAnalysisUnitRunnerManager(
 
     val status = AtomicReference<Status>(Status.OK)
 
+    private lateinit var activeApManager: ApManager
+    val apManager: ApManager get() = activeApManager
+
     private fun updateFailureStatus(status: Status) {
         if (status == Status.OK) return
         this.status.compareAndSet(Status.OK, status)
@@ -121,6 +124,12 @@ class TaintAnalysisUnitRunnerManager(
         summarySerializationContext.flush()
     }
 
+    fun resetApManager(manager: ApManager) {
+        this.activeApManager = manager
+        runnerForUnit.elements().iterator().forEach { it.resetApManager(manager) }
+        unitStorage.elements().iterator().forEach { it.resetApManager(manager) }
+    }
+
     fun runAnalysis(
         startMethods: List<MethodWithContext>,
         timeout: Duration,
@@ -129,6 +138,10 @@ class TaintAnalysisUnitRunnerManager(
         cancellation.activate()
 
         val timeStart = TimeSource.Monotonic.markNow()
+
+        runnerForUnit.entries.forEach { (u, r) ->
+            startRunner(u, r)
+        }
 
         val unitStartMethods = startMethods.groupBy { unitResolver.resolve(it.method) }.filterKeys { it != UnknownUnit }
 
@@ -171,6 +184,7 @@ class TaintAnalysisUnitRunnerManager(
                     progress.cancelAndJoin()
                     runnerJobs.forEach { it.cancel() }
                     runnerJobs.joinAll()
+                    runnerJobs.clear()
                 }
 
                 reportRunnerProgress(currentProgress)
@@ -453,6 +467,12 @@ class TaintAnalysisUnitRunnerManager(
             taintRulesStatsSamplingPeriod = taintRulesStatsSamplingPeriod
         )
 
+        startRunner(unit, runner)
+
+        return runner
+    }
+
+    private fun startRunner(unit: UnitType, runner: TaintAnalysisUnitRunner) {
         val exceptionHandler = CoroutineExceptionHandler { _, exception ->
             if (exception is Cancellation.Cancelled) {
                 logger.error { "Cancelled: $unit, stopping analysis" }
@@ -466,8 +486,6 @@ class TaintAnalysisUnitRunnerManager(
 
         val job = analyzerScope.launch(exceptionHandler) { runner.runLoop() }
         runnerJobs.add(job)
-
-        return runner
     }
 
     fun handleEventEnqueued() {

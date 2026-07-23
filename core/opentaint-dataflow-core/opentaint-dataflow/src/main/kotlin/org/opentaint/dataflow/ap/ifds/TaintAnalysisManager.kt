@@ -9,6 +9,13 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.util.analysis.ApplicationGraph
 
 interface TaintAnalysisManager : AnalysisManager {
+    sealed interface Phase {
+        data object Prescan : Phase
+        data object FullScan : Phase
+    }
+
+    fun selectPhase(phase: Phase)
+
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,

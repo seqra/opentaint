@@ -8,10 +8,15 @@ import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import java.util.concurrent.ConcurrentHashMap
 
 open class MethodSummariesUnitStorage(
-    private val apManager: ApManager,
+    private var apManager: ApManager,
     private val languageManager: LanguageManager,
 ) {
-    private val methodSummaries = ConcurrentHashMap<MethodEntryPoint, SummaryEdgeStorageWithSubscribers>()
+    private var methodSummaries = ConcurrentHashMap<MethodEntryPoint, SummaryEdgeStorageWithSubscribers>()
+
+    open fun resetApManager(apManager: ApManager) {
+        this.apManager = apManager
+        methodSummaries = ConcurrentHashMap<MethodEntryPoint, SummaryEdgeStorageWithSubscribers>()
+    }
 
     fun cleanup() {
         methodSummaries.elements().asSequence().forEach { it.cleanup() }
