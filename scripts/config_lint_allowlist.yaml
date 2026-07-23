@@ -1,0 +1,13 @@
+renderers:
+  - toString
+  - hashCode
+  - getContent
+  - getInputStream
+  - getRequestLine
+  - getHostURL
+  - writeXml
+source_fed_slots:
+  - .javax.servlet.ServletRequest#content#java.lang.Object
+  - .javax.servlet.ServletRequest#parameters#java.lang.Object
+  - .jakarta.servlet.ServletRequest#content#java.lang.Object
+  - .jakarta.servlet.ServletRequest#parameters#java.lang.Object

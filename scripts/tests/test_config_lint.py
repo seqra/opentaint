@@ -139,3 +139,87 @@ def test_scalar_typed_slot_target_needs_a_carrier(tmp_path):
         """)
     findings = cl.check_element_carrier(cl.load_entries(root))
     assert [f.code for f in findings] == ["I3"]
+
+
+def test_property_extraction():
+    assert cl.property_of("getResponseBody") == "responsebody"
+    assert cl.property_of("setPath") == "path"
+    assert cl.property_of("addRequestHeader") == "requestheader"
+    assert cl.property_of("toString") is None
+
+
+ALLOW = {"renderers": ["toString"], "source_fed_slots": []}
+
+
+def test_shared_slot_across_properties_is_flagged(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function: p.C#getResponseBody
+          copy:
+          - from:
+            - this
+            - .p.C#bag#java.lang.Object
+            to: result
+        """)
+    findings = cl.check_shared_slot(cl.load_entries(root), ALLOW)
+    assert [f.code for f in findings] == ["I1"]
+    assert "setPath" in findings[0].detail and "getResponseBody" in findings[0].detail
+
+
+def test_same_property_through_one_slot_is_fine(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#path#java.lang.Object
+        - function: p.C#getPath
+          copy:
+          - from:
+            - this
+            - .p.C#path#java.lang.Object
+            to: result
+        """)
+    assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
+
+
+def test_renderer_reading_every_slot_is_exempt(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#path#java.lang.Object
+        - function: p.C#toString
+          copy:
+          - from:
+            - this
+            - .p.C#path#java.lang.Object
+            to: result
+        """)
+    assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
+
+
+def test_write_only_slot_is_flagged(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """)
+    findings = cl.check_orphan_slots(cl.load_entries(root), ALLOW)
+    assert [f.code for f in findings] == ["I2"]
+    assert "never read" in findings[0].detail

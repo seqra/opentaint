@@ -197,3 +197,73 @@ def check_element_carrier(entries) -> list:
                 f"{'.'.join(c.frm)} (type {src_t}) -> {'.'.join(c.to)} (type {dst_t}) "
                 f"has no explicit [*] carrier"))
     return findings
+
+
+_PREFIXES = ("set", "get", "add", "is", "put", "has")
+
+
+def property_of(method: str):
+    for p in _PREFIXES:
+        if method.startswith(p) and len(method) > len(p):
+            return method[len(p):].lower()
+    return None
+
+
+def load_allowlist(path: str) -> dict:
+    with open(path) as fh:
+        doc = yaml.safe_load(fh) or {}
+    return {
+        "renderers": list(doc.get("renderers") or []),
+        "source_fed_slots": list(doc.get("source_fed_slots") or []),
+    }
+
+
+def _slot_usage(entries):
+    """slot -> (writers, readers) as sets of (file, method)."""
+    writers, readers = {}, {}
+    for e in entries:
+        if not isinstance(e.func, str) or "#" not in e.func:
+            continue
+        method = e.func.rsplit("#", 1)[1]
+        for c in e.copies:
+            for side, acc in ((c.to, writers), (c.frm, readers)):
+                for a in side[1:]:
+                    if a == "[*]":
+                        continue
+                    acc.setdefault(a, set()).add((e.file, method))
+    return writers, readers
+
+
+def check_shared_slot(entries, allow) -> list:
+    renderers = set(allow["renderers"])
+    writers, readers = _slot_usage(entries)
+    findings = []
+    for slot in sorted(set(writers) & set(readers)):
+        for wfile, wm in sorted(writers[slot]):
+            wp = property_of(wm)
+            for rfile, rm in sorted(readers[slot]):
+                if rm in renderers or wm in renderers:
+                    continue
+                rp = property_of(rm)
+                if wp is None or rp is None or wp == rp:
+                    continue
+                findings.append(Finding(
+                    "I1", wfile, slot,
+                    f"{wm} writes and {rm} reads the same slot {slot}"))
+    return findings
+
+
+def check_orphan_slots(entries, allow) -> list:
+    exempt = set(allow["source_fed_slots"])
+    writers, readers = _slot_usage(entries)
+    findings = []
+    for slot in sorted(set(writers) | set(readers)):
+        if slot in exempt:
+            continue
+        if slot not in readers:
+            f = sorted(writers[slot])[0]
+            findings.append(Finding("I2", f[0], slot, f"{slot} is written ({f[1]}) but never read"))
+        elif slot not in writers:
+            f = sorted(readers[slot])[0]
+            findings.append(Finding("I2", f[0], slot, f"{slot} is read ({f[1]}) but never written"))
+    return findings
