@@ -200,7 +200,7 @@ class MethodTaintConfigurationResolver(
             TaintMethodSink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
-                ruleId(), meta(), info
+                ruleId(), meta(), info, id
             )
         }
 
@@ -208,7 +208,7 @@ class MethodTaintConfigurationResolver(
             TaintMethodExitSink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
-                ruleId(), meta(), info
+                ruleId(), meta(), info, id
             )
         }
 
@@ -216,7 +216,7 @@ class MethodTaintConfigurationResolver(
             TaintMethodEntrySink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
-                ruleId(), meta(), info
+                ruleId(), meta(), info, id
             )
         }
 

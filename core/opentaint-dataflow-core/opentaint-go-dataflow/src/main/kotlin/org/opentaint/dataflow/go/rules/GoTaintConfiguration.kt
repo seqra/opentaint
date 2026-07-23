@@ -234,7 +234,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         val id = rule.id ?: generateRuleId(rule)
         val meta = rule.meta ?: defaultMeta(signature.name)
 
-        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta, rule.info)
+        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta, rule.info, rule.id)
     }
 
     private fun List<GoSerializedAssignAction>.specialize(signature: GoFunctionSignature) = flatMap { t ->
