@@ -31,6 +31,19 @@ class JoinRightCompositionStrategy<Item, Cond, Assign, Clean>(
         return strategy.posContainsAnyMark(pos, leftFinalMarks)
     }
 
+    override fun stateContainsOnAnyField(
+        state: TaintRegisterStateAutomata.State,
+        varName: MetavarAtom,
+        pos: PositionBaseWithModifiers
+    ): Cond? {
+        if (varName != initialVar) return null
+        val value = state.register.assignedVars[varName]
+        if (value != initialStateId) return null
+
+        val builder = strategy.conditionBuilder
+        return builder.or(leftFinalMarks.map { builder.checkTaintMarkOnAnyField(it, pos) })
+    }
+
     override fun stateAccessedMarks(
         state: TaintRegisterStateAutomata.State,
         varName: MetavarAtom

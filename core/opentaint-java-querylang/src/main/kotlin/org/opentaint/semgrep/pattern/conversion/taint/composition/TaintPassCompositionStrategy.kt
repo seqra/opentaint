@@ -28,6 +28,16 @@ class TaintPassCompositionStrategy<Item, Cond, Assign, Clean>(
         return markRequires.build(strategy.conditionBuilder, pos)
     }
 
+    override fun stateContainsOnAnyField(
+        state: TaintRegisterStateAutomata.State,
+        varName: MetavarAtom,
+        pos: PositionBaseWithModifiers
+    ): Cond? {
+        val value = state.register.assignedVars[varName]
+        if (value != initialStateId) return null
+        return markRequires.buildOnAnyField(strategy.conditionBuilder, pos)
+    }
+
     override fun stateAssign(
         state: TaintRegisterStateAutomata.State,
         varName: MetavarAtom,
