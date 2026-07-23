@@ -223,3 +223,42 @@ def test_write_only_slot_is_flagged(tmp_path):
     findings = cl.check_orphan_slots(cl.load_entries(root), ALLOW)
     assert [f.code for f in findings] == ["I2"]
     assert "never read" in findings[0].detail
+
+
+def test_container_role_slot_is_not_a_leak(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#addAll
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .java.lang.Iterable#Element#java.lang.Object
+        - function: p.C#getFirst
+          copy:
+          - from:
+            - this
+            - .java.lang.Iterable#Element#java.lang.Object
+            to: result
+        """)
+    assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
+
+
+def test_allowlisted_shared_slot_is_not_a_leak(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function: p.C#getResponseBody
+          copy:
+          - from:
+            - this
+            - .p.C#bag#java.lang.Object
+            to: result
+        """)
+    allow = dict(ALLOW, shared_slots=[".p.C#bag#java.lang.Object"])
+    assert cl.check_shared_slot(cl.load_entries(root), allow) == []

@@ -201,6 +201,11 @@ def check_element_carrier(entries) -> list:
 
 _PREFIXES = ("set", "get", "add", "is", "put", "has")
 
+# Slot roles that denote a container's contents rather than a named property.
+# Every accessor of a collection legitimately reads and writes these, so the
+# property-mismatch rule does not apply to them.
+CONTAINER_ROLES = {"Element", "Key", "Value", "MapKey", "MapValue", "Entry"}
+
 
 def property_of(method: str):
     for p in _PREFIXES:
@@ -209,12 +214,18 @@ def property_of(method: str):
     return None
 
 
+def _slot_role(slot: str):
+    parts = slot.split("#")
+    return parts[1] if len(parts) == 3 else None
+
+
 def load_allowlist(path: str) -> dict:
     with open(path) as fh:
         doc = yaml.safe_load(fh) or {}
     return {
         "renderers": list(doc.get("renderers") or []),
         "source_fed_slots": list(doc.get("source_fed_slots") or []),
+        "shared_slots": list(doc.get("shared_slots") or []),
     }
 
 
@@ -236,9 +247,12 @@ def _slot_usage(entries):
 
 def check_shared_slot(entries, allow) -> list:
     renderers = set(allow["renderers"])
+    shared = set(allow.get("shared_slots") or ())
     writers, readers = _slot_usage(entries)
     findings = []
     for slot in sorted(set(writers) & set(readers)):
+        if _slot_role(slot) in CONTAINER_ROLES or slot in shared:
+            continue
         for wfile, wm in sorted(writers[slot]):
             wp = property_of(wm)
             for rfile, rm in sorted(readers[slot]):
