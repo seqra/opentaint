@@ -11,7 +11,9 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .java.text.DecimalFormat#pattern#java.lang.String
 - function: java.text.DateFormatSymbols#getInstanceRef
   signature: (*) java.text.DateFormatSymbols
   copy:
@@ -73,15 +75,6 @@ passThrough:
     - index: 0
       type: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
   - from: arg(0)
     to:
     - this
@@ -241,7 +234,9 @@ passThrough:
   signature: (java.lang.String, boolean) void
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .java.text.DecimalFormat#pattern#java.lang.String
 - function: java.text.DecimalFormatSymbols#<init>
   signature:
     params:
@@ -965,20 +960,6 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormat#pattern#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
 - function:
     package: java.text
     class: DecimalFormat
@@ -1083,15 +1064,6 @@ passThrough:
   signature:
     return: java.lang.String
   copy:
-  - from:
-    - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
-    to: result
   - from:
     - this
     - .java.text.DecimalFormat#pattern#java.lang.String
