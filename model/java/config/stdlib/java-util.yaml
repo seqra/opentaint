@@ -191,12 +191,8 @@ passThrough:
   signature: (double[], int, int) double[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Set#copyOf
   signature: (java.util.Collection) java.util.Set
   overrides: false
@@ -366,12 +362,8 @@ passThrough:
   signature: (double[], int) double[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Set#of
   signature: (java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
@@ -538,12 +530,8 @@ passThrough:
   signature: (byte[], int, int) byte[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Arrays#spliterator
   signature: (long[], int, int) java.util.Spliterator$OfLong
   taintCopyOnly: true
@@ -554,12 +542,8 @@ passThrough:
   signature: (short[], int, int) short[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Enumeration#<init>
   bypassVerification: true
   copy:
@@ -571,12 +555,6 @@ passThrough:
     - .java.util.Enumeration#Element#java.lang.Object
   - from: arg(0)
     to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.util.Enumeration#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -876,12 +854,8 @@ passThrough:
   signature: (short[], int) short[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.EventObject#getSource
   signature: () java.lang.Object
   copy:
@@ -1693,12 +1667,8 @@ passThrough:
   signature: (java.lang.Object[], int, java.lang.Class) java.lang.Object[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.AbstractMap$SimpleEntry#<init>
   signature: (java.util.Map$Entry) void
   overrides: false
@@ -1730,12 +1700,8 @@ passThrough:
   signature: (byte[], int) byte[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Optional#ofNullable
   signature: (java.lang.Object) java.util.Optional
   copy:
@@ -2242,12 +2208,8 @@ passThrough:
   signature: (int[], int) int[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.NavigableMap#lowerEntry
   signature: (java.lang.Object) java.util.Map$Entry
   copy:
@@ -2284,12 +2246,8 @@ passThrough:
   signature: (char[], int) char[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.NavigableSet#ceiling
   signature: (java.lang.Object) java.lang.Object
   copy:
@@ -2501,12 +2459,6 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -2703,12 +2655,8 @@ passThrough:
   signature: (int[], int, int) int[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Spliterators#spliteratorUnknownSize
   signature:
     params:
@@ -2880,12 +2828,8 @@ passThrough:
   signature: (boolean[], int, int) boolean[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Optional#flatMap
   signature: (java.util.function.Function) java.util.Optional
   copy:
@@ -2944,12 +2888,8 @@ passThrough:
   signature: (java.lang.Object[], int, int) java.lang.Object[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.SequencedMap#pollFirstEntry
   copy:
   - from:
@@ -3051,12 +2991,8 @@ passThrough:
   signature: (float[], int, int) float[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.PriorityQueue#<init>
   signature: (java.util.Collection) void
   overrides: false
@@ -3942,16 +3878,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Set#of
-  signature: (java.lang.Object[]) java.util.Set
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Optional#orElse
   signature: (java.lang.Object) java.lang.Object
   taintCopyOnly: true
@@ -4021,12 +3947,8 @@ passThrough:
   signature: (long[], int, int) long[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.LinkedList#addLast
   signature: (java.lang.Object) void
   copy:
@@ -4128,12 +4050,8 @@ passThrough:
   signature: (boolean[], int) boolean[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Scanner#reset
   signature: () java.util.Scanner
   copy:
@@ -4206,12 +4124,6 @@ passThrough:
     - .java.util.Iterator#Element#java.lang.Object
   - from: arg(0)
     to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.util.Iterator#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -4227,12 +4139,8 @@ passThrough:
   signature: (long[], int) long[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.List#<init>
   copy:
   - from: arg(0)
@@ -4827,12 +4735,8 @@ passThrough:
   signature: (float[], int) float[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.Collections#unmodifiableSortedSet
   signature: (java.util.SortedSet) java.util.SortedSet
   overrides: false
@@ -4847,12 +4751,8 @@ passThrough:
   signature: (java.lang.Object[], int) java.lang.Object[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: java.util
     class: Collections
@@ -4925,12 +4825,6 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -5426,16 +5320,6 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     to: result
-- function: java.util.List#of
-  signature: (java.lang.Object[]) java.util.List
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Collections#checkedNavigableMap
   signature: (java.util.NavigableMap, java.lang.Class, java.lang.Class) java.util.NavigableMap
   copy:
@@ -5600,12 +5484,8 @@ passThrough:
   signature: (java.lang.Object[], int, int, java.lang.Class) java.lang.Object[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.LinkedList#getFirst
   signature: () java.lang.Object
   copy:
@@ -6219,12 +6099,8 @@ passThrough:
   signature: (char[], int, int) char[]
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: java.util.StringJoiner#merge
   signature: (java.util.StringJoiner) java.util.StringJoiner
   overrides: false

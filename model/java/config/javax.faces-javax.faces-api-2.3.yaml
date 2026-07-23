@@ -155,12 +155,6 @@ passThrough:
   - from:
     - arg(3)
     - '[*]'
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
-  - from:
-    - arg(3)
-    - '[*]'
     to: this
   - from: arg(3)
     to:
@@ -226,24 +220,6 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.faces.model.ArrayDataModel#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
@@ -319,12 +295,6 @@ passThrough:
     - arg(0)
     - '[*]'
     to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this

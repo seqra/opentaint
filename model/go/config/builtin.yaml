@@ -11,18 +11,6 @@ passThrough:
     package: <builtin>
     name: append
     receiver: false
-  taintCopyOnly: true
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
-- function:
-    package: <builtin>
-    name: append
-    receiver: false
   copy:
   - from: arg(1)
     to: result
@@ -47,27 +35,11 @@ passThrough:
     to: arg(0)
 - function:
     package: <builtin>
-    name: copy
-    receiver: false
-  taintCopyOnly: true
-  copy:
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - arg(0)
-    - '[*]'
-- function:
-    package: <builtin>
     name: max
     receiver: false
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: result
-  - from:
-      - arg(*)
-      - '[*]'
     to: result
 - function:
     package: <builtin>
@@ -76,10 +48,6 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: result
-  - from:
-      - arg(*)
-      - '[*]'
     to: result
 - function:
     package: <builtin>

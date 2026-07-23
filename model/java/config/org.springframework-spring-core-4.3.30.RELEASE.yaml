@@ -10,15 +10,7 @@ passThrough:
 - function: org.springframework.util.StringUtils#mergeStringArrays
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result

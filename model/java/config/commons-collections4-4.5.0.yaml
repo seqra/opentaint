@@ -1898,12 +1898,6 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from:
-    - arg(0)
     - .java.lang.Iterable#Element#java.lang.Object
     to:
     - result
@@ -6224,15 +6218,6 @@ passThrough:
     to:
     - this
     - .org.apache.commons.collections4.Get#MapValue#java.lang.Object
-- function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (*, boolean) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .org.apache.commons.collections4.keyvalue.MultiKey#Element#java.lang.Object
 - function: org.apache.commons.collections4.collection.PredicatedCollection$Builder#rejectedElements
   copy:
   - from:
@@ -8192,15 +8177,6 @@ passThrough:
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-- function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (*) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .org.apache.commons.collections4.keyvalue.MultiKey#Element#java.lang.Object
 - function: org.apache.commons.collections4.CollectionUtils#selectRejected
   signature: (*, *, *) *
   copy:

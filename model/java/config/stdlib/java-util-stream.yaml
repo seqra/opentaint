@@ -133,15 +133,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.stream.Stream#of
-  signature: (java.lang.Object[]) java.util.stream.Stream
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.stream.Stream#findAny
   signature: () java.util.Optional
   copy:

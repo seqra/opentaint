@@ -410,38 +410,14 @@ passThrough:
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], java.lang.String[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
+  - from: arg(0)
     to:
     - this
     - .java.sql.ResultSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.sql.rowset.CachedRowSet#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
     - .javax.sql.rowset.JoinRowSet#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.sql.rowset.JoinRowSet#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.sql.rowset.WebRowSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -453,38 +429,14 @@ passThrough:
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], int[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
+  - from: arg(0)
     to:
     - this
     - .java.sql.ResultSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.sql.rowset.CachedRowSet#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
     - .javax.sql.rowset.JoinRowSet#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.sql.rowset.JoinRowSet#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.sql.rowset.WebRowSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this

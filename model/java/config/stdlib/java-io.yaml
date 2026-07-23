@@ -85,12 +85,6 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.io.ObjectOutput#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: this
   - from: arg(0)
     to:
@@ -246,18 +240,6 @@ passThrough:
 - function: java.io.ByteArrayOutputStream#write
   signature: (byte[], int, int) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.io.ByteArrayOutputStream#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.io.OutputStream#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -326,12 +308,6 @@ passThrough:
 - function: java.io.OutputStream#write
   signature: (byte[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.io.OutputStream#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
