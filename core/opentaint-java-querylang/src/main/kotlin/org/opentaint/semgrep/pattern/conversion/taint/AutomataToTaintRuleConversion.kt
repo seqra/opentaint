@@ -95,7 +95,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertMatchingRuleToT
             convertAutomataToTaintRules(strategy, r.metaVarInfo, r.rule, RuleUniqueMarkPrefix(ruleId, modeModifier, idx))
         }
 
-        rules?.let { TaintRuleFromSemgrep.TaintRuleGroup(it) }
+        rules
     }
 
     if (ruleGroups.isEmpty()) {
@@ -110,7 +110,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertAutomataToTaint
     metaVarInfo: ResolvedMetaVarInfo,
     taintAutomata: TaintRegisterStateAutomata,
     markPrefix: RuleUniqueMarkPrefix,
-): List<Item> {
+): TaintRuleFromSemgrep.TaintRuleGroup<Item> {
     val automataWithVars = TaintRegisterStateAutomataWithStateVars(
         taintAutomata,
         initialStateVars = emptySet(),
@@ -119,7 +119,8 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertAutomataToTaint
     val taintEdges = generateTaintAutomataEdges(automataWithVars, metaVarInfo)
     val ctx = TaintRuleGenerationCtx(markPrefix, taintEdges, compositionStrategy = null, strategy)
 
-    return strategy.generateTaintRules(ctx, this, SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION)
+    val rules = strategy.generateTaintRules(ctx, this, SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION)
+    return ctx.createRuleGroup(rules)
 }
 
 private data class RegisterVarPosition(val varName: MetavarAtom, val positions: MutableSet<PositionBase>)
@@ -231,7 +232,7 @@ private enum class TaintEdgeKind {
 }
 
 fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<SerializedItem> {
-    val rules = mutableListOf<SerializedItem>()
+    val rules = mutableListOf<Pair<TaintRuleEdge, SerializedItem>>()
 
     fun evaluateWithStateCheck(edge: TaintRuleEdge, kind: TaintEdgeKind, state: State): List<EvaluatedEdgeCondition> =
         evaluateMethodConditionAndEffect(kind, state, edge.edgeCondition, edge.edgeEffect, ctx.trace)
@@ -241,7 +242,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
         val state = ruleEdge.stateFrom
 
         for (condition in evaluateWithStateCheck(ruleEdge, TaintEdgeKind.POSITIVE, state)) {
-            rules += condition.additionalFieldRules
+            rules += condition.additionalFieldRules.map { ruleEdge to it }
 
             val actions = buildStateAssignAction(ruleEdge.stateTo, condition)
             if (actions.isEmpty()) continue
@@ -265,7 +266,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                         generateMethodEndSource(cond, actions, info)
                     }
                 }
-            }
+            }.map { ruleEdge to it }
         }
     }
 
@@ -273,7 +274,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
         val state = ruleEdge.stateFrom
 
         for (condition in evaluateWithStateCheck(ruleEdge, TaintEdgeKind.POSITIVE, state)) {
-            rules += condition.additionalFieldRules
+            rules += condition.additionalFieldRules.map { ruleEdge to it }
 
             rules += generateRules(condition.ruleCondition) { function, cond ->
                 val afterSinkActions = buildStateAssignAction(ruleEdge.stateTo, condition)
@@ -299,7 +300,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                         generateEndSink(cond, afterSinkActions, ctx.ruleId, ctx.meta)
                     }
                 }
-            }
+            }.map { ruleEdge to it }
         }
     }
 
@@ -307,7 +308,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
         val state = ruleEdge.stateFrom
 
         for (condition in evaluateWithStateCheck(ruleEdge, TaintEdgeKind.CLEANER, state)) {
-            rules += condition.additionalFieldRules
+            rules += condition.additionalFieldRules.map { ruleEdge to it }
 
             val actions = buildStateCleanAction(ruleEdge.stateTo, state, condition)
             if (actions.isEmpty()) continue
@@ -326,13 +327,41 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                                 info = edgeRuleInfo(ruleEdge)
                             )
                         )
-                    }
+                    }.map { ruleEdge to it }
                 }
             }
         }
     }
 
-    return rules
+    return rules.map { (edge, item) ->
+        val itemWithId = item.withId(ctx.nextSerializedItemId(item.typeLabel()))
+        registerSerializedItem(edge, requireNotNull(itemWithId.id))
+        itemWithId
+    }
+}
+
+private fun SerializedItem.typeLabel(): String = when (this) {
+    is SerializedRule.EntryPoint -> "entry-point"
+    is SerializedRule.Source -> "source"
+    is SerializedRule.Cleaner -> "cleaner"
+    is SerializedRule.PassThrough -> "pass-through"
+    is SerializedRule.Sink -> "sink"
+    is SerializedRule.MethodExitSink -> "method-exit-sink"
+    is SerializedRule.MethodEntrySink -> "method-entry-sink"
+    is SerializedRule.MethodExitSource -> "method-exit-source"
+    is SerializedFieldRule.SerializedStaticFieldSource -> "static-field-source"
+}
+
+private fun SerializedItem.withId(id: String): SerializedItem = when (this) {
+    is SerializedRule.EntryPoint -> copy(id = id)
+    is SerializedRule.Source -> copy(id = id)
+    is SerializedRule.Cleaner -> copy(id = id)
+    is SerializedRule.PassThrough -> copy(id = id)
+    is SerializedRule.Sink -> copy(id = id)
+    is SerializedRule.MethodExitSink -> copy(id = id)
+    is SerializedRule.MethodEntrySink -> copy(id = id)
+    is SerializedRule.MethodExitSource -> copy(id = id)
+    is SerializedFieldRule.SerializedStaticFieldSource -> copy(id = id)
 }
 
 private fun JavaTaintRuleGenerationCtx.buildStateAssignAction(

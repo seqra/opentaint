@@ -77,7 +77,7 @@ class TestAnalysisRunner(
                 get() = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
             override fun analysisGraph() = ifdsAnalysisGraph
-            override fun analysisManager() = JIRAnalysisManager(cp, configProvider)
+            override fun analysisManager() = JIRAnalysisManager(cp, refManager, configProvider)
             override fun unitResolver() = object :JIRUnitResolver {
                 override fun locationIsUnknown(loc: RegisteredLocation): Boolean =
                     loc.isRuntime

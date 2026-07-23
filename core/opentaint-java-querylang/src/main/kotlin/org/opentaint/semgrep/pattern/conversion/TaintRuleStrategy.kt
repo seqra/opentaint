@@ -16,6 +16,8 @@ interface TaintRuleStrategy<R, Cond, Assign, Clean> {
         sinkDiscardMode: SinkDiscardMode
     ): List<R>
 
+    fun serializedItemId(item: R): String?
+
     val conditionBuilder: MarkConditionBuilder<Cond>
 
     fun posContainsAnyMark(pos: PositionBaseWithModifiers, marks: Set<Mark.GeneratedMark>): Cond

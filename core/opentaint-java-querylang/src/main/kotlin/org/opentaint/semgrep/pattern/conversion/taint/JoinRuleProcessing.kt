@@ -180,7 +180,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
     val leftRules = leftCtx.mapNotNull {
         safeConvertToTaintRules {
             val generatedRules = strategy.generateTaintRules(it, this, SinkDiscardMode.NONE)
-            TaintRuleFromSemgrep.TaintRuleGroup(generatedRules)
+            it.createRuleGroup(generatedRules)
         }
     }
 
@@ -232,7 +232,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
                 return@safeConvertToTaintRules null
             }
 
-            TaintRuleFromSemgrep.TaintRuleGroup(generatedRules)
+            it.createRuleGroup(generatedRules)
         }
     }
 

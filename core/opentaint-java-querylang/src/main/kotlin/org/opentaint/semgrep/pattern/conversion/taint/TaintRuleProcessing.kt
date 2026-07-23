@@ -62,7 +62,7 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintRuleToTaintRules(
     val taintRules = taintCtx.flatMap {
         safeConvertToTaintRules {
             val generatedRules = strategy.generateTaintRules(it, this, SinkDiscardMode.TRIVIAL_CONDITION)
-            listOf(TaintRuleFromSemgrep.TaintRuleGroup(generatedRules))
+            listOf(it.createRuleGroup(generatedRules))
         }.orEmpty()
     }
 

@@ -11,7 +11,11 @@ data class TaintRuleFromSemgrep<R>(
 ) {
     val size: Int get() = taintRules.sumOf { it.size }
 
-    data class TaintRuleGroup<R>(val rules: List<R>) {
+    data class TaintRuleGroup<R>(
+        val rules: List<R>,
+        val ruleDependencies: Map<String, Set<String>> = emptyMap(),
+        val finalRuleIds: Set<String> = emptySet(),
+    ) {
         val size: Int get() = rules.size
     }
 }
