@@ -260,3 +260,7 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
