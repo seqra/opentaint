@@ -15,12 +15,6 @@ passThrough:
 - function: javax.naming.directory.SearchControls#<init>
   signature: (int, long, int, java.lang.String[], boolean, boolean) void
   copy:
-  - from:
-    - arg(3)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.directory.SearchControls#<rule-storage>#java.lang.Object
   - from: arg(3)
     to:
     - this
@@ -153,12 +147,6 @@ passThrough:
 - function: javax.naming.directory.SearchControls#setReturningAttributes
   signature: (java.lang.String[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.directory.SearchControls#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this

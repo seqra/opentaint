@@ -32,29 +32,11 @@ passThrough:
   - from:
     - arg(2)
     - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(2)
-    - '[*]'
     to: this
-  - from:
-    - arg(2)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.SortResponseControl#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
     - .javax.naming.ldap.SortResponseControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(2)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.Control#<rule-storage>#java.lang.Object
   - from: arg(2)
     to:
     - this
@@ -186,29 +168,11 @@ passThrough:
   - from:
     - arg(2)
     - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(2)
-    - '[*]'
     to: this
-  - from:
-    - arg(2)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.PagedResultsResponseControl#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
     - .javax.naming.ldap.PagedResultsResponseControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(2)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.Control#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -393,19 +357,7 @@ passThrough:
   - from:
     - arg(2)
     - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(2)
-    - '[*]'
     to: this
-  - from:
-    - arg(2)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.Control#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -429,12 +381,6 @@ passThrough:
     - arg(1)
     - '[*]'
     to: this
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.ExtendedRequest#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -677,24 +623,6 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.Control#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.SortControl#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -751,24 +679,6 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.BasicControl#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.Control#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.naming.ldap.SortControl#<rule-storage>#java.lang.Object
   - from: arg(0)
     to:
     - this

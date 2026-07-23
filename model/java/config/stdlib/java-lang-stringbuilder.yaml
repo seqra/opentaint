@@ -73,19 +73,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
@@ -276,19 +264,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -422,19 +398,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
@@ -562,19 +526,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -753,19 +705,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (char[]) java.lang.StringBuffer
   copy:
@@ -794,19 +734,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
@@ -1138,19 +1066,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (char[], int, int) java.lang.StringBuffer
   copy:
@@ -1179,19 +1095,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -1391,19 +1295,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, char[]) java.lang.StringBuffer
   copy:
@@ -1432,19 +1324,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
@@ -1671,19 +1551,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, char[], int, int) java.lang.StringBuffer
   copy:
@@ -1712,19 +1580,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -1954,19 +1810,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (char[]) java.lang.StringBuilder
   copy:
@@ -1995,19 +1839,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
@@ -2297,19 +2129,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (char[], int, int) java.lang.StringBuilder
   copy:
@@ -2338,19 +2158,7 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -2550,19 +2358,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, char[]) java.lang.StringBuilder
   copy:
@@ -2591,19 +2387,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
@@ -2830,19 +2614,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, char[], int, int) java.lang.StringBuilder
   copy:
@@ -2871,19 +2643,7 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to:
-    - this
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
     to: result
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.CharSequence#<rule-storage>#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:

@@ -169,7 +169,8 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
-- function: org.springframework.core.io.ClassRelativeResourceLoader$ClassRelativeContextResource#createRelative
+- function: 
+    org.springframework.core.io.ClassRelativeResourceLoader$ClassRelativeContextResource#createRelative
   signature: (*) org.springframework.core.io.Resource
   copy:
   - from:
@@ -300,12 +301,8 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: org.springframework.util.LinkedMultiValueMap#<init>
   signature: (java.util.Map) *
   overrides: false
@@ -704,7 +701,8 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: org.springframework.core.io.DefaultResourceLoader$ClassPathContextResource#createRelative
+- function: 
+    org.springframework.core.io.DefaultResourceLoader$ClassPathContextResource#createRelative
   signature: (*) org.springframework.core.io.Resource
   copy:
   - from:
@@ -756,12 +754,8 @@ passThrough:
 - function: org.springframework.util.StringUtils#sortStringArray
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: org.springframework.util.AutoPopulatingList#<init>
   signature: (java.util.List, java.lang.Class) *
   overrides: false
@@ -820,7 +814,8 @@ passThrough:
     - .java.io.File#uri#java.net.URI
     - .java.net.URI#value#java.lang.String
 - function: org.springframework.util.AutoPopulatingList#<init>
-  signature: (java.util.List, org.springframework.util.AutoPopulatingList$ElementFactory) *
+  signature: (java.util.List, org.springframework.util.AutoPopulatingList$ElementFactory)
+    *
   overrides: false
   copy:
   - from:
@@ -1194,12 +1189,8 @@ passThrough:
   overrides: false
   bypassVerification: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: org.springframework.util.MultiValueMapAdapter#<init>
   overrides: false
   copy:
@@ -1573,12 +1564,8 @@ passThrough:
 - function: org.springframework.util.StringUtils#removeDuplicateStrings
   overrides: false
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: org.springframework.util.StringUtils#trimAllWhitespace
   copy:
   - from: arg(0)
@@ -1904,12 +1891,8 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function: org.springframework.util.MultiValueMap#set
   copy:
   - from: arg(1)

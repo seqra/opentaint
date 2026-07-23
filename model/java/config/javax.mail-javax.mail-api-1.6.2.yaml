@@ -405,18 +405,6 @@ passThrough:
     - .javax.mail.Message#<rule-storage>#java.lang.Object
   - from: arg(1)
     to: this
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
 - function: javax.mail.Folder#getName
   signature: () java.lang.String
   copy:
