@@ -20,35 +20,44 @@ def _as_tuple(v):
     return tuple(v) if isinstance(v, list) else (v,)
 
 
+def _entry_of(file_rel, entry, copies):
+    return cl.Entry(file_rel, entry.get("function"), entry.get("signature"),
+                     [cl.Copy(_as_tuple(c["from"]), _as_tuple(c["to"])) for c in copies])
+
+
+def _find_culprit(file_rel, entry, copies, finding_count):
+    """The copy whose removal makes an I3 finding disappear -- i.e. the copy
+    the gate is blaming. Consults check_element_carrier as a black box: this
+    function never re-derives *when* a carrier is needed (that is entirely
+    the gate's call), only *which* already-flagged copy a finding names, so
+    the fix set can never drift from what I3 actually checks.
+    """
+    for i in range(len(copies)):
+        trial = copies[:i] + copies[i + 1:]
+        if len(cl.check_element_carrier([_entry_of(file_rel, entry, trial)])) < finding_count:
+            return i
+    return None
+
+
 def add_carriers(doc: dict, file_rel: str):
     added = 0
     for entry in doc.get("passThrough") or []:
-        copies = entry.get("copy") or []
-        e = cl.Entry(file_rel, entry.get("function"), entry.get("signature"),
-                     [cl.Copy(_as_tuple(c["from"]), _as_tuple(c["to"])) for c in copies])
-        missing = cl.check_element_carrier([e])
-        if not missing:
-            continue
-        present = {(c.frm, c.to) for c in e.copies}
-        new_copies = list(copies)
-        for c in e.copies:
-            if "[*]" in c.frm or "[*]" in c.to:
-                continue
-            src_t = cl.position_type(e, c.frm)
-            if src_t is None or not src_t.endswith("[]"):
-                continue
-            if cl._dst_holds_element(e, c.to):
-                continue
-            carrier = (c.frm + ("[*]",), c.to)
-            if carrier in present:
-                continue
-            present.add(carrier)
-            new_copies.append({
-                "from": list(carrier[0]),
-                "to": list(carrier[1]) if len(carrier[1]) > 1 else carrier[1][0],
+        copies = list(entry.get("copy") or [])
+        while True:
+            findings = cl.check_element_carrier([_entry_of(file_rel, entry, copies)])
+            if not findings:
+                break
+            culprit = _find_culprit(file_rel, entry, copies, len(findings))
+            if culprit is None:
+                break  # defensive: no single copy's removal explains the finding
+            c = cl.Copy(_as_tuple(copies[culprit]["from"]), _as_tuple(copies[culprit]["to"]))
+            carrier_from, carrier_to = c.frm + ("[*]",), c.to
+            copies.append({
+                "from": list(carrier_from),
+                "to": list(carrier_to) if len(carrier_to) > 1 else carrier_to[0],
             })
             added += 1
-        entry["copy"] = new_copies
+        entry["copy"] = copies
     # `added` counts carriers emitted, which can be fewer than the raw I3
     # finding count: two identical whole-copies in one entry produce two
     # findings but need only one carrier. The repaired document satisfies the
