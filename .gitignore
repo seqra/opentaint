@@ -27,6 +27,10 @@ config.local.*
 /install/
 core/**/bin/
 
+# Python build artifacts
+__pycache__/
+*.pyc
+
 # Ignore all hidden files and directories
 .*
 

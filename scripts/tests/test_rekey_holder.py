@@ -51,30 +51,30 @@ def test_entry_with_no_copies_left_is_dropped():
 
 
 def test_entry_without_a_copy_key_is_preserved():
-    doc = {"passThrough": [
-        {"function": "p.C#m", "condition": {"tainted": "arg(0)"}},
-        {"function": "p.C#n", "copy": []},
-    ]}
+    kept = {"function": "p.C#m", "condition": {"tainted": "arg(0)"}}
+    empty = {"function": "p.C#n", "copy": []}
+    doc = {"passThrough": [kept, empty]}
     out = rh.collapse(doc, {"p.C"})
-    assert out["passThrough"] == [
-        {"function": "p.C#m", "condition": {"tainted": "arg(0)"}},
-        {"function": "p.C#n", "copy": []},
+    assert out["passThrough"][0] is kept
+    assert out["passThrough"][1] is empty
+
+
+def test_untargeted_entry_keeps_its_duplicate_copies():
+    # 101 entries in the real config carry literal duplicate copies. The
+    # transform must not tidy them up when it was not asked to touch the entry.
+    doc = {"passThrough": [{
+        "function": "p.C#m",
+        "copy": [{"from": "arg(0)", "to": "this"},
+                 {"from": "arg(0)", "to": "this"}],
+    }]}
+    out = rh.collapse(doc, {"other.Class"})
+    assert out["passThrough"][0]["copy"] == [
+        {"from": "arg(0)", "to": "this"},
+        {"from": "arg(0)", "to": "this"},
     ]
 
 
-def test_entry_emptied_by_the_collapse_is_still_dropped():
-    doc = {"passThrough": [{
-        "function": "p.C#m",
-        "copy": [{"from": ["this", ".p.C#<rule-storage>#java.lang.Object"],
-                  "to": ["result", ".p.C#<rule-storage>#java.lang.Object"]},
-                 {"from": "this", "to": "result"}],
-    }]}
-    out = rh.collapse(doc, {"p.C"})
-    assert len(out["passThrough"]) == 1
-    assert out["passThrough"][0]["copy"] == [{"from": "this", "to": "result"}]
-
-
-def test_entry_whose_only_copy_collapses_to_a_self_copy_is_dropped():
+def test_entry_whose_only_copy_collapses_to_a_self_copy_is_kept():
     doc = {"passThrough": [
         {"function": "p.C#m",
          "copy": [{"from": ["this", ".p.C#<rule-storage>#java.lang.Object"],
