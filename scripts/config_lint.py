@@ -416,6 +416,12 @@ def main(argv=None) -> int:
     if not os.path.isfile(args.allowlist):
         print(f"error: allowlist not found: {args.allowlist}", file=sys.stderr)
         return 2
+    if args.compare_ref is not None:
+        try:
+            _git(["rev-parse", "--verify", f"{args.compare_ref}^{{commit}}"], args.root)
+        except RuntimeError as exc:
+            print(f"error: --compare-ref {args.compare_ref}: {exc}", file=sys.stderr)
+            return 2
     changed = set(args.changed) if args.changed is not None else None
     try:
         failures, reports, preexisting_changed = run(

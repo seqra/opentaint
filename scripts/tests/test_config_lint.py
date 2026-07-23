@@ -502,3 +502,16 @@ def test_compare_ref_unresolvable_exits_2(tmp_path, capsys):
                   "--changed", "x.yaml", "--compare-ref", "not-a-real-ref"])
     assert rc == 2
     assert "not-a-real-ref" in capsys.readouterr().err
+
+
+def test_main_rejects_an_unresolvable_compare_ref_without_changed(tmp_path, capsys):
+    repo, git = init_git_repo(tmp_path)
+    (repo / "x.yaml").write_text(yaml_doc(_MATCHED_PAIR_ITEM))
+    git("add", "x.yaml")
+    git("commit", "-q", "-m", "initial")
+
+    allow_path = write_allow(tmp_path)
+    rc = cl.main(["--root", str(repo), "--allowlist", allow_path,
+                  "--compare-ref", "not-a-real-ref-xyz"])
+    assert rc == 2
+    assert "not-a-real-ref-xyz" in capsys.readouterr().err
