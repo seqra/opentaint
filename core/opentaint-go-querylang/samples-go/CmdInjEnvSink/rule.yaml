@@ -10,14 +10,14 @@ rules:
     pattern-sinks:
       - pattern-either:
           - patterns:
-              - pattern: $C*.CombinedOutput()
+              - pattern: $*C.CombinedOutput()
               - focus-metavariable: $C
           - patterns:
-              - pattern: $C*.Run()
+              - pattern: $*C.Run()
               - focus-metavariable: $C
           - patterns:
-              - pattern: $C*.Output()
+              - pattern: $*C.Output()
               - focus-metavariable: $C
           - patterns:
-              - pattern: $C*.Start()
+              - pattern: $*C.Start()
               - focus-metavariable: $C

@@ -8,5 +8,5 @@ rules:
       - pattern: star_01_sink_field.Source(...)
     pattern-sinks:
       - patterns:
-          - pattern: star_01_sink_field.Sink_Box($Y*)
+          - pattern: star_01_sink_field.Sink_Box($*Y)
           - focus-metavariable: $Y

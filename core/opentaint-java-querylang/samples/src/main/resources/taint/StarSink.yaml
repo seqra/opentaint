@@ -11,5 +11,5 @@ rules:
           - focus-metavariable: $X
     pattern-sinks:
       - patterns:
-          - pattern: sink($Y*);
+          - pattern: sink($*Y);
           - focus-metavariable: $Y

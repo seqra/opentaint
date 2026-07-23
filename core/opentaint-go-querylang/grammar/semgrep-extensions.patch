@@ -1,15 +1,16 @@
 --- a/GoLexer.g4
 +++ b/GoLexer.g4
-@@ -69,6 +69,15 @@
+@@ -69,6 +69,16 @@
  TYPE        : 'type';
  VAR         : 'var';
- 
+
 +
 +// --- Semgrep extensions ---
 +LDOTS              : '<...';
 +RDOTS              : '...>' -> mode(NLSEMI);
 +METAVAR_ELLIPSIS   : '$...' [A-Z_] [A-Z_0-9]* -> mode(NLSEMI);
 +ANONYMOUS_METAVAR  : '$_' -> mode(NLSEMI);
++METAVAR_STAR_IDENT : '$*' [A-Z_] [A-Z_0-9]* -> mode(NLSEMI);
 +METAVAR_IDENT      : '$' [A-Z_] [A-Z_0-9]* -> mode(NLSEMI);
 +// --- end semgrep extensions ---
 +
@@ -45,15 +46,16 @@
  
  // Hidden tokens
  
-@@ -210,6 +229,16 @@
+@@ -210,6 +230,17 @@
  fragment UNICODE_LETTER: [\p{L}];
- 
+
  mode NLSEMI;
 +// --- Semgrep extensions in NLSEMI mode ---
 +LDOTS_NLSEMI             : '<...'                            -> type(LDOTS), mode(DEFAULT_MODE);
 +RDOTS_NLSEMI             : '...>'                            -> type(RDOTS);
 +METAVAR_ELLIPSIS_NLSEMI  : '$...' [A-Z_] [A-Z_0-9]*           -> type(METAVAR_ELLIPSIS);
 +ANONYMOUS_METAVAR_NLSEMI : '$_'                              -> type(ANONYMOUS_METAVAR);
++METAVAR_STAR_IDENT_NLSEMI : '$*' [A-Z_] [A-Z_0-9]*           -> type(METAVAR_STAR_IDENT);
 +METAVAR_IDENT_NLSEMI     : '$' [A-Z_] [A-Z_0-9]*              -> type(METAVAR_IDENT);
 +METAVAR_LITERAL_NLSEMI   : '"' '$' [A-Z_] [A-Z_0-9]* '"'      -> type(METAVAR_LITERAL);
 +ELLIPSIS_LITERAL_NLSEMI  : '"' '...' '"'                     -> type(ELLIPSIS_LITERAL);
@@ -64,10 +66,10 @@
  WS_NLSEMI: [ \t]+ -> channel(HIDDEN);
 --- a/GoParser.g4
 +++ b/GoParser.g4
-@@ -39,10 +39,63 @@
+@@ -39,10 +39,52 @@
      superClass = GoParserBase;
  }
- 
+
 +@parser::members {
 +    // Semgrep: enable the `operand` (composite-literal) alternative for a qualified
 +    // type literal `pkg.T{...}`. Without imports the base predicate routes `pkg.T`
@@ -83,17 +85,6 @@
 +            return true;
 +        }
 +        return super.isOperand();
-+    }
-+
-+    // Semgrep: an adjacent postfix star on a metavar (VAR followed by STAR) is a
-+    // whole-object starred metavar. The predicate fires only when METAVAR_IDENT is
-+    // immediately followed by a `*` with no gap, so a spaced `VAR * y` (multiplication)
-+    // and a prefix `*p` (deref) are unaffected.
-+    public boolean metavarStarAdjacent() {
-+        org.antlr.v4.runtime.Token mv = _input.LT(1);
-+        org.antlr.v4.runtime.Token star = _input.LT(2);
-+        return mv != null && star != null && "*".equals(star.getText())
-+            && mv.getStopIndex() + 1 == star.getStartIndex();
 +    }
 +}
 +
@@ -305,10 +296,10 @@
 @@ -424,6 +478,9 @@
  operand
 -    : literal
-+    : {this.metavarStarAdjacent()}? METAVAR_IDENT STAR
++    : METAVAR_STAR_IDENT
 +    | literal
      | operandName typeArgs?
-+    | L_PAREN {this.metavarStarAdjacent()}? METAVAR_IDENT STAR COLON type_ R_PAREN
++    | L_PAREN METAVAR_STAR_IDENT COLON type_ R_PAREN
 +    | L_PAREN METAVAR_IDENT COLON type_ R_PAREN
      | L_PAREN expression R_PAREN
      ;

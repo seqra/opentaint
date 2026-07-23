@@ -10,8 +10,8 @@ rules:
     pattern-sinks:
       - pattern-either:
           - patterns:
-              - pattern: "($C* : *exec.Cmd).Run()"
+              - pattern: "($*C : *exec.Cmd).Run()"
               - focus-metavariable: $C
           - patterns:
-              - pattern: "($C* : *exec.Cmd).CombinedOutput()"
+              - pattern: "($*C : *exec.Cmd).CombinedOutput()"
               - focus-metavariable: $C

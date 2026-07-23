@@ -11,7 +11,7 @@ rules:
           - focus-metavariable: $X
     pattern-sanitizers:
       - patterns:
-          - pattern: clean($C*);
+          - pattern: clean($*C);
           - focus-metavariable: $C
     pattern-sinks:
       - patterns:

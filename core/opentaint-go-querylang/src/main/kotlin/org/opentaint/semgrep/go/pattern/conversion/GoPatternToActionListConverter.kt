@@ -509,8 +509,8 @@ class GoPatternToActionListConverter : ActionListBuilder<SemgrepGoPattern> {
         return transformAssignmentValue(conditions, value)
     }
 
-    // Name + star of an assignment target. A bare `Metavar` (`$X*`) or a typed metavar (`($X* : T)`)
-    // can be starred; other target shapes carry star = false. Threading star lets `$X* = src()` (or
+    // Name + star of an assignment target. A bare `Metavar` (`$*X`) or a typed metavar (`($*X : T)`)
+    // can be starred; other target shapes carry star = false. Threading star lets `$*X = src()` (or
     // its typed form) taint every nested field.
     private data class AssignmentTarget(val name: String, val star: Boolean)
 

@@ -10,7 +10,7 @@ func Source() Data { return Data{Field: "tainted"} }
 
 func Sink(s string) { _ = s }
 
-// Positive_field_read: the starred source ($X* = Source()) taints the whole object
+// Positive_field_read: the starred source ($*X = Source()) taints the whole object
 // AND all its fields; the field read d.Field then reaches the plain sink.
 func Positive_field_read() {
 	d := Source()

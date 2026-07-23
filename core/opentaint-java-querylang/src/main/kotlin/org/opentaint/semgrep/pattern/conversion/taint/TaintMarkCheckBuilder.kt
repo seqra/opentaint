@@ -40,7 +40,7 @@ sealed interface TaintMarkCheckBuilder {
     fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C
 
     // Any-field lift of [build]: every mark leaf becomes a "contains on any field" check on the
-    // same mark and position; boolean structure is preserved. Used by starred ($X*) sinks so the
+    // same mark and position; boolean structure is preserved. Used by starred ($*X) sinks so the
     // any-field arm stays coherent with the composed requires marks (same mark, same base).
     // Defined once by lifting the builder ([AnyFieldLift]) rather than mirroring [build] per case,
     // so a subclass that overrides only [build] cannot desync its any-field arm.

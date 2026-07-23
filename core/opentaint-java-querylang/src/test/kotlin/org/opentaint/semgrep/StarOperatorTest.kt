@@ -9,7 +9,7 @@ import kotlin.test.Test
 
 @TestInstance(PER_CLASS)
 class StarOperatorTest : SampleBasedTest() {
-    // The starred SOURCE ($X* = src()) taints the whole object and every field; a concrete
+    // The starred SOURCE ($*X = src()) taints the whole object and every field; a concrete
     // field read only inherits that taint once the any-accessor is unrolled to a field read.
     // Mirror the Go harness and enable unrolling for THIS sample only (StarSink/StarSanitizer
     // keep the default AnyAccessorDisabled). Removing the source `*` makes the Positive a false

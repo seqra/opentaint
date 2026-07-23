@@ -8,5 +8,5 @@ rules:
       - pattern: $R.FormValue($K)
     pattern-sinks:
       - patterns:
-          - pattern: $W.Write($B*)
+          - pattern: $W.Write($*B)
           - focus-metavariable: $B
