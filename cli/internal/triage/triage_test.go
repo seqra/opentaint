@@ -206,3 +206,53 @@ func TestApplySuppressionStatsCoverTheWholeReport(t *testing.T) {
 		t.Errorf("stats: got %+v", out.View.Suppressions)
 	}
 }
+
+func TestApplyReadOnlyAnnotatesInMemoryWithoutClaimingToWrite(t *testing.T) {
+	// summary never writes the report, but it still needs baselineState on the
+	// in-memory copy so that --baseline-state can filter on it.
+	current := report(result("a", "id-a", "trace-a"), result("b", "id-b", "trace-b"))
+	out, err := Apply(current, Options{
+		Baseline: report(result("a", "id-a", "trace-a")),
+		ReadOnly: true,
+	})
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	states := []string{}
+	for _, r := range current.Results() {
+		if r.BaselineState == nil {
+			t.Fatal("read-only mode must still annotate the in-memory report")
+		}
+		states = append(states, string(*r.BaselineState))
+	}
+	if states[0] != "unchanged" || states[1] != "new" {
+		t.Errorf("states: got %v", states)
+	}
+	if out.Changed {
+		t.Error("read-only mode must never mark the report as needing a write")
+	}
+	if out.View.StateWritten {
+		t.Error("read-only mode must not claim the state was persisted")
+	}
+	if !out.View.ReadOnly {
+		t.Error("the view should record that nothing will be written")
+	}
+}
+
+func TestApplyReadOnlyStillInheritsSuppressions(t *testing.T) {
+	base := result("a", "id-a", "trace-a")
+	if err := sarif.Accept(&base, "admin-only"); err != nil {
+		t.Fatal(err)
+	}
+	current := report(result("a", "id-a", "trace-a"))
+	out, err := Apply(current, Options{Baseline: report(base), ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sarif.IsSuppressed(current.Results()[0]) {
+		t.Error("read-only display must still show inherited suppressions")
+	}
+	if out.Changed {
+		t.Error("read-only mode must not mark the report as changed")
+	}
+}

@@ -20,6 +20,11 @@ type Options struct {
 	WriteBaselineState bool
 	// FingerprintKey selects the identity fingerprint ("" = default).
 	FingerprintKey string
+	// ReadOnly means the caller will never persist the report. The comparison is
+	// still applied to the in-memory copy so that --baseline-state can filter on
+	// it, but nothing is reported as written or changed. This is what summary
+	// uses.
+	ReadOnly bool
 
 	// Accept, Defer and Unsuppress name findings by fingerprint prefix.
 	Accept     []string
@@ -57,7 +62,7 @@ func Apply(report *sarif.Report, opts Options) (*Outcome, error) {
 		return nil, fmt.Errorf("a justification is required to suppress a finding: pass --justification")
 	}
 
-	view := &sarif.TriageView{BaselinePath: opts.BaselinePath}
+	view := &sarif.TriageView{BaselinePath: opts.BaselinePath, ReadOnly: opts.ReadOnly}
 	changed := false
 
 	if opts.Baseline != nil {
@@ -84,13 +89,16 @@ func Apply(report *sarif.Report, opts Options) (*Outcome, error) {
 			return nil, err
 		}
 		view.Comparison = comparison
-		if opts.WriteBaselineState {
+		if opts.WriteBaselineState || opts.ReadOnly {
 			comparison.Apply(report)
-			view.StateWritten = true
-			changed = true
+			view.StateWritten = opts.WriteBaselineState && !opts.ReadOnly
+			changed = changed || view.StateWritten
 		}
 	}
 
+	if opts.ReadOnly {
+		changed = false
+	}
 	if changed {
 		// A report the CLI has written must be citable as the next baseline.
 		sarif.EnsureRunGUIDs(report)

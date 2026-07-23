@@ -11,6 +11,7 @@ import (
 	"github.com/seqra/opentaint/internal/load_trace"
 	"github.com/seqra/opentaint/internal/rules"
 	"github.com/seqra/opentaint/internal/sarif"
+	"github.com/seqra/opentaint/internal/triage"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/seqra/opentaint/internal/version"
 
@@ -38,6 +39,12 @@ type ScanConfig struct {
 	PassthroughApproximations []string
 	DataflowApproximations    []string
 	TrackExternalMethods      bool
+
+	Baseline           string
+	WriteBaselineState bool
+	FingerprintKey     string
+	ErrorOnFindings    bool
+	ErrorOnSeverity    []string
 
 	DebugFactReachabilitySarif            bool
 	DebugRunAnalysisOnSelectedEntryPoints string
@@ -172,6 +179,10 @@ func addScanFlags(cmd *cobra.Command) {
 	addRenamedStringArrayFlag(cmd.Flags(), &scanFlags.DataflowApproximations, "java-models", "dataflow-approximations", "Java dataflow models: a compiled class directory or a Java source directory (repeatable)")
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
+
+	addBaselineFlags(cmd, &scanFlags.Baseline, &scanFlags.FingerprintKey)
+	cmd.Flags().BoolVar(&scanFlags.WriteBaselineState, "baseline-state", false, "Write result.baselineState and run.baselineGuid into the report")
+	addGateFlags(cmd, &scanFlags.ErrorOnFindings, &scanFlags.ErrorOnSeverity)
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.
@@ -261,6 +272,19 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		absSarifReportPath = log.AbsPathOrExit(cfg.SarifReportPath, "output")
 	} else {
 		absSarifReportPath = utils.DefaultSarifReportPath(absProjectModelPath)
+	}
+
+	// Validate the triage flags before compiling: a typo in --baseline should
+	// not surface only after a fifteen-minute analysis.
+	gateSeverities, err := triage.ParseGateSeverities(cfg.ErrorOnSeverity)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	if cfg.WriteBaselineState && cfg.Baseline == "" {
+		out.Fatalf("--baseline-state needs a --baseline to compare against")
+	}
+	if cfg.Baseline != "" {
+		loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
 	}
 
 	sarifReportName := filepath.Base(absSarifReportPath)
@@ -491,10 +515,12 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			suggestions = append(suggestions, retry)
 		}
 	}
+	var view *sarif.TriageView
 	if report != nil {
+		view = triageScanReport(cfg, report, absSarifReportPath)
 		// Scan does not expose summary's filter/group flags, so pass zero values:
 		// no filtering, default group dimension, first-flow code-flow selection.
-		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1})
+		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1}, view, false)
 		switch {
 		case cfg.DebugFactReachabilitySarif:
 			if analyzerFail == nil {
@@ -530,6 +556,34 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
 	}
+	if report != nil {
+		exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report, view)
+	}
+}
+
+// triageScanReport applies the baseline and any inherited suppressions to the
+// report the analyzer just wrote, rewriting the file when that changed it. With
+// no baseline and no annotation requested, the report is left exactly as the
+// analyzer produced it.
+func triageScanReport(cfg ScanConfig, report *sarif.Report, absSarifReportPath string) *sarif.TriageView {
+	opts := triage.Options{
+		WriteBaselineState: cfg.WriteBaselineState,
+		FingerprintKey:     cfg.FingerprintKey,
+	}
+	if cfg.Baseline != "" {
+		opts.Baseline, opts.BaselinePath = loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
+	}
+
+	outcome, err := triage.Apply(report, opts)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	if outcome.Changed {
+		if err := sarif.SaveReport(report, absSarifReportPath); err != nil {
+			out.Fatalf("Failed to write report: %s", err)
+		}
+	}
+	return outcome.View
 }
 
 // noteSeverityScanCommand builds the follow-up command for a clean scan: the

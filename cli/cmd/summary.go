@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/seqra/opentaint/internal/sarif"
+	"github.com/seqra/opentaint/internal/triage"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
@@ -53,20 +54,52 @@ This command only reads the report. It does not write files.`,
 			out.Fatalf("%s", err)
 		}
 
+		states, err := sarif.ParseBaselineStates(summaryBaselineStates)
+		if err != nil {
+			out.Fatalf("%s", err)
+		}
+
 		absSarifPath := log.AbsPathOrExit(args[0], "sarif path")
 		report, err := sarif.LoadReport(absSarifPath)
 		if err != nil {
 			out.Fatalf("Failed to load SARIF report: %s", err)
 		}
-		printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
 
-		if !showFindings && sarif.GenerateSummary(report.Filter(summaryFilters())).TotalFindings > 0 {
+		// summary never writes: the baseline comparison and any inherited
+		// suppressions are applied to the in-memory copy for display only.
+		view := applyTriageForDisplay(report, absSarifPath)
+
+		filters := summaryFilters()
+		filters.BaselineStates = states
+		printSarifSummary(report, absSarifPath, filters, summaryListingOptions(dim, codeFlowSel), view, showFindings)
+
+		if !showFindings && sarif.GenerateSummary(report.Filter(filters)).TotalFindings > 0 {
 			out.Suggest(
 				"To list the findings, run:",
 				currentSummaryBuilder(absSarifPath).WithShowFindings().Build(),
 			)
 		}
 	},
+}
+
+// applyTriageForDisplay runs a read-only triage pass so that summary can show
+// baseline states and inherited suppressions without touching the file.
+func applyTriageForDisplay(report *sarif.Report, absSarifPath string) *sarif.TriageView {
+	if summaryBaseline == "" {
+		return &sarif.TriageView{Suppressions: sarif.CollectSuppressionStats(report)}
+	}
+
+	baseline, absBaselinePath := loadBaselineOrExit(summaryBaseline, absSarifPath)
+	outcome, err := triage.Apply(report, triage.Options{
+		Baseline:       baseline,
+		BaselinePath:   absBaselinePath,
+		FingerprintKey: summaryFingerprintKey,
+		ReadOnly:       true,
+	})
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	return outcome.View
 }
 
 var showFindings bool
@@ -77,10 +110,14 @@ var summaryPaths []string
 var summarySeverities []string
 var summaryRuleIDs []string
 var summaryFingerprints []string
-var summaryFingerprintKey string
+var summaryPartialFingerprintKey string
 var summaryGroupBy string
 var summaryMaxNestingLevel = -1 // -1 = no cap; >= 0 collapses deeper flow steps
 var summaryCodeFlow string
+var summaryBaseline string
+var summaryBaselineStates []string
+var summaryFingerprintKey string
+var summaryShowSuppressed bool
 
 func init() {
 	rootCmd.AddCommand(summaryCmd)
@@ -92,10 +129,34 @@ func init() {
 	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings at these SARIF levels: note, warning, error, none (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings from this rule: full id, leaf name, or glob (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this value (git-hash style, repeatable)")
-	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint (defaults to vulnerabilityWithTraceHash/v1)")
+	summaryCmd.Flags().StringVar(&summaryPartialFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint (defaults to vulnerabilityWithTraceHash/v1)")
 	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Collapse code-flow steps deeper than this call-nesting level (-1 = no cap)")
 	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (defaults to file-path)")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
+	addBaselineFlags(summaryCmd, &summaryBaseline, &summaryFingerprintKey)
+	summaryCmd.Flags().StringArrayVar(&summaryBaselineStates, "baseline-state", nil, "Show only findings in this baseline state: new, unchanged, updated, absent (repeatable, needs --baseline)")
+	summaryCmd.Flags().BoolVar(&summaryShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
+}
+
+// addBaselineFlags registers the flags shared by every command that can compare
+// a report against a baseline.
+func addBaselineFlags(cmd *cobra.Command, baseline *string, fingerprintKey *string) {
+	cmd.Flags().StringVar(baseline, "baseline", "", "Previous SARIF report to compare against and inherit suppressions from")
+	cmd.Flags().StringVar(fingerprintKey, "fingerprint-key", "", "partialFingerprints key identifying a finding across reports (default "+sarif.DefaultIdentityKey+")")
+}
+
+// loadBaselineOrExit resolves and loads a baseline report, refusing to use the
+// report under inspection as its own baseline.
+func loadBaselineOrExit(baselinePath, absReportPath string) (*sarif.Report, string) {
+	absBaselinePath := log.AbsPathOrExit(baselinePath, "baseline")
+	if absBaselinePath == absReportPath {
+		out.Fatalf("The baseline and the report are the same file: %s", absBaselinePath)
+	}
+	baseline, err := sarif.LoadReport(absBaselinePath)
+	if err != nil {
+		out.Fatalf("Failed to load baseline report: %s", err)
+	}
+	return baseline, absBaselinePath
 }
 
 // currentSummaryBuilder returns a builder pre-populated with the user's current summary flags.
@@ -116,7 +177,7 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	builder.WithSeverity(summarySeverities)
 	builder.WithRuleID(summaryRuleIDs)
 	builder.WithPartialFingerprint(summaryFingerprints)
-	builder.WithPartialFingerprintKey(summaryFingerprintKey)
+	builder.WithPartialFingerprintKey(summaryPartialFingerprintKey)
 	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
 	builder.WithGroupBy(summaryGroupBy)
 	builder.WithCodeFlow(summaryCodeFlow)
@@ -132,7 +193,7 @@ func summaryFilters() sarif.Filters {
 		Severities:     summarySeverities,
 		RuleIDs:        summaryRuleIDs,
 		Fingerprints:   summaryFingerprints,
-		FingerprintKey: summaryFingerprintKey,
+		FingerprintKey: summaryPartialFingerprintKey,
 	}
 }
 
@@ -146,23 +207,27 @@ func summaryListingOptions(dim sarif.GroupDimension, codeFlowSel sarif.CodeFlowS
 		VerboseFlow:      verboseFlow,
 		MaxNestingLevel:  summaryMaxNestingLevel,
 		GroupBy:          dim,
-		FingerprintKey:   summaryFingerprintKey,
+		FingerprintKey:   summaryPartialFingerprintKey,
 		CodeFlows:        codeFlowSel,
+		ShowSuppressed:   summaryShowSuppressed,
 	}
 }
 
-func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions) {
+// printSarifSummary renders the optional finding listing followed by the scan
+// summary. list controls whether the listing is printed; each command owns its
+// own --show-findings flag.
+func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions, view *sarif.TriageView, list bool) {
 	filtered := report.Filter(filters)
 
 	hasOmittedFlow := false
-	if showFindings {
+	if list {
 		hasOmittedFlow = filtered.PrintAll(out, opts)
 		out.Blank()
 	}
 
 	filtered.PrintSummary(out, absSarifPath, view)
 
-	if showFindings && hasOmittedFlow && !verboseFlow {
+	if list && hasOmittedFlow && !verboseFlow {
 		out.Suggest(
 			"To see the full code flow and code snippets, run:",
 			currentSummaryBuilder(absSarifPath).WithVerboseFlow().WithShowCodeSnippets().Build(),

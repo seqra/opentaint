@@ -19,6 +19,9 @@ type TriageView struct {
 	// StateWritten records whether baselineState was persisted into the report
 	// (--baseline-state) or only computed for display.
 	StateWritten bool
+	// ReadOnly means the command never writes the report, so reporting whether
+	// the state was persisted would be noise.
+	ReadOnly bool
 
 	// Suppressions counts the suppression state of the report.
 	Suppressions SuppressionStats
@@ -60,6 +63,9 @@ func (v *TriageView) baselineItems(out *output.Printer) []any {
 		items = append(items, out.FieldItem("Not comparable", v.Comparison.Unmatchable))
 	}
 
+	if v.ReadOnly {
+		return items
+	}
 	written := "no"
 	if v.StateWritten {
 		written = "yes"
