@@ -340,6 +340,12 @@ def main(argv=None) -> int:
                     help="config-relative paths to enforce; others are reported only")
     ap.add_argument("--gate-i6", action="store_true")
     args = ap.parse_args(argv)
+    if not os.path.isdir(args.root):
+        print(f"error: config root not found: {args.root}", file=sys.stderr)
+        return 2
+    if not os.path.isfile(args.allowlist):
+        print(f"error: allowlist not found: {args.allowlist}", file=sys.stderr)
+        return 2
     changed = set(args.changed) if args.changed is not None else None
     failures, reports = run(args.root, args.allowlist, changed, args.gate_i6)
     for f in failures:

@@ -375,3 +375,18 @@ def test_dict_signature_type_is_keyed_by_declared_index(tmp_path):
     entry = cl.load_entries(root)[0]
     assert cl.position_type(entry, ("arg(1)",)) == "java.lang.String[]"
     assert cl.position_type(entry, ("arg(0)",)) is None
+
+
+def test_main_rejects_a_missing_config_root(tmp_path, capsys):
+    rc = cl.main(["--root", str(tmp_path / "nope"),
+                  "--allowlist", str(tmp_path / "allow.yaml")])
+    assert rc == 2
+    assert "config root not found" in capsys.readouterr().err
+
+
+def test_main_rejects_a_missing_allowlist(tmp_path, capsys):
+    (tmp_path / "cfg").mkdir()
+    rc = cl.main(["--root", str(tmp_path / "cfg"),
+                  "--allowlist", str(tmp_path / "nope.yaml")])
+    assert rc == 2
+    assert "allowlist not found" in capsys.readouterr().err
