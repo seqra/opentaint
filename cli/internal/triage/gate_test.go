@@ -81,7 +81,7 @@ func TestGateWithBaselineDoesNotTripWhenNothingIsNew(t *testing.T) {
 	}
 }
 
-func TestGateCountsUpdatedFindingsAsNew(t *testing.T) {
+func TestGateDoesNotCountUpdatedFindings(t *testing.T) {
 	baseline := report(result("a", "id-a", "trace-old"))
 	rep := report(result("a", "id-a", "trace-new"))
 	out, err := Apply(rep, Options{Baseline: baseline})

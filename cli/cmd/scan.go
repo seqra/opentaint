@@ -312,8 +312,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if cfg.WriteBaselineState && cfg.Baseline == "" {
 		out.Fatalf("--baseline-state needs a --baseline to compare against")
 	}
+	var baseline *sarif.Report
+	var absBaselinePath string
 	if cfg.Baseline != "" {
-		loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
+		baseline, absBaselinePath = loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
 	}
 
 	sarifReportName := filepath.Base(absSarifReportPath)
@@ -543,7 +545,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	var view *sarif.TriageView
 	if report != nil {
-		view = triageScanReport(cfg, report, absSarifReportPath)
+		view = triageScanReport(cfg, report, absSarifReportPath, baseline, absBaselinePath)
 		// Scan does not expose summary's filter/group flags, so pass zero values:
 		// no filtering, default group dimension, first-flow code-flow selection.
 		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1}, view, false)
@@ -590,17 +592,15 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 // triageScanReport applies the baseline and any inherited suppressions to the
 // report the analyzer just wrote, rewriting the file when that changed it. With
 // no baseline and no annotation requested, the report is left exactly as the
-// analyzer produced it.
-func triageScanReport(cfg ScanConfig, report *sarif.Report, absSarifReportPath string) *sarif.TriageView {
-	opts := triage.Options{
+// analyzer produced it. The baseline was loaded (and validated) before the
+// compile step, so a bad path fails fast and the file is read only once.
+func triageScanReport(cfg ScanConfig, report *sarif.Report, absSarifReportPath string, baseline *sarif.Report, absBaselinePath string) *sarif.TriageView {
+	outcome, err := triage.Apply(report, triage.Options{
 		WriteBaselineState: cfg.WriteBaselineState,
 		FingerprintKey:     cfg.FingerprintKey,
-	}
-	if cfg.Baseline != "" {
-		opts.Baseline, opts.BaselinePath = loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
-	}
-
-	outcome, err := triage.Apply(report, opts)
+		Baseline:           baseline,
+		BaselinePath:       absBaselinePath,
+	})
 	if err != nil {
 		out.Fatalf("%s", err)
 	}
