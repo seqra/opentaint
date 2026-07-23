@@ -760,3 +760,111 @@ def test_main_rejects_an_unresolvable_compare_ref_without_changed(tmp_path, caps
                   "--compare-ref", "not-a-real-ref-xyz"])
     assert rc == 2
     assert "not-a-real-ref-xyz" in capsys.readouterr().err
+
+
+# ---- I7: cross-file half-collapse ----
+
+_SHARED_WRITER_ITEM = """
+    - function: p.A#setX
+      copy:
+      - from: arg(0)
+        to:
+        - this
+        - .p.C#<rule-storage>#java.lang.Object
+    """
+
+_SHARED_READER_ITEM = """
+    - function: p.B#getX
+      copy:
+      - from:
+        - this
+        - .p.C#<rule-storage>#java.lang.Object
+        to: result
+    """
+
+# The "collapsed" (base-only) form of the writer/reader, as a half-collapse in
+# one file alone would produce it -- no more reference to the shared slot.
+_COLLAPSED_WRITER_ITEM = """
+    - function: p.A#setX
+      copy:
+      - from: arg(0)
+        to: this
+    """
+
+_COLLAPSED_READER_ITEM = """
+    - function: p.B#getX
+      copy:
+      - from: this
+        to: result
+    """
+
+
+def test_i7_fires_when_one_file_of_a_shared_slot_is_collapsed_alone(tmp_path):
+    repo, git = init_git_repo(tmp_path)
+    (repo / "a.yaml").write_text(yaml_doc(_SHARED_WRITER_ITEM))
+    (repo / "b.yaml").write_text(yaml_doc(_SHARED_READER_ITEM))
+    git("add", "a.yaml", "b.yaml")
+    git("commit", "-q", "-m", "ref: shared slot across two files")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    # Half-collapse: only a.yaml is rewritten to drop the shared slot; b.yaml
+    # is left addressing the old key -- the write and read never meet again.
+    (repo / "a.yaml").write_text(yaml_doc(_COLLAPSED_WRITER_ITEM))
+
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(repo), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    i7 = [f for f in failures if f.code == "I7"]
+    assert len(i7) == 1
+    assert i7[0].file == "a.yaml"
+    assert ".p.C#<rule-storage>#java.lang.Object" in i7[0].func or \
+        ".p.C#<rule-storage>#java.lang.Object" in i7[0].detail
+
+
+def test_i7_does_not_fire_when_both_files_of_a_shared_slot_are_changed_together(tmp_path):
+    repo, git = init_git_repo(tmp_path)
+    (repo / "a.yaml").write_text(yaml_doc(_SHARED_WRITER_ITEM))
+    (repo / "b.yaml").write_text(yaml_doc(_SHARED_READER_ITEM))
+    git("add", "a.yaml", "b.yaml")
+    git("commit", "-q", "-m", "ref: shared slot across two files")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    # Coordinated re-key: both files are rewritten together, so the closure
+    # stays consistent -- not a half-collapse.
+    (repo / "a.yaml").write_text(yaml_doc(_COLLAPSED_WRITER_ITEM))
+    (repo / "b.yaml").write_text(yaml_doc(_COLLAPSED_READER_ITEM))
+
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(repo), allow_path, changed={"a.yaml", "b.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    assert [f for f in failures if f.code == "I7"] == []
+
+
+def test_i7_does_not_fire_without_compare_ref(tmp_path):
+    # No git needed -- I7 requires compare_ref to run at all, so with
+    # changed set but compare_ref=None it must be silent.
+    (tmp_path / "a.yaml").write_text(yaml_doc(_SHARED_WRITER_ITEM))
+    (tmp_path / "b.yaml").write_text(yaml_doc(_SHARED_READER_ITEM))
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(tmp_path), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=None)
+    assert [f for f in failures if f.code == "I7"] == []
+
+
+def test_i7_ignores_a_slot_used_by_only_one_file(tmp_path):
+    # Not cross-file at all: collapsing it in its one file is not a half-collapse.
+    repo, git = init_git_repo(tmp_path)
+    (repo / "a.yaml").write_text(yaml_doc(_SHARED_WRITER_ITEM, _SHARED_READER_ITEM))
+    git("add", "a.yaml")
+    git("commit", "-q", "-m", "ref: single-file slot")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    (repo / "a.yaml").write_text(yaml_doc(_COLLAPSED_WRITER_ITEM, _COLLAPSED_READER_ITEM))
+
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(repo), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    assert [f for f in failures if f.code == "I7"] == []

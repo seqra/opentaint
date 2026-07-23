@@ -8,6 +8,9 @@ Invariants (see docs/superpowers/specs/2026-07-23-rule-storage-rekey-design.md):
   I4 no [*] on a non-array-typed position
   I5 no out-of-range arg(n)
   I6 no <rule-storage> anywhere in the Java config (final gate)
+  I7 no cross-file half-collapse: a --changed file must not change its edges on
+     a slot whose writers/readers span more than one file while another
+     participating file is left out of --changed (requires --compare-ref)
 """
 import json
 import os
@@ -414,6 +417,79 @@ def check_no_rule_storage(entries) -> list:
     return findings
 
 
+def _slot_edges_by_file(entries):
+    """(file, slot) -> set of (frm, to) copy tuples that touch that slot."""
+    out = {}
+    for e in entries:
+        for c in e.copies:
+            touched = {a for side in (c.frm, c.to) for a in side[1:] if a != "[*]"}
+            for slot in touched:
+                out.setdefault((e.file, slot), set()).add((c.frm, c.to))
+    return out
+
+
+def _slot_participants(writers, readers):
+    """slot -> set of files among its writers or readers."""
+    out = {}
+    for slot in set(writers) | set(readers):
+        files = {f for f, _, _ in writers.get(slot, set())} | {f for f, _, _ in readers.get(slot, set())}
+        out[slot] = files
+    return out
+
+
+def check_cross_file_half_collapse(entries, ref_entries, changed) -> list:
+    """I7: the half-collapse signature.
+
+    A slot is cross-file when the set of files containing its writers or
+    readers has size > 1 -- most such slots are legitimate shared value
+    types, so being cross-file alone is not a finding. Participation is
+    checked across both the working tree (`entries`) and `compare_ref`
+    (`ref_entries`) and unioned: a file that dropped every edge touching the
+    slot in the very edit under test (the collapse itself) must still count
+    as a participant, or the collapse would erase its own evidence.
+
+    It becomes a finding when a `--changed` file's edges touching that slot
+    differ between the working tree and `compare_ref`, while at least one
+    other file that participates in the slot (in either state) was left out
+    of `--changed`: someone changed how one file uses a shared slot and left
+    the other users of that slot behind, so the write and read on either side
+    never meet.
+
+    If every file that participates in the slot is in `--changed`, the whole
+    closure is being edited together and this does not fire.
+    """
+    if not changed:
+        return []
+    cur_writers, cur_readers = _slot_usage(entries)
+    ref_writers, ref_readers = _slot_usage(ref_entries)
+    cur_participants = _slot_participants(cur_writers, cur_readers)
+    ref_participants = _slot_participants(ref_writers, ref_readers)
+    slots = set(cur_participants) | set(ref_participants)
+    participants = {
+        s: cur_participants.get(s, set()) | ref_participants.get(s, set()) for s in slots
+    }
+    cross_slots = {s for s, files in participants.items() if len(files) > 1}
+    if not cross_slots:
+        return []
+    cur_edges = _slot_edges_by_file(entries)
+    ref_edges = _slot_edges_by_file(ref_entries)
+    findings = []
+    for slot in sorted(cross_slots):
+        others = participants[slot] - set(changed)
+        if not others:
+            continue
+        for file in sorted(changed):
+            cur = cur_edges.get((file, slot), set())
+            ref = ref_edges.get((file, slot), set())
+            if cur == ref:
+                continue
+            findings.append(Finding(
+                "I7", file, slot,
+                f"{slot} edges changed in {file} but left unchanged in "
+                f"{', '.join(sorted(others))}, which also write or read this slot"))
+    return findings
+
+
 def _all_findings(entries, allow, gate_i6) -> list:
     findings = (
         check_shared_slot(entries, allow)
@@ -442,7 +518,10 @@ def run(root, allow_path, changed=None, gate_i6=False, compare_ref=None):
     failure, matching the pre-`--compare-ref` behaviour.
     With `changed` and `compare_ref`, only findings in changed files that are
     NEW relative to `compare_ref` are failures; findings are compared by
-    (code, file, func, detail) identity, not by count.
+    (code, file, func, detail) identity, not by count. I7 (cross-file
+    half-collapse) is only computed in this mode -- it always compares
+    `changed` files against `compare_ref` -- and its findings are always
+    failures, never demoted to preexisting.
     """
     entries = load_entries(root)
     allow = load_allowlist(allow_path)
@@ -456,6 +535,7 @@ def run(root, allow_path, changed=None, gate_i6=False, compare_ref=None):
     ref_entries = load_entries_at_ref(compare_ref, root)
     ref_ids = {tuple(f) for f in _all_findings(ref_entries, allow, gate_i6)}
     failures = [f for f in findings if f.file in changed and tuple(f) not in ref_ids]
+    failures += check_cross_file_half_collapse(entries, ref_entries, changed)
     preexisting_changed = [f for f in findings if f.file in changed and tuple(f) in ref_ids]
     reports = [f for f in findings if f.file not in changed]
     return failures, reports, preexisting_changed
