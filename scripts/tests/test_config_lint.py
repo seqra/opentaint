@@ -301,3 +301,38 @@ def test_camelcase_role_named_value_is_still_checked(tmp_path):
         """)
     findings = cl.check_shared_slot(cl.load_entries(root), ALLOW)
     assert [f.code for f in findings] == ["I1"]
+
+
+def test_changed_only_splits_failures_from_reports(tmp_path):
+    root = write(tmp_path, "touched.yaml", """
+        passThrough:
+        - function: p.C#m
+          signature: () void
+          copy:
+          - from: arg(0)
+            to: this
+        """)
+    (tmp_path / "untouched.yaml").write_text(
+        "passThrough:\n- function: p.D#m\n  signature: () void\n  copy:\n"
+        "  - from: arg(0)\n    to: this\n")
+    allow = tmp_path / "allow.yaml"
+    allow.write_text("renderers: []\nsource_fed_slots: []\n")
+    failures, reports = cl.run(root, str(allow), changed={"touched.yaml"}, gate_i6=False)
+    assert [f.file for f in failures] == ["touched.yaml"]
+    assert [f.file for f in reports] == ["untouched.yaml"]
+
+
+def test_i6_gate_flags_rule_storage(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#m
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#<rule-storage>#java.lang.Object
+        """)
+    allow = tmp_path / "allow.yaml"
+    allow.write_text("renderers: []\nsource_fed_slots: []\n")
+    failures, _ = cl.run(root, str(allow), changed=None, gate_i6=True)
+    assert any(f.code == "I6" for f in failures)

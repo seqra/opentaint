@@ -294,3 +294,61 @@ def check_orphan_slots(entries, allow) -> list:
             f = sorted(readers[slot])[0]
             findings.append(Finding("I2", f[0], slot, f"{slot} is read ({f[1]}) but never written"))
     return findings
+
+
+def check_no_rule_storage(entries) -> list:
+    findings = []
+    for e in entries:
+        for c in e.copies:
+            for side in (c.frm, c.to):
+                for a in side[1:]:
+                    if isinstance(a, str) and "<rule-storage>" in a:
+                        findings.append(Finding(
+                            "I6", e.file, func_name(e.func), f"{a} must be re-keyed"))
+    return findings
+
+
+def run(root, allow_path, changed=None, gate_i6=False):
+    entries = load_entries(root)
+    allow = load_allowlist(allow_path)
+    findings = (
+        check_shared_slot(entries, allow)
+        + check_orphan_slots(entries, allow)
+        + check_element_carrier(entries)
+        + check_element_targets(entries)
+        + check_arg_range(entries)
+    )
+    if gate_i6:
+        findings += check_no_rule_storage(entries)
+    if changed is None:
+        return findings, []
+    failures = [f for f in findings if f.file in changed]
+    reports = [f for f in findings if f.file not in changed]
+    return failures, reports
+
+
+def main(argv=None) -> int:
+    import argparse
+    here = os.path.dirname(os.path.abspath(__file__))
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--root", default=os.path.join(here, "..", "model", "java", "config"))
+    ap.add_argument("--allowlist", default=os.path.join(here, "config_lint_allowlist.yaml"))
+    ap.add_argument("--changed", nargs="*", default=None,
+                    help="config-relative paths to enforce; others are reported only")
+    ap.add_argument("--gate-i6", action="store_true")
+    args = ap.parse_args(argv)
+    changed = set(args.changed) if args.changed is not None else None
+    failures, reports = run(args.root, args.allowlist, changed, args.gate_i6)
+    for f in failures:
+        print(f"FAIL {f.code} {f.file} {f.func}: {f.detail}")
+    if reports:
+        counts = {}
+        for f in reports:
+            counts[f.code] = counts.get(f.code, 0) + 1
+        print("pre-existing (reported, not enforced): "
+              + ", ".join(f"{k}={counts[k]}" for k in sorted(counts)))
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
