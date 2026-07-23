@@ -11,7 +11,6 @@ import org.opentaint.semgrep.pattern.MetaVarConstraintFormulaCube
 import org.opentaint.semgrep.pattern.MetaVarConstraints
 import org.opentaint.semgrep.pattern.ResolvedMetaVarInfo
 import org.opentaint.semgrep.pattern.conversion.IsMetavar
-import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.ParamCondition.Atom
 import org.opentaint.semgrep.pattern.conversion.LanguageTypeOps
 import org.opentaint.semgrep.pattern.conversion.SemgrepPatternAction.SignatureName
@@ -31,7 +30,6 @@ import org.opentaint.semgrep.pattern.conversion.automata.OperationCancelation
 import org.opentaint.semgrep.pattern.conversion.automata.ParamConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.Position
 import org.opentaint.semgrep.pattern.conversion.automata.Predicate
-import org.opentaint.semgrep.pattern.conversion.automata.StarPatternNotCoincidence
 import org.opentaint.semgrep.pattern.conversion.generatedAnyValueGeneratorMethodName
 import org.opentaint.semgrep.pattern.conversion.generatedStringConcatMethodName
 import org.opentaint.semgrep.pattern.toDNF
@@ -285,7 +283,6 @@ fun MethodFormulaManager.simplifyMethodFormulaCube(
 ): MethodFormulaCubeCompact? {
     var solver = MethodFormulaSolver(
         metaVarInfo, typeOps, applyNotEquivalentTransformations,
-        coincidenceSink = starPatternNotCoincidences,
     )
 
     cube.positiveLiterals.forEach {
@@ -316,10 +313,7 @@ fun MethodFormulaManager.simplifyMethodFormulaCube(
     return result
 }
 
-private class MethodConstraintsSolver(
-    private val coincidenceSink: MutableSet<StarPatternNotCoincidence>? = null,
-) {
-    private val positiveMetaVars = hashMapOf<Position, MutableSet<MetavarAtom.Basic>>()
+private class MethodConstraintsSolver {
     private val positiveParams = hashMapOf<Position, MutableSet<Atom>>()
     private var positiveNumberOfArgs: NumberOfArgsConstraint? = null
     private val positiveMethodModifiers = hashSetOf<MethodModifierConstraint>()
@@ -339,12 +333,23 @@ private class MethodConstraintsSolver(
     fun addPositive(constraint: MethodConstraint): Unit? {
         when (constraint) {
             is ParamConstraint -> {
-                positiveParams.getOrPut(constraint.position, ::hashSetOf).add(constraint.condition)
-
-                if (constraint.condition is IsMetavar) {
-                    positiveMetaVars.getOrPut(constraint.position, ::hashSetOf)
-                        .addAll(constraint.condition.metavar.basics)
+                val posSet = positiveParams.getOrPut(constraint.position, ::hashSetOf)
+                val cond = constraint.condition
+                if (cond is IsMetavar) {
+                    // A (base, star=false) implies A* (base OR any-field, star=true), so A subsumes
+                    // A* at the same position: `A ^ A*` == A. Keep only the base literal.
+                    if (!cond.star) {
+                        posSet.removeAll {
+                            it is IsMetavar && it.star && it.metavar.basics.any { b -> b in cond.metavar.basics }
+                        }
+                    } else if (posSet.any {
+                            it is IsMetavar && !it.star && it.metavar.basics.any { b -> b in cond.metavar.basics }
+                        }) {
+                        // A* is redundant when a coinciding base A is already required.
+                        return Unit
+                    }
                 }
+                posSet.add(cond)
             }
 
             is NumberOfArgsConstraint -> {
@@ -374,24 +379,25 @@ private class MethodConstraintsSolver(
 
                 val negCond = constraint.condition
                 if (negCond is IsMetavar) {
-                    val posMetaVars = positiveMetaVars[constraint.position].orEmpty()
-                    if (negCond.metavar.basics.any { it in posMetaVars }) {
-                        // The negated metavar coincides (star-blind) with a positive occurrence at
-                        // the same position -> whole-match exclusion (return null below), unchanged.
-                        // Additionally flag the T/F cell: an unstarred `pattern-not $X` coinciding
-                        // with a positive `$*X`. Its "keep field, drop base" semantics is NOT
-                        // implemented; treat as full exclusion (as today) but surface a diagnostic.
-                        if (!negCond.star) {
-                            val coincidesWithStarPositive = currentPositive.any { pos ->
-                                pos is IsMetavar && pos.star &&
-                                    pos.metavar.basics.any { it in negCond.metavar.basics }
-                            }
-                            if (coincidesWithStarPositive) {
-                                coincidenceSink?.add(StarPatternNotCoincidence(negCond.metavar.toString()))
-                            }
-                        }
-                        return null
+                    // `$X` (star=false) is base/value taint = A; `$*X` (star=true) is base OR
+                    // any-field = A*. They are DISTINCT literals related by the implication A => A*.
+                    // Stars of the positive occurrences of the SAME metavar at this position:
+                    val coincidingPositiveStars = currentPositive.asSequence()
+                        .filterIsInstance<IsMetavar>()
+                        .filter { pos -> pos.metavar.basics.any { it in negCond.metavar.basics } }
+                        .map { it.star }
+                        .toSet()
+
+                    // Contradiction (whole-match exclusion) per the A => A* truth table:
+                    //   !A* is UNSAT if A or A* is positive (A => A*);
+                    //   !A  is UNSAT only if A (star=false) is positive -- if ONLY A* (star=true)
+                    //       is positive, `!A ^ A*` is SAT (field-only) and must be kept below.
+                    val contradiction = if (negCond.star) {
+                        coincidingPositiveStars.isNotEmpty()
+                    } else {
+                        false in coincidingPositiveStars
                     }
+                    if (contradiction) return null
                 }
             }
 
@@ -433,9 +439,8 @@ private class MethodFormulaSolver(
     private val metaVarInfo: ResolvedMetaVarInfo,
     private val typeOps: LanguageTypeOps,
     private val applyNotEquivalentTransformations: Boolean,
-    coincidenceSink: MutableSet<StarPatternNotCoincidence>? = null,
     private val positive: SolverConstraints =
-        SolverConstraints(signature = null, constraints = MethodConstraintsSolver(coincidenceSink)),
+        SolverConstraints(signature = null, constraints = MethodConstraintsSolver()),
     private val negated: MutableMap<MethodSignature, MutableList<SolverConstraints>> = hashMapOf()
 ) {
     fun addPositivePredicate(predicate: Predicate): MethodFormulaSolver? {

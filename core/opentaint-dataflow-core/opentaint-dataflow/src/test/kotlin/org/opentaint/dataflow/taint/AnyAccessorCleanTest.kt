@@ -47,6 +47,7 @@ class AnyAccessorCleanTest {
     private val base = AccessPathBase.This
     private val mark = TaintMarkAccessor("m")
     private val field = FieldAccessor("A", "f", "B")
+    private val field2 = FieldAccessor("B", "g", "C")
 
     private val dummyRule = object : CommonTaintConfigurationItem {}
     private val dummyAction = object : CommonTaintAction {}
@@ -85,6 +86,40 @@ class AnyAccessorCleanTest {
         assertTrue(
             clean(nestedField, complexAny).isEmpty(),
             "any-accessor clean must remove a concrete nested-field mark",
+        )
+    }
+
+    @Test
+    fun `containsAnyPosition (sink observation) observes a DEPTH-2 concrete field mark`() {
+        // The sink `sink($*o)` evaluates ContainsMarkOnAnyField via FactReader.containsAnyPosition
+        // (readAnyPosition) — a DIFFERENT path from the clean. This isolates read-boundedness from
+        // fact production: construct base.f.g.mark directly and ask if the any-field observation
+        // finds the mark under base at depth 2.
+        val deep = fact(field, field2, mark) // base.f.g.mark
+        val reader = FinalFactReader(deep, apManager)
+        val found = reader.containsAnyPosition(PositionAccess.Complex(simple, mark)) // base.<any>.mark
+        assertTrue(found != null, "containsAnyPosition must observe a depth-2 concrete field mark; got null")
+    }
+
+    @Test
+    fun `containsAnyPosition observes a DEPTH-1 concrete field mark`() {
+        val d1 = fact(field, mark) // base.f.mark
+        val reader = FinalFactReader(d1, apManager)
+        assertTrue(
+            reader.containsAnyPosition(PositionAccess.Complex(simple, mark)) != null,
+            "containsAnyPosition must observe a depth-1 concrete field mark",
+        )
+    }
+
+    @Test
+    fun `any-accessor clean removes a DEPTH-2 concrete nested-field mark`() {
+        // KNOWN GAP characterization (StarDeepSink): a concrete mark buried 2 levels deep,
+        // base.f.g.mark. If the any-accessor read is truly unbounded-depth, the whole-object
+        // clean removes it; if it is depth-1-bounded, the mark survives.
+        val deepField = fact(field, field2, mark)
+        assertTrue(
+            clean(deepField, complexAny).isEmpty(),
+            "any-accessor clean must remove a depth-2 concrete nested-field mark (unbounded depth)",
         )
     }
 
