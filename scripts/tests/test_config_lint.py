@@ -284,6 +284,76 @@ def test_capitalised_role_is_shared_by_design(tmp_path):
     assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
 
 
+def test_map_form_literal_name_participates_in_shared_slot(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function:
+            package: p
+            class: C
+            name: getResponseBody
+          copy:
+          - from:
+            - this
+            - .p.C#bag#java.lang.Object
+            to: result
+        """)
+    findings = cl.check_shared_slot(cl.load_entries(root), ALLOW)
+    assert [f.code for f in findings] == ["I1"]
+    assert "setPath" in findings[0].detail and "getResponseBody" in findings[0].detail
+
+
+def test_map_form_pattern_name_is_not_a_named_property_for_shared_slot(tmp_path):
+    # A regex method-name entry must never be paired against a named property
+    # as a cross-property leak: the pattern isn't a single property accessor.
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function:
+            package: p
+            class: C
+            name:
+              pattern: get.*
+          copy:
+          - from:
+            - this
+            - .p.C#bag#java.lang.Object
+            to: result
+        """)
+    assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
+
+
+def test_map_form_pattern_name_still_counts_for_orphan(tmp_path):
+    # Even though a pattern-name entry is not a "property" for I1 purposes, it
+    # is still a real reader/writer for I2 orphan-slot purposes.
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function:
+            package: p
+            class: C
+            name:
+              pattern: set.*
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """)
+    findings = cl.check_orphan_slots(cl.load_entries(root), ALLOW)
+    assert [f.code for f in findings] == ["I2"]
+    assert "never read" in findings[0].detail
+
+
 def test_camelcase_role_named_value_is_still_checked(tmp_path):
     root = write(tmp_path, "x.yaml", """
         passThrough:

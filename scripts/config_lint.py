@@ -284,13 +284,36 @@ def load_allowlist(path: str) -> dict:
     }
 
 
+def _entry_method(func):
+    """Method name for slot-usage purposes, or None when func is unrecognised.
+
+    String form (`pkg.Cls#method`) and map form with a literal `name:` both
+    identify one exact method -- same meaning, see SerializedNameMatcher.kt.
+    Map form with `name: {pattern: ...}` identifies a family of methods by
+    regex, not a single name; it is represented as a sentinel that never
+    matches a known getter/setter prefix, so property_of() reports it as "not
+    a named property" and it can never be paired against a real accessor as a
+    cross-property (I1) leak. It still carries a (file, sentinel) identity so
+    it counts as a real reader/writer for orphan-slot (I2) purposes.
+    """
+    if isinstance(func, str):
+        return func.rsplit("#", 1)[1] if "#" in func else None
+    if isinstance(func, dict):
+        name = func.get("name")
+        if isinstance(name, str):
+            return name
+        if isinstance(name, dict) and isinstance(name.get("pattern"), str):
+            return f"<pattern:{name['pattern']}>"
+    return None
+
+
 def _slot_usage(entries):
     """slot -> (writers, readers) as sets of (file, method)."""
     writers, readers = {}, {}
     for e in entries:
-        if not isinstance(e.func, str) or "#" not in e.func:
+        method = _entry_method(e.func)
+        if method is None:
             continue
-        method = e.func.rsplit("#", 1)[1]
         for c in e.copies:
             for side, acc in ((c.to, writers), (c.frm, readers)):
                 for a in side[1:]:
