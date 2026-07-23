@@ -27,29 +27,15 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
-    to: result
 - function: java.io.Reader#read
   signature: (char[], int, int) int
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
-    to: result
 - function: java.io.ByteArrayOutputStream#toByteArray
   signature: () byte[]
   copy:
-  - from:
-    - this
-    - .java.io.ByteArrayOutputStream#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.io.OutputStream#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.io.ByteArrayOutputStream#write
   signature: (byte[], int, int) void
@@ -87,16 +73,10 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.io.ObjectOutput#<rule-storage>#java.lang.Object
+    to: this
 - function: java.io.InputStream#read
   signature: (byte[]) int
   copy:
-  - from:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.io.StringBufferInputStream#<init>
@@ -123,10 +103,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
-    to: result
 - function: java.io.ByteArrayOutputStream#toByteArray
   signature:
     return: byte[]
@@ -138,22 +114,12 @@ passThrough:
 - function: java.io.InputStream#read
   signature: () int
   copy:
-  - from:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.io.ByteArrayInputStream#<init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.io.ByteArrayInputStream#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
+    to: this
 - function: java.io.StringReader#<init>
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -175,9 +141,7 @@ passThrough:
     - index: 0
       type: .byte[]
   copy:
-  - from:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
+  - from: this
     to: arg(0)
 - function: java.io.ByteArrayInputStream#<init>
   signature:
@@ -195,9 +159,7 @@ passThrough:
     name:
       pattern: read.+
   copy:
-  - from:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function:
     package: java.io
@@ -206,10 +168,6 @@ passThrough:
       pattern: read.+
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
     to: result
 - function: java.io.BufferedReader#lines
   signature: () java.util.stream.Stream
@@ -221,33 +179,17 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.StringReader#<rule-storage>#java.lang.Object
+    to: this
 - function: java.io.Reader#<init>
   signature: (java.lang.Object) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.io.ByteArrayOutputStream#write
   signature: (byte[], int, int) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.io.ByteArrayOutputStream#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.OutputStream#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -255,14 +197,6 @@ passThrough:
 - function: java.io.ByteArrayOutputStream#write
   signature: (int) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.ByteArrayOutputStream#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.OutputStream#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.io.ByteArrayOutputStream#toByteArray
@@ -275,10 +209,6 @@ passThrough:
   signature: (java.nio.CharBuffer) int
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.io.Reader#<rule-storage>#java.lang.Object
     to: result
 - function: java.io.OutputStream#write
   signature: (byte[]) void
@@ -298,20 +228,12 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.io.StringBufferInputStream#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
+    to: this
 - function: java.io.OutputStream#write
   signature: (byte[]) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.io.OutputStream#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -319,10 +241,6 @@ passThrough:
 - function: java.io.InputStream#read
   signature: (byte[], int, int) int
   copy:
-  - from:
-    - this
-    - .java.io.InputStream#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.io.File#<init>
