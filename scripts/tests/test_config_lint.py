@@ -1,3 +1,4 @@
+import subprocess
 import sys, pathlib, textwrap
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import config_lint as cl
@@ -317,9 +318,10 @@ def test_changed_only_splits_failures_from_reports(tmp_path):
         "  - from: arg(0)\n    to: this\n")
     allow = tmp_path / "allow.yaml"
     allow.write_text("renderers: []\nsource_fed_slots: []\n")
-    failures, reports = cl.run(root, str(allow), changed={"touched.yaml"}, gate_i6=False)
+    failures, reports, preexisting = cl.run(root, str(allow), changed={"touched.yaml"}, gate_i6=False)
     assert [f.file for f in failures] == ["touched.yaml"]
     assert [f.file for f in reports] == ["untouched.yaml"]
+    assert preexisting == []
 
 
 def test_i6_gate_flags_rule_storage(tmp_path):
@@ -334,7 +336,7 @@ def test_i6_gate_flags_rule_storage(tmp_path):
         """)
     allow = tmp_path / "allow.yaml"
     allow.write_text("renderers: []\nsource_fed_slots: []\n")
-    failures, _ = cl.run(root, str(allow), changed=None, gate_i6=True)
+    failures, _, _ = cl.run(root, str(allow), changed=None, gate_i6=True)
     assert any(f.code == "I6" for f in failures)
 
 
@@ -390,3 +392,113 @@ def test_main_rejects_a_missing_allowlist(tmp_path, capsys):
                   "--allowlist", str(tmp_path / "nope.yaml")])
     assert rc == 2
     assert "allowlist not found" in capsys.readouterr().err
+
+
+# ---- --compare-ref: gate on new findings, not whole files ----
+
+_ORPHAN_ITEM = """
+    - function: p.C#<init>
+      copy:
+      - from: arg(0)
+        to:
+        - this
+        - .p.C#userName#java.lang.Object
+    """
+
+_MATCHED_PAIR_ITEM = """
+    - function: p.C#getPath
+      copy:
+      - from:
+        - this
+        - .p.C#path#java.lang.Object
+        to: result
+    - function: p.C#setPath
+      copy:
+      - from: arg(0)
+        to:
+        - this
+        - .p.C#path#java.lang.Object
+    """
+
+
+def yaml_doc(*items):
+    """A passThrough YAML document made of one or more dedented list-item blocks."""
+    return "passThrough:\n" + "".join(textwrap.dedent(i) for i in items)
+
+
+def init_git_repo(tmp_path):
+    """A throwaway repo under tmp_path; never touches the real project history."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    git("init", "-q")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+    return repo, git
+
+
+def write_allow(tmp_path):
+    allow = tmp_path / "allow.yaml"
+    allow.write_text("renderers: []\nsource_fed_slots: []\n")
+    return str(allow)
+
+
+def test_compare_ref_preexisting_finding_is_not_a_failure_but_is_without_it(tmp_path):
+    repo, git = init_git_repo(tmp_path)
+    (repo / "x.yaml").write_text(yaml_doc(_ORPHAN_ITEM))
+    git("add", "x.yaml")
+    git("commit", "-q", "-m", "ref: orphan slot")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    # Touch the file, but keep the original orphan-slot finding byte-identical.
+    (repo / "x.yaml").write_text(yaml_doc(_ORPHAN_ITEM, _MATCHED_PAIR_ITEM))
+    git("add", "x.yaml")
+    git("commit", "-q", "-m", "unrelated touch")
+
+    allow_path = write_allow(tmp_path)
+
+    failures, reports, preexisting = cl.run(
+        str(repo), allow_path, changed={"x.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    assert failures == []
+    assert [f.code for f in preexisting] == ["I2"]
+    assert reports == []
+
+    failures_no_ref, _, _ = cl.run(
+        str(repo), allow_path, changed={"x.yaml"}, gate_i6=False, compare_ref=None)
+    assert [f.code for f in failures_no_ref] == ["I2"]
+
+
+def test_compare_ref_new_finding_is_a_failure(tmp_path):
+    repo, git = init_git_repo(tmp_path)
+    (repo / "x.yaml").write_text(yaml_doc(_MATCHED_PAIR_ITEM))
+    git("add", "x.yaml")
+    git("commit", "-q", "-m", "ref: clean")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    (repo / "x.yaml").write_text(yaml_doc(_MATCHED_PAIR_ITEM, _ORPHAN_ITEM))
+    git("add", "x.yaml")
+    git("commit", "-q", "-m", "introduce orphan slot")
+
+    allow_path = write_allow(tmp_path)
+    failures, _, preexisting = cl.run(
+        str(repo), allow_path, changed={"x.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    assert [f.code for f in failures] == ["I2"]
+    assert preexisting == []
+
+
+def test_compare_ref_unresolvable_exits_2(tmp_path, capsys):
+    repo, git = init_git_repo(tmp_path)
+    (repo / "x.yaml").write_text(yaml_doc(_ORPHAN_ITEM))
+    git("add", "x.yaml")
+    git("commit", "-q", "-m", "initial")
+
+    allow_path = write_allow(tmp_path)
+    rc = cl.main(["--root", str(repo), "--allowlist", allow_path,
+                  "--changed", "x.yaml", "--compare-ref", "not-a-real-ref"])
+    assert rc == 2
+    assert "not-a-real-ref" in capsys.readouterr().err

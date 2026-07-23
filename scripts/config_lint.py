@@ -12,7 +12,10 @@ Invariants (see docs/superpowers/specs/2026-07-23-rule-storage-rekey-design.md):
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 from typing import NamedTuple, Optional
 
 import yaml
@@ -61,6 +64,42 @@ def load_entries(root: str) -> list:
                 copies = [Copy(_pos(c["from"]), _pos(c["to"])) for c in raw.get("copy") or []]
                 entries.append(Entry(rel, raw.get("function"), raw.get("signature"), copies))
     return entries
+
+
+def _git(args, cwd) -> str:
+    """Run a git command, returning stdout; raises RuntimeError with stderr on failure."""
+    proc = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError((proc.stderr or proc.stdout).strip() or f"git {' '.join(args)} failed")
+    return proc.stdout
+
+
+def load_entries_at_ref(ref: str, root: str) -> list:
+    """Same entries as load_entries(root), read from git ref <ref> instead of the
+    working tree. `root` must live inside a git working tree; touches neither the
+    working tree, the index, nor HEAD. Raises RuntimeError if `ref` (or a path
+    under `root`) cannot be resolved."""
+    top = _git(["rev-parse", "--show-toplevel"], root).strip()
+    rel_root = os.path.relpath(os.path.abspath(root), top)
+    rel_root = "" if rel_root == "." else rel_root
+
+    ls_args = ["ls-tree", "-r", "--name-only", ref]
+    if rel_root:
+        ls_args += ["--", rel_root]
+    paths = [p for p in _git(ls_args, top).splitlines() if p.endswith((".yaml", ".yml"))]
+
+    tmpdir = tempfile.mkdtemp(prefix="config_lint_ref_")
+    try:
+        for path in paths:
+            content = _git(["show", f"{ref}:{path}"], top)
+            dest_rel = os.path.relpath(path, rel_root) if rel_root else path
+            dest = os.path.join(tmpdir, dest_rel)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with open(dest, "w") as fh:
+                fh.write(content)
+        return load_entries(tmpdir)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def arity(sig) -> Optional[int]:
@@ -311,9 +350,7 @@ def check_no_rule_storage(entries) -> list:
     return findings
 
 
-def run(root, allow_path, changed=None, gate_i6=False):
-    entries = load_entries(root)
-    allow = load_allowlist(allow_path)
+def _all_findings(entries, allow, gate_i6) -> list:
     findings = (
         check_shared_slot(entries, allow)
         + check_orphan_slots(entries, allow)
@@ -323,11 +360,41 @@ def run(root, allow_path, changed=None, gate_i6=False):
     )
     if gate_i6:
         findings += check_no_rule_storage(entries)
+    return findings
+
+
+def run(root, allow_path, changed=None, gate_i6=False, compare_ref=None):
+    """Returns (failures, reports, preexisting_changed).
+
+    failures: findings to gate on.
+    reports: findings outside `changed`, reported but never enforced.
+    preexisting_changed: only non-empty with `compare_ref` set — findings in
+        `changed` files that already existed at `compare_ref`; reported, not
+        enforced, and kept distinct from `failures` (new findings) and from
+        `reports` (untouched files).
+
+    Without `changed`, every finding is a failure (whole-config gate).
+    With `changed` but no `compare_ref`, every finding in a changed file is a
+    failure, matching the pre-`--compare-ref` behaviour.
+    With `changed` and `compare_ref`, only findings in changed files that are
+    NEW relative to `compare_ref` are failures; findings are compared by
+    (code, file, func, detail) identity, not by count.
+    """
+    entries = load_entries(root)
+    allow = load_allowlist(allow_path)
+    findings = _all_findings(entries, allow, gate_i6)
     if changed is None:
-        return findings, []
-    failures = [f for f in findings if f.file in changed]
+        return findings, [], []
+    if compare_ref is None:
+        failures = [f for f in findings if f.file in changed]
+        reports = [f for f in findings if f.file not in changed]
+        return failures, reports, []
+    ref_entries = load_entries_at_ref(compare_ref, root)
+    ref_ids = {tuple(f) for f in _all_findings(ref_entries, allow, gate_i6)}
+    failures = [f for f in findings if f.file in changed and tuple(f) not in ref_ids]
+    preexisting_changed = [f for f in findings if f.file in changed and tuple(f) in ref_ids]
     reports = [f for f in findings if f.file not in changed]
-    return failures, reports
+    return failures, reports, preexisting_changed
 
 
 def main(argv=None) -> int:
@@ -339,6 +406,9 @@ def main(argv=None) -> int:
     ap.add_argument("--changed", nargs="*", default=None,
                     help="config-relative paths to enforce; others are reported only")
     ap.add_argument("--gate-i6", action="store_true")
+    ap.add_argument("--compare-ref", default=None,
+                    help="git ref to diff --changed findings against; only findings "
+                         "new relative to this ref fail, pre-existing ones are reported")
     args = ap.parse_args(argv)
     if not os.path.isdir(args.root):
         print(f"error: config root not found: {args.root}", file=sys.stderr)
@@ -347,9 +417,20 @@ def main(argv=None) -> int:
         print(f"error: allowlist not found: {args.allowlist}", file=sys.stderr)
         return 2
     changed = set(args.changed) if args.changed is not None else None
-    failures, reports = run(args.root, args.allowlist, changed, args.gate_i6)
+    try:
+        failures, reports, preexisting_changed = run(
+            args.root, args.allowlist, changed, args.gate_i6, args.compare_ref)
+    except RuntimeError as e:
+        print(f"error: --compare-ref {args.compare_ref}: {e}", file=sys.stderr)
+        return 2
     for f in failures:
         print(f"FAIL {f.code} {f.file} {f.func}: {f.detail}")
+    if preexisting_changed:
+        counts = {}
+        for f in preexisting_changed:
+            counts[f.code] = counts.get(f.code, 0) + 1
+        print("pre-existing in changed files (reported, not enforced): "
+              + ", ".join(f"{k}={counts[k]}" for k in sorted(counts)))
     if reports:
         counts = {}
         for f in reports:
