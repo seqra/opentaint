@@ -65,6 +65,10 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
 - function:
     package: <builtin>
     name: min
@@ -72,6 +76,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
     to: result
 - function:
     package: <builtin>
