@@ -226,7 +226,7 @@ private fun Predicate.transform(context: MetavarUnificationContext): Predicate {
     val condition = constraint.condition
 
     val newCondition = when (condition) {
-        is IsMetavar -> IsMetavar(context.transform(condition.metavar))
+        is IsMetavar -> IsMetavar(context.transform(condition.metavar), condition.star)
         is StringValueMetaVar -> StringValueMetaVar(context.transform(condition.metaVar))
         else -> return this
     }

@@ -142,7 +142,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
             }
 
             is Metavar -> {
-                IsMetavar(MetavarAtom.create(pattern.name))
+                IsMetavar(MetavarAtom.create(pattern.name), star = pattern.star)
             }
 
             is AnonymousMetavar -> {
@@ -157,7 +157,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
                 val typeName = transformTypeName(pattern.type)
                 ParamCondition.And(
                     listOf(
-                        IsMetavar(MetavarAtom.create(pattern.name)),
+                        IsMetavar(MetavarAtom.create(pattern.name), star = pattern.star),
                         ParamCondition.TypeIs(typeName)
                     )
                 )
@@ -597,7 +597,7 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
                         is MetavarName -> {
                             paramConditions += ParamPattern(
                                 position,
-                                IsMetavar(MetavarAtom.create(name.metavarName))
+                                IsMetavar(MetavarAtom.create(name.metavarName), star = param.star)
                             )
                         }
                         is AnonymousName -> {}

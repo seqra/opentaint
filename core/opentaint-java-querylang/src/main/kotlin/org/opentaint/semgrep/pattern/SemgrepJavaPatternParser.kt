@@ -63,6 +63,21 @@ import org.opentaint.semgrep.pattern.antlr.JavaParserBaseVisitor
 import java.util.Collections
 import java.util.IdentityHashMap
 
+/**
+ * Parses a single Java semgrep pattern string into a [SemgrepJavaPattern], throwing on failure.
+ *
+ * Thin convenience wrapper over [SemgrepJavaPatternParser.parseSemgrepJavaPattern] using the exact
+ * same parser path the rule loader uses (see conversion/SemgrepPatternParser.kt).
+ */
+fun parseJavaSemgrepPattern(pattern: String): SemgrepJavaPattern =
+    when (val result = SemgrepJavaPatternParser().parseSemgrepJavaPattern(pattern)) {
+        is SemgrepJavaPatternParsingResult.Ok -> result.pattern
+        is SemgrepJavaPatternParsingResult.ParserFailure -> throw result.exception
+        is SemgrepJavaPatternParsingResult.OtherFailure -> throw result.exception
+        is SemgrepJavaPatternParsingResult.FailedASTParsing ->
+            error("Failed to parse pattern '$pattern': ${result.errorMessages}")
+    }
+
 sealed interface SemgrepJavaPatternParsingResult {
     data class Ok(val pattern: SemgrepJavaPattern) : SemgrepJavaPatternParsingResult
     data class ParserFailure(val exception: SemgrepParsingException) : SemgrepJavaPatternParsingResult
@@ -333,10 +348,17 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
     override fun visitFormalParameter(ctx: FormalParameterContext): SemgrepJavaPattern = ctx.withRule {
         tryRule(FormalParameterContext::ellipsisExpression) { return Ellipsis }
         tryRule(FormalParameterContext::formalParameterMetavar) { return parseFormalParameterMetavar(it) }
-        tryRule(FormalParameterContext::variableDeclaratorId) {
-            val name = it.identifier().parseName()
+        tryRule(FormalParameterContext::variableDeclaratorId) { declaratorId ->
             val type = value(FormalParameterContext::typeType).accept(typenameParser) ?: ctx.parsingFailed()
             val modifiers = value(FormalParameterContext::variableModifier).mapNotNull { parseModifier(it) }
+
+            // Starred declarator alternative `METAVAR '*'`: the `identifier` subrule is absent.
+            if (declaratorId.identifier() == null) {
+                val name = MetavarName(declaratorId.METAVAR().text)
+                return FormalArgument(name, type, modifiers, star = true)
+            }
+
+            val name = declaratorId.identifier().parseName()
             return FormalArgument(name, type, modifiers)
         }
         unreachable()
@@ -683,6 +705,9 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
 
     override fun visitPrimaryExpression(ctx: JavaParser.PrimaryExpressionContext): SemgrepJavaPattern =
         ctx.primary().parse()
+
+    override fun visitPrimaryStarredMetavar(ctx: JavaParser.PrimaryStarredMetavarContext): SemgrepJavaPattern =
+        Metavar(ctx.METAVAR().text, star = true)
 
     override fun visitPrimaryClassLiteral(ctx: JavaParser.PrimaryClassLiteralContext): SemgrepJavaPattern = ctx.todo()
 

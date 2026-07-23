@@ -188,7 +188,7 @@ interface PatternRewriter {
         val newModifiersOptions = modifiers.map { it.rewriteModifier() }.cartesianProductMapTo { it.toList() }
 
         return newModifiersOptions.flatMap { newModifiers ->
-            createFormalArgument(newName, newType, newModifiers)
+            createFormalArgument(newName, newType, newModifiers, star)
         }
     }
 
@@ -296,8 +296,13 @@ interface PatternRewriter {
     fun createArrayAccess(obj: SemgrepJavaPattern, idx: SemgrepJavaPattern): List<SemgrepJavaPattern> =
         listOf(ArrayAccess(obj, idx))
 
-    fun createFormalArgument(name: Name, type: TypeName, modifiers: List<Modifier>): List<SemgrepJavaPattern> =
-        listOf(FormalArgument(name, type, modifiers))
+    fun createFormalArgument(
+        name: Name,
+        type: TypeName,
+        modifiers: List<Modifier>,
+        star: Boolean = false
+    ): List<SemgrepJavaPattern> =
+        listOf(FormalArgument(name, type, modifiers, star))
 
     fun createMethodDeclaration(
         name: Name,
