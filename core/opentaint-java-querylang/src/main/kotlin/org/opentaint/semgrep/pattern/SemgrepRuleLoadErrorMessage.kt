@@ -179,6 +179,14 @@ class MetavarConstraintParsingFailure : UnsupportedFeatureNonBlockingMessage() {
     override val message: String = "Failed to parse metavariable constraint; the constraint will be ignored"
 }
 
+class StarPatternNotCoincidenceUnsupported(metavar: String) : UnsupportedFeatureNonBlockingMessage() {
+    override val message: String =
+        "A positive whole-object taint occurrence `$metavar*` coincides at the same position with an " +
+            "unstarred `pattern-not $metavar`. The scoped 'keep field, drop base' semantics of this " +
+            "combination is unsupported and reserved; it is treated as a full (exclude-all) match. " +
+            "To keep the current behavior explicitly, star the pattern-not occurrence as `$metavar*`."
+}
+
 class TaintAutomataCreationFailure(causeMessage: String?) : InternalWarningBlockingMessage() {
     override val message: String = "Failed to create taint automata: ${causeMessage ?: "unknown error"}"
 }

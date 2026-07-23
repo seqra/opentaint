@@ -441,11 +441,11 @@ class PatternToActionListConverter: ActionListBuilder<SemgrepJavaPattern> {
 
         when (val v = pattern.variable) {
             is Metavar -> {
-                conditions += IsMetavar(MetavarAtom.create(v.name))
+                conditions += IsMetavar(MetavarAtom.create(v.name), star = v.star)
             }
 
             is TypedMetavar -> {
-                conditions += IsMetavar(MetavarAtom.create(v.name))
+                conditions += IsMetavar(MetavarAtom.create(v.name), star = v.star)
 
                 val typeName = transformTypeName(v.type)
                 conditions += ParamCondition.TypeIs(typeName)

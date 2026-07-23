@@ -64,7 +64,7 @@
  WS_NLSEMI: [ \t]+ -> channel(HIDDEN);
 --- a/GoParser.g4
 +++ b/GoParser.g4
-@@ -39,10 +39,52 @@
+@@ -39,10 +39,63 @@
      superClass = GoParserBase;
  }
  
@@ -83,6 +83,17 @@
 +            return true;
 +        }
 +        return super.isOperand();
++    }
++
++    // Semgrep: an adjacent postfix star on a metavar (VAR followed by STAR) is a
++    // whole-object starred metavar. The predicate fires only when METAVAR_IDENT is
++    // immediately followed by a `*` with no gap, so a spaced `VAR * y` (multiplication)
++    // and a prefix `*p` (deref) are unaffected.
++    public boolean metavarStarAdjacent() {
++        org.antlr.v4.runtime.Token mv = _input.LT(1);
++        org.antlr.v4.runtime.Token star = _input.LT(2);
++        return mv != null && star != null && "*".equals(star.getText())
++            && mv.getStopIndex() + 1 == star.getStartIndex();
 +    }
 +}
 +
@@ -291,14 +302,17 @@
      ;
  
  conversion
-@@ -424,6 +478,7 @@
+@@ -424,6 +478,9 @@
  operand
-     : literal
+-    : literal
++    : {this.metavarStarAdjacent()}? METAVAR_IDENT STAR
++    | literal
      | operandName typeArgs?
++    | L_PAREN {this.metavarStarAdjacent()}? METAVAR_IDENT STAR COLON type_ R_PAREN
 +    | L_PAREN METAVAR_IDENT COLON type_ R_PAREN
      | L_PAREN expression R_PAREN
      ;
- 
+
 @@ -451,11 +506,17 @@
  
  operandName

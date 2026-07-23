@@ -93,6 +93,70 @@ class StarOperatorRuleGenTest {
     }
 
     @Test
+    fun `starred assignment-LHS source assigns value and any-field`() {
+        // F1: the star sits on the assignment LHS metavar (`$X* = src()`), not a call argument.
+        // The whole-object taint must still emit BOTH a plain-value assign and an any-field assign.
+        val cfg = config(
+            """
+            rules:
+              - id: star-assign-source
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: ${'$'}X* = src();
+                pattern-sinks:
+                  - pattern: sink(${'$'}Y);
+            """.trimIndent()
+        )
+        val positions = sourceAssignPositions(cfg)
+        assertTrue(
+            positions.any { it is PositionBaseWithModifiers.BaseOnly },
+            "expected a plain-value assign; got $positions"
+        )
+        assertTrue(
+            positions.any {
+                it is PositionBaseWithModifiers.WithModifiers &&
+                    it.modifiers.contains(PositionModifier.AnyField)
+            },
+            "expected an any-field assign; got $positions"
+        )
+    }
+
+    @Test
+    fun `starred typed-declaration source assigns value and any-field`() {
+        // F5: a starred TYPED declaration (`String $X* = src()`) must load and thread the star
+        // through the assignment path, emitting both a plain-value and an any-field assign.
+        val cfg = config(
+            """
+            rules:
+              - id: star-typed-decl-source
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: String ${'$'}X* = src();
+                pattern-sinks:
+                  - pattern: sink(${'$'}Y);
+            """.trimIndent()
+        )
+        val positions = sourceAssignPositions(cfg)
+        assertTrue(
+            positions.any { it is PositionBaseWithModifiers.BaseOnly },
+            "expected a plain-value assign; got $positions"
+        )
+        assertTrue(
+            positions.any {
+                it is PositionBaseWithModifiers.WithModifiers &&
+                    it.modifiers.contains(PositionModifier.AnyField)
+            },
+            "expected an any-field assign; got $positions"
+        )
+    }
+
+    @Test
     fun `starred sanitizer cleans value and any-field`() {
         val cfg = config(
             """

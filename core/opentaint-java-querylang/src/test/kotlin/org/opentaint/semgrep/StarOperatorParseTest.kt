@@ -72,6 +72,15 @@ class StarOperatorParseTest {
     }
 
     @Test
+    fun `starred typed variable declaration`() {
+        // F5: the starred `variableDeclaratorId` alternative in a TYPED declaration must load
+        // (no parse exception) and the declared LHS metavar must carry star=true.
+        val mvs = metavars("String \$UNTRUSTED* = \$REQ.getParameter(\"q\");")
+        val u = mvs.single { it.name == "\$UNTRUSTED" }
+        assertTrue(u.star, "expected typed-declaration \$UNTRUSTED* to be starred")
+    }
+
+    @Test
     fun `starred bare return value`() {
         val mvs = metavars("return \$UNTRUSTED*;")
         val u = mvs.single { it.name == "\$UNTRUSTED" }

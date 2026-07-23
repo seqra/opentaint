@@ -31,6 +31,7 @@ import org.opentaint.semgrep.pattern.conversion.automata.OperationCancelation
 import org.opentaint.semgrep.pattern.conversion.automata.ParamConstraint
 import org.opentaint.semgrep.pattern.conversion.automata.Position
 import org.opentaint.semgrep.pattern.conversion.automata.Predicate
+import org.opentaint.semgrep.pattern.conversion.automata.StarPatternNotCoincidence
 import org.opentaint.semgrep.pattern.conversion.generatedAnyValueGeneratorMethodName
 import org.opentaint.semgrep.pattern.conversion.generatedStringConcatMethodName
 import org.opentaint.semgrep.pattern.toDNF
@@ -282,7 +283,10 @@ fun MethodFormulaManager.simplifyMethodFormulaCube(
     typeOps: LanguageTypeOps,
     applyNotEquivalentTransformations: Boolean,
 ): MethodFormulaCubeCompact? {
-    var solver = MethodFormulaSolver(metaVarInfo, typeOps, applyNotEquivalentTransformations)
+    var solver = MethodFormulaSolver(
+        metaVarInfo, typeOps, applyNotEquivalentTransformations,
+        coincidenceSink = starPatternNotCoincidences,
+    )
 
     cube.positiveLiterals.forEach {
         solver = solver.addPositivePredicate(predicate(it))
@@ -312,7 +316,9 @@ fun MethodFormulaManager.simplifyMethodFormulaCube(
     return result
 }
 
-private class MethodConstraintsSolver {
+private class MethodConstraintsSolver(
+    private val coincidenceSink: MutableSet<StarPatternNotCoincidence>? = null,
+) {
     private val positiveMetaVars = hashMapOf<Position, MutableSet<MetavarAtom.Basic>>()
     private val positiveParams = hashMapOf<Position, MutableSet<Atom>>()
     private var positiveNumberOfArgs: NumberOfArgsConstraint? = null
@@ -366,9 +372,26 @@ private class MethodConstraintsSolver {
                 val currentPositive = positiveParams[constraint.position].orEmpty()
                 if (constraint.condition in currentPositive) return null
 
-                if (constraint.condition is IsMetavar) {
+                val negCond = constraint.condition
+                if (negCond is IsMetavar) {
                     val posMetaVars = positiveMetaVars[constraint.position].orEmpty()
-                    if (constraint.condition.metavar.basics.any { it in posMetaVars }) return null
+                    if (negCond.metavar.basics.any { it in posMetaVars }) {
+                        // The negated metavar coincides (star-blind) with a positive occurrence at
+                        // the same position -> whole-match exclusion (return null below), unchanged.
+                        // Additionally flag the T/F cell: an unstarred `pattern-not $X` coinciding
+                        // with a positive `$X*`. Its "keep field, drop base" semantics is NOT
+                        // implemented; treat as full exclusion (as today) but surface a diagnostic.
+                        if (!negCond.star) {
+                            val coincidesWithStarPositive = currentPositive.any { pos ->
+                                pos is IsMetavar && pos.star &&
+                                    pos.metavar.basics.any { it in negCond.metavar.basics }
+                            }
+                            if (coincidesWithStarPositive) {
+                                coincidenceSink?.add(StarPatternNotCoincidence(negCond.metavar.toString()))
+                            }
+                        }
+                        return null
+                    }
                 }
             }
 
@@ -410,7 +433,9 @@ private class MethodFormulaSolver(
     private val metaVarInfo: ResolvedMetaVarInfo,
     private val typeOps: LanguageTypeOps,
     private val applyNotEquivalentTransformations: Boolean,
-    private val positive: SolverConstraints = SolverConstraints(signature = null),
+    coincidenceSink: MutableSet<StarPatternNotCoincidence>? = null,
+    private val positive: SolverConstraints =
+        SolverConstraints(signature = null, constraints = MethodConstraintsSolver(coincidenceSink)),
     private val negated: MutableMap<MethodSignature, MutableList<SolverConstraints>> = hashMapOf()
 ) {
     fun addPositivePredicate(predicate: Predicate): MethodFormulaSolver? {

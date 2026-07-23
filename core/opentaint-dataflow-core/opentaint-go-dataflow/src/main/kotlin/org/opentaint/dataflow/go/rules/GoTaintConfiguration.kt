@@ -277,7 +277,11 @@ class GoTaintConfiguration : GoTaintRulesProvider {
     private fun GoSerializedCleanAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =
         pos.resolve(signature).map {
             val kind = taintKind
-            if (kind == null) RemoveAllMarks(it) else RemoveMark(kind, it)
+            when {
+                kind == null -> RemoveAllMarks(it)
+                this is GoSerializedCleanAction.AnyAccessor -> RemoveMark(kind, it, onAnyAccessor = true)
+                else -> RemoveMark(kind, it)
+            }
         }
 
     private fun generateRuleId(rule: GoSerializedRule.Sink): String {

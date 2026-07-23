@@ -187,6 +187,7 @@ interface MethodCallFlowFunction {
         override fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase) = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                initialFacts = emptySet(),
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                 },
@@ -194,6 +195,8 @@ interface MethodCallFlowFunction {
                     check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                     this += CallToReturnZFact(factAp, trace)
                 },
+                // no initial facts here, so the resolver is never built/consulted
+                addSideEffect = { _, _ -> },
             )
         }
 
@@ -204,6 +207,7 @@ interface MethodCallFlowFunction {
         ): Set<FactCallFailureFact> = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                initialFacts = setOf(initialFactAp),
                 addSideEffectRequirement = { factReader ->
                     this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
                 },
@@ -214,6 +218,7 @@ interface MethodCallFlowFunction {
                         trace
                     )
                 },
+                addSideEffect = { i, k -> this += FactSideEffect(i, k) },
             )
         }
 
@@ -224,6 +229,7 @@ interface MethodCallFlowFunction {
         ) = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                initialFacts = initialFacts,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                 },
@@ -231,6 +237,8 @@ interface MethodCallFlowFunction {
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                     this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
                 },
+                // multiple initial facts here, so the resolver is never built/consulted
+                addSideEffect = { _, _ -> },
             )
         }
 
@@ -247,8 +255,10 @@ interface MethodCallFlowFunction {
 
         fun propagateUnresolvedCallFact(
             factAp: FinalFactAp,
+            initialFacts: Set<InitialFactAp>,
             addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
             addSideEffectRequirement: (FinalFactReader) -> Unit,
+            addSideEffect: (InitialFactAp, SideEffectKind) -> Unit,
         )
     }
 }

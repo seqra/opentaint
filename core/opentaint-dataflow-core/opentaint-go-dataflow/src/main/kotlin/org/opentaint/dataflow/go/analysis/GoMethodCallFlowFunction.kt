@@ -3,6 +3,7 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -176,8 +177,10 @@ class GoMethodCallFlowFunction(
 
     override fun propagateUnresolvedCallFact(
         factAp: FinalFactAp,
+        initialFacts: Set<InitialFactAp>,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
-        addSideEffectRequirement: (FinalFactReader) -> Unit
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addSideEffect: (InitialFactAp, SideEffectKind) -> Unit,
     ) {
         propagateDefault(factAp, addCallToReturn)
 

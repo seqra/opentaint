@@ -51,6 +51,9 @@ data object GoTaintStrategy :
 
     data object GoMarkConditionBuilder : MarkConditionBuilder<GoSerializedCondition> {
         override fun checkTaintMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): GoSerializedCondition =
+            mark.mkGoContainsMark(pos)
+
+        override fun checkTaintMarkOnAnyField(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): GoSerializedCondition =
             mark.mkGoContainsMarkOnAnyAccessor(pos)
 
         override fun negate(cond: GoSerializedCondition) = GoSerializedCondition.not(cond)
