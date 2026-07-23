@@ -8,6 +8,6 @@ passThrough:
   - from: arg(*)
     to: result(0)
   - from:
-      - arg(*)
+      - arg(0)
       - '[*]'
     to: result(0)
