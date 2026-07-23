@@ -464,7 +464,7 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.SortResponseControl#encodedValue#byte[]
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
   - from: arg(2)
     to:
     - this
