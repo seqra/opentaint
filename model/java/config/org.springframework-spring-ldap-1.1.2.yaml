@@ -26,11 +26,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-- function: org.springframework.ldap.support.LdapRdn#addComponent
-  taintCopyOnly: true
-  copy:
-  - from: arg(*)
-    to: this
 - function: org.springframework.ldap.support.filter.LessThanOrEqualsFilter#<init>
   signature:
     params:
@@ -196,11 +191,6 @@ passThrough:
     to:
     - this
     - .org.springframework.ldap.support.control.PagedResultsCookie#<rule-storage>#java.lang.Object
-- function: org.springframework.ldap.support.LdapRdnComponent#getValue
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function:
     package: org.springframework.ldap.support
     class: LdapRdn
@@ -253,13 +243,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: org.springframework.ldap.support.LdapRdnComponent#<init>
-  taintCopyOnly: true
-  copy:
-  - from: arg(1)
-    to: this
-  - from: arg(0)
-    to: this
 - function: org.springframework.ldap.support.filter.LessThanOrEqualsFilter#<init>
   copy:
   - from: arg(1)
@@ -388,11 +371,6 @@ passThrough:
     to:
     - this
     - .org.springframework.ldap.support.filter.LikeFilter#attribute#java.lang.String
-- function: org.springframework.ldap.support.LdapRdn#getComponent
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.springframework.ldap.support.LdapRdnComponent#getKey
   copy:
   - from:
@@ -432,11 +410,6 @@ passThrough:
     - this
     - .org.springframework.ldap.support.LdapRdnComponent#<rule-storage>#java.lang.Object
     to: result
-- function: org.springframework.ldap.support.LdapRdnComponent#setValue
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function:
     package: org.springframework.ldap.support
     class: LdapRdn
@@ -561,11 +534,6 @@ passThrough:
     - this
     - .org.springframework.ldap.support.DistinguishedName#rdns#java.util.List
     to: result
-- function: org.springframework.ldap.support.LdapRdn#getComponents
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.springframework.ldap.support.filter.WhitespaceWildcardsFilter#<init>
   signature:
     params:
@@ -595,16 +563,6 @@ passThrough:
     - this
     - .org.springframework.ldap.support.DirContextOperations#dn#javax.naming.Name
     to: result
-- function: org.springframework.ldap.support.LdapRdnComponent#getKey
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.springframework.ldap.support.LdapRdnComponent#setKey
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: org.springframework.ldap.CollectingNameClassPairCallbackHandler#getObjectFromNameClassPair
   taintCopyOnly: true
   copy:

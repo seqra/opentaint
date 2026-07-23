@@ -26,12 +26,6 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
-- function: javax.xml.transform.sax.SAXResult#setLexicalHandler
-  signature: (org.xml.sax.ext.LexicalHandler) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: javax.xml.transform.sax.SAXResult#getLexicalHandler
   signature: () org.xml.sax.ext.LexicalHandler
   copy:
@@ -59,12 +53,6 @@ passThrough:
     to:
     - this
     - .javax.xml.transform.sax.SAXResult#lexicalHandler#org.xml.sax.ext.LexicalHandler
-- function: javax.xml.transform.sax.SAXResult#setHandler
-  signature: (org.xml.sax.ContentHandler) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function:
     package: javax.xml.transform.sax
     class: SAXResult
@@ -95,12 +83,6 @@ passThrough:
   - from:
     - this
     - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
-    to: result
-- function: javax.xml.transform.sax.SAXResult#getLexicalHandler
-  signature: () org.xml.sax.ext.LexicalHandler
-  taintCopyOnly: true
-  copy:
-  - from: this
     to: result
 - function:
     package: javax.xml.transform.sax
@@ -195,12 +177,6 @@ passThrough:
     to:
     - this
     - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
-- function: javax.xml.transform.sax.SAXResult#getHandler
-  signature: () org.xml.sax.ContentHandler
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature: () void
   taintCopyOnly: true
