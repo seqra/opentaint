@@ -83,8 +83,10 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
             }
         }
 
-        val finalRuleIds = (edgesToFinalAccept + edgesToFinalDead)
-            .flatMap { serializedItemIdsByEdge[it].orEmpty().asSequence() }
+        val finalStates = automata.finalAcceptStates + automata.finalDeadStates
+        val finalRuleIds = finalStates
+            .flatMap { predecessorEdgesByState[it].orEmpty() }
+            .flatMap { serializedItemIdsByEdge[it].orEmpty() }
             .filterTo(hashSetOf()) { it in survivingIds }
 
         return TaintRuleFromSemgrep.TaintRuleGroup(rules, dependencies, finalRuleIds)
