@@ -147,6 +147,58 @@ passThrough:
     to:
     - this
     - .javax.naming.NameClassPair#className#java.lang.Object
+- function: javax.naming.Binding#<init>
+  signature: (java.lang.String, java.lang.Object) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.NameClassPair#name#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
+- function: javax.naming.Binding#<init>
+  signature: (java.lang.String, java.lang.Object, boolean) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.NameClassPair#name#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
+- function: javax.naming.Binding#<init>
+  signature: (java.lang.String, java.lang.String, java.lang.Object) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.NameClassPair#name#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.NameClassPair#className#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
+- function: javax.naming.Binding#<init>
+  signature: (java.lang.String, java.lang.String, java.lang.Object, boolean) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.NameClassPair#name#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.NameClassPair#className#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
 - function: javax.naming.CompositeName#addAll
   signature:
     params:

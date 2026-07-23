@@ -150,6 +150,13 @@ passThrough:
     - this
     - .javax.naming.ldap.Rdn#value#java.lang.Object
     to: result
+- function: javax.naming.ldap.Rdn#getType
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.naming.ldap.Rdn#type#java.lang.String
+    to: result
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.ldap.Rdn) *
   copy:
@@ -184,12 +191,6 @@ passThrough:
   - from: arg(0)
     to: this
   - from: arg(1)
-    to: this
-- function: javax.naming.ldap.Rdn#<init>
-  signature: (java.lang.String, java.lang.Object) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(*)
     to: this
 - function: javax.naming.ldap.Rdn#unescapeValue
   signature: (java.lang.String) java.lang.Object
@@ -292,8 +293,14 @@ passThrough:
 - function: javax.naming.ldap.Rdn#<init>
   signature: (java.lang.String, java.lang.Object) void
   copy:
-  - from: arg(*)
-    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.ldap.Rdn#type#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.ldap.Rdn#value#java.lang.Object
 - function: javax.naming.ldap.Rdn#put
   signature: (*, *) javax.naming.ldap.Rdn
   copy:
