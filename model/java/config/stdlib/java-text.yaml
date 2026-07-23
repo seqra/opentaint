@@ -150,10 +150,7 @@ passThrough:
   copy:
   - from: arg(1)
     to: result
-- function:
-    package: java.text
-    class: DateFormatSymbols
-    name: setLocalPatternChars
+- function: java.text.DateFormatSymbols#setLocalPatternChars
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
@@ -264,10 +261,7 @@ passThrough:
     to: result
   - from: this
     to: result
-- function:
-    package: java.text
-    class: DateFormatSymbols
-    name: setZoneStrings
+- function: java.text.DateFormatSymbols#setZoneStrings
   signature: (java.lang.String[][]) void
   copy:
   - from: arg(0)
@@ -826,20 +820,14 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormat#parsedNumber#java.lang.Number
-- function:
-    package: java.text
-    class: DateFormatSymbols
-    name: getLocalPatternChars
+- function: java.text.DateFormatSymbols#getLocalPatternChars
   signature: () java.lang.String
   copy:
   - from:
     - this
     - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
     to: result
-- function:
-    package: java.text
-    class: DateFormatSymbols
-    name: getZoneStrings
+- function: java.text.DateFormatSymbols#getZoneStrings
   signature: () java.lang.String[][]
   copy:
   - from:
