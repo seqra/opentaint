@@ -81,7 +81,7 @@ class TaintAnalysisUnitRunnerManager(
     private val methodDependencies = ConcurrentHashMap<CommonMethod, MutableSet<UnitType>>()
 
     private val runnerJobs = ConcurrentLinkedQueue<Job>()
-    private val analysisCompletion = CompletableDeferred<Unit>()
+    private var analysisCompletion = CompletableDeferred<Unit>()
 
     private val totalEventsProcessed = AtomicInteger()
     private val totalEventsEnqueued = AtomicInteger()
@@ -128,6 +128,11 @@ class TaintAnalysisUnitRunnerManager(
         this.activeApManager = manager
         runnerForUnit.elements().iterator().forEach { it.resetApManager(manager) }
         unitStorage.elements().iterator().forEach { it.resetApManager(manager) }
+
+        totalDelayedUnits.set(0)
+        totalEventsEnqueued.set(0)
+        totalEventsProcessed.set(0)
+        analysisCompletion = CompletableDeferred()
     }
 
     fun runAnalysis(
@@ -139,6 +144,8 @@ class TaintAnalysisUnitRunnerManager(
 
         val timeStart = TimeSource.Monotonic.markNow()
 
+        handleEventEnqueued()
+
         runnerForUnit.entries.forEach { (u, r) ->
             startRunner(u, r)
         }
@@ -146,8 +153,6 @@ class TaintAnalysisUnitRunnerManager(
         val unitStartMethods = startMethods.groupBy { unitResolver.resolve(it.method) }.filterKeys { it != UnknownUnit }
 
         logger.info { "Starting analysis of ${startMethods.size} methods in ${unitStartMethods.size} units" }
-
-        handleEventEnqueued()
 
         for ((unit, methods) in unitStartMethods) {
             val runner = getOrSpawnUnitRunner(unit)
