@@ -7,6 +7,7 @@ import org.opentaint.semgrep.pattern.Metavar
 import org.opentaint.semgrep.pattern.SemgrepJavaPattern
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.TypedMetavar
 import org.opentaint.semgrep.pattern.antlr.JavaLexer
 import org.opentaint.semgrep.pattern.antlr.JavaParser
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
@@ -79,6 +80,26 @@ class StarOperatorParseTest {
         val mvs = metavars("String \$*UNTRUSTED = \$REQ.getParameter(\"q\");")
         val u = mvs.single { it.name == "\$UNTRUSTED" }
         assertTrue(u.star, "expected typed-declaration \$*UNTRUSTED to be starred")
+    }
+
+    @Test
+    fun `starred typed metavar in receiver position`() {
+        // `(Type $*VAR).m()` is how a sink observes taint buried in a field of its RECEIVER —
+        // e.g. a java.io.File whose path is tainted but whose base carries no mark. Before the
+        // typedVariableExpression grammar accepted STARRED_METAVAR this failed to parse, and the
+        // whole pattern was dropped SILENTLY (the rule count shrank, no error was reported).
+        val typed = collect(parseJavaSemgrepPattern("(java.io.File \$*FILE).exists();"))
+            .filterIsInstance<TypedMetavar>()
+        val f = typed.single { it.name == "\$FILE" }
+        assertTrue(f.star, "expected receiver \$*FILE to be starred")
+    }
+
+    @Test
+    fun `starred typed metavar in argument position`() {
+        val typed = collect(parseJavaSemgrepPattern("sink((java.nio.file.Path \$*P));"))
+            .filterIsInstance<TypedMetavar>()
+        val p = typed.single { it.name == "\$P" }
+        assertTrue(p.star, "expected parenthesised typed \$*P to be starred")
     }
 
     @Test

@@ -302,6 +302,9 @@ private class SemgrepJavaPatternParserVisitor : JavaParserBaseVisitor<SemgrepJav
 
     override fun visitTypedVariableExpression(ctx: TypedVariableExpressionContext): TypedMetavar = ctx.withRule {
         val type = value(TypedVariableExpressionContext::typeTypeOrVoid).accept(typenameParser)
+        // Starred alternative (`(Type $*VAR)`): whole-object taint on the typed position. It has
+        // no `identifier` subrule, mirroring `variableDeclaratorId` and the formal-argument form.
+        ctx.STARRED_METAVAR()?.let { return TypedMetavar(it.text.stripStar(), type, star = true) }
         val name = value(TypedVariableExpressionContext::identifier).parseName() as? MetavarName
             ?: ctx.parsingFailed("Expected variable name to be a metavar name")
 

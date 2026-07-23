@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -39,7 +40,8 @@ class AnyAccessorCleanTest {
             is TaintMarkAccessor,
             is TypeInfoAccessor,
             is TypeInfoGroupAccessor -> false
-            is ValueAccessor -> error("unexpected accessor to unroll: $accessor")
+            is ValueAccessor,
+            is DeepMarkExclusion -> error("unexpected accessor to unroll: $accessor")
         }
     }
 
@@ -134,6 +136,19 @@ class AnyAccessorCleanTest {
             listOf(nestedField),
             clean(nestedField, simple),
             "base clean must NOT reach a concrete nested-field mark",
+        )
+    }
+
+    @Test
+    fun `any-accessor clean on a base-only final fact does not crash`() {
+        // A summary fact that is just base.Final (no accessors, no mark) has empty start accessors.
+        // An any-accessor clean position (base.ANY.mark.Final) must resolve to "not contained",
+        // NOT throw error("Impossible") in the any-accessor read split.
+        val bareFinal = fact()
+        assertEquals(
+            listOf(bareFinal),
+            clean(bareFinal, complexAny),
+            "any-accessor clean must leave an unrelated base-only final fact untouched",
         )
     }
 
