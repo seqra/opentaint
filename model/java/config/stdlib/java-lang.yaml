@@ -1189,7 +1189,8 @@ passThrough:
   - from: this
     to: result
 - function: java.lang.String#join
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[], int) java.lang.String
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[],
+    int) java.lang.String
   taintCopyOnly: true
   copy:
   - from: arg(*)
