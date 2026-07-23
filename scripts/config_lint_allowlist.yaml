@@ -1,3 +1,14 @@
+# Methods that legitimately expose every property of an object at once, so
+# the property-mismatch rule's "writer property != reader property" heuristic
+# does not apply to them. Two shapes belong here: renderers, which serialise
+# the whole object out (toString, getContent, ...), and whole-object
+# factories, which build or hand back a complete instance from all of an
+# object's properties in one call (DateFormatSymbols#getInstance and its
+# private/package-private helpers getInstanceRef, getProviderInstance --
+# confirmed with `javap -p java.text.DateFormatSymbols` to be the class's
+# only *Instance* factory methods, not named property accessors). Add an
+# entry only after confirming the method really has no single "property" of
+# its own -- never to silence a finding on a genuine named accessor.
 renderers:
   - toString
   - hashCode
@@ -6,6 +17,9 @@ renderers:
   - getRequestLine
   - getHostURL
   - writeXml
+  - getInstance
+  - getInstanceRef
+  - getProviderInstance
 source_fed_slots:
   - .javax.servlet.ServletRequest#content#java.lang.Object
   - .javax.servlet.ServletRequest#parameters#java.lang.Object
