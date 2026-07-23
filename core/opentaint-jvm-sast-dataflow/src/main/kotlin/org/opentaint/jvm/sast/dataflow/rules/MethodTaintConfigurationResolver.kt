@@ -185,15 +185,15 @@ class MethodTaintConfigurationResolver(
         ctx: AnyArgSpecializationCtx,
     ): TaintConfigurationItem = when (this) {
         is SerializedRule.EntryPoint -> {
-            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, id)
         }
 
         is SerializedRule.Source -> {
-            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, id)
         }
 
         is SerializedRule.MethodExitSource -> {
-            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, id)
         }
 
         is SerializedRule.Sink -> {
@@ -221,11 +221,11 @@ class MethodTaintConfigurationResolver(
         }
 
         is SerializedRule.PassThrough -> {
-            TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info)
+            TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info, id)
         }
 
         is SerializedRule.Cleaner -> {
-            TaintCleaner(method, condition, cleans.flatMap { it.resolve(ctx) }, info)
+            TaintCleaner(method, condition, cleans.flatMap { it.resolve(ctx) }, info, id)
         }
     }
 

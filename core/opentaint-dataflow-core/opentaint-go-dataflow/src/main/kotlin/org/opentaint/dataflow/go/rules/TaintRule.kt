@@ -11,6 +11,7 @@ import org.opentaint.dataflow.configuration.go.serialized.ItemInfo
 
 sealed interface TaintRule: CommonTaintConfigurationItem {
     val info: ItemInfo?
+    val id: String?
 
     sealed interface GoSourceRule : TaintRule, CommonTaintConfigurationSource {
         val condition: CommonCondition<GoRuleCondition>
@@ -22,6 +23,7 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
         override val condition: CommonCondition<GoRuleCondition>,
         override val actionsAfter: List<GoAssignAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : GoSourceRule
 
     data class FieldReadSource(
@@ -29,6 +31,7 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
         override val condition: CommonCondition<GoRuleCondition>,
         override val actionsAfter: List<GoAssignAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : GoSourceRule
 
     data class Source(
@@ -36,6 +39,7 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
         override val condition: CommonCondition<GoRuleCondition>,
         override val actionsAfter: List<GoAssignAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : GoSourceRule
 
     data class Sink(
@@ -57,6 +61,7 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
         val function: String,
         val actionsAfter: List<GoTaintAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : TaintRule, CommonTaintConfigurationItem, CommonTaintAction
 
     data class Cleaner(
@@ -64,5 +69,6 @@ sealed interface TaintRule: CommonTaintConfigurationItem {
         val condition: CommonCondition<GoRuleCondition>,
         val actionsAfter: List<GoTaintAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : TaintRule, CommonTaintConfigurationItem, CommonTaintAction
 }

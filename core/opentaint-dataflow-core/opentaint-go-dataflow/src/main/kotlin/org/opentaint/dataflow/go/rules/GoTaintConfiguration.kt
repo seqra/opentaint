@@ -186,12 +186,12 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     private fun specialize(rule: GoSerializedGlobalSource, name: String, fieldType: GoIRType) =
         specializeFieldSourceRule(name, fieldType, null, rule.condition, rule.taint) { name, condition, actions ->
-            TaintRule.GlobalReadSource(name, condition, actions, rule.info)
+            TaintRule.GlobalReadSource(name, condition, actions, rule.info, rule.id)
         }
 
     private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: GoIRType, receiverType: GoIRType?)  =
         specializeFieldSourceRule(name, fieldType, receiverType, rule.condition, rule.taint) { name, condition, actions ->
-            TaintRule.FieldReadSource(name, condition, actions, rule.info)
+            TaintRule.FieldReadSource(name, condition, actions, rule.info, rule.id)
         }
 
     private inline fun <T> specializeFieldSourceRule(
@@ -220,7 +220,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         if (condition.isFalse()) return null
 
         val actions = rule.taint.specialize(signature)
-        return TaintRule.Source(signature.name, condition, actions, rule.info)
+        return TaintRule.Source(signature.name, condition, actions, rule.info, rule.id)
     }
 
     private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRule.Sink? {
@@ -254,7 +254,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     private fun specialize(rule: GoSerializedRule.PassThrough, signature: GoFunctionSignature): TaintRule.PassThrough? {
         val actions = rule.copy.flatMap { it.toTaintAction(signature) }
-        return TaintRule.PassThrough(signature.name, actions, rule.info)
+        return TaintRule.PassThrough(signature.name, actions, rule.info, rule.id)
     }
 
     private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRule.Cleaner? {
@@ -262,7 +262,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         if (condition.isFalse()) return null
 
         val actions = rule.cleans.flatMap { it.toTaintAction(signature) }
-        return TaintRule.Cleaner(signature.name, condition, actions, rule.info)
+        return TaintRule.Cleaner(signature.name, condition, actions, rule.info, rule.id)
     }
 
     private fun GoSerializedPassAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =

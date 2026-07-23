@@ -10,6 +10,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.ItemInfo
 
 sealed interface TaintConfigurationItem : CommonTaintConfigurationItem {
     val info: ItemInfo?
+    val id: String?
 }
 
 sealed interface TaintConfigurationSource : TaintConfigurationItem, CommonTaintConfigurationSource {
@@ -22,6 +23,7 @@ data class TaintEntryPointSource(
     override val condition: Condition,
     override val actionsAfter: List<AssignMark>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : TaintConfigurationSource
 
 data class TaintMethodSource(
@@ -29,6 +31,7 @@ data class TaintMethodSource(
     override val condition: Condition,
     override val actionsAfter: List<AssignMark>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : TaintConfigurationSource
 
 data class TaintMethodExitSource(
@@ -36,6 +39,7 @@ data class TaintMethodExitSource(
     override val condition: Condition,
     override val actionsAfter: List<AssignMark>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : TaintConfigurationSource
 
 data class TaintStaticFieldSource(
@@ -43,6 +47,7 @@ data class TaintStaticFieldSource(
     override val condition: Condition,
     override val actionsAfter: List<AssignMark>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : TaintConfigurationSource
 
 sealed interface TaintConfigurationSink : TaintConfigurationItem, CommonTaintConfigurationSink {
@@ -88,6 +93,7 @@ data class TaintPassThrough(
     val condition: Condition,
     val actionsAfter: List<Action>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : TaintConfigurationItem
 
 data class TaintCleaner(
@@ -95,4 +101,5 @@ data class TaintCleaner(
     val condition: Condition,
     val actionsAfter: List<Action>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : TaintConfigurationItem
