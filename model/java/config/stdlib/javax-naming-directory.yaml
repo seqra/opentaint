@@ -72,11 +72,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
+    - .javax.naming.Binding#attributes#java.lang.Object
 - function: javax.naming.directory.SearchResult#<init>
   signature:
     params:
@@ -192,11 +188,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.Binding#attributes#java.lang.Object
     to: result
   - from:
     - this
@@ -315,37 +307,21 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.NameClassPair#name#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.NameClassPair#className#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.Binding#object#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(3)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
+    - .javax.naming.Binding#attributes#java.lang.Object
 - function: javax.naming.directory.BasicAttribute#remove
   signature: (int) java.lang.Object
   taintCopyOnly: true
@@ -391,37 +367,21 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.NameClassPair#name#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.NameClassPair#className#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
+    - .javax.naming.Binding#object#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(3)
     to:
     - this
-    - .javax.naming.Binding#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.NameClassPair#<rule-storage>#java.lang.Object
+    - .javax.naming.Binding#attributes#java.lang.Object
 - function: javax.naming.directory.ModificationItem#<init>
   signature: (int, javax.naming.directory.Attribute) void
   copy:
