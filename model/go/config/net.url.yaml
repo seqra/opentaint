@@ -193,6 +193,6 @@ passThrough:
   - from: arg(*)
     to: result(0)
   - from:
-      - arg(*)
+      - arg(1)
       - '[*]'
     to: result(0)
