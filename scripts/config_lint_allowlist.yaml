@@ -30,6 +30,7 @@ renderers:
   - java.text.DateFormatSymbols#getInstance
   - java.text.DateFormatSymbols#getInstanceRef
   - java.text.DateFormatSymbols#getProviderInstance
+  - java.text.DecimalFormatSymbols#getInstance
 source_fed_slots:
   - .javax.servlet.ServletRequest#content#java.lang.Object
   - .javax.servlet.ServletRequest#parameters#java.lang.Object
