@@ -15,29 +15,30 @@ to reproduce each resolved vulnerability in the full scan. Across every
 trace branch that can participate in a complete source-to-sink path, the
 searcher must collect:
 
-1. the sink rule represented by the vulnerability, with a `null` taint action;
-2. every rule/action pair carried by an `otherAction` in the relevant trace
-   corridor;
-3. source rule/action pairs hoisted into a `SourceStartEntry`;
-4. rule/action pairs inside an expanded `CallSummary`; marked summaries must
-   expand, while all-abstract/unmarked summaries must be skipped.
+1. the sink rule represented by the vulnerability, with an empty action set;
+2. every rule and its actions carried by an `otherAction` in the relevant
+   trace;
+3. source rules and actions hoisted into a `SourceStartEntry`;
+4. rules and actions inside every expanded `CallSummary`; marked summaries
+   must expand, while all-abstract/unmarked summaries must be skipped.
 
 Change `Collected.rules` to expose a
-`Set<Pair<CommonTaintConfigurationItem, CommonTaintAction?>>`. The current
-`List` has order-sensitive equality even though every producer is set- and
-graph-based and has no deterministic iteration order.
+`Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>`. An empty action
+set denotes a sink rule. A non-empty action set contains every used action for
+that rule.
 
 The searcher does not prove the vulnerability again. `TraceResolver` has
 already built the interprocedural source-to-sink graph. The searcher identifies
 the graph corridor that belongs to at least one complete source-to-sink path,
 materializes its `FullStart2FinalTrace` objects, expands relevant inner
-summaries, and projects all relevant entries to rule/action pairs.
+summaries, and projects all relevant entries to the rule/action map.
 
 ## Non-goals
 
-- Do not enumerate every alternative source-to-sink path. Collect the union
-  of relevant entries by graph reachability instead. Path enumeration can be
-  exponential while the required rule/action result is only a set union.
+- Do not enumerate source-to-sink or intra-method path combinations. Traverse
+  every entry in every relevant full trace and recursively traverse every
+  relevant summary. The required result is a union, so path enumeration adds
+  combinatorial cost without adding information.
 - Do not collect rules from entry-point-to-start traces. The selected rules
   describe taint creation and propagation from source to sink, not ordinary
   reachability from an application entry point.
@@ -94,7 +95,7 @@ TraceEntry.SourceStartEntry.sourceOtherActions
 
 Inspecting only `TraceEntry.Action` would silently lose source rules.
 
-The primary action variants do not directly carry rule/action pairs:
+The primary action variants do not directly contribute rule/action map data:
 
 - `Sequential` and `UnresolvedCallSkip` are structural;
 - `CallSourceSummary` points to the source-producing callee trace;
@@ -112,7 +113,7 @@ The safe current behavior is:
 
 ```text
 for every vulnerability.vulnerabilityRules key:
-    collect (sink rule, null)
+    collect sink rule -> emptySet()
 ```
 
 This is a small overapproximation. If exact sink-rule provenance becomes
@@ -124,32 +125,43 @@ substitute.
 
 ### Vulnerability sink
 
-Every sink rule attached to the vulnerability is relevant. Emit one pair per
-rule:
+Every sink rule attached to the vulnerability is relevant. Emit one map entry
+per rule:
 
 ```text
-(sinkRule, null)
+sinkRule -> emptySet()
 ```
 
-`null` is reserved for this case. Every trace-derived pair has a non-null
-action.
+An empty set is reserved for sink rules. A trace-derived rule must have a
+non-empty action set.
 
 ### Other actions
 
-For every rule-bearing other action in the relevant trace corridor, emit one
-pair for each member of its action set:
+For every rule-bearing other action in the relevant trace, union its action
+set into the map value for its rule:
 
 ```text
 RuleAction(rule = R, actions = {A1, A2})
-    -> (R, A1), (R, A2)
+    -> R -> {A1, A2}
 ```
 
-The pair is the unit of deduplication. The same rule with two different
-actions must remain two entries.
+The rule is the map key and actions deduplicate within its set. Repeated uses
+of the same rule accumulate their action sets:
+
+```text
+R -> {A1}
+R -> {A2}
+    becomes
+R -> {A1, A2}
+```
+
+The representation assumes that a configuration item cannot be both a sink
+rule and an action-owning source/pass rule. Enforce this invariant while
+building and consuming the map; otherwise `emptySet()` would be ambiguous.
 
 ### `CallSourceSummary`
 
-`CallSourceSummary` carries no rule/action pair.
+`CallSourceSummary` carries no direct rule/action map contribution.
 
 When it appears as the primary action of a `SourceStartEntry` in a full trace
 materialized from an outer compact node, `TraceResolver` has created the
@@ -161,7 +173,7 @@ In other words:
 
 ```text
 CallSourceSummary in SourceStartEntry
-    -> no direct pair
+    -> no direct map contribution
     -> for an outer compact model, callee already appears on root-to-source
        graph corridor
 ```
@@ -193,7 +205,7 @@ and resolve it recursively.
 
 ### `CallSummary`
 
-`CallSummary` also carries no direct pair. Its `summaryTrace` is expanded when
+`CallSummary` also carries no direct map contribution. Its `summaryTrace` is expanded when
 the callee summary boundary contains a taint mark, skipped when every boundary
 fact is abstract and unmarked, and expanded conservatively for the remaining
 concrete-unmarked case.
@@ -253,24 +265,38 @@ trace extraction:
 
 rule projection:
     relevant TraceEntry stream
-        -> deduplicated (Rule, Action?) set
+        -> Map<Rule, Set<Action>>
 ```
 
 Keep these layers independently testable. The production implementation may
 stream entries directly into the projector rather than retaining a large
 intermediate list.
 
+Traversal completeness is defined structurally:
+
+```text
+for every relevant FullStart2FinalTrace:
+    visit every element of entries
+    enqueue every relevant SummaryTrace referenced by those entries
+
+for every distinct enqueued SummaryTrace:
+    resolve every FullStart2FinalTrace
+    apply the same traversal
+```
+
+No source-to-sink path list or intra-method entry path is constructed.
+
 ### 1. Validate and seed
 
-Create a per-invocation `LinkedHashSet` of rule/action pairs and seed it with
-all vulnerability sink rules paired with `null`.
+Create a per-invocation mutable map from rules to mutable action sets and seed
+it with every vulnerability sink rule mapped to an empty set.
 
 Then classify the interprocedural trace:
 
 | input | result |
 |---|---|
 | `trace == null` | `Failed` |
-| simple unconditional trace | `Collected(sink pairs)` |
+| simple unconditional trace | `Collected(sink rule map)` |
 | non-simple source-to-sink trace | continue |
 
 The simple case has no source-to-sink action trace to inspect.
@@ -339,6 +365,12 @@ Resolution must run through `withMethodRunner(node.methodEntryPoint)`. Set
 `collapseUnchangedNodes = true`; collapsing unchanged nodes preserves all
 action entries and reduces memory.
 
+Traverse the complete `FullStart2FinalTrace.entries` array for every
+materialized trace. Do not enumerate routes through `successors`.
+`MethodTraceResolver` has already removed entries that are unreachable from
+the selected start/final trace. The successor graph is used only for
+reachability after an invalid summary dependency is pruned.
+
 Represent each returned full trace as a small dependency model:
 
 ```text
@@ -367,17 +399,18 @@ Dependency extraction is context-sensitive for
 | recursively discovered inner summary | required local `SummaryTrace` dependency |
 
 Discover dependencies with an invocation-local `SummaryTrace` worklist.
-Resolve each distinct key once with the strict full-resolution API and store
-all returned full-trace models. Enqueue dependencies found in those models.
-This discovery terminates on recursive call graphs because keys are marked
-discovered before their full traces are inspected.
+Resolve each distinct relevant summary key once with the strict
+full-resolution API, traverse every entry of every returned full trace, and
+store all returned full-trace models. Enqueue every relevant dependency found
+in those entries. This discovery terminates on recursive call graphs because
+keys are marked discovered before their full traces are inspected.
 
 `Cancelled` or `HardLimit` aborts the entire collection invocation with
 `Failed`. Never convert a strict partial-resolution result to an invalid
 summary model. Only `Complete(emptyList())` represents a semantically invalid
 alternative that the fixed point may prune.
 
-Do not project rule/action pairs during discovery. Some discovered traces and
+Do not update the rule/action map during discovery. Some discovered traces and
 entries may later prove to be dead alternatives.
 
 `InterProceduralSummaryTraceNode` should be supported by the materializer for
@@ -456,10 +489,15 @@ recompute `completeRoots`, root-to-source corridor, and root-to-sink corridor
 as in step 2. If no complete root remains, return `Failed`.
 
 For every valid full trace of every node in the recomputed outer corridor,
-visit the union of entries in its valid start-to-final corridor. Then project
-all valid inner summaries referenced by those entries. Inner projection uses
-a visited-summary set only for deduplication; validity has already been solved
-by the fixed point.
+iterate all entries and project each entry retained by its valid
+start-to-final corridor. Then traverse every valid relevant inner summary
+referenced by those entries, again iterating all of its full-trace entries.
+Inner projection uses a visited-summary set only for deduplication; validity
+has already been solved by the fixed point.
+
+Thus the algorithm traverses entries and summary graphs, not paths. The
+reachability sets are Boolean filters over entries; they are never enumerated
+as path sequences.
 
 For each projected entry:
 
@@ -469,16 +507,17 @@ For each projected entry:
 
 Ordering is not part of result equality.
 
-### 6. Deduplicate and return
+### 6. Freeze and return
 
-Deduplicate exact `(rule, action)` pairs. Preserve:
+For each projected `RuleAction`, union all of its actions into the mutable set
+stored under its rule. Preserve different rule objects that happen to share an
+ID unless the rule configuration layer explicitly defines them as equal.
 
-- the same rule paired with different actions;
-- `(rule, null)` independently of `(rule, action)`;
-- different rule objects that happen to share an ID, unless the rule
-  configuration layer explicitly defines them as equal.
+Sink rules remain mapped to an empty set. Reject an attempt to add actions to
+a sink-rule key or to register an action-owning rule as a sink.
 
-Return `Collected(pairs.toSet())`.
+Create immutable snapshots of both the outer map and every inner action set,
+then return `Collected(rules)`.
 
 ## Required strict full-resolution status
 
@@ -536,36 +575,24 @@ types.
 Then the collector has one projection:
 
 ```text
-RuleAction -> action.map { rule to it }
+RuleAction(rule, actions)
+    -> result.getOrPut(rule, ::mutableSetOf).addAll(actions)
 ```
 
 This is preferable to a type switch in `TraceActionSearcher`: adding another
 rule-bearing action without implementing `RuleAction` becomes a model-level
 review error instead of a silent collector omission.
 
-The public result would also be clearer with a named value:
-
-```kotlin
-data class ActionableRule(
-    val rule: CommonTaintConfigurationItem,
-    val action: CommonTaintAction?,
-)
-```
-
-This replacement is optional for the first implementation; it does not
-change semantics.
-
-The set contract is not optional:
+The map contract is:
 
 ```kotlin
 data class Collected(
-    val rules: Set<Pair<CommonTaintConfigurationItem, CommonTaintAction?>>,
+    val rules: Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>,
 ) : ActionableRulesCollectionResult
 ```
 
-Keeping a `List` would require a stable comparator for every rule and action
-implementation so that data-class equality and serialized/debug output do not
-depend on hash iteration order.
+An empty value set identifies a sink rule. All other entries have non-empty
+value sets.
 
 ## Failure contract
 
@@ -581,8 +608,8 @@ Do not return `Failed` merely because:
 
 - a `CallSummary` is unmarked;
 - an entry has no rule-bearing other actions;
-- a `CallSourceSummary` has no direct pair;
-- a pair was already collected.
+- a `CallSourceSummary` has no direct map contribution;
+- an action was already present in the rule's action set.
 
 The current shallow-scan consumer drops `Failed` discoveries. Therefore
 failure must never be converted to a partially collected result.
@@ -590,26 +617,34 @@ failure must never be converted to a partially collected result.
 ## Downstream full-scan contract
 
 `Phase.FullScan` currently receives the per-vulnerability `Collected` values,
-while the JVM and Go consumers are still TODO. They should union all pair sets
-globally before configuring the full scan.
-
-Pair interpretation is exact:
+while the JVM and Go consumers are still TODO. They should merge all maps
+globally before configuring the full scan:
 
 ```text
-(sink rule, null) -> enable that sink rule
-(rule, action)    -> enable that exact action under that rule
+for each (rule, actions):
+    if rule is absent:
+        copy actions
+    else:
+        union actions into the existing set
 ```
 
-`(rule, null)` is not a wildcard for all actions of a rule. Source and pass
-rules are enabled only through non-null action pairs. This preserves the
-reason the staged pipeline collects rule/action pairs rather than rule IDs.
+Map interpretation is exact:
+
+```text
+sink rule -> emptySet()       -> enable that sink rule
+rule      -> {A1, A2, ...}    -> enable exactly those actions for that rule
+```
+
+An empty action set is not a wildcard. Source and pass rules require non-empty
+sets. Assert that no merge combines an empty sink value with a non-empty
+action value for the same rule.
 
 ## Concurrency and lifetime
 
 Actionable-rule resolution processes vulnerabilities in parallel. All mutable
 search state must be invocation-local:
 
-- pair set;
+- rule-to-mutable-action-set map;
 - discovered summary models;
 - valid-summary fixed-point set;
 - projection visited-summary set;
@@ -621,7 +656,7 @@ global summary-resolution cache in the first implementation: it would need
 publication, cancellation, and AP-manager lifetime rules that are unnecessary
 for correctness.
 
-The returned set must not expose mutable collector state.
+The returned map and its action sets must not expose mutable collector state.
 
 ## Complexity
 
@@ -652,7 +687,7 @@ Useful counters are:
 - marked inner summaries resolved;
 - abstract-unmarked inner summaries skipped;
 - summary dependency cycles discovered;
-- exact rule/action pairs emitted;
+- distinct rules and actions emitted;
 - failure reason.
 
 ## Rejected alternatives
@@ -661,9 +696,9 @@ Useful counters are:
 
 This is attractive because it already materializes full traces, but it is an
 underapproximation for staged rule selection. A BaseOnly-only shallow branch
-can be selected while a different branch contains the rule/action pair needed
-by a real Tree/full-scan path. The graph-corridor union is linear and avoids
-that omission without enumerating path combinations.
+can be selected while a different branch contains an action needed under a
+rule by a real Tree/full-scan path. The graph-corridor union is linear and
+avoids that omission without enumerating path combinations.
 
 ### Collect every node reachable from a root
 
@@ -686,10 +721,10 @@ case.
 
 ### Apply a fixed inner-summary depth limit
 
-A fixed limit terminates recursion by silently omitting deeper rule/action
-pairs. Deduplicating `SummaryTrace` keys terminates dependency discovery; the
-least-fixed-point validity solver then preserves finite-path semantics and
-rejects recursive SCCs without a valid base route.
+A fixed limit terminates recursion by silently omitting deeper rules or
+actions. Deduplicating `SummaryTrace` keys terminates dependency discovery;
+the least-fixed-point validity solver then preserves finite-path semantics
+and rejects recursive SCCs without a valid base route.
 
 ## Verification plan
 
@@ -715,14 +750,16 @@ The last case pins the distinction between `summaryEdges` and
 
 Test:
 
-- every vulnerability sink rule is emitted with `null`;
-- one other action with multiple actions emits multiple pairs;
-- identical pairs deduplicate;
-- the same rule with different actions does not deduplicate;
+- every vulnerability sink rule maps to `emptySet()`;
+- one other action with multiple actions produces one rule key with all
+  actions;
+- repeated actions deduplicate within the rule's action set;
+- repeated uses of the same rule union their different actions;
 - all four current rule-bearing other-action variants;
 - source rules in `SourceStartEntry.sourceOtherActions`;
-- structural primary actions add no pair;
-- result equality is independent of insertion and hash-iteration order.
+- structural primary actions add no map contribution;
+- sink/action key collisions fail the representation invariant;
+- map equality is independent of insertion and hash-iteration order.
 
 ### Trace scenarios
 
@@ -732,12 +769,13 @@ Add small dataflow samples for:
 2. sequential source -> pass rule -> sink;
 3. source in a callee represented by `CallSourceSummary`: callee source rule is
    obtained from the interprocedural source path;
-4. marked `CallSummary`: inner rule/action is collected;
+4. marked `CallSummary`: its inner rule and action are collected;
 5. unmarked abstract `CallSummary`: inner trace is not resolved and its rules
    are not collected;
 6. marked inner summary with an unresolvable first route and a valid second
-   route: rules from the valid resolved route are retained;
-7. recursive marked summary: collection terminates and returns each pair once;
+   route: rules and actions from the valid resolved route are retained;
+7. recursive marked summary: collection terminates and returns each rule with
+   its complete deduplicated action set;
 8. missing trace and fully unresolvable marked summary: `Failed`;
 9. merged vulnerability sink rules: all sink keys are retained;
 10. alternate source and sink branches: collect the union from every branch
@@ -753,12 +791,12 @@ Add small dataflow samples for:
 14. cancellation and action-hard-limit exits after partial graph construction:
     return `Failed`, never `Collected`.
 
-Each scenario should assert the exact pair set, not only success.
+Each scenario should assert the exact rule-to-action-set map, not only success.
 
 ### Integration
 
 Run a staged JVM and Go analysis where the full-scan rule provider is filtered
-to the collected pairs. Assert:
+by the collected rule/action maps. Assert:
 
 - a true shallow branch is reproducible by the full scan;
 - a shallow BaseOnly-only false discovery can disappear in the full scan;
@@ -796,12 +834,14 @@ The feature is complete when:
 
 1. every `Collected` result comes from a resolved source-to-sink graph with at
    least one complete source-to-sink path;
-2. it contains every vulnerability sink rule and every rule/action pair on
-   every relevant graph branch, including marked inner summaries;
-3. it contains no pair solely from an abstract-unmarked inner summary;
+2. it contains every vulnerability sink rule and every action grouped under
+   its rule from every relevant graph branch, including marked inner
+   summaries;
+3. it contains no rule or action solely from an abstract-unmarked inner
+   summary;
 4. recursive summaries terminate without a semantic depth cutoff;
 5. cancellation or a hard-limit partial resolution returns `Failed`, while a
    semantically invalid alternative is pruned;
-6. full scan configured from the collected pairs does not lose a real branch
+6. full scan configured from the collected maps does not lose a real branch
    merely because BaseOnly also exposed a different shallow alternative;
 7. JVM, Go, dataflow, and query-language regression suites remain green.
