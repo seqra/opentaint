@@ -30,7 +30,7 @@ rules:
                 @$ANNOTATION(...)
                 $RETURNTYPE $METHOD(...) {
                   ...
-                  return $UNTRUSTED;
+                  return $UNTRUSTED*;
                   ...
                 }
             - metavariable-pattern:
