@@ -13,9 +13,7 @@ passThrough:
     to: result
 - function: org.w3c.dom.Document#getElementById
   copy:
-  - from:
-    - this
-    - .org.w3c.dom.Document#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -36,9 +34,7 @@ passThrough:
     to: result
 - function: org.w3c.dom.Document#getDocumentElement
   copy:
-  - from:
-    - this
-    - .org.w3c.dom.Document#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -144,9 +140,7 @@ passThrough:
     to: result
 - function: org.w3c.dom.Document#getElementsByTagNameNS
   copy:
-  - from:
-    - this
-    - .org.w3c.dom.Document#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -275,9 +269,7 @@ passThrough:
     to: result
 - function: org.w3c.dom.Document#getElementsByTagName
   copy:
-  - from:
-    - this
-    - .org.w3c.dom.Document#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -355,9 +347,7 @@ passThrough:
 - function: org.w3c.dom.Document#importNode
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .org.w3c.dom.Document#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
