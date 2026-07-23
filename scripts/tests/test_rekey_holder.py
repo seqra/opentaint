@@ -38,14 +38,49 @@ def test_collapse_leaves_other_classes_alone():
 
 
 def test_entry_with_no_copies_left_is_dropped():
-    doc = {"passThrough": [
-        {"function": "p.C#m", "copy": [
+    doc = {"passThrough": [{
+        "function": "p.C#m", "copy": [
             {"from": ["this", ".p.C#<rule-storage>#java.lang.Object"],
              "to": ["result", ".p.C#<rule-storage>#java.lang.Object"]},
             {"from": "this", "to": "result"},
         ]},
-        {"function": "p.C#n", "copy": []},
     ]}
     out = rh.collapse(doc, {"p.C"})
     assert len(out["passThrough"]) == 1
     assert out["passThrough"][0]["copy"] == [{"from": "this", "to": "result"}]
+
+
+def test_entry_without_a_copy_key_is_preserved():
+    doc = {"passThrough": [
+        {"function": "p.C#m", "condition": {"tainted": "arg(0)"}},
+        {"function": "p.C#n", "copy": []},
+    ]}
+    out = rh.collapse(doc, {"p.C"})
+    assert out["passThrough"] == [
+        {"function": "p.C#m", "condition": {"tainted": "arg(0)"}},
+        {"function": "p.C#n", "copy": []},
+    ]
+
+
+def test_entry_emptied_by_the_collapse_is_still_dropped():
+    doc = {"passThrough": [{
+        "function": "p.C#m",
+        "copy": [{"from": ["this", ".p.C#<rule-storage>#java.lang.Object"],
+                  "to": ["result", ".p.C#<rule-storage>#java.lang.Object"]},
+                 {"from": "this", "to": "result"}],
+    }]}
+    out = rh.collapse(doc, {"p.C"})
+    assert len(out["passThrough"]) == 1
+    assert out["passThrough"][0]["copy"] == [{"from": "this", "to": "result"}]
+
+
+def test_entry_whose_only_copy_collapses_to_a_self_copy_is_dropped():
+    doc = {"passThrough": [
+        {"function": "p.C#m",
+         "copy": [{"from": ["this", ".p.C#<rule-storage>#java.lang.Object"],
+                   "to": ["this", ".p.C#<rule-storage>#java.lang.Object"]}]},
+        {"function": "p.C#keeper", "copy": [{"from": "arg(0)", "to": "this"}]},
+    ]}
+    out = rh.collapse(doc, {"p.C"})
+    assert [e["function"] for e in out["passThrough"]] == ["p.C#m", "p.C#keeper"]
+    assert out["passThrough"][0]["copy"] == [{"from": "this", "to": "this"}]

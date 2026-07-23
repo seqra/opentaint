@@ -35,6 +35,29 @@ def _rewrite(pos, classes):
 def collapse(doc: dict, classes: set) -> dict:
     out_entries = []
     for entry in doc.get("passThrough") or []:
+        # If entry has no targeted class references, preserve it as-is.
+        # Quick check: if any copy contains a <rule-storage> reference to a targeted class, process it.
+        has_targeted_refs = False
+        for c in entry.get("copy") or []:
+            for pos in [c.get("from"), c.get("to")]:
+                pos_list = _as_list(pos)
+                for item in pos_list:
+                    if isinstance(item, str) and "<rule-storage>" in item:
+                        owner = item.split("#")[0].lstrip(".")
+                        if owner in classes:
+                            has_targeted_refs = True
+                            break
+                if has_targeted_refs:
+                    break
+            if has_targeted_refs:
+                break
+
+        # If no targeted refs, preserve the entry as-is (no-op for untargeted entries).
+        if not has_targeted_refs:
+            out_entries.append(entry)
+            continue
+
+        # Process copies: rewrite and deduplicate.
         seen, copies = set(), []
         for c in entry.get("copy") or []:
             frm = _rewrite(c["from"], classes)
@@ -44,7 +67,12 @@ def collapse(doc: dict, classes: set) -> dict:
                 continue
             seen.add(key)
             copies.append({"from": frm, "to": to})
+        # Drop an entry only when this transform is what emptied it. An entry
+        # that never had copies was not targeted, so leave it exactly as found.
         if not copies:
+            if entry.get("copy"):
+                continue
+            out_entries.append(entry)
             continue
         new = dict(entry)
         new["copy"] = copies
