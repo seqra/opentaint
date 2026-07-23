@@ -19,13 +19,15 @@ type Filters struct {
 	RuleIDs        []string // full id, leaf, or doublestar glob over the full id
 	Fingerprints   []string // git-style prefixes of the chosen fingerprint key's value
 	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
+	BaselineStates []string // SARIF baselineState values: new/unchanged/updated/absent
 }
 
 // active reports whether any filter dimension is set. FingerprintKey is
 // intentionally excluded: it only selects which key Fingerprints matches
 // against, so it has no effect without Fingerprints set.
 func (f Filters) active() bool {
-	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 || len(f.Fingerprints) > 0
+	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 ||
+		len(f.Fingerprints) > 0 || len(f.BaselineStates) > 0
 }
 
 // Filter returns a shallow copy of the report whose Runs[].Results contain only
@@ -68,7 +70,51 @@ func (f Filters) matches(r *Result) bool {
 	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.FingerprintKey, f.Fingerprints) {
 		return false
 	}
+	if len(f.BaselineStates) > 0 && !matchBaselineState(r, f.BaselineStates) {
+		return false
+	}
 	return true
+}
+
+// matchBaselineState reports whether the result's baselineState equals any
+// supplied value (case-insensitive). A result with no baselineState never
+// matches: it was not compared against a baseline, so no state claim holds.
+func matchBaselineState(r *Result, states []string) bool {
+	if r.BaselineState == nil {
+		return false
+	}
+	actual := strings.ToLower(string(*r.BaselineState))
+	for _, s := range states {
+		if strings.ToLower(strings.TrimSpace(s)) == actual {
+			return true
+		}
+	}
+	return false
+}
+
+// ParseBaselineStates validates --baseline-state values against the SARIF
+// enumeration, returning them normalized.
+func ParseBaselineStates(values []string) ([]string, error) {
+	valid := map[string]BaselineState{
+		"new":       New,
+		"unchanged": Unchanged,
+		"updated":   Updated,
+		"absent":    Absent,
+	}
+	var out []string
+	for _, v := range values {
+		normalized := strings.ToLower(strings.TrimSpace(v))
+		if normalized == "" {
+			continue
+		}
+		state, ok := valid[normalized]
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid baseline state %q: valid values are new, unchanged, updated, absent", v)
+		}
+		out = append(out, string(state))
+	}
+	return out, nil
 }
 
 // matchPath reports whether the result's primary location's relative file path

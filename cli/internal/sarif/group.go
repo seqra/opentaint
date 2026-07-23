@@ -23,6 +23,11 @@ type ListingOptions struct {
 	GroupBy          GroupDimension    // default groupByFilePath
 	FingerprintKey   string            // "" = DefaultFingerprintKey
 	CodeFlows        CodeFlowSelection // zero value = render first flow only
+	// ShowSuppressed lists findings that carry an honored suppression. They are
+	// hidden by default: a suppressed finding is one somebody already decided
+	// about. Hiding happens here rather than in Filters so that the summary
+	// counts still see every result and can report how many were suppressed.
+	ShowSuppressed bool
 }
 
 // ParseGroupDimension converts a --group-by flag value into a GroupDimension.
