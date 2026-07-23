@@ -749,7 +749,7 @@ deepEllipsisExpression
     ;
 
 typedVariableExpression
-    : typeTypeOrVoid identifier
+    : typeTypeOrVoid (identifier | STARRED_METAVAR)
     ;
 
 // Java17

@@ -82,6 +82,18 @@ class StarOperatorTest : SampleBasedTest() {
     fun `star matrix sanitizer - wrapped whole-object clean across summaries`() =
         runTest<taint.StarMatrixSanitizer>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
 
+    // Composition stress for the deep mark exclusions: the starred clean under TWO wrapper
+    // summaries, with the sanitized flow itself inside a further summarized helper.
+    @Test
+    fun `star nested wrapper sanitizer - deep exclusion composes across summary levels`() =
+        runTest<taint.StarNestedWrapperSanitizer>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
+
+    // Mixed exclusion kinds on one flow: deep (starred clean) + plain (value clean) refinements
+    // of the same initial fact — the always-propagate-deep-marks regression net.
+    @Test
+    fun `star mixed exclusion sanitizer - deep and plain exclusions compose`() =
+        runTest<taint.StarMixedExclusionSanitizer>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
+
     @Test
     fun `star matrix pattern-not - starred sink with excluded emit mode`() =
         runTest<taint.StarMatrixPatternNot>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
