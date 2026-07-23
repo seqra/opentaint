@@ -153,12 +153,8 @@ passThrough:
 - function:
     package: java.text
     class: DateFormatSymbols
-    name:
-      pattern: set.+
-  signature:
-    params:
-    - index: 0
-      type: java.lang.String
+    name: setLocalPatternChars
+  signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
@@ -271,12 +267,8 @@ passThrough:
 - function:
     package: java.text
     class: DateFormatSymbols
-    name:
-      pattern: set.+
-  signature:
-    params:
-    - index: 0
-      type: java.lang.String[][]
+    name: setZoneStrings
+  signature: (java.lang.String[][]) void
   copy:
   - from: arg(0)
     to:
@@ -572,19 +564,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function:
-    package: java.text
-    class: DateFormatSymbols
-    name:
-      pattern: set.+
-  taintCopyOnly: true
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
-  - from: arg(0)
-    to: this
 - function: java.text.NumberFormat#format
   signature: (long) java.lang.String
   copy:
@@ -850,10 +829,22 @@ passThrough:
 - function:
     package: java.text
     class: DateFormatSymbols
-    name:
-      pattern: get.+
+    name: getLocalPatternChars
+  signature: () java.lang.String
   copy:
-  - from: this
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    to: result
+- function:
+    package: java.text
+    class: DateFormatSymbols
+    name: getZoneStrings
+  signature: () java.lang.String[][]
+  copy:
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
     to: result
 - function: java.text.DateFormatSymbols#getEras
   signature: () java.lang.String[]
