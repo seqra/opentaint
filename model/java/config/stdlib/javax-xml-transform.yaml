@@ -64,9 +64,7 @@ passThrough:
       pattern: set(.)*
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+    to: this
 - function:
     package: javax.xml.transform
     class: Transformer
@@ -92,9 +90,7 @@ passThrough:
     name:
       pattern: get(.)*
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function:
     package: javax.xml.transform
@@ -102,9 +98,7 @@ passThrough:
     name:
       pattern: get(.)*
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function:
     package: javax.xml.transform
@@ -313,9 +307,7 @@ passThrough:
       pattern: set(.)*
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function:
     package: javax.xml.transform
     class: Result
