@@ -28,24 +28,26 @@ data class TaintRuleFromSemgrep<R>(
             override fun flatten(): List<TaintRuleGroup<R>> = sources + sinks + propagators + sanitizers
         }
 
-        data class Join<R>(val branches: List<Branch<R>>) : Structure<R> {
-            override fun flatten(): List<TaintRuleGroup<R>> = branches.flatMap { branch ->
-                branch.leftOperands.flatMap { it.child.flatten() } + branch.rightOperand.child.flatten()
-            }
+        data class Join<R>(val branches: List<JoinBranch<R>>) : Structure<R> {
+            override fun flatten(): List<TaintRuleGroup<R>> = branches.flatMap { it.flatten() }
         }
     }
 
-    data class Branch<R>(
-        val leftOperands: List<Operand<R>>,
-        val rightOperand: Operand<R>,
-    )
+    data class JoinBranch<R>(
+        val leftOperands: List<JoinOperand<R>>,
+        val rightOperand: JoinOperand<R>,
+    ) {
+        fun flatten() = leftOperands.flatMap { it.flatten() } + rightOperand.flatten()
+    }
 
-    data class Operand<R>(
+    data class JoinOperand<R>(
         val itemId: String,
         val ruleId: String,
         val metavar: String,
         val child: Structure<R>,
-    )
+    ) {
+        fun flatten() = child.flatten()
+    }
 
     data class TaintRuleGroup<R>(
         val rules: List<R>,

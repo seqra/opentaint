@@ -71,7 +71,7 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintAutomataJoinToTain
 
     val operationsBySink = rule.operations.groupBy { it.rhs.itemId }
 
-    val branches = mutableListOf<TaintRuleFromSemgrep.Branch<Item>>()
+    val branches = mutableListOf<TaintRuleFromSemgrep.JoinBranch<Item>>()
     for ((sinkItemId, sinkOps) in operationsBySink) {
         val rightItemRef = sinkOps.mapTo(linkedSetOf()) { it.rhs }.singleOrNull()
         if (rightItemRef == null) {
@@ -104,8 +104,8 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
     rule: TaintAutomataJoinRule,
     rightItemRef: TaintAutomataJoinMetaVarRef,
     leftItemRefs: List<TaintAutomataJoinMetaVarRef>,
-): TaintRuleFromSemgrep.Branch<Item>? {
-    val leftOperands = mutableListOf<TaintRuleFromSemgrep.Operand<Item>>()
+): TaintRuleFromSemgrep.JoinBranch<Item>? {
+    val leftOperands = mutableListOf<TaintRuleFromSemgrep.JoinOperand<Item>>()
     val allLeftFinalMarks = hashSetOf<GeneratedMark>()
 
     for (leftItemRef in leftItemRefs) {
@@ -117,7 +117,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
             leftItemRef.itemId, strategy, leftAutomata, leftItemRef.metaVar
         ) ?: return null
 
-        leftOperands += TaintRuleFromSemgrep.Operand(
+        leftOperands += TaintRuleFromSemgrep.JoinOperand(
             leftItemRef.itemId, leftItem.ruleId, leftItemRef.metaVar.toString(), leftStructure
         )
         allLeftFinalMarks.addAll(leftFinalMarks)
@@ -135,10 +135,10 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
         ) ?: return null
     }
 
-    val rightOperand = TaintRuleFromSemgrep.Operand(
+    val rightOperand = TaintRuleFromSemgrep.JoinOperand(
         rightItemRef.itemId, rightItem.ruleId, rightItemRef.metaVar.toString(), rightRules
     )
-    return TaintRuleFromSemgrep.Branch(leftOperands, rightOperand)
+    return TaintRuleFromSemgrep.JoinBranch(leftOperands, rightOperand)
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeftRule(
