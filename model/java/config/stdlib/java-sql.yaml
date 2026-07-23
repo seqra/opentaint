@@ -9,9 +9,7 @@ passThrough:
 - function: java.sql.ResultSet#getRef
   signature: (int) java.sql.Ref
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getBlob
   signature: (int) java.sql.Blob
@@ -34,23 +32,17 @@ passThrough:
 - function: java.sql.ResultSet#getURL
   signature: (java.lang.String) java.net.URL
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getClob
   signature: (java.lang.String) java.sql.Clob
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Array#getArray
   signature: (long, int) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Ref#getObject
   signature: () java.lang.Object
@@ -73,25 +65,17 @@ passThrough:
 - function: java.sql.Array#getArray
   signature: (long, int, java.util.Map) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#updateObject
   signature: (java.lang.String, java.lang.Object, int) void
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getObject
   signature: (java.lang.String, java.util.Map) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getBytes
   signature:
@@ -134,9 +118,7 @@ passThrough:
 - function: java.sql.Array#getArray
   signature: (java.util.Map) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Struct#getAttributes
   signature: (java.util.Map) java.lang.Object[]
@@ -149,10 +131,6 @@ passThrough:
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getBlob
   signature:
     return: java.sql.Blob
@@ -192,16 +170,12 @@ passThrough:
 - function: java.sql.Clob#getCharacterStream
   signature: (long, long) java.io.Reader
   copy:
-  - from:
-    - this
-    - .java.sql.Clob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getBytes
   signature: (int) byte[]
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getObject
   signature: (java.lang.String, java.util.Map) java.lang.Object
@@ -212,30 +186,22 @@ passThrough:
 - function: java.sql.Array#getResultSet
   signature: () java.sql.ResultSet
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Array#getResultSet
   signature: (java.util.Map) java.sql.ResultSet
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Struct#getAttributes
   signature: () java.lang.Object[]
   copy:
-  - from:
-    - this
-    - .java.sql.Struct#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getUnicodeStream
   signature: (java.lang.String) java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getString
   signature: (int) java.lang.String
@@ -264,19 +230,13 @@ passThrough:
 - function: java.sql.Clob#getAsciiStream
   signature: () java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.Clob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#updateObject
   signature: (int, java.lang.Object, java.sql.SQLType, int) void
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.Blob#getBytes
   signature:
     return: byte[]
@@ -306,23 +266,17 @@ passThrough:
 - function: java.sql.Blob#getBinaryStream
   signature: (long, long) java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.Blob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Blob#getBytes
   signature: (long, int) byte[]
   copy:
-  - from:
-    - this
-    - .java.sql.Blob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getArray
   signature: (int) java.sql.Array
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Clob#getCharacterStream
   signature: (long, long) java.io.Reader
@@ -339,9 +293,7 @@ passThrough:
 - function: java.sql.ResultSet#getString
   signature: (int) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getCharacterStream
   signature: (int) java.io.Reader
@@ -364,9 +316,7 @@ passThrough:
 - function: java.sql.Clob#getCharacterStream
   signature: () java.io.Reader
   copy:
-  - from:
-    - this
-    - .java.sql.Clob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getRef
   signature: (java.lang.String) java.sql.Ref
@@ -395,19 +345,13 @@ passThrough:
 - function: java.sql.ResultSet#getObject
   signature: (int, java.lang.Class) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#updateObject
   signature: (java.lang.String, java.lang.Object) void
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getClob
   signature: (int) java.sql.Clob
   taintCopyOnly: true
@@ -423,16 +367,12 @@ passThrough:
 - function: java.sql.ResultSet#getBlob
   signature: (int) java.sql.Blob
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Array#getArray
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Clob#getSubString
   signature: (long, int) java.lang.String
@@ -443,9 +383,7 @@ passThrough:
 - function: java.sql.ResultSet#getRef
   signature: (java.lang.String) java.sql.Ref
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Clob#getCharacterStream
   signature: () java.io.Reader
@@ -538,16 +476,12 @@ passThrough:
 - function: java.sql.ResultSet#getURL
   signature: (int) java.net.URL
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getClob
   signature: (int) java.sql.Clob
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Array#getResultSet
   signature: (long, int, java.util.Map) java.sql.ResultSet
@@ -576,23 +510,17 @@ passThrough:
 - function: java.sql.ResultSet#getObject
   signature: (int, java.util.Map) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getBytes
   signature: (java.lang.String) byte[]
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getObject
   signature: (int) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Connection#prepareCall
   signature: (java.lang.String) java.sql.CallableStatement
@@ -603,30 +531,22 @@ passThrough:
 - function: java.sql.Ref#getObject
   signature: (java.util.Map) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.Ref#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getArray
   signature: (java.lang.String) java.sql.Array
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Clob#getSubString
   signature: (long, int) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.sql.Clob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Blob#getBinaryStream
   signature: () java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.Blob#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getAsciiStream
   signature: (int) java.io.InputStream
@@ -673,9 +593,7 @@ passThrough:
 - function: java.sql.ResultSet#getCharacterStream
   signature: (int) java.io.Reader
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getObject
   signature: (int, java.util.Map) java.lang.Object
@@ -724,9 +642,7 @@ passThrough:
 - function: java.sql.ResultSet#getAsciiStream
   signature: (java.lang.String) java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getUnicodeStream
   signature: (java.lang.String) java.io.InputStream
@@ -737,9 +653,7 @@ passThrough:
 - function: java.sql.Array#getResultSet
   signature: (long, int) java.sql.ResultSet
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Connection#prepareStatement
   signature: (java.lang.String, int[]) java.sql.PreparedStatement
@@ -750,9 +664,7 @@ passThrough:
 - function: java.sql.Array#getResultSet
   signature: (long, int, java.util.Map) java.sql.ResultSet
   copy:
-  - from:
-    - this
-    - .java.sql.Array#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Clob#getSubString
   signature:
@@ -777,9 +689,7 @@ passThrough:
 - function: java.sql.Struct#getAttributes
   signature: (java.util.Map) java.lang.Object[]
   copy:
-  - from:
-    - this
-    - .java.sql.Struct#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getURL
   signature: (java.lang.String) java.net.URL
@@ -796,32 +706,22 @@ passThrough:
 - function: java.sql.ResultSet#getBlob
   signature: (java.lang.String) java.sql.Blob
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getAsciiStream
   signature: (int) java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#updateObject
   signature: (int, java.lang.Object, java.sql.SQLType) void
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getCharacterStream
   signature: (java.lang.String) java.io.Reader
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getObject
   signature: (java.lang.String, java.lang.Class) java.lang.Object
@@ -838,19 +738,13 @@ passThrough:
 - function: java.sql.ResultSet#getObject
   signature: (java.lang.String) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#updateObject
   signature: (int, java.lang.Object) void
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getAsciiStream
   signature: (java.lang.String) java.io.InputStream
   taintCopyOnly: true
@@ -860,9 +754,7 @@ passThrough:
 - function: java.sql.Ref#getObject
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.Ref#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getRef
   signature:
@@ -881,10 +773,6 @@ passThrough:
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getClob
   signature: (java.lang.String) java.sql.Clob
   taintCopyOnly: true
@@ -894,9 +782,7 @@ passThrough:
 - function: java.sql.ResultSet#getUnicodeStream
   signature: (int) java.io.InputStream
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.ResultSet#getBytes
   signature: (java.lang.String) byte[]
@@ -907,9 +793,7 @@ passThrough:
 - function: java.sql.ResultSet#getObject
   signature: (java.lang.String, java.lang.Class) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.sql.Connection#nativeSQL
   signature: (java.lang.String) java.lang.String
@@ -939,10 +823,6 @@ passThrough:
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
 - function: java.sql.ResultSet#getArray
   signature:
     return: java.sql.Array
@@ -958,7 +838,5 @@ passThrough:
 - function: java.sql.ResultSet#getString
   signature: (java.lang.String) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.sql.ResultSet#<rule-storage>#java.lang.Object
+  - from: this
     to: result
