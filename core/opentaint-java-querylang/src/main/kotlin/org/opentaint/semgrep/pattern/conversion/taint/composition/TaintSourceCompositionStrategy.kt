@@ -32,6 +32,19 @@ class TaintSourceCompositionStrategy<Item, Cond, Assign, Clean>(
         return requires.build(strategy.conditionBuilder, pos)
     }
 
+    override fun stateContainsOnAnyField(
+        state: TaintRegisterStateAutomata.State,
+        varName: MetavarAtom,
+        pos: PositionBaseWithModifiers
+    ): Cond? {
+        if (requires == null) return null
+
+        val value = state.register.assignedVars[varName]
+        if (value != initialStateId) return null
+
+        return requires.buildOnAnyField(strategy.conditionBuilder, pos)
+    }
+
     override fun stateAssign(
         state: TaintRegisterStateAutomata.State,
         varName: MetavarAtom,

@@ -123,7 +123,8 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertAutomataToTaint
     return ctx.createRuleGroup(rules)
 }
 
-private data class RegisterVarPosition(val varName: MetavarAtom, val positions: MutableSet<PositionBase>)
+private data class StarredPosition(val position: PositionBase, val star: Boolean)
+private data class RegisterVarPosition(val varName: MetavarAtom, val positions: MutableSet<StarredPosition>)
 
 private data class RuleCondition(
     val enclosingClassPackage: SerializedSimpleNameMatcher,
@@ -184,6 +185,7 @@ private fun SerializedCondition.rewriteAsEndCondition(): SerializedCondition = w
     is SerializedCondition.IsNull -> copy(isNull = isNull.rewriteAsEndPosition())
     is SerializedCondition.ConstantMatches -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedCondition.ContainsMark -> copy(pos = pos.rewriteAsEndPosition())
+    is SerializedCondition.ContainsMarkOnAnyField -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedCondition.IsConstant -> copy(isConstant = isConstant.rewriteAsEndPosition())
     is SerializedCondition.IsType -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedCondition.ParamAnnotated -> copy(pos = pos.rewriteAsEndPosition())
@@ -371,8 +373,14 @@ private fun JavaTaintRuleGenerationCtx.buildStateAssignAction(
     val requiredVariables = state.register.assignedVars.keys
     val result = requiredVariables.flatMapTo(mutableListOf()) { varName ->
         val varPosition = edgeCondition.accessedVarPosition[varName] ?: return@flatMapTo emptyList()
-        varPosition.positions.flatMap {
-            stateAssignMark(varPosition.varName, state, it.base())
+        varPosition.positions.flatMap { sp ->
+            val base = sp.position.base()
+            val assigns = stateAssignMark(varPosition.varName, state, base)
+            if (sp.star) {
+                assigns + stateAssignMark(varPosition.varName, state, base.withAnyField())
+            } else {
+                assigns
+            }
         }
     }
 
@@ -389,8 +397,14 @@ private fun JavaTaintRuleGenerationCtx.buildStateCleanAction(
     edgeCondition: EvaluatedEdgeCondition
 ): List<SerializedTaintCleanAction> {
     val result = edgeCondition.accessedVarPosition.values.flatMapTo(mutableListOf()) { varPosition ->
-        varPosition.positions.flatMap {
-            stateCleanMark(varPosition.varName, state, stateBefore, it.base())
+        varPosition.positions.flatMap { sp ->
+            val base = sp.position.base()
+            val cleans = stateCleanMark(varPosition.varName, state, stateBefore, base)
+            if (sp.star) {
+                cleans + stateCleanMark(varPosition.varName, state, stateBefore, base.withAnyField())
+            } else {
+                cleans
+            }
         }
     }
 
@@ -413,8 +427,11 @@ private fun EvaluatedEdgeCondition.addStateCheck(
         stateChecks += ctx.globalStateMarkName(state).mkContainsMark(ctx.stateVarPosition)
     } else {
         for (metaVar in state.register.assignedVars.keys) {
-            for (pos in accessedVarPosition[metaVar]?.positions.orEmpty()) {
-                stateChecks += ctx.containsStateMark(metaVar, state, pos.base())
+            for (sp in accessedVarPosition[metaVar]?.positions.orEmpty()) {
+                stateChecks += ctx.containsStateMark(metaVar, state, sp.position.base())
+                if (sp.star) {
+                    stateChecks += ctx.containsStateMarkOnAnyField(metaVar, state, sp.position.base())
+                }
             }
         }
     }
@@ -1103,7 +1120,7 @@ private fun findMetaVarPosition(
     val varPosition = varPositions.getOrPut(condition.metavar) {
         RegisterVarPosition(condition.metavar, hashSetOf())
     }
-    varPosition.positions.add(position)
+    varPosition.positions.add(StarredPosition(position, condition.star))
 }
 
 private fun JavaTaintRuleGenerationCtx.evaluateParamCondition(
@@ -1122,7 +1139,12 @@ private fun JavaTaintRuleGenerationCtx.evaluateParamCondition(
                 semgrepRuleTrace.error(IgnoredMetavarConstraint(condition.metavar))
             }
 
-            return containsMarkWithAnyStateBefore(state, condition.metavar, position.base())
+            val contains = containsMarkWithAnyStateBefore(state, condition.metavar, position.base())
+            if (!condition.star) return contains
+
+            val containsAnyField =
+                containsMarkOnAnyFieldWithAnyStateBefore(state, condition.metavar, position.base())
+            return taintRuleStrategy.conditionBuilder.or(listOf(contains, containsAnyField))
         }
 
         is ParamCondition.TypeIs -> {

@@ -66,6 +66,7 @@ import org.opentaint.dataflow.configuration.mkFalse
 import org.opentaint.dataflow.configuration.mkOr
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.simplify
+import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassType
@@ -309,6 +310,7 @@ class MethodTaintConfigurationResolver(
         is SerializedCondition.ConstantLt -> pos.collectAnyArgumentClassifiers(classifiers)
         is SerializedCondition.ConstantMatches -> pos.collectAnyArgumentClassifiers(classifiers)
         is SerializedCondition.ContainsMark -> pos.collectAnyArgumentClassifiers(classifiers)
+        is SerializedCondition.ContainsMarkOnAnyField -> pos.collectAnyArgumentClassifiers(classifiers)
         is SerializedCondition.IsConstant -> isConstant.collectAnyArgumentClassifiers(classifiers)
         is SerializedCondition.IsNull -> isNull.collectAnyArgumentClassifiers(classifiers)
         is SerializedCondition.IsType -> pos.collectAnyArgumentClassifiers(classifiers)
@@ -447,6 +449,12 @@ class MethodTaintConfigurationResolver(
             pos.resolvePosition(ctx)
                 .flatMap { it.resolveArrayPosition() }
                 .map { ContainsMark(it, taintMarkManager.taintMark(tainted)).atom() }
+        )
+
+        is SerializedCondition.ContainsMarkOnAnyField -> mkOr(
+            pos.resolvePosition(ctx)
+                .flatMap { it.resolveArrayPosition() }
+                .map { ContainsMarkOnAnyField(it, taintMarkManager.taintMark(tainted)).atom() }
         )
 
         is SerializedCondition.IsType -> resolveIsType(ctx)
