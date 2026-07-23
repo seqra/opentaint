@@ -267,6 +267,67 @@ def test_write_only_slot_is_flagged(tmp_path):
     assert "never read" in findings[0].detail
 
 
+def test_orphan_finding_is_attributed_to_every_participating_file(tmp_path):
+    # Two files write the same slot and nobody reads it anywhere: the finding
+    # must not be pinned to one arbitrary file (e.g. sorted()[0]) -- a
+    # --changed run touching either file must catch it.
+    a = tmp_path / "a.yaml"
+    a.write_text(textwrap.dedent("""
+        passThrough:
+        - function: p.C#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """))
+    b = tmp_path / "b.yaml"
+    b.write_text(textwrap.dedent("""
+        passThrough:
+        - function: p.D#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """))
+    findings = cl.check_orphan_slots(cl.load_entries(str(tmp_path)), ALLOW)
+    assert sorted(f.file for f in findings) == ["a.yaml", "b.yaml"]
+    assert len({f.detail for f in findings}) == 1, "detail text should be identical across files"
+    assert all(f.code == "I2" for f in findings)
+
+
+def test_orphan_finding_attribution_reaches_run_with_changed_scoped_to_one_file(tmp_path):
+    # The point of Hole 4: a --changed run naming only the file that is NOT
+    # the arbitrary sorted()[0] pick must still see (and enforce) the finding.
+    a = tmp_path / "a.yaml"
+    a.write_text(textwrap.dedent("""
+        passThrough:
+        - function: p.C#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """))
+    b = tmp_path / "b.yaml"
+    b.write_text(textwrap.dedent("""
+        passThrough:
+        - function: p.D#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """))
+    allow_path = tmp_path / "allow.yaml"
+    allow_path.write_text("renderers: []\nsource_fed_slots: []\n")
+    # "b.yaml" sorts after "a.yaml", so an arbitrary sorted()[0] pick would
+    # attribute the finding only to a.yaml and this --changed run would miss it.
+    failures, _, _ = cl.run(str(tmp_path), str(allow_path), changed={"b.yaml"}, gate_i6=False)
+    assert any(f.code == "I2" for f in failures)
+
+
 def test_container_role_slot_is_not_a_leak(tmp_path):
     root = write(tmp_path, "x.yaml", """
         passThrough:

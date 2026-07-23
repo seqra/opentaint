@@ -364,6 +364,13 @@ def check_shared_slot(entries, allow) -> list:
 
 
 def check_orphan_slots(entries, allow) -> list:
+    """One I2 finding per file that participates in an orphan slot, not one
+    arbitrary file -- a slot written across several files but never read is
+    equally "caused by" each of them, and `--changed` must catch it however
+    the changed-file set intersects that group. Every such finding for a
+    given slot carries identical detail text, so it reads as one underlying
+    issue reported once per participating file rather than as unrelated
+    findings."""
     exempt = set(allow["source_fed_slots"])
     writers, readers = _slot_usage(entries)
     findings = []
@@ -371,11 +378,16 @@ def check_orphan_slots(entries, allow) -> list:
         if slot in exempt:
             continue
         if slot not in readers:
-            f = sorted(writers[slot])[0]
-            findings.append(Finding("I2", f[0], slot, f"{slot} is written ({f[1]}) but never read"))
+            side, verb, reason = writers[slot], "written", "never read"
         elif slot not in writers:
-            f = sorted(readers[slot])[0]
-            findings.append(Finding("I2", f[0], slot, f"{slot} is read ({f[1]}) but never written"))
+            side, verb, reason = readers[slot], "read", "never written"
+        else:
+            continue
+        files = sorted({f for f, _, _ in side})
+        methods = sorted({m for _, m, _ in side})
+        detail = f"{slot} is {verb} ({', '.join(methods)}) but {reason}"
+        for file in files:
+            findings.append(Finding("I2", file, slot, detail))
     return findings
 
 
