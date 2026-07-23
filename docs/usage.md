@@ -82,6 +82,7 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 | `opentaint compile` | Build project model separately from scanning |
 | `opentaint project` | Create project model from precompiled JARs/classes |
 | `opentaint summary` | View SARIF analysis results |
+| `opentaint triage` | Compare a report against a baseline and record suppressions |
 | `opentaint health` | Show dependency paths and report missing components |
 | `opentaint test rule` | Create, run, and debug detection-rule tests |
 | `opentaint test approximation` | Create and run dataflow-approximation tests |
@@ -106,6 +107,20 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--ruleset` | Rules to run: a YAML file, a directory of rules files, or `builtin` (default: `builtin`) |
 | `--dry-run` | Validate inputs and show what would run without compiling or scanning |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
+
+#### Baseline and gating flags
+
+| Flag | Description |
+|------|-------------|
+| `--baseline` | Previous SARIF report to compare against and inherit suppressions from |
+| `--baseline-state` | Write `result.baselineState` and `run.baselineGuid` into the report (needs `--baseline`) |
+| `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
+| `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
+| `--error-on-severity` | Restrict `--error-on-findings` to these levels: `error`, `warning`, `note`, `none` (repeatable, default all) |
+
+With `--baseline`, findings the baseline already accepted stay suppressed and
+the summary reports how many are new, unchanged, updated, or fixed. See
+[Baselines and suppressions](#baselines-and-suppressions).
 
 #### Rule-authoring flags
 
@@ -208,8 +223,99 @@ reflects the full set the tool ran.
 | `--max-nesting-level` | Collapse code-flow steps deeper than this call-nesting level (`-1` = no cap). Best-effort: depth is derived from step kinds and method names, so flows lacking method info may over-collapse |
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
 | `--code-flow` | Render code flows: `all`, a 1-based index, or unset (first flow only). On multi-flow findings the listing also shows a `Code flows: <N>` field. |
+| `--baseline` | Compare against this SARIF report and show new/unchanged/updated/fixed counts. The file is never modified. |
+| `--baseline-state` | Show only findings in this state: `new`, `unchanged`, `updated`, `absent` (repeatable, needs `--baseline`) |
+| `--suppressed` | Include suppressed findings in the listing (hidden by default) |
+| `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
 
 Filters combine as OR within a dimension and AND across dimensions.
+
+### opentaint triage
+
+Compare a SARIF report against a baseline and record decisions about findings.
+Nothing is ever deleted: an accepted or deferred finding stays in the report,
+marked with a SARIF suppression recording what was decided and why.
+
+```bash
+# What changed since the last release? Modifies nothing.
+opentaint triage scan.sarif --baseline release.sarif
+
+# We will not fix this one
+opentaint triage scan.sarif --accept q3Vf9k --justification "sink is a constant"
+
+# We are not fixing this one yet
+opentaint triage scan.sarif --defer 8bc1d2 --justification "waiting on OT-412"
+```
+
+| Flag | Description |
+|------|-------------|
+| `--baseline` | Previous SARIF report to compare against and inherit suppressions from |
+| `--baseline-state` | Write `result.baselineState` and `run.baselineGuid` into the report (needs `--baseline`) |
+| `--accept` | Accept the finding with this fingerprint prefix — won't fix (repeatable) |
+| `--defer` | Defer the finding with this fingerprint prefix — not fixing for now (repeatable) |
+| `--unsuppress` | Remove the suppression from the finding with this fingerprint prefix (repeatable) |
+| `--justification` | Why the finding is accepted or deferred (required with `--accept`/`--defer`) |
+| `--output`, `-o` | Write the triaged report here (default: rewrite the input in place) |
+| `--show-findings` | List the findings, not just the summary |
+| `--suppressed` | Include suppressed findings in the listing |
+| `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
+| `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
+| `--error-on-severity` | Restrict `--error-on-findings` to these levels (repeatable, default all) |
+
+A finding is named by a fingerprint prefix, git-style — the value shown as
+`Fingerprint:` by `opentaint summary --show-findings`. An ambiguous or unknown
+prefix is an error, never a guess.
+
+Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Triage completed |
+| 1 | General failure (bad input, unreadable report) |
+| 2 | Findings remain and `--error-on-findings` was set |
+
+## Baselines and suppressions
+
+A baseline is just a SARIF report you kept. Two independent things are built on
+it, both expressed in SARIF 2.1.0's own vocabulary.
+
+**Baseline comparison** answers "is this new?". `--baseline old.sarif`
+classifies every finding as new, unchanged, updated (same source and sink, a
+different path through the code), or fixed. By default this only affects what is
+printed; `--baseline-state` also writes `result.baselineState` and
+`run.baselineGuid` into the report. Findings are matched by fingerprint, not by
+line number, so moving code around does not invent new findings.
+
+**Suppression** answers "did a human accept this?". Presence in a baseline is
+not acceptance — a baseline entry that carries no suppression only makes a
+finding `unchanged`. A finding is suppressed only when someone decided so with
+`opentaint triage`, which writes a SARIF suppression:
+
+| Decision | `suppression.status` | Meaning |
+|----------|----------------------|---------|
+| `--accept` | `accepted` | The team will not fix this |
+| `--defer` | `underReview` | The team is not fixing this for now |
+
+Both hide the finding from the listing and from the failure gate, and both
+require a justification. A deferral does not expire on its own; the summary's
+`Deferred` count is what keeps it visible.
+
+Decisions travel forward through the baseline. A finding matching a baseline
+entry that carries a suppression inherits it verbatim — same status, same
+justification, same guid — so a decision is authored once and re-attached by
+every later scan for as long as the fingerprint matches. When the code is fixed
+and the finding disappears, the decision retires with it.
+
+A typical CI setup keeps the last accepted report and fails only on new work:
+
+```bash
+opentaint scan --baseline baselines/main.sarif -o scan.sarif \
+    --error-on-findings --error-on-severity error,warning .
+```
+
+Suppressions read from a baseline are interpreted conservatively: an entry whose
+status is `rejected`, or anything unrecognised, never hides a finding, and the
+summary counts it under `Not honored` so nothing disappears quietly.
 
 ### opentaint project
 

@@ -27,6 +27,11 @@ output:
 # Java runtime settings
 java:
   version: 23
+
+# Which rules the analyzer runs
+rules:
+  only: []                       # if set, only these rules run
+  exclude: [reflected-xss-*]     # these rules never run
 ```
 
 ### Available Options
@@ -39,6 +44,36 @@ java:
 | `output.color` | Color mode: `auto`, `always`, `never` | `auto` |
 | `output.quiet` | Suppress interactive console output (spinners, progress bars, JAR streaming) | `false` |
 | `java.version` | Java version for running the analyzer | `23` |
+| `rules.only` | Run only the rules matching these patterns | all rules |
+| `rules.exclude` | Never run the rules matching these patterns | none |
+
+### Selecting rules
+
+`rules.only` and `rules.exclude` control which rules the analyzer loads. They
+are rule *selection*, not suppression: an excluded rule never runs, so it
+produces nothing in the report and nothing to review later. To hide a finding a
+rule did produce, accept it with `opentaint triage` instead.
+
+Each entry matches a full `path/to/file.yaml:rule-id`, a bare rule name, or a
+glob over either:
+
+```yaml
+rules:
+  only:
+    - sql-injection*             # every rule whose name starts with sql-injection
+    - java/security/**           # every rule under that directory
+  exclude:
+    - reflected-xss-in-servlet-app
+```
+
+`exclude` is applied after `only`. A library rule that a selected rule joins
+against is always kept, even if a pattern excluded it, since dropping it would
+leave a rule that can never match. A selection that ends up matching no rules is
+an error rather than a scan that silently checks nothing — `--dry-run` reports
+it without compiling.
+
+The `--rule-id` flag overrides both lists, following the usual rule that flags
+outrank the configuration file.
 
 The per-run log file (`~/.opentaint/logs/<project>/<timestamp>.log`) always
 captures full JAR subprocess output regardless of these flags. They control
