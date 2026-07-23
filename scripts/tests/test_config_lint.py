@@ -211,6 +211,47 @@ def test_renderer_reading_every_slot_is_exempt(tmp_path):
     assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
 
 
+def test_class_scoped_renderer_exempts_only_that_class(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function: p.C#getInstance
+          copy:
+          - from:
+            - this
+            - .p.C#bag#java.lang.Object
+            to: result
+        """)
+    allow = dict(ALLOW, renderers=["p.C#getInstance"])
+    assert cl.check_shared_slot(cl.load_entries(root), allow) == []
+
+
+def test_class_scoped_renderer_does_not_exempt_other_classes(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.D#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.D#bag#java.lang.Object
+        - function: p.D#getInstance
+          copy:
+          - from:
+            - this
+            - .p.D#bag#java.lang.Object
+            to: result
+        """)
+    allow = dict(ALLOW, renderers=["p.C#getInstance"])
+    findings = cl.check_shared_slot(cl.load_entries(root), allow)
+    assert [f.code for f in findings] == ["I1"]
+
+
 def test_write_only_slot_is_flagged(tmp_path):
     root = write(tmp_path, "x.yaml", """
         passThrough:

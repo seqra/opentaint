@@ -284,43 +284,61 @@ def load_allowlist(path: str) -> dict:
     }
 
 
-def _entry_method(func):
-    """Method name for slot-usage purposes, or None when func is unrecognised.
+def _entry_identity(func):
+    """(class, method) for slot-usage purposes, or None when func is unrecognised.
 
     String form (`pkg.Cls#method`) and map form with a literal `name:` both
     identify one exact method -- same meaning, see SerializedNameMatcher.kt.
+    `class` is the fully-qualified owner when it can be read literally
+    (string form, or map form with literal `package:`/`class:`); it is None
+    when the owner itself is pattern-matched, since no single class name can
+    be attributed to the entry.
+
     Map form with `name: {pattern: ...}` identifies a family of methods by
     regex, not a single name; it is represented as a sentinel that never
     matches a known getter/setter prefix, so property_of() reports it as "not
     a named property" and it can never be paired against a real accessor as a
-    cross-property (I1) leak. It still carries a (file, sentinel) identity so
-    it counts as a real reader/writer for orphan-slot (I2) purposes.
+    cross-property (I1) leak. It still carries a (file, class, sentinel)
+    identity so it counts as a real reader/writer for orphan-slot (I2)
+    purposes.
     """
     if isinstance(func, str):
-        return func.rsplit("#", 1)[1] if "#" in func else None
+        if "#" not in func:
+            return None
+        cls, method = func.rsplit("#", 1)
+        return cls, method
     if isinstance(func, dict):
+        pkg, klass = func.get("package"), func.get("class")
+        cls = f"{pkg}.{klass}" if isinstance(pkg, str) and isinstance(klass, str) else None
         name = func.get("name")
         if isinstance(name, str):
-            return name
+            return cls, name
         if isinstance(name, dict) and isinstance(name.get("pattern"), str):
-            return f"<pattern:{name['pattern']}>"
+            return cls, f"<pattern:{name['pattern']}>"
     return None
 
 
 def _slot_usage(entries):
-    """slot -> (writers, readers) as sets of (file, method)."""
+    """slot -> (writers, readers) as sets of (file, method, class)."""
     writers, readers = {}, {}
     for e in entries:
-        method = _entry_method(e.func)
-        if method is None:
+        identity = _entry_identity(e.func)
+        if identity is None:
             continue
+        cls, method = identity
         for c in e.copies:
             for side, acc in ((c.to, writers), (c.frm, readers)):
                 for a in side[1:]:
                     if a == "[*]":
                         continue
-                    acc.setdefault(a, set()).add((e.file, method))
+                    acc.setdefault(a, set()).add((e.file, method, cls))
     return writers, readers
+
+
+def _is_renderer(cls, method, renderers) -> bool:
+    """True when a bare method name or a `Class#method` scoped entry in the
+    allowlist's `renderers` exempts this (class, method)."""
+    return method in renderers or (cls is not None and f"{cls}#{method}" in renderers)
 
 
 def check_shared_slot(entries, allow) -> list:
@@ -331,10 +349,10 @@ def check_shared_slot(entries, allow) -> list:
     for slot in sorted(set(writers) & set(readers)):
         if _is_shared_by_design(slot, shared):
             continue
-        for wfile, wm in sorted(writers[slot]):
+        for wfile, wm, wcls in sorted(writers[slot]):
             wp = property_of(wm)
-            for rfile, rm in sorted(readers[slot]):
-                if rm in renderers or wm in renderers:
+            for rfile, rm, rcls in sorted(readers[slot]):
+                if _is_renderer(rcls, rm, renderers) or _is_renderer(wcls, wm, renderers):
                     continue
                 rp = property_of(rm)
                 if wp is None or rp is None or wp == rp:
