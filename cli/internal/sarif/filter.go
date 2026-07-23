@@ -61,7 +61,7 @@ func (f Filters) matches(r *Result) bool {
 	if len(f.Paths) > 0 && !matchPath(r, f.Paths) {
 		return false
 	}
-	if len(f.Severities) > 0 && !matchSeverity(r, f.Severities) {
+	if len(f.Severities) > 0 && !MatchesSeverity(r, f.Severities) {
 		return false
 	}
 	if len(f.RuleIDs) > 0 && !matchRuleID(r, f.RuleIDs) {
@@ -136,9 +136,9 @@ func matchPath(r *Result, patterns []string) bool {
 	return false
 }
 
-// matchSeverity reports whether the result's level equals any supplied level
+// MatchesSeverity reports whether the result's level equals any supplied level
 // (case-insensitive). A nil/empty level is treated as "note".
-func matchSeverity(r *Result, levels []string) bool {
+func MatchesSeverity(r *Result, levels []string) bool {
 	actual := strings.ToLower(string(findingLevel(r)))
 	for _, l := range levels {
 		if strings.ToLower(strings.TrimSpace(l)) == actual {
@@ -192,7 +192,8 @@ func fingerprintValue(r *Result, key string) string {
 	if key == "" {
 		key = DefaultFingerprintKey
 	}
-	return r.PartialFingerprints[key]
+	v, _ := Identity(r, key)
+	return v
 }
 
 // matchFingerprint reports whether the result's partialFingerprints value under

@@ -61,16 +61,7 @@ func counts(r *sarif.Result, view *sarif.TriageView) bool {
 }
 
 func (g Gate) inScope(r *sarif.Result) bool {
-	if len(g.Severities) == 0 {
-		return true
-	}
-	level := strings.ToLower(string(sarif.LevelOf(r)))
-	for _, s := range g.Severities {
-		if strings.ToLower(strings.TrimSpace(s)) == level {
-			return true
-		}
-	}
-	return false
+	return len(g.Severities) == 0 || sarif.MatchesSeverity(r, g.Severities)
 }
 
 // ParseGateSeverities validates --error-on-severity values.
