@@ -53,7 +53,7 @@ class JIRMethodSequentFlowFunction(
         add(Sequent.ZeroToZero)
 
         if (currentInst is JIRAssignInst) {
-            JIRMethodCallResolver.TypeInfoSequentFlowFunction.handle(currentInst) { accessors ->
+            JIRMethodCallResolver.TypeInfoSequentFlowFunction.handle(analysisContext, currentInst) { accessors ->
                 val lhv = accessPathBase(currentInst.lhv) ?: return@handle
                 val startFact = apManager.createFinalAp(lhv, ExclusionSet.Universe)
                 val fact = accessors.foldRight(startFact) { a, f -> f.prependAccessor(a) }

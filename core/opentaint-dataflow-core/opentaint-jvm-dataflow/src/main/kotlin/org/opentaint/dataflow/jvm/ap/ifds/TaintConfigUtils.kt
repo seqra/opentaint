@@ -91,6 +91,21 @@ object TaintConfigUtils {
         return applicableRules.map { it.rule }
     }
 
+    inline fun <T> Iterable<T>.applyCleanerActions(
+        initial: EvaluatedCleanAction,
+        body: (T, EvaluatedCleanAction) -> List<EvaluatedCleanAction>
+    ): List<EvaluatedCleanAction> {
+        var unprocessedFacts = listOf(initial)
+        for (action in this) {
+            val next = mutableListOf<EvaluatedCleanAction>()
+            for (f in unprocessedFacts) {
+                next += body(action, f)
+            }
+            unprocessedFacts = next
+        }
+        return unprocessedFacts
+    }
+
     inline fun <T> List<T>.applyCleanerActions(
         evaluator: JIRTaintCleanActionEvaluator,
         itemRule: (T) -> TaintConfigurationItem,

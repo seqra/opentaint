@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.configuration.jvm.Argument
 import org.opentaint.dataflow.configuration.jvm.ClassStatic
@@ -17,6 +18,7 @@ import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRParameter
+import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRArgument
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
@@ -72,21 +74,38 @@ class CalleePositionToJIRValueResolver(
     }
 }
 
-class JIRMethodPositionBaseTypeResolver(private val method: JIRMethod) :PositionTypeResolver {
+class JIRMethodPositionBaseTypeResolver(private val method: JIRMethod) : PositionTypeResolver {
     private val cp = method.enclosingClass.classpath
 
     override fun resolve(position: PositionAccess): CommonType? {
         if (position !is PositionAccess.Simple) return null
 
         return when (val base = position.base) {
-            is AccessPathBase.Argument -> method.parameters.getOrNull(base.idx)?.let { cp.findTypeOrNull(it.type.typeName) }
-            is AccessPathBase.Return -> cp.findTypeOrNull(method.returnType.typeName)
-            is AccessPathBase.This -> method.enclosingClass.toType()
+            is AccessPathBase.Argument,
+            is AccessPathBase.Return,
+            is AccessPathBase.This -> positionType.computeIfAbsent(base) {
+                base.resolveType()
+            }
+
             is AccessPathBase.ClassStatic,
             is AccessPathBase.Constant,
             is AccessPathBase.Exception,
             is AccessPathBase.LocalVar -> null
         }
+    }
+
+    private val positionType = Object2ObjectOpenHashMap<AccessPathBase, CommonType?>()
+
+    private fun AccessPathBase.resolveType(): JIRType? = when (this) {
+        is AccessPathBase.Argument -> method.parameters.getOrNull(idx)
+            ?.let { cp.findTypeOrNull(it.type.typeName) }
+
+        is AccessPathBase.Return -> cp.findTypeOrNull(method.returnType.typeName)
+        is AccessPathBase.This -> method.enclosingClass.toType()
+        is AccessPathBase.ClassStatic,
+        is AccessPathBase.Constant,
+        is AccessPathBase.Exception,
+        is AccessPathBase.LocalVar -> null
     }
 }
 

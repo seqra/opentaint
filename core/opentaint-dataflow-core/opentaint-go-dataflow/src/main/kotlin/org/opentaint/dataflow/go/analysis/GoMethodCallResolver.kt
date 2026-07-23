@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner.LambdaResolvedEvent
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
@@ -73,7 +74,9 @@ class GoMethodCallResolver(
     }
 
     data object ClosureCreationFlowFunction {
-        fun handle(inst: GoIRInst, body: (AccessPathBase, List<Accessor>) -> Unit) {
+        fun handle(context: GoMethodAnalysisContext, inst: GoIRInst, body: (AccessPathBase, List<Accessor>) -> Unit) {
+            if (context.phase !is Phase.Prescan) return
+
             val expr = (inst as? GoIRAssignInst)?.expr ?: return
 
             if (expr is GoIRMakeClosureExpr) {
@@ -102,6 +105,7 @@ class GoMethodCallResolver(
         val subscription = ClosureSubscription(runner, callerContext.methodEntryPoint, handler)
         tracker.addSubscriber(subscription)
 
+        if (callerContext.phase !is Phase.Prescan) return
         tracker.tryExtractClosureName(handler, analyzer)
     }
 

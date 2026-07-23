@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -53,6 +54,13 @@ class GoAnalysisManager(
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
 
+    private var selectedPhase: Phase = Phase.Prescan
+    val phase: Phase get() = selectedPhase
+
+    override fun selectPhase(phase: Phase) {
+        selectedPhase = phase
+    }
+
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,
@@ -67,7 +75,7 @@ class GoAnalysisManager(
         )
 
         val aliasAnalysis = GoLocalAliasAnalysis(methodEntryPoint.method as GoIRFunction)
-        return GoMethodAnalysisContext(methodEntryPoint, taintCtx, aliasAnalysis)
+        return GoMethodAnalysisContext(this, methodEntryPoint, taintCtx, aliasAnalysis)
     }
 
     override fun getMethodInstGraph(

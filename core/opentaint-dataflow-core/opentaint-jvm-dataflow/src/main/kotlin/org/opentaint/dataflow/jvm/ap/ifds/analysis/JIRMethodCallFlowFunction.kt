@@ -48,6 +48,10 @@ class JIRMethodCallFlowFunction(
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
+    val typeResolver by lazy {
+        JIRMethodPositionBaseTypeResolver(callExpr.method.method)
+    }
+
     override fun propagateZeroToZero() = buildSet {
         applySinkRules(
             factReader = null,
@@ -156,7 +160,6 @@ class JIRMethodCallFlowFunction(
             markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
         )
 
-        val typeResolver = JIRMethodPositionBaseTypeResolver(method)
         val cleaner = JIRTaintCleanActionEvaluator(typeResolver)
 
         val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
@@ -270,7 +273,7 @@ class JIRMethodCallFlowFunction(
                 listOf(passFactReader),
                 markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
             )
-            val typeResolver = JIRMethodPositionBaseTypeResolver(method)
+
             val passEvaluator = TaintPassActionEvaluator(
                 apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
             )
