@@ -163,3 +163,25 @@ def check_element_targets(entries) -> list:
                         "I4", e.file, func_name(e.func),
                         f"[*] on {'.'.join(prefix)} of scalar type {t}"))
     return findings
+
+
+def check_element_carrier(entries) -> list:
+    findings = []
+    for e in entries:
+        present = {(c.frm, c.to) for c in e.copies}
+        for c in e.copies:
+            if "[*]" in c.frm or "[*]" in c.to:
+                continue
+            src_t = position_type(e, c.frm)
+            if src_t is None or not src_t.endswith("[]"):
+                continue
+            dst_t = position_type(e, c.to)
+            if is_element_safe(dst_t) and (dst_t is None or dst_t.endswith("[]")):
+                continue  # array target: the whole copy carries elements
+            if (c.frm + ("[*]",), c.to) in present:
+                continue
+            findings.append(Finding(
+                "I3", e.file, func_name(e.func),
+                f"{'.'.join(c.frm)} (type {src_t}) -> {'.'.join(c.to)} (type {dst_t}) "
+                f"has no explicit [*] carrier"))
+    return findings

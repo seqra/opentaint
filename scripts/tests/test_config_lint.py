@@ -68,3 +68,45 @@ def test_element_on_array_param_is_allowed(tmp_path):
             - '[*]'
         """)
     assert cl.check_element_targets(cl.load_entries(root)) == []
+
+
+def test_missing_element_carrier_is_flagged(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#append
+          signature: (char[]) p.C
+          copy:
+          - from: arg(0)
+            to: this
+        """)
+    findings = cl.check_element_carrier(cl.load_entries(root))
+    assert [f.code for f in findings] == ["I3"]
+    assert "arg(0)" in findings[0].detail
+
+
+def test_present_element_carrier_passes(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#append
+          signature: (char[]) p.C
+          copy:
+          - from: arg(0)
+            to: this
+          - from:
+            - arg(0)
+            - '[*]'
+            to: this
+        """)
+    assert cl.check_element_carrier(cl.load_entries(root)) == []
+
+
+def test_array_to_array_needs_no_carrier(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#copyOf
+          signature: (char[]) char[]
+          copy:
+          - from: arg(0)
+            to: result
+        """)
+    assert cl.check_element_carrier(cl.load_entries(root)) == []
