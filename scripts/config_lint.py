@@ -165,6 +165,18 @@ def check_element_targets(entries) -> list:
     return findings
 
 
+def _dst_holds_element(entry, to: tuple) -> bool:
+    """True when the destination can hold an array element, so a whole copy
+    carries src[i] with it and no explicit [*] edge is needed."""
+    tail = [a for a in to[1:] if a != "[*]"]
+    if tail:
+        parts = tail[-1].split("#")
+        t = parts[-1] if len(parts) == 3 else None
+        return t is None or t == "java.lang.Object" or t.endswith("[]")
+    t = position_type(entry, to)
+    return t is None or t.endswith("[]")
+
+
 def check_element_carrier(entries) -> list:
     findings = []
     for e in entries:
@@ -176,8 +188,8 @@ def check_element_carrier(entries) -> list:
             if src_t is None or not src_t.endswith("[]"):
                 continue
             dst_t = position_type(e, c.to)
-            if is_element_safe(dst_t) and (dst_t is None or dst_t.endswith("[]")):
-                continue  # array target: the whole copy carries elements
+            if _dst_holds_element(e, c.to):
+                continue  # element-holding target: the whole copy carries elements
             if (c.frm + ("[*]",), c.to) in present:
                 continue
             findings.append(Finding(

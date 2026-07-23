@@ -110,3 +110,32 @@ def test_array_to_array_needs_no_carrier(tmp_path):
             to: result
         """)
     assert cl.check_element_carrier(cl.load_entries(root)) == []
+
+
+def test_object_typed_slot_target_needs_no_carrier(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#addAll
+          signature: (java.lang.Object[]) void
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#items#java.lang.Object
+        """)
+    assert cl.check_element_carrier(cl.load_entries(root)) == []
+
+
+def test_scalar_typed_slot_target_needs_a_carrier(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setNames
+          signature: (java.lang.String[]) void
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#name#java.lang.String
+        """)
+    findings = cl.check_element_carrier(cl.load_entries(root))
+    assert [f.code for f in findings] == ["I3"]
