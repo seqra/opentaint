@@ -346,6 +346,7 @@ def check_shared_slot(entries, allow) -> list:
     shared = set(allow.get("shared_slots") or ())
     writers, readers = _slot_usage(entries)
     findings = []
+    seen = set()
     for slot in sorted(set(writers) & set(readers)):
         if _is_shared_by_design(slot, shared):
             continue
@@ -357,9 +358,19 @@ def check_shared_slot(entries, allow) -> list:
                 rp = property_of(rm)
                 if wp is None or rp is None or wp == rp:
                     continue
-                findings.append(Finding(
+                # The owning class is part of writers/readers identity (so a
+                # scoped renderer can exempt one class's method but not
+                # another's with the same name), but not part of the Finding
+                # itself: several owning classes sharing the same (file,
+                # method) writer or reader would otherwise report the exact
+                # same (file, slot, detail) finding once per class.
+                finding = Finding(
                     "I1", wfile, slot,
-                    f"{wm} writes and {rm} reads the same slot {slot}"))
+                    f"{wm} writes and {rm} reads the same slot {slot}")
+                if finding in seen:
+                    continue
+                seen.add(finding)
+                findings.append(finding)
     return findings
 
 

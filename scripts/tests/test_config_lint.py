@@ -252,6 +252,38 @@ def test_class_scoped_renderer_does_not_exempt_other_classes(tmp_path):
     assert [f.code for f in findings] == ["I1"]
 
 
+def test_shared_slot_finding_is_not_duplicated_across_owning_classes(tmp_path):
+    # Two different classes both write the same slot key under the same
+    # method name (e.g. many Iterator subclasses all implementing the same
+    # slot-carrying constructor). The class is not part of the Finding's
+    # identity (file, method, slot text) -- reporting it once per distinct
+    # owning class would just be noise, not new information.
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: q.One#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function: r.Two#setPath
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#bag#java.lang.Object
+        - function: p.C#getResponseBody
+          copy:
+          - from:
+            - this
+            - .p.C#bag#java.lang.Object
+            to: result
+        """)
+    findings = cl.check_shared_slot(cl.load_entries(root), ALLOW)
+    assert len(findings) == 1
+    assert findings[0].code == "I1"
+
+
 def test_write_only_slot_is_flagged(tmp_path):
     root = write(tmp_path, "x.yaml", """
         passThrough:
