@@ -8,9 +8,10 @@ Invariants (see docs/superpowers/specs/2026-07-23-rule-storage-rekey-design.md):
   I4 no [*] on a non-array-typed position
   I5 no out-of-range arg(n)
   I6 no <rule-storage> anywhere in the Java config (final gate)
-  I7 no cross-file half-collapse: a --changed file must not change its edges on
-     a slot whose writers/readers span more than one file while another
-     participating file is left out of --changed (requires --compare-ref)
+  I7 no cross-file half-collapse: a --changed file must not drop its last
+     write/read of a slot whose writers/readers span more than one file while
+     another participating file is left out of --changed (shared-by-design
+     slots are exempt, same as I1; requires --compare-ref)
 """
 import json
 import os
@@ -437,7 +438,7 @@ def _slot_participants(writers, readers):
     return out
 
 
-def check_cross_file_half_collapse(entries, ref_entries, changed) -> list:
+def check_cross_file_half_collapse(entries, ref_entries, changed, shared) -> list:
     """I7: the half-collapse signature.
 
     A slot is cross-file when the set of files containing its writers or
@@ -448,12 +449,27 @@ def check_cross_file_half_collapse(entries, ref_entries, changed) -> list:
     slot in the very edit under test (the collapse itself) must still count
     as a participant, or the collapse would erase its own evidence.
 
-    It becomes a finding when a `--changed` file's edges touching that slot
-    differ between the working tree and `compare_ref`, while at least one
-    other file that participates in the slot (in either state) was left out
-    of `--changed`: someone changed how one file uses a shared slot and left
-    the other users of that slot behind, so the write and read on either side
-    never meet.
+    Two things exempt an otherwise cross-file slot:
+
+    - Shared-by-design slots (`_is_shared_by_design`, the same test
+      `check_shared_slot` (I1) uses): a Capitalised container/wrapper role,
+      or a slot named in the allowlist's `shared_slots`, is shared
+      vocabulary that many unrelated files legitimately reuse on purpose --
+      not a private per-object channel, so it can never be half-collapsed.
+    - A `--changed` file that still has at least one edge touching the slot
+      after the change has not severed anything, even if the exact edge set
+      changed (e.g. a redundant duplicate edge was dropped). The hazard is a
+      file that DROPS its participation entirely, not one that edits it.
+
+    It becomes a finding when a `--changed` file F had at least one edge
+    touching the slot at `compare_ref` but has none in the working tree --
+    it stopped writing or reading the slot -- while at least one other file
+    that participates in the slot (in either state) was left out of
+    `--changed`: F severed its side of the slot and left the other users of
+    it behind, so the write and read on either side no longer meet. Re-keying
+    a slot to a different spelling is the important case this still catches:
+    the old slot key loses F's participation while a new key gains it, so
+    the old key correctly fires here if another file is still on it.
 
     If every file that participates in the slot is in `--changed`, the whole
     closure is being edited together and this does not fire.
@@ -475,18 +491,21 @@ def check_cross_file_half_collapse(entries, ref_entries, changed) -> list:
     ref_edges = _slot_edges_by_file(ref_entries)
     findings = []
     for slot in sorted(cross_slots):
+        if _is_shared_by_design(slot, shared):
+            continue
         others = participants[slot] - set(changed)
         if not others:
             continue
         for file in sorted(changed):
             cur = cur_edges.get((file, slot), set())
             ref = ref_edges.get((file, slot), set())
-            if cur == ref:
-                continue
+            if cur or not ref:
+                continue  # still participates, or never participated at compare_ref
             findings.append(Finding(
                 "I7", file, slot,
-                f"{slot} edges changed in {file} but left unchanged in "
-                f"{', '.join(sorted(others))}, which also write or read this slot"))
+                f"{slot} is no longer written or read in {file} but left "
+                f"unchanged in {', '.join(sorted(others))}, which also write "
+                f"or read this slot"))
     return findings
 
 
@@ -535,7 +554,8 @@ def run(root, allow_path, changed=None, gate_i6=False, compare_ref=None):
     ref_entries = load_entries_at_ref(compare_ref, root)
     ref_ids = {tuple(f) for f in _all_findings(ref_entries, allow, gate_i6)}
     failures = [f for f in findings if f.file in changed and tuple(f) not in ref_ids]
-    failures += check_cross_file_half_collapse(entries, ref_entries, changed)
+    failures += check_cross_file_half_collapse(
+        entries, ref_entries, changed, set(allow.get("shared_slots") or ()))
     preexisting_changed = [f for f in findings if f.file in changed and tuple(f) in ref_ids]
     reports = [f for f in findings if f.file not in changed]
     return failures, reports, preexisting_changed

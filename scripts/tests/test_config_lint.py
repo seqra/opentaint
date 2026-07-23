@@ -868,3 +868,134 @@ def test_i7_ignores_a_slot_used_by_only_one_file(tmp_path):
     failures, _, _ = cl.run(
         str(repo), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=ref_sha)
     assert [f for f in failures if f.code == "I7"] == []
+
+
+# ---- I7 narrowing: shared-by-design exemption + drop-only trigger ----
+
+_ITERABLE_WRITER_ITEM = """
+    - function: p.A#addAll
+      copy:
+      - from: arg(0)
+        to:
+        - this
+        - .java.lang.Iterable#Element#java.lang.Object
+    """
+
+_ITERABLE_READER_ITEM = """
+    - function: p.B#forEach
+      copy:
+      - from:
+        - this
+        - .java.lang.Iterable#Element#java.lang.Object
+        to: result
+    """
+
+def test_i7_exempts_a_shared_by_design_slot(tmp_path):
+    # .java.lang.Iterable#Element#java.lang.Object is a Capitalised container-
+    # content role -- shared by design across unrelated files by convention,
+    # exactly like check_shared_slot's I1 exemption. One file changing its
+    # edges on it is not a half-collapse: the slot is shared vocabulary, not
+    # a private per-object channel.
+    repo, git = init_git_repo(tmp_path)
+    (repo / "a.yaml").write_text(yaml_doc(_ITERABLE_WRITER_ITEM))
+    (repo / "b.yaml").write_text(yaml_doc(_ITERABLE_READER_ITEM))
+    git("add", "a.yaml", "b.yaml")
+    git("commit", "-q", "-m", "ref: shared Iterable#Element slot across two files")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    # a.yaml drops its use of the slot entirely (a real drop of participation,
+    # same shape as the true-positive case) -- must still not fire, because
+    # the slot itself is exempt.
+    (repo / "a.yaml").write_text(yaml_doc(_COLLAPSED_WRITER_ITEM))
+
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(repo), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    assert [f for f in failures if f.code == "I7"] == []
+
+
+_DUP_WRITER_TWO_EDGES_ITEM = """
+    - function: p.D#setExtra
+      copy:
+      - from: arg(0)
+        to:
+        - this
+        - .p.D#extra#java.lang.Object
+      - from: arg(1)
+        to:
+        - this
+        - .p.D#extra#java.lang.Object
+    """
+
+_DUP_WRITER_ONE_EDGE_ITEM = """
+    - function: p.D#setExtra
+      copy:
+      - from: arg(0)
+        to:
+        - this
+        - .p.D#extra#java.lang.Object
+    """
+
+_DUP_READER_ITEM = """
+    - function: p.D#getExtra
+      copy:
+      - from:
+        - this
+        - .p.D#extra#java.lang.Object
+        to: result
+    """
+
+
+def test_i7_does_not_fire_when_participation_is_retained_despite_edge_set_change(tmp_path):
+    # a.yaml drops one of two edges touching a private cross-file slot, but
+    # still writes it (via the remaining edge) -- participation is unchanged,
+    # so this is not a half-collapse even though the raw edge set differs.
+    repo, git = init_git_repo(tmp_path)
+    (repo / "a.yaml").write_text(yaml_doc(_DUP_WRITER_TWO_EDGES_ITEM))
+    (repo / "b.yaml").write_text(yaml_doc(_DUP_READER_ITEM))
+    git("add", "a.yaml", "b.yaml")
+    git("commit", "-q", "-m", "ref: private slot with a duplicate writer edge")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    (repo / "a.yaml").write_text(yaml_doc(_DUP_WRITER_ONE_EDGE_ITEM))
+
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(repo), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    assert [f for f in failures if f.code == "I7"] == []
+
+
+def test_i7_fires_on_a_rekey_that_leaves_the_old_slot_behind(tmp_path):
+    # a.yaml moves its writer edge from the old .p.C#<rule-storage># slot to
+    # a new, differently-spelled .p.C#prop# slot, but b.yaml is left
+    # addressing the old key -- the old key's write and read no longer meet,
+    # even though a.yaml's overall re-key looks like a normal edit and not a
+    # bare collapse.
+    repo, git = init_git_repo(tmp_path)
+    (repo / "a.yaml").write_text(yaml_doc(_SHARED_WRITER_ITEM))
+    (repo / "b.yaml").write_text(yaml_doc(_SHARED_READER_ITEM))
+    git("add", "a.yaml", "b.yaml")
+    git("commit", "-q", "-m", "ref: shared slot across two files")
+    ref_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo,
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    _REKEYED_WRITER_ITEM = """
+        - function: p.A#setX
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#prop#java.lang.Object
+        """
+    (repo / "a.yaml").write_text(yaml_doc(_REKEYED_WRITER_ITEM))
+
+    allow_path = write_allow(tmp_path)
+    failures, _, _ = cl.run(
+        str(repo), allow_path, changed={"a.yaml"}, gate_i6=False, compare_ref=ref_sha)
+    i7 = [f for f in failures if f.code == "I7"]
+    assert len(i7) == 1
+    assert i7[0].file == "a.yaml"
+    assert ".p.C#<rule-storage>#java.lang.Object" in i7[0].func or \
+        ".p.C#<rule-storage>#java.lang.Object" in i7[0].detail
