@@ -160,7 +160,7 @@ func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.
 		out.Blank()
 	}
 
-	filtered.PrintSummary(out, absSarifPath)
+	filtered.PrintSummary(out, absSarifPath, view)
 
 	if showFindings && hasOmittedFlow && !verboseFlow {
 		out.Suggest(

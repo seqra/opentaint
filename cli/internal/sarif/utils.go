@@ -61,6 +61,10 @@ type RuleSummary struct {
 	Notes       int
 }
 
+// LevelOf returns the result's SARIF level, defaulting to "note" when absent —
+// the same reading the summary and the filters use.
+func LevelOf(result *Result) Level { return findingLevel(result) }
+
 func findingLevel(result *Result) Level {
 	if result == nil || result.Level == nil || *result.Level == "" {
 		return Note
@@ -202,8 +206,11 @@ func pluralize(count int, singular string) string {
 	return singular + "s"
 }
 
-// PrintSummary prints a human-readable summary of the SARIF report
-func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath string) {
+// PrintSummary prints a human-readable summary of the SARIF report. view is the
+// baseline/suppression state to report alongside it, or nil when neither
+// applies — in which case the output is exactly what it was before triage
+// existed.
+func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath string, view *TriageView) {
 	summary := GenerateSummary(report)
 	ruleSummary := generateRuleSummary(report)
 
@@ -244,17 +251,24 @@ func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath strin
 		rulesTriggered = out.FieldItem("Rules triggered", summary.TotalRulesTriggered)
 	}
 
-	out.Section("Scan Summary").
-		Group("Findings",
-			out.FieldItem("Total", totalLine),
-			out.FieldItem("Files affected", findingFiles(report)),
-			out.FieldItem("Rules executed", summary.TotalRulesExecuted),
-			rulesTriggered,
-		).
-		Group("Output",
-			outputItems(out, absSarifReportPath)...,
-		).
-		Render()
+	findings := []any{out.FieldItem("Total", totalLine)}
+	if view != nil && view.Suppressions.Suppressed > 0 {
+		findings = append(findings, out.FieldItem("Reported", view.Suppressions.Total-view.Suppressions.Suppressed))
+	}
+	findings = append(findings,
+		out.FieldItem("Files affected", findingFiles(report)),
+		out.FieldItem("Rules executed", summary.TotalRulesExecuted),
+		rulesTriggered,
+	)
+
+	section := out.Section("Scan Summary").Group("Findings", findings...)
+	if items := view.baselineItems(out); len(items) > 0 {
+		section.Group("Baseline", items...)
+	}
+	if items := view.suppressionItems(out); len(items) > 0 {
+		section.Group("Suppressions", items...)
+	}
+	section.Group("Output", outputItems(out, absSarifReportPath)...).Render()
 }
 
 func outputItems(out *output.Printer, absSarifReportPath string) []any {

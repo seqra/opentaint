@@ -96,6 +96,17 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	findingNode.Child(out.FieldItem("Severity", coloredSeverity))
 	findingNode.Child(out.FieldItem("Location", locStr))
 
+	if result.BaselineState != nil {
+		findingNode.Child(out.FieldItem("Baseline", string(*result.BaselineState)))
+	}
+	if IsSuppressed(result) {
+		suppressedLine := StatusOf(result)
+		if justification := JustificationOf(result); justification != "" {
+			suppressedLine += ": " + justification
+		}
+		findingNode.Child(out.FieldItem("Suppressed", suppressedLine))
+	}
+
 	total := len(result.CodeFlows)
 	if total > 1 {
 		findingNode.Child(out.FieldItem("Code flows", total))
