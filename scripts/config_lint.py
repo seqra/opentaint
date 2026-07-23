@@ -66,8 +66,10 @@ def load_entries(root: str) -> list:
 def arity(sig) -> Optional[int]:
     """Number of declared parameters, or None when unknown/wildcarded."""
     if isinstance(sig, dict):
-        params = sig.get("params")
-        return None if params is None else len(params)
+        # A dict signature constrains selected positions; it does not declare
+        # how many parameters the method has, so no index can be proven
+        # out of range.
+        return None
     if not isinstance(sig, str) or not sig.startswith("("):
         return None
     inner = sig[1:sig.index(")")].strip()
@@ -115,20 +117,21 @@ def is_element_safe(type_name) -> bool:
 
 
 def _split_signature(sig):
-    """(param type list, return type) or (None, None) when unknown."""
+    """({param index: type}, return type); params is None when unknown."""
     if isinstance(sig, dict):
         params = sig.get("params")
         types = None
         if params is not None:
-            types = [p.get("type") for p in sorted(params, key=lambda p: p["index"])]
+            types = {p["index"]: p.get("type") for p in params}
         return types, sig.get("return")
     if not isinstance(sig, str) or not sig.startswith("("):
         return None, None
     inner = sig[1:sig.index(")")].strip()
+    ret = sig[sig.index(")") + 1:].strip() or None
     if "*" in inner:
-        return None, sig[sig.index(")") + 1:].strip() or None
+        return None, ret
     types = [] if inner == "" else [t.strip() for t in inner.split(",")]
-    return types, sig[sig.index(")") + 1:].strip() or None
+    return {i: t for i, t in enumerate(types)}, ret
 
 
 def _parse_slot(accessor: str):
@@ -152,8 +155,8 @@ def position_type(entry, pos: tuple):
     if base == "this":
         return "java.lang.Object"
     m = _ARG.fullmatch(base)
-    if m and params is not None and int(m.group(1)) < len(params):
-        return params[int(m.group(1))]
+    if m and params is not None:
+        return params.get(int(m.group(1)))
     return None
 
 

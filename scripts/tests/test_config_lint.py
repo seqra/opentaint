@@ -336,3 +336,42 @@ def test_i6_gate_flags_rule_storage(tmp_path):
     allow.write_text("renderers: []\nsource_fed_slots: []\n")
     failures, _ = cl.run(root, str(allow), changed=None, gate_i6=True)
     assert any(f.code == "I6" for f in failures)
+
+
+def test_dict_signature_has_unknown_arity():
+    # A dict signature constrains selected positions; it is not a full
+    # parameter list, so no arg index can be proven out of range.
+    assert cl.arity({"params": [{"index": 1, "type": "java.lang.String"}]}) is None
+    assert cl.arity({"return": "java.lang.String"}) is None
+
+
+def test_dict_signature_arg_is_not_flagged_out_of_range(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#toJson
+          signature:
+            params:
+            - index: 1
+              type: p.Writer
+          copy:
+          - from: arg(1)
+            to: this
+        """)
+    assert cl.check_arg_range(cl.load_entries(root)) == []
+
+
+def test_dict_signature_type_is_keyed_by_declared_index(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#m
+          signature:
+            params:
+            - index: 1
+              type: java.lang.String[]
+          copy:
+          - from: arg(0)
+            to: this
+        """)
+    entry = cl.load_entries(root)[0]
+    assert cl.position_type(entry, ("arg(1)",)) == "java.lang.String[]"
+    assert cl.position_type(entry, ("arg(0)",)) is None
