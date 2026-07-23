@@ -15,8 +15,8 @@ import javax.management.openmbean.CompositeData
 import kotlin.system.exitProcess
 
 class MemoryManager(
+    val refManager: RefManager,
     private val memoryThreshold: Double,
-    val refManager: SoftReferenceManager?,
     private val onOutOfMemory: () -> Unit
 ) {
     private val memoryManagerState = AtomicInteger(STATE_NORMAL)
@@ -48,7 +48,7 @@ class MemoryManager(
             val state = memoryManagerState.get()
 
             if (usedAfterGc < thr) {
-                refManager?.enable()
+                refManager.allSoftRefManagers().asSequence().forEach { it.enable() }
                 val currentState = memoryManagerState.getAndSet(STATE_NORMAL)
                 if (currentState != STATE_NORMAL) {
                     logger.info("Memory back to normal state: $usedAfterGc < $thr")
@@ -60,10 +60,14 @@ class MemoryManager(
 
             when(state) {
                 STATE_NORMAL -> {
-                    val cleaned = refManager?.cleanup()
-                    if (cleaned != null && cleaned < 0) return
+                    var cleaned = -1
+                    refManager.allSoftRefManagers().asSequence().forEach {
+                        cleaned += it.cleanup().coerceAtLeast(0)
+                    }
 
-                    logger.debug("Cleaned soft refs: $cleaned")
+                    if (cleaned >= 0) {
+                        logger.debug("Cleaned soft refs: $cleaned")
+                    }
 
                     memoryManagerState.compareAndSet(STATE_NORMAL, STATE_SOFT_REF_RESET)
 
@@ -105,11 +109,11 @@ class MemoryManager(
         val listener = GCNotificationListener(memMx)
         registerListener(listener)
         try {
-            refManager?.enable()
+            refManager.allSoftRefManagers().asSequence().forEach { it.enable() }
             return body()
         } finally {
             removeListener(listener)
-            refManager?.cleanup()
+            refManager.allSoftRefManagers().asSequence().forEach { it.cleanup() }
         }
     }
 

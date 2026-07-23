@@ -17,7 +17,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import mu.KotlinLogging
 import org.opentaint.dataflow.ap.ifds.access.ApManager
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
@@ -40,7 +39,7 @@ import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.MemoryManager
-import org.opentaint.dataflow.util.SoftReferenceManager
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.dataflow.util.percentToString
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -55,15 +54,14 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 class TaintAnalysisUnitRunnerManager(
+    val refManager: RefManager,
+    override val cancellation: Cancellation,
     private val analysisManager: TaintAnalysisManager,
     val graph: ApplicationGraph<CommonMethod, CommonInst>,
     override val unitResolver: UnitResolver<CommonMethod>,
     private val summarySerializationContext: SummarySerializationContext,
-    val apManager: ApManager,
     private val taintRulesStatsSamplingPeriod: Int?,
 ): AnalysisUnitRunnerManager, AutoCloseable {
-    override val cancellation: Cancellation = apManager.cancellation
-
     enum class Status {
         OK, EXCEPTION, TIMEOUT, OOM
     }
@@ -109,7 +107,7 @@ class TaintAnalysisUnitRunnerManager(
         (progressDispatcher.executor as? ExecutorService)?.shutdownNow()
     }
 
-    private val analysisMemoryManager = MemoryManager(OOM_DETECTION_THRESHOLD, apManager.refManager()) {
+    private val analysisMemoryManager = MemoryManager(refManager, OOM_DETECTION_THRESHOLD) {
         logger.error { "Running low on memory, stopping analysis" }
         analysisCompletion.complete(Unit)
         cancellation.cancel()
@@ -205,7 +203,7 @@ class TaintAnalysisUnitRunnerManager(
         if (vulnerabilities.isEmpty()) return emptyList()
         cancellation.activate()
 
-        val traceResolverMemoryManager = MemoryManager(TRACE_GENERATION_MEMORY_THRESHOLD, apManager.refManager()) {
+        val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
             cancellation.cancel()
             updateFailureStatus(Status.OOM)
             logger.error { "Running low on memory, stopping trace resolution" }
@@ -228,7 +226,7 @@ class TaintAnalysisUnitRunnerManager(
         if (vulnerabilities.isEmpty()) return emptyList()
         cancellation.activate()
 
-        val traceResolverMemoryManager = MemoryManager(TRACE_GENERATION_MEMORY_THRESHOLD, apManager.refManager()) {
+        val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
             cancellation.cancel()
             updateFailureStatus(Status.OOM)
             logger.error { "Running low on memory, stopping trace resolution" }
@@ -354,7 +352,7 @@ class TaintAnalysisUnitRunnerManager(
 
         if (unconfirmedVulnerabilities.isEmpty()) return confirmed
 
-        val vulnConfirmMemoryManager = MemoryManager(TRACE_GENERATION_MEMORY_THRESHOLD, apManager.refManager()) {
+        val vulnConfirmMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
             cancellation.cancel()
             updateFailureStatus(Status.OOM)
             logger.error { "Running low on memory, stopping vulnerability confirmation" }
@@ -616,9 +614,6 @@ class TaintAnalysisUnitRunnerManager(
         appendLine("Steps for taint rules (sampled)")
         mostStepsForTaintRule.take(5).forEach { appendLine("${it.key} -> ${it.value}") }
     }
-
-    private fun ApManager.refManager(): SoftReferenceManager? =
-        if (this is TreeApManager) refManager else null
 
     companion object {
         private val logger = KotlinLogging.logger {}

@@ -157,7 +157,7 @@ abstract class AnalysisTest : BasicTestUtils() {
                 get() = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
-            override fun analysisManager() = JIRAnalysisManager(cp, rulesProvider)
+            override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
             override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
         }
 

@@ -79,11 +79,14 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
     }
 
+    val refManager = RefManager()
+    val cancellation = Cancellation()
+
     private val apManager by lazy {
         when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(unrollStrategy)
-            ApMode.Cactus -> CactusApManager(unrollStrategy)
-            ApMode.Automata -> AutomataApManager(unrollStrategy)
+            ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation)
+            ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation)
+            ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation)
         }
     }
 
@@ -97,9 +100,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     abstract fun unitResolver(): UnitResolver<Method>
 
+    private val analysisManager by lazy { analysisManager() }
+
     @Suppress("UNCHECKED_CAST")
     private fun createIfdsEngine() = TaintAnalysisUnitRunnerManager(
-        analysisManager(),
+        refManager, cancellation,
+        analysisManager,
         ifdsAnalysisGraph as ApplicationGraph<CommonMethod, CommonInst>,
         unitResolver() as UnitResolver<CommonMethod>,
         summarySerializationContext,

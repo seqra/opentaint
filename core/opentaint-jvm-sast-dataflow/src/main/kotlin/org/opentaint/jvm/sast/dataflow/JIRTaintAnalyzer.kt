@@ -51,7 +51,8 @@ class JIRTaintAnalyzer(
         StringConcatRuleProvider(taintConfiguration)
     }
 
-    override fun analysisManager() = JIRAnalysisManager(cp, taintConfig, externalMethodTracker, analysisParams)
+    override fun analysisManager() =
+        JIRAnalysisManager(cp, refManager, taintConfig, externalMethodTracker, analysisParams)
 
     override fun unitResolver() = analysisUnit
 

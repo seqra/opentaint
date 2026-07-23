@@ -29,7 +29,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class AutomataApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
-    override val cancellation: Cancellation = Cancellation()
+    override val cancellation: Cancellation
 ) : ApManager {
     private val interner = AccessorInterner()
 

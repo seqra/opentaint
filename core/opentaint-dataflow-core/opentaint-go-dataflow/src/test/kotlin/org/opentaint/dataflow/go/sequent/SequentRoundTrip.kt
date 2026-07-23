@@ -22,6 +22,8 @@ import org.opentaint.dataflow.go.analysis.alias.GoLocalAliasAnalysis
 import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.trace.GoMethodSequentPrecondition
+import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
@@ -44,7 +46,7 @@ data class Scenario(
 )
 
 class SequentFixture(program: GoIRProgram, val fn: GoIRFunction) {
-    val apManager: ApManager = TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+    val apManager: ApManager = TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, RefManager(), Cancellation())
 
     private val context: GoMethodAnalysisContext = run {
         val taintConfig = GoTaintConfiguration()

@@ -28,7 +28,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class CactusApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
-    override val cancellation: Cancellation = Cancellation(),
+    override val cancellation: Cancellation,
 ) : ApManager {
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
         CactusInitialFactAbstraction()

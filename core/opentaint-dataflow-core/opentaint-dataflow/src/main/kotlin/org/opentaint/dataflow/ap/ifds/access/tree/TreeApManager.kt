@@ -28,14 +28,16 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
-import org.opentaint.dataflow.util.SoftReferenceManager
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
-    val refManager: SoftReferenceManager = SoftReferenceManager(),
-    override val cancellation: Cancellation = Cancellation(),
+    refManager: RefManager,
+    override val cancellation: Cancellation,
 ) : ApManager {
+    val refManager = refManager.softRefManager("Tree")
+
     val interner = AccessorInterner()
 
     val Accessor.idx: AccessorIdx
