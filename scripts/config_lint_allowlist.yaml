@@ -43,3 +43,5 @@ source_fed_slots:
 shared_slots:
   - .java.io.File#path#java.lang.String
   - .java.lang.String#bytes#byte[]
+  - .java.io.File#uri#java.net.URI
+  - .java.net.URI#value#java.lang.String
