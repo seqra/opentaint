@@ -3,35 +3,12 @@ library: org.springframework.ws:spring-ws-core:4.1.0
 dependencies:
 - org.apache.ws.commons.axiom:axiom-api:1.4.0
 passThrough:
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setSoapAction
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getEnvelope
   copy:
   - from:
     - this
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#<rule-storage>#java.lang.Object
     to: result
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#<init>
-  signature:
-    params:
-    - index: 0
-      type: org.apache.axiom.soap.SOAPMessage
-  taintCopyOnly: true
-  copy:
-  - from: arg(1)
-    to: this
-  - from: arg(2)
-    to: this
-  - from: arg(0)
-    to: this
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setDocument
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setSoapAction
   copy:
   - from: arg(0)
@@ -54,16 +31,6 @@ passThrough:
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
     - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
     - .org.w3c.dom.Node#nodeValue#java.lang.String
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setAxiomMessage
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getAttachment
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#<init>
   signature:
     params:
@@ -91,16 +58,6 @@ passThrough:
   - from:
     - this
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#<rule-storage>#java.lang.Object
-    to: result
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getAxiomMessage
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getEnvelope
-  taintCopyOnly: true
-  copy:
-  - from: this
     to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getDocument
   copy:
@@ -134,11 +91,6 @@ passThrough:
     to:
     - this
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#org.apache.axiom.soap.SOAPMessage
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getSoapAction
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setDocument
   copy:
   - from: arg(0)
@@ -201,16 +153,6 @@ passThrough:
     - this
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#<rule-storage>#java.lang.Object
     to: result
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setStreamingPayload
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getAttachments
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getSoapAction
   signature:
     return: java.lang.String
@@ -224,11 +166,6 @@ passThrough:
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
     - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
     - .org.w3c.dom.Node#nodeValue#java.lang.String
-    to: result
-- function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getDocument
-  taintCopyOnly: true
-  copy:
-  - from: this
     to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getSoapAction
   copy:
