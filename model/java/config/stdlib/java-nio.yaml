@@ -6,6 +6,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.CharBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   taintCopyOnly: true
@@ -17,16 +21,10 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.LongBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#put
   signature: (int, byte[]) java.nio.ByteBuffer
@@ -39,14 +37,8 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.DoubleBuffer#put
   signature: (int, double) java.nio.DoubleBuffer
   copy:
@@ -55,16 +47,8 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.CharBuffer#append
   signature: (java.lang.CharSequence) java.lang.Appendable
@@ -75,9 +59,7 @@ passThrough:
 - function: java.nio.IntBuffer#array
   signature: () int[]
   copy:
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.FloatBuffer#array
   signature: () java.lang.Object
@@ -93,17 +75,33 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.LongBuffer#wrap
   signature: (long[]) java.nio.LongBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.ShortBuffer#wrap
   signature: (short[], int, int) java.nio.ShortBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.IntBuffer#put
   signature:
@@ -115,6 +113,10 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.DoubleBuffer#array
   signature: () java.lang.Object
@@ -131,10 +133,6 @@ passThrough:
 - function: java.nio.LongBuffer#slice
   signature: () java.nio.LongBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.nio.ByteBuffer#wrap
@@ -142,6 +140,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.LongBuffer#put
   signature: (int, long[]) java.nio.LongBuffer
@@ -153,32 +155,18 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.FloatBuffer#slice
   signature: () java.nio.FloatBuffer
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.DoubleBuffer#slice
   signature: (int, int) java.nio.DoubleBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.CharBuffer#duplicate
   signature: () java.nio.Buffer
@@ -190,10 +178,6 @@ passThrough:
   signature: (int, byte[]) java.nio.ByteBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.CharBuffer#append
   signature: (java.lang.CharSequence) java.nio.CharBuffer
@@ -209,6 +193,14 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.ByteBuffer#asShortBuffer
   signature: () java.nio.ShortBuffer
   taintCopyOnly: true
@@ -218,9 +210,7 @@ passThrough:
 - function: java.nio.LongBuffer#duplicate
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#slice
   signature: () java.nio.CharBuffer
@@ -231,18 +221,10 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ByteBuffer#get
   signature: (byte[], int, int) java.nio.ByteBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.CharBuffer#read
   signature: (java.nio.CharBuffer) int
@@ -250,10 +232,6 @@ passThrough:
   - from:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
-    to: arg(0)
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -264,6 +242,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.CharBuffer#get
   signature:
@@ -285,10 +271,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#toString
   signature: () java.lang.String
   taintCopyOnly: true
@@ -302,10 +284,6 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.ByteBuffer#put
   signature: (byte) java.nio.ByteBuffer
   copy:
@@ -313,18 +291,10 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.ByteBuffer#getChar
   signature: (int) char
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.CharBuffer#toString
   signature: (int, int) java.lang.String
@@ -335,10 +305,6 @@ passThrough:
 - function: java.nio.LongBuffer#compact
   signature: () java.nio.LongBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.nio.CharBuffer#slice
@@ -348,9 +314,7 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#slice
   signature: () java.nio.Buffer
@@ -366,28 +330,16 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: arg(0)
 - function: java.nio.ShortBuffer#array
   signature: () short[]
   copy:
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.LongBuffer#slice
   signature: (int, int) java.nio.LongBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.nio.ByteBuffer#get
@@ -395,19 +347,11 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ShortBuffer#put
   signature: (short) java.nio.ShortBuffer
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.nio.LongBuffer#put
@@ -440,15 +384,7 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.nio.IntBuffer#put
@@ -461,14 +397,8 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.CharBuffer#get
   signature: (int) char
@@ -478,10 +408,6 @@ passThrough:
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.DoubleBuffer#put
   signature:
@@ -515,9 +441,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.ByteBuffer#put
   signature:
     params:
@@ -540,9 +464,7 @@ passThrough:
 - function: java.nio.ByteBuffer#asIntBuffer
   signature: () java.nio.IntBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#get
   signature: (int, char[]) java.nio.CharBuffer
@@ -552,10 +474,6 @@ passThrough:
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.ShortBuffer#put
   signature:
@@ -594,9 +512,11 @@ passThrough:
       type: .int[]
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.DoubleBuffer#array
   signature:
     return: double[]
@@ -616,16 +536,10 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.FloatBuffer#duplicate
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#slice
   signature: () java.nio.Buffer
@@ -654,9 +568,7 @@ passThrough:
 - function: java.nio.FloatBuffer#array
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#array
   signature: () int[]
@@ -669,6 +581,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.CharBuffer#wrap
   signature: (java.lang.CharSequence, int, int) java.nio.CharBuffer
@@ -683,9 +599,7 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ShortBuffer#put
   signature: (int, short) java.nio.ShortBuffer
@@ -695,23 +609,13 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from: arg(0)
     to: this
 - function: java.nio.ShortBuffer#array
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#put
   signature: (int, byte[], int, int) java.nio.ByteBuffer
@@ -721,6 +625,14 @@ passThrough:
     to: result
   - from: arg(1)
     to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
 - function: java.nio.FloatBuffer#put
   signature: (int, float[]) java.nio.FloatBuffer
   taintCopyOnly: true
@@ -729,22 +641,24 @@ passThrough:
     to: result
   - from: arg(1)
     to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
 - function: java.nio.FloatBuffer#asReadOnlyBuffer
   signature: () java.nio.FloatBuffer
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#put
   signature: (char[]) java.nio.CharBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -790,9 +704,7 @@ passThrough:
 - function: java.nio.ByteBuffer#asFloatBuffer
   signature: () java.nio.FloatBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#putLong
   signature: (int, long) java.nio.ByteBuffer
@@ -805,14 +717,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.CharBuffer#array
   signature: () char[]
   taintCopyOnly: true
@@ -826,6 +730,14 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.LongBuffer#array
   signature: () long[]
@@ -859,9 +771,7 @@ passThrough:
   signature: (double[]) java.nio.DoubleBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -898,9 +808,11 @@ passThrough:
       type: .short[]
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.CharBuffer#put
   signature: (java.lang.String) java.nio.CharBuffer
   taintCopyOnly: true
@@ -914,10 +826,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.IntBuffer#put
   signature: (int[], int, int) java.nio.IntBuffer
   copy:
@@ -926,9 +834,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.IntBuffer#put
   signature:
     params:
@@ -950,13 +856,15 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.CharBuffer#put
   signature: (java.lang.String, int, int) java.nio.CharBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
@@ -969,26 +877,18 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.IntBuffer#array
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#duplicate
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#put
   signature: (char) java.nio.CharBuffer
@@ -996,15 +896,11 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.nio.IntBuffer#put
   signature: (int, int[]) java.nio.IntBuffer
   copy:
@@ -1015,14 +911,8 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.ShortBuffer#put
   signature: (int, short[]) java.nio.ShortBuffer
@@ -1031,6 +921,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.ByteBuffer#get
   signature:
@@ -1077,18 +975,10 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ByteBuffer#get
   signature: (byte[]) java.nio.ByteBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.ShortBuffer#put
   signature: (java.nio.ShortBuffer) java.nio.ShortBuffer
@@ -1131,10 +1021,6 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
@@ -1142,9 +1028,7 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.DoubleBuffer#put
   signature:
@@ -1153,9 +1037,11 @@ passThrough:
       type: .double[]
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.IntBuffer#put
   signature: (java.nio.IntBuffer) java.nio.IntBuffer
   copy:
@@ -1173,22 +1059,14 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to: this
 - function: java.nio.LongBuffer#put
   signature: (long[]) java.nio.LongBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -1220,13 +1098,9 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
@@ -1235,16 +1109,10 @@ passThrough:
     to:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(0)
-    to: this
 - function: java.nio.ByteBuffer#asCharBuffer
   signature: () java.nio.CharBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ShortBuffer#put
   signature:
@@ -1269,25 +1137,21 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ShortBuffer#wrap
   signature: (short[]) java.nio.ShortBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.DoubleBuffer#put
   signature: (double) java.nio.DoubleBuffer
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.nio.FloatBuffer#wrap
@@ -1310,10 +1174,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.FloatBuffer#put
   signature: (float[]) java.nio.FloatBuffer
   taintCopyOnly: true
@@ -1321,6 +1181,14 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.ShortBuffer#put
   signature: (int, short[], int, int) java.nio.ShortBuffer
@@ -1330,21 +1198,23 @@ passThrough:
     to: result
   - from: arg(1)
     to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
 - function: java.nio.ShortBuffer#slice
   signature: () java.nio.ShortBuffer
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.DoubleBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#toString
   signature: () java.lang.String
@@ -1353,9 +1223,7 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#asCharBuffer
   signature: () java.nio.CharBuffer
@@ -1369,13 +1237,9 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(1)
     - '[*]'
@@ -1388,8 +1252,6 @@ passThrough:
     to:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.nio.CharBuffer#slice
   signature: (int, int) java.nio.Buffer
   taintCopyOnly: true
@@ -1411,9 +1273,7 @@ passThrough:
 - function: java.nio.IntBuffer#slice
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#put
   signature:
@@ -1445,10 +1305,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#put
   signature: (char[]) java.nio.CharBuffer
   taintCopyOnly: true
@@ -1457,14 +1313,18 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.ByteBuffer#get
   signature: (int) byte
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.ShortBuffer#array
   signature:
@@ -1483,10 +1343,6 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.IntBuffer#array
   signature: () java.lang.Object
   taintCopyOnly: true
@@ -1498,10 +1354,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.nio.ShortBuffer#put
@@ -1515,6 +1367,10 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.IntBuffer#put
   signature: (int, int[]) java.nio.IntBuffer
   taintCopyOnly: true
@@ -1522,6 +1378,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.FloatBuffer#put
   signature: (int, float[]) java.nio.FloatBuffer
@@ -1533,13 +1397,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to: this
 - function: java.nio.FloatBuffer#put
@@ -1550,9 +1408,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.ByteBuffer#put
   signature: (int, byte[], int, int) java.nio.ByteBuffer
   copy:
@@ -1564,14 +1420,8 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.ByteBuffer#putInt
   signature: (int, int) java.nio.ByteBuffer
   copy:
@@ -1583,22 +1433,10 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.IntBuffer#slice
   signature: () java.nio.IntBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.FloatBuffer#put
   signature:
@@ -1620,10 +1458,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ByteBuffer#putFloat
   signature: (float) java.nio.ByteBuffer
   copy:
@@ -1631,10 +1465,6 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.LongBuffer#put
   signature: (long[], int, int) java.nio.LongBuffer
   taintCopyOnly: true
@@ -1642,6 +1472,14 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.CharBuffer#get
   signature: (int, char[], int, int) java.nio.CharBuffer
@@ -1651,10 +1489,6 @@ passThrough:
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.IntBuffer#slice
   signature: (int, int) java.nio.Buffer
@@ -1694,13 +1528,9 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(1)
     - '[*]'
@@ -1713,8 +1543,6 @@ passThrough:
     to:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.nio.ByteBuffer#putInt
   signature: (int) java.nio.ByteBuffer
   copy:
@@ -1722,15 +1550,15 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.LongBuffer#wrap
   signature: (long[], int, int) java.nio.LongBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.ByteBuffer#put
   signature:
@@ -1755,6 +1583,14 @@ passThrough:
     to: result
   - from: arg(1)
     to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
 - function: java.nio.IntBuffer#put
   signature:
     params:
@@ -1772,9 +1608,7 @@ passThrough:
 - function: java.nio.ByteBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.DoubleBuffer#put
   signature: (int, double[], int, int) java.nio.DoubleBuffer
@@ -1784,12 +1618,18 @@ passThrough:
     to: result
   - from: arg(1)
     to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
 - function: java.nio.ByteBuffer#asLongBuffer
   signature: () java.nio.LongBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.FloatBuffer#put
   signature: (int, float[], int, int) java.nio.FloatBuffer
@@ -1798,6 +1638,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.CharBuffer#append
   signature: (char) java.lang.Appendable
@@ -1814,9 +1662,7 @@ passThrough:
   signature: (char[], int, int) java.nio.CharBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -1845,12 +1691,18 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.LongBuffer#array
   signature: () long[]
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.LongBuffer#put
   signature:
@@ -1874,10 +1726,6 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.FloatBuffer#slice
   signature: (int, int) java.nio.Buffer
   taintCopyOnly: true
@@ -1897,6 +1745,14 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.IntBuffer#wrap
   signature:
@@ -1927,12 +1783,18 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.ShortBuffer#slice
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#array
   signature: () java.lang.Object
@@ -1948,9 +1810,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.IntBuffer#put
   signature:
     params:
@@ -1977,9 +1837,7 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#put
   signature: (int, int[], int, int) java.nio.IntBuffer
@@ -1988,6 +1846,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.ByteBuffer#put
   signature:
@@ -2000,15 +1866,15 @@ passThrough:
       type: int
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.FloatBuffer#slice
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#wrap
   signature: (int[], int, int) java.nio.IntBuffer
@@ -2016,12 +1882,14 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.ByteBuffer#array
   signature: () byte[]
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#get
   signature: () char
@@ -2032,16 +1900,10 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.LongBuffer#array
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ShortBuffer#put
   signature: (short[]) java.nio.ShortBuffer
@@ -2051,14 +1913,18 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.ByteBuffer#duplicate
   signature: () java.nio.ByteBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.DoubleBuffer#put
   signature:
@@ -2071,6 +1937,10 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.FloatBuffer#put
   signature: (float[]) java.nio.FloatBuffer
   copy:
@@ -2079,9 +1949,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.FloatBuffer#put
   signature:
     params:
@@ -2105,9 +1973,7 @@ passThrough:
   signature: (double[], int, int) java.nio.DoubleBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -2118,12 +1984,14 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.ByteBuffer#duplicate
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.LongBuffer#array
   signature: () java.lang.Object
@@ -2134,9 +2002,7 @@ passThrough:
 - function: java.nio.ShortBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#slice
   signature: (int, int) java.nio.Buffer
@@ -2175,11 +2041,19 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.DoubleBuffer#wrap
   signature: (double[], int, int) java.nio.DoubleBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.ByteBuffer#putFloat
   signature: (int, float) java.nio.ByteBuffer
@@ -2192,22 +2066,10 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.ByteBuffer#get
   signature: () byte
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.ByteBuffer#duplicate
   signature: () java.nio.Buffer
@@ -2221,10 +2083,6 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.ByteBuffer#put
   signature: (int, java.nio.ByteBuffer, int, int) java.nio.ByteBuffer
@@ -2237,10 +2095,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.ShortBuffer#wrap
   signature:
     params:
@@ -2267,21 +2121,11 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.CharBuffer#put
   signature: (java.lang.String) java.nio.CharBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
@@ -2315,6 +2159,14 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.CharBuffer#put
   signature: (char[], int, int) java.nio.CharBuffer
   taintCopyOnly: true
@@ -2323,12 +2175,18 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.LongBuffer#slice
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ShortBuffer#put
   signature: (int, short[]) java.nio.ShortBuffer
@@ -2340,13 +2198,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to: this
 - function: java.nio.LongBuffer#put
@@ -2355,10 +2207,6 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.DoubleBuffer#put
   signature: (int, double[]) java.nio.DoubleBuffer
@@ -2366,18 +2214,12 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from: arg(0)
     to: this
 - function: java.nio.CharBuffer#get
   signature:
@@ -2393,15 +2235,9 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: arg(0)
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.CharBuffer#toString
   signature:
@@ -2428,9 +2264,7 @@ passThrough:
   signature: (long[], int, int) java.nio.LongBuffer
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -2448,6 +2282,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.CharBuffer#put
   signature: (java.lang.String, int, int) java.nio.CharBuffer
@@ -2468,12 +2310,14 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.ByteBuffer#asDoubleBuffer
   signature: () java.nio.DoubleBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.DoubleBuffer#put
   signature: (int, double[], int, int) java.nio.DoubleBuffer
@@ -2481,18 +2325,12 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from: arg(0)
     to: this
 - function: java.nio.CharBuffer#put
   signature:
@@ -2526,12 +2364,8 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.LongBuffer#put
   signature: (int, java.nio.LongBuffer, int, int) java.nio.LongBuffer
@@ -2541,12 +2375,8 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.CharBuffer#get
   signature: (char[], int, int) java.nio.CharBuffer
@@ -2557,18 +2387,10 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.FloatBuffer#duplicate
   signature: () java.nio.FloatBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.LongBuffer#put
   signature: (int, long[], int, int) java.nio.LongBuffer
@@ -2580,14 +2402,8 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.ShortBuffer#put
   signature: (short[], int, int) java.nio.ShortBuffer
@@ -2597,9 +2413,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.LongBuffer#array
   signature:
     return: long[]
@@ -2615,25 +2429,17 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.DoubleBuffer#compact
   signature: () java.nio.DoubleBuffer
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ShortBuffer#duplicate
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.DoubleBuffer#put
   signature: (int, java.nio.DoubleBuffer, int, int) java.nio.DoubleBuffer
@@ -2643,12 +2449,8 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.ByteBuffer#put
   signature:
@@ -2664,6 +2466,10 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.DoubleBuffer#wrap
   signature:
@@ -2685,10 +2491,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#slice
   signature: (int, int) java.nio.CharBuffer
   copy:
@@ -2697,10 +2499,6 @@ passThrough:
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.FloatBuffer#put
   signature:
@@ -2749,9 +2547,7 @@ passThrough:
 - function: java.nio.DoubleBuffer#array
   signature: () double[]
   copy:
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.FloatBuffer#put
   signature:
@@ -2760,15 +2556,15 @@ passThrough:
       type: .float[]
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.DoubleBuffer#array
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#put
   signature: (int, int) java.nio.IntBuffer
@@ -2778,23 +2574,13 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.DoubleBuffer#duplicate
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.IntBuffer#array
   signature:
@@ -2813,10 +2599,6 @@ passThrough:
 - function: java.nio.LongBuffer#duplicate
   signature: () java.nio.LongBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.nio.ByteBuffer#putShort
@@ -2830,14 +2612,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.DoubleBuffer#slice
   signature: () java.nio.Buffer
   taintCopyOnly: true
@@ -2848,10 +2622,6 @@ passThrough:
   signature: (int, int) java.nio.ByteBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.ByteBuffer#array
   signature: () byte[]
@@ -2864,10 +2634,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
@@ -2875,9 +2641,7 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ShortBuffer#slice
   signature: () java.nio.Buffer
@@ -2890,10 +2654,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.FloatBuffer#put
   signature: (int, java.nio.FloatBuffer, int, int) java.nio.FloatBuffer
   copy:
@@ -2904,10 +2664,6 @@ passThrough:
   - from: arg(1)
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.nio.ByteBuffer#put
   signature: (byte[], int, int) java.nio.ByteBuffer
@@ -2916,6 +2672,14 @@ passThrough:
   - from: arg(0)
     to: result
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.nio.ByteBuffer#get
   signature:
@@ -2934,6 +2698,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.LongBuffer#wrap
   signature:
@@ -2957,17 +2729,11 @@ passThrough:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.LongBuffer#asReadOnlyBuffer
   signature: () java.nio.LongBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.nio.CharBuffer#put
@@ -2986,25 +2752,15 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ShortBuffer#compact
   signature: () java.nio.ShortBuffer
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.FloatBuffer#array
   signature: () float[]
   copy:
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#get
   signature:
@@ -3022,13 +2778,15 @@ passThrough:
       type: .char[]
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.LongBuffer#put
   signature: (int, long[]) java.nio.LongBuffer
   taintCopyOnly: true
@@ -3037,12 +2795,18 @@ passThrough:
     to: result
   - from: arg(1)
     to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to: this
 - function: java.nio.ByteBuffer#array
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.LongBuffer#duplicate
   signature: () java.nio.Buffer
@@ -3055,10 +2819,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#append
   signature: (char) java.nio.CharBuffer
   copy:
@@ -3069,10 +2829,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ByteBuffer#asDoubleBuffer
   signature: () java.nio.DoubleBuffer
   taintCopyOnly: true
@@ -3082,9 +2838,7 @@ passThrough:
 - function: java.nio.FloatBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#put
   signature: (java.nio.ByteBuffer) java.nio.ByteBuffer
@@ -3102,10 +2856,6 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.LongBuffer#put
   signature: (int, long) java.nio.LongBuffer
   copy:
@@ -3114,16 +2864,8 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(1)
     to: this
 - function: java.nio.CharBuffer#put
   signature: (int, java.nio.CharBuffer, int, int) java.nio.CharBuffer
@@ -3133,16 +2875,12 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
   - from: arg(1)
-    to: this
-  - from: arg(0)
     to: this
 - function: java.nio.DoubleBuffer#put
   signature: (int, double[]) java.nio.DoubleBuffer
@@ -3151,6 +2889,14 @@ passThrough:
   - from: arg(1)
     to: result
   - from: arg(1)
+    to: this
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: this
 - function: java.nio.ByteBuffer#array
   signature: () java.lang.Object
@@ -3165,15 +2911,15 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.FloatBuffer#wrap
   signature: (float[], int, int) java.nio.FloatBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.FloatBuffer#put
   signature:
@@ -3186,6 +2932,10 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.FloatBuffer#put
   signature: (int, float[], int, int) java.nio.FloatBuffer
   copy:
@@ -3196,21 +2946,13 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to: this
 - function: java.nio.ByteBuffer#asShortBuffer
   signature: () java.nio.ShortBuffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#get
   signature: (char[]) java.nio.CharBuffer
@@ -3220,10 +2962,6 @@ passThrough:
     - .java.lang.Appendable#<rule-storage>#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
     to: result
 - function: java.nio.CharBuffer#put
   signature:
@@ -3286,14 +3024,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.DoubleBuffer#put
   signature: (java.nio.DoubleBuffer) java.nio.DoubleBuffer
   copy:
@@ -3327,9 +3057,7 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.ShortBuffer#put
   signature:
     params:
@@ -3375,6 +3103,14 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.FloatBuffer#put
   signature: (java.nio.FloatBuffer) java.nio.FloatBuffer
   copy:
@@ -3389,14 +3125,20 @@ passThrough:
       type: .long[]
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#<rule-storage>#java.lang.Object
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.nio.DoubleBuffer#wrap
   signature: (double[]) java.nio.DoubleBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.nio.ByteBuffer#putDouble
   signature: (int, double) java.nio.ByteBuffer
@@ -3409,14 +3151,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.ByteBuffer#put
   signature: (byte[], int, int) java.nio.ByteBuffer
   copy:
@@ -3425,15 +3159,11 @@ passThrough:
     - '[*]'
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+    to: this
 - function: java.nio.IntBuffer#slice
   signature: (int, int) java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ShortBuffer#array
   signature: () short[]
@@ -3463,10 +3193,6 @@ passThrough:
     to: result
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
 - function: java.nio.CharBuffer#slice
   signature: () java.nio.Buffer
   taintCopyOnly: true
@@ -3482,22 +3208,20 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.CharBuffer#wrap
   signature: (char[], int, int) java.nio.CharBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.nio.DoubleBuffer#slice
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.DoubleBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.CharBuffer#put
   signature:
@@ -3518,23 +3242,13 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.nio.IntBuffer#<rule-storage>#java.lang.Object
-    to: result
 - function: java.nio.ByteBuffer#slice
   signature: () java.nio.Buffer
   copy:
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.nio.ByteBuffer#asReadOnlyBuffer
   signature: () java.nio.ByteBuffer
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.nio.ByteBuffer#<rule-storage>#java.lang.Object
     to: result
