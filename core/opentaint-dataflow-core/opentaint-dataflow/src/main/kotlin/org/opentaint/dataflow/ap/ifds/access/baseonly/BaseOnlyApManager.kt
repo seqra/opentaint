@@ -31,7 +31,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class BaseOnlyApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
-    override val cancellation: Cancellation = Cancellation(),
+    override val cancellation: Cancellation,
     val fieldSensitive: Boolean = false,
 ) : ApManager {
     val interner = AccessorInterner()

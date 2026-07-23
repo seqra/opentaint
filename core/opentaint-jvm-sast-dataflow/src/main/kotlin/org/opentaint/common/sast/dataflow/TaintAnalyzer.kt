@@ -20,6 +20,8 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
+import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
@@ -33,6 +35,7 @@ import org.opentaint.dataflow.ap.ifds.trace.InnerCallTraceResolveStrategy
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction.TraceSummaryEdge
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.action.ActionableRulesCollectionResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
@@ -91,8 +94,8 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation)
             ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation)
             ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation)
-            ApMode.BaseOnly -> BaseOnlyApManager(unrollStrategy, fieldSensitive = false)
-            ApMode.BaseOnlyField -> BaseOnlyApManager(unrollStrategy, fieldSensitive = true)
+            ApMode.BaseOnly -> BaseOnlyApManager(unrollStrategy, cancellation, fieldSensitive = false)
+            ApMode.BaseOnlyField -> BaseOnlyApManager(unrollStrategy, cancellation, fieldSensitive = true)
         }
     }
 
@@ -140,6 +143,25 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val prescanTimeout = options.ifdsTimeout * 0.3
         runCatching { ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds) }
             .onFailure { logger.error(it) { "Prescan failed" } }
+        logger.info { "Start shallow scan phase" }
+        val (shallowScanRes, shallowStatus) = shallowScan(analysisStart, entryPoints, startMethods)
+        logger.info { "Finish shallow scan phase" }
+
+        if (shallowScanRes.isEmpty()) return emptyList<VulnerabilityWithTrace>() to shallowStatus
+
+        logger.info { "Start full scan phase" }
+        val fullScanResult = fullScan(analysisStart, entryPoints, startMethods, shallowScanRes)
+        logger.info { "Finish full scan phase" }
+        return fullScanResult
+    }
+
+    private fun prescan(startMethods: List<MethodWithContext>) {
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
+        ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
+
+        val prescanTimeout = options.ifdsTimeout * 0.3
+        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Prescan failed" } }
 
         if (options.debugOptions?.enableIfdsCoverage == true) {
             logger.debug {
@@ -166,15 +188,28 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             logger.info { "Storing summaries" }
             ifdsEngine.storeSummaries()
         }
+    }
 
-        ifdsEngine.cleanup()
+    private fun shallowScan(
+        analysisStart: TimeSource.Monotonic.ValueTimeMark,
+        entryPoints: List<Method>,
+        startMethods: List<MethodWithContext>
+    ): Pair<List<ActionableRulesCollectionResult.Collected>, Status> {
+        val shallowScanApManager = BaseOnlyApManager(unrollStrategy, cancellation, fieldSensitive = true)
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.ShallowScan)
+        ifdsEngine.resetApManager(shallowScanApManager)
 
+        val shallowScanTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.4
+        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = shallowScanTimeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Shallow scan failed" } }
+
+        val analysisStatus = ifdsEngine.status.get()
         val allVulnerabilities = ifdsEngine.getVulnerabilities()
 
-        logger.info { "Start vulnerability confirmation" }
+        logger.info { "Start shallow scan discovery confirmation" }
         val vulnCheckTimeout = options.ifdsTimeout - analysisStart.elapsedNow()
         var vulnerabilities = if (!vulnCheckTimeout.isPositive()) {
-            logger.warn { "No time remaining for vulnerability confirmation" }
+            logger.warn { "No time remaining for discovery confirmation" }
             allVulnerabilities
         } else {
             ifdsEngine.confirmVulnerabilities(
@@ -183,7 +218,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             )
         }
 
-        logger.info { "Total vulnerabilities: ${vulnerabilities.size}" }
+        logger.info { "Total shallow scan discoveries: ${vulnerabilities.size}" }
 
         if (options.debugOptions?.enableVulnSummary == true) {
             logger.info {
@@ -197,8 +232,70 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 cwe?.intersect(options.analysisCwe)?.isNotEmpty() ?: true
             }
 
-            logger.info { "Vulnerabilities with cwe ${options.analysisCwe}: ${vulnerabilities.size}" }
+            logger.info { "Discoveries with cwe ${options.analysisCwe}: ${vulnerabilities.size}" }
         }
+
+        logger.info { "Start shallow trace generation" }
+        val traceResolutionTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.5
+        if (!traceResolutionTimeout.isPositive()) {
+            logger.warn { "No time remaining for trace resolution" }
+            val status = Status(analysisStatus, TaintAnalysisUnitRunnerManager.Status.TIMEOUT)
+            return emptyList<ActionableRulesCollectionResult.Collected>() to status
+        }
+
+        val actionableRules = ifdsEngine.resolveActionableRules(shallowScanApManager, entryPoints, vulnerabilities, traceResolutionTimeout)
+            .also { logger.info("Finish actionable rules search") }
+
+        val collected = actionableRules.filterIsInstance<ActionableRulesCollectionResult.Collected>()
+
+        if (collected.size != vulnerabilities.size) {
+            val delta = vulnerabilities.size - collected.size
+            logger.info { "Filter out $delta discoveries without resolved actionable rules" }
+        }
+
+        val status = Status(analysisStatus, ifdsEngine.status.get())
+        return collected to status
+    }
+
+    private fun fullScan(
+        analysisStart: TimeSource.Monotonic.ValueTimeMark,
+        entryPoints: List<Method>,
+        startMethods: List<MethodWithContext>,
+        shallowScanRes: List<ActionableRulesCollectionResult.Collected>
+    ): Pair<List<VulnerabilityWithTrace>, Status> {
+        val fullScanManager = apManager
+
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan(shallowScanRes))
+        ifdsEngine.resetApManager(fullScanManager)
+
+        val analysisTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.80
+        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = analysisTimeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Full analysis failed" } }
+
+        val analysisStatus = ifdsEngine.status.get()
+
+        if (options.storeSummaries) {
+            logger.info { "Storing summaries" }
+            ifdsEngine.storeSummaries()
+        }
+
+        ifdsEngine.cleanup()
+
+        val allVulnerabilities = ifdsEngine.getVulnerabilities()
+
+        logger.info { "Start vulnerability confirmation" }
+        val vulnCheckTimeout = options.ifdsTimeout - analysisStart.elapsedNow()
+        val vulnerabilities = if (!vulnCheckTimeout.isPositive()) {
+            logger.warn { "No time remaining for vulnerability confirmation" }
+            allVulnerabilities
+        } else {
+            ifdsEngine.confirmVulnerabilities(
+                entryPoints.toHashSet(), allVulnerabilities,
+                vulnCheckTimeout, cancellationTimeout = 30.seconds
+            )
+        }
+
+        logger.info { "Total vulnerabilities: ${vulnerabilities.size}" }
 
         logger.info { "Start trace generation" }
         val leftTime = options.ifdsTimeout - analysisStart.elapsedNow()
@@ -209,7 +306,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             return emptyList<VulnerabilityWithTrace>() to status
         }
 
-        val vulnerabilitiesWithTraces = ifdsEngine.generateTraces(entryPoints, vulnerabilities, traceResolutionTimeout)
+        val vulnerabilitiesWithTraces = ifdsEngine.generateTraces(fullScanManager, entryPoints, vulnerabilities, traceResolutionTimeout)
             .also { logger.info { "Finish trace generation" } }
 
         val filteredVulnerabilities = vulnerabilitiesWithTraces.filter {
@@ -233,12 +330,38 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
     }
 
+    private fun TaintAnalysisUnitRunnerManager.resolveActionableRules(
+        manager: ApManager,
+        entryPoints: List<Method>,
+        vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
+        timeout: Duration,
+    ): List<ActionableRulesCollectionResult> {
+        (manager as? BaseOnlyApManager)?.enableNormalizedEdges()
+
+        val entryPointsSet = entryPoints.toHashSet()
+        val interProcTraces = resolveVulnerabilityInterProceduralTraces(
+            entryPointsSet, vulnerabilities,
+            resolverParams = TraceResolver.Params(
+                resolveEntryPointToStartTrace = false,
+            ),
+            timeout = timeout * 0.5,
+            cancellationTimeout = 30.seconds
+        )
+
+        return resolveVulnerabilityActionableRules(
+            interProcTraces,
+            timeout = timeout * 0.5,
+            cancellationTimeout = 30.seconds
+        )
+    }
+
     private fun TaintAnalysisUnitRunnerManager.generateTraces(
+        manager: ApManager,
         entryPoints: List<Method>,
         vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
         timeout: Duration,
     ): List<VulnerabilityWithTrace> {
-        (apManager as? BaseOnlyApManager)?.enableNormalizedEdges()
+        (manager as? BaseOnlyApManager)?.enableNormalizedEdges()
 
         val entryPointsSet = entryPoints.toHashSet()
         val interProcTraces = resolveVulnerabilityInterProceduralTraces(
@@ -249,13 +372,6 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             timeout = timeout * 0.5,
             cancellationTimeout = 30.seconds
         )
-
-        if (SKIP_PATH_SAMPLING) {
-            return interProcTraces.map {
-                val res = if (it.trace != null) TracePathGenerationResult.Simple else TracePathGenerationResult.Failure
-                VulnerabilityWithTrace(it.vulnerability, res)
-            }
-        }
 
         return resolveVulnerabilityTraces(
             interProcTraces,
@@ -367,6 +483,5 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     companion object {
         private val logger = object : KLogging() {}.logger
-        private const val SKIP_PATH_SAMPLING = true
     }
 }
