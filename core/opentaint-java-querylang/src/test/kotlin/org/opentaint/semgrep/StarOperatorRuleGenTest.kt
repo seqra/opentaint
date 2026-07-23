@@ -283,4 +283,38 @@ class StarOperatorRuleGenTest {
             "pattern-not sink must still carry the any-field check"
         )
     }
+
+    // Mirrors the shipped xss sanitizer shape: the starred metavar sits inside a `pattern-either`
+    // at a NON-first arg position with leading/trailing varargs `...`, focused separately. This is
+    // the shape the OWASP escapeHtml sanitizer uses; if the any-field clean is lost here (but not
+    // in the simple `clean($*X)` case), that explains why starring the shipped sanitizer was a no-op.
+    @Test
+    fun `starred sanitizer in pattern-either with varargs still cleans any-field on Result`() {
+        val cfg = config(
+            """
+            rules:
+              - id: star-san-either
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: ${'$'}X = src();
+                pattern-sanitizers:
+                  - patterns:
+                      - pattern-either:
+                          - pattern: esc(..., ${'$'}*X, ...);
+                      - focus-metavariable: ${'$'}X
+                pattern-sinks:
+                  - pattern: sink(${'$'}X);
+            """.trimIndent()
+        )
+        val positions = cleanPositions(cfg)
+        val anyField = positions.filterIsInstance<PositionBaseWithModifiers.WithModifiers>()
+            .filter { it.modifiers.contains(PositionModifier.AnyField) }
+        assertTrue(
+            anyField.any { it.base == PositionBase.Result },
+            "expected any-field clean on Result for the pattern-either/varargs sanitizer; got $positions"
+        )
+    }
 }

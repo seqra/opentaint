@@ -33,9 +33,19 @@ private fun GoSerializedCondition.resolveImpl(signature: GoFunctionSignature): C
     is GoSerializedCondition.Or -> mkOr(anyOf.map { it.resolveImpl(signature) })
     is GoSerializedCondition.Not -> CommonCondition.Not(not.resolveImpl(signature))
 
-    is GoSerializedCondition.ContainsMark -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
-        GoRuleCondition.ContainsMark(it, tainted)
-    }
+    is GoSerializedCondition.ContainsMark -> mkOr(
+        listOf(
+            pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
+                GoRuleCondition.ContainsMark(it, tainted)
+            },
+            // Star-model replacement for the removed runtime element reader
+            // (GoMethodCallTaintUtil.patchSinkConditionFactReader): a position also observes
+            // element (`arg[*]`, incl. variadic `...T`) taint via the recursive any-accessor check.
+            pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
+                GoRuleCondition.ContainsMarkOnAnyAccessor(it, tainted)
+            }
+        )
+    )
 
     is GoSerializedCondition.ContainsMarkOnAnyAccessor -> pos.resolveAny(signature, PositionBaseWithModifiers::resolve) {
         GoRuleCondition.ContainsMarkOnAnyAccessor(it, tainted)
@@ -109,7 +119,7 @@ fun PositionBase.resolve(signature: GoFunctionSignature): List<Position.Simple> 
         }
     }
 
-    is PositionBase.ClassStatic -> error("Unused")
+    is PositionBase.ClassStatic -> listOf(Position.ClassStatic(className))
     is PositionBase.Result -> listOf(Position.Result)
     is PositionBase.This -> if (signature.hasReceiver) listOf(Position.This) else emptyList()
 }
@@ -141,6 +151,7 @@ fun PositionBaseWithModifiers.resolve(signature: GoFunctionSignature): List<Posi
 
 private fun GoFunctionSignature.positionType(pos: Position.Simple): List<GoIRType> = when (pos) {
     is Position.Argument -> listOfNotNull(paramTypes.getOrNull(pos.index))
+    is Position.ClassStatic -> emptyList()
     is Position.Result -> {
         val types = mutableListOf(resultType)
         if (resultType is GoIRTupleType) {

@@ -294,13 +294,16 @@ object GoFlowFunctionUtils {
         is PositionWithAccess -> PositionAccess.Complex(base.resolvePosAccess(), access.resolvePosAccess())
     }
 
-    fun Position.Simple.resolvePosAccess(): PositionAccess.Simple {
-        val base = when (this) {
-            is Position.Argument -> AccessPathBase.Argument(index)
-            is Position.Result -> AccessPathBase.Return
-            is Position.This -> AccessPathBase.This
-        }
-        return PositionAccess.Simple(base)
+    fun Position.Simple.resolvePosAccess(): PositionAccess = when (this) {
+        is Position.Argument -> PositionAccess.Simple(AccessPathBase.Argument(index))
+        is Position.Result -> PositionAccess.Simple(AccessPathBase.Return)
+        is Position.This -> PositionAccess.Simple(AccessPathBase.This)
+        // The state-var global slot: base ClassStatic + a ClassStaticAccessor carrying the
+        // name, exactly how Go models global variables (mirrors the JVM resolveAp).
+        is Position.ClassStatic -> PositionAccess.Complex(
+            PositionAccess.Simple(AccessPathBase.ClassStatic),
+            ClassStaticAccessor(className)
+        )
     }
 
     fun PositionAccessor.resolvePosAccess(): Accessor = when (this) {

@@ -257,6 +257,11 @@ private fun GoTaintRuleGenerationCtx.buildGoStateAssignActions(
             assigns + assigns.map { GoSerializedAssignAction.AnyAccessor(it.kind, it.rawPosition()) }
         }
     }
+
+    if (stateAfter in globalStateAssignStates) {
+        result += globalStateMarkName(stateAfter).mkGoAssignMark(goStateVarPosition)
+    }
+
     return result
 }
 
@@ -276,8 +281,16 @@ private fun GoTaintRuleGenerationCtx.buildGoStateCleanActions(
         }
     }
     result += stateCleanMark(varName = null, stateAfter, stateBefore, position = null)
+
+    if (stateBefore in globalStateAssignStates) {
+        result += globalStateMarkName(stateBefore).mkGoCleanMark(goStateVarPosition)
+    }
+
     return result
 }
+
+private val GoTaintRuleGenerationCtx.goStateVarPosition: PositionBaseWithModifiers
+    get() = PositionBase.ClassStatic(prefix.artificialState("pos").taintMarkStr()).baseGo()
 
 private fun GoEvaluatedEdgeCondition.addGoStateCheck(
     ctx: GoTaintRuleGenerationCtx,
@@ -286,9 +299,7 @@ private fun GoEvaluatedEdgeCondition.addGoStateCheck(
 ): GoEvaluatedEdgeCondition {
     val stateChecks = mutableListOf<GoSerializedCondition>()
     if (checkGlobalState) {
-        stateChecks += ctx.globalStateMarkName(stateOfEdge).mkGoContainsMark(
-            PositionBase.ClassStatic(ctx.prefix.artificialState("pos").taintMarkStr()).baseGo()
-        )
+        stateChecks += ctx.globalStateMarkName(stateOfEdge).mkGoContainsMark(ctx.goStateVarPosition)
     } else {
         for (metaVar in stateOfEdge.register.assignedVars.keys) {
             for (sp in accessedVarPosition[metaVar]?.positions.orEmpty()) {

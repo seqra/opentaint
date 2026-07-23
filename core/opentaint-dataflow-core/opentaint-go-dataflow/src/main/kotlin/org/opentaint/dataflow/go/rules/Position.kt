@@ -12,6 +12,11 @@ sealed interface Position {
     data object Result : Simple {
         override fun toString(): String = javaClass.simpleName
     }
+
+    // A named global slot (the querylang state-var mechanism); mirrors the JVM
+    // Position.ClassStatic and resolves to the ClassStatic access-path base with a
+    // ClassStaticAccessor carrying the name.
+    data class ClassStatic(val className: String) : Simple
 }
 
 sealed interface PositionAccessor {
