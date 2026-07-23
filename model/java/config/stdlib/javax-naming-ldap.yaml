@@ -493,8 +493,6 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.SortKey#attributeId#java.lang.String
-  - from: arg(0)
-    to: this
 - function: javax.naming.ldap.SortKey#<init>
   signature: (java.lang.String, boolean, java.lang.String) void
   copy:
@@ -506,10 +504,6 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
-  - from: arg(2)
-    to: this
-  - from: arg(0)
-    to: this
 - function: javax.naming.ldap.SortKey#getAttributeID
   signature: () java.lang.String
   copy:
@@ -517,14 +511,10 @@ passThrough:
     - this
     - .javax.naming.ldap.SortKey#attributeId#java.lang.String
     to: result
-  - from: this
-    to: result
 - function: javax.naming.ldap.SortKey#getMatchingRuleID
   signature: () java.lang.String
   copy:
   - from:
     - this
     - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
-    to: result
-  - from: this
     to: result
