@@ -18,13 +18,7 @@ passThrough:
   signature: (org.w3c.dom.Node) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function:
     package: javax.xml.transform.dom
     class: DOMResult
@@ -65,13 +59,7 @@ passThrough:
   signature: (org.w3c.dom.Node) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.dom.DOMResult#setNextSibling
   signature:
     params:
@@ -85,13 +73,7 @@ passThrough:
 - function: javax.xml.transform.dom.DOMSource#getNode
   signature: () org.w3c.dom.Node
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMSource#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.transform.dom.DOMSource#getNode
   signature:
@@ -123,13 +105,7 @@ passThrough:
 - function: javax.xml.transform.dom.DOMResult#getNode
   signature: () org.w3c.dom.Node
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMResult#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -175,21 +151,9 @@ passThrough:
       pattern: <init>
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.dom.DOMSource#setNode
   signature: (org.w3c.dom.Node) void
   taintCopyOnly: true
@@ -205,13 +169,7 @@ passThrough:
 - function: javax.xml.transform.dom.DOMResult#getNextSibling
   signature: () org.w3c.dom.Node
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMResult#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -236,13 +194,7 @@ passThrough:
   signature: (org.w3c.dom.Node) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.dom.DOMSource#setNode
   signature:
     params:
@@ -257,24 +209,12 @@ passThrough:
   signature: (org.w3c.dom.Node, java.lang.String) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.dom.DOMSource#<init>
   signature: (org.w3c.dom.Node) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+    to: this
 - function:
     package: javax.xml.transform.dom
     class: DOMResult

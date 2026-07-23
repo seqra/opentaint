@@ -13,13 +13,7 @@ passThrough:
       pattern: <init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXResult#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#getXMLReader
   signature: () org.xml.sax.XMLReader
   taintCopyOnly: true
@@ -29,13 +23,7 @@ passThrough:
 - function: javax.xml.transform.sax.SAXResult#getLexicalHandler
   signature: () org.xml.sax.ext.LexicalHandler
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.sax.SAXResult#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature: (org.xml.sax.InputSource) void
@@ -76,13 +64,7 @@ passThrough:
 - function: javax.xml.transform.sax.SAXResult#getHandler
   signature: () org.xml.sax.ContentHandler
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.sax.SAXResult#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function:
     package: javax.xml.transform.sax
@@ -97,13 +79,7 @@ passThrough:
   signature: () org.xml.sax.InputSource
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#setInputSource
   signature:
     params:
@@ -118,24 +94,12 @@ passThrough:
   signature: (org.xml.sax.InputSource) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature: (org.xml.sax.InputSource) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#setXMLReader
   signature: (org.xml.sax.XMLReader) void
   taintCopyOnly: true
@@ -170,13 +134,7 @@ passThrough:
   signature: (org.xml.sax.XMLReader, org.xml.sax.InputSource) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature: () void
   taintCopyOnly: true
@@ -187,13 +145,7 @@ passThrough:
   signature: (org.xml.sax.ContentHandler) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXResult#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature: (org.xml.sax.XMLReader, org.xml.sax.InputSource) void
   taintCopyOnly: true
@@ -214,13 +166,7 @@ passThrough:
   signature: (org.xml.sax.XMLReader) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXResult#getLexicalHandler
   signature:
     return: org.xml.sax.ext.LexicalHandler
@@ -233,35 +179,17 @@ passThrough:
   signature: (org.xml.sax.ext.LexicalHandler) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXResult#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#getXMLReader
   signature: () org.xml.sax.XMLReader
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature: () void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.sax.SAXSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.sax.SAXSource#<init>
   signature:
     params:
