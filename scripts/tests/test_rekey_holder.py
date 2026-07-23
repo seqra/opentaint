@@ -37,7 +37,7 @@ def test_collapse_leaves_other_classes_alone():
         "this", ".p.D#<rule-storage>#java.lang.Object"]
 
 
-def test_entry_with_no_copies_left_is_dropped():
+def test_targeted_entry_copies_are_deduped_after_rewrite():
     doc = {"passThrough": [{
         "function": "p.C#m", "copy": [
             {"from": ["this", ".p.C#<rule-storage>#java.lang.Object"],

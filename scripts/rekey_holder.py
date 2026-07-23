@@ -67,12 +67,9 @@ def collapse(doc: dict, classes: set) -> dict:
                 continue
             seen.add(key)
             copies.append({"from": frm, "to": to})
-        # Drop an entry only when this transform is what emptied it. Entries
-        # reaching here always started with a non-empty copy list (the
-        # pre-scan above already passed through anything untargeted), so an
-        # empty result here means the collapse emptied it.
-        if not copies:
-            continue
+        # `copies` is always non-empty here: the entry had copies to begin with,
+        # _rewrite only strips accessors from a position, and dedup keeps the
+        # first occurrence of each key. No entry is ever emptied by the collapse.
         new = dict(entry)
         new["copy"] = copies
         out_entries.append(new)
