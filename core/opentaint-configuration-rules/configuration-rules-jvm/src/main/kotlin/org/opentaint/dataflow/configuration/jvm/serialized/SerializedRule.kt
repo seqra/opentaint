@@ -7,6 +7,7 @@ interface ItemInfo
 
 sealed interface SerializedItem {
     val info: ItemInfo?
+    val id: String?
 }
 
 sealed interface SourceRule: SerializedItem {
@@ -17,7 +18,6 @@ sealed interface SourceRule: SerializedItem {
 sealed interface SinkRule : SerializedItem {
     val condition: SerializedCondition?
     val trackFactsReachAnalysisEnd: List<SerializedTaintAssignAction>?
-    val id: String?
     val meta: SinkMetaData?
 }
 
@@ -40,7 +40,8 @@ sealed interface SerializedRule: SerializedItem {
         override val overrides: Boolean = true,
         override val condition: SerializedCondition? = null,
         override val taint: List<SerializedTaintAssignAction>,
-        override val info: ItemInfo? = null
+        override val info: ItemInfo? = null,
+        override val id: String? = null,
     ) : SourceRule, SerializedRule
 
     @Serializable
@@ -50,7 +51,8 @@ sealed interface SerializedRule: SerializedItem {
         override val overrides: Boolean = true,
         override val condition: SerializedCondition? = null,
         override val taint: List<SerializedTaintAssignAction>,
-        override val info: ItemInfo? = null
+        override val info: ItemInfo? = null,
+        override val id: String? = null,
     ) : SourceRule, SerializedRule
 
     @Serializable
@@ -60,7 +62,8 @@ sealed interface SerializedRule: SerializedItem {
         override val overrides: Boolean = true,
         val condition: SerializedCondition? = null,
         val cleans: List<SerializedTaintCleanAction>,
-        override val info: ItemInfo? = null
+        override val info: ItemInfo? = null,
+        override val id: String? = null,
     ) : SerializedRule
 
     @Serializable
@@ -72,7 +75,8 @@ sealed interface SerializedRule: SerializedItem {
         val bypassVerification: Boolean = false,
         val condition: SerializedCondition? = null,
         val copy: List<SerializedTaintPassAction>,
-        override val info: ItemInfo? = null
+        override val info: ItemInfo? = null,
+        override val id: String? = null,
     ) : SerializedRule
 
     @Serializable
@@ -124,7 +128,8 @@ sealed interface SerializedRule: SerializedItem {
         override val overrides: Boolean = true,
         override val condition: SerializedCondition? = null,
         override val taint: List<SerializedTaintAssignAction>,
-        override val info: ItemInfo? = null
+        override val info: ItemInfo? = null,
+        override val id: String? = null,
     ) : SourceRule, SerializedRule
 }
 
@@ -138,7 +143,8 @@ sealed interface SerializedFieldRule: SerializedItem {
         override val fieldName: SerializedSimpleNameMatcher,
         override val condition: SerializedCondition?,
         override val taint: List<SerializedTaintAssignAction>,
-        override val info: ItemInfo? = null
+        override val info: ItemInfo? = null,
+        override val id: String? = null,
     ): SerializedFieldRule, SourceRule
 }
 

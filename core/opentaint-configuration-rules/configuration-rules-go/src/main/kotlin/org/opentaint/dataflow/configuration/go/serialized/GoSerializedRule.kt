@@ -4,6 +4,7 @@ interface ItemInfo
 
 sealed interface GoSerializedItem {
     val info: ItemInfo?
+    val id: String?
 }
 
 data class GoSerializedGlobalSource(
@@ -12,6 +13,7 @@ data class GoSerializedGlobalSource(
     val condition: GoSerializedCondition?,
     val taint: List<GoSerializedAssignAction>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : GoSerializedItem
 
 data class GoSerializedFieldSource(
@@ -19,6 +21,7 @@ data class GoSerializedFieldSource(
     val condition: GoSerializedCondition?,
     val taint: List<GoSerializedAssignAction>,
     override val info: ItemInfo?,
+    override val id: String? = null,
 ) : GoSerializedItem
 
 sealed interface GoSerializedRule : GoSerializedItem {
@@ -31,6 +34,7 @@ sealed interface GoSerializedRule : GoSerializedItem {
         val condition: GoSerializedCondition?,
         val taint: List<GoSerializedAssignAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : GoSerializedRule
 
     data class Sink(
@@ -38,7 +42,7 @@ sealed interface GoSerializedRule : GoSerializedItem {
         override val function: GoNameMatcher,
         val condition: GoSerializedCondition?,
         val trackFactsReachAnalysisEnd: List<GoSerializedAssignAction>? = null,
-        val id: String? = null,
+        override val id: String? = null,
         val meta: GoSinkMetaData? = null,
         override val info: ItemInfo?,
     ) : GoSerializedRule
@@ -48,6 +52,7 @@ sealed interface GoSerializedRule : GoSerializedItem {
         override val function: GoNameMatcher,
         val copy: List<GoSerializedPassAction>,
         override val info: ItemInfo? = null,
+        override val id: String? = null,
     ) : GoSerializedRule
 
     data class Cleaner(
@@ -56,5 +61,6 @@ sealed interface GoSerializedRule : GoSerializedItem {
         val condition: GoSerializedCondition? = null,
         val cleans: List<GoSerializedCleanAction>,
         override val info: ItemInfo?,
+        override val id: String? = null,
     ) : GoSerializedRule
 }
