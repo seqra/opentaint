@@ -181,6 +181,10 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
 	builder.WithGroupBy(summaryGroupBy)
 	builder.WithCodeFlow(summaryCodeFlow)
+	builder.WithBaseline(summaryBaseline)
+	builder.WithFingerprintKey(summaryFingerprintKey)
+	builder.WithBaselineStateFilter(summaryBaselineStates)
+	builder.WithSuppressed(summaryShowSuppressed)
 	return builder
 }
 

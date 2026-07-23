@@ -195,7 +195,12 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleID(cfg.RuleID).
 		WithPassthroughApproximations(cfg.PassthroughApproximations).
 		WithDataflowApproximations(cfg.DataflowApproximations).
-		WithTrackExternalMethods(cfg.TrackExternalMethods)
+		WithTrackExternalMethods(cfg.TrackExternalMethods).
+		WithBaseline(cfg.Baseline).
+		WithBaselineState(cfg.WriteBaselineState).
+		WithFingerprintKey(cfg.FingerprintKey).
+		WithErrorOnFindings(cfg.ErrorOnFindings).
+		WithErrorOnSeverity(cfg.ErrorOnSeverity)
 	if !isDefaultSeverity(cfg.Severity) {
 		b.WithSeverity(cfg.Severity)
 	}
