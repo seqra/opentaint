@@ -24,7 +24,10 @@ class GoTaintRuleEmitterTest {
     private fun baseOnly(pos: PositionBase) = PositionBaseWithModifiers.BaseOnly(pos)
 
     private fun rule(vararg items: GoSerializedItem): TaintRuleFromSemgrep<GoSerializedItem> =
-        TaintRuleFromSemgrep("r", listOf(TaintRuleFromSemgrep.TaintRuleGroup(items.toList())))
+        TaintRuleFromSemgrep(
+            "r",
+            TaintRuleFromSemgrep.Structure.Matching(listOf(TaintRuleFromSemgrep.TaintRuleGroup(items.toList())))
+        )
 
     @Test
     fun `source taints the result of a named function`() {

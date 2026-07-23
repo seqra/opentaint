@@ -102,7 +102,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertMatchingRuleToT
         error("Failed to generate any taintRuleGroup")
     }
 
-    return TaintRuleFromSemgrep(ruleId, ruleGroups)
+    return TaintRuleFromSemgrep(ruleId, TaintRuleFromSemgrep.Structure.Matching(ruleGroups))
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertAutomataToTaintRules(

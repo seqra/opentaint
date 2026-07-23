@@ -7,9 +7,45 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
 data class TaintRuleFromSemgrep<R>(
     val ruleId: String,
-    val taintRules: List<TaintRuleGroup<R>>
+    val root: Structure<R>,
 ) {
+    val taintRules: List<TaintRuleGroup<R>> get() = root.flatten()
     val size: Int get() = taintRules.sumOf { it.size }
+
+    sealed interface Structure<R> {
+        fun flatten(): List<TaintRuleGroup<R>>
+
+        data class Matching<R>(val groups: List<TaintRuleGroup<R>>) : Structure<R> {
+            override fun flatten(): List<TaintRuleGroup<R>> = groups
+        }
+
+        data class Taint<R>(
+            val sources: List<TaintRuleGroup<R>>,
+            val sinks: List<TaintRuleGroup<R>>,
+            val propagators: List<TaintRuleGroup<R>>,
+            val sanitizers: List<TaintRuleGroup<R>>,
+        ) : Structure<R> {
+            override fun flatten(): List<TaintRuleGroup<R>> = sources + sinks + propagators + sanitizers
+        }
+
+        data class Join<R>(val branches: List<Branch<R>>) : Structure<R> {
+            override fun flatten(): List<TaintRuleGroup<R>> = branches.flatMap { branch ->
+                branch.leftOperands.flatMap { it.child.flatten() } + branch.rightOperand.child.flatten()
+            }
+        }
+    }
+
+    data class Branch<R>(
+        val leftOperands: List<Operand<R>>,
+        val rightOperand: Operand<R>,
+    )
+
+    data class Operand<R>(
+        val itemId: String,
+        val ruleId: String,
+        val metavar: String,
+        val child: Structure<R>,
+    )
 
     data class TaintRuleGroup<R>(
         val rules: List<R>,

@@ -71,7 +71,7 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintAutomataJoinToTain
 
     val operationsBySink = rule.operations.groupBy { it.rhs.itemId }
 
-    val allGroups = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup<Item>>()
+    val branches = mutableListOf<TaintRuleFromSemgrep.Branch<Item>>()
     for ((sinkItemId, sinkOps) in operationsBySink) {
         val rightItemRef = sinkOps.mapTo(linkedSetOf()) { it.rhs }.singleOrNull()
         if (rightItemRef == null) {
@@ -87,10 +87,10 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintAutomataJoinToTain
 
         val converted = sinkCtx.convertCompositionJoinOperations(strategy, rule, rightItemRef, sinkOps.map { it.lhs })
             ?: return null
-        allGroups += converted.taintRules
+        branches += converted
     }
 
-    return TaintRuleFromSemgrep(ruleId, allGroups)
+    return TaintRuleFromSemgrep(ruleId, TaintRuleFromSemgrep.Structure.Join(branches))
 }
 
 private fun validateNoChainedOperations(operations: List<TaintAutomataJoinOperation>): Boolean {
@@ -104,8 +104,8 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
     rule: TaintAutomataJoinRule,
     rightItemRef: TaintAutomataJoinMetaVarRef,
     leftItemRefs: List<TaintAutomataJoinMetaVarRef>,
-): TaintRuleFromSemgrep<Item>? {
-    val allLeftRules = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup<Item>>()
+): TaintRuleFromSemgrep.Branch<Item>? {
+    val leftOperands = mutableListOf<TaintRuleFromSemgrep.Operand<Item>>()
     val allLeftFinalMarks = hashSetOf<GeneratedMark>()
 
     for (leftItemRef in leftItemRefs) {
@@ -113,11 +113,13 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
         val leftAutomata = leftItem.rule
 
         val leftCtx = RuleConversionCtx("$ruleId#${leftItemRef.itemId}", modeModifier, meta, trace, typeOps)
-        val (leftRules, leftFinalMarks) = leftCtx.convertCompositionLeftRule(
+        val (leftStructure, leftFinalMarks) = leftCtx.convertCompositionLeftRule(
             leftItemRef.itemId, strategy, leftAutomata, leftItemRef.metaVar
         ) ?: return null
 
-        allLeftRules.addAll(leftRules)
+        leftOperands += TaintRuleFromSemgrep.Operand(
+            leftItemRef.itemId, leftItem.ruleId, leftItemRef.metaVar.toString(), leftStructure
+        )
         allLeftFinalMarks.addAll(leftFinalMarks)
     }
 
@@ -133,7 +135,10 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
         ) ?: return null
     }
 
-    return TaintRuleFromSemgrep(ruleId, allLeftRules + rightRules)
+    val rightOperand = TaintRuleFromSemgrep.Operand(
+        rightItemRef.itemId, rightItem.ruleId, rightItemRef.metaVar.toString(), rightRules
+    )
+    return TaintRuleFromSemgrep.Branch(leftOperands, rightOperand)
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeftRule(
@@ -141,7 +146,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalVar: MetavarAtom,
-): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>>? {
+): Pair<TaintRuleFromSemgrep.Structure<Item>, Set<GeneratedMark>>? {
     return when (automata) {
         is SemgrepMatchingRule -> convertCompositionLeftMatchingRule(itemId, strategy, automata, finalVar)
         is SemgrepTaintRule -> convertCompositionLeftTaintRule(itemId, strategy, automata, finalVar)
@@ -153,7 +158,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepMatchingRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalVar: MetavarAtom,
-): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>>? {
+): Pair<TaintRuleFromSemgrep.Structure<Item>, Set<GeneratedMark>>? {
     val leftEdges = automata.flatMap { r ->
         val automataWithVars = TaintRegisterStateAutomataWithStateVars(
             r.rule, initialStateVars = emptySet(), acceptStateVars = setOf(finalVar)
@@ -198,7 +203,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
         return null
     }
 
-    return leftRules to leftFinalMarks
+    return TaintRuleFromSemgrep.Structure.Matching(leftRules) to leftFinalMarks
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRightMatchingRule(
@@ -207,7 +212,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
     automata: SemgrepMatchingRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     initialVar: MetavarAtom,
     leftFinalMarks: Set<GeneratedMark>,
-): List<TaintRuleFromSemgrep.TaintRuleGroup<Item>> {
+): TaintRuleFromSemgrep.Structure<Item> {
     val rightEdges = automata.flatMap { r ->
         val automataWithVars = TaintRegisterStateAutomataWithStateVars(
             r.rule, initialStateVars = setOf(initialVar), acceptStateVars = emptySet()
@@ -236,7 +241,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
         }
     }
 
-    return rightRules
+    return TaintRuleFromSemgrep.Structure.Matching(rightRules)
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.composeRuleJoinRight(
@@ -256,7 +261,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
     automata: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     initialVar: MetavarAtom,
     leftFinalMarks: Set<GeneratedMark>,
-): List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>? {
+): TaintRuleFromSemgrep.Structure<Item>? {
     if (automata.sources.isNotEmpty()) {
         trace.error(JoinOnTaintRuleWithNonEmptySources())
         return null
@@ -282,13 +287,13 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionRigh
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     sourceMarks: Set<GeneratedMark>,
-): List<TaintRuleFromSemgrep.TaintRuleGroup<Item>> {
+): TaintRuleFromSemgrep.Structure<Item> {
     val preparedRules = prepareTaintNonSourceRules(
         automata,
         sources = emptyList(),
         taintMarks = sourceMarks.mapTo(hashSetOf()) { GeneratedTaintMark(it) }
     )
-    return convertTaintRuleToTaintRules(strategy, preparedRules, ignoreEmptySources = true).taintRules
+    return convertTaintRuleToTaintRules(strategy, preparedRules, ignoreEmptySources = true).root
 }
 
 private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeftTaintRule(
@@ -296,7 +301,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalVar: MetavarAtom,
-): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>>? {
+): Pair<TaintRuleFromSemgrep.Structure<Item>, Set<GeneratedMark>>? {
     if (automata.sinks.isNotEmpty()) {
         trace.error(LeftTaintRuleShouldNotHaveSinks())
         return null
@@ -328,7 +333,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
     strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
     automata: SemgrepTaintRule<RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>>,
     finalLabels: List<SemgrepTaintLabel>,
-): Pair<List<TaintRuleFromSemgrep.TaintRuleGroup<Item>>, Set<GeneratedMark>> {
+): Pair<TaintRuleFromSemgrep.Structure<Item>, Set<GeneratedMark>> {
     val (sources, taintMarks) = prepareTaintSourceRules(automata)
 
     val preparedRules = prepareTaintNonSourceRules(
@@ -340,5 +345,5 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionLeft
     val result = convertTaintRuleToTaintRules(strategy, preparedRules, ignoreEmptySources = false)
 
     val finalMarks = finalLabels.mapTo(hashSetOf()) { taintMark(it) }
-    return result.taintRules to finalMarks
+    return result.root to finalMarks
 }
