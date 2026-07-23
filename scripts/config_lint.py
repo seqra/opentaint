@@ -93,3 +93,73 @@ def check_arg_range(entries) -> list:
                         "I5", e.file, func_name(e.func),
                         f"{side[0]} but signature declares {n} parameter(s)"))
     return findings
+
+
+SCALAR_PRIMITIVES = {
+    "byte", "short", "int", "long", "float", "double", "char", "boolean", "void",
+}
+KNOWN_SCALAR_CLASSES = {
+    "java.lang.String", "java.lang.CharSequence", "java.lang.Integer", "java.lang.Long",
+    "java.lang.Boolean", "java.lang.Character", "java.lang.Double", "java.lang.Float",
+    "java.lang.Short", "java.lang.Byte", "java.lang.Class", "java.net.URL", "java.net.URI",
+}
+
+
+def is_element_safe(type_name) -> bool:
+    """True when an ElementAccessor on this type is not provably dead."""
+    if type_name is None:
+        return True
+    if type_name.endswith("[]"):
+        return True
+    return type_name not in SCALAR_PRIMITIVES and type_name not in KNOWN_SCALAR_CLASSES
+
+
+def _split_signature(sig):
+    """(param type list, return type) or (None, None) when unknown."""
+    if isinstance(sig, dict):
+        params = sig.get("params")
+        types = None
+        if params is not None:
+            types = [p.get("type") for p in sorted(params, key=lambda p: p["index"])]
+        return types, sig.get("return")
+    if not isinstance(sig, str) or not sig.startswith("("):
+        return None, None
+    inner = sig[1:sig.index(")")].strip()
+    if "*" in inner:
+        return None, sig[sig.index(")") + 1:].strip() or None
+    types = [] if inner == "" else [t.strip() for t in inner.split(",")]
+    return types, sig[sig.index(")") + 1:].strip() or None
+
+
+def position_type(entry, pos: tuple):
+    """Declared type of the slot the accessors land on, or of the base."""
+    tail = [a for a in pos[1:] if a != "[*]"]
+    if tail:
+        parts = tail[-1].split("#")
+        return parts[-1] if len(parts) == 3 else None
+    params, ret = _split_signature(entry.sig)
+    base = pos[0]
+    if base == "result":
+        return ret
+    if base == "this":
+        return "java.lang.Object"
+    m = _ARG.fullmatch(base)
+    if m and params is not None and int(m.group(1)) < len(params):
+        return params[int(m.group(1))]
+    return None
+
+
+def check_element_targets(entries) -> list:
+    findings = []
+    for e in entries:
+        for c in e.copies:
+            for side in (c.frm, c.to):
+                if "[*]" not in side:
+                    continue
+                prefix = side[:side.index("[*]")]
+                t = position_type(e, prefix)
+                if not is_element_safe(t):
+                    findings.append(Finding(
+                        "I4", e.file, func_name(e.func),
+                        f"[*] on {'.'.join(prefix)} of scalar type {t}"))
+    return findings
