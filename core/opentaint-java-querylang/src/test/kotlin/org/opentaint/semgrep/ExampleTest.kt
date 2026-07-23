@@ -13,6 +13,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintPassAc
 import org.opentaint.semgrep.pattern.conversion.taint.anyFunction
 import org.opentaint.semgrep.pattern.conversion.taint.base
 import org.opentaint.semgrep.util.SampleBasedTest
+import org.opentaint.semgrep.util.TestAnalysisRunner
 import kotlin.test.Test
 
 @TestInstance(PER_CLASS)
@@ -192,8 +193,12 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test tricky pattern not`() = runTest<example.TrickyPatterNot>(EXPECT_STATE_VAR)
 
+    // The array source is now starred ($*PARAM); the whole-object/any-field taint reaches a
+    // concrete element read (data[0]) only once the any-accessor is unrolled, so enable the
+    // production-like unroll here (mirrors StarSource/the real analyzer).
     @Test
-    fun `test array example`() = runTest<example.ArrayExample>()
+    fun `test array example`() =
+        runTest<example.ArrayExample>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
 
     @Test
     fun `test join with taint and matching left`() = runTest<example.JoinWithTaintAndMatchingLeft>()

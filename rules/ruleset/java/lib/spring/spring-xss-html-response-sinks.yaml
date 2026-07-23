@@ -493,19 +493,19 @@ rules:
                   ...
                   $W = (HttpServletResponse $R).getWriter(...);
                   ...
-                  $W.$WRITE(..., $UNTRUSTED, ...);
+                  $W.$WRITE(..., $*UNTRUSTED, ...);
               - pattern: |
                   (HttpServletResponse $R).setHeader("Content-Type", "$CT_HTML");
                   ...
                   $W = (HttpServletResponse $R).getWriter(...);
                   ...
-                  $W.$WRITE(..., $UNTRUSTED, ...);
+                  $W.$WRITE(..., $*UNTRUSTED, ...);
               - pattern: |
                   (HttpServletResponse $R).addHeader("Content-Type", "$CT_HTML");
                   ...
                   $W = (HttpServletResponse $R).getWriter(...);
                   ...
-                  $W.$WRITE(..., $UNTRUSTED, ...);
+                  $W.$WRITE(..., $*UNTRUSTED, ...);
           - metavariable-regex:
               metavariable: $CT_HTML
               regex: '^text/html(\s*;.*)?$'

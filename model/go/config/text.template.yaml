@@ -35,6 +35,10 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
 - function:
     package: text/template
     name: JSEscaper
@@ -42,10 +46,18 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(*)
+      - '[*]'
+    to: result
 - function:
     package: text/template
     name: URLQueryEscaper
     receiver: false
   copy:
   - from: arg(*)
+    to: result
+  - from:
+      - arg(*)
+      - '[*]'
     to: result

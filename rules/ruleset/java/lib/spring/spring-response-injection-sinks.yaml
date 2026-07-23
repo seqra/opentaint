@@ -42,13 +42,13 @@ rules:
                       - pattern: PostMapping
                       - pattern: PutMapping
           - pattern: |
-              (HttpServletResponse $RESPONSE).getWriter(...).$WRITE(..., $UNTRUSTED, ...)
+              (HttpServletResponse $RESPONSE).getWriter(...).$WRITE(..., $*UNTRUSTED, ...)
           - pattern: |
-              (HttpServletResponse $RESPONSE).getOutputStream(...).$WRITE(..., $UNTRUSTED, ...)
+              (HttpServletResponse $RESPONSE).getOutputStream(...).$WRITE(..., $*UNTRUSTED, ...)
           - pattern: |
               (HttpServletResponse $RESPONSE).sendError($CODE, $UNTRUSTED)
           - pattern: |
-              (javax.servlet.ServletOutputStream $WRITER).$WRITE(..., $UNTRUSTED, ...)
+              (javax.servlet.ServletOutputStream $WRITER).$WRITE(..., $*UNTRUSTED, ...)
           - pattern: |
-              (ServletOutputStream $WRITER).$WRITE(..., $UNTRUSTED, ...)
+              (ServletOutputStream $WRITER).$WRITE(..., $*UNTRUSTED, ...)
         - focus-metavariable: $UNTRUSTED

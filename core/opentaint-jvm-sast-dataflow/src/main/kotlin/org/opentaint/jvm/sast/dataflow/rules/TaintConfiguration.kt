@@ -28,15 +28,12 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
-import org.opentaint.ir.api.jvm.ext.objectClass
 import org.opentaint.ir.impl.util.adjustEmptyList
-import org.opentaint.jvm.util.typename
 
 class TaintConfiguration(private val cp: JIRClasspath) {
     private val patternManager = PatternManager()
     private val taintMarkManager = TaintMarkManager()
     private val hierarchyInfo = JIRHierarchyInfo(cp)
-    private val objectTypeName = cp.objectClass.typename
 
     private val entryPointConfig = TaintRulesStorage<SerializedRule.EntryPoint, TaintEntryPointSource>()
     private val sourceConfig = TaintRulesStorage<SerializedRule.Source, TaintMethodSource>()
@@ -169,7 +166,7 @@ class TaintConfiguration(private val cp: JIRClasspath) {
             rules.removeAll { !it.function.matchFunctionName(method) }
             if (rules.isEmpty()) return emptyList()
 
-            val resolver = MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, objectTypeName, method)
+            val resolver = MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, method)
             rules.removeAll {
                 with(resolver) {
                     it.signature?.matchFunctionSignature() == false
