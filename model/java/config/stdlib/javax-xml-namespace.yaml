@@ -4,9 +4,7 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.namespace.QName#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.namespace.QName#<init>
   signature: (java.lang.String, java.lang.String) void
   taintCopyOnly: true
@@ -22,9 +20,7 @@ passThrough:
 - function: javax.xml.namespace.QName#getPrefix
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .javax.xml.namespace.QName#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.namespace.QName#valueOf
   signature: (java.lang.String) javax.xml.namespace.QName
@@ -55,9 +51,7 @@ passThrough:
 - function: javax.xml.namespace.QName#getNamespaceURI
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .javax.xml.namespace.QName#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.namespace.QName#valueOf
   signature:
@@ -81,9 +75,7 @@ passThrough:
 - function: javax.xml.namespace.QName#getLocalPart
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .javax.xml.namespace.QName#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.namespace.QName#<init>
   signature:
@@ -115,16 +107,12 @@ passThrough:
   signature: (java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.namespace.QName#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.namespace.QName#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.namespace.QName#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.namespace.QName#getLocalPart
   signature: () java.lang.String
   taintCopyOnly: true
