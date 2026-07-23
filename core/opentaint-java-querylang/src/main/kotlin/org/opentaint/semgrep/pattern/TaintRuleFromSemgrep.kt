@@ -1,10 +1,5 @@
 package org.opentaint.semgrep.pattern
 
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedFieldRule
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
-
 data class TaintRuleFromSemgrep<R>(
     val ruleId: String,
     val root: Structure<R>,
@@ -56,19 +51,4 @@ data class TaintRuleFromSemgrep<R>(
     ) {
         val size: Int get() = rules.size
     }
-}
-
-fun TaintRuleFromSemgrep<SerializedItem>.createTaintConfig(): SerializedTaintConfig {
-    val rules = taintRules.flatMap { it.rules }
-    return SerializedTaintConfig(
-        entryPoint = rules.filterIsInstance<SerializedRule.EntryPoint>(),
-        source = rules.filterIsInstance<SerializedRule.Source>(),
-        methodExitSource = rules.filterIsInstance<SerializedRule.MethodExitSource>(),
-        sink = rules.filterIsInstance<SerializedRule.Sink>(),
-        passThrough = rules.filterIsInstance<SerializedRule.PassThrough>(),
-        cleaner = rules.filterIsInstance<SerializedRule.Cleaner>(),
-        methodExitSink = rules.filterIsInstance<SerializedRule.MethodExitSink>(),
-        methodEntrySink = rules.filterIsInstance<SerializedRule.MethodEntrySink>(),
-        staticFieldSource = rules.filterIsInstance<SerializedFieldRule.SerializedStaticFieldSource>(),
-    )
 }

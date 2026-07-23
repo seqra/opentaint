@@ -220,6 +220,10 @@ private fun createTestConfig(
         check(method is JIRMethod) { "Expected method to be JIRMethod" }
         return body(method)
     }
+
+    override fun selectRules(ruleIds: Set<String>) {
+        // do nothing
+    }
 }
 
 private fun ProjectAnalysisContext.analyze(

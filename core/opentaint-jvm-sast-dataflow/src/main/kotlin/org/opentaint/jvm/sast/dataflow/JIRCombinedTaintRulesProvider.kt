@@ -91,4 +91,9 @@ class JIRCombinedTaintRulesProvider(
             CombinationMode.IGNORE -> baseRules
         }
     }
+
+    override fun selectRules(ruleIds: Set<String>) {
+        base.selectRules(ruleIds)
+        combined.selectRules(ruleIds)
+    }
 }

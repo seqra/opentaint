@@ -4,6 +4,8 @@ import OpentaintIrDependency.opentaint_ir_approximations
 import OpentaintIrDependency.opentaint_ir_core
 import OpentaintIrDependency.opentaint_ir_storage
 import OpentaintUtilDependency.opentaintUtilJvm
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.opentaint.common.KotlinDependency
 
 plugins {
@@ -42,6 +44,7 @@ dependencies {
 
     testCompileOnly(project("samples"))
     testImplementation("org.opentaint.sast:dataflow")
+    testImplementation(rootProject)
 }
 
 val testSamples by configurations.creating
@@ -86,6 +89,17 @@ val generateKotlinGrammarSource by tasks.registering(AntlrTask::class) {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.remove("-Werror")
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+}
+
+tasks.named<KotlinCompile>("compileTestKotlin") {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
 }
 
 tasks.compileKotlin {

@@ -26,4 +26,6 @@ interface TaintRulesProvider : CommonTaintRulesProvider {
     fun passTroughRulesForMethod(method: CommonMethod, statement: CommonInst?, fact: FactAp?, allRelevant: Boolean = false): Iterable<TaintPassThrough>
     fun cleanerRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean = false): Iterable<TaintCleaner>
     fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean = false): Iterable<TaintStaticFieldSource>
+
+    fun selectRules(ruleIds: Set<String>)
 }

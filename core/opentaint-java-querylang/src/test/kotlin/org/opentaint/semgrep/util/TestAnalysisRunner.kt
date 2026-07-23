@@ -7,6 +7,7 @@ import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitType
@@ -26,10 +27,11 @@ import org.opentaint.ir.impl.features.classpaths.UnknownClasses
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.dataflow.JIRMethodExitRuleProvider
-import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
+import org.opentaint.jvm.sast.rules.JIRSemgrepRuleProvider
 import org.opentaint.jvm.transformer.JMultiDimArrayAllocationTransformer
 import org.opentaint.jvm.transformer.JStringConcatTransformer
+import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import kotlin.time.Duration.Companion.minutes
 
 class TestAnalysisRunner(
@@ -92,6 +94,7 @@ class TestAnalysisRunner(
     }
 
     fun run(
+        rule: TaintRuleFromSemgrep<SerializedItem>,
         config: SerializedTaintConfig,
         useDefaultConfig: Boolean,
         samples: Set<String>
@@ -101,7 +104,7 @@ class TestAnalysisRunner(
             val ep = cls.declaredMethods.singleOrNull { it.name == "entrypoint" }
                 ?: error("No entrypoint in $sample")
 
-            val rulesProvider = rulesProvider(config, useDefaultConfig, hashSetOf(ep))
+            val rulesProvider = rulesProvider(rule, config, useDefaultConfig)
             setupEngine(rulesProvider).use { engine ->
                 val traces = engine.analyzeWithIfds(listOf(ep)).first
                 sample to traces
@@ -114,9 +117,9 @@ class TestAnalysisRunner(
     }
 
     private fun rulesProvider(
+        rule: TaintRuleFromSemgrep<SerializedItem>,
         config: SerializedTaintConfig,
-        useDefaultConfig: Boolean,
-        ep: Set<JIRMethod>
+        useDefaultConfig: Boolean
     ): TaintRulesProvider {
         val taintConfig = TaintConfiguration(cp)
         taintConfig.loadConfig(config)
@@ -126,7 +129,7 @@ class TestAnalysisRunner(
             taintConfig.loadConfig(defaultPassRules)
         }
 
-        var cfg: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
+        var cfg: TaintRulesProvider = JIRSemgrepRuleProvider(listOf(rule), taintConfig)
         cfg = JIRMethodExitRuleProvider(cfg)
         return cfg
     }
