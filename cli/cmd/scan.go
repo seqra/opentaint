@@ -192,6 +192,40 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 	return b
 }
 
+// resolveRuleIDs determines which rules the analyzer should run: the --rule-id
+// flag when given, otherwise the configured rules.only / rules.exclude lists.
+// The flag wins over the config file, as it does everywhere else; honoring both
+// would silently intersect two selections the user never asked to combine.
+// Returns nil when nothing restricts the rules, which runs the whole ruleset.
+func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) []string {
+	var rulesetRoots []string
+	for _, r := range absRuleSetPaths {
+		rulesetRoots = append(rulesetRoots, r.Path)
+	}
+
+	if len(cfg.RuleID) > 0 {
+		if cfg.ExpandRuleRefs {
+			return rules.ExpandRuleIDs(cfg.RuleID, rulesetRoots)
+		}
+		return cfg.RuleID
+	}
+
+	selected, err := rules.Select(configuredRuleSelection(), rulesetRoots)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	return selected
+}
+
+// configuredRuleSelection reads the rules.only / rules.exclude allow and deny
+// lists from the configuration file.
+func configuredRuleSelection() rules.Selection {
+	return rules.Selection{
+		Only:    globals.Config.Rules.Only,
+		Exclude: globals.Config.Rules.Exclude,
+	}
+}
+
 func isDefaultSeverity(sev []string) bool {
 	return len(sev) == 2 && sev[0] == "warning" && sev[1] == "error"
 }
@@ -322,6 +356,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.Fatalf("Input validation failed: %s", err)
 	}
 
+	// Resolve the active rules before the dry-run bail-out, so that a bad
+	// rules.only/rules.exclude list is reported by --dry-run and never after a
+	// full compile.
+	ruleIDs := resolveRuleIDs(cfg, absRuleSetPaths)
+
 	if cfg.DryRun {
 		runDryRun("the build and scan")
 		return
@@ -412,14 +451,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	if maxMemory != "" {
 		nativeBuilder.SetMaxMemory(maxMemory)
-	}
-	ruleIDs := cfg.RuleID
-	if cfg.ExpandRuleRefs && len(ruleIDs) > 0 {
-		var roots []string
-		for _, r := range absRuleSetPaths {
-			roots = append(roots, r.Path)
-		}
-		ruleIDs = rules.ExpandRuleIDs(ruleIDs, roots)
 	}
 	for _, ruleID := range ruleIDs {
 		nativeBuilder.AddRuleID(ruleID)
