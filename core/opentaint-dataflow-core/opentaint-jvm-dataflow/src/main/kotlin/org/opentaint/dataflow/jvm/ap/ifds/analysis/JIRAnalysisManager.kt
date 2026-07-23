@@ -50,6 +50,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class JIRAnalysisManager(
@@ -67,6 +68,7 @@ class JIRAnalysisManager(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),
     )
 
+    private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
     private var currentPhase: Phase = Phase.Prescan
@@ -123,7 +125,7 @@ class JIRAnalysisManager(
         }
 
         val taintContext = JIRTaintAnalysisContext(
-            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker
+            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker, relevantRuleIds
         )
 
         return JIRMethodAnalysisContext(
