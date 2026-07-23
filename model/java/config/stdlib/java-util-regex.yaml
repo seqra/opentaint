@@ -19,17 +19,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.util.regex.Matcher#group#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
     to: result
 - function: java.util.regex.Matcher#appendReplacement
   signature: (*, *) java.util.regex.Matcher
@@ -264,17 +254,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.util.regex.Matcher#group#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
     to: result
 - function: java.util.regex.Matcher#replaceFirst
   signature: (java.lang.String) java.lang.String
@@ -401,14 +381,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: java.util.regex.Matcher#pattern
-  signature:
-    return: java.util.regex.Pattern
-  copy:
-  - from:
-    - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    to: result
 - function: java.util.regex.Matcher#replaceAll
   signature: (java.util.function.Function) java.lang.String
   copy:
@@ -422,36 +394,8 @@ passThrough:
     - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.lang.StringBuffer#content#java.lang.CharSequence
-  - from:
-    - this
-    - .java.util.regex.Matcher#input#java.lang.CharSequence
-    to:
-    - result
-    - .java.lang.StringBuffer#delegate#java.lang.AbstractStringBuilder
-    - .java.lang.AbstractStringBuilder#content#java.lang.CharSequence
-  - from:
-    - this
-    - .java.util.regex.Matcher#input#java.lang.CharSequence
-    to:
-    - result
     - .java.lang.StringBuffer#value#java.lang.String
     - .java.lang.String#content#java.lang.CharSequence
-  - from:
-    - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    - .java.lang.String#content#java.lang.CharSequence
-    to:
-    - result
-    - .java.lang.StringBuffer#content#java.lang.CharSequence
-  - from:
-    - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    - .java.lang.String#content#java.lang.CharSequence
-    to:
-    - result
-    - .java.lang.StringBuffer#delegate#java.lang.AbstractStringBuilder
-    - .java.lang.AbstractStringBuilder#content#java.lang.CharSequence
   - from:
     - this
     - .java.util.regex.Matcher#group#java.lang.String
@@ -582,21 +526,8 @@ passThrough:
     - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.lang.StringBuilder#content#java.lang.CharSequence
-  - from:
-    - this
-    - .java.util.regex.Matcher#input#java.lang.CharSequence
-    to:
-    - result
     - .java.lang.StringBuilder#value#java.lang.String
     - .java.lang.String#content#java.lang.CharSequence
-  - from:
-    - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    - .java.lang.String#content#java.lang.CharSequence
-    to:
-    - result
-    - .java.lang.StringBuilder#content#java.lang.CharSequence
   - from:
     - this
     - .java.util.regex.Matcher#group#java.lang.String
@@ -675,26 +606,11 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.util.regex.Matcher#group#java.lang.String
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.util.regex.Matcher#group#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
-    - .java.util.regex.Pattern#regex#java.lang.String
     to: result
 - function: java.util.regex.Pattern#matcher
   signature:
