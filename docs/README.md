@@ -124,6 +124,7 @@ npx @seqra/opentaint scan                                 # Run without installi
 opentaint scan --output results.sarif                     # Scan with explicit output path
 opentaint summary --show-findings results.sarif           # View results
 opentaint summary --show-findings --verbose-flow --show-code-snippets results.sarif  # Full detail
+opentaint scan --baseline main.sarif --error-on-findings   # Fail CI only on new findings
 ```
 
 | Command | Description |
@@ -132,6 +133,7 @@ opentaint summary --show-findings --verbose-flow --show-code-snippets results.sa
 | `opentaint compile` | Build project model separately |
 | `opentaint project` | Create model from precompiled JARs |
 | `opentaint summary` | View SARIF results |
+| `opentaint triage` | Compare against a baseline and record suppressions |
 | `opentaint health` | Show dependency paths and report missing components |
 | `opentaint test rule` | Scaffold, test, and debug detection rules |
 | `opentaint test approximation` | Scaffold and test dataflow approximations |
