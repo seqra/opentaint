@@ -63,8 +63,6 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]
-  - from: arg(2)
-    to: this
   - from:
     - arg(2)
     - '[*]'
@@ -170,8 +168,6 @@ passThrough:
   signature: (java.lang.String, boolean, byte[]) void
   taintCopyOnly: true
   copy:
-  - from: arg(2)
-    to: this
   - from: arg(0)
     to: this
   - from:
@@ -419,8 +415,6 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]
-  - from: arg(2)
-    to: this
   - from: arg(0)
     to: this
   - from:
@@ -470,8 +464,6 @@ passThrough:
     - this
     - .javax.naming.ldap.SortResponseControl#failedAttributeId#java.lang.String
     - .java.lang.String#bytes#byte[]
-  - from: arg(2)
-    to: this
   - from: arg(0)
     to: this
   - from:
