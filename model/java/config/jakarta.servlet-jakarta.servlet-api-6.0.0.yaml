@@ -1,0 +1,126 @@
+language: java
+library: jakarta.servlet:jakarta.servlet-api:6.0.0
+passThrough:
+- function: jakarta.servlet.ServletRequest#getParameter
+  signature: (java.lang.String) java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.ServletRequest#getParameterValues
+  signature: (java.lang.String) java.lang.String[]
+  copy:
+  - from: this
+    to: result
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function: jakarta.servlet.ServletRequest#getParameterMap
+  signature: () java.util.Map
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.ServletRequest#getParameterNames
+  signature: () java.util.Enumeration
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.ServletRequest#getReader
+  signature: () java.io.BufferedReader
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.ServletRequest#getInputStream
+  signature: () jakarta.servlet.ServletInputStream
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getHeader
+  signature: (java.lang.String) java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getHeaders
+  signature: (java.lang.String) java.util.Enumeration
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getHeaderNames
+  signature: () java.util.Enumeration
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getQueryString
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getRequestURI
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getRequestURL
+  signature: () java.lang.StringBuffer
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getPathInfo
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getPathTranslated
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getServletPath
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getCookies
+  signature: () jakarta.servlet.http.Cookie[]
+  copy:
+  - from: this
+    to: result
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function: jakarta.servlet.http.HttpServletRequest#getRequestedSessionId
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getRemoteUser
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.HttpServletRequest#getAuthType
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.Cookie#getValue
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.Cookie#getName
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.Cookie#getPath
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: jakarta.servlet.http.Cookie#getDomain
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
