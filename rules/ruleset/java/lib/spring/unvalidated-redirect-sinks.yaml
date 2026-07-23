@@ -20,7 +20,7 @@ rules:
             @$ANNOTATION(...)
             $RETURNTYPE $METHOD(...) {
               ...
-              return "$REDIRECT" + $URL*;
+              return "$REDIRECT" + $*URL;
               ...
             }
 
