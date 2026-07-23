@@ -131,12 +131,20 @@ def _split_signature(sig):
     return types, sig[sig.index(")") + 1:].strip() or None
 
 
+def _parse_slot(accessor: str):
+    """(owner, role, type) for a well-formed `.Owner#role#Type` key, else None."""
+    parts = accessor.split("#")
+    if len(parts) != 3:
+        return None
+    return parts[0].lstrip("."), parts[1], parts[2]
+
+
 def position_type(entry, pos: tuple):
     """Declared type of the slot the accessors land on, or of the base."""
     tail = [a for a in pos[1:] if a != "[*]"]
     if tail:
-        parts = tail[-1].split("#")
-        return parts[-1] if len(parts) == 3 else None
+        parsed = _parse_slot(tail[-1])
+        return parsed[2] if parsed else None
     params, ret = _split_signature(entry.sig)
     base = pos[0]
     if base == "result":
@@ -170,8 +178,8 @@ def _dst_holds_element(entry, to: tuple) -> bool:
     carries src[i] with it and no explicit [*] edge is needed."""
     tail = [a for a in to[1:] if a != "[*]"]
     if tail:
-        parts = tail[-1].split("#")
-        t = parts[-1] if len(parts) == 3 else None
+        parsed = _parse_slot(tail[-1])
+        t = parsed[2] if parsed else None
         return t is None or t == "java.lang.Object" or t.endswith("[]")
     t = position_type(entry, to)
     return t is None or t.endswith("[]")
@@ -201,11 +209,6 @@ def check_element_carrier(entries) -> list:
 
 _PREFIXES = ("set", "get", "add", "is", "put", "has")
 
-# Slot roles that denote a container's contents rather than a named property.
-# Every accessor of a collection legitimately reads and writes these, so the
-# property-mismatch rule does not apply to them.
-CONTAINER_ROLES = {"Element", "Key", "Value", "MapKey", "MapValue", "Entry"}
-
 
 def property_of(method: str):
     for p in _PREFIXES:
@@ -214,9 +217,19 @@ def property_of(method: str):
     return None
 
 
-def _slot_role(slot: str):
-    parts = slot.split("#")
-    return parts[1] if len(parts) == 3 else None
+def _is_shared_by_design(slot: str, shared: set) -> bool:
+    """True when a slot legitimately carries one value across every accessor.
+
+    The config's convention: a Capitalised role is a container's or wrapper's
+    contents (`Iterable#Element`, `Map#MapValue`, `HttpEntity#Body`) that every
+    accessor shares on purpose, while a camelCase role is a named property that
+    only its own getter and setter may touch. `shared` carries per-slot
+    exceptions from the allowlist.
+    """
+    if slot in shared:
+        return True
+    parsed = _parse_slot(slot)
+    return parsed is not None and parsed[1][:1].isupper()
 
 
 def load_allowlist(path: str) -> dict:
@@ -251,7 +264,7 @@ def check_shared_slot(entries, allow) -> list:
     writers, readers = _slot_usage(entries)
     findings = []
     for slot in sorted(set(writers) & set(readers)):
-        if _slot_role(slot) in CONTAINER_ROLES or slot in shared:
+        if _is_shared_by_design(slot, shared):
             continue
         for wfile, wm in sorted(writers[slot]):
             wp = property_of(wm)

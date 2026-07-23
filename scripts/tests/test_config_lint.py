@@ -262,3 +262,42 @@ def test_allowlisted_shared_slot_is_not_a_leak(tmp_path):
         """)
     allow = dict(ALLOW, shared_slots=[".p.C#bag#java.lang.Object"])
     assert cl.check_shared_slot(cl.load_entries(root), allow) == []
+
+
+def test_capitalised_role_is_shared_by_design(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setBody
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#Body#java.lang.Object
+        - function: p.C#getPayload
+          copy:
+          - from:
+            - this
+            - .p.C#Body#java.lang.Object
+            to: result
+        """)
+    assert cl.check_shared_slot(cl.load_entries(root), ALLOW) == []
+
+
+def test_camelcase_role_named_value_is_still_checked(tmp_path):
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#setValue
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#value#java.lang.Object
+        - function: p.C#getPassword
+          copy:
+          - from:
+            - this
+            - .p.C#value#java.lang.Object
+            to: result
+        """)
+    findings = cl.check_shared_slot(cl.load_entries(root), ALLOW)
+    assert [f.code for f in findings] == ["I1"]
