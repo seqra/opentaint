@@ -374,6 +374,12 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+- function: javax.naming.ldap.SortControl#<init>
+  signature: (java.lang.String, boolean) void
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.ldap.Rdn) void
   copy:
