@@ -11,7 +11,7 @@ func Source() string { return "tainted" }
 func Sink_Box(b Box) { _ = b }
 
 // Positive_tainted_field: a source-tainted value is written into b.Value (a nested
-// field). The starred sink Sink_Box($Y*) matches the field taint on the whole object.
+// field). The starred sink Sink_Box($*Y) matches the field taint on the whole object.
 func Positive_tainted_field() {
 	var b Box
 	b.Value = Source()

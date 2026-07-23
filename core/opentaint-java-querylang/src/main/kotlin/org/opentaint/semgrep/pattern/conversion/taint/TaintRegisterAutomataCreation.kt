@@ -56,7 +56,7 @@ private fun TaintAutomataConversionCtx.createAutomataWithEdgeElimination(
     runCatching {
         createAutomataWithEdgeEliminationUnsafe(formulaManager, metaVarInfo, initialNode)
     }.also {
-        // Non-fatal: a positive `$X*` coinciding with an unstarred `pattern-not $X` at the same
+        // Non-fatal: a positive `$*X` coinciding with an unstarred `pattern-not $X` at the same
         // position is a reserved/unsupported combination, treated as full exclusion (unchanged
         // behavior). Emitted here (not inside the unsafe body) so it surfaces even when the T/F
         // arm collapses to an empty automata and the unsafe body throws.

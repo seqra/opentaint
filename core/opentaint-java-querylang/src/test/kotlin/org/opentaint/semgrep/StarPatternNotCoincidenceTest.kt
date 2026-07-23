@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 /**
  * Rule-load diagnostic for the T/F cell of the star / pattern-not coincidence matrix:
- * a positive `$X*` (whole-object taint) coinciding at the SAME position with an unstarred
+ * a positive `$*X` (whole-object taint) coinciding at the SAME position with an unstarred
  * `pattern-not $X`. Its scoped 'keep field, drop base' semantics is unsupported; the combination
  * is treated as full (exclude-all) exclusion, same as the already-correct T/T case, and a non-fatal
  * diagnostic is surfaced through the rule-load trace.
@@ -54,7 +54,7 @@ class StarPatternNotCoincidenceTest {
      * @param notMetavar    the metavar spelled in the `pattern-not` param slot (with or without `*`)
      */
     private fun methodRule(id: String, positiveStar: Boolean, notMetavar: String): String {
-        val pos = if (positiveStar) "${'$'}UNTRUSTED*" else "${'$'}UNTRUSTED"
+        val pos = if (positiveStar) "${'$'}*UNTRUSTED" else "${'$'}UNTRUSTED"
         return """
             rules:
               - id: $id
@@ -99,11 +99,11 @@ class StarPatternNotCoincidenceTest {
     fun `T-F behaves as full exclusion, identical to the T-T case`() {
         // Same id so the two configs are byte-for-byte comparable (marks embed the rule id).
         val tf = load(methodRule("cmp", positiveStar = true, notMetavar = "${'$'}UNTRUSTED"))
-        val tt = load(methodRule("cmp", positiveStar = true, notMetavar = "${'$'}UNTRUSTED*"))
+        val tt = load(methodRule("cmp", positiveStar = true, notMetavar = "${'$'}*UNTRUSTED"))
         // T/T is the already-correct exclude-all case and must NOT emit the diagnostic.
         assertTrue(
             tt.errors.coincidenceDiagnostics().isEmpty(),
-            "T/T (`pattern-not \$UNTRUSTED*`) must not emit the diagnostic; got ${tt.errors.map { it.message }}"
+            "T/T (`pattern-not \$*UNTRUSTED`) must not emit the diagnostic; got ${tt.errors.map { it.message }}"
         )
         assertTrue(tf.config != null && tt.config != null, "both rules must load")
         // Same exclude-all behavior: the generated taint config is byte-for-byte identical.
@@ -113,7 +113,7 @@ class StarPatternNotCoincidenceTest {
     @Test
     fun `structural non-coinciding pattern-not does not emit the diagnostic`() {
         // The pattern-not negates the same position with a DIFFERENT metavar (`$OTHER`) — a genuine
-        // structural exclusion, not a coincidence with the positive `$UNTRUSTED*`.
+        // structural exclusion, not a coincidence with the positive `$*UNTRUSTED`.
         val loaded = load(methodRule("structural", positiveStar = true, notMetavar = "${'$'}OTHER"))
         assertTrue(
             loaded.errors.coincidenceDiagnostics().isEmpty(),

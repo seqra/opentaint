@@ -379,7 +379,7 @@ private class MethodConstraintsSolver(
                         // The negated metavar coincides (star-blind) with a positive occurrence at
                         // the same position -> whole-match exclusion (return null below), unchanged.
                         // Additionally flag the T/F cell: an unstarred `pattern-not $X` coinciding
-                        // with a positive `$X*`. Its "keep field, drop base" semantics is NOT
+                        // with a positive `$*X`. Its "keep field, drop base" semantics is NOT
                         // implemented; treat as full exclusion (as today) but surface a diagnostic.
                         if (!negCond.star) {
                             val coincidesWithStarPositive = currentPositive.any { pos ->

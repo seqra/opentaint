@@ -33,7 +33,7 @@ class StarOperatorParseTest {
     }
 
     // Walks the raw ANTLR parse tree (the parser path the rule loader uses) and counts how many
-    // starred-metavar alternatives ($VAR*) were recognized in expression position.
+    // starred-metavar alternatives ($*VAR) were recognized in expression position.
     private fun starredMetavarCount(pattern: String): Int {
         val lexer = JavaLexer(CharStreams.fromString(pattern))
         val parser = JavaParser(CommonTokenStream(lexer))
@@ -49,40 +49,41 @@ class StarOperatorParseTest {
 
     @Test
     fun `starred metavar in call argument`() {
-        val mvs = metavars("sink(\$Y*);")
+        val mvs = metavars("sink(\$*Y);")
         val y = mvs.single { it.name == "\$Y" }
-        assertTrue(y.star, "expected \$Y* to be starred")
+        assertTrue(y.star, "expected \$*Y to be starred")
     }
 
     @Test
-    fun `whitespace separates multiplication from star`() {
-        // \$Y * z is multiplication, NOT a starred metavar: the grammar must not recognize a
-        // PrimaryStarredMetavar for the whitespace-separated case (while it does for the adjacent one).
+    fun `prefix star, not suffix, marks the metavar`() {
+        // The star is a `$*` prefix bound into the metavar token. `$Y * z` stays multiplication,
+        // and the retired suffix form `$Y*` is no longer a starred metavar.
+        assertEquals(1, starredMetavarCount("sink(\$*Y);"), "\$*Y must be a star")
         assertEquals(0, starredMetavarCount("sink(\$Y * z);"), "\$Y * z must not be a star")
-        assertEquals(1, starredMetavarCount("sink(\$Y*);"), "\$Y* must be a star")
+        assertEquals(0, starredMetavarCount("sink(\$Y*);"), "retired suffix \$Y* must not be a star")
     }
 
     @Test
     fun `starred formal parameter metavar`() {
         val mvs = metavars(
-            "@\$ANNOTATION(...) \$RT \$M(..., \$TYPE \$UNTRUSTED*, ...) { ... }"
+            "@\$ANNOTATION(...) \$RT \$M(..., \$TYPE \$*UNTRUSTED, ...) { ... }"
         )
         val u = mvs.single { it.name == "\$UNTRUSTED" }
-        assertTrue(u.star, "expected formal-parameter \$UNTRUSTED* to be starred")
+        assertTrue(u.star, "expected formal-parameter \$*UNTRUSTED to be starred")
     }
 
     @Test
     fun `starred typed variable declaration`() {
         // F5: the starred `variableDeclaratorId` alternative in a TYPED declaration must load
         // (no parse exception) and the declared LHS metavar must carry star=true.
-        val mvs = metavars("String \$UNTRUSTED* = \$REQ.getParameter(\"q\");")
+        val mvs = metavars("String \$*UNTRUSTED = \$REQ.getParameter(\"q\");")
         val u = mvs.single { it.name == "\$UNTRUSTED" }
-        assertTrue(u.star, "expected typed-declaration \$UNTRUSTED* to be starred")
+        assertTrue(u.star, "expected typed-declaration \$*UNTRUSTED to be starred")
     }
 
     @Test
     fun `starred bare return value`() {
-        val mvs = metavars("return \$UNTRUSTED*;")
+        val mvs = metavars("return \$*UNTRUSTED;")
         val u = mvs.single { it.name == "\$UNTRUSTED" }
         assertTrue(u.star)
     }
@@ -100,7 +101,7 @@ class StarOperatorParseTest {
                 languages: [java]
                 mode: taint
                 pattern-sources:
-                  - pattern: ${'$'}UNTRUSTED* = src();
+                  - pattern: ${'$'}*UNTRUSTED = src();
                 pattern-sinks:
                   - pattern: sink(${'$'}UNTRUSTED);
         """.trimIndent()

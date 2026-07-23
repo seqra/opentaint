@@ -38,16 +38,6 @@ options {
     tokenVocab = JavaLexer;
 }
 
-@parser::members {
-    public boolean metavarStarAdjacent() {
-        org.antlr.v4.runtime.Token mv = _input.LT(1);
-        org.antlr.v4.runtime.Token star = _input.LT(2);
-        return mv != null && star != null
-            && "*".equals(star.getText())
-            && mv.getStopIndex() + 1 == star.getStartIndex();
-    }
-}
-
 compilationUnit
     : packageDeclaration? (importDeclaration | ';')* (typeDeclaration | ';')* EOF
     | moduleDeclaration EOF
@@ -263,7 +253,7 @@ variableDeclarator
     ;
 
 variableDeclaratorId
-    : {metavarStarAdjacent()}? METAVAR '*'
+    : STARRED_METAVAR
     | identifier ('[' ']')*
     ;
 
@@ -792,7 +782,7 @@ primary
     | thisExpression                    #PrimarySimple
     | SUPER                             #PrimarySimple
     | literal                           #PrimarySimple
-    | {metavarStarAdjacent()}? METAVAR '*'   #PrimaryStarredMetavar
+    | STARRED_METAVAR                   #PrimaryStarredMetavar
     | identifier                        #PrimarySimple
     | typeTypeOrVoid '.' CLASS          #PrimaryClassLiteral
     | ellipsisExpression                #PrimarySimple

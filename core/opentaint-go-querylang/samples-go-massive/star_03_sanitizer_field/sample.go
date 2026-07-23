@@ -1,6 +1,6 @@
 package util
 
-// Box carries the tainted field. The starred sanitizer Clean($C*) must clear the
+// Box carries the tainted field. The starred sanitizer Clean($*C) must clear the
 // taint on the whole object INCLUDING the nested field, so a later field read is clean.
 type Box struct {
 	Value string
@@ -8,7 +8,7 @@ type Box struct {
 
 func Source() string { return "tainted" }
 
-// Clean is the $C* sanitizer: it clears the argument object and all of its fields.
+// Clean is the $*C sanitizer: it clears the argument object and all of its fields.
 func Clean(b Box) Box { return b }
 
 func Sink(s string) { _ = s }
@@ -20,7 +20,7 @@ func Positive_unsanitized() {
 	Sink(b.Value)
 }
 
-// Negative_sanitized: the starred sanitizer sits between source and sink; if $C* truly
+// Negative_sanitized: the starred sanitizer sits between source and sink; if $*C truly
 // clears the concrete nested-field taint, the field read must be clean and nothing reports.
 func Negative_sanitized() {
 	var b Box

@@ -506,8 +506,8 @@ private fun forkState(
     return newState
 }
 
-// True when this edge assigns a whole-object (`$X*`) metavar. Used to propagate the star onto the
-// synthesized `generated_source` mark for focus-free source patterns (e.g. `$X* = src()`), so the
+// True when this edge assigns a whole-object (`$*X`) metavar. Used to propagate the star onto the
+// synthesized `generated_source` mark for focus-free source patterns (e.g. `$*X = src()`), so the
 // generated source taints the value AND all of its nested fields, matching the starred intent.
 private fun EdgeEffect.assignsStarredMetaVar(): Boolean =
     assignMetaVar.values.asSequence().flatten().any {

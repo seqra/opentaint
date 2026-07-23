@@ -8,5 +8,5 @@ rules:
       - pattern: "MapValueToReceiver.Source(...)"
     pattern-sinks:
       - patterns:
-          - pattern: "$C*.Serve()"
+          - pattern: "$*C.Serve()"
           - focus-metavariable: $C

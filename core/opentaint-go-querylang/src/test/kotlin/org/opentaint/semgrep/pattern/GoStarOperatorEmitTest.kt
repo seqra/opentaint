@@ -11,8 +11,8 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Unit-level checks that the Go taint-rule emitter threads the `$X*` star operator, giving Go the
- * same semantics as Java: `$X` = base-only taint; `$X*` = base + all nested fields (any-accessor).
+ * Unit-level checks that the Go taint-rule emitter threads the `$*X` star operator, giving Go the
+ * same semantics as Java: `$X` = base-only taint; `$*X` = base + all nested fields (any-accessor).
  *
  * Mirrors [org.opentaint.semgrep.StarOperatorRuleGenTest] on the Java side, but the Go engine models
  * "any field" as a distinct ACTION/CONDITION variant on the SAME position (AnyAccessor /
@@ -62,7 +62,7 @@ class GoStarOperatorEmitTest {
                   - pattern: "util.Source(...)"
                 pattern-sinks:
                   - patterns:
-                      - pattern: "util.Sink(${'$'}Y*)"
+                      - pattern: "util.Sink(${'$'}*Y)"
                       - focus-metavariable: ${'$'}Y
             """.trimIndent()
         )
@@ -94,7 +94,7 @@ class GoStarOperatorEmitTest {
                 message: x
                 severity: ERROR
                 pattern-sources:
-                  - pattern: "${'$'}X* = util.Source()"
+                  - pattern: "${'$'}*X = util.Source()"
                 pattern-sinks:
                   - pattern: "util.Sink(${'$'}Y)"
             """.trimIndent()
@@ -129,7 +129,7 @@ class GoStarOperatorEmitTest {
                   - pattern: "${'$'}X = util.Source()"
                 pattern-sanitizers:
                   - patterns:
-                      - pattern: "util.Clean(${'$'}X*)"
+                      - pattern: "util.Clean(${'$'}*X)"
                       - focus-metavariable: ${'$'}X
                 pattern-sinks:
                   - pattern: "util.Sink(${'$'}X)"
@@ -155,7 +155,7 @@ class GoStarOperatorEmitTest {
 
     @Test
     fun `starred TYPED sink checks base and any-accessor with the type constraint retained`() {
-        // `($Y* : string)` is a starred TYPED metavar. It lowers to And(IsMetavar(star), TypeIs),
+        // `($*Y : string)` is a starred TYPED metavar. It lowers to And(IsMetavar(star), TypeIs),
         // which the automata flattens into two per-position atoms; the starred IsMetavar atom must
         // still thread the any-accessor arm, and the TypeIs atom must still emit an IsType check.
         val items = emitItems(
@@ -170,7 +170,7 @@ class GoStarOperatorEmitTest {
                   - pattern: "util.Source(...)"
                 pattern-sinks:
                   - patterns:
-                      - pattern: "util.Sink((${'$'}Y* : string))"
+                      - pattern: "util.Sink((${'$'}*Y : string))"
                       - focus-metavariable: ${'$'}Y
             """.trimIndent()
         )

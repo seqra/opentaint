@@ -14,12 +14,12 @@ public abstract class StarSource implements RuleSample {
         void setValue(String value) { this.value = value; }
     }
 
-    // Positive: the STARRED source ($X* = src()) taints the whole Box AND every field.
+    // Positive: the STARRED source ($*X = src()) taints the whole Box AND every field.
     // The concrete field read b.getValue() therefore inherits the taint (the source-star's
     // any-field taint is unrolled to the field read) and reaches the plain sink.
     final static class PositiveStarredSourceField extends StarSource {
         @Override public void entrypoint() {
-            Box b = src();            // $X* = src(): whole-object + any-field taint
+            Box b = src();            // $*X = src(): whole-object + any-field taint
             String v = b.getValue();  // any-accessor taint unrolls to the concrete field
             sink(v);                  // plain sink observes the tainted field
         }
