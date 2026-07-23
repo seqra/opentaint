@@ -33,15 +33,6 @@ passThrough:
     to:
     - result
     - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
-- function:
-    package: java.text
-    class: DecimalFormatSymbols
-    name:
-      pattern: set.+
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.text.MessageFormat#applyPattern
   signature: (java.lang.String) void
   copy:
@@ -794,14 +785,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-- function:
-    package: java.text
-    class: DecimalFormatSymbols
-    name:
-      pattern: get.+
-  copy:
-  - from: this
-    to: result
 - function: java.text.DecimalFormatSymbols#getCurrency
   signature: () java.util.Currency
   copy:
@@ -1248,6 +1231,146 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormatSymbols#percent#java.lang.Object
+- function: java.text.DecimalFormatSymbols#setZeroDigit
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#zeroDigit#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getZeroDigit
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#zeroDigit#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setGroupingSeparator
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#groupingSeparator#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getGroupingSeparator
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#groupingSeparator#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setDecimalSeparator
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#decimalSeparator#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getDecimalSeparator
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#decimalSeparator#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setPerMill
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#perMill#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getPerMill
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#perMill#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setDigit
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#digit#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getDigit
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#digit#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setPatternSeparator
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#patternSeparator#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getPatternSeparator
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#patternSeparator#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setMinusSign
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#minusSign#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getMinusSign
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#minusSign#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setMonetaryDecimalSeparator
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#monetaryDecimalSeparator#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getMonetaryDecimalSeparator
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#monetaryDecimalSeparator#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setMonetaryGroupingSeparator
+  signature: (char) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#monetaryGroupingSeparator#java.lang.Object
+- function: java.text.DecimalFormatSymbols#getMonetaryGroupingSeparator
+  signature: () char
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#monetaryGroupingSeparator#java.lang.Object
+    to: result
+- function: java.text.DecimalFormatSymbols#setExponentSeparator
+  signature: (java.lang.String) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#exponentSeparator#java.lang.String
+- function: java.text.DecimalFormatSymbols#getExponentSeparator
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#exponentSeparator#java.lang.String
+    to: result
 - function:
     package: java.text
     class: DecimalFormat
