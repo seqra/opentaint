@@ -123,19 +123,7 @@ passThrough:
   signature: (java.lang.Object) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.concurrent.Future#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.concurrent.CompletableFuture#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.concurrent.CompletionStage#<rule-storage>#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#replace
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
   copy:
@@ -171,17 +159,7 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - this
-    - .java.util.concurrent.CompletionStage#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.concurrent.Future#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.concurrent.CompletableFuture#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.concurrent.CompletableFuture#complete
   signature: (java.lang.Object) boolean
@@ -258,19 +236,7 @@ passThrough:
   signature: (java.lang.Object) boolean
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.concurrent.Future#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.concurrent.CompletableFuture#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.concurrent.CompletionStage#<rule-storage>#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#elements
   signature: () java.util.Enumeration
   copy:
@@ -334,17 +300,7 @@ passThrough:
 - function: java.util.concurrent.CompletableFuture#join
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.util.concurrent.CompletionStage#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.concurrent.Future#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.concurrent.CompletableFuture#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.concurrent.ConcurrentHashMap#reduceKeys
   signature: (long, java.util.function.BiFunction) java.lang.Object
