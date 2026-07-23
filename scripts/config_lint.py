@@ -457,6 +457,11 @@ def main(argv=None) -> int:
     if not os.path.isfile(args.allowlist):
         print(f"error: allowlist not found: {args.allowlist}", file=sys.stderr)
         return 2
+    if args.changed is not None and len(args.changed) == 0:
+        print("error: --changed given with no paths -- this would enforce nothing "
+              "and exit 0 vacuously; omit --changed entirely to enforce everything, "
+              "or pass at least one path", file=sys.stderr)
+        return 2
     if args.compare_ref is not None:
         try:
             _git(["rev-parse", "--verify", f"{args.compare_ref}^{{commit}}"], args.root)

@@ -497,6 +497,47 @@ def test_main_rejects_a_missing_config_root(tmp_path, capsys):
     assert "config root not found" in capsys.readouterr().err
 
 
+def test_main_rejects_an_empty_changed_list(tmp_path, capsys):
+    # --changed with no arguments (nargs="*" -> []) must not silently mean
+    # "nothing changed, demote every finding to reported, exit 0" -- a CI
+    # file-list glob that expanded to nothing would go green vacuously.
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """)
+    allow = tmp_path / "allow.yaml"
+    allow.write_text("renderers: []\nsource_fed_slots: []\n")
+    rc = cl.main(["--root", root, "--allowlist", str(allow), "--changed"])
+    assert rc == 2
+    assert "--changed" in capsys.readouterr().err
+
+
+def test_main_omitting_changed_still_enforces_everything(tmp_path, capsys):
+    # Omitting --changed entirely is a different, valid mode: changed is
+    # None, meaning "enforce everything", and must still work after the
+    # empty-list guard is added.
+    root = write(tmp_path, "x.yaml", """
+        passThrough:
+        - function: p.C#<init>
+          copy:
+          - from: arg(0)
+            to:
+            - this
+            - .p.C#userName#java.lang.Object
+        """)
+    allow = tmp_path / "allow.yaml"
+    allow.write_text("renderers: []\nsource_fed_slots: []\n")
+    rc = cl.main(["--root", root, "--allowlist", str(allow)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "FAIL I2" in out
+
+
 def test_main_rejects_a_missing_allowlist(tmp_path, capsys):
     (tmp_path / "cfg").mkdir()
     rc = cl.main(["--root", str(tmp_path / "cfg"),
