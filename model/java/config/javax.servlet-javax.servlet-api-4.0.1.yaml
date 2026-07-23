@@ -164,3 +164,118 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: javax.servlet.ServletRequest#getParameter
+  signature: (java.lang.String) java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.ServletRequest#getParameterValues
+  signature: (java.lang.String) java.lang.String[]
+  copy:
+  - from: this
+    to: result
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function: javax.servlet.ServletRequest#getParameterMap
+  signature: () java.util.Map
+  copy:
+  - from:
+    - this
+    - .java.util.Map#parameterMap#java.lang.Object
+    to:
+    - result
+- function: javax.servlet.ServletRequest#getParameterNames
+  signature: () java.util.Enumeration
+  copy:
+  - from:
+    - this
+    - .java.util.Enumeration#parameterNames#java.lang.Object
+    to:
+    - result
+- function: javax.servlet.ServletRequest#getReader
+  signature: () java.io.BufferedReader
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.ServletRequest#getInputStream
+  signature: () javax.servlet.ServletInputStream
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getHeader
+  signature: (java.lang.String) java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getHeaders
+  signature: (java.lang.String) java.util.Enumeration
+  copy:
+  - from:
+    - this
+    - .java.util.Enumeration#headers#java.lang.Object
+    to:
+    - result
+- function: javax.servlet.http.HttpServletRequest#getHeaderNames
+  signature: () java.util.Enumeration
+  copy:
+  - from:
+    - this
+    - .java.util.Enumeration#headerNames#java.lang.Object
+    to:
+    - result
+- function: javax.servlet.http.HttpServletRequest#getQueryString
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getRequestURI
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getRequestURL
+  signature: () java.lang.StringBuffer
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getPathInfo
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getPathTranslated
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getServletPath
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getCookies
+  signature: () javax.servlet.http.Cookie[]
+  copy:
+  - from: this
+    to: result
+  - from: this
+    to:
+    - result
+    - '[*]'
+- function: javax.servlet.http.HttpServletRequest#getRequestedSessionId
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getRemoteUser
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getAuthType
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
