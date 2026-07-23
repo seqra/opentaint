@@ -8,10 +8,6 @@ passThrough:
 - function: java.lang.Character#charValue
   signature: () char
   copy:
-  - from:
-    - this
-    - .java.lang.Character#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.lang.Character#toUpperCase
@@ -52,12 +48,8 @@ passThrough:
   signature: () java.util.List
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
+    to: this
+  - from: this
     to: result
 - function: java.lang.Class#getConstructors
   signature: () java.lang.reflect.Constructor[]
@@ -173,23 +165,13 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.lang.Enum#<rule-storage>#java.lang.Object
-    to: result
 - function: java.lang.ProcessBuilder#command
   signature: (java.util.List) java.lang.ProcessBuilder
   copy:
   - from: this
     to: result
   - from: arg(*)
-    to:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
-    to: result
+    to: this
 - function: java.lang.Thread#<init>
   signature: (java.lang.String) void
   overrides: false
@@ -309,9 +291,7 @@ passThrough:
 - function: java.lang.ProcessBuilder#start
   signature: () java.lang.Process
   copy:
-  - from:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.lang.Long#toOctalString
   signature: (long) java.lang.String
@@ -548,10 +528,6 @@ passThrough:
     to:
     - result
     - .java.lang.Throwable#cause#java.lang.Object
-  - from:
-    - this
-    - .java.lang.Throwable#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
   - from: arg(0)
@@ -616,9 +592,7 @@ passThrough:
       pattern: <init>
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
+    to: this
 - function: java.lang.Class#getClasses
   signature: () java.lang.Class[]
   taintCopyOnly: true
@@ -636,9 +610,7 @@ passThrough:
 - function: java.lang.ProcessBuilder#start
   signature: (java.lang.ProcessBuilder$Redirect[]) java.lang.Process
   copy:
-  - from:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.lang.String#substring
   signature: (int, int) java.lang.String
@@ -705,9 +677,7 @@ passThrough:
   signature: (java.lang.String, int) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .java.lang.Enum#<rule-storage>#java.lang.Object
+    to: this
 - function: java.lang.Class#getFields
   signature: () java.lang.reflect.Field[]
   taintCopyOnly: true
@@ -788,13 +758,7 @@ passThrough:
   - from: this
     to: result
   - from: arg(*)
-    to:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
-  - from:
-    - this
-    - .java.lang.ProcessBuilder#<rule-storage>#java.lang.Object
-    to: result
+    to: this
 - function: java.lang.String#<init>
   signature:
     params:
@@ -1231,9 +1195,7 @@ passThrough:
   signature: (java.lang.String, java.lang.Throwable) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.lang.Throwable#<rule-storage>#java.lang.Object
+    to: this
 - function: java.lang.ProcessBuilder#command
   signature: (java.lang.String[]) java.lang.ProcessBuilder
   taintCopyOnly: true
@@ -1351,9 +1313,7 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.lang.Throwable#<rule-storage>#java.lang.Object
+    to: this
 - function: java.lang.String#getBytes
   signature:
     params:
@@ -1452,10 +1412,6 @@ passThrough:
 - function: java.lang.Character#<init>
   signature: (char) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Character#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.lang.String#<init>
@@ -1585,9 +1541,7 @@ passThrough:
   signature: (java.lang.String, java.lang.Throwable, boolean, boolean) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.lang.Throwable#<rule-storage>#java.lang.Object
+    to: this
 - function: java.lang.String#<init>
   signature: (char[], int, int) void
   copy:
