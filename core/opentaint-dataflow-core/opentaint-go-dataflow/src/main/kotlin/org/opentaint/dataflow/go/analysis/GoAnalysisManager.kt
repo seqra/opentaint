@@ -42,6 +42,7 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.util.analysis.ApplicationGraph
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Central factory that wires all Go dataflow analysis components together.
@@ -54,11 +55,14 @@ class GoAnalysisManager(
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
 
+    private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
+
     private var selectedPhase: Phase = Phase.Prescan
     val phase: Phase get() = selectedPhase
 
     override fun selectPhase(phase: Phase) {
         selectedPhase = phase
+        contexts.forEach { it.resetAnalysisCache() }
     }
 
     override fun getMethodAnalysisContext(
@@ -75,7 +79,9 @@ class GoAnalysisManager(
         )
 
         val aliasAnalysis = GoLocalAliasAnalysis(methodEntryPoint.method as GoIRFunction)
-        return GoMethodAnalysisContext(this, methodEntryPoint, taintCtx, aliasAnalysis)
+        return GoMethodAnalysisContext(this, methodEntryPoint, taintCtx, aliasAnalysis).also {
+            contexts.add(it)
+        }
     }
 
     override fun getMethodInstGraph(

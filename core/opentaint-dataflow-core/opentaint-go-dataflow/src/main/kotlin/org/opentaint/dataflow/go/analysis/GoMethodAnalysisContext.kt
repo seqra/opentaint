@@ -29,4 +29,8 @@ class GoMethodAnalysisContext(
         get() = methodEntryPoint.method as GoIRFunction
 
     val closureCallResolution = int2ObjectMap<ClosureTracker>()
+
+    fun resetAnalysisCache() {
+        closureCallResolution.values.forEach { it.resetSubscribers() }
+    }
 }
