@@ -15,6 +15,16 @@ interface MarkConditionBuilder<C> {
     fun mkFalse(): C
 }
 
+// Lifts a plain [MarkConditionBuilder] into its any-field form: the mark leaf ([checkTaintMark])
+// is rerouted to [checkTaintMarkOnAnyField], while boolean structure (negate/and/or/true/false) is
+// delegated unchanged. This is the single source of the plain -> any-field mapping, guaranteeing the
+// plain and any-field arms carry the SAME mark on the SAME base, differing only ContainsMark vs
+// ContainsMarkOnAnyField. Impls are stateless singletons, so delegation via `by inner` is sound.
+class AnyFieldLift<C>(private val inner: MarkConditionBuilder<C>) : MarkConditionBuilder<C> by inner {
+    override fun checkTaintMark(mark: GeneratedMark, pos: PositionBaseWithModifiers): C =
+        inner.checkTaintMarkOnAnyField(mark, pos)
+}
+
 data object JavaMarkConditionBuilder : MarkConditionBuilder<SerializedCondition> {
     override fun checkTaintMark(mark: GeneratedMark, pos: PositionBaseWithModifiers) = mark.mkContainsMark(pos)
     override fun checkTaintMarkOnAnyField(mark: GeneratedMark, pos: PositionBaseWithModifiers) =
@@ -32,23 +42,20 @@ sealed interface TaintMarkCheckBuilder {
     // Any-field lift of [build]: every mark leaf becomes a "contains on any field" check on the
     // same mark and position; boolean structure is preserved. Used by starred ($X*) sinks so the
     // any-field arm stays coherent with the composed requires marks (same mark, same base).
-    fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C
+    // Defined once by lifting the builder ([AnyFieldLift]) rather than mirroring [build] per case,
+    // so a subclass that overrides only [build] cannot desync its any-field arm.
+    fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
+        build(AnyFieldLift(builder), position)
 }
 
 data class TaintMarkLabelCheckBuilder(val label: GeneratedMark) : TaintMarkCheckBuilder {
     override fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
         builder.checkTaintMark(label, position)
-
-    override fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
-        builder.checkTaintMarkOnAnyField(label, position)
 }
 
 data class TaintMarkNotCheckBuilder(val arg: TaintMarkCheckBuilder) : TaintMarkCheckBuilder {
     override fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
         builder.negate(arg.build(builder, position))
-
-    override fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
-        builder.negate(arg.buildOnAnyField(builder, position))
 }
 
 data class TaintMarkAndCheckBuilder(
@@ -57,9 +64,6 @@ data class TaintMarkAndCheckBuilder(
 ) : TaintMarkCheckBuilder {
     override fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
         builder.and(listOf(l.build(builder, position), r.build(builder, position)))
-
-    override fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
-        builder.and(listOf(l.buildOnAnyField(builder, position), r.buildOnAnyField(builder, position)))
 }
 
 data class TaintMarkOrCheckBuilder(
@@ -68,16 +72,10 @@ data class TaintMarkOrCheckBuilder(
 ) : TaintMarkCheckBuilder {
     override fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
         builder.or(listOf(l.build(builder, position), r.build(builder, position)))
-
-    override fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
-        builder.or(listOf(l.buildOnAnyField(builder, position), r.buildOnAnyField(builder, position)))
 }
 
 data object TaintMarkCheckNotRequiredBuilder : TaintMarkCheckBuilder {
     override fun <C> build(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C = builder.mkTrue()
-
-    override fun <C> buildOnAnyField(builder: MarkConditionBuilder<C>, position: PositionBaseWithModifiers): C =
-        builder.mkTrue()
 }
 
 fun TaintMarkCheckBuilder.collectLabels(dst: MutableSet<GeneratedMark>): Set<GeneratedMark> {

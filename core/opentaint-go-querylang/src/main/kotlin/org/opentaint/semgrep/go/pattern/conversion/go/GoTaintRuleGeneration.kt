@@ -249,7 +249,13 @@ private fun GoTaintRuleGenerationCtx.buildGoStateAssignActions(
     val requiredVariables = stateAfter.register.assignedVars.keys
     val result = requiredVariables.flatMapTo(mutableListOf()) { varName ->
         val varPosition = edgeCondition.accessedVarPosition[varName] ?: return@flatMapTo emptyList()
-        varPosition.positions.flatMap { stateAssignMark(varPosition.varName, stateAfter, it) }
+        varPosition.positions.flatMap { sp ->
+            val assigns = stateAssignMark(varPosition.varName, stateAfter, sp.position)
+            if (!sp.star) return@flatMap assigns
+            // Starred source ($X*): also taint every nested field. Mirror each emitted Direct with an
+            // any-accessor assign on the SAME mark/position (the engine-supported whole-object taint).
+            assigns + assigns.map { GoSerializedAssignAction.AnyAccessor(it.kind, it.rawPosition()) }
+        }
     }
     return result
 }
@@ -260,7 +266,14 @@ private fun GoTaintRuleGenerationCtx.buildGoStateCleanActions(
     edgeCondition: GoEvaluatedEdgeCondition
 ): List<GoSerializedCleanAction> {
     val result = edgeCondition.accessedVarPosition.values.flatMapTo(mutableListOf()) { varPosition ->
-        varPosition.positions.flatMap { stateCleanMark(varPosition.varName, stateAfter, stateBefore, it) }
+        varPosition.positions.flatMap { sp ->
+            val cleans = stateCleanMark(varPosition.varName, stateAfter, stateBefore, sp.position)
+            if (!sp.star) return@flatMap cleans
+            // Starred sanitizer ($C*): clean the base value AND every nested field. The any-accessor
+            // clean removes marks stored under an ANY accessor but does NOT reach a concrete base
+            // mark, so the base Direct clean is REQUIRED too -- emit BOTH (mirrors the source side).
+            cleans + cleans.map { GoSerializedCleanAction.AnyAccessor(it.taintKind, it.pos) }
+        }
     }
     result += stateCleanMark(varName = null, stateAfter, stateBefore, position = null)
     return result
@@ -278,8 +291,10 @@ private fun GoEvaluatedEdgeCondition.addGoStateCheck(
         )
     } else {
         for (metaVar in stateOfEdge.register.assignedVars.keys) {
-            for (pos in accessedVarPosition[metaVar]?.positions.orEmpty()) {
-                stateChecks += ctx.containsStateMark(metaVar, stateOfEdge, pos)
+            for (sp in accessedVarPosition[metaVar]?.positions.orEmpty()) {
+                stateChecks += ctx.containsStateMark(metaVar, stateOfEdge, sp.position)
+                // Starred sink ($Y*): also match when any nested field carries the mark.
+                if (sp.star) stateChecks += ctx.containsStateMarkOnAnyField(metaVar, stateOfEdge, sp.position)
             }
         }
     }
@@ -609,7 +624,7 @@ private fun findGoMetaVarPositionUtil(
     val varPosition = varPositions.getOrPut(condition.metavar) {
         GoRegisterVarPosition(condition.metavar, hashSetOf())
     }
-    varPosition.positions.add(position)
+    varPosition.positions.add(GoStarredPosition(position, condition.star))
 }
 
 private fun evaluateGoParamCondition(
@@ -627,7 +642,12 @@ private fun evaluateGoParamCondition(
                 // todo: semantic metavar constraint
                 semgrepRuleTrace.error(IgnoredMetavarConstraint(condition.metavar))
             }
-            return ctx.containsMarkWithAnyStateBefore(edgeState, condition.metavar, position)
+            val contains = ctx.containsMarkWithAnyStateBefore(edgeState, condition.metavar, position)
+            if (!condition.star) return contains
+            // Starred sink ($Y*): match the base value OR any nested field carrying the mark.
+            val containsAnyField =
+                ctx.containsMarkOnAnyFieldWithAnyStateBefore(edgeState, condition.metavar, position)
+            return GoSerializedCondition.or(listOf(contains, containsAnyField))
         }
         is ParamCondition.TypeIs -> {
             return ctx.goTypeMatcher(condition.typeName, semgrepRuleTrace)

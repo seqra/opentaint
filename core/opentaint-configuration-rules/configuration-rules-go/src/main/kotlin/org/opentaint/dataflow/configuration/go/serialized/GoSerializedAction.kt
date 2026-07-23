@@ -31,10 +31,25 @@ sealed interface GoSerializedAssignAction : GoSerializedAction {
     }
 }
 
-data class GoSerializedCleanAction(
-    val taintKind: String? = null,
-    val pos: PositionBaseWithModifiers,
-) : GoSerializedAction
+sealed interface GoSerializedCleanAction : GoSerializedAction {
+    val taintKind: String?
+    val pos: PositionBaseWithModifiers
+
+    data class Direct(
+        override val taintKind: String? = null,
+        override val pos: PositionBaseWithModifiers,
+    ) : GoSerializedCleanAction
+
+    data class AnyAccessor(
+        override val taintKind: String? = null,
+        override val pos: PositionBaseWithModifiers,
+    ) : GoSerializedCleanAction
+
+    companion object {
+        operator fun invoke(taintKind: String? = null, pos: PositionBaseWithModifiers): GoSerializedCleanAction =
+            Direct(taintKind, pos)
+    }
+}
 
 data class GoSerializedPassAction(
     val taintKind: String? = null,

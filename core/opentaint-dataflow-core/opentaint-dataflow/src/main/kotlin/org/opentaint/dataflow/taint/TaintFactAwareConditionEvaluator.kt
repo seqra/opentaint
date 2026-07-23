@@ -42,28 +42,46 @@ class TaintFactAwareConditionEvaluator(
         }
     }
 
+    private val anyFieldMarkEvalCache = hashMapOf<Pair<PositionAccess, TaintMarkAccessor>, MarkEvaluationResult>()
+
     private fun evalContainsMarkOnAnyField(positionAccess: PositionAccess, mark: TaintMarkAccessor): Boolean {
         val conditionBase = positionAccess.base()
         val relevantFacts = basedFacts[conditionBase] ?: return false
 
-        val requiredPosition = positionAccess.withSuffix(listOf(mark))
-        for (reader in relevantFacts) {
-            val positionWithTaintMark = reader.containsAnyPosition(requiredPosition) ?: continue
+        val result = anyFieldMarkEvalCache.computeIfAbsent(positionAccess to mark) {
+            val requiredPosition = positionAccess.withSuffix(listOf(mark))
 
-            val finalPositionWithTaintMark = positionWithTaintMark.withSuffix(listOf(FinalAccessor))
-            if (!reader.containsPosition(finalPositionWithTaintMark)) continue
+            var evaluatedFact: EvaluatedFact? = null
+            for (reader in relevantFacts) {
+                val positionWithTaintMark = reader.containsAnyPosition(requiredPosition) ?: continue
 
-            val tmPosition = positionWithTaintMark.removeSuffix(listOf(mark))
+                val finalPositionWithTaintMark = positionWithTaintMark.withSuffix(listOf(FinalAccessor))
+                if (!reader.containsPosition(finalPositionWithTaintMark)) continue
 
-            hasEvaluatedContainsMark = true
-            evaluatedFacts += EvaluatedFact(reader, tmPosition, mark)
+                val tmPosition = positionWithTaintMark.removeSuffix(listOf(mark))
+                evaluatedFact = EvaluatedFact(reader, tmPosition, mark)
+                break
+            }
 
-            return true
+            if (evaluatedFact != null) {
+                evaluatedFact
+            } else {
+                // Register the unfold request only on the first computation for this (pos, mark);
+                // repeated evaluations for the same key are served from the cache without re-resolving.
+                markAfterAnyAccessorResolver?.resolve(mark)
+                NoFact
+            }
         }
 
-        markAfterAnyAccessorResolver?.resolve(mark)
+        return when (result) {
+            is NoFact -> false
+            is EvaluatedFact -> {
+                hasEvaluatedContainsMark = true
+                evaluatedFacts += result
 
-        return false
+                true
+            }
+        }
     }
 
     private val markEvalCache = hashMapOf<Pair<PositionAccess, TaintMarkAccessor>, MarkEvaluationResult>()

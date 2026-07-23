@@ -6,6 +6,7 @@ import com.charleskorn.kaml.YamlNode
 import com.charleskorn.kaml.YamlScalar
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -143,6 +144,7 @@ sealed interface SerializedCondition {
 
     @Serializable
     data class ContainsMarkOnAnyField(
+        @SerialName("taintedOnAnyField")
         val tainted: String,
         val pos: PositionBaseWithModifiers,
     ): SerializedCondition
@@ -229,6 +231,7 @@ class SerializedConditionSerializer :
     companion object {
         private val serializerByProperty = mapOf(
             "tainted" to SerializedCondition.ContainsMark.serializer(),
+            "taintedOnAnyField" to SerializedCondition.ContainsMarkOnAnyField.serializer(),
             "anyOf" to SerializedCondition.Or.serializer(),
             "allOf" to SerializedCondition.And.serializer(),
             "not" to SerializedCondition.Not.serializer(),
