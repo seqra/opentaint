@@ -146,10 +146,6 @@ passThrough:
   signature: (int) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.util.ListIterator#add
   signature: (java.lang.Object) void
@@ -221,13 +217,9 @@ passThrough:
     - this
     - .java.util.Map$Entry#Key#java.lang.Object
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Map$Entry#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Map$Entry#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Scanner#findWithinHorizon
   signature: (java.util.regex.Pattern, int) java.lang.String
   taintCopyOnly: true
@@ -380,24 +372,12 @@ passThrough:
   signature: (long) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Random#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
 - function: java.util.BitSet#set
   signature: (int, int, boolean) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.util.List#set
@@ -431,13 +411,7 @@ passThrough:
 - function: java.util.Scanner#findInLine
   signature: (java.lang.String) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Vector#elements
   signature: () java.util.Enumeration
@@ -658,35 +632,11 @@ passThrough:
   - from: arg(4)
     to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from: arg(2)
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
-  - from: arg(5)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(4)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
 - function: java.util.Arrays#fill
   signature: (long[], long) void
   overrides: false
@@ -828,10 +778,6 @@ passThrough:
 - function: java.util.BitSet#get
   signature: (int) boolean
   copy:
-  - from:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.LinkedList#getLast
@@ -929,10 +875,6 @@ passThrough:
   signature: (java.lang.CharSequence) java.util.StringJoiner
   overrides: false
   copy:
-  - from:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.Collections#unmodifiableNavigableSet
@@ -1049,25 +991,7 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.LinkedList#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Arrays#fill
   signature: (byte[], byte) void
@@ -1080,15 +1004,7 @@ passThrough:
 - function: java.util.Scanner#skip
   signature: (java.util.regex.Pattern) java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.Scanner#<init>
   signature: (java.io.InputStream, java.lang.String) void
@@ -1125,10 +1041,6 @@ passThrough:
 - function: java.util.BitSet#get
   signature: (int, int) java.util.BitSet
   copy:
-  - from:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.Arrays#stream
@@ -1202,10 +1114,6 @@ passThrough:
   signature: (java.lang.CharSequence) java.util.StringJoiner
   overrides: false
   copy:
-  - from:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.Map#values
@@ -1220,15 +1128,7 @@ passThrough:
 - function: java.util.Scanner#useDelimiter
   signature: (java.lang.String) java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.Map#putAll
   signature: (java.util.Map) void
@@ -1335,15 +1235,7 @@ passThrough:
   signature: (int, int) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.util.Map#get
@@ -1357,34 +1249,16 @@ passThrough:
   signature: (java.io.InputStream) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Scanner#next
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Scanner#findWithinHorizon
   signature: (java.lang.String, int) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Collections#unmodifiableSequencedCollection
   overrides: false
@@ -1843,9 +1717,7 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.StringJoiner#<init>
   signature:
@@ -1878,13 +1750,7 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Collections#checkedList
   signature: (java.util.List, java.lang.Class) java.util.List
   overrides: false
@@ -2170,15 +2036,7 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.Spliterators#spliterator
   signature:
@@ -2197,13 +2055,7 @@ passThrough:
   signature: (java.io.InputStream, java.lang.String) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Arrays#copyOf
   signature: (int[], int) int[]
   overrides: false
@@ -2496,13 +2348,7 @@ passThrough:
   signature: (java.io.InputStream, java.nio.charset.Charset) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.StringJoiner#add
   signature:
     params:
@@ -2804,10 +2650,6 @@ passThrough:
 - function: java.util.Calendar#internalGet
   signature: (int) int
   copy:
-  - from:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function:
@@ -2907,10 +2749,6 @@ passThrough:
 - function: java.util.Calendar#get
   signature: (int) int
   copy:
-  - from:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.Arrays#fill
@@ -2928,31 +2766,11 @@ passThrough:
   - from: arg(4)
     to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from: arg(2)
     to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(0)
     to: this
-  - from: arg(4)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
 - function: java.util.Collections#min
   signature: (java.util.Collection) java.lang.Object
   taintCopyOnly: true
@@ -3072,10 +2890,6 @@ passThrough:
     to: result
   - from: this
     to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-    to: result
 - function: java.util.Arrays#fill
   signature: (int[], int, int, int) void
   overrides: false
@@ -3126,9 +2940,7 @@ passThrough:
   signature: (java.lang.CharSequence) java.util.StringJoiner
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.StringJoiner#add
   signature:
     params:
@@ -3218,10 +3030,6 @@ passThrough:
     name:
       pattern: getActualM.*
   copy:
-  - from:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.List#of
@@ -3953,43 +3761,15 @@ passThrough:
   signature: (java.lang.Object) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.LinkedList#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.util.Scanner#useDelimiter
   signature: (java.util.regex.Pattern) java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.NavigableSet#floor
   signature: (java.lang.Object) java.lang.Object
@@ -4055,15 +3835,7 @@ passThrough:
 - function: java.util.Scanner#reset
   signature: () java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.List#spliterator
   signature:
@@ -4078,15 +3850,7 @@ passThrough:
 - function: java.util.Scanner#useRadix
   signature: (int) java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.Arrays#spliterator
   signature: (java.lang.Object[]) java.util.Spliterator
@@ -4144,17 +3908,11 @@ passThrough:
 - function: java.util.List#<init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
 - function: java.util.Map#of
   signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
     java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
@@ -4216,19 +3974,11 @@ passThrough:
   signature: (int, java.util.Collection) boolean
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-  - from: arg(1)
-    to: this
 - function: java.util.SequencedMap#putLast
   copy:
   - from: arg(1)
@@ -4267,13 +4017,7 @@ passThrough:
 - function: java.util.Scanner#findInLine
   signature: (java.util.regex.Pattern) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Map#of
   signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
@@ -4373,10 +4117,6 @@ passThrough:
   signature: (int, int) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
 - function: java.util.Vector#<init>
   signature: (java.util.Collection) void
@@ -4427,9 +4167,7 @@ passThrough:
         typeIs: org.apache.commons.lang3.tuple.MutableTriple
         pos: this
   copy:
-  - from:
-    - this
-    - .java.util.Map$Entry#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Vector#addElement
   signature: (java.lang.Object) void
@@ -4471,13 +4209,7 @@ passThrough:
 - function: java.util.Enumeration#nextElement
   signature: () java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.util.Enumeration#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Enumeration#Element#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -4527,15 +4259,7 @@ passThrough:
 - function: java.util.Scanner#skip
   signature: (java.lang.String) java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.Arrays#fill
   signature: (boolean[], boolean) void
@@ -4646,15 +4370,7 @@ passThrough:
   signature: (int, int) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.util.Set#of
@@ -4787,9 +4503,7 @@ passThrough:
       pattern: setT.*
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Arrays#spliterator
   signature: (java.lang.Object[], int, int) java.util.Spliterator
   overrides: false
@@ -4859,13 +4573,7 @@ passThrough:
 - function: java.util.Scanner#findWithinHorizon
   signature: (java.util.regex.Pattern, int) java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Map#replace
   signature: (java.lang.Object, java.lang.Object, java.lang.Object) boolean
@@ -4933,17 +4641,7 @@ passThrough:
 - function: java.util.Deque#<init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
@@ -4951,9 +4649,7 @@ passThrough:
 - function: java.util.Collection#<init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
@@ -5022,9 +4718,7 @@ passThrough:
 - function: java.util.Iterator#<init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.NavigableMap#headMap
   signature: (java.lang.Object, boolean) java.util.NavigableMap
   copy:
@@ -5108,21 +4802,9 @@ passThrough:
   signature: (int, int, int) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
   - from: arg(2)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .java.util.Calendar#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.util.ArrayDeque#<init>
@@ -5184,15 +4866,7 @@ passThrough:
   signature: (int, boolean) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
-  - from: arg(1)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.BitSet#<rule-storage>#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.util.Objects#toString
@@ -5426,9 +5100,7 @@ passThrough:
 - function: java.util.StringJoiner#toString
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+  - from: this
     to: result
   - from:
     - this
@@ -5493,25 +5165,7 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.LinkedList#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Iterator#next
   signature: () java.lang.Object
@@ -5527,59 +5181,27 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.LinkedList#addFirst
   signature: (java.lang.Object) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.LinkedList#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.util.StringJoiner#<init>
   signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
     void
   copy:
   - from: arg(2)
-    to:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(1)
-    to:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.SequencedMap#pollLastEntry
   copy:
   - from:
@@ -5598,9 +5220,7 @@ passThrough:
   signature: (java.lang.CharSequence) java.util.StringJoiner
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.StringJoiner#setEmptyValue
   signature:
     params:
@@ -5797,15 +5417,7 @@ passThrough:
 - function: java.util.Scanner#useLocale
   signature: (java.util.Locale) java.util.Scanner
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
     to: result
 - function: java.util.ArrayList#<init>
   signature: (java.util.Collection) void
@@ -5863,25 +5475,7 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.LinkedList#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Collections#unmodifiableSequencedSet
   overrides: false
@@ -5908,9 +5502,7 @@ passThrough:
 - function: java.util.Enumeration#<init>
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.Enumeration#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Deque#pollLast
   signature: () java.lang.Object
   copy:
@@ -5941,25 +5533,7 @@ passThrough:
     - this
     - .java.lang.Iterable#<rule-storage>#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.List#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Deque#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Collection#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.LinkedList#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Queue#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Scanner#next
   signature:
@@ -6105,22 +5679,12 @@ passThrough:
   signature: (java.util.StringJoiner) java.util.StringJoiner
   overrides: false
   copy:
-  - from:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: java.util.Scanner#nextLine
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.Iterator#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: java.util.Arrays#fill
   signature: (short[], short) void
@@ -6150,9 +5714,7 @@ passThrough:
   signature: (java.lang.CharSequence) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.util.StringJoiner#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.Base64$Encoder#encodeToString
   copy:
   - from: arg(0)
