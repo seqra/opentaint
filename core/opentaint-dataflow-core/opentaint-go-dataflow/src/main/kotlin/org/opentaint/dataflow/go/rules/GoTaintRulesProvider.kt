@@ -11,4 +11,5 @@ interface GoTaintRulesProvider {
     fun sinkRulesForCall(signature: GoFunctionSignature): List<TaintRule.Sink>
     fun passThroughRulesForCall(signature: GoFunctionSignature): List<TaintRule.PassThrough>
     fun cleanerRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean = false): List<TaintRule.Cleaner>
+    fun selectRules(ruleIds: Set<String>) = Unit
 }

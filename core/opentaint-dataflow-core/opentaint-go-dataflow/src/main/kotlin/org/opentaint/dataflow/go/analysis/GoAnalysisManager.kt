@@ -42,6 +42,7 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.util.analysis.ApplicationGraph
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -55,6 +56,7 @@ class GoAnalysisManager(
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
 
+    private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
 
     private var selectedPhase: Phase = Phase.Prescan
@@ -63,6 +65,9 @@ class GoAnalysisManager(
     override fun selectPhase(phase: Phase) {
         selectedPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
+        if (phase is Phase.FullScan) {
+            taintConfig.selectRules(relevantRuleIds)
+        }
     }
 
     override fun getMethodAnalysisContext(
@@ -76,6 +81,7 @@ class GoAnalysisManager(
             taintAnalysisContext.taintSinkTracker,
             taintConfig,
             externalMethodTracker,
+            relevantRuleIds,
         )
 
         val aliasAnalysis = GoLocalAliasAnalysis(methodEntryPoint.method as GoIRFunction)

@@ -52,6 +52,11 @@ class GoCombinedTaintRulesProvider(
             base.cleanerRulesForCall(signature, allRelevant),
             combined.cleanerRulesForCall(signature, allRelevant))
 
+    override fun selectRules(ruleIds: Set<String>) {
+        base.selectRules(ruleIds)
+        combined.selectRules(ruleIds)
+    }
+
     private fun <T> combine(mode: CombinationMode, base: List<T>, extra: List<T>): List<T> = when (mode) {
         CombinationMode.EXTEND -> base + extra
         CombinationMode.OVERRIDE -> extra.takeIf { it.isNotEmpty() } ?: base

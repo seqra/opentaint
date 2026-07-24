@@ -20,6 +20,10 @@ class GoMethodAnalysisContext(
     val taint: GoTaintAnalysisContext,
     val aliasAnalysis: GoLocalAliasAnalysis,
 ) : MethodAnalysisContext {
+    init {
+        taint.bindAnalysisContext(this)
+    }
+
     val phase: TaintAnalysisManager.Phase get() = analysisManager.phase
 
     override val methodCallFactMapper: MethodCallFactMapper
