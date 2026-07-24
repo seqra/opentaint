@@ -1,5 +1,6 @@
 package org.opentaint.common.sast.rules
 
+import mu.KLogging
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep.Structure
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep.TaintRuleGroup
@@ -12,6 +13,8 @@ abstract class SemgrepRuleProvider<RuleItem, ResolvedRule>(
     fun selectRelevantSemgrepRules(ruleIds: Set<String>) {
         ruleIdFilter = rules
             .flatMapTo(hashSetOf()) { rule -> reduce(rule.root, ruleIds).retainedRuleIds }
+
+        logger.debug { "Select ${ruleIdFilter?.size} from ${rules.sumOf { it.size }} rules" }
     }
 
     private data class Reduction(
@@ -118,5 +121,9 @@ abstract class SemgrepRuleProvider<RuleItem, ResolvedRule>(
             val rId = rule.resolvedRuleId() ?: return@filter true
             selectedRuleIds.contains(rId)
         }
+    }
+
+    companion object {
+        private val logger = object : KLogging() {}.logger
     }
 }
