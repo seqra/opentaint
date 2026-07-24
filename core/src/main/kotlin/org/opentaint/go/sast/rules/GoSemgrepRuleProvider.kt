@@ -14,7 +14,7 @@ class GoSemgrepRuleProvider(
     rules: List<TaintRuleFromSemgrep<GoSerializedItem>>,
     private val base: GoTaintConfiguration,
 ) : SemgrepRuleProvider<GoSerializedItem, TaintRule>(rules), GoTaintRulesProvider {
-    override fun GoSerializedItem.ruleItemId(): String? = id
+    override fun GoSerializedItem.ruleItemId(): String? = serializedId
     override fun TaintRule.resolvedRuleId(): String? = serializedId
 
     override fun selectRules(ruleIds: Set<String>) = selectRelevantSemgrepRules(ruleIds)

@@ -47,7 +47,7 @@ data object GoTaintStrategy :
         }
     }
 
-    override fun serializedItemId(item: GoSerializedItem): String? = item.id
+    override fun serializedItemId(item: GoSerializedItem): String? = item.serializedId
 
     data object GoMarkConditionBuilder : MarkConditionBuilder<GoSerializedCondition> {
         override fun checkTaintMark(mark: Mark.GeneratedMark, pos: PositionBaseWithModifiers): GoSerializedCondition =

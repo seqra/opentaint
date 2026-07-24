@@ -194,7 +194,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
 
     return rules.map { (edge, item) ->
         val itemWithId = item.withId(ctx.nextSerializedItemId(item.typeLabel()))
-        registerSerializedItem(edge, requireNotNull(itemWithId.id))
+        registerSerializedItem(edge, requireNotNull(itemWithId.serializedId))
         itemWithId
     }
 }
@@ -209,12 +209,12 @@ private fun GoSerializedItem.typeLabel(): String = when (this) {
 }
 
 private fun GoSerializedItem.withId(id: String): GoSerializedItem = when (this) {
-    is GoSerializedGlobalSource -> copy(id = id)
-    is GoSerializedFieldSource -> copy(id = id)
-    is GoSerializedRule.Source -> copy(id = id)
-    is GoSerializedRule.Sink -> copy(id = id)
-    is GoSerializedRule.PassThrough -> copy(id = id)
-    is GoSerializedRule.Cleaner -> copy(id = id)
+    is GoSerializedGlobalSource -> copy(serializedId = id)
+    is GoSerializedFieldSource -> copy(serializedId = id)
+    is GoSerializedRule.Source -> copy(serializedId = id)
+    is GoSerializedRule.Sink -> copy(serializedId = id)
+    is GoSerializedRule.PassThrough -> copy(serializedId = id)
+    is GoSerializedRule.Cleaner -> copy(serializedId = id)
 }
 
 private inline fun GoFunctionNameMatcher.handleMethodCall(

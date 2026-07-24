@@ -23,7 +23,7 @@ class JIRSemgrepRuleProvider(
 ) : TaintRulesProvider, SemgrepRuleProvider<SerializedItem, TaintConfigurationItem>(rules) {
     val base = JIRTaintRulesProvider(taintConfiguration)
 
-    override fun SerializedItem.ruleItemId(): String? = id
+    override fun SerializedItem.ruleItemId(): String? = serializedId
     override fun TaintConfigurationItem.resolvedRuleId(): String? = serializedId
 
     init {

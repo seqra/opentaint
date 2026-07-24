@@ -59,7 +59,7 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
 
     fun createRuleGroup(rules: List<Item>): TaintRuleFromSemgrep.TaintRuleGroup<Item> {
         val ruleIds = rules.mapNotNull(taintRuleStrategy::serializedItemId)
-        require(ruleIds.size == rules.size) { "Every generated taint rule must have an id" }
+        require(ruleIds.size == rules.size) { "Every generated taint rule must have an serializedId" }
         require(ruleIds.toSet().size == ruleIds.size) { "Generated taint rule ids must be unique within a group" }
 
         val survivingIds = ruleIds.toSet()

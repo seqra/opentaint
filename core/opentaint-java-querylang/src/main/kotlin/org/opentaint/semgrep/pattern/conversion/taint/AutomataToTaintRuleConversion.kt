@@ -335,7 +335,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
 
     return rules.map { (edge, item) ->
         val itemWithId = item.withId(ctx.nextSerializedItemId(item.typeLabel()))
-        registerSerializedItem(edge, requireNotNull(itemWithId.id))
+        registerSerializedItem(edge, requireNotNull(itemWithId.serializedId))
         itemWithId
     }
 }
@@ -353,15 +353,15 @@ private fun SerializedItem.typeLabel(): String = when (this) {
 }
 
 private fun SerializedItem.withId(id: String): SerializedItem = when (this) {
-    is SerializedRule.EntryPoint -> copy(id = id)
-    is SerializedRule.Source -> copy(id = id)
-    is SerializedRule.Cleaner -> copy(id = id)
-    is SerializedRule.PassThrough -> copy(id = id)
-    is SerializedRule.Sink -> copy(id = id)
-    is SerializedRule.MethodExitSink -> copy(id = id)
-    is SerializedRule.MethodEntrySink -> copy(id = id)
-    is SerializedRule.MethodExitSource -> copy(id = id)
-    is SerializedFieldRule.SerializedStaticFieldSource -> copy(id = id)
+    is SerializedRule.EntryPoint -> copy(serializedId = id)
+    is SerializedRule.Source -> copy(serializedId = id)
+    is SerializedRule.Cleaner -> copy(serializedId = id)
+    is SerializedRule.PassThrough -> copy(serializedId = id)
+    is SerializedRule.Sink -> copy(serializedId = id)
+    is SerializedRule.MethodExitSink -> copy(serializedId = id)
+    is SerializedRule.MethodEntrySink -> copy(serializedId = id)
+    is SerializedRule.MethodExitSource -> copy(serializedId = id)
+    is SerializedFieldRule.SerializedStaticFieldSource -> copy(serializedId = id)
 }
 
 private fun JavaTaintRuleGenerationCtx.buildStateAssignAction(
