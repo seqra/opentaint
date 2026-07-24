@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds
 
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.persistentHashSetOf
+import kotlinx.collections.immutable.toPersistentHashSet
 
 sealed interface ExclusionSet {
     operator fun contains(accessor: Accessor): Boolean
@@ -14,6 +15,7 @@ sealed interface ExclusionSet {
 
     fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet
     fun deepExclusion(): Set<DeepMarkExclusion>
+    fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet
 
     data object Empty : ExclusionSet {
         override fun contains(accessor: Accessor): Boolean = false
@@ -31,6 +33,12 @@ sealed interface ExclusionSet {
         }
 
         override fun deepExclusion(): Set<DeepMarkExclusion> = emptySet()
+
+        override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet = if (accessors.isEmpty()) {
+            this
+        } else {
+            Concrete(persistentHashSetOf(), accessors.toPersistentHashSet(), accessors.hashCode())
+        }
     }
 
     data object Universe : ExclusionSet {
@@ -45,6 +53,7 @@ sealed interface ExclusionSet {
 
         override fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet = this
         override fun deepExclusion(): Set<DeepMarkExclusion> = emptySet()
+        override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet = this
     }
 
     data class Concrete(
@@ -122,6 +131,12 @@ sealed interface ExclusionSet {
         }
 
         override fun deepExclusion(): Set<DeepMarkExclusion> = deepExclusion
+
+        override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet {
+            val mergedDeep = deepExclusion.addAll(accessors)
+            if (mergedDeep === deepExclusion) return this
+            return Concrete(set, mergedDeep, set.hashCode() + mergedDeep.hashCode())
+        }
 
         override fun intersect(other: ExclusionSet): ExclusionSet = when (other) {
             Empty -> other
