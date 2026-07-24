@@ -161,8 +161,7 @@ class PIRSequentTaintUtil(
     }
 
     override fun mapFactToReturn(fact: InitialFactAp) = when (statement) {
-        // Attribute loads only apply source rules, which never reach handleReachedSink → this overload.
-        is PIRLoadAttr -> TODO()
+        is PIRLoadAttr -> listOfNotNull(callFactMapper.mapLoadAttributeFactToReturn(statement, fact))
         is PIRReturn -> listOfNotNull(fact.fromResultBase(statement))
         else -> error("Unexpected statement: $statement")
     }

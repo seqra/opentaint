@@ -3,13 +3,11 @@ package org.opentaint.dataflow.python.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
@@ -23,16 +21,18 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRLanguageManager
 import org.opentaint.dataflow.python.alias.PIRLocalAliasAnalysis
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
+import org.opentaint.dataflow.python.pIRDowncast
 import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext
 import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
+import org.opentaint.dataflow.python.trace.PIRMethodCallPrecondition
+import org.opentaint.dataflow.python.trace.PIRMethodSequentPrecondition
+import org.opentaint.dataflow.python.trace.PIRMethodStartPrecondition
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -106,13 +106,21 @@ class PIRAnalysisManager(
     override fun getMethodStartPrecondition(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
-    ): MethodStartPrecondition = NoOpStartPrecondition
+    ): MethodStartPrecondition {
+        pIRDowncast<PIRMethodAnalysisContext>(analysisContext)
+        return PIRMethodStartPrecondition(apManager, analysisContext)
+    }
 
     override fun getMethodSequentPrecondition(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
         currentInst: CommonInst,
-    ): MethodSequentPrecondition = NoOpSequentPrecondition
+    ): MethodSequentPrecondition {
+        pIRDowncast<PIRMethodAnalysisContext>(analysisContext)
+        pIRDowncast<PIRInstruction>(currentInst)
+
+        return PIRMethodSequentPrecondition(apManager, currentInst, analysisContext, pirCallResolver)
+    }
 
     override fun getMethodSequentFlowFunction(
         apManager: ApManager,
@@ -147,7 +155,12 @@ class PIRAnalysisManager(
         returnValue: CommonValue?,
         callExpr: CommonCallExpr,
         statement: CommonInst,
-    ): MethodCallPrecondition = NoOpCallPrecondition
+    ): MethodCallPrecondition {
+        pIRDowncast<PIRCall>(statement)
+        pIRDowncast<PIRMethodAnalysisContext>(analysisContext)
+
+        return PIRMethodCallPrecondition(apManager, statement, analysisContext, pirCallResolver)
+    }
 
     override fun getMethodCallSummaryHandler(
         apManager: ApManager,
@@ -189,32 +202,4 @@ class PIRAnalysisManager(
     override fun onInstructionReached(inst: CommonInst) {
         // No-op
     }
-}
-
-// --- No-op preconditions for minimal prototype ---
-
-private object NoOpStartPrecondition : MethodStartPrecondition {
-    override fun factPrecondition(fact: InitialFactAp): List<TaintRulePrecondition.Source> = emptyList()
-}
-
-private object NoOpSequentPrecondition : MethodSequentPrecondition {
-    override fun factPrecondition(fact: InitialFactAp): Set<MethodSequentPrecondition.SequentPrecondition> =
-        setOf(MethodSequentPrecondition.SequentPrecondition.Unchanged)
-}
-
-private object NoOpCallPrecondition : MethodCallPrecondition {
-    override fun factPrecondition(fact: InitialFactAp): List<MethodCallPrecondition.CallPrecondition> =
-        listOf(MethodCallPrecondition.CallPrecondition.Unchanged)
-
-    override fun factPreconditionResolutionFailure(
-        fact: InitialFactAp,
-        startFactBase: AccessPathBase
-    ): List<MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact> =
-        emptyList()
-
-    override fun resolvePassRuleCondition(
-        precondition: PassRuleCondition,
-        edges: MethodAnalyzerEdges
-    ): List<MethodCallPrecondition.PassRuleConditionFacts> =
-        emptyList()
 }

@@ -105,6 +105,14 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
             else -> null
         }
 
+    fun mapLoadAttributeFactToReturn(statement: PIRLoadAttr, fact: InitialFactAp): InitialFactAp? =
+        when (fact.base) {
+            is AccessPathBase.Return -> valueToBase(statement.target)?.let { fact.rebase(it) }
+            is AccessPathBase.This -> valueToBase(statement.obj)?.let { fact.rebase(it) }
+            is AccessPathBase.ClassStatic -> fact
+            else -> null
+        }
+
     private fun <F : FactAp> mapMethodExitToReturnFlowFact(
         call: PIRCall,
         factAp: F,
