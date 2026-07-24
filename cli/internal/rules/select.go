@@ -129,3 +129,29 @@ func ApplyExclusions(ids, patterns []string) ([]string, error) {
 	}
 	return kept, nil
 }
+
+// Unmatched returns the selection patterns that match none of the given rule
+// ids, in Only-then-Exclude order. A pattern matching nothing is usually a
+// typo'd rule name, and silently ignoring it would make an exclusion look
+// effective when it never was — the caller should surface these.
+func (s Selection) Unmatched(all []string) []string {
+	var unmatched []string
+	for _, pattern := range append(append([]string{}, s.Only...), s.Exclude...) {
+		if pattern == "" {
+			continue
+		}
+		if !anyIDMatches(all, pattern) {
+			unmatched = append(unmatched, pattern)
+		}
+	}
+	return unmatched
+}
+
+func anyIDMatches(all []string, pattern string) bool {
+	for _, id := range all {
+		if matchesAny(id, []string{pattern}) {
+			return true
+		}
+	}
+	return false
+}

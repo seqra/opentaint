@@ -228,17 +228,31 @@ func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) []string {
 		if err != nil {
 			out.Fatalf("%s", err)
 		}
+		warnUnmatchedRulePatterns(rules.Selection{Exclude: cfg.ExcludeRuleID}, cfg.RuleID)
 		if cfg.ExpandRuleRefs {
 			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
 		}
 		return ids
 	}
 
-	selected, err := rules.Select(configuredRuleSelection(cfg), rulesetRoots)
+	selection := configuredRuleSelection(cfg)
+	selected, err := rules.Select(selection, rulesetRoots)
 	if err != nil {
 		out.Fatalf("%s", err)
 	}
+	if selection.Active() {
+		warnUnmatchedRulePatterns(selection, rules.ListRuleIDs(rulesetRoots))
+	}
 	return selected
+}
+
+// warnUnmatchedRulePatterns surfaces selection patterns that matched no rule.
+// A pattern matching nothing is usually a typo, and staying silent would make
+// an exclusion look effective when it never was.
+func warnUnmatchedRulePatterns(selection rules.Selection, all []string) {
+	for _, pattern := range selection.Unmatched(all) {
+		out.Warnf("Rule pattern %q matches no rule in the active ruleset", pattern)
+	}
 }
 
 // configuredRuleSelection merges the rules.only / rules.exclude lists from the
