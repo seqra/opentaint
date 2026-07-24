@@ -72,8 +72,10 @@ leave a rule that can never match. A selection that ends up matching no rules is
 an error rather than a scan that silently checks nothing — `--dry-run` reports
 it without compiling.
 
-The `--rule-id` flag overrides both lists, following the usual rule that flags
-outrank the configuration file.
+The `--rule-id` flag overrides both lists, and the `--exclude-rule-id` flag
+overrides `rules.exclude`, following the usual rule that flags outrank the
+configuration file. The two flags compose: `--rule-id` selects, then
+`--exclude-rule-id` subtracts.
 
 The per-run log file (`~/.opentaint/logs/<project>/<timestamp>.log`) always
 captures full JAR subprocess output regardless of these flags. They control

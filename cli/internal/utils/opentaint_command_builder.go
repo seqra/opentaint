@@ -450,3 +450,13 @@ func (cb *OpentaintCommandBuilder) WithBaselineStateFilter(states []string) *Ope
 	}
 	return cb
 }
+
+// WithExcludeRuleID adds repeatable --exclude-rule-id filters.
+func (cb *OpentaintCommandBuilder) WithExcludeRuleID(ruleIDs []string) *OpentaintCommandBuilder {
+	for _, id := range ruleIDs {
+		if id != "" {
+			cb.arrayFlags["exclude-rule-id"] = append(cb.arrayFlags["exclude-rule-id"], id)
+		}
+	}
+	return cb
+}

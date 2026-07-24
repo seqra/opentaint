@@ -107,6 +107,8 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--ruleset` | Rules to run: a YAML file, a directory of rules files, or `builtin` (default: `builtin`) |
 | `--dry-run` | Validate inputs and show what would run without compiling or scanning |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
+| `--rule-id` | Run only rules with this ID (repeatable) |
+| `--exclude-rule-id` | Never run rules matching this ID: full id, bare name, or glob (repeatable; overrides `rules.exclude` from the config, composes with `--rule-id`) |
 
 #### Baseline and gating flags
 

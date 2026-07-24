@@ -184,3 +184,31 @@ func TestSelectWithNoRulesFoundIsAnError(t *testing.T) {
 		t.Error("expected an error when the ruleset holds no rules at all")
 	}
 }
+
+func TestApplyExclusionsFiltersAnExplicitList(t *testing.T) {
+	ids := []string{"a.yaml:keep-me", "a.yaml:drop-me", "b.yaml:drop-me-too"}
+	got, err := ApplyExclusions(ids, []string{"drop-*"})
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if len(got) != 1 || got[0] != "a.yaml:keep-me" {
+		t.Errorf("got %v", got)
+	}
+}
+
+func TestApplyExclusionsWithNoPatternsIsIdentity(t *testing.T) {
+	ids := []string{"a.yaml:x"}
+	got, err := ApplyExclusions(ids, nil)
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if len(got) != 1 || got[0] != "a.yaml:x" {
+		t.Errorf("got %v", got)
+	}
+}
+
+func TestApplyExclusionsEmptyingTheListIsAnError(t *testing.T) {
+	if _, err := ApplyExclusions([]string{"a.yaml:x"}, []string{"**"}); err == nil {
+		t.Error("excluding every explicitly requested rule should error, not scan nothing")
+	}
+}

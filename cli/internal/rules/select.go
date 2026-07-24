@@ -136,3 +136,23 @@ func matchesPattern(id, pattern string) bool {
 	matched, err := doublestar.Match(pattern, leaf)
 	return err == nil && matched
 }
+
+// ApplyExclusions filters an explicit rule-id list (--rule-id) by exclusion
+// patterns (--exclude-rule-id), so the two flags compose instead of one
+// silently winning. Emptying the list is an error: every id in it was asked
+// for by name, so excluding them all leaves a scan that checks nothing.
+func ApplyExclusions(ids, patterns []string) ([]string, error) {
+	if len(patterns) == 0 {
+		return ids, nil
+	}
+	var kept []string
+	for _, id := range ids {
+		if !matchesAny(id, patterns) {
+			kept = append(kept, id)
+		}
+	}
+	if len(ids) > 0 && len(kept) == 0 {
+		return nil, fmt.Errorf("--exclude-rule-id excludes every rule selected by --rule-id; nothing would be scanned")
+	}
+	return kept, nil
+}
