@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.util.Cancellation
 import kotlin.random.Random
 
 class RandomGraphGenerator(
@@ -11,7 +12,7 @@ class RandomGraphGenerator(
     val accessorsSize: Int = 10,
     val operationsLimit: Int = 10,
 ) {
-    val manager = AutomataApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+    val manager = AutomataApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
 
     init {
         with(manager) {

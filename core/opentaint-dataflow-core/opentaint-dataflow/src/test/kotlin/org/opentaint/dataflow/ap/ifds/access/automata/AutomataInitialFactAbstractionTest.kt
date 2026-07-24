@@ -4,9 +4,10 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAbstractionTest
+import org.opentaint.dataflow.util.Cancellation
 
 class AutomataInitialFactAbstractionTest : InitialFactAbstractionTest() {
-    override fun mkApManager(strategy: AnyAccessorUnrollStrategy): ApManager = AutomataApManager(strategy)
+    override fun mkApManager(strategy: AnyAccessorUnrollStrategy): ApManager = AutomataApManager(strategy, Cancellation())
 
     override fun merge(fact: FinalFactAp, vararg facts: FinalFactAp): FinalFactAp {
         check(fact is AccessGraphFinalFactAp)
