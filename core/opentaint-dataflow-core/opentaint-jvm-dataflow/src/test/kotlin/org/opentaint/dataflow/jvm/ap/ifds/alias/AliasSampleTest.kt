@@ -109,6 +109,10 @@ class AliasSampleTest : BasicTestUtils() {
             fact: FactAp?,
             allRelevant: Boolean
         ): Iterable<TaintStaticFieldSource> = emptyList()
+
+        override fun selectRules(ruleIds: Set<String>) {
+            // do nothing
+        }
     }
     
     private val manager by lazy { JIRAnalysisManager(cp, RefManager(), noRules) }
