@@ -30,8 +30,8 @@ java:
 
 # Which rules the analyzer runs
 rules:
-  only: []                       # if set, only these rules run
-  exclude: [reflected-xss-*]     # these rules never run
+  only: []                                  # if set, only these rules run
+  exclude: [reflected-xss-in-servlet-app]   # these rules never run
 ```
 
 ### Available Options
@@ -54,14 +54,16 @@ are rule *selection*, not suppression: an excluded rule never runs, so it
 produces nothing in the report and nothing to review later. To hide a finding a
 rule did produce, accept it with `opentaint triage` instead.
 
-Each entry matches a full `path/to/file.yaml:rule-id`, a bare rule name, or a
-glob over either:
+Each entry matches a full `path/to/file.yaml:rule-id` exactly, a bare rule name
+exactly, or a doublestar glob over the full id — the same grammar as the
+summary command's `--rule-id` filter. Globs never match the bare name alone:
 
 ```yaml
 rules:
   only:
-    - sql-injection*             # every rule whose name starts with sql-injection
-    - java/security/**           # every rule under that directory
+    - sql-injection                        # exact rule name
+    - java/security/**                     # every rule under that directory
+    - java/security/sqli.yaml:*            # every rule in that file
   exclude:
     - reflected-xss-in-servlet-app
 ```
