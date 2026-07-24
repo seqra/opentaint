@@ -31,7 +31,7 @@ java:
 # Which rules the analyzer runs
 rules:
   only: []                                  # if set, only these rules run
-  exclude: [reflected-xss-in-servlet-app]   # these rules never run
+  exclude: [cookie-missing-httponly]                # these rules never run
 ```
 
 ### Available Options
@@ -65,8 +65,11 @@ rules:
     - java/security/**                     # every rule under that directory
     - java/security/sqli.yaml:*            # every rule in that file
   exclude:
-    - reflected-xss-in-servlet-app
+    - cookie-missing-httponly
 ```
+
+A pattern that matches no rule in the active ruleset produces a warning, so a
+typo'd exclusion cannot silently look effective.
 
 `exclude` is applied after `only`. A library rule that a selected rule joins
 against is always kept, even if a pattern excluded it, since dropping it would

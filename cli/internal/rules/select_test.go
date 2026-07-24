@@ -212,3 +212,22 @@ func TestApplyExclusionsEmptyingTheListIsAnError(t *testing.T) {
 		t.Error("excluding every explicitly requested rule should error, not scan nothing")
 	}
 }
+
+func TestUnmatchedReportsPatternsThatSelectNothing(t *testing.T) {
+	all := []string{"a.yaml:keep-me", "java/security/sqli.yaml:sql-injection"}
+	sel := Selection{
+		Only:    []string{"keep-me", "no-such-rule"},
+		Exclude: []string{"java/**", "typo-*"},
+	}
+	got := sel.Unmatched(all)
+	if len(got) != 2 || got[0] != "no-such-rule" || got[1] != "typo-*" {
+		t.Errorf("got %v, want [no-such-rule typo-*]", got)
+	}
+}
+
+func TestUnmatchedIsEmptyWhenEverythingMatches(t *testing.T) {
+	all := []string{"a.yaml:x"}
+	if got := (Selection{Exclude: []string{"x"}}).Unmatched(all); got != nil {
+		t.Errorf("got %v, want nil", got)
+	}
+}
