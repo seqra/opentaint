@@ -76,6 +76,7 @@ sealed class Accessor : Comparable<Accessor> {
             ElementAccessor, FinalAccessor, AnyAccessor, ValueAccessor, TypeInfoGroupAccessor -> 0 // Definitely equal
             is FieldAccessor -> this.compareToFieldAccessor(other as FieldAccessor)
             is TaintMarkAccessor -> this.compareToTaintMarkAccessor(other as TaintMarkAccessor)
+            is DeepMarkExclusion -> this.compareToDeepMarkExclusion(other as DeepMarkExclusion)
             is ClassStaticAccessor -> this.compareToClassStaticAccessor(other as ClassStaticAccessor)
             is TypeInfoAccessor -> this.compareToTypeInfoAccessor(other as TypeInfoAccessor)
         }
@@ -91,6 +92,18 @@ data class TaintMarkAccessor(val mark: String): Accessor(), AbstractionAlwaysUnr
     fun compareToTaintMarkAccessor(other: TaintMarkAccessor): Int {
         return mark.compareTo(other.mark)
     }
+}
+
+/**
+ * Exclusion-set-only accessor: "[mark] is excluded at every depth >= 2 under the fact's base"
+ */
+data class DeepMarkExclusion(val mark: String) : Accessor() {
+    override fun toSuffix(): String = "!*[$mark]"
+    override fun toString(): String = toSuffix()
+
+    override val accessorClassId: Int = 9
+
+    fun compareToDeepMarkExclusion(other: DeepMarkExclusion): Int = mark.compareTo(other.mark)
 }
 
 data class FieldAccessor(
