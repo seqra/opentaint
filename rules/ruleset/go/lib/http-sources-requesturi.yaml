@@ -2,6 +2,8 @@ rules:
   - id: http-sources-requesturi
     options:
       lib: true
+    tags:
+      - request-uri-untrusted-data-source
     severity: NOTE
     message: Untrusted request URI source
     metadata:

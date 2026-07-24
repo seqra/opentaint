@@ -2,6 +2,8 @@ rules:
   - id: http-sources
     options:
       lib: true
+    tags:
+      - http-untrusted-data-source
     severity: NOTE
     message: Untrusted user input originates here
     metadata:

@@ -2,6 +2,8 @@ rules:
   - id: http-sources-header-index
     options:
       lib: true
+    tags:
+      - beego-header-untrusted-data-source
     severity: NOTE
     message: Untrusted beego request-header value source
     metadata:

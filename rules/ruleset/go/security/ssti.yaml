@@ -48,7 +48,7 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#http-sources
+        - tag: http-untrusted-data-source
           as: src
         - tag: ssti-sink
           as: sink
