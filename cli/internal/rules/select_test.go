@@ -94,8 +94,8 @@ func TestSelectWithNeitherListReturnsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	if got != nil {
-		t.Errorf("got %v, want nil: with no lists the analyzer runs every rule", got)
+	if got.Include != nil || got.Exclude != nil {
+		t.Errorf("got %+v, want zero: with no lists the analyzer runs every rule", got)
 	}
 }
 
@@ -107,12 +107,14 @@ func TestSelectOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	if len(got) != 1 || got[0] != "a.yaml:keep-me" {
-		t.Errorf("got %v", got)
+	if len(got.Include) != 1 || got.Include[0] != "a.yaml:keep-me" || len(got.Exclude) != 0 {
+		t.Errorf("got %+v", got)
 	}
 }
 
-func TestSelectExclude(t *testing.T) {
+func TestSelectExcludeResolvesToConcreteExcludedIDs(t *testing.T) {
+	// Exclusion alone must NOT expand into a giant inclusion list: the analyzer
+	// has --semgrep-rule-id-exclude, so only the excluded ids are passed.
 	root := ruleset(t, map[string]string{
 		"a.yaml": "rules:\n  - id: keep-me\n  - id: drop-me\n",
 	})
@@ -120,8 +122,11 @@ func TestSelectExclude(t *testing.T) {
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	if len(got) != 1 || got[0] != "a.yaml:keep-me" {
-		t.Errorf("got %v", got)
+	if len(got.Include) != 0 {
+		t.Errorf("no inclusion list expected, got %v", got.Include)
+	}
+	if len(got.Exclude) != 1 || got.Exclude[0] != "a.yaml:drop-me" {
+		t.Errorf("got %v, want the one excluded id", got.Exclude)
 	}
 }
 
@@ -133,8 +138,8 @@ func TestSelectExcludeAppliesAfterOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	if len(got) != 1 || got[0] != "a.yaml:sqli-one" {
-		t.Errorf("got %v", got)
+	if len(got.Include) != 1 || got.Include[0] != "a.yaml:sqli-one" {
+		t.Errorf("got %+v", got)
 	}
 }
 
@@ -147,25 +152,28 @@ func TestSelectPullsInReferencedRules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	sort.Strings(got)
-	if len(got) != 2 || got[1] != "security/sqli.yaml:sql-injection" || got[0] != "lib/sources.yaml:servlet-source" {
-		t.Errorf("got %v, want the rule plus the library rule it joins", got)
+	sort.Strings(got.Include)
+	if len(got.Include) != 2 || got.Include[1] != "security/sqli.yaml:sql-injection" || got.Include[0] != "lib/sources.yaml:servlet-source" {
+		t.Errorf("got %+v, want the rule plus the library rule it joins", got)
 	}
 }
 
-func TestSelectReAddsAnExcludedRuleThatSurvivorsNeed(t *testing.T) {
-	// Excluding a library rule that a kept rule joins against would produce a
-	// rule that cannot match anything. Reference expansion brings it back.
+func TestSelectOnlyReAddsAnExcludedRuleThatSurvivorsNeed(t *testing.T) {
+	// On the inclusion path, excluding a library rule that a kept rule joins
+	// against would produce a rule that cannot match anything. Reference
+	// expansion brings it back. (On the exclusion-only path the analyzer
+	// resolves join refs past the exclusion itself, covered by the jar-side
+	// RuleIdExcludeTest.)
 	root := ruleset(t, map[string]string{
 		"security/sqli.yaml": "rules:\n  - id: sql-injection\n    join:\n      refs:\n        - rule: lib/sources.yaml#servlet-source\n",
 		"lib/sources.yaml":   "rules:\n  - id: servlet-source\n",
 	})
-	got, err := Select(Selection{Exclude: []string{"lib/**"}}, []string{root})
+	got, err := Select(Selection{Only: []string{"**"}, Exclude: []string{"lib/**"}}, []string{root})
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	if len(got) != 2 {
-		t.Errorf("got %v, want the excluded library rule restored", got)
+	if len(got.Include) != 2 {
+		t.Errorf("got %+v, want the excluded library rule restored", got)
 	}
 }
 

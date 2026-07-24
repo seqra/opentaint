@@ -210,20 +210,24 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 	return b
 }
 
-// resolveRuleIDs determines which rules the analyzer should run.
+// resolveRuleIDs determines which rules the analyzer should run, as exact
+// inclusion and exclusion ids (patterns never reach the analyzer).
 //
 // --rule-id wins over the config lists, as flags do everywhere else; honoring
 // a flag and rules.only together would silently intersect two selections the
 // user never asked to combine. --exclude-rule-id overrides rules.exclude the
 // same way, and composes with --rule-id since both were asked for explicitly.
-// Returns nil when nothing restricts the rules, which runs the whole ruleset.
-func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) []string {
+// Returns the zero value when nothing restricts the rules, which runs the
+// whole ruleset.
+func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolved {
 	var rulesetRoots []string
 	for _, r := range absRuleSetPaths {
 		rulesetRoots = append(rulesetRoots, r.Path)
 	}
 
 	if len(cfg.RuleID) > 0 {
+		// The explicit list is small, so exclusions are subtracted right here
+		// and the analyzer sees only the survivors.
 		ids, err := rules.ApplyExclusions(cfg.RuleID, cfg.ExcludeRuleID)
 		if err != nil {
 			out.Fatalf("%s", err)
@@ -232,7 +236,7 @@ func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) []string {
 		if cfg.ExpandRuleRefs {
 			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
 		}
-		return ids
+		return rules.Resolved{Include: ids}
 	}
 
 	selection := configuredRuleSelection(cfg)
@@ -404,7 +408,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	// Resolve the active rules before the dry-run bail-out, so that a bad
 	// rules.only/rules.exclude list is reported by --dry-run and never after a
 	// full compile.
-	ruleIDs := resolveRuleIDs(cfg, absRuleSetPaths)
+	resolvedRules := resolveRuleIDs(cfg, absRuleSetPaths)
 
 	if cfg.DryRun {
 		runDryRun("the build and scan")
@@ -497,8 +501,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if maxMemory != "" {
 		nativeBuilder.SetMaxMemory(maxMemory)
 	}
-	for _, ruleID := range ruleIDs {
+	for _, ruleID := range resolvedRules.Include {
 		nativeBuilder.AddRuleID(ruleID)
+	}
+	for _, ruleID := range resolvedRules.Exclude {
+		nativeBuilder.AddRuleIDExclude(ruleID)
 	}
 	addPassthroughApproximations(nativeBuilder, cfg.PassthroughApproximations)
 	if cfg.TrackExternalMethods {

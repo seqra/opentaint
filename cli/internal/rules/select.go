@@ -65,41 +65,57 @@ func isRuleFile(path string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// Select resolves a Selection against the ruleset roots and returns the rule ids
-// to pass to the analyzer, or nil when the selection restricts nothing (in which
-// case the analyzer runs every rule, as it always has).
+// Resolved is a rule selection lowered to the exact ids the analyzer accepts:
+// Include feeds --semgrep-rule-id (empty = run everything), Exclude feeds
+// --semgrep-rule-id-exclude. Patterns never reach the analyzer.
+type Resolved struct {
+	Include []string
+	Exclude []string
+}
+
+// Select resolves a Selection against the ruleset roots.
 //
-// The analyzer only supports inclusion, so an exclusion list is applied by
-// enumerating every rule and subtracting. Rules referenced by the survivors are
-// then pulled back in: a rule whose joined library rule was excluded could never
-// match anything, which is a silently broken scan rather than a narrower one.
-func Select(selection Selection, roots []string) ([]string, error) {
+// An exclusion-only selection resolves to just the excluded ids — excluding
+// one rule passes one exclusion arg, not the 150-rule complement. When an
+// allow-list is present the inclusion list is unavoidable (the analyzer
+// matches exact ids), so exclusions are subtracted from it CLI-side and rules
+// referenced by the survivors are pulled back in: a rule whose joined library
+// rule was excluded could never match anything, which is a silently broken
+// scan rather than a narrower one. On the exclusion side the analyzer itself
+// resolves join refs past exclusions, so no such repair is needed.
+func Select(selection Selection, roots []string) (Resolved, error) {
 	if !selection.Active() {
-		return nil, nil
+		return Resolved{}, nil
 	}
 
 	all := ListRuleIDs(roots)
 	if len(all) == 0 {
-		return nil, fmt.Errorf("rules.only/rules.exclude are configured but no rules were found in the ruleset")
+		return Resolved{}, fmt.Errorf("rules.only/rules.exclude are configured but no rules were found in the ruleset")
 	}
 
-	var kept []string
+	var kept, excluded []string
 	for _, id := range all {
 		if len(selection.Only) > 0 && !matchesAny(id, selection.Only) {
 			continue
 		}
 		if matchesAny(id, selection.Exclude) {
+			excluded = append(excluded, id)
 			continue
 		}
 		kept = append(kept, id)
 	}
 	if len(kept) == 0 {
-		return nil, fmt.Errorf("rules.only/rules.exclude select no rules at all; nothing would be scanned")
+		return Resolved{}, fmt.Errorf("rules.only/rules.exclude select no rules at all; nothing would be scanned")
+	}
+
+	if len(selection.Only) == 0 {
+		sort.Strings(excluded)
+		return Resolved{Exclude: excluded}, nil
 	}
 
 	expanded := ExpandRuleIDs(kept, roots)
 	sort.Strings(expanded)
-	return expanded, nil
+	return Resolved{Include: expanded}, nil
 }
 
 // matchesAny delegates to the one rule-id grammar (sarif.MatchesRuleID), so a
