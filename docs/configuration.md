@@ -71,11 +71,13 @@ rules:
 A pattern that matches no rule in the active ruleset produces a warning, so a
 typo'd exclusion cannot silently look effective.
 
-`exclude` is applied after `only`. A library rule that a selected rule joins
-against is always kept, even if a pattern excluded it, since dropping it would
-leave a rule that can never match. A selection that ends up matching no rules is
-an error rather than a scan that silently checks nothing — `--dry-run` reports
-it without compiling.
+`exclude` is applied after `only`. An exclusion-only list is passed to the
+analyzer as the excluded rule ids themselves — excluding one rule adds one
+argument, not the whole ruleset's complement. A library rule that a selected
+rule joins against always keeps working, even if a pattern excluded it, since
+dropping it would leave a rule that can never match. A selection that ends up
+matching no rules is an error rather than a scan that silently checks
+nothing — `--dry-run` reports it without compiling.
 
 The `--rule-id` flag overrides both lists, and the `--exclude-rule-id` flag
 overrides `rules.exclude`, following the usual rule that flags outrank the
