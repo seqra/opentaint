@@ -108,7 +108,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--dry-run` | Validate inputs and show what would run without compiling or scanning |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
 | `--rule-id` | Run only rules with this ID (repeatable) |
-| `--exclude-rule-id` | Never run rules matching this ID: full id, bare name, or glob (repeatable; overrides `rules.exclude` from the config, composes with `--rule-id`) |
+| `--exclude-rule-id` | Never run rules matching this ID: full id, bare name, or glob over the full id — the same matching as summary's `--rule-id` filter (repeatable; overrides `rules.exclude` from the config, composes with `--rule-id`) |
 
 #### Baseline and gating flags
 

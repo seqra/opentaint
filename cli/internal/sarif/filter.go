@@ -161,13 +161,17 @@ func ruleLeaf(id string) string {
 	return id
 }
 
-// matchRuleID reports whether the result's rule-id matches any supplied value as
-// a full-id exact match, a leaf exact match, or a doublestar glob over the full id.
+// matchRuleID reports whether the result's rule-id matches any supplied value.
 func matchRuleID(r *Result, values []string) bool {
-	if r.RuleID == nil {
-		return false
-	}
-	full := *r.RuleID
+	return r.RuleID != nil && MatchesRuleID(*r.RuleID, values)
+}
+
+// MatchesRuleID reports whether a rule id matches any supplied value as a
+// full-id exact match, a leaf exact match, or a doublestar glob over the full
+// id — globs deliberately never match the bare leaf. This is the one rule-id
+// grammar: summary's --rule-id filter and scan's rules.only/rules.exclude and
+// --exclude-rule-id selection all use it.
+func MatchesRuleID(full string, values []string) bool {
 	leaf := ruleLeaf(full)
 	for _, v := range values {
 		// skip blank values (cobra StringArrayVar can yield them) so an empty

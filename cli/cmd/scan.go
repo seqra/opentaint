@@ -157,7 +157,7 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob (repeatable; overrides rules.exclude from the config)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob over the full id (repeatable; overrides rules.exclude from the config)")
 }
 
 func addScanFlags(cmd *cobra.Command) {

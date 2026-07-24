@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bmatcuk/doublestar/v4"
+	"github.com/seqra/opentaint/internal/sarif"
 	"gopkg.in/yaml.v2"
 )
 
@@ -102,39 +102,12 @@ func Select(selection Selection, roots []string) ([]string, error) {
 	return expanded, nil
 }
 
+// matchesAny delegates to the one rule-id grammar (sarif.MatchesRuleID), so a
+// pattern behaves identically in rules.only/rules.exclude, --exclude-rule-id,
+// and summary's --rule-id filter: exact full "path.yaml:id", exact bare name,
+// or a doublestar glob over the full id.
 func matchesAny(id string, patterns []string) bool {
-	for _, p := range patterns {
-		if matchesPattern(id, p) {
-			return true
-		}
-	}
-	return false
-}
-
-// matchesPattern matches a rule id as a full "path.yaml:id", as a bare leaf
-// name, or as a doublestar glob over either. Globbing the leaf as well as the
-// full id is what makes the natural "sqli-*" work; matching only the full id
-// would silently select nothing, since the leaf never contains the path.
-func matchesPattern(id, pattern string) bool {
-	pattern = strings.TrimSpace(pattern)
-	if pattern == "" {
-		return false
-	}
-	if id == pattern {
-		return true
-	}
-	if matched, err := doublestar.Match(pattern, id); err == nil && matched {
-		return true
-	}
-	_, leaf, ok := splitRuleID(id)
-	if !ok {
-		return false
-	}
-	if leaf == pattern {
-		return true
-	}
-	matched, err := doublestar.Match(pattern, leaf)
-	return err == nil && matched
+	return sarif.MatchesRuleID(id, patterns)
 }
 
 // ApplyExclusions filters an explicit rule-id list (--rule-id) by exclusion

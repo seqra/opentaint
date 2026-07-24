@@ -66,24 +66,24 @@ func TestListRuleIDsMergesRoots(t *testing.T) {
 	}
 }
 
-func TestMatchesPattern(t *testing.T) {
+func TestMatchesAnyUsesTheSummaryRuleIDGrammar(t *testing.T) {
 	const id = "java/security/sqli.yaml:sql-injection"
 	cases := []struct {
 		pattern string
 		want    bool
 	}{
 		{"java/security/sqli.yaml:sql-injection", true}, // full id
-		{"sql-injection", true},                         // leaf
-		{"java/security/**", true},                      // glob over the path
-		{"sql-*", true},                                 // glob over the leaf
+		{"sql-injection", true},                         // exact leaf
+		{"java/security/**", true},                      // glob over the full id
 		{"java/**/sqli.yaml:*", true},
+		{"sql-*", false}, // globs match the FULL id only, same as summary --rule-id
 		{"sql-injection-jdbc", false},
 		{"go/**", false},
 		{"", false},
 	}
 	for _, tc := range cases {
-		if got := matchesPattern(id, tc.pattern); got != tc.want {
-			t.Errorf("matchesPattern(%q, %q) = %v, want %v", id, tc.pattern, got, tc.want)
+		if got := matchesAny(id, []string{tc.pattern}); got != tc.want {
+			t.Errorf("matchesAny(%q, [%q]) = %v, want %v", id, tc.pattern, got, tc.want)
 		}
 	}
 }
@@ -129,7 +129,7 @@ func TestSelectExcludeAppliesAfterOnly(t *testing.T) {
 	root := ruleset(t, map[string]string{
 		"a.yaml": "rules:\n  - id: sqli-one\n  - id: sqli-two\n  - id: xss\n",
 	})
-	got, err := Select(Selection{Only: []string{"sqli-*"}, Exclude: []string{"sqli-two"}}, []string{root})
+	got, err := Select(Selection{Only: []string{"a.yaml:sqli-*"}, Exclude: []string{"sqli-two"}}, []string{root})
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestSelectWithNoRulesFoundIsAnError(t *testing.T) {
 
 func TestApplyExclusionsFiltersAnExplicitList(t *testing.T) {
 	ids := []string{"a.yaml:keep-me", "a.yaml:drop-me", "b.yaml:drop-me-too"}
-	got, err := ApplyExclusions(ids, []string{"drop-*"})
+	got, err := ApplyExclusions(ids, []string{"*:drop-*"})
 	if err != nil {
 		t.Fatalf("apply: %v", err)
 	}
