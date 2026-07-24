@@ -57,7 +57,7 @@ rules:
           as: src
         - rule: go/lib/http-sources-header-index.yaml#http-sources-header-index
           as: extra_header
-        - rule: go/lib/cmdi-sinks.yaml#cmdi-sinks
+        - tag: command-injection-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

@@ -54,7 +54,7 @@ rules:
           as: extra_requesturi
         - rule: go/lib/http-sources-header-index.yaml#http-sources-header-index
           as: extra_header
-        - rule: go/lib/sql-sinks.yaml#sql-sinks
+        - tag: sqli-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

@@ -2,6 +2,8 @@ rules:
   - id: cmdi-sinks
     options:
       lib: true
+    tags:
+      - command-injection-sink
     severity: NOTE
     message: Untrusted data reaches an OS command execution API
     metadata:

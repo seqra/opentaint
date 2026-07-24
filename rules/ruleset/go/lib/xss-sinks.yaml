@@ -2,6 +2,8 @@ rules:
   - id: xss-sinks
     options:
       lib: true
+    tags:
+      - xss-sink
     severity: NOTE
     message: Untrusted data reaches an HTTP response write API
     metadata:

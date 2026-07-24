@@ -2,6 +2,8 @@ rules:
   - id: sql-sinks
     options:
       lib: true
+    tags:
+      - sqli-sink
     severity: NOTE
     message: Untrusted data reaches a SQL execution API
     metadata:

@@ -57,7 +57,7 @@ rules:
       refs:
         - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/ssrf-sinks.yaml#ssrf-sinks
+        - tag: ssrf-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

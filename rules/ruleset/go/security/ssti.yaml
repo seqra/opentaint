@@ -50,7 +50,7 @@ rules:
       refs:
         - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/ssti-sinks.yaml#ssti-sinks
+        - tag: ssti-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

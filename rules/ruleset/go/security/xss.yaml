@@ -50,7 +50,7 @@ rules:
       refs:
         - rule: go/lib/http-sources.yaml#http-sources
           as: src
-        - rule: go/lib/xss-sinks.yaml#xss-sinks
+        - tag: xss-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

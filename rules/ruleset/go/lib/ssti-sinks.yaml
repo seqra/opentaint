@@ -2,6 +2,8 @@ rules:
   - id: ssti-sinks
     options:
       lib: true
+    tags:
+      - ssti-sink
     severity: NOTE
     message: Untrusted data reaches a template-source parse API
     metadata:

@@ -2,6 +2,8 @@ rules:
   - id: ssrf-sinks
     options:
       lib: true
+    tags:
+      - ssrf-sink
     severity: NOTE
     message: Untrusted data reaches an outbound HTTP request API
     metadata:
