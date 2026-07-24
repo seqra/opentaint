@@ -36,6 +36,7 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
+	ExcludeRuleID             []string
 	PassthroughApproximations []string
 	DataflowApproximations    []string
 	TrackExternalMethods      bool
@@ -156,6 +157,7 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob (repeatable; overrides rules.exclude from the config)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -193,6 +195,7 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleset(cfg.Ruleset).
 		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
 		WithRuleID(cfg.RuleID).
+		WithExcludeRuleID(cfg.ExcludeRuleID).
 		WithPassthroughApproximations(cfg.PassthroughApproximations).
 		WithDataflowApproximations(cfg.DataflowApproximations).
 		WithTrackExternalMethods(cfg.TrackExternalMethods).
@@ -207,10 +210,12 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 	return b
 }
 
-// resolveRuleIDs determines which rules the analyzer should run: the --rule-id
-// flag when given, otherwise the configured rules.only / rules.exclude lists.
-// The flag wins over the config file, as it does everywhere else; honoring both
-// would silently intersect two selections the user never asked to combine.
+// resolveRuleIDs determines which rules the analyzer should run.
+//
+// --rule-id wins over the config lists, as flags do everywhere else; honoring
+// a flag and rules.only together would silently intersect two selections the
+// user never asked to combine. --exclude-rule-id overrides rules.exclude the
+// same way, and composes with --rule-id since both were asked for explicitly.
 // Returns nil when nothing restricts the rules, which runs the whole ruleset.
 func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) []string {
 	var rulesetRoots []string
@@ -219,26 +224,35 @@ func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) []string {
 	}
 
 	if len(cfg.RuleID) > 0 {
-		if cfg.ExpandRuleRefs {
-			return rules.ExpandRuleIDs(cfg.RuleID, rulesetRoots)
+		ids, err := rules.ApplyExclusions(cfg.RuleID, cfg.ExcludeRuleID)
+		if err != nil {
+			out.Fatalf("%s", err)
 		}
-		return cfg.RuleID
+		if cfg.ExpandRuleRefs {
+			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
+		}
+		return ids
 	}
 
-	selected, err := rules.Select(configuredRuleSelection(), rulesetRoots)
+	selected, err := rules.Select(configuredRuleSelection(cfg), rulesetRoots)
 	if err != nil {
 		out.Fatalf("%s", err)
 	}
 	return selected
 }
 
-// configuredRuleSelection reads the rules.only / rules.exclude allow and deny
-// lists from the configuration file.
-func configuredRuleSelection() rules.Selection {
-	return rules.Selection{
+// configuredRuleSelection merges the rules.only / rules.exclude lists from the
+// configuration file with the --exclude-rule-id flag, which overrides the
+// configured exclude list when set.
+func configuredRuleSelection(cfg ScanConfig) rules.Selection {
+	selection := rules.Selection{
 		Only:    globals.Config.Rules.Only,
 		Exclude: globals.Config.Rules.Exclude,
 	}
+	if len(cfg.ExcludeRuleID) > 0 {
+		selection.Exclude = cfg.ExcludeRuleID
+	}
+	return selection
 }
 
 func isDefaultSeverity(sev []string) bool {
