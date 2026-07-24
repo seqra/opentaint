@@ -78,6 +78,10 @@ private class ResolvedCall(val methods: Map<JIRMethod, ResolvedCallMethod>?) {
 }
 
 private class NestedCallInstEvalCtx(val call: Stmt.Call, val ctx: ContextInfo) : InstEvalContext {
+    // A well-formed resolution never asks for an argument the call does not have:
+    // resolveCallNoCache only inlines callees whose arity matches call.args, so
+    // every JIRArgument index the callee's body references is in range. If this
+    // fails, the resolution invariant upstream was violated -- surface it.
     override fun createArg(idx: Int): Value = call.args.getOrNull(idx)
         ?: error("Incorrect argument idx: $idx")
 
@@ -92,6 +96,16 @@ private fun resolveCallNoCache(stmt: Stmt.Call, ctx: ContextInfo, callResolver: 
         ?: return ResolvedCall.empty
 
     val resolvedCall = methods.mapIndexedNotNull { idx, method ->
+        // Never inline a callee that declares more parameters than the call site
+        // provides: mapping its parameters onto call.args would read arguments the
+        // call never passed (createArg would index past call.args). This happens
+        // when a call site resolves to a method that is not its real callee -- an
+        // `invokedynamic` such as a record's auto-generated equals/hashCode/toString
+        // resolves to its bootstrap method java.lang.runtime.ObjectMethods.bootstrap,
+        // which declares 6 parameters while the dynamic call site supplies one.
+        // Treat such a call as opaque for alias analysis instead of crashing.
+        if (method.parameters.size > stmt.args.size) return@mapIndexedNotNull null
+
         val graph = callResolver.buildMethodGraph(method)
             ?: return@mapIndexedNotNull null
 

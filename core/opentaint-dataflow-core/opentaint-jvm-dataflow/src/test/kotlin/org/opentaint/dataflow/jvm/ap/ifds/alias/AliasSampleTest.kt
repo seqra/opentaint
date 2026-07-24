@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
@@ -577,6 +578,25 @@ class AliasSampleTest : BasicTestUtils() {
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
     }
 
+    @Test
+    fun `record invokedynamic bootstrap does not overflow alias arg mapping`() {
+        val method = findMethod(RECORD_SAMPLE, "recordHashCodeInlined")
+
+        // depth 2: recordHashCodeInlined (level 0) -> Payload.hashCode() (level 1)
+        // -> ObjectMethods.bootstrap (level 2). The record method lowers to an
+        // invokedynamic whose bootstrap declares 6 parameters, while the dynamic
+        // call site supplies 1. Querying an alias runs the full computation, which
+        // inlines that chain. Without the arity guard in resolveCallNoCache the
+        // nested-call arg mapping indexes past call.args and throws
+        // IllegalStateException("Incorrect argument idx"); with it the bootstrap
+        // call is skipped as opaque and the analysis completes.
+        assertDoesNotThrow {
+            val aa = aaForMethodKnowingObjectMethods(method, depth = 2)
+            val sink = method.findSinkCall("sinkOneValue")
+            aa.sinkArgApAliases(sink)
+        }
+    }
+
     private fun aaForMethod(
         method: JIRMethod,
         params: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params()
@@ -590,6 +610,29 @@ class AliasSampleTest : BasicTestUtils() {
         val cancellation = Cancellation().also { it.activate() }
 
         return JIRLocalAliasAnalysis(ep, graph, callResolver, noRules, localReachability, cancellation, manager, params)
+    }
+
+    private fun aaForMethodKnowingObjectMethods(method: JIRMethod, depth: Int): JIRLocalAliasAnalysis {
+        val ep = method.instList.first()
+        val usages = runBlocking { cp.usagesExt() }
+        val graph = JApplicationGraphImpl(cp, usages)
+
+        // Treat both the sample location and java.lang.runtime.ObjectMethods as
+        // known so the record method AND its invokedynamic bootstrap resolve to
+        // inlinable graphs -- reproducing the condition under which the crash
+        // occurred (a production model where the bootstrap method was resolvable).
+        val sampleLoc = method.enclosingClass.declaration.location
+        val objectMethodsLoc =
+            cp.findClassOrNull("java.lang.runtime.ObjectMethods")?.declaration?.location
+        val knownLocs = setOfNotNull(sampleLoc, objectMethodsLoc)
+
+        val callResolver = JIRCallResolver(cp, MultiLocationUnit(knownLocs))
+        val localReachability = JIRLocalVariableReachability(method, graph, manager)
+        val cancellation = Cancellation().also { it.activate() }
+
+        return JIRLocalAliasAnalysis(
+            ep, graph, callResolver, noRules, localReachability, cancellation, manager, interProcParams(depth)
+        )
     }
 
     private fun interProcParams(depth: Int) =
@@ -631,6 +674,13 @@ class AliasSampleTest : BasicTestUtils() {
         override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc != this.loc
     }
 
+    private class MultiLocationUnit(val locs: Set<RegisteredLocation>) : JIRUnitResolver {
+        override fun resolve(method: JIRMethod): UnitType =
+            if (method.enclosingClass.declaration.location in locs) SingletonUnit else UnknownUnit
+
+        override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc !in locs
+    }
+
     companion object {
         const val ALIAS_SAMPLE_PKG = "sample.alias"
         const val SIMPLE_SAMPLE = "$ALIAS_SAMPLE_PKG.SimpleAliasSample"
@@ -639,6 +689,7 @@ class AliasSampleTest : BasicTestUtils() {
         const val INTERPROC_SAMPLE = "$ALIAS_SAMPLE_PKG.InterProcAliasSample"
         const val FLAKY_SAMPLE = "$ALIAS_SAMPLE_PKG.FlakyAliasSample"
         const val HEADER_VALUES_SAMPLE = "sample.alias.HeaderValuesHangSample"
+        const val RECORD_SAMPLE = "$ALIAS_SAMPLE_PKG.RecordAliasSample"
 
         private const val FIELD_VALUE = "value"
         private const val FIELD_BOX = "box"
