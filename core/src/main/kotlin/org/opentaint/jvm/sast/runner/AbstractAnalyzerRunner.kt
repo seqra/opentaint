@@ -29,7 +29,7 @@ abstract class AbstractAnalyzerRunner : CliWithLogger() {
 
     protected val ifdsApMode: ApMode by option(help = "IFDS Ap mode")
         .choice(ApMode.entries.associateBy { it.name })
-        .default(ApMode.Tree)
+        .default(ApMode.SuffixTree)
 
     private val debugTaintRulesStats: Boolean by
         option(help = "Enable reporting stats about analyzer steps per taint rule")

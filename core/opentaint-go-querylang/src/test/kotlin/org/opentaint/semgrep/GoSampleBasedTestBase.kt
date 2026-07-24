@@ -144,7 +144,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = ApMode.Tree
+            ifdsApMode = ApMode.SuffixTree
         )
 
         val analyzer = object : TaintAnalyzer<GoIRFunction, GoIRInst>(options) {

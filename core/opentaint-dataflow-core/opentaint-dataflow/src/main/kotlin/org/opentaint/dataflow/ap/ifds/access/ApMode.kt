@@ -16,7 +16,7 @@ enum class ApMode {
     }
 
     companion object {
-        fun fromTestProperty(default: ApMode = Tree): ApMode {
+        fun fromTestProperty(default: ApMode = SuffixTree): ApMode {
             val raw = System.getProperty("opentaint.test.apMode") ?: return default
             return entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
                 ?: error("Unknown opentaint.test.apMode='$raw'; expected one of ${entries.map { it.name }}")

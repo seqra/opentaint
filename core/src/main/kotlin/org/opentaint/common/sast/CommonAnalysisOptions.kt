@@ -16,7 +16,7 @@ data class CommonAnalysisOptions(
     val semgrepRuleId: List<String> = emptyList(),
     val trackExternalMethods: Boolean = false,
     val ifdsAnalysisTimeout: Duration = Duration.ZERO,
-    val ifdsApMode: ApMode = ApMode.Tree,
+    val ifdsApMode: ApMode = ApMode.SuffixTree,
     val debugOptions: DebugOptions? = null,
     val sarifGenerationOptions: SarifGenerationOptions = SarifGenerationOptions(),
     val cwe: List<Int> = emptyList(),
