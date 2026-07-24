@@ -32,8 +32,8 @@ class GoSemgrepRuleProvider(
         base.sinkRulesForCall(signature).select().toList()
 
     override fun passThroughRulesForCall(signature: GoFunctionSignature) =
-        base.passThroughRulesForCall(signature).select().toList()
+        base.passThroughRulesForCall(signature)
 
     override fun cleanerRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =
-        base.cleanerRulesForCall(signature, allRelevant).select().toList()
+        base.cleanerRulesForCall(signature, allRelevant)
 }

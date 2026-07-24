@@ -46,11 +46,14 @@ class GoTaintAnalysisContext(
         statement: GoIRInst,
         callExpr: GoCallExpr,
         returnValue: GoIRValue?,
-    ): List<RuleWithCondition<TaintRule.Cleaner>> = prepareCallStatementRules(
-        taintConfig.cleanerRulesForCall(signature, allRelevant = true),
-        TaintRule.Cleaner::condition,
-        statement, callExpr, returnValue,
-    )
+    ): List<RuleWithCondition<TaintRule.Cleaner>> {
+        if (phase is Phase.Prescan) return emptyList()
+        return prepareCallStatementRules(
+            taintConfig.cleanerRulesForCall(signature, allRelevant = true),
+            TaintRule.Cleaner::condition,
+            statement, callExpr, returnValue,
+        )
+    }
 
     fun sourceRulesForCallStatement(
         signature: GoFunctionSignature,
