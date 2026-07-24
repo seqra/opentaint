@@ -29,7 +29,8 @@ interface MethodSideEffectSummaryHandler {
         summaryEffect: SummaryEdgeApplication,
         kind: SideEffectKind
     ): Set<Sequent> = handleSummary(summaryEffect, kind) { ex, k ->
-        Sequent.FactSideEffect(currentInitialFactAp.replaceExclusions(ex), k)
+        val refined = ex.withDeepExclusion(currentInitialFactAp.exclusions.deepExclusion())
+        Sequent.FactSideEffect(currentInitialFactAp.replaceExclusions(refined), k)
     }
 
     fun handleSummary(
