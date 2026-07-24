@@ -20,16 +20,16 @@ class GoSemgrepRuleProvider(
     override fun selectRules(ruleIds: Set<String>) = selectRelevantSemgrepRules(ruleIds)
 
     override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature) =
-        base.sourceRulesForGlobal(signature).select().toList()
+        base.sourceRulesForGlobal(signature).select(allRelevant = false).toList()
 
     override fun sourceRulesForFieldRead(signature: GoFieldSignature) =
-        base.sourceRulesForFieldRead(signature).select().toList()
+        base.sourceRulesForFieldRead(signature).select(allRelevant = false).toList()
 
     override fun sourceRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =
-        base.sourceRulesForCall(signature, allRelevant).select().toList()
+        base.sourceRulesForCall(signature, allRelevant).select(allRelevant).toList()
 
     override fun sinkRulesForCall(signature: GoFunctionSignature) =
-        base.sinkRulesForCall(signature).select().toList()
+        base.sinkRulesForCall(signature).select(allRelevant = false).toList()
 
     override fun passThroughRulesForCall(signature: GoFunctionSignature) =
         base.passThroughRulesForCall(signature)

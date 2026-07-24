@@ -51,34 +51,34 @@ class JIRSemgrepRuleProvider(
         method: CommonMethod,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.entryPointRulesForMethod(method, fact, allRelevant).select()
+    ) = base.entryPointRulesForMethod(method, fact, allRelevant).select(allRelevant)
 
     override fun sourceRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.sourceRulesForMethod(method, statement, fact, allRelevant).select()
+    ) = base.sourceRulesForMethod(method, statement, fact, allRelevant).select(allRelevant)
 
     override fun exitSourceRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.exitSourceRulesForMethod(method, statement, fact, allRelevant).select()
+    ) = base.exitSourceRulesForMethod(method, statement, fact, allRelevant).select(allRelevant)
 
     override fun sinkRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.sinkRulesForMethod(method, statement, fact, allRelevant).select()
+    ) = base.sinkRulesForMethod(method, statement, fact, allRelevant).select(allRelevant)
 
     override fun sinkRulesForMethodEntry(
         method: CommonMethod,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.sinkRulesForMethodEntry(method, fact, allRelevant).select()
+    ) = base.sinkRulesForMethodEntry(method, fact, allRelevant).select(allRelevant)
 
     override fun sinkRulesForMethodExit(
         method: CommonMethod,
@@ -87,14 +87,14 @@ class JIRSemgrepRuleProvider(
         initialFacts: Set<InitialFactAp>?,
         allRelevant: Boolean
     ): Iterable<TaintMethodExitSink> =
-        base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant).select()
+        base.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant).select(allRelevant)
 
     override fun sourceRulesForStaticField(
         field: JIRField,
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.sourceRulesForStaticField(field, statement, fact, allRelevant).select()
+    ) = base.sourceRulesForStaticField(field, statement, fact, allRelevant).select(allRelevant)
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,

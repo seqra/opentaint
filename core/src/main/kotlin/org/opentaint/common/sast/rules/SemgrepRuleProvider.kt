@@ -115,7 +115,8 @@ abstract class SemgrepRuleProvider<RuleItem, ResolvedRule>(
     abstract fun RuleItem.ruleItemId(): String?
     abstract fun ResolvedRule.resolvedRuleId(): String?
 
-    fun <T : ResolvedRule> Iterable<T>.select(): Iterable<T> {
+    fun <T : ResolvedRule> Iterable<T>.select(allRelevant: Boolean): Iterable<T> {
+        if (allRelevant) return this
         val selectedRuleIds = ruleIdFilter ?: return this
         return filter { rule ->
             val rId = rule.resolvedRuleId() ?: return@filter true
