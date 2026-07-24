@@ -3,7 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
@@ -277,6 +280,25 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		return
 	}
 
+	// Go projects: the analyzer drives an out-of-process go-ssa-server, which in
+	// turn shells out to the `go` toolchain at runtime. Decide the Go wiring up
+	// front — after the --dry-run early return (so dry-run stays side-effect-free)
+	// and BEFORE the autobuilder compile + analyzer download — so a Go-only scan
+	// with a missing `go` toolchain fails fast rather than after a long compile.
+	//
+	// sourceRoot is the live source tree for source scans and the project.yaml
+	// sourceRoot for --project-model scans, so detection covers both paths; for a
+	// precompiled model it relies on the recorded source root still existing on
+	// disk with its go.mod (otherwise detection yields no languages).
+	//
+	// The `go` preflight is INDEPENDENT of the --go-server-binary override
+	// (go-ssa-server still shells out to `go`), so it applies whenever Go is
+	// detected. When Go is the SOLE language we hard-fail; when other languages are
+	// also present we warn and skip Go wiring rather than failing the whole scan.
+	// The binary resolution itself is deferred (see resolveGoServerEnv below) until
+	// after the compile, so a missing `go` is reported before the long compile runs.
+	needGoServer := goServerRequired(sourceRoot)
+
 	hasBuiltin := false
 	for _, ruleSetPath := range absRuleSetPaths {
 		if ruleSetPath.Builtin {
@@ -394,7 +416,19 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	// Process --dataflow-approximations: auto-compile .java sources if needed
 	addDataflowApproximations(nativeBuilder, cfg.DataflowApproximations, analyzerJarPath, absProjectModelPath)
 
-	analyzerJavaRunner := newAnalyzerJavaRunner()
+	// Go projects: resolve the go-ssa-server binary (download, or the
+	// --go-server-binary override) and pass its ABSOLUTE path to the analyzer via
+	// GOIR_SERVER_BINARY. needGoServer was decided early (after the --dry-run
+	// return), where the `go` preflight already ran; here we only do the binary
+	// resolution + env injection. Non-Go scans — and polyglot scans where `go` was
+	// missing — leave goServerEnv nil, so WithExtraEnv(nil) is a strict no-op and
+	// those runs are byte-for-byte unchanged.
+	var goServerEnv map[string]string
+	if needGoServer {
+		goServerEnv = resolveGoServerEnv()
+	}
+
+	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv)
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		out.Fatalf("Failed to resolve Java for analyzer: %s", err)
 	}
@@ -581,6 +615,130 @@ func setupSemgrepRuleLoadTrace(traceDir string) string {
 
 	// Rule load trace path is now displayed in the tree format
 	return absSemgrepRuleLoadTracePath
+}
+
+// EnsureGoServerAvailable resolves the go-ssa-server binary path, downloading the
+// per-platform asset if absent, makes it executable on unix, and returns its
+// ABSOLUTE path.
+//
+// The release tag is the configured go-server version ("go-server/<ver>", default
+// globals.GoServerBindVersion) and the downloaded asset is the platform-specific
+// globals.GoServerAssetName() ("go-ssa-server_<GOOS>_<GOARCH>", with ".exe" on
+// windows). Checksums are verified automatically by DownloadGithubReleaseAsset.
+//
+// This is the public entry point intended to be called for Go projects (Task 03)
+// and by `opentaint pull`. It does not set any environment variables.
+//
+// When the --go-server-binary override is set (globals.Config.GoServer.Binary),
+// it short-circuits: the provided path is validated to exist, converted to an
+// absolute path, and returned WITHOUT downloading, WITHOUT requiring the version
+// manifest tag, and WITHOUT chmod (the user-provided file is respected). This
+// mirrors how --analyzer-jar overrides ensureAnalyzerAvailable().
+func EnsureGoServerAvailable() (string, error) {
+	if globals.Config.GoServer.Binary != "" {
+		info, err := os.Stat(globals.Config.GoServer.Binary)
+		if err != nil {
+			return "", fmt.Errorf("go-ssa-server binary not found at %s: %w", globals.Config.GoServer.Binary, err)
+		}
+		if info.IsDir() {
+			return "", fmt.Errorf("go-ssa-server path %s is a directory, expected an executable file", globals.Config.GoServer.Binary)
+		}
+		if runtime.GOOS != "windows" && info.Mode()&0o111 == 0 {
+			return "", fmt.Errorf("go-ssa-server binary %s is not executable (run: chmod +x %s)", globals.Config.GoServer.Binary, globals.Config.GoServer.Binary)
+		}
+		absPath, err := filepath.Abs(globals.Config.GoServer.Binary)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve absolute path to the go-ssa-server: %w", err)
+		}
+		return absPath, nil
+	}
+
+	version := globals.Config.GoServer.Version
+	if version == "" {
+		version = globals.GoServerBindVersion
+	}
+
+	assetName := globals.GoServerAssetName()
+
+	goServerPath, err := utils.GetGoServerPath(version)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct path to the go-ssa-server: %w", err)
+	}
+
+	if err := ensureArtifactAvailable("go-ssa-server", version, goServerPath, func() error {
+		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, version, assetName, goServerPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
+	}); err != nil {
+		return "", err
+	}
+
+	// The go-ssa-server is a single native binary and must be executable to run.
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(goServerPath, 0o755); err != nil {
+			return "", fmt.Errorf("failed to mark go-ssa-server executable at %s: %w", goServerPath, err)
+		}
+	}
+
+	absPath, err := filepath.Abs(goServerPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path to the go-ssa-server: %w", err)
+	}
+
+	return absPath, nil
+}
+
+// goServerRequired reports whether the analyzer needs the go-ssa-server for a
+// project rooted at sourceRoot, running the `go` toolchain preflight as a side
+// effect: Go present but `go` missing hard-fails a Go-only project and warns
+// (returning false) for a polyglot one, since go-ssa-server shells out to `go`
+// regardless of the --go-server-binary override. Returns false when Go is absent.
+//
+// This is the "decide" half of the Go wiring; resolveGoServerEnv is the "resolve"
+// half. The scan command keeps them apart so the preflight can run before the
+// autobuilder compile (fail fast) and the binary download after it; callers
+// without a compile step (e.g. rule tests) just invoke both back to back.
+func goServerRequired(sourceRoot string) bool {
+	langs := validation.DetectLanguages(sourceRoot)
+	if !slices.Contains(langs, "Go") {
+		return false
+	}
+	if _, lookErr := exec.LookPath("go"); lookErr != nil {
+		if len(langs) == 1 {
+			out.Fatal("Analyzing a Go project requires the Go toolchain, but `go` was not found on your PATH.\n" +
+				"Install Go (https://go.dev/dl/) and ensure `go` is on your PATH, then re-run.")
+		}
+		out.Warnf("Detected a Go module (go.mod) but `go` was not found on your PATH; " +
+			"skipping Go analysis setup and continuing with the other detected language(s). " +
+			"Install Go (https://go.dev/dl/) to enable Go analysis.")
+		return false
+	}
+	return true
+}
+
+// resolveGoServerEnv resolves the go-ssa-server binary (download or the
+// --go-server-binary override) and returns the analyzer env pointing
+// GOIR_SERVER_BINARY at its absolute path. Call only when goServerRequired
+// returned true.
+func resolveGoServerEnv() map[string]string {
+	goServerPath, err := EnsureGoServerAvailable()
+	if err != nil {
+		out.Fatalf("Failed to resolve go-ssa-server: %s", err)
+	}
+	return map[string]string{"GOIR_SERVER_BINARY": goServerPath}
+}
+
+// goServerEnvForModel composes goServerRequired + resolveGoServerEnv for a
+// compiled project model: it reads the model's recorded source root and returns
+// the go-ssa-server env when the model needs it, or nil otherwise (so the result
+// passes straight to newAnalyzerJavaRunner, where WithExtraEnv(nil) is a no-op).
+func goServerEnvForModel(projectModelPath string) map[string]string {
+	sourceRoot, err := project.GetSourceRoot(projectModelPath)
+	if err != nil {
+		out.Fatalf("Failed to parse sourceRoot from project.yaml: %v", err)
+	}
+	if !goServerRequired(sourceRoot) {
+		return nil
+	}
+	return resolveGoServerEnv()
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {

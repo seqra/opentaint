@@ -1,5 +1,7 @@
 # Approximation iteration
 
+**Go:** the leaf skills are **analyze-external-methods-go** and **create-pass-through-approximation-go**, and the loop is **passThrough-only** — Go has no dataflow approximation, so ignore every dataflow-unit branch below (no create-test-project/create-dataflow-approximation, no `.opentaint/dataflow`). A Go passThrough that won't converge is an engine issue (debug-rule → report-analyzer-issue), not a dataflow re-plan. The rest (classify every dropped method or skip it; re-scan to stabilization) is identical.
+
 Every dropped method MUST end up either modeled (a passthrough/dataflow unit) or in `skipped.yaml` — no exceptions, no "good enough". This loop does not finish while any method in `dropped-external-methods.yaml` is still unclassified. Do not stop early because the important-looking ones are done, because a batch is large, or because the remaining methods seem minor — an unmodeled method silently kills taint and hides real findings. Keep iterating until the only thing left dropped is the skip set.
 
 Loop until stabilization:

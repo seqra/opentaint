@@ -25,6 +25,8 @@ From the caller; if omitted, fall back to the default. Ask only when a required 
 
 Read `<model-dir>/project.yaml` — the `dependencies:` list under each `javaProjects:` entry is every jar on the classpath. Resolve each to the library it is. Most of a large project's jars are transitive infrastructure
 
+**Go projects** carry no jar list — read the module's `go.mod` (`require` blocks) and `go.sum` for the dependency modules instead. Go has no per-jar disassembly, so the unsure-peek in step 2 is a source grep for the dependency's import path under `<project-root>`, never inspecting a jar.
+
 ### 2. Mark each library
 
 For each library decide: could it introduce an attacker-controlled source (e.g. HTTP/RPC request data, message-broker payloads and so on) or a dangerous sink (e.g. query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection and so on)?
