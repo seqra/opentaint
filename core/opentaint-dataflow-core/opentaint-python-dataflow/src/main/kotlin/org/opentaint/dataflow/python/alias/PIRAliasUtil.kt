@@ -7,17 +7,41 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.alias.applyAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasAfterStatement
+import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasBeforeStatement
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.ir.api.python.PIRInstruction
 
 /**
- * Consumer helpers mirroring the JVM `JIRAliasUtil`: expand a fact onto all
- * aliases of its (local-var) base. Accessors are minted name-only via the shared
+ * Consumer helpers mirroring the JVM `JIRAliasUtil` / Go `GoAliasUtil`: expand a fact
+ * onto all aliases of its (local-var) base. Accessors are minted name-only via the shared
  * [mkFieldAccessor] util, matching the engine's name-only attribute matching.
  *
- * These query the after-statement state (Python's chosen semantics), so they use
- * the shared base's `findAliasAfterStatement` / `forEachHeapAliasAfterStatement`.
+ * Both before- and after-statement variants are provided (mirroring the shared base's
+ * `findAlias` / `findAliasAfterStatement`). Flow functions read the before-statement state,
+ * matching the Go backend which reads before uniformly at both sequent and call sites.
  */
+fun PIRLocalAliasAnalysis.forEachAliasBeforeStatement(
+    statement: PIRInstruction,
+    fact: FinalFactAp,
+    body: (FinalFactAp) -> Unit,
+) {
+    val base = fact.base as? AccessPathBase.LocalVar ?: return
+    val aliases = findAlias(base, statement) ?: return
+    aliases.mapNotNull { it.relevantApInfo() }
+        .forEach { applyAlias(fact, it, AliasAccessor::apAccessor, body) }
+}
+
+fun PIRLocalAliasAnalysis.forEachAliasBeforeCallStatement(
+    statement: PIRInstruction,
+    fact: FinalFactAp,
+    body: (FinalFactAp) -> Unit,
+) {
+    forEachAliasBeforeStatement(statement, fact, body)
+    forEachHeapAliasBeforeStatement(
+        statement, fact, Accessor::aliasAccessor, AliasApInfo::relevantApInfo, AliasAccessor::apAccessor, body
+    )
+}
+
 fun PIRLocalAliasAnalysis.forEachAliasAfterStatement(
     statement: PIRInstruction,
     fact: FinalFactAp,

@@ -21,7 +21,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mayReadAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
-import org.opentaint.dataflow.python.alias.forEachAliasAfterStatement
+import org.opentaint.dataflow.python.alias.forEachAliasBeforeStatement
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
@@ -710,7 +710,7 @@ class PIRMethodSequentFlowFunction(
             val newFact = currentFactAp.rebase(destObj).prependAccessor(accessor)
             propagateFact(newFact, TraceInfo.Flow)
 
-            ctx.aliasAnalysis?.forEachAliasAfterStatement(instruction, newFact) {
+            ctx.aliasAnalysis?.forEachAliasBeforeStatement(instruction, newFact) {
                 propagateFact(it, TraceInfo.Flow)
             }
 

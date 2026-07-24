@@ -10,7 +10,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.python.PIRCallResolver
-import org.opentaint.dataflow.python.alias.forEachAliasAfterCallStatement
+import org.opentaint.dataflow.python.alias.forEachAliasBeforeCallStatement
 import org.opentaint.ir.api.python.PIRCall
 import kotlin.collections.plusAssign
 
@@ -71,7 +71,7 @@ class PIRMethodCallSummaryHandler(
             if (seq !is Sequent.ZeroToFact) return@flatMapTo listOf(seq)
 
             val result = mutableListOf(seq)
-            ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, seq.factAp) { aliased ->
+            ctx.aliasAnalysis?.forEachAliasBeforeCallStatement(callInst, seq.factAp) { aliased ->
                 result += Sequent.ZeroToFact(aliased, seq.traceInfo)
             }
             result
@@ -97,7 +97,7 @@ class PIRMethodCallSummaryHandler(
             }
 
             if (summaryEdge.hasMemoryEffect()) {
-                ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, summaryFactAp) { aliased ->
+                ctx.aliasAnalysis?.forEachAliasBeforeCallStatement(callInst, summaryFactAp) { aliased ->
                     result += handleSummaryEdge(initialFactRefinement, aliased)
                 }
             }

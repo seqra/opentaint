@@ -25,7 +25,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.PIRSimpleFactAwareConditionEvaluator
 import org.opentaint.dataflow.python.adapter.callExpr
-import org.opentaint.dataflow.python.alias.forEachAliasAfterCallStatement
+import org.opentaint.dataflow.python.alias.forEachAliasBeforeCallStatement
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
@@ -395,7 +395,7 @@ class PIRMethodCallFlowFunction(
             return
         }
 
-        ctx.aliasAnalysis?.forEachAliasAfterCallStatement(callInst, this) { aliased ->
+        ctx.aliasAnalysis?.forEachAliasBeforeCallStatement(callInst, this) { aliased ->
             body(aliased)
         }
     }
