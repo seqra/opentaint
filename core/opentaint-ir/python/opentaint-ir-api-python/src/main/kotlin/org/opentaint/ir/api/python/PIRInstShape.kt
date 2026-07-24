@@ -1,33 +1,5 @@
 package org.opentaint.ir.api.python
 
-/**
- * Shape utilities for [PIRInstruction]: the result-target slot.
- * Mirrors [FlatInstShape] for the PIR layer.
- *
- * Note: write-side mappers (`mapTarget`, `mapOperand`) are intentionally absent.
- * PIR instructions use identity-based equality and their [PIRLocation] must not
- * be aliased across copies — structural `copy()` would silently corrupt the IR.
- * See the [PIRInstruction] KDoc for details.
- *
- * Conventions
- * -----------
- *
- * **Targets.** "Target" means the [PIRLocalVar] slot that the instruction
- * *writes* to (the result slot). Targets are always [PIRLocalVar] — assignment
- * to a global goes through [PIRStoreGlobal]; module slots are never written.
- * - Most instructions have exactly one target.
- * - [PIRCall], [PIRExceptHandler], [PIRYield], [PIRYieldFrom], [PIRAwait] have a
- *   nullable target: [targets] returns an empty list when the result is discarded.
- * - [PIRUnpack] has multiple targets (one per unpacked element slot).
- * - Side-effect-only instructions ([PIRStoreAttr], [PIRStoreSubscript],
- *   [PIRStoreGlobal], [PIRStoreClosure], control-flow terminators, and deletes)
- *   produce no target — [targets] returns an empty list.
- */
-
-/**
- * The write targets of this instruction — the [PIRLocalVar] slots that receive
- * a result. Empty for side-effect-only and control-flow instructions.
- */
 val PIRInstruction.targets: List<PIRLocalVar>
     get() = accept(TargetExtractor)
 
@@ -54,4 +26,56 @@ private object TargetExtractor : PIRInstVisitor<List<PIRLocalVar>> {
     override fun visitDeleteSubscript(inst: PIRDeleteSubscript) = emptyList<PIRLocalVar>()
     override fun visitDeleteGlobal(inst: PIRDeleteGlobal)       = emptyList<PIRLocalVar>()
     override fun visitUnreachable(inst: PIRUnreachable)         = emptyList<PIRLocalVar>()
+}
+
+val PIRInstruction.operands: List<PIRValue>
+    get() = accept(OperandExtractor)
+
+val PIRInstruction.locals: List<PIRLocalVar>
+    get() = operands.filterIsInstance<PIRLocalVar>()
+
+private object OperandExtractor : PIRInstVisitor<List<PIRValue>> {
+    override fun visitAssign(inst: PIRAssign)                   = listOf<PIRValue>(inst.target) + inst.expr.operands()
+    override fun visitLoadAttr(inst: PIRLoadAttr)               = listOf(inst.target, inst.obj)
+    override fun visitStoreAttr(inst: PIRStoreAttr)             = listOf(inst.obj, inst.value)
+    override fun visitStoreSubscript(inst: PIRStoreSubscript)   = listOf(inst.obj, inst.index, inst.value)
+    override fun visitStoreGlobal(inst: PIRStoreGlobal)         = listOf(inst.value)
+    override fun visitStoreClosure(inst: PIRStoreClosure)       = listOf(inst.value)
+    override fun visitCall(inst: PIRCall)                       = inst.target?.let { listOf<PIRValue>(it) }.orEmpty() +
+                                                                      inst.callee + inst.args.map { it.value }
+    override fun visitNextIter(inst: PIRNextIter)               = listOf(inst.target, inst.iterator)
+    override fun visitUnpack(inst: PIRUnpack)                   = inst.targets + inst.source
+    override fun visitGoto(inst: PIRGoto)                       = emptyList<PIRValue>()
+    override fun visitBranch(inst: PIRBranch)                   = listOf(inst.condition)
+    override fun visitReturn(inst: PIRReturn)                   = listOfNotNull(inst.value)
+    override fun visitRaise(inst: PIRRaise)                     = listOfNotNull(inst.exception, inst.cause)
+    override fun visitExceptHandler(inst: PIRExceptHandler)     = listOfNotNull(inst.target)
+    override fun visitYield(inst: PIRYield)                     = listOfNotNull(inst.target, inst.value)
+    override fun visitYieldFrom(inst: PIRYieldFrom)             = listOfNotNull<PIRValue>(inst.target) + inst.iterable
+    override fun visitAwait(inst: PIRAwait)                     = listOfNotNull<PIRValue>(inst.target) + inst.awaitable
+    override fun visitDeleteLocal(inst: PIRDeleteLocal)         = listOf(inst.local)
+    override fun visitDeleteAttr(inst: PIRDeleteAttr)           = listOf(inst.obj)
+    override fun visitDeleteSubscript(inst: PIRDeleteSubscript) = listOf(inst.obj, inst.index)
+    // `ref` is a structural name reference, not a value read.
+    override fun visitDeleteGlobal(inst: PIRDeleteGlobal)       = emptyList<PIRValue>()
+    override fun visitUnreachable(inst: PIRUnreachable)         = emptyList<PIRValue>()
+}
+
+private fun PIRExpr.operands(): List<PIRValue> = when (this) {
+    is PIRValue           -> listOf(this)
+    is PIRBinaryExpr      -> listOf(left, right)
+    is PIRCompareExpr     -> listOf(left, right)
+    is PIRUnaryExpr       -> listOf(operand)
+    is PIRSubscriptExpr   -> listOf(obj, index)
+    is PIRListExpr        -> elements
+    is PIRTupleExpr       -> elements
+    is PIRSetExpr         -> elements
+    is PIRDictExpr        -> keys + values
+    is PIRSliceExpr       -> listOfNotNull(obj, lower, upper, step)
+    is PIRStringExpr      -> parts
+    is PIRIterExpr        -> listOf(iterable)
+    is PIRTypeCheckExpr   -> listOf(value)
+    // Structural name references, not value reads.
+    is PIRBindFunctionExpr -> emptyList()
+    is PIRReadNameExpr     -> emptyList()
 }

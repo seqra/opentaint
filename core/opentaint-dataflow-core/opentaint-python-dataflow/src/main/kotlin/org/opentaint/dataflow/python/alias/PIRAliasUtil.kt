@@ -5,21 +5,16 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.alias.applyAlias
+import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachAliasAtStatementAmongBases
 import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasAfterStatement
 import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasBeforeStatement
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
+import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
+import org.opentaint.ir.api.python.locals
 import org.opentaint.ir.api.python.PIRInstruction
 
-/**
- * Consumer helpers mirroring the JVM `JIRAliasUtil` / Go `GoAliasUtil`: expand a fact
- * onto all aliases of its (local-var) base. Accessors are minted name-only via the shared
- * [mkFieldAccessor] util, matching the engine's name-only attribute matching.
- *
- * Both before- and after-statement variants are provided (mirroring the shared base's
- * `findAlias` / `findAliasAfterStatement`). Flow functions read the before-statement state,
- * matching the Go backend which reads before uniformly at both sequent and call sites.
- */
 fun PIRLocalAliasAnalysis.forEachAliasBeforeStatement(
     statement: PIRInstruction,
     fact: FinalFactAp,
@@ -63,6 +58,27 @@ fun PIRLocalAliasAnalysis.forEachAliasAfterCallStatement(
         statement, fact, Accessor::aliasAccessor, AliasApInfo::relevantApInfo, AliasAccessor::apAccessor, body
     )
 }
+
+fun PIRLocalAliasAnalysis.forEachPossibleAliasBeforeStatement(
+    statement: PIRInstruction,
+    fact: InitialFactAp,
+    body: (InitialFactAp) -> Unit,
+) {
+    val localVars = statement.locals
+        .map(PIRFlowFunctionUtils::accessPathBase)
+        .filterIsInstance<AccessPathBase.LocalVar>()
+
+    forEachAliasAtStatementAmongBases(statement, fact, localVars, body)
+}
+
+private fun PIRLocalAliasAnalysis.forEachAliasAtStatementAmongBases(
+    statement: PIRInstruction,
+    fact: InitialFactAp,
+    bases: List<AccessPathBase.LocalVar>,
+    body: (InitialFactAp) -> Unit,
+) = forEachAliasAtStatementAmongBases(
+    statement, fact, bases, AliasApInfo::relevantApInfo, AliasAccessor::apAccessor, body
+)
 
 private fun AliasApInfo.relevantApInfo(): AliasApInfo? =
     takeIf { it.base !is AccessPathBase.Constant }

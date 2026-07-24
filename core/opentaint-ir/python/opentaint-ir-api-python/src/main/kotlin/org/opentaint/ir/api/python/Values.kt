@@ -1,5 +1,7 @@
 package org.opentaint.ir.api.python
 
+import org.opentaint.ir.api.common.cfg.CommonValue
+
 /**
  * A value used as an operand or result of a PIR instruction.
  *
@@ -11,7 +13,7 @@ package org.opentaint.ir.api.python
  * Values are also expressions ([PIRExpr]) since they can appear as the
  * right-hand side of [PIRAssign].
  */
-sealed interface PIRValue : PIRExpr, org.opentaint.ir.api.common.cfg.CommonValue {
+sealed interface PIRValue : PIRExpr, CommonValue {
     val type: PIRType
     override val typeName: String get() = type.typeName
     fun <T> accept(visitor: PIRValueVisitor<T>): T
