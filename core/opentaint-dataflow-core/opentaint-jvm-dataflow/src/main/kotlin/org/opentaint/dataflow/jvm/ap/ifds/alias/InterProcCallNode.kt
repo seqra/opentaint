@@ -78,8 +78,15 @@ private class ResolvedCall(val methods: Map<JIRMethod, ResolvedCallMethod>?) {
 }
 
 private class NestedCallInstEvalCtx(val call: Stmt.Call, val ctx: ContextInfo) : InstEvalContext {
+    // A resolved callee can reference an argument index the call site does not
+    // provide -- an arity mismatch from bridge/synthetic methods, varargs
+    // adaptation, or an approximation whose positions exceed the actual call.
+    // Aborting here kills the whole package unit's analysis (losing every
+    // finding in it); fall back instead to a value that carries no reference
+    // aliasing, consistent with the Expr.Unknown fallbacks used elsewhere in
+    // this builder.
     override fun createArg(idx: Int): Value = call.args.getOrNull(idx)
-        ?: error("Incorrect argument idx: $idx")
+        ?: SimpleValue.Primitive
 
     override fun createThis(isOuter: Boolean): Value = call.instance
         ?: error("Non instance call")
