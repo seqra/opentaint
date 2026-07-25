@@ -14,9 +14,7 @@ interface TaintAnalysisManager : AnalysisManager {
     sealed interface Phase {
         data object Prescan : Phase
         data object ShallowScan : Phase
-        data class FullScan(
-            val actionableRules: Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>,
-        ) : Phase
+        data class FullScan(val actionableRules: Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>) : Phase
     }
 
     fun selectPhase(phase: Phase)
