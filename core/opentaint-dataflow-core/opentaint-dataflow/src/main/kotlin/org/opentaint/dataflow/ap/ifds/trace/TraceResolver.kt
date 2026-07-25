@@ -26,6 +26,7 @@ class TraceResolver(
 ) {
     data class Params(
         val resolveEntryPointToStartTrace: Boolean = true,
+        val resolveAllTraces: Boolean = false,
     )
 
     data class Trace(
@@ -153,7 +154,13 @@ class TraceResolver(
                         return NoTrace(state.vulnerability)
                     }
 
-                    val nextState = addNextRequest(state)
+                    var nextState = addNextRequest(state)
+                    if (params.resolveAllTraces) {
+                        while (nextState.nextRequestIdx < state.requests.size) {
+                            nextState = addNextRequest(nextState)
+                        }
+                    }
+
                     return TraceResolutionResult.InProgress(nextState)
                 }
 

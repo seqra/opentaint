@@ -320,6 +320,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             entryPointsSet, vulnerabilities,
             resolverParams = TraceResolver.Params(
                 resolveEntryPointToStartTrace = false,
+                resolveAllTraces = true,
             ),
             timeout = timeout * 0.5,
             cancellationTimeout = 30.seconds
