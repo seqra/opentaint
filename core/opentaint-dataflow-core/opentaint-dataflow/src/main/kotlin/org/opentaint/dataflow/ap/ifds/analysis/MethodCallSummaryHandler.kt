@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.analysis
 
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
@@ -97,8 +98,10 @@ interface MethodCallSummaryHandler {
 
     fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> = listOf(summaryEdge)
 
-    fun InitialFactAp.refine(exclusionSet: ExclusionSet?) =
-        if (exclusionSet == null) this else replaceExclusions(exclusionSet)
+    fun InitialFactAp.refine(exclusionSet: ExclusionSet?) = when {
+        exclusionSet == null -> this
+        else -> replaceExclusions(exclusionSet.withDeepExclusion(exclusions.deepExclusion()))
+    }
 
     fun handleSummary(
         currentFactAp: FinalFactAp,
@@ -112,9 +115,12 @@ interface MethodCallSummaryHandler {
         return when (summaryEffect) {
             is SummaryApRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
                 // todo: filter exclusions
+                val summaryDeepExclusion = summaryEdge.summaryDeepExclusion()
+                val exclusion = currentFactAp.exclusions.withDeepExclusion(summaryDeepExclusion)
+
                 val summaryFactAp = mappedSummaryFact
                     .concat(factTypeChecker, summaryEffect.delta)
-                    ?.replaceExclusions(currentFactAp.exclusions)
+                    ?.replaceExclusions(exclusion)
                     ?: return@mapNotNullTo null
 
                 handleSummaryEdge(null, summaryFactAp)
@@ -128,4 +134,7 @@ interface MethodCallSummaryHandler {
             }
         }
     }
+
+    fun SummaryEdge.summaryDeepExclusion(): Set<DeepMarkExclusion> =
+        final.exclusions.deepExclusion()
 }
