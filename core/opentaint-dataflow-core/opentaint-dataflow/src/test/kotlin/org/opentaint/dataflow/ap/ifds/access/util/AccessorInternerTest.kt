@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AbstractionAlwaysUnrollNextAccessor
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -19,6 +20,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isT
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class AccessorInternerTest {
     private companion object {
@@ -71,6 +73,12 @@ class AccessorInternerTest {
             val second = interner.index(accessor)
             assertEquals(first, second, "Indices differ between two index() calls for $accessor")
         }
+    }
+
+    @Test
+    fun `deep mark exclusion is not internable`() {
+        val interner = AccessorInterner()
+        assertFailsWith<IllegalStateException> { interner.index(DeepMarkExclusion("m")) }
     }
 
     @Test
