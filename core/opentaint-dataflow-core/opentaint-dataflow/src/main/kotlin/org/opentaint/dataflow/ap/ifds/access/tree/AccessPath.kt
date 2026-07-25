@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntList
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
@@ -175,8 +176,18 @@ class AccessPath(
 
     private fun AccessNode.filter(exclusion: ExclusionSet): AccessNode? = when (exclusion) {
         ExclusionSet.Empty -> this
-        is ExclusionSet.Concrete -> this.takeIf { with(manager) { it.accessor.accessor !in exclusion } }
         ExclusionSet.Universe -> null
+        is ExclusionSet.Concrete -> with(apManager) {
+            if (accessor.accessor in exclusion) return@with null
+
+            val deepExclusion = exclusion.deepExclusion()
+            if (deepExclusion.isNotEmpty()) {
+                val accessors = IntOpenHashSet(toList())
+                if (deepExclusion.any { accessors.contains(it.excludedAccessor().idx) }) return@with null
+            }
+
+            this@filter
+        }
     }
 
     override fun concat(delta: InitialFactAp.Delta): InitialFactAp {
