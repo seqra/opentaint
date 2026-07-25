@@ -53,7 +53,7 @@ class TreeInitialFactAbstraction(
 
         val excludedAccessors = IntOpenHashSet()
         when (val ex = factAp.exclusions) {
-            is ExclusionSet.Concrete -> ex.set.forEach {
+            is ExclusionSet.Concrete -> ex.nonDeepExclusion().forEach {
                 with(apManager) { excludedAccessors.add(it.idx) }
             }
             Empty -> {

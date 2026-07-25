@@ -132,6 +132,8 @@ sealed interface ExclusionSet {
 
         override fun deepExclusion(): Set<DeepMarkExclusion> = deepExclusion
 
+        fun nonDeepExclusion(): Set<Accessor> = set
+
         override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet {
             val mergedDeep = deepExclusion.addAll(accessors)
             if (mergedDeep === deepExclusion) return this
