@@ -2,6 +2,7 @@ package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
@@ -51,6 +52,7 @@ class TaintCleanActionEvaluator {
         this is PositionAccess.Complex && accessor is AnyAccessor && base is PositionAccess.Simple
 
     private fun FinalFactAp.containsAbstractNode(): Boolean {
+        if (exclusions is ExclusionSet.Universe) return false
         if (isAbstract()) return true
 
         val visited = hashSetOf<FinalFactAp>()
