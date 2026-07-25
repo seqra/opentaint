@@ -1209,6 +1209,7 @@ class AccessCactus(
                     is FieldAccessor -> (low is FieldAccessor) && (low.className == high.className)
                     is ClassStaticAccessor -> low is ClassStaticAccessor
                     is TaintMarkAccessor -> error("Unexpected TaintMarkAccessor")
+                    is DeepMarkExclusion -> error("DeepMarkExclusion must not occur in access paths: $high")
                     FinalAccessor -> error("Unexpected FinalAccessor")
                     AnyAccessor -> low === AnyAccessor
                     ValueAccessor -> TODO()
