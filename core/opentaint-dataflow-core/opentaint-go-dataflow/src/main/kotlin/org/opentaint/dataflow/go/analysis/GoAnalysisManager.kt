@@ -29,6 +29,7 @@ import org.opentaint.dataflow.go.analysis.alias.GoLocalAliasAnalysis
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
+import org.opentaint.dataflow.go.rules.SelectedGoTaintRulesProvider
 import org.opentaint.dataflow.go.trace.GoMethodCallPrecondition
 import org.opentaint.dataflow.go.trace.GoMethodSequentPrecondition
 import org.opentaint.dataflow.go.trace.GoMethodStartPrecondition
@@ -55,6 +56,7 @@ class GoAnalysisManager(
 ) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
+    private val phaseTaintConfig = SelectedGoTaintRulesProvider(taintConfig)
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
@@ -68,15 +70,16 @@ class GoAnalysisManager(
 
         when (phase) {
             is Phase.Prescan -> {
-                // do nothing
+                phaseTaintConfig.select(null)
             }
 
             is Phase.ShallowScan -> {
-                taintConfig.selectRules(relevantRuleIds)
+                phaseTaintConfig.selectRules(relevantRuleIds)
+                phaseTaintConfig.select(null)
             }
 
             is Phase.FullScan -> {
-                // todo
+                phaseTaintConfig.select(phase.actionableRules)
             }
         }
     }
@@ -90,7 +93,7 @@ class GoAnalysisManager(
     ): MethodAnalysisContext {
         val taintCtx = GoTaintAnalysisContext(
             taintAnalysisContext.taintSinkTracker,
-            taintConfig,
+            phaseTaintConfig,
             externalMethodTracker,
             relevantRuleIds,
         )
