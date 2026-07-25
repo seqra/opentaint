@@ -67,6 +67,15 @@ sealed interface ExclusionSet {
             accessor.hashCode()
         )
 
+        constructor(
+            accessors: Set<Accessor>,
+            deepExclusion: Set<DeepMarkExclusion>
+        ) : this(
+            accessors.toPersistentHashSet(),
+            deepExclusion.toPersistentHashSet(),
+            accessors.hashCode() + deepExclusion.hashCode()
+        )
+
         override fun hashCode(): Int = hash
 
         override fun equals(other: Any?): Boolean {
