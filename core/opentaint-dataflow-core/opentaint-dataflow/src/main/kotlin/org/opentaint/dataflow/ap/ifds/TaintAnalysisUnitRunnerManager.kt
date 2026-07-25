@@ -221,6 +221,12 @@ class TaintAnalysisUnitRunnerManager(
         cancellationTimeout: Duration
     ): List<ActionableRulesCollectionResult> {
         if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { ActionableRulesCollectionResult.Failed }
+        }
+
         cancellation.activate()
 
         val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
@@ -243,6 +249,12 @@ class TaintAnalysisUnitRunnerManager(
         cancellationTimeout: Duration
     ): List<VulnerabilityWithTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { VulnerabilityWithTrace(it.vulnerability, TracePathGenerationResult.Failure) }
+        }
+
         cancellation.activate()
 
         val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
@@ -266,6 +278,12 @@ class TaintAnalysisUnitRunnerManager(
         cancellationTimeout: Duration
     ): List<VulnerabilityWithInterproceduralTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { VulnerabilityWithInterproceduralTrace(it, trace = null) }
+        }
+
         cancellation.activate()
 
         val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
@@ -405,6 +423,11 @@ class TaintAnalysisUnitRunnerManager(
         timeout: Duration,
         cancellationTimeout: Duration
     ): List<TaintVulnerability> {
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities
+        }
+
         cancellation.activate()
 
         val confirmed = mutableListOf<TaintVulnerability>()

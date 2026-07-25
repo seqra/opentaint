@@ -77,9 +77,19 @@ class JIRAnalysisManager(
     override fun selectPhase(phase: Phase) {
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
+
         when (phase) {
-            Phase.Prescan -> {}
-            Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
+            is Phase.Prescan -> {
+                // do nothing
+            }
+
+            is Phase.ShallowScan -> {
+                taintConfig.selectRules(relevantRuleIds)
+            }
+
+            is Phase.FullScan -> {
+                // todo
+            }
         }
     }
 
