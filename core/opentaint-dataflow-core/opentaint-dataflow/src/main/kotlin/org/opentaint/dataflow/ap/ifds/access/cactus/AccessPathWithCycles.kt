@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -57,6 +58,9 @@ class AccessPathWithCycles(
 
     // todo: rewrite stub implementation
     override fun prependAccessor(accessor: Accessor): InitialFactAp {
+        check(accessor !is DeepMarkExclusion) {
+            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
+        }
         val node = AccessNode(accessor, next = access, cycles = emptyList())
         return AccessPathWithCycles(base, node, exclusions)
     }
