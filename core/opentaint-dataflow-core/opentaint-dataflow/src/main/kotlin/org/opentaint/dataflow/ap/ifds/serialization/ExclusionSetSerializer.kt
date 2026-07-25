@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.serialization
 
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -11,8 +12,12 @@ class ExclusionSetSerializer(private val context: SummarySerializationContext) {
             ExclusionSet.Universe -> writeEnum(ExclusionSetType.UNIVERSE)
             is ExclusionSet.Concrete -> {
                 writeEnum(ExclusionSetType.CONCRETE)
-                writeInt(exclusionSet.set.size)
-                exclusionSet.set.forEach {
+                writeInt(exclusionSet.nonDeepExclusion().size)
+                exclusionSet.nonDeepExclusion().forEach {
+                    writeLong(context.getIdByAccessor(it))
+                }
+                writeInt(exclusionSet.deepExclusion().size)
+                exclusionSet.deepExclusion().forEach {
                     writeLong(context.getIdByAccessor(it))
                 }
             }
@@ -27,7 +32,9 @@ class ExclusionSetSerializer(private val context: SummarySerializationContext) {
             ExclusionSetType.CONCRETE -> {
                 val size = readInt()
                 val accessors = List(size) { context.getAccessorById(readLong()) }
-                accessors.map(ExclusionSet::Concrete).reduce(ExclusionSet::union)
+                val deepSize = readInt()
+                val deepAccessors = List(deepSize) { context.getAccessorById(readLong()) as DeepMarkExclusion }
+                return ExclusionSet.Concrete(accessors.toSet(), deepAccessors.toSet())
             }
         }
     }
