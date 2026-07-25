@@ -148,7 +148,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         config: SerializedTaintConfig,
         entryPointClass: String,
         entryPointMethod: String,
-        apMode: ApMode = ApMode.BaseOnlyField,
+        apMode: ApMode = ApMode.Tree,
     ): List<VulnerabilityWithTrace> {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
@@ -199,7 +199,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointName: String,
         ruleId: String,
         testName: String,
-        apMode: ApMode = ApMode.BaseOnlyField,
+        apMode: ApMode = ApMode.Tree,
     ) {
         val traces = runAnalysis(config, testCls, entryPointName, apMode)
         assertTrue(traces.isNotEmpty(), "$testName: expected taint to reach the sink, but no vulnerability was found")
@@ -216,7 +216,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         testCls: String,
         entryPointName: String,
         testName: String,
-        apMode: ApMode = ApMode.BaseOnlyField,
+        apMode: ApMode = ApMode.Tree,
     ) {
         val traces = runAnalysis(config, testCls, entryPointName, apMode)
         assertTrue(traces.isEmpty(), "$testName: expected no vulnerability, but found ${traces.size}")

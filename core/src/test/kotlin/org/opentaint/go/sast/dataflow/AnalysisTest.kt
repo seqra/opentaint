@@ -186,7 +186,7 @@ abstract class AnalysisTest {
 
         val options = CommonAnalysisOptions(
             ifdsAnalysisTimeout = 1.minutes,
-            ifdsApMode = ApMode.BaseOnlyField,
+            ifdsApMode = ApMode.Tree,
         )
         val analyzer = GoTaintAnalyzer(cp, loadedConfig, GoTestUnitResolver, options.taintAnalyzerOptions())
         analyzer.use {
