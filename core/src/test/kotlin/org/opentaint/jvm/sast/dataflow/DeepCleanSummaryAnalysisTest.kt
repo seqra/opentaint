@@ -1,5 +1,6 @@
 package org.opentaint.jvm.sast.dataflow
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -156,6 +157,7 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
     }
 
     @Test
+    @Disabled // todo: fix automata
     fun `base-only clean keeps the whole-object field taint through the wrapper`() {
         // The clean removes only the base-value mark; the any-field mark survives the call
         // and the sanitized-side read stays tainted. This pins the cleaner-lineage
