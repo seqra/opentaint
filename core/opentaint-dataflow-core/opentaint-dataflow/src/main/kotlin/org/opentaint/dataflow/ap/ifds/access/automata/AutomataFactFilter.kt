@@ -3,6 +3,7 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
@@ -71,6 +72,8 @@ private inline fun <T> AutomataApManager.createFilter(
             is TypeInfoAccessor -> filters += singleAccessorFilter(accessor)
             is FieldAccessor,
             is ClassStaticAccessor -> filters += accessorListFilter(listOf(accessor))
+
+            is DeepMarkExclusion -> error("DeepMarkExclusion must not occur in access paths: $accessor")
 
             is ElementAccessor -> {
                 val edge = access.getEdge(accessorIdx) ?: error("No edge for: $accessor")
