@@ -189,10 +189,7 @@ class SelectedTaintRulesProvider(
         statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean,
-    ): Iterable<TaintCleaner> {
-        val s = selected ?: return delegate.cleanerRulesForMethod(method, statement, fact, allRelevant)
-        return s.methodCleaner.find(statement as JIRInst)
-    }
+    ): Iterable<TaintCleaner> = delegate.cleanerRulesForMethod(method, statement, fact, allRelevant)
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,

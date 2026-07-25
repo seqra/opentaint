@@ -125,10 +125,7 @@ class SelectedGoTaintRulesProvider(
         signature: GoFunctionSignature,
         statement: GoIRInst,
         allRelevant: Boolean,
-    ): List<TaintRule.Cleaner> {
-        val s = selected ?: return delegate.cleanerRulesForCall(signature, statement, allRelevant)
-        return s.callCleaner.find(statement)
-    }
+    ): List<TaintRule.Cleaner> = delegate.cleanerRulesForCall(signature, statement, allRelevant)
 
     private fun <T : GoTaintAction> List<T>.relevantActions(relevant: Set<CommonTaintAction>): List<T>? =
         filter { it in relevant }.takeIf { it.isNotEmpty() }
