@@ -133,7 +133,7 @@ private class FinalApStorage {
     }
 
     fun add(exclusion: ExclusionSet, finalApAg: AccessGraph): Boolean {
-        val mergedExclusion = exclusionStorage?.union(exclusion) ?: exclusion
+        val mergedExclusion = exclusionStorage?.mergeAndIntersectDeep(exclusion) ?: exclusion
         if (mergedExclusion === exclusionStorage) {
             return agStorage.add(finalApAg)
         }

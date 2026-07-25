@@ -94,7 +94,7 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         }
 
         val currentEdges = edges!!
-        val mergedExclusion = currentExclusion.union(addedEx)
+        val mergedExclusion = currentExclusion.mergeAndIntersectDeep(addedEx)
         if (mergedExclusion === currentExclusion) {
             val (modifiedEdges, modificationDelta) = currentEdges.mergeAddDelta(exitAccess)
             if (modificationDelta == null) return false
