@@ -36,10 +36,35 @@ class TaintCleanActionEvaluator {
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
 
+        // A whole-object clean (`base.[any]`) removes the mark at every depth >= 2 under the base.
+        if (from.isBaseAnyFieldPosition() && fact.factAp.containsAbstractNode()) {
+            fact.excludeDeep(markRestriction)
+        }
+
         if (!fact.containsPositionWithTaintMark(from, markRestriction)) return listOf(evc)
 
         val cleanAccessors = from.accessorList() + markRestriction
         return cleanAccessors(cleanAccessors, fact, rule, action, evc)
+    }
+
+    private fun PositionAccess.isBaseAnyFieldPosition(): Boolean =
+        this is PositionAccess.Complex && accessor is AnyAccessor && base is PositionAccess.Simple
+
+    private fun FinalFactAp.containsAbstractNode(): Boolean {
+        if (isAbstract()) return true
+
+        val visited = hashSetOf<FinalFactAp>()
+        val queue = ArrayDeque<FinalFactAp>()
+        queue.add(this)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (current.isAbstract()) return true
+            for (accessor in current.getStartAccessors()) {
+                val child = current.readAccessor(accessor) ?: continue
+                if (visited.add(child)) queue.add(child)
+            }
+        }
+        return false
     }
 
     private fun cleanAccessors(
