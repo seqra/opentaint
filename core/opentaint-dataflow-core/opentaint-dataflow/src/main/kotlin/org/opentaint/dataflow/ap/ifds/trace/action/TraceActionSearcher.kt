@@ -275,8 +275,7 @@ private class TraceActionCollector(
             collected.addRuleActions(trace.entries[entryId])
         }
 
-        val rules = collected.freeze()
-        return if (rules.isEmpty()) Evaluation.Invalid else Evaluation.Valid(rules)
+        return Evaluation.Valid(collected.freeze())
     }
 
     private fun TraceEntry.relevantSummary(origin: TraceOrigin): SummaryTrace? = when (this) {
