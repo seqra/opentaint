@@ -82,11 +82,15 @@ class MethodEdgesInitialToFinalCactusApSet(
             }
 
             val currentAccess = edges[edgeSetIdx]!!
-            val mergedExclusion = currentExclusion.union(accessWithExclusion.exclusion)
+            val mergedExclusion = currentExclusion.mergeAndIntersectDeep(accessWithExclusion.exclusion)
             exclusions[edgeSetIdx] = mergedExclusion
 
             val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
-            if (mergedAccess === currentAccess) return null
+            if (mergedAccess === currentAccess) {
+                if (mergedExclusion === currentExclusion) return null
+
+                return AccessWithExclusion(mergedAccess, mergedExclusion)
+            }
 
             edges[edgeSetIdx] = mergedAccess
             return AccessWithExclusion(mergedAccess, mergedExclusion)
