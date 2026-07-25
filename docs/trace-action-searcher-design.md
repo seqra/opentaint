@@ -4,9 +4,9 @@ Date: 2026-07-23
 
 ## Status
 
-Proposed design for implementing
-`TaintAnalysisUnitRunnerManager.collectActionableRules` in
-`TraceActionSearcher.kt`.
+Implemented by `TaintAnalysisUnitRunnerManager.collectActionableRules` and
+the staged JVM/Go rule providers. This document remains the behavioral
+contract for the implementation.
 
 ## Goal
 
@@ -638,6 +638,15 @@ rule      -> {A1, A2, ...}    -> enable exactly those actions for that rule
 An empty action set is not a wildcard. Source and pass rules require non-empty
 sets. Assert that no merge combines an empty sink value with a non-empty
 action value for the same rule.
+
+There is one temporary full-scan compatibility exception. The JVM and Go
+selected providers narrow source rules to the selected actions and enable only
+selected sink rules, but keep all pass-through rules and cleaners available.
+BaseOnly traces can omit a pass action that Tree still needs to reproduce the
+same flow, so narrowing pass-through rules from the shallow trace would be
+unsound. The collected map still records and validates pass actions; they are
+not yet used to narrow the provider. Prescan-derived `relevantRuleIds`
+selection remains in effect before this action-level filtering.
 
 ## Concurrency and lifetime
 
