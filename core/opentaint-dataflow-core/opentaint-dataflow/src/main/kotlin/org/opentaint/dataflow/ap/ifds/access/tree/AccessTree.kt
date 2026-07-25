@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -76,6 +77,9 @@ class AccessTree(
     }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp = with(apManager) {
+        check(accessor !is DeepMarkExclusion) {
+            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
+        }
         AccessTree(apManager, base, access.addParent(accessor.idx), exclusions)
     }
 

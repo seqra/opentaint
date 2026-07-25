@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
@@ -57,8 +58,12 @@ class AccessCactus(
     override fun readAccessor(accessor: Accessor): FinalFactAp? =
         access.getChild(accessor)?.let { AccessCactus(base, it, exclusions) }
 
-    override fun prependAccessor(accessor: Accessor): FinalFactAp =
-        AccessCactus(base, access.addParent(accessor), exclusions)
+    override fun prependAccessor(accessor: Accessor): FinalFactAp {
+        check(accessor !is DeepMarkExclusion) {
+            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
+        }
+        return AccessCactus(base, access.addParent(accessor), exclusions)
+    }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? {
         val newAccess = access.clearChild(accessor).takeIf { !it.isEmpty } ?: return null
