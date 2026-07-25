@@ -317,8 +317,38 @@ class AccessGraph(
         ExclusionSet.Empty -> this
         ExclusionSet.Universe -> if (initialNodeIsFinal()) manager.emptyGraph() else null
         is ExclusionSet.Concrete -> with(manager) {
-            filter(exclusionSet.set.toBitSet { it.idx })
+            filter(exclusionSet.nonDeepExclusion().toBitSet { it.idx })
         }
+    }
+
+    fun filterDeep(exclusionSet: ExclusionSet, keepInitialLevel: Boolean): AccessGraph? = when (exclusionSet) {
+        ExclusionSet.Empty -> this
+        ExclusionSet.Universe -> this
+        is ExclusionSet.Concrete -> with(manager) {
+            val deepAccessors = exclusionSet.deepExclusion().toBitSet { it.excludedAccessor().idx }
+            if (deepAccessors.isEmpty) return this@AccessGraph
+
+            removeDeepAccessors(deepAccessors, keepInitialLevel)
+        }
+    }
+
+    private fun removeDeepAccessors(deepAccessors: BitSet, keepInitialLevel: Boolean): AccessGraph? {
+        val keepAtInitial = keepInitialLevel && nodePred[initial].let { it == null || it.isEmpty }
+
+        val edgesToRemove = BitSet()
+        deepAccessors.forEach { accessor ->
+            val edge = edges.get(accessor)
+            if (edge == NO_EDGE) return@forEach
+            if (keepAtInitial && edge.from == initial) return@forEach
+            edgesToRemove.set(accessor)
+        }
+
+        if (edgesToRemove.isEmpty) return this
+
+        return mutable()
+            .removeEdges(edgesToRemove)
+            .persist()
+            .removeUnreachableNodes()
     }
 
     private fun filter(exclusionSet: BitSet): AccessGraph? {
@@ -864,6 +894,18 @@ class MutableAccessGraph(
         val freshNode = holeIdx
         updateLastIdx(freshNode)
         return freshNode
+    }
+
+    fun removeEdges(accessors: BitSet): MutableAccessGraph {
+        accessors.forEach { accessor ->
+            val edge = removeEdge(accessor)
+            check(edge != NO_EDGE) { "No edge" }
+
+            removeNodeSuccessor(edge.from, accessor)
+            removeNodePredecessor(edge.to, accessor)
+        }
+
+        return create(initial, final)
     }
 
     fun clear(accessors: BitSet): MutableAccessGraph? {
