@@ -27,7 +27,7 @@ class BaseOnlyFactOpsTest {
     private val typeInfo = TypeInfoAccessor("pkg.fn")
 
     private fun mgr(fieldSensitive: Boolean) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
 
     private fun BaseOnlyApManager.finalOf(vararg accessors: Accessor): BaseOnlyFinalFactAp {
         var f = createFinalAp(arg0, ExclusionSet.Empty) as BaseOnlyFinalFactAp

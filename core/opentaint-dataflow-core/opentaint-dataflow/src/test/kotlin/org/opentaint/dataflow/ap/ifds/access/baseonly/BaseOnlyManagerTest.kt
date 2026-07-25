@@ -3,13 +3,14 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.util.Cancellation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BaseOnlyManagerTest {
-    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
 
     private object Seam : BaseOnlyFinalApAccess {
         lateinit var mgr: BaseOnlyApManager

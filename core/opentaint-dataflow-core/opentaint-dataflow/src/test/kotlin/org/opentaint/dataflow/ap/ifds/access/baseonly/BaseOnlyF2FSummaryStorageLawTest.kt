@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.CommonMethodParameter
@@ -28,7 +29,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BaseOnlyF2FSummaryStorageLawTest {
-    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
     private val entryPoint by lazy { MethodEntryPoint(EmptyMethodContext, inst) }
     private val exA = ExclusionSet.Concrete(TaintMarkAccessor("excluded-a"))
     private val exB = ExclusionSet.Concrete(TaintMarkAccessor("excluded-b"))

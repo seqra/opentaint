@@ -26,7 +26,7 @@ class BaseOnlyInitialFactAbstractionCasesTest {
     private val mark = TaintMarkAccessor("m")
 
     private fun mgr(fieldSensitive: Boolean = false) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
 
     private fun BaseOnlyApManager.finalOf(vararg accessors: Accessor): FinalFactAp {
         var f = createFinalAp(arg0, ExclusionSet.Empty)

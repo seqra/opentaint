@@ -28,7 +28,7 @@ class BaseOnlyDeltaTest {
     private val mark2 = TaintMarkAccessor("m2")
 
     private fun mgr(fieldSensitive: Boolean = false) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
 
     private fun BaseOnlyApManager.finalOf(vararg accessors: Accessor): BaseOnlyFinalFactAp {
         var f: FinalFactAp = createFinalAp(arg0, ExclusionSet.Empty)

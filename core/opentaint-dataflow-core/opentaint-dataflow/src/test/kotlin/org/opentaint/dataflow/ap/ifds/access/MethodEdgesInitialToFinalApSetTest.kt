@@ -59,10 +59,10 @@ class MethodEdgesInitialToFinalApSetTest {
     fun `exclusion changes publish the complete final language for every AP implementation`() {
         val strategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
         val managers = listOf(
-            "Tree" to TreeApManager(strategy, RefManager()),
-            "Automata" to AutomataApManager(strategy),
-            "Cactus" to CactusApManager(strategy),
-            "BaseOnly" to BaseOnlyApManager(strategy, fieldSensitive = true),
+            "Tree" to TreeApManager(strategy, RefManager(), org.opentaint.dataflow.util.Cancellation()),
+            "Automata" to AutomataApManager(strategy, org.opentaint.dataflow.util.Cancellation()),
+            "Cactus" to CactusApManager(strategy, org.opentaint.dataflow.util.Cancellation()),
+            "BaseOnly" to BaseOnlyApManager(strategy, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = true),
         )
 
         managers.forEach { (name, manager) ->

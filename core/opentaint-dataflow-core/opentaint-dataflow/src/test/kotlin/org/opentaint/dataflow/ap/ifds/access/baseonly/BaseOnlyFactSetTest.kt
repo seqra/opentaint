@@ -36,7 +36,7 @@ class BaseOnlyFactSetTest {
     private val field2 = FieldAccessor("A", "g", "B")
 
     private fun mkManager(fieldSensitive: Boolean = false) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
 
     private val dummyMethod = object : CommonMethod {
         override val name: String = "dummy"

@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.util.Cancellation
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -16,7 +17,7 @@ import kotlin.test.assertTrue
 class BaseOnlyInitialAccessIndexTest {
     @Test
     fun `pattern traversal agrees with summary applicability for every packed slot shape`() {
-        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
         val staticA = manager.interner.index(ClassStaticAccessor("S0"))
         val staticB = manager.interner.index(ClassStaticAccessor("S1"))
         val fieldA = manager.interner.index(FieldAccessor("C", "f0", "T"))
@@ -66,7 +67,7 @@ class BaseOnlyInitialAccessIndexTest {
 
     @Test
     fun `f2f identity and non-identity summaries use the same pattern filter`() {
-        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(testInst, manager).createStorage()
         val fieldA = manager.interner.index(FieldAccessor("C", "first", "T"))
         val fieldB = manager.interner.index(FieldAccessor("C", "second", "T"))
@@ -95,7 +96,7 @@ class BaseOnlyInitialAccessIndexTest {
 
     @Test
     fun `identity trie traversal agrees with summary applicability`() {
-        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(testInst, manager).createStorage()
         val static = manager.interner.index(ClassStaticAccessor("S"))
         val fieldA = manager.interner.index(FieldAccessor("C", "f0", "T"))
@@ -129,7 +130,7 @@ class BaseOnlyInitialAccessIndexTest {
 
     @Test
     fun `fact side-effect summaries filter incompatible initials`() {
-        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
         val storage = FactSESummariesBaseOnlyStorage(testInst, manager).createStorage()
         val kind = object : SideEffectKind {}
         val fieldA = manager.interner.index(FieldAccessor("C", "f0", "T"))
@@ -148,7 +149,7 @@ class BaseOnlyInitialAccessIndexTest {
 
     @Test
     fun `single writer and concurrent readers survive repeated index rehashes`() {
-        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled)
+        val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
         val index = BaseOnlyInitialAccessIndex<BaseOnlyAccess>()
         val accesses = (0 until 4_000).map { value ->
             val static = manager.interner.index(ClassStaticAccessor("S${value / 1_000}"))

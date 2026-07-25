@@ -29,7 +29,7 @@ class BaseOnlySplitDeltaAlignmentTest {
     private enum class Suffix { ABSTRACT, VALUE, MARK1, MARK2 }
 
     private fun mgr(fieldSensitive: Boolean) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
 
     private fun BaseOnlyApManager.mkAccess(staticIdx: Int, fieldIdx: Int, suffix: Suffix): BaseOnlyAccess {
         val idxs = ArrayList<Int>(3)

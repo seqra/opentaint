@@ -17,6 +17,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.serialization.MethodContextSerializer
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
@@ -43,8 +44,15 @@ class BaseOnlyTreeDifferentialStorageTest {
     private val entryPoint = MethodEntryPoint(EmptyMethodContext, inst)
 
     private fun managers(): Pair<TreeApManager, BaseOnlyApManager> =
-        TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, RefManager()) to
-            BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = true)
+        TreeApManager(
+            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            RefManager(),
+            Cancellation(),
+        ) to BaseOnlyApManager(
+            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            Cancellation(),
+            fieldSensitive = true,
+        )
 
     @Test
     fun `intraprocedural Z2F F2F and ND sets cover Tree collection and deltas`() {

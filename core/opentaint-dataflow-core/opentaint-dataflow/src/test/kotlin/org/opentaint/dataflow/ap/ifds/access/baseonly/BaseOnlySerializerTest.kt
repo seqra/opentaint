@@ -11,6 +11,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
@@ -32,7 +33,11 @@ class BaseOnlySerializerTest {
     private val mark = TaintMarkAccessor("m")
     private val stat = ClassStaticAccessor("A")
 
-    private val m = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = true)
+    private val m = BaseOnlyApManager(
+        AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+        Cancellation(),
+        fieldSensitive = true,
+    )
     private val context = InMemoryContext()
     private val serializer = m.createSerializer(context)
 

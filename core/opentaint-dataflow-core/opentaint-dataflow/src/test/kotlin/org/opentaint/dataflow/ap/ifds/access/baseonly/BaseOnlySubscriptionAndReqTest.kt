@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.CommonMethodParameter
@@ -27,7 +28,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BaseOnlySubscriptionAndReqTest {
-    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = true)
+    private val manager = BaseOnlyApManager(
+        AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+        Cancellation(),
+        fieldSensitive = true,
+    )
     private val fieldA = FieldAccessor("Owner", "a", "Value")
     private val fieldB = FieldAccessor("Owner", "b", "Value")
     private val mark = TaintMarkAccessor("m")
@@ -229,7 +234,11 @@ class BaseOnlySubscriptionAndReqTest {
 
     @Test
     fun `subscription filtering covers the corresponding Tree scenario`() {
-        val treeManager = TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, RefManager())
+        val treeManager = TreeApManager(
+            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            RefManager(),
+            Cancellation(),
+        )
         val treeSub = treeManager.accessPathSubscription()
         val baseOnlySub = manager.accessPathSubscription()
 

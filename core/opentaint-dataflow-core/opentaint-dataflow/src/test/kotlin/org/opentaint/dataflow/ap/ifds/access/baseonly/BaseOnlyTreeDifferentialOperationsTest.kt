@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.RefManager
@@ -57,8 +58,8 @@ class BaseOnlyTreeDifferentialOperationsTest {
     }
 
     private fun managers(): Pair<TreeApManager, BaseOnlyApManager> =
-        TreeApManager(unrollStructural, RefManager()) to
-            BaseOnlyApManager(unrollStructural, fieldSensitive = true)
+        TreeApManager(unrollStructural, RefManager(), Cancellation()) to
+            BaseOnlyApManager(unrollStructural, Cancellation(), fieldSensitive = true)
 
     private fun ApManager.finalOf(vararg accessors: Accessor): FinalFactAp {
         var fact = createFinalAp(base, ExclusionSet.Empty)
@@ -506,8 +507,12 @@ class BaseOnlyTreeDifferentialOperationsTest {
     @Test
     fun `explicit Any projects to the implicit structural branch`() {
         for (fieldSensitive in listOf(false, true)) {
-            val treeManager = TreeApManager(unrollStructural, RefManager())
-            val baseOnlyManager = BaseOnlyApManager(unrollStructural, fieldSensitive = fieldSensitive)
+            val treeManager = TreeApManager(unrollStructural, RefManager(), Cancellation())
+            val baseOnlyManager = BaseOnlyApManager(
+                unrollStructural,
+                Cancellation(),
+                fieldSensitive = fieldSensitive,
+            )
             val treeBare = treeManager.finalOf(mark)
             val baseOnlyBare = baseOnlyManager.finalOf(mark)
 

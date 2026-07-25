@@ -27,7 +27,7 @@ class BaseOnlyDeltaConcatPinTest {
     private enum class Suffix { ABSTRACT, MARK1, MARK2 }
 
     private fun mgr(fieldSensitive: Boolean) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
 
     private fun BaseOnlyApManager.mkAccess(static: ClassStaticAccessor?, field: FieldAccessor?, suffix: Suffix): BaseOnlyAccess {
         val idxs = ArrayList<Int>(3)

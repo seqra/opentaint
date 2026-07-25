@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.util.Cancellation
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -18,7 +19,7 @@ class BaseOnlyAnyMatchTest {
     private val field = FieldAccessor("A", "f", "B")
 
     private fun mgr(fieldSensitive: Boolean = false) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, fieldSensitive = fieldSensitive)
+        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation(), fieldSensitive = fieldSensitive)
 
     private fun BaseOnlyApManager.expandedTainted(): FinalFactAp =
         createFinalAp(arg0, ExclusionSet.Empty).prependAccessor(mark).prependAccessor(AnyAccessor)

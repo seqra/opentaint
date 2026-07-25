@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
@@ -90,6 +91,7 @@ class BaseOnlyApDeltaConcatTest {
     fun `BaseOnly resolves the Stirling semantic sink branch after lossy normalization`() {
         val manager = BaseOnlyApManager(
             AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            Cancellation(),
             fieldSensitive = true,
         )
         val body = FieldAccessor("Response", "Body", "Token")
@@ -129,6 +131,7 @@ class BaseOnlyApDeltaConcatTest {
         val manager = TreeApManager(
             AnyAccessorUnrollStrategy.AnyAccessorDisabled,
             RefManager(),
+            Cancellation(),
         )
         val body = FieldAccessor("Response", "Body", "Token")
         val sink = TaintMarkAccessor("sink_35")
