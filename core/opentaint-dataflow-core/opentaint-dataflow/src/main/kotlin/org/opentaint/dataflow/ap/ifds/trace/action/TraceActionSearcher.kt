@@ -306,8 +306,22 @@ private class TraceActionCollector(
         }
 
         actions.forEach { action ->
-            val ruleAction = action as? TraceEntryAction.CallRuleAction ?: return@forEach
-            addAction(entry.statement, ruleAction.rule, ruleAction.action)
+            when (action) {
+                is TraceEntryAction.CallRuleAction -> {
+                    addAction(entry.statement, action.rule, action.action)
+                }
+
+                is TraceEntryAction.SequentialSourceRule -> {
+                    addAction(entry.statement, action.rule, action.action)
+                }
+
+                is TraceEntryAction.CallSourceSummary,
+                is TraceEntryAction.CallSummary,
+                is TraceEntryAction.UnresolvedCallSkip,
+                is TraceEntryAction.Sequential -> {
+                    // skip, no rules
+                }
+            }
         }
     }
 
