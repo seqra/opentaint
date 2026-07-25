@@ -454,7 +454,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         fun add(final: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
             if (final.isCollapsed) return false
             val currentExclusion = aggregateExclusion
-            val mergedExclusion = currentExclusion?.intersect(exclusion) ?: exclusion
+            val mergedExclusion = currentExclusion?.union(exclusion) ?: exclusion
             val exclusionChanged = currentExclusion == null || mergedExclusion !== currentExclusion
 
             // The exclusion aggregate is initialized before a new final is published.
