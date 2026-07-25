@@ -80,7 +80,7 @@ inline fun <F, R> readWithAnyAccessorSplit(
     }
 
     val firstMismatch = mismatchedNodes.firstOrNull()
-        ?: error("Impossible")
+        ?: return onMismatch(ap, null)
 
     return onMismatch(firstMismatch.first, firstMismatch.second)
 }
