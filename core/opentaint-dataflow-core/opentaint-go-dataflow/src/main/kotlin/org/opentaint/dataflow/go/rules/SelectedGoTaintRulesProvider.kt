@@ -104,7 +104,11 @@ class SelectedGoTaintRulesProvider(
         statement: GoIRInst,
         allRelevant: Boolean,
     ): List<TaintRule.Source> {
-        val s = selected ?: return delegate.sourceRulesForCall(signature, statement, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.sourceRulesForCall(signature, statement, allRelevant)
+        }
+
         return s.callSource.find(statement)
     }
 

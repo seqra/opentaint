@@ -119,7 +119,11 @@ class SelectedTaintRulesProvider(
         fact: FactAp?,
         allRelevant: Boolean,
     ): Iterable<TaintEntryPointSource> {
-        val s = selected ?: return delegate.entryPointRulesForMethod(method, statement, fact, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.entryPointRulesForMethod(method, statement, fact, allRelevant)
+        }
+
         return s.methodEntrySource.find(statement as JIRInst)
     }
 
@@ -129,7 +133,11 @@ class SelectedTaintRulesProvider(
         fact: FactAp?,
         allRelevant: Boolean,
     ): Iterable<TaintMethodEntrySink> {
-        val s = selected ?: return delegate.sinkRulesForMethodEntry(method, statement, fact, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.sinkRulesForMethodEntry(method, statement, fact, allRelevant)
+        }
+
         return s.methodEntrySink.find(statement as JIRInst)
     }
 
@@ -139,7 +147,11 @@ class SelectedTaintRulesProvider(
         fact: FactAp?,
         allRelevant: Boolean,
     ): Iterable<TaintMethodSource> {
-        val s = selected ?: return delegate.sourceRulesForMethod(method, statement, fact, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.sourceRulesForMethod(method, statement, fact, allRelevant)
+        }
+
         return s.methodSource.find(statement as JIRInst)
     }
 
@@ -149,7 +161,11 @@ class SelectedTaintRulesProvider(
         fact: FactAp?,
         allRelevant: Boolean,
     ): Iterable<TaintMethodExitSource> {
-        val s = selected ?: return delegate.exitSourceRulesForMethod(method, statement, fact, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.exitSourceRulesForMethod(method, statement, fact, allRelevant)
+        }
+
         return s.methodExitSource.find(statement as JIRInst)
     }
 
@@ -159,7 +175,11 @@ class SelectedTaintRulesProvider(
         fact: FactAp?,
         allRelevant: Boolean,
     ): Iterable<TaintStaticFieldSource> {
-        val s = selected ?: return delegate.sourceRulesForStaticField(field, statement, fact, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.sourceRulesForStaticField(field, statement, fact, allRelevant)
+        }
+
         return s.staticFieldSource.find(statement as JIRInst)
     }
 
@@ -169,7 +189,11 @@ class SelectedTaintRulesProvider(
         fact: FactAp?,
         allRelevant: Boolean,
     ): Iterable<TaintMethodSink> {
-        val s = selected ?: return delegate.sinkRulesForMethod(method, statement, fact, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.sinkRulesForMethod(method, statement, fact, allRelevant)
+        }
+
         return s.methodSink.find(statement as JIRInst)
     }
 
@@ -180,7 +204,11 @@ class SelectedTaintRulesProvider(
         initialFacts: Set<InitialFactAp>?,
         allRelevant: Boolean,
     ): Iterable<TaintMethodExitSink> {
-        val s = selected ?: return delegate.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant)
+        val s = selected
+        if (s == null || allRelevant) {
+            return delegate.sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant)
+        }
+
         return s.methodExitSink.find(statement as JIRInst)
     }
 
