@@ -92,7 +92,7 @@ class MethodEdgesInitialToFinalTreeApSet(
                 return accessWithExclusion
             }
 
-            val mergedExclusion = currentExclusion.union(accessWithExclusion.exclusion)
+            val mergedExclusion = currentExclusion.mergeAndIntersectDeep(accessWithExclusion.exclusion)
             exclusions[edgeSetIdx] = mergedExclusion
 
             val currentAccess = edges[edgeSetIdx]!!
