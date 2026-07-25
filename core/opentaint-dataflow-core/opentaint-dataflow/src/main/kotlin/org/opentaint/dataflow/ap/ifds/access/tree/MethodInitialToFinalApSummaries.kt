@@ -7,7 +7,6 @@ import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companio
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.ir.api.common.cfg.CommonInst
-import kotlin.collections.plusAssign
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
 class MethodInitialToFinalApSummaries(
@@ -268,7 +267,7 @@ private class MethodTaintedSummariesMergingStorage(
             return true
         }
 
-        val mergedExclusion = currentExclusion.union(addedEx)
+        val mergedExclusion = currentExclusion.mergeAndIntersectDeep(addedEx)
         if (mergedExclusion === currentExclusion) {
             return treeStorage.add(exitAccess)
         }
