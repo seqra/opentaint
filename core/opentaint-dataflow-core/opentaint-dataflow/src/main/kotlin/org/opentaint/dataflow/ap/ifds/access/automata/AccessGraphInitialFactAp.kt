@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
@@ -37,6 +38,9 @@ data class AccessGraphInitialFactAp(
 
     override fun prependAccessor(accessor: Accessor): InitialFactAp = with(access.manager) {
         check(accessor !is AnyAccessor)
+        check(accessor !is DeepMarkExclusion) {
+            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
+        }
         return AccessGraphInitialFactAp(base, access.prepend(accessor.idx), exclusions)
     }
 
