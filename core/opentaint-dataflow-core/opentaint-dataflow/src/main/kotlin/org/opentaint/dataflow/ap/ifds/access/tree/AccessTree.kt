@@ -8,9 +8,9 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -167,6 +167,7 @@ class AccessTree(
         if (base != other.base) return emptyList()
 
         var node = access
+        var initialAccessDepth = 0
         val access = other.access
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
@@ -175,12 +176,26 @@ class AccessTree(
             }
 
             node = node.getChild(accessor) ?: return emptyList()
+            initialAccessDepth++
         }
 
-        val filteredNode = when (val exclusion = other.exclusions) {
+        val exclusion = other.exclusions
+        var filteredNode = when (exclusion) {
             ExclusionSet.Empty -> node
             is ExclusionSet.Concrete -> node.filter(exclusion)
             ExclusionSet.Universe -> error("Unexpected universe exclusion in initial fact")
+        }
+
+        val deepExclusion = exclusion.deepExclusion()
+        if (deepExclusion.isNotEmpty()) {
+            val excludedAccessors = IntOpenHashSet()
+            deepExclusion.forEach {
+                excludedAccessors.add(with(apManager) { it.excludedAccessor().idx })
+            }
+
+            val minPruneDepth = if (initialAccessDepth == 0) 2 else 1
+            filteredNode = filteredNode.removeAccessors(excludedAccessors, depth = 1, minPruneDepth = minPruneDepth)
+                ?: return emptyList()
         }
 
         if (filteredNode.isEmpty) return emptyList()
@@ -608,6 +623,18 @@ class AccessTree(
             val accessorNodes = transformedAccessors?.second ?: accessorNodes
 
             return manager.create(isAbstract, isFinal, accessors, accessorNodes)
+        }
+
+        fun removeAccessors(toRemove: IntOpenHashSet, depth: Int, minPruneDepth: Int): AccessNode? {
+            manager.cancellation.checkpoint()
+
+            return transformAccessorsNonEmpty { accessor, node ->
+                if (depth >= minPruneDepth && toRemove.contains(accessor)) {
+                    null
+                } else {
+                    node.removeAccessors(toRemove, depth + 1, minPruneDepth)
+                }
+            }
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {

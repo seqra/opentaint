@@ -104,6 +104,8 @@ data class DeepMarkExclusion(val mark: String) : Accessor() {
     override val accessorClassId: Int = 9
 
     fun compareToDeepMarkExclusion(other: DeepMarkExclusion): Int = mark.compareTo(other.mark)
+
+    fun excludedAccessor() = TaintMarkAccessor(mark)
 }
 
 data class FieldAccessor(
