@@ -35,6 +35,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.ap.ifds.trace.action.ActionableRulesCollectionResult
+import org.opentaint.dataflow.ap.ifds.trace.action.mergeActionableRules
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
@@ -224,7 +225,9 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         actionableRules: List<ActionableRulesCollectionResult.Collected>,
     ): Pair<List<VulnerabilityWithTrace>, Status> {
         val fullScanManager = apManager
-        analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan(actionableRules))
+        analysisManager.selectPhase(
+            TaintAnalysisManager.Phase.FullScan(mergeActionableRules(actionableRules))
+        )
         ifdsEngine.resetApManager(fullScanManager)
 
         val analysisTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.80
