@@ -2,8 +2,8 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -71,14 +71,20 @@ data class AccessGraphInitialFactAp(
         if (base != other.base) return emptyList()
 
         if (other.access.isEmpty()) {
-            val filteredDelta = this.access.filter(other.exclusions) ?: return emptyList()
+            val filteredDelta = this.access
+                .filter(other.exclusions)
+                ?.filterDeep(other.exclusions, keepInitialLevel = true)
+                ?: return emptyList()
 
             val emptyFact = AccessGraphInitialFactAp(base, access.manager.emptyGraph(), exclusions)
             return listOf(emptyFact to Delta(filteredDelta))
         }
 
         return access.splitDelta(other.access).mapNotNull { (matchedAccess, delta) ->
-            val filteredDelta = delta.filter(other.exclusions) ?: return@mapNotNull null
+            val filteredDelta = delta
+                .filter(other.exclusions)
+                ?.filterDeep(other.exclusions, keepInitialLevel = matchedAccess.isEmpty())
+                ?: return@mapNotNull null
 
             val matchedFact = AccessGraphInitialFactAp(base, matchedAccess, exclusions)
             matchedFact to Delta(filteredDelta)
