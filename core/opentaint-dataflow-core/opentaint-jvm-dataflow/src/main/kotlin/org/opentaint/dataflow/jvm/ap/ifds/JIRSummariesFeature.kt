@@ -4,6 +4,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -172,6 +173,7 @@ class JIRSummariesFeature(
                             fieldNameId = accessorEntity.get<Long>("fieldNameId"),
                             fieldTypeId = accessorEntity.get<Long>("fieldTypeId"),
                             taintMarkId = accessorEntity.get<Long>("taintMarkId"),
+                            taintMarkDeep = accessorEntity.get<Long>("taintMarkDeep"),
                             staticTypeNameId = accessorEntity.get<Long>("staticTypeNameId"),
                             typeInfoTypeNameId = accessorEntity.get<Long>("typeInfoTypeNameId"),
                         )
@@ -198,7 +200,12 @@ class JIRSummariesFeature(
 
                         val taintMarkName = interner.findSymbolName(ids.taintMarkId)
                             ?: error("Deserialization error. Unknown taintMark id: $id")
-                        TaintMarkAccessor(taintMarkName)
+                        // Absent property (entities written before deep marks existed) means plain.
+                        if (ids.taintMarkDeep == 1L) {
+                            DeepMarkExclusion(taintMarkName)
+                        } else {
+                            TaintMarkAccessor(taintMarkName)
+                        }
                     }
                 }
             }
@@ -234,6 +241,21 @@ class JIRSummariesFeature(
                 val taintMarkId = accessor.mark.asSymbolId(interner)
                 val accessorId = jIRdb.persistence.read { context ->
                     context.txn.find(ACCESSOR_IDS_TYPE, "taintMarkId", taintMarkId)
+                        .filter { (it.get<Long>("taintMarkDeep") ?: 0L) == 0L }
+                        .singleOrNull()
+                        ?.get<Long>("id")
+                }
+
+                accessorId ?: accessorIdGen.incrementAndGet().also {
+                    newAccessors.add(accessor)
+                }
+            }
+
+            is DeepMarkExclusion -> accessorToIdCache.computeIfAbsent(accessor) {
+                val taintMarkId = accessor.mark.asSymbolId(interner)
+                val accessorId = jIRdb.persistence.read { context ->
+                    context.txn.find(ACCESSOR_IDS_TYPE, "taintMarkId", taintMarkId)
+                        .filter { (it.get<Long>("taintMarkDeep") ?: 0L) == 1L }
                         .singleOrNull()
                         ?.get<Long>("id")
                 }
@@ -358,6 +380,15 @@ class JIRSummariesFeature(
                         typeInfoAccessorId["typeInfoTypeNameId"] = typeInfoTypeNameId
                     }
                 }
+            } else if (accessor is DeepMarkExclusion) {
+                val taintMarkId = accessor.mark.asSymbolId(interner)
+                jIRdb.persistence.write { context ->
+                    context.txn.newEntity(ACCESSOR_IDS_TYPE).also { deepMarkExclusionId ->
+                        deepMarkExclusionId["id"] = accessorToIdCache[accessor]!!
+                        deepMarkExclusionId["taintMarkId"] = taintMarkId
+                        deepMarkExclusionId["taintMarkDeep"] = 1L
+                    }
+                }
             } else {
                 accessor as TaintMarkAccessor
 
@@ -389,6 +420,7 @@ class JIRSummariesFeature(
         val fieldNameId: Long?,
         val fieldTypeId: Long?,
         val taintMarkId: Long?,
+        val taintMarkDeep: Long?,
         val staticTypeNameId: Long?,
         val typeInfoTypeNameId: Long?,
     )
