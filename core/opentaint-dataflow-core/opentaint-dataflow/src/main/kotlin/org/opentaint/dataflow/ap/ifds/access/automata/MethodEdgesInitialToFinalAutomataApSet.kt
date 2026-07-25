@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
@@ -12,6 +11,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
+import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesInitialToFinalAutomataApSet(
     methodInitialStatement: CommonInst,
@@ -208,7 +208,7 @@ class MethodEdgesInitialToFinalAutomataApSet(
                 return exclusion
             }
 
-            val merged = currentExclusion.union(exclusion)
+            val merged = currentExclusion.mergeAndIntersectDeep(exclusion)
             if (merged === currentExclusion) {
                 return if (returnNullIfNotUpdated) null else merged
             }
