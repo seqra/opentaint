@@ -45,7 +45,7 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
 
             traceGeneralizationAt(statement)?.let { edge ->
                 val generalized = edge.initial to AccessWithExclusion(edge.final, edge.exclusion)
-                if (generalized !in dst) dst += generalized
+                dst += generalized
             }
         }
 
