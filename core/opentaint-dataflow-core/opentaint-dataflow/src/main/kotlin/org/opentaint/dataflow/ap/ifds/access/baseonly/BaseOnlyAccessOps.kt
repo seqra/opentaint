@@ -255,20 +255,14 @@ object BaseOnlyAccessOps {
             }
             2 -> {
                 if (suffix.staticIdx != NO_ACCESSOR) return null
-                // `outer.* + inner.tail` denotes `outer.inner.tail`. BaseOnly retains `outer`,
-                // absorbs the unrepresentable inner structural step, and keeps `tail`. Reading
-                // `outer` installs the implicit structural self-loop before the terminal, so
-                // `outer.tail` covers every concrete `outer.inner.tail` Tree path. Returning
-                // `outer.*` here would lose a semantic terminal and underapproximate.
-                val field = when {
-                    prefix.fieldIdx >= 0 -> prefix.fieldIdx
-                    suffix.fieldIdx != NO_ACCESSOR -> suffix.fieldIdx
-                    else -> NO_ACCESSOR
-                }
+                // The prefix's suffix abstraction already contains an implicit Any step. It is
+                // the earlier structural step even when no concrete prefix field is retained, so
+                // a structural suffix is absorbed rather than installed into the empty field slot.
+                // Keeping only the incoming semantic terminal covers both the zero-length and
+                // structural branches represented by the prefix.
+                val field = prefix.fieldIdx
                 val terminal = when {
-                    prefix.fieldIdx >= 0 && suffix.fieldIdx >= 0 && !suffix.hasSemanticMark ->
-                        ABSTRACT_MARK
-                    suffix.fieldIdx == ABSTRACT_MARK && prefix.fieldIdx >= 0 -> ABSTRACT_MARK
+                    suffix.fieldIdx != NO_ACCESSOR && !suffix.hasSemanticMark -> ABSTRACT_MARK
                     else -> suffix.suffixIdx
                 }
                 packNormalized(prefix.staticIdx, field, terminal, suffix.valueAccessorState)

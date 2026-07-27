@@ -396,10 +396,12 @@ of `prefix` with `suffix`, like Tree concat, and canonicalizes the union.
   where Tree allows that static accessor;
 - incompatible paths are rejected only when Tree/type checking rejects them;
 - discarded precision causes widening: when two structural steps compete for
-  the one retained field slot, keep the earlier known step and preserve an
-  incoming semantic terminal behind its implicit structural-Any tail; if the
-  suffix ends only in exact `$`, widen to suffix abstraction because no terminal
-  can represent the discarded step;
+  the one retained field slot, keep the earlier step and preserve an incoming
+  semantic terminal behind its implicit structural-Any tail. The earlier step
+  includes the virtual Any represented by an absent field in a suffix-abstract
+  prefix; it consumes a concrete suffix field instead of allowing that field to
+  occupy the empty slot. If the suffix ends only in exact `$`, widen to suffix
+  abstraction because no terminal can represent the discarded step;
 - initial-delta concat uses the same graft without a type checker;
 - final-delta concat uses the supplied `FactTypeChecker` and must not recreate a
   Tree-rejected or primitive-incompatible path.

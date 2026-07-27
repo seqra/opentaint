@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -38,6 +39,12 @@ class BaseOnlyAppendFinalTest {
     @Test fun `AP@suffix receiver retains terminal after absorbing a field-leading semantic delta`() {
         val recv = ai.abstractAt(NO_ACCESSOR, i(field), 2)           // (-1,f,-2), hole at slot 2
         assertEquals(chain(field, mark), ai.appendFinal(recv, chain(field2, mark)))
+    }
+    @Test fun `root suffix receiver preserves implicit Any when absorbing a field-leading semantic delta`() {
+        val recv = ai.abstractEmpty                                  // (-1,-1,-2), implicit Any
+        val expected = chain(AnyAccessor, mark)                      // (-1,-1,m)
+        assertEquals(expected, ai.append(recv, chain(field2, mark)))
+        assertEquals(expected, ai.appendFinal(recv, chain(field2, mark)))
     }
     @Test fun `AP@suffix receiver abstracts after retained field for a field-leading exact delta`() {
         val recv = ai.abstractAt(NO_ACCESSOR, i(field), 2)

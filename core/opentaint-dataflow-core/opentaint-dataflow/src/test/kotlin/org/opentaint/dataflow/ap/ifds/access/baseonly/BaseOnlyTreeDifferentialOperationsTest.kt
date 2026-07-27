@@ -445,6 +445,35 @@ class BaseOnlyTreeDifferentialOperationsTest {
     }
 
     @Test
+    fun `root suffix concat covers both plain and implicit Any Tree prefixes`() {
+        val (treeManager, baseOnlyManager) = managers()
+        val treeDelta = treeManager.finalOf(otherField, mark)
+            .delta(treeManager.mostAbstractInitialAp(base))
+            .single()
+        val baseOnlyDelta = BaseOnlyNodeFinalDelta(
+            baseOnlyManager,
+            (baseOnlyManager.finalOf(otherField, mark) as BaseOnlyFinalFactAp).access,
+        )
+
+        val treeRoot = assertNotNull(
+            treeManager.mostAbstractFinalAp(base).concat(FactTypeChecker.Dummy, treeDelta),
+        )
+        val treeAfterField = assertNotNull(
+            treeManager.abstractFinalOf(field).concat(FactTypeChecker.Dummy, treeDelta),
+        )
+        val baseOnlyResult = assertNotNull(
+            baseOnlyManager.mostAbstractFinalAp(base).concat(FactTypeChecker.Dummy, baseOnlyDelta),
+        )
+
+        assertEquals(baseOnlyManager.finalOf(AnyAccessor, mark), baseOnlyResult)
+        assertOverapproximates(
+            listOf(treeRoot, treeAfterField),
+            listOf(baseOnlyResult),
+            "root suffix concat with implicit Any",
+        )
+    }
+
+    @Test
     fun `contains and equalTo preserve every Tree-true relation`() {
         val (treeManager, baseOnlyManager) = managers()
         val treeFinal = treeManager.finalOf(field, mark)
