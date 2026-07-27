@@ -119,8 +119,12 @@ the exclusion check reduces to:
 covered.exclusions.contains(cover.exclusions)
 ```
 
-Exclusions are aggregated per initial access. Every retained final for that
-initial uses the same intersection before any subsumption check.
+Exclusions are intersected only for repeated occurrences of the same exact
+`(initial, final)` edge. Different finals retain independent exclusions.
+
+If a representation forces several distinct final edges into one record, their
+exclusions must instead be combined by union. BaseOnly stores the finals
+separately, so this lossy fallback is unnecessary.
 
 For a non-empty residual, `cover.exclusions` is checked by the ordinary
 residual operation. If it rejects the residual, `cover` does not subsume the
@@ -136,11 +140,10 @@ participate in primary-edge subsumption.
 The storage writer handles one `add` batch as follows:
 
 1. Reject edges containing a collapsed access.
-2. Intersect every incoming exclusion into the aggregate for its initial
-   access.
-3. Rebuild the retained and incoming exact `(initial, final)` keys for each
-   affected initial using that aggregate exclusion.
-4. Combine those rebuilt candidates with summaries for unaffected initials and
+2. Intersect every incoming exclusion into the aggregate for its exact
+   `(initial, final)` key.
+3. Rebuild the retained and incoming records for the affected exact keys.
+4. Combine those rebuilt candidates with summaries for unaffected keys and
    retain a deterministic antichain using the authoritative `subsumes`
    predicate.
 5. Publish the complete new snapshot and append every newly visible primary
@@ -175,7 +178,7 @@ insertion delta.
 
 The logic-first implementation keeps:
 
-- writer-owned merged exclusions keyed by initial access;
+- writer-owned merged exclusions keyed by exact `(initial, final)` edge;
 - one volatile immutable list of retained primary summaries.
 
 `add` computes and publishes a complete replacement list. `collect` reads only
@@ -208,8 +211,8 @@ observe the new antichain.
 
 - an abstract edge excluding `M` does not subsume the concrete `M` edge;
 - for equal initials, `{}` subsumes `{M}`, but `{M}` does not subsume `{}`;
-- initial-exclusion updates rebuild all finals for that initial and rerun
-  eviction;
+- exact-key exclusion updates rerun eviction without changing unrelated
+  finals;
 - an exclusion unrelated to a non-empty residual does not by itself prevent
   subsumption.
 

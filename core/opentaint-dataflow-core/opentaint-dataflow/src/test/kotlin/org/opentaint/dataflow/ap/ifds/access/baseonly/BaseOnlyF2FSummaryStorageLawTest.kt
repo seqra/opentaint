@@ -117,7 +117,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
-    fun `nonidentity exclusion aggregation is intersection and insertion-order independent`() {
+    fun `different finals keep independent exclusions in either insertion order`() {
         val field = field("aggregate")
         val initial = packBaseOnlyAccess(NO_ACCESSOR, field, ABSTRACT_MARK)
         val finalA = packBaseOnlyAccess(NO_ACCESSOR, field, mark("aggregate-a"))
@@ -128,7 +128,6 @@ class BaseOnlyF2FSummaryStorageLawTest {
             val delta = mutableListOf<FactToFactEdgeBuilder>()
             summaries.add(edges, delta)
             assertEquals(2, delta.size)
-            assertTrue(delta.all { it.record().exclusion == ExclusionSet.Empty })
             return summaries.records().toSet()
         }
 
@@ -136,8 +135,13 @@ class BaseOnlyF2FSummaryStorageLawTest {
         val reverse = run(listOf(edge(initial, finalB, exB), edge(initial, finalA, exA)))
 
         assertEquals(forward, reverse)
-        assertEquals(setOf(finalA, finalB), forward.mapTo(hashSetOf()) { it.final })
-        assertTrue(forward.all { it.exclusion == ExclusionSet.Empty })
+        assertEquals(
+            setOf(
+                Record(initial, finalA, exA),
+                Record(initial, finalB, exB),
+            ),
+            forward,
+        )
     }
 
     @Test
@@ -433,7 +437,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
-    fun `concurrent nonidentity publication never pairs a new final with the old aggregate exclusion`() {
+    fun `concurrent publication preserves each final exclusion`() {
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
         val initial = packBaseOnlyAccess(NO_ACCESSOR, field("publication"), ABSTRACT_MARK)
         val firstFinal = packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, mark("publication-first"))
@@ -469,11 +473,11 @@ class BaseOnlyF2FSummaryStorageLawTest {
                     while (!finished.get()) {
                         val observed = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
                         storage.collectSummariesTo(observed, null)
-                        val records = observed.map(::record)
-                        if (records.any { it.final != firstFinal }) {
-                            assertTrue(
-                                records.all { it.exclusion == ExclusionSet.Empty },
-                                "a newly published final was observed with the pre-merge exclusion",
+                        observed.map(::record).forEach { record ->
+                            assertEquals(
+                                if (record.final == firstFinal) exA else exB,
+                                record.exclusion,
+                                "a final was observed with another edge's exclusion",
                             )
                         }
                     }
@@ -490,7 +494,9 @@ class BaseOnlyF2FSummaryStorageLawTest {
         val eventual = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
         storage.collectSummariesTo(eventual, null)
         assertEquals(count + 1, eventual.size)
-        assertTrue(eventual.all { record(it).exclusion == ExclusionSet.Empty })
+        eventual.map(::record).forEach { record ->
+            assertEquals(if (record.final == firstFinal) exA else exB, record.exclusion)
+        }
     }
 
     @Test

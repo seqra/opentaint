@@ -19,7 +19,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             val final: BaseOnlyAccess,
         )
 
-        private val mergedExclusions = linkedMapOf<BaseOnlyAccess, ExclusionSet>()
+        private val mergedExclusions = linkedMapOf<EdgeKey, ExclusionSet>()
 
         @Volatile
         private var summaries: List<BaseOnlySummaryEdge> = emptyList()
@@ -31,10 +31,9 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             val newEdges = edges.filterNot { it.initial.isCollapsed || it.final.isCollapsed }
             if (newEdges.isEmpty()) return
 
-            val affectedInitials = updateMergedExclusions(newEdges)
-            val candidates = rebuildAffectedSummaries(newEdges, affectedInitials)
+            val candidates = mergeExactEdges(newEdges)
             val previous = summaries
-            summaries = retainCanonicalSummaries(previous, affectedInitials, candidates)
+            summaries = retainCanonicalSummaries(previous, candidates)
             appendAddedSummaries(previous, summaries, added)
         }
 
@@ -47,51 +46,35 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             }
         }
 
-        private fun updateMergedExclusions(
+        private fun mergeExactEdges(
             edges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
-        ): Set<BaseOnlyAccess> {
-            val affectedInitials = linkedSetOf<BaseOnlyAccess>()
-            edges.forEach { edge ->
-                affectedInitials += edge.initial
-                val previous = mergedExclusions[edge.initial]
-                mergedExclusions[edge.initial] = previous?.intersect(edge.exclusion) ?: edge.exclusion
-            }
-            return affectedInitials
-        }
-
-        private fun rebuildAffectedSummaries(
-            newEdges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
-            affectedInitials: Set<BaseOnlyAccess>,
         ): List<BaseOnlySummaryEdge> {
-            val candidates = linkedMapOf<EdgeKey, BaseOnlySummaryEdge>()
-
-            summaries.filter { it.initial in affectedInitials }.forEach { edge ->
-                candidates[edge.key] = edge.withMergedExclusion()
-            }
-            newEdges.forEach { edge ->
+            val affectedKeys = linkedSetOf<EdgeKey>()
+            edges.forEach { edge ->
                 val key = EdgeKey(edge.initial, edge.final)
-                candidates[key] = BaseOnlySummaryEdge(
-                    initial = edge.initial,
-                    final = edge.final,
-                    exclusion = mergedExclusions.getValue(edge.initial),
+                affectedKeys += key
+                val previous = mergedExclusions[key]
+                mergedExclusions[key] = previous?.intersect(edge.exclusion) ?: edge.exclusion
+            }
+
+            return affectedKeys.map { key ->
+                BaseOnlySummaryEdge(
+                    initial = key.initial,
+                    final = key.final,
+                    exclusion = mergedExclusions.getValue(key),
                 )
             }
-
-            return candidates.values.toList()
         }
 
         private val BaseOnlySummaryEdge.key: EdgeKey
             get() = EdgeKey(initial, final)
 
-        private fun BaseOnlySummaryEdge.withMergedExclusion(): BaseOnlySummaryEdge =
-            copy(exclusion = mergedExclusions.getValue(initial))
-
         private fun retainCanonicalSummaries(
             previous: List<BaseOnlySummaryEdge>,
-            affectedInitials: Set<BaseOnlyAccess>,
             candidates: List<BaseOnlySummaryEdge>,
         ): List<BaseOnlySummaryEdge> {
-            val retained = previous.filterTo(arrayListOf()) { it.initial !in affectedInitials }
+            val affectedKeys = candidates.mapTo(hashSetOf()) { it.key }
+            val retained = previous.filterTo(arrayListOf()) { it.key !in affectedKeys }
             candidates.sortedWith(edgeOrder).forEach { candidate ->
                 if (retained.any { isCanonicalCover(it, candidate) }) return@forEach
                 retained.removeAll { isCanonicalCover(candidate, it) }
