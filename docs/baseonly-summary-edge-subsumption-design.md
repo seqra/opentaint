@@ -2,11 +2,16 @@
 
 ## Goal
 
-`MethodInitialToFinalBaseOnlyApSummariesStorage` must retain an antichain of
-summary edges. For two edges with the same entry base, exit base, and exit
-statement, an edge can be discarded when every forward application and every
-backward trace reconstruction provided by it is already provided by one other
-edge.
+`MethodInitialToFinalBaseOnlyApSummariesStorage` has two operations:
+
+- `add` merges new summaries into a minimal covering set and reports its
+  insertion delta;
+- `collect` returns the retained summaries matching an optional initial-fact
+  pattern, including normalized read-only views when enabled.
+
+The storage does not expose separate forward and backward modes. Edge
+subsumption is an internal decision made by `add`. Its predicate must preserve
+the correlated transformation used by every consumer of a collected summary.
 
 For example:
 
@@ -60,20 +65,20 @@ The authoritative predicate must therefore:
 2. graft each surviving residual onto `cover.final` using the same operation as
    `FinalFactAp.concat`;
 3. accept only if one produced final fact, including its effective exclusions,
-   subsumes `covered.final / covered.exclusions`;
+   is exactly `covered.final / covered.exclusions`;
 4. verify that backward `InitialFactAp.splitDelta` on `covered.final` and
    `cover.final` can recover the same residual and that concatenating it with
-   `cover.initial` directionally covers `covered.initial`.
+   `cover.initial` exactly reconstructs `covered.initial`.
 
 In notation, for at least one residual `d`:
 
 ```text
 d in residual(covered.initial, cover.initial, cover.exclusions)
-factSubsumes(apply(cover, covered.initial / covered.exclusions),
-             covered.final / covered.exclusions)
+apply(cover, covered.initial / covered.exclusions)
+    == covered.final / covered.exclusions
 
 d in splitResidual(covered.final, cover.final, cover.exclusions)
-covers(concat(cover.initial, d), covered.initial)
+concat(cover.initial, d) == covered.initial
 ```
 
 The two witnesses must denote the same logical residual. Checking the forward
@@ -89,11 +94,12 @@ BaseOnlySummaryEdgeOps.subsumes(cover, covered): Boolean
 The implementation should use shared access-level residual, exclusion, graft,
 and concat operations. It must not duplicate AP-slot case logic in the storage.
 
-`factSubsumes` is likewise directional and operational. It asks whether the
-first final fact can be applied as a summary pattern to obtain the second fact.
-For a non-empty residual, the first fact's exclusions are applied to that
-residual. For an empty residual, exclusion permissiveness is compared. This is
-more precise than either raw access coverage or whole-set exclusion comparison.
+Directional BaseOnly coverage is not sufficient here. In particular, implicit
+`AnyAccessor` makes `.*` cover `.f.*`, but the transformations `.* -> .*` and
+`.* -> .f.*` are not trace-equivalent: the latter installs the residual under
+`f`. Deleting it loses the backward field-installation step. Exact correlated
+reconstruction is intentionally conservative; a retained redundant edge costs
+space, while a falsely deleted edge loses trace behavior.
 
 ### Empty residual and exclusions
 
@@ -105,20 +111,16 @@ effective exclusions =
     covered.exclusions union cover.exclusions
 ```
 
-That produced final fact is compared to
-`covered.final / covered.exclusions` with `factSubsumes`. When the final
-accesses are also equal, this reduces to:
+That produced final fact must equal
+`covered.final / covered.exclusions`. Since the final accesses must be equal,
+the exclusion check reduces to:
 
 ```text
 covered.exclusions.contains(cover.exclusions)
 ```
 
-When `cover.final` is broader, an exclusion may be irrelevant to the concrete
-branch represented by `covered.final`; the residual operation decides that
-case. A blanket exclusion-subset requirement would retain redundant edges.
-
-For equal `(initial, final)` keys, additions continue to merge exclusions by
-intersection before any subsumption check.
+Exclusions are aggregated per initial access. Every retained final for that
+initial uses the same intersection before any subsumption check.
 
 For a non-empty residual, `cover.exclusions` is checked by the ordinary
 residual operation. If it rejects the residual, `cover` does not subsume the
@@ -131,20 +133,18 @@ participate in primary-edge subsumption.
 
 ## Add protocol
 
-All incoming edges are first consolidated by exact `(initial, final)` key,
-intersecting their exclusions. The storage writer then processes each
-consolidated edge:
+The storage writer handles one `add` batch as follows:
 
-1. Reject collapsed or invalid accesses as today.
-2. Merge an existing exact key by exclusion intersection. Treat the merged
-   record as the candidate; a less restrictive exclusion can make it subsume
-   additional records.
-3. Find active records whose initial access may be a prefix of the candidate
-   initial. Apply the authoritative `subsumes(existing, candidate)` predicate.
-   If one succeeds, ignore the candidate.
-4. Find active records whose initial access may extend the candidate initial.
-   Apply `subsumes(candidate, existing)` and tombstone every successful match.
-5. Publish the candidate and mark only it as insertion delta.
+1. Reject edges containing a collapsed access.
+2. Intersect every incoming exclusion into the aggregate for its initial
+   access.
+3. Rebuild the retained and incoming exact `(initial, final)` keys for each
+   affected initial using that aggregate exclusion.
+4. Combine those rebuilt candidates with summaries for unaffected initials and
+   retain a deterministic antichain using the authoritative `subsumes`
+   predicate.
+5. Publish the complete new snapshot and append every newly visible primary
+   summary to the insertion delta.
 
 Steps 3 and 4 use an index only to obtain a conservative candidate set. The
 authoritative predicate is always evaluated before rejection or removal.
@@ -158,41 +158,29 @@ edge inserted and then subsumed by a later edge in the same batch emits no
 delta. Removing an edge published by an earlier call emits no retraction: the
 new edge covers its behavior, and IFDS propagation remains monotone.
 
-## Storage changes
+## Collect protocol
 
-Keep the current specialized identity and non-identity physical layouts. Add a
-writer-side subsumption index spanning both, because an identity and a
-non-identity edge must not be treated as separate semantic universes.
+`collect` reads one immutable snapshot of the retained primary summaries:
 
-Each indexed record has a handle to its physical leaf. A physical leaf supports:
+1. Add each primary summary that matches the optional initial-fact pattern.
+2. When normalized views are enabled, derive the normalized initial from each
+   primary and add it if it matches the pattern.
+3. Merge duplicate `(initial, final)` views by exclusion intersection.
+4. Materialize the resulting summary builders.
 
-```kotlin
-updateExclusion(intersection): Boolean
-remove()
-isActive(): Boolean
-```
+Normalized views have no independent storage state and never contribute an
+insertion delta.
 
-Removal sets the leaf payload to `null`; it does not remove or compact parent
-nodes. Empty per-initial storages remain in the index and may be traversed, but
-emit no summaries. This follows the existing single-writer/multiple-reader
-storage approach and avoids structural mutation visible to concurrent readers.
+## Storage representation
 
-The existing local abstraction logic in `StaticLayer`, `FieldLayer`, and
-`SuffixLayer` must report every leaf it nulls so the spanning index cannot
-retain an apparently active stale record. Alternatively, move all local
-subsumption decisions into the new authoritative edge predicate and make the
-physical tries exact-key stores. There must be only one authority for deciding
-whether a record is active.
+The logic-first implementation keeps:
 
-The initial-access candidate index needs two directional traversals:
+- writer-owned merged exclusions keyed by initial access;
+- one volatile immutable list of retained primary summaries.
 
-```kotlin
-collectPotentialPrefixes(access, consume)
-collectPotentialExtensions(access, consume)
-```
-
-They may over-return. Unlike `collectCandidates`, these methods must not use
-the symmetric `mayOverlap` relation as the final decision.
+`add` computes and publishes a complete replacement list. `collect` reads only
+that published list. Identity and non-identity edges share the same
+representation and the same subsumption authority.
 
 The concurrency contract remains:
 
@@ -200,10 +188,10 @@ The concurrency contract remains:
 one writer, multiple eventually-consistent readers
 ```
 
-Record exclusion and active-leaf publication must be visible to readers.
-Readers may observe an old covered record or the new covering record during an
-insertion, but must never observe a malformed edge. After the writer completes,
-later readers observe only the antichain.
+Snapshot publication must be visible to readers. A reader may observe the
+complete old snapshot or the complete new snapshot during an insertion, but
+never a partially rebuilt set. After the writer completes, later readers
+observe the new antichain.
 
 ## Required tests
 
@@ -220,7 +208,8 @@ later readers observe only the antichain.
 
 - an abstract edge excluding `M` does not subsume the concrete `M` edge;
 - for equal initials, `{}` subsumes `{M}`, but `{M}` does not subsume `{}`;
-- exact-key updates intersect exclusions and rerun eviction;
+- initial-exclusion updates rebuild all finals for that initial and rerun
+  eviction;
 - an exclusion unrelated to a non-empty residual does not by itself prevent
   subsumption.
 
@@ -233,7 +222,7 @@ later readers observe only the antichain.
 - patterned and full collection never return tombstoned records;
 - normalized views are derived only from active primary records.
 
-### Forward/trace differential
+### Consumer differential
 
 For a bounded set of Tree-equivalent accesses and caller extensions:
 

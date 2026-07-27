@@ -222,6 +222,166 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
+    fun `correlated abstract edge subsumes its concrete specialization`() {
+        val fieldA = field("subsumption-a")
+        val fieldB = field("subsumption-b")
+        val terminal = mark("subsumption-mark")
+        val broad = BaseOnlySummaryEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, ABSTRACT_MARK),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, ABSTRACT_MARK),
+            exclusion = ExclusionSet.Empty,
+        )
+        val narrow = BaseOnlySummaryEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, terminal),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, terminal),
+            exclusion = ExclusionSet.Empty,
+        )
+
+        assertTrue(BaseOnlySummaryEdgeOps.subsumes(manager, broad, narrow))
+        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, narrow, broad))
+    }
+
+    @Test
+    fun `correlated abstract edge does not subsume a different final residual`() {
+        val fieldA = field("mismatch-a")
+        val fieldB = field("mismatch-b")
+        val broad = BaseOnlySummaryEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, ABSTRACT_MARK),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, ABSTRACT_MARK),
+            exclusion = ExclusionSet.Empty,
+        )
+        val mismatch = BaseOnlySummaryEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, mark("mismatch-in")),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, mark("mismatch-out")),
+            exclusion = ExclusionSet.Empty,
+        )
+
+        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, broad, mismatch))
+    }
+
+    @Test
+    fun `abstract identity does not subsume an abstract field installation`() {
+        val abstractIdentity = BaseOnlySummaryEdge(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = ABSTRACT_EMPTY_ACCESS,
+            exclusion = ExclusionSet.Empty,
+        )
+        val fieldInstallation = BaseOnlySummaryEdge(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = packBaseOnlyAccess(NO_ACCESSOR, field("installed-field"), ABSTRACT_MARK),
+            exclusion = ExclusionSet.Empty,
+        )
+
+        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, abstractIdentity, fieldInstallation))
+    }
+
+    @Test
+    fun `summary antichain retains abstract identity and field installation in either order`() {
+        val identity = storageEdge(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = ABSTRACT_EMPTY_ACCESS,
+        )
+        val installation = storageEdge(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = packBaseOnlyAccess(NO_ACCESSOR, field("retained-field"), ABSTRACT_MARK),
+        )
+
+        fun run(edges: List<CommonF2FSummary.StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>): Set<Record> {
+            val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+            storage.add(edges, mutableListOf())
+            val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.collectSummariesTo(current, null)
+            return current.mapTo(hashSetOf(), ::record)
+        }
+
+        val expected = setOf(
+            Record(identity.initial, identity.final, ExclusionSet.Empty),
+            Record(installation.initial, installation.final, ExclusionSet.Empty),
+        )
+        assertEquals(expected, run(listOf(identity, installation)))
+        assertEquals(expected, run(listOf(installation, identity)))
+    }
+
+    @Test
+    fun `excluded residual prevents summary edge subsumption`() {
+        val fieldA = field("excluded-a")
+        val fieldB = field("excluded-b")
+        val markAccessor = TaintMarkAccessor("excluded-residual")
+        val terminal = manager.interner.index(markAccessor)
+        val broad = BaseOnlySummaryEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, ABSTRACT_MARK),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, ABSTRACT_MARK),
+            exclusion = ExclusionSet.Concrete(markAccessor),
+        )
+        val narrow = BaseOnlySummaryEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, terminal),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, terminal),
+            exclusion = ExclusionSet.Empty,
+        )
+
+        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, broad, narrow))
+    }
+
+    @Test
+    fun `summary antichain keeps only broad correlated edge in either insertion order`() {
+        val fieldA = field("antichain-a")
+        val fieldB = field("antichain-b")
+        val terminal = mark("antichain-mark")
+        val broad = storageEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, ABSTRACT_MARK),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, ABSTRACT_MARK),
+        )
+        val narrow = storageEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, terminal),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, terminal),
+        )
+
+        fun run(edges: List<CommonF2FSummary.StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>): Set<Record> {
+            val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+            val delta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.add(edges, delta)
+            val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.collectSummariesTo(current, null)
+            assertEquals(current.map(::record).toSet(), delta.map(::record).toSet())
+            return current.mapTo(hashSetOf(), ::record)
+        }
+
+        val expected = setOf(Record(broad.initial, broad.final, ExclusionSet.Empty))
+        assertEquals(expected, run(listOf(narrow, broad)))
+        assertEquals(expected, run(listOf(broad, narrow)))
+    }
+
+    @Test
+    fun `adding broad edge evicts published narrow edge and adding narrow edge is ignored`() {
+        val fieldA = field("incremental-a")
+        val fieldB = field("incremental-b")
+        val terminal = mark("incremental-mark")
+        val broad = storageEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, ABSTRACT_MARK),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, ABSTRACT_MARK),
+        )
+        val narrow = storageEdge(
+            initial = packBaseOnlyAccess(NO_ACCESSOR, fieldA, terminal),
+            final = packBaseOnlyAccess(NO_ACCESSOR, fieldB, terminal),
+        )
+
+        val narrowThenBroad = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        narrowThenBroad.add(listOf(narrow), mutableListOf())
+        val broadDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        narrowThenBroad.add(listOf(broad), broadDelta)
+        assertEquals(setOf(broad.initial), broadDelta.mapTo(hashSetOf()) { record(it).initial })
+        val afterEviction = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        narrowThenBroad.collectSummariesTo(afterEviction, null)
+        assertEquals(setOf(broad.initial), afterEviction.mapTo(hashSetOf()) { record(it).initial })
+
+        val broadThenNarrow = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        broadThenNarrow.add(listOf(broad), mutableListOf())
+        val ignoredDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        broadThenNarrow.add(listOf(narrow), ignoredDelta)
+        assertTrue(ignoredDelta.isEmpty())
+    }
+
+    @Test
     fun `concurrent first-leaf publication never exposes synthetic Universe exclusion`() {
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
         val failures = ConcurrentLinkedQueue<Throwable>()

@@ -1,14 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
-import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
-import org.opentaint.dataflow.util.collectToListWithPostProcess
-import org.opentaint.dataflow.util.forEachEntry
-import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.getOrCreateNullable
-import org.opentaint.dataflow.util.int2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodInitialToFinalBaseOnlyApSummariesStorage(
@@ -21,466 +14,154 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
     private class F2FStorage(
         private val manager: BaseOnlyApManager,
     ) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
-        private val idEdges = IdEdgeStorage(manager)
-        private val perInitial = BaseOnlyInitialAccessIndex<MergingStorage>()
+        private data class EdgeKey(
+            val initial: BaseOnlyAccess,
+            val final: BaseOnlyAccess,
+        )
+
+        private val mergedExclusions = linkedMapOf<BaseOnlyAccess, ExclusionSet>()
+
+        @Volatile
+        private var summaries: List<BaseOnlySummaryEdge> = emptyList()
 
         override fun add(
             edges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
             added: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
         ) {
-            val modified = linkedSetOf<MergingStorage>()
-            for (edge in edges) {
-                if (edge.initial.isCollapsed || edge.final.isCollapsed) continue
-                if (edge.initial == edge.final) {
-                    idEdges.add(edge.initial, edge.exclusion)
-                } else {
-                    val storage = perInitial.getOrCreate(edge.initial) { MergingStorage(manager, edge.initial) }
-                    if (storage.add(edge.final, edge.exclusion)) modified += storage
-                }
-            }
+            val newEdges = edges.filterNot { it.initial.isCollapsed || it.final.isCollapsed }
+            if (newEdges.isEmpty()) return
 
-            modified.forEach { it.getAndResetDelta(added) }
-            idEdges.getAndResetDelta(added)
+            val affectedInitials = updateMergedExclusions(newEdges)
+            val candidates = rebuildAffectedSummaries(newEdges, affectedInitials)
+            val previous = summaries
+            summaries = retainCanonicalSummaries(previous, affectedInitials, candidates)
+            appendAddedSummaries(previous, summaries, added)
         }
 
         override fun collectSummariesTo(
             dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
-            initialFactPatter: BaseOnlyAccess?,
-        ) {
-            val normalizedEnabled = manager.normalizedEdgesEnabled()
-            val emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit = { initial, final, exclusion ->
-                dst += Builder(manager).setInitialAp(initial).setExitAp(final).setExclusion(exclusion)
-            }
-
-            if (!normalizedEnabled) {
-                collectSummaries(initialFactPatter, emit)
-                return
-            }
-
-            val views = linkedMapOf<SummaryKey, ExclusionSet>()
-            fun addView(initial: BaseOnlyAccess, final: BaseOnlyAccess, exclusion: ExclusionSet) {
-                val key = SummaryKey(initial, final)
-                views[key] = views[key]?.intersect(exclusion) ?: exclusion
-            }
-
-            // A normalized initial is a read-only view of its primary edge.  It owns no
-            // exclusion state and emits no delta.  Scan primaries in trace mode because an
-            // alias can match a pattern that does not select the primary initial itself.
-            collectSummaries(null) { initial, final, exclusion ->
-                addView(initial, final, exclusion)
-                val normalized = normalizeSummaryInitialAccess(initial, final)
-                if (normalized != initial) {
-                    addView(normalized, final, exclusion)
-                }
-            }
-            views.forEach { (key, exclusion) -> emit(key.initial, key.final, exclusion) }
-        }
-
-        private fun collectSummaries(
             initialFactPattern: BaseOnlyAccess?,
-            emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit,
         ) {
-            if (initialFactPattern == null) {
-                idEdges.collectAll(emit)
-                perInitial.collectAll { _, storage -> storage.collectAll(emit) }
-            } else {
-                idEdges.collectContainedBy(initialFactPattern, emit)
-                perInitial.collectCandidates(initialFactPattern) { initial, storage ->
-                    if (baseOnlySummaryInitialMatches(initialFactPattern, initial)) storage.collectAll(emit)
-                }
-            }
-        }
-    }
-
-    private data class SummaryKey(
-        val initial: BaseOnlyAccess,
-        val final: BaseOnlyAccess,
-    )
-
-    private class IdEdgeStorage(private val manager: BaseOnlyApManager) {
-        private val storage = StaticLayer()
-
-        fun add(access: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
-            if (access.isCollapsed) return false
-            return access.withBaseOnlyAccessUnpacked { staticIdx, fieldIdx, suffixIdx ->
-                storage.add(manager, staticIdx, fieldIdx, suffixIdx, access.rawSuffixSlot, exclusion)
+            collectViews(initialFactPattern).forEach { (key, exclusion) ->
+                dst += BaseOnlySummaryEdge(key.initial, key.final, exclusion).toBuilder()
             }
         }
 
-        fun getAndResetDelta(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
-            storage.getAndResetDelta(manager, dst)
-        }
-
-        fun collectAll(emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit) {
-            storage.collectAll { access, exclusion -> emit(access, access, exclusion) }
-        }
-
-        fun collectContainedBy(
-            pattern: BaseOnlyAccess,
-            emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit,
-        ) {
-            storage.collectContainedBy(pattern) { access, exclusion -> emit(access, access, exclusion) }
-        }
-    }
-
-    private class MergingStorage(
-        private val manager: BaseOnlyApManager,
-        private val initial: BaseOnlyAccess,
-    ) {
-        private val storage = StaticLayer()
-
-        fun add(final: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
-            if (final.isCollapsed) return false
-
-            return final.withBaseOnlyAccessUnpacked { staticIdx, fieldIdx, suffixIdx ->
-                storage.add(manager, staticIdx, fieldIdx, suffixIdx, final.rawSuffixSlot, exclusion)
+        private fun updateMergedExclusions(
+            edges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
+        ): Set<BaseOnlyAccess> {
+            val affectedInitials = linkedSetOf<BaseOnlyAccess>()
+            edges.forEach { edge ->
+                affectedInitials += edge.initial
+                val previous = mergedExclusions[edge.initial]
+                mergedExclusions[edge.initial] = previous?.intersect(edge.exclusion) ?: edge.exclusion
             }
+            return affectedInitials
         }
 
-        fun getAndResetDelta(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
-            collectToListWithPostProcess(
-                dst,
-                { storage.getAndResetDelta(manager, it) },
-                { it.setInitialAp(initial) }
-            )
-        }
+        private fun rebuildAffectedSummaries(
+            newEdges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
+            affectedInitials: Set<BaseOnlyAccess>,
+        ): List<BaseOnlySummaryEdge> {
+            val candidates = linkedMapOf<EdgeKey, BaseOnlySummaryEdge>()
 
-        fun collectAll(emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit) {
-            storage.collectAll { final, ex ->
-                emit(initial, final, ex)
+            summaries.filter { it.initial in affectedInitials }.forEach { edge ->
+                candidates[edge.key] = edge.withMergedExclusion()
             }
+            newEdges.forEach { edge ->
+                val key = EdgeKey(edge.initial, edge.final)
+                candidates[key] = BaseOnlySummaryEdge(
+                    initial = edge.initial,
+                    final = edge.final,
+                    exclusion = mergedExclusions.getValue(edge.initial),
+                )
+            }
+
+            return candidates.values.toList()
         }
-    }
 
-    private abstract class LayerBase<S : Any> {
-        var apExclusion: ExclusionSet? = null
-        var noAccessor: S? = null
-        val concrete = int2ObjectMap<S?>()
-        private var delta: IntOpenHashSet? = null
+        private val BaseOnlySummaryEdge.key: EdgeKey
+            get() = EdgeKey(initial, final)
 
-        abstract fun createNext(): S
+        private fun BaseOnlySummaryEdge.withMergedExclusion(): BaseOnlySummaryEdge =
+            copy(exclusion = mergedExclusions.getValue(initial))
 
-        inline fun add(
-            manager: BaseOnlyApManager,
-            accessorIdx: AccessorIdx,
-            exclusion: ExclusionSet,
-            addNext: S.() -> Boolean,
+        private fun retainCanonicalSummaries(
+            previous: List<BaseOnlySummaryEdge>,
+            affectedInitials: Set<BaseOnlyAccess>,
+            candidates: List<BaseOnlySummaryEdge>,
+        ): List<BaseOnlySummaryEdge> {
+            val retained = previous.filterTo(arrayListOf()) { it.initial !in affectedInitials }
+            candidates.sortedWith(edgeOrder).forEach { candidate ->
+                if (retained.any { isCanonicalCover(it, candidate) }) return@forEach
+                retained.removeAll { isCanonicalCover(candidate, it) }
+                retained += candidate
+            }
+            return retained.sortedWith(edgeOrder)
+        }
+
+        private fun isCanonicalCover(
+            cover: BaseOnlySummaryEdge,
+            covered: BaseOnlySummaryEdge,
         ): Boolean {
-            if (accessorIdx == NO_ACCESSOR) {
-                val next = noAccessor ?: createNext().also { noAccessor = it }
-                return next.addNext()
-            }
-
-            if (accessorIdx == ABSTRACT_MARK) {
-                val current = apExclusion
-                val merged = current?.intersect(exclusion) ?: exclusion
-                return updateAbstraction(manager, current, merged)
-            }
-
-            apExclusion?.let { abstractExclusion ->
-                val accessor = with(manager) { accessorIdx.accessor }
-                if (!abstractExclusion.contains(accessor)) return false
-            }
-
-            val next = concrete.getOrCreateNullable(accessorIdx) { createNext() }
-            if (!next.addNext()) return false
-            modified().add(accessorIdx)
-            return true
+            if (!BaseOnlySummaryEdgeOps.subsumes(manager, cover, covered)) return false
+            if (!BaseOnlySummaryEdgeOps.subsumes(manager, covered, cover)) return true
+            return edgeOrder.compare(cover, covered) < 0
         }
 
-        private fun updateAbstraction(
-            manager: BaseOnlyApManager,
-            current: ExclusionSet?,
-            merged: ExclusionSet,
-        ): Boolean {
-            if (current != null && current === merged) return false
-
-            modified().add(ABSTRACT_MARK)
-            apExclusion = merged
-            concrete.keys.toIntArray().forEach { accessorIdx ->
-                val accessor = with(manager) { accessorIdx.accessor }
-                if (!merged.contains(accessor)) concrete.put(accessorIdx, null)
-            }
-            return true
-        }
-
-        inline fun getAndResetDelta(
-            manager: BaseOnlyApManager,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
-            emitNext: S.(AccessorIdx) -> Unit,
-            createAbstraction: () -> BaseOnlyAccess,
+        private fun appendAddedSummaries(
+            previous: List<BaseOnlySummaryEdge>,
+            current: List<BaseOnlySummaryEdge>,
+            added: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
         ) {
-            noAccessor?.emitNext(NO_ACCESSOR)
-            getAndResetModified()?.forEachInt { accessorIdx ->
-                if (accessorIdx == ABSTRACT_MARK) {
-                    apExclusion?.let { exclusion ->
-                        val access = createAbstraction()
-                        dst += Builder(manager).setInitialAp(access).setExitAp(access).setExclusion(exclusion)
+            val previousSet = previous.toHashSet()
+            current.filterNot { it in previousSet }.forEach { edge ->
+                added += edge.toBuilder()
+            }
+        }
+
+        private fun collectViews(initialFactPattern: BaseOnlyAccess?): Map<EdgeKey, ExclusionSet> {
+            val views = linkedMapOf<EdgeKey, ExclusionSet>()
+            summaries.forEach { edge ->
+                views.addIfMatches(initialFactPattern, edge.initial, edge.final, edge.exclusion)
+
+                if (manager.normalizedEdgesEnabled()) {
+                    val normalizedInitial = normalizeSummaryInitialAccess(edge.initial, edge.final)
+                    if (normalizedInitial != edge.initial) {
+                        views.addIfMatches(initialFactPattern, normalizedInitial, edge.final, edge.exclusion)
                     }
-                } else {
-                    concrete.get(accessorIdx)?.emitNext(accessorIdx)
                 }
             }
+            return views
         }
 
-        fun collectAll(
-            collectNext: S.(AccessorIdx) -> Unit,
-            createAbstraction: () -> BaseOnlyAccess,
-            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
-        ) {
-            noAccessor?.collectNext(NO_ACCESSOR)
-            apExclusion?.let { emit(createAbstraction(), it) }
-            concrete.forEachEntry { accessorIdx, next -> next?.collectNext(accessorIdx) }
-        }
-
-        private fun modified(): IntOpenHashSet = delta ?: IntOpenHashSet().also { delta = it }
-
-        private fun getAndResetModified(): IntOpenHashSet? = delta?.also { delta = null }
-    }
-
-    private class StaticLayer : LayerBase<FieldLayer>() {
-        override fun createNext(): FieldLayer = FieldLayer()
-
-        fun add(
-            manager: BaseOnlyApManager,
-            staticIdx: AccessorIdx,
-            fieldIdx: AccessorIdx,
-            suffixIdx: AccessorIdx,
-            rawSuffixSlot: Int,
+        private fun MutableMap<EdgeKey, ExclusionSet>.addIfMatches(
+            pattern: BaseOnlyAccess?,
+            initial: BaseOnlyAccess,
+            final: BaseOnlyAccess,
             exclusion: ExclusionSet,
-        ): Boolean = add(manager, staticIdx, exclusion) {
-            add(manager, fieldIdx, suffixIdx, rawSuffixSlot, exclusion)
-        }
-
-        fun getAndResetDelta(
-            manager: BaseOnlyApManager,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
-        ) = getAndResetDelta(
-            manager,
-            dst,
-            { getAndResetDelta(manager, it, dst) },
-            { packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR) },
-        )
-
-        fun collectAll(emit: (BaseOnlyAccess, ExclusionSet) -> Unit) = collectAll(
-            { collectAll(it, emit) },
-            { packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR) },
-            emit,
-        )
-
-        fun collectContainedBy(pattern: BaseOnlyAccess, emit: (BaseOnlyAccess, ExclusionSet) -> Unit) {
-            if (pattern.staticIdx == ABSTRACT_MARK) {
-                collectAll(emit)
-                return
-            }
-
-            apExclusion?.let { exclusion ->
-                emitIfApplicable(packBaseOnlyAccess(ABSTRACT_MARK, NO_ACCESSOR, NO_ACCESSOR), exclusion, pattern, emit)
-            }
-            val next = if (pattern.staticIdx == NO_ACCESSOR) noAccessor else concrete.get(pattern.staticIdx)
-            next?.collectContainedBy(pattern.staticIdx, pattern, emit)
-        }
-    }
-
-    private class FieldLayer : LayerBase<SuffixLayer>() {
-        override fun createNext(): SuffixLayer = SuffixLayer()
-
-        fun add(
-            manager: BaseOnlyApManager,
-            fieldIdx: AccessorIdx,
-            suffixIdx: AccessorIdx,
-            rawSuffixSlot: Int,
-            exclusion: ExclusionSet,
-        ): Boolean = add(manager, fieldIdx, exclusion) {
-            add(manager, suffixIdx, rawSuffixSlot, exclusion)
-        }
-
-        fun getAndResetDelta(
-            manager: BaseOnlyApManager,
-            staticIdx: AccessorIdx,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
-        ) = getAndResetDelta(
-            manager,
-            dst,
-            { getAndResetDelta(manager, staticIdx, it, dst) },
-            { packBaseOnlyAccess(staticIdx, ABSTRACT_MARK, NO_ACCESSOR) },
-        )
-
-        fun collectAll(staticIdx: AccessorIdx, emit: (BaseOnlyAccess, ExclusionSet) -> Unit) = collectAll(
-            { collectAll(staticIdx, it, emit) },
-            { packBaseOnlyAccess(staticIdx, ABSTRACT_MARK, NO_ACCESSOR) },
-            emit,
-        )
-
-        fun collectContainedBy(
-            staticIdx: AccessorIdx,
-            pattern: BaseOnlyAccess,
-            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
         ) {
-            if (pattern.fieldIdx == ABSTRACT_MARK) {
-                collectAll(staticIdx, emit)
-                return
-            }
-
-            apExclusion?.let { exclusion ->
-                emitIfApplicable(packBaseOnlyAccess(staticIdx, ABSTRACT_MARK, NO_ACCESSOR), exclusion, pattern, emit)
-            }
-            if (pattern.fieldIdx == NO_ACCESSOR) {
-                noAccessor?.collectContainedBy(staticIdx, NO_ACCESSOR, pattern, emit)
-                concrete.forEachEntry { fieldIdx, next ->
-                    next?.collectContainedBy(staticIdx, fieldIdx, pattern, emit)
-                }
-                return
-            }
-
-            noAccessor?.collectContainedBy(staticIdx, NO_ACCESSOR, pattern, emit)
-            concrete.get(pattern.fieldIdx)?.collectContainedBy(staticIdx, pattern.fieldIdx, pattern, emit)
-        }
-    }
-
-    private class SuffixLayer {
-        private class MutableExclusion(@Volatile var exclusion: ExclusionSet)
-
-        private var apExclusion: ExclusionSet? = null
-        private var noAccessor: MutableExclusion? = null
-        private val concrete = int2ObjectMap<MutableExclusion?>()
-        private var delta: IntOpenHashSet? = null
-
-        fun add(
-            manager: BaseOnlyApManager,
-            suffixIdx: AccessorIdx,
-            rawSuffixSlot: Int,
-            exclusion: ExclusionSet,
-        ): Boolean {
-            if (suffixIdx == NO_ACCESSOR) {
-                val current = noAccessor
-                if (current == null) {
-                    noAccessor = MutableExclusion(exclusion)
-                    modified().add(NO_ACCESSOR)
-                    return true
-                }
-                return current.intersect(exclusion).also { if (it) modified().add(NO_ACCESSOR) }
-            }
-
-            if (suffixIdx == ABSTRACT_MARK) {
-                val current = apExclusion
-                val merged = current?.intersect(exclusion) ?: exclusion
-                if (current != null && current === merged) return false
-                modified().add(ABSTRACT_MARK)
-                apExclusion = merged
-                concrete.keys.toIntArray().forEach { rawSlot ->
-                    val concreteSuffix = suffixIdxFromRawSlot(rawSlot)
-                    val accessor = with(manager) { concreteSuffix.accessor }
-                    if (!merged.contains(accessor)) concrete.put(rawSlot, null)
-                }
-                return true
-            }
-
-            apExclusion?.let { abstractExclusion ->
-                val accessor = with(manager) { suffixIdx.accessor }
-                if (!abstractExclusion.contains(accessor)) return false
-            }
-
-            val current = concrete.get(rawSuffixSlot)
-            if (current == null) {
-                concrete.put(rawSuffixSlot, MutableExclusion(exclusion))
-                modified().add(rawSuffixSlot)
-                return true
-            }
-            return current.intersect(exclusion).also { if (it) modified().add(rawSuffixSlot) }
+            if (pattern != null && !baseOnlySummaryInitialMatches(pattern, initial)) return
+            val key = EdgeKey(initial, final)
+            this[key] = this[key]?.intersect(exclusion) ?: exclusion
         }
 
-        fun getAndResetDelta(
-            manager: BaseOnlyApManager,
-            staticIdx: AccessorIdx,
-            fieldIdx: AccessorIdx,
-            dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
-        ) {
-            val modified = delta?.also { delta = null } ?: return
-            modified.forEachInt { key ->
-                val accessAndExclusion = when (key) {
-                    NO_ACCESSOR -> packBaseOnlyAccess(staticIdx, fieldIdx, NO_ACCESSOR) to noAccessor?.exclusion
-                    ABSTRACT_MARK -> packBaseOnlyAccess(staticIdx, fieldIdx, ABSTRACT_MARK) to apExclusion
-                    else -> packBaseOnlyAccessFromRawSuffix(staticIdx, fieldIdx, key) to concrete.get(key)?.exclusion
-                }
-                val exclusion = accessAndExclusion.second ?: return@forEachInt
-                val access = accessAndExclusion.first
-                dst += Builder(manager).setInitialAp(access).setExitAp(access).setExclusion(exclusion)
-            }
-        }
+        private fun BaseOnlySummaryEdge.toBuilder(): F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess> =
+            Builder(manager)
+                .setInitialAp(initial)
+                .setExitAp(final)
+                .setExclusion(exclusion)
 
-        fun collectAll(
-            staticIdx: AccessorIdx,
-            fieldIdx: AccessorIdx,
-            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
-        ) {
-            noAccessor?.let { emit(packBaseOnlyAccess(staticIdx, fieldIdx, NO_ACCESSOR), it.exclusion) }
-            apExclusion?.let { emit(packBaseOnlyAccess(staticIdx, fieldIdx, ABSTRACT_MARK), it) }
-            concrete.forEachEntry { rawSlot, entry ->
-                entry?.let { emit(packBaseOnlyAccessFromRawSuffix(staticIdx, fieldIdx, rawSlot), it.exclusion) }
-            }
-        }
-
-        fun collectContainedBy(
-            staticIdx: AccessorIdx,
-            fieldIdx: AccessorIdx,
-            pattern: BaseOnlyAccess,
-            emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
-        ) {
-            if (pattern.suffixIdx == ABSTRACT_MARK) {
-                collectAll(staticIdx, fieldIdx, emit)
-                return
-            }
-
-            apExclusion?.let { exclusion ->
-                emitIfApplicable(packBaseOnlyAccess(staticIdx, fieldIdx, ABSTRACT_MARK), exclusion, pattern, emit)
-            }
-            if (pattern.suffixIdx == NO_ACCESSOR) {
-                noAccessor?.let {
-                    emitIfApplicable(packBaseOnlyAccess(staticIdx, fieldIdx, NO_ACCESSOR), it.exclusion, pattern, emit)
-                }
-                return
-            }
-
-            val states = if (pattern.hasSemanticMark) {
-                BaseOnlyValueAccessorState.entries
-            } else {
-                listOf(BaseOnlyValueAccessorState.Normal)
-            }
-            for (state in states) {
-                val rawSlot = rawBaseOnlySuffixSlot(pattern.suffixIdx, state)
-                val entry = concrete.get(rawSlot) ?: continue
-                emitIfApplicable(packBaseOnlyAccessFromRawSuffix(staticIdx, fieldIdx, rawSlot), entry.exclusion, pattern, emit)
-            }
-        }
-
-        private fun MutableExclusion.intersect(exclusion: ExclusionSet): Boolean {
-            val current = this.exclusion
-            val merged = current.intersect(exclusion)
-            if (merged === current) return false
-            this.exclusion = merged
-            return true
-        }
-
-        private fun modified(): IntOpenHashSet = delta ?: IntOpenHashSet().also { delta = it }
-
-        private fun suffixIdxFromRawSlot(rawSlot: Int): AccessorIdx =
-            (rawSlot and BASE_ONLY_SUFFIX_VALUE_MASK) - BASE_ONLY_BIAS
+        private val edgeOrder = compareBy<BaseOnlySummaryEdge>(
+            { it.initial },
+            { it.final },
+        )
     }
 
     private class Builder(override val apManager: BaseOnlyApManager) :
         F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>(), BaseOnlyInitialApAccess, BaseOnlyFinalApAccess {
         override fun nonNullIAP(iap: BaseOnlyAccess?): BaseOnlyAccess = iap ?: ABSTRACT_EMPTY_ACCESS
     }
-}
-
-private fun emitIfApplicable(
-    access: BaseOnlyAccess,
-    exclusion: ExclusionSet,
-    pattern: BaseOnlyAccess,
-    emit: (BaseOnlyAccess, ExclusionSet) -> Unit,
-) {
-    if (baseOnlySummaryInitialMatches(pattern, access)) emit(access, exclusion)
 }
 
 internal fun normalizeSummaryInitialAccess(initial: BaseOnlyAccess, final: BaseOnlyAccess): BaseOnlyAccess {
