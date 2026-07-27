@@ -1,14 +1,12 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
-import it.unimi.dsi.fastutil.longs.LongArrayList
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
+import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.dataflow.util.forEachEntry
 import org.opentaint.dataflow.util.forEachInt
-import org.opentaint.dataflow.util.forEachLong
 import org.opentaint.dataflow.util.getOrCreateNullable
 import org.opentaint.dataflow.util.int2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -122,6 +120,35 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit,
         ) {
             storage.collectContainedBy(pattern) { access, exclusion -> emit(access, access, exclusion) }
+        }
+    }
+
+    private class MergingStorage(
+        private val manager: BaseOnlyApManager,
+        private val initial: BaseOnlyAccess,
+    ) {
+        private val storage = StaticLayer()
+
+        fun add(final: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
+            if (final.isCollapsed) return false
+
+            return final.withBaseOnlyAccessUnpacked { staticIdx, fieldIdx, suffixIdx ->
+                storage.add(manager, staticIdx, fieldIdx, suffixIdx, final.rawSuffixSlot, exclusion)
+            }
+        }
+
+        fun getAndResetDelta(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
+            collectToListWithPostProcess(
+                dst,
+                { storage.getAndResetDelta(manager, it) },
+                { it.setInitialAp(initial) }
+            )
+        }
+
+        fun collectAll(emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit) {
+            storage.collectAll { final, ex ->
+                emit(initial, final, ex)
+            }
         }
     }
 
@@ -439,57 +466,6 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
 
         private fun suffixIdxFromRawSlot(rawSlot: Int): AccessorIdx =
             (rawSlot and BASE_ONLY_SUFFIX_VALUE_MASK) - BASE_ONLY_BIAS
-    }
-
-    private class MergingStorage(
-        private val manager: BaseOnlyApManager,
-        private val initial: BaseOnlyAccess,
-    ) {
-        private val finals = org.opentaint.dataflow.util.longSet()
-        private val deltaFinals = LongOpenHashSet()
-
-        @Volatile
-        private var aggregateExclusion: ExclusionSet? = null
-
-        fun add(final: BaseOnlyAccess, exclusion: ExclusionSet): Boolean {
-            if (final.isCollapsed) return false
-            val currentExclusion = aggregateExclusion
-            val mergedExclusion = currentExclusion?.union(exclusion) ?: exclusion
-            val exclusionChanged = currentExclusion == null || mergedExclusion !== currentExclusion
-
-            // The exclusion aggregate is initialized before a new final is published.
-            aggregateExclusion = mergedExclusion
-            val finalAdded = finals.add(final)
-            if (exclusionChanged) {
-                finals.forEachLong(deltaFinals::add)
-            } else if (finalAdded) {
-                deltaFinals.add(final)
-            }
-            return exclusionChanged || finalAdded
-        }
-
-        fun getAndResetDelta(dst: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>) {
-            val exclusion = aggregateExclusion ?: return
-            val iterator = deltaFinals.iterator()
-            while (iterator.hasNext()) {
-                val final = iterator.nextLong()
-                dst += Builder(manager).setInitialAp(initial).setExitAp(final)
-                    .setExclusion(exclusion)
-            }
-            deltaFinals.clear()
-        }
-
-        fun collectAll(emit: (BaseOnlyAccess, BaseOnlyAccess, ExclusionSet) -> Unit) {
-            // The writer publishes the aggregate exclusion before a new final. Snapshot finals
-            // first and read the volatile exclusion afterwards, so a reader that observes a new
-            // final cannot pair it with the older aggregate exclusion.
-            val snapshot = LongArrayList()
-            finals.forEachLong(snapshot::add)
-            val exclusion = aggregateExclusion ?: return
-            for (index in 0 until snapshot.size) {
-                emit(initial, snapshot.getLong(index), exclusion)
-            }
-        }
     }
 
     private class Builder(override val apManager: BaseOnlyApManager) :
