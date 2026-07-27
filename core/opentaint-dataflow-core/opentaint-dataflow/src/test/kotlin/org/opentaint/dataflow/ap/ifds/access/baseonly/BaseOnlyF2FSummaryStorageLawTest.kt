@@ -461,6 +461,42 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
+    fun `field generalization can be disabled`() {
+        val exactManager = BaseOnlyApManager(
+            AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+            Cancellation(),
+            fieldGeneralizationEnabled = false,
+        )
+        val members = (0 until MAX_FIELD_ENUMERATION_EDGES + 2).map { index ->
+            storageEdge(
+                initial = packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    exactManager.interner.index(FieldAccessor("Owner", "exact-$index", "Value")),
+                    ABSTRACT_MARK,
+                ),
+                final = ABSTRACT_EMPTY_ACCESS,
+                exclusion = if (index % 2 == 0) exA else exB,
+            )
+        }
+        val expected = members.mapTo(hashSetOf()) {
+            Record(it.initial, it.final, it.exclusion)
+        }
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, exactManager).createStorage()
+        val delta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+
+        storage.add(members, delta)
+        exactManager.enableTraceResolutionMode()
+        val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(current, null)
+
+        assertEquals(expected, delta.mapTo(hashSetOf(), ::record))
+        assertEquals(expected, current.mapTo(hashSetOf(), ::record))
+        assertFalse(current.map(::record).any {
+            it.initial == ABSTRACT_EMPTY_ACCESS && it.final == ABSTRACT_EMPTY_ACCESS
+        })
+    }
+
+    @Test
     fun `field generalization is invariant under insertion order`() {
         val members = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
             storageEdge(

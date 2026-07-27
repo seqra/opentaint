@@ -38,6 +38,12 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             val candidates = mergeExactEdges(newEdges)
             val previous = summaries
             val canonical = retainCanonicalSummaries(previous, candidates)
+            if (!manager.fieldGeneralizationEnabled) {
+                summaries = canonical
+                appendAddedSummaries(previous, summaries, emptySet(), added)
+                return
+            }
+
             val generalization = fieldGeneralizer.rewrite(canonical)
             purgeGeneralizedExactEdges()
             summaries = generalization.summaries

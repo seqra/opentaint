@@ -73,7 +73,7 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
         }
 
         private fun traceGeneralizationAt(statement: CommonInst): BaseOnlySummaryEdge? {
-            if (!apManager.traceResolutionModeEnabled()) return null
+            if (!apManager.traceResolutionModeEnabled() || !apManager.fieldGeneralizationEnabled) return null
 
             val exact = arrayListOf<BaseOnlySummaryEdge>()
             perInitial.forEach { (initial, ps) ->

@@ -33,6 +33,7 @@ class BaseOnlyApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     override val cancellation: Cancellation,
     val fieldSensitive: Boolean = false,
+    val fieldGeneralizationEnabled: Boolean = true,
 ) : ApManager {
     val interner = AccessorInterner()
 

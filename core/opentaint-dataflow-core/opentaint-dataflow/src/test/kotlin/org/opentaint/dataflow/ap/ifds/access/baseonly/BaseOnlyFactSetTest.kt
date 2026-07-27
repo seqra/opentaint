@@ -35,8 +35,15 @@ class BaseOnlyFactSetTest {
     private val field1 = FieldAccessor("A", "f", "B")
     private val field2 = FieldAccessor("A", "g", "B")
 
-    private fun mkManager(fieldSensitive: Boolean = false) =
-        BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = fieldSensitive)
+    private fun mkManager(
+        fieldSensitive: Boolean = false,
+        fieldGeneralizationEnabled: Boolean = true,
+    ) = BaseOnlyApManager(
+        AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+        org.opentaint.dataflow.util.Cancellation(),
+        fieldSensitive = fieldSensitive,
+        fieldGeneralizationEnabled = fieldGeneralizationEnabled,
+    )
 
     private val dummyMethod = object : CommonMethod {
         override val name: String = "dummy"
@@ -444,6 +451,49 @@ class BaseOnlyFactSetTest {
             m.mostAbstractInitialAp(AccessPathBase.This),
         )
         assertEquals(listOf<FinalFactAp>(generalizedFinal), traceLookup)
+    }
+
+    @Test
+    fun `f2f trace view respects disabled field generalization`() {
+        val m = mkManager(fieldSensitive = true, fieldGeneralizationEnabled = false)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val exactInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.Return,
+            packBaseOnlyAccess(NO_ACCESSOR, m.interner.index(field1), ABSTRACT_MARK),
+            ExclusionSet.Empty,
+        )
+        val exactFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.This,
+            ABSTRACT_EMPTY_ACCESS,
+            ExclusionSet.Empty,
+        )
+        set.add(inst, exactInitial, exactFinal)
+
+        m.enableTraceResolutionMode()
+
+        val traceState = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(traceState, inst)
+        assertEquals(
+            listOf<Pair<InitialFactAp, FinalFactAp>>(exactInitial to exactFinal),
+            traceState,
+        )
+
+        val generalizedInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.Return,
+            ABSTRACT_EMPTY_ACCESS,
+            ExclusionSet.Empty,
+        )
+        val generalizedLookup = mutableListOf<FinalFactAp>()
+        set.collectApAtStatement(
+            generalizedLookup,
+            inst,
+            generalizedInitial,
+            m.mostAbstractInitialAp(AccessPathBase.This),
+        )
+        assertTrue(generalizedLookup.isEmpty())
     }
 
     @Test
