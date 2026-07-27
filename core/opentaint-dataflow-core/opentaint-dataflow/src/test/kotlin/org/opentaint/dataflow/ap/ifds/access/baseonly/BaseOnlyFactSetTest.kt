@@ -229,7 +229,7 @@ class BaseOnlyFactSetTest {
         val final = m.finalFact(AccessPathBase.This, field1, mark).replaceExclusions(ExclusionSet.Empty)
 
         assertEquals(1, set.add(inst, primary, final).size)
-        m.enableNormalizedEdges()
+        m.enableTraceResolutionMode()
 
         val collected = mutableListOf<FinalFactAp>()
         set.collectApAtStatement(
@@ -239,6 +239,211 @@ class BaseOnlyFactSetTest {
             m.mostAbstractInitialAp(AccessPathBase.This),
         )
         assertEquals(listOf(final), collected)
+    }
+
+    @Test
+    fun `f2f publishes correlated edges with different exact initial accesses`() {
+        val m = mkManager(fieldSensitive = true)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val initialField = m.interner.index(FieldAccessor("Input", "field", "Value"))
+        val finalField = m.interner.index(FieldAccessor("Output", "field", "Value"))
+        val terminal = m.interner.index(TaintMarkAccessor("correlated-terminal"))
+        val broadInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.This,
+            packBaseOnlyAccess(NO_ACCESSOR, initialField, ABSTRACT_MARK),
+            ExclusionSet.Empty,
+        )
+        val broadFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.Return,
+            packBaseOnlyAccess(NO_ACCESSOR, finalField, ABSTRACT_MARK),
+            ExclusionSet.Empty,
+        )
+        val concreteInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.This,
+            packBaseOnlyAccess(NO_ACCESSOR, initialField, terminal),
+            ExclusionSet.Empty,
+        )
+        val concreteFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.Return,
+            packBaseOnlyAccess(NO_ACCESSOR, finalField, terminal),
+            ExclusionSet.Empty,
+        )
+
+        assertEquals(listOf(broadInitial to broadFinal), set.add(inst, broadInitial, broadFinal))
+        assertEquals(
+            listOf(concreteInitial to concreteFinal),
+            set.add(inst, concreteInitial, concreteFinal),
+            "summary-edge subsumption must not suppress an intraprocedural exact-initial edge",
+        )
+
+        val all = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(all, inst)
+        assertEquals(setOf(broadInitial to broadFinal, concreteInitial to concreteFinal), all.toSet())
+
+        val concreteLookup = mutableListOf<FinalFactAp>()
+        set.collectApAtStatement(
+            concreteLookup,
+            inst,
+            concreteInitial,
+            m.mostAbstractInitialAp(AccessPathBase.Return),
+        )
+        assertEquals(listOf<FinalFactAp>(concreteFinal), concreteLookup)
+    }
+
+    @Test
+    fun `f2f trace lookup erases an eligible exact witness without changing forward state`() {
+        val m = mkManager(fieldSensitive = true)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val initialField = m.interner.index(FieldAccessor("Input", "field", "Value"))
+        val finalField = m.interner.index(FieldAccessor("Output", "field", "Value"))
+        val otherInitialField = m.interner.index(FieldAccessor("Input", "other", "Value"))
+        val otherFinalField = m.interner.index(FieldAccessor("Output", "other", "Value"))
+        val exA = ExclusionSet.Concrete(TaintMarkAccessor("trace-view-a"))
+        val exB = ExclusionSet.Concrete(TaintMarkAccessor("trace-view-b"))
+        val preciseInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.This,
+            packBaseOnlyAccess(NO_ACCESSOR, initialField, ABSTRACT_MARK),
+            exA,
+        )
+        val preciseFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.Return,
+            packBaseOnlyAccess(NO_ACCESSOR, finalField, ABSTRACT_MARK),
+            exA,
+        )
+        val otherPreciseInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.This,
+            packBaseOnlyAccess(NO_ACCESSOR, otherInitialField, ABSTRACT_MARK),
+            exB,
+        )
+        val otherPreciseFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.Return,
+            packBaseOnlyAccess(NO_ACCESSOR, otherFinalField, ABSTRACT_MARK),
+            exB,
+        )
+        val generalizedInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.This,
+            ABSTRACT_EMPTY_ACCESS,
+            exA.union(exB),
+        )
+        val generalizedFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.Return,
+            ABSTRACT_EMPTY_ACCESS,
+            exA.union(exB),
+        )
+
+        assertEquals(listOf(preciseInitial to preciseFinal), set.add(inst, preciseInitial, preciseFinal))
+        assertEquals(
+            listOf(otherPreciseInitial to otherPreciseFinal),
+            set.add(inst, otherPreciseInitial, otherPreciseFinal),
+        )
+
+        val forwardState = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(forwardState, inst)
+        assertEquals(
+            setOf<Pair<InitialFactAp, FinalFactAp>>(
+                preciseInitial to preciseFinal,
+                otherPreciseInitial to otherPreciseFinal,
+            ),
+            forwardState.toSet(),
+            "the generalized witness is a trace-only view, not a primary forward edge",
+        )
+
+        m.enableTraceResolutionMode()
+        val traceLookup = mutableListOf<FinalFactAp>()
+        set.collectApAtStatement(
+            traceLookup,
+            inst,
+            generalizedInitial,
+            m.mostAbstractInitialAp(AccessPathBase.Return),
+        )
+        assertEquals(
+            listOf<FinalFactAp>(generalizedFinal),
+            traceLookup,
+            "trace mode exposes a generalized witness without inserting it into the fact set",
+        )
+    }
+
+    @Test
+    fun `f2f field generalization is a trace only view`() {
+        val m = mkManager(fieldSensitive = true)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val exA = ExclusionSet.Concrete(TaintMarkAccessor("generalized-a"))
+        val exB = ExclusionSet.Concrete(TaintMarkAccessor("generalized-b"))
+        val generalizedExclusion = exA.union(exB)
+        val contributors = (0 until MAX_FIELD_ENUMERATION_EDGES + 2).map { index ->
+            val field = m.interner.index(FieldAccessor("Input", "field-$index", "Value"))
+            val exclusion = if (index % 2 == 0) exA else exB
+            val initial = BaseOnlyInitialFactAp(
+                m,
+                AccessPathBase.Return,
+                packBaseOnlyAccess(NO_ACCESSOR, field, ABSTRACT_MARK),
+                exclusion,
+            )
+            val final = BaseOnlyFinalFactAp(
+                m,
+                AccessPathBase.This,
+                ABSTRACT_EMPTY_ACCESS,
+                exclusion,
+            )
+            initial to final
+        }
+
+        contributors.forEach { (initial, final) ->
+            assertEquals(
+                listOf(initial to final),
+                set.add(inst, initial, final),
+                "forward insertion must retain every exact fact-set edge",
+            )
+        }
+
+        val generalizedInitial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.Return,
+            ABSTRACT_EMPTY_ACCESS,
+            generalizedExclusion,
+        )
+        val generalizedFinal = BaseOnlyFinalFactAp(
+            m,
+            AccessPathBase.This,
+            ABSTRACT_EMPTY_ACCESS,
+            generalizedExclusion,
+        )
+
+        val forward = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(forward, inst)
+        assertEquals(
+            contributors.toSet(),
+            forward.toSet(),
+            "forward collection must remain exact",
+        )
+
+        m.enableTraceResolutionMode()
+        val traceState = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(traceState, inst)
+        assertEquals(
+            contributors.toSet() + (generalizedInitial to generalizedFinal),
+            traceState.toSet(),
+            "trace mode adds one generalized view without replacing exact edges",
+        )
+
+        val traceLookup = mutableListOf<FinalFactAp>()
+        set.collectApAtStatement(
+            traceLookup,
+            inst,
+            generalizedInitial,
+            m.mostAbstractInitialAp(AccessPathBase.This),
+        )
+        assertEquals(listOf<FinalFactAp>(generalizedFinal), traceLookup)
     }
 
     @Test

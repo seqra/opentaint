@@ -313,7 +313,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
         timeout: Duration,
     ): List<ActionableRulesCollectionResult> {
-        (manager as? BaseOnlyApManager)?.enableNormalizedEdges()
+        (manager as? BaseOnlyApManager)?.enableTraceResolutionMode()
 
         val entryPointsSet = entryPoints.toHashSet()
         val interProcTraces = resolveVulnerabilityInterProceduralTraces(
@@ -339,7 +339,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
         timeout: Duration,
     ): List<VulnerabilityWithTrace> {
-        (manager as? BaseOnlyApManager)?.enableNormalizedEdges()
+        (manager as? BaseOnlyApManager)?.enableTraceResolutionMode()
 
         val entryPointsSet = entryPoints.toHashSet()
         val interProcTraces = resolveVulnerabilityInterProceduralTraces(

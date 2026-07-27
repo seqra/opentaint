@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.ir.api.common.CommonMethod
@@ -33,6 +34,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
     private val entryPoint by lazy { MethodEntryPoint(EmptyMethodContext, inst) }
     private val exA = ExclusionSet.Concrete(TaintMarkAccessor("excluded-a"))
     private val exB = ExclusionSet.Concrete(TaintMarkAccessor("excluded-b"))
+    private val exC = ExclusionSet.Concrete(TaintMarkAccessor("excluded-c"))
 
     @Test
     fun `normalized alias emits no delta and reads the primary exclusion`() {
@@ -49,7 +51,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
         summaries.add(listOf(edge(initial, final, exB)), secondDelta)
         assertEquals(listOf(ExclusionSet.Empty), secondDelta.map { it.record().exclusion })
 
-        manager.enableNormalizedEdges()
+        manager.enableTraceResolutionMode()
         val records = summaries.records()
         assertEquals(2, records.size)
         assertEquals(
@@ -71,7 +73,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
         summaries.add(listOf(edge(original, final, exA), edge(normalized, final, exB)), added)
         assertEquals(2, added.size, "both primary aggregates contribute insertion deltas")
 
-        manager.enableNormalizedEdges()
+        manager.enableTraceResolutionMode()
         val records = summaries.records()
         assertEquals(2, records.size, "the alias must not duplicate the exact primary view")
         assertEquals(exA, records.single { it.initial == original }.exclusion)
@@ -403,6 +405,195 @@ class BaseOnlyF2FSummaryStorageLawTest {
         val ignoredDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
         broadThenNarrow.add(listOf(narrow), ignoredDelta)
         assertTrue(ignoredDelta.isEmpty())
+    }
+
+    @Test
+    fun `field generalization has a sixteen edge budget and monotone deltas`() {
+        val members = (0 until 18).map { index ->
+            storageEdge(
+                initial = packBaseOnlyAccess(NO_ACCESSOR, field("budget-$index"), ABSTRACT_MARK),
+                final = ABSTRACT_EMPTY_ACCESS,
+                exclusion = if (index % 2 == 0) exA else exB,
+            )
+        }
+        val representative = Record(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = ABSTRACT_EMPTY_ACCESS,
+            exclusion = exA.union(exB),
+        )
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+
+        val belowBudgetDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.add(members.take(MAX_FIELD_ENUMERATION_EDGES), belowBudgetDelta)
+        assertEquals(
+            members.take(MAX_FIELD_ENUMERATION_EDGES)
+                .mapTo(hashSetOf()) { Record(it.initial, it.final, it.exclusion) },
+            belowBudgetDelta.mapTo(hashSetOf(), ::record),
+        )
+
+        val crossingDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.add(listOf(members[MAX_FIELD_ENUMERATION_EDGES]), crossingDelta)
+        assertEquals(listOf(representative), crossingDelta.map(::record))
+
+        val afterCrossing = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(afterCrossing, null)
+        assertEquals(listOf(representative), afterCrossing.map(::record))
+
+        val absorbed = members[MAX_FIELD_ENUMERATION_EDGES + 1].copy(exclusion = exC)
+        val absorbedDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.add(listOf(absorbed), absorbedDelta)
+        val representativeWithAbsorbedExclusion = representative.copy(
+            exclusion = exA.union(exB).union(exC),
+        )
+        assertEquals(
+            listOf(representativeWithAbsorbedExclusion),
+            absorbedDelta.map(::record),
+            "a later member must update the representative without re-enumerating the group",
+        )
+
+        val afterAbsorption = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(afterAbsorption, null)
+        assertEquals(listOf(representativeWithAbsorbedExclusion), afterAbsorption.map(::record))
+
+        val repeatedDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.add(listOf(absorbed), repeatedDelta)
+        assertTrue(repeatedDelta.isEmpty(), "an unchanged generalized representative emits no delta")
+    }
+
+    @Test
+    fun `field generalization is invariant under insertion order`() {
+        val members = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            storageEdge(
+                initial = packBaseOnlyAccess(NO_ACCESSOR, field("order-$index"), ABSTRACT_MARK),
+                final = ABSTRACT_EMPTY_ACCESS,
+                exclusion = if (index % 2 == 0) exA else exB,
+            )
+        }
+        val representative = Record(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = ABSTRACT_EMPTY_ACCESS,
+            exclusion = exA.union(exB),
+        )
+        val orders = buildList {
+            add(members)
+            add(members.reversed())
+            for (shift in listOf(1, 5, 11)) {
+                add(members.drop(shift) + members.take(shift))
+            }
+        }
+
+        orders.forEachIndexed { orderIndex, order ->
+            val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+            val delta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.add(order, delta)
+            val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.collectSummariesTo(current, null)
+
+            assertEquals(listOf(representative), delta.map(::record), "delta for order $orderIndex")
+            assertEquals(listOf(representative), current.map(::record), "state for order $orderIndex")
+        }
+    }
+
+    @Test
+    fun `static semantic and value dimensions are excluded from field generalization`() {
+        fun assertRetained(
+            scenario: String,
+            edges: List<CommonF2FSummary.StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
+        ) {
+            val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+            val delta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.add(edges, delta)
+            val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.collectSummariesTo(current, null)
+            val expected = edges.mapTo(hashSetOf()) { Record(it.initial, it.final, it.exclusion) }
+            assertEquals(expected, delta.mapTo(hashSetOf(), ::record), "$scenario delta")
+            assertEquals(expected, current.mapTo(hashSetOf(), ::record), "$scenario state")
+        }
+
+        val staticInitial = static("non-generalized-initial-static")
+        assertRetained(
+            "initial static",
+            (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+                storageEdge(
+                    packBaseOnlyAccess(staticInitial, field("static-in-$index"), ABSTRACT_MARK),
+                    ABSTRACT_EMPTY_ACCESS,
+                )
+            },
+        )
+
+        val staticFinal = static("non-generalized-final-static")
+        assertRetained(
+            "final static",
+            (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+                storageEdge(
+                    packBaseOnlyAccess(NO_ACCESSOR, field("static-out-$index"), ABSTRACT_MARK),
+                    packBaseOnlyAccess(staticFinal, NO_ACCESSOR, ABSTRACT_MARK),
+                )
+            },
+        )
+
+        val initialSemantic = mark("non-generalized-initial-semantic")
+        assertRetained(
+            "initial semantic",
+            (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+                storageEdge(
+                    packBaseOnlyAccess(NO_ACCESSOR, field("semantic-in-$index"), initialSemantic),
+                    ABSTRACT_EMPTY_ACCESS,
+                )
+            },
+        )
+
+        val finalSemantic = mark("non-generalized-final-semantic")
+        assertRetained(
+            "final semantic and value mode",
+            (0..MAX_FIELD_ENUMERATION_EDGES).flatMap { index ->
+                val initial = packBaseOnlyAccess(NO_ACCESSOR, field("semantic-out-$index"), ABSTRACT_MARK)
+                BaseOnlyValueAccessorState.entries.map { state ->
+                    storageEdge(
+                        initial,
+                        packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, finalSemantic, state),
+                    )
+                }
+            },
+        )
+    }
+
+    @Test
+    fun `pattern filtering finds the generalized edge for every removed premise`() {
+        val structuralAccessors = listOf(ELEMENT_ACCESSOR_IDX) +
+            (0 until MAX_FIELD_ENUMERATION_EDGES).map { index -> field("pattern-generalized-$index") }
+        val members = structuralAccessors.map { accessor ->
+            storageEdge(
+                initial = packBaseOnlyAccess(NO_ACCESSOR, accessor, ABSTRACT_MARK),
+                final = if (accessor == ELEMENT_ACCESSOR_IDX) {
+                    packBaseOnlyAccess(NO_ACCESSOR, ELEMENT_ACCESSOR_IDX, ABSTRACT_MARK)
+                } else {
+                    ABSTRACT_EMPTY_ACCESS
+                },
+            )
+        }
+        val representative = Record(
+            initial = ABSTRACT_EMPTY_ACCESS,
+            final = ABSTRACT_EMPTY_ACCESS,
+            exclusion = ExclusionSet.Empty,
+        )
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        storage.add(members, mutableListOf())
+
+        members.forEach { member ->
+            val queried = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+            storage.collectSummariesTo(queried, member.initial)
+            assertEquals(
+                listOf(representative),
+                queried.map(::record),
+                "removed premise ${member.initial} must select its generalized representative",
+            )
+        }
+
+        manager.enableTraceResolutionMode()
+        val all = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(all, null)
+        assertEquals(listOf(representative), all.map(::record), "normalized views must not duplicate the representative")
     }
 
     @Test

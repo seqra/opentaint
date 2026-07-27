@@ -37,10 +37,10 @@ For each fixed `x`, the edge
 `(-1, x, -2) -> (-1, y, -2)`: the premise is identical and the abstract-tail
 conclusion implies every concrete-field conclusion.
 
-The desired bounded representation after field generalization is:
+The desired bounded representation after structural-accessor generalization is:
 
 ```text
-(-1, -1, -2) /{} -> (-1, -1, -2) /{}
+(-1, -1, -2) /E -> (-1, -1, -2) /E
 ```
 
 This is an explicit field-erasing widening. It is not ordinary summary-edge
@@ -71,13 +71,15 @@ What subsumption does not remove is variation in the premise:
 (-1, z, -2) -> (-1, -1, -2)
 ```
 
-Field generalization forgets that remaining `x` versus `z` distinction. It
+Generalization forgets that remaining `x` versus `z` distinction. It
 must remain a separate operation from `BaseOnlySummaryEdgeOps.subsumes`.
 
-Generalization instead forgets which field was read and which field was
-written. Applying the generalized edge produces an abstract final fact that
-covers every concrete final field. False-positive paths are an accepted cost
-of the widening; losing a forward result is not.
+Generalization instead forgets which structural accessor was read and which
+structural accessor was written. Structural accessors include ordinary fields
+and the element accessor because implicit `[any]` covers both. Applying the
+generalized edge produces an abstract final fact that covers every concrete
+field and element accessor. False-positive paths are an accepted cost of the
+widening; losing a forward result is not.
 
 ## Field-erasure projection
 
@@ -97,7 +99,7 @@ The eligible access shapes are:
 
 ```text
 (-1, ABSTRACT_MARK, NO_ACCESSOR)
-(-1, concreteField, ABSTRACT_MARK)
+(-1, concreteFieldOrElement, ABSTRACT_MARK)
 (-1, NO_ACCESSOR, ABSTRACT_MARK)
 ```
 
@@ -108,7 +110,8 @@ eraseField(access) = (NO_ACCESSOR, NO_ACCESSOR, ABSTRACT_MARK)
 ```
 
 Normal and Value suffix states, semantic marks, type-information accessors, and
-final accessors must not be merged.
+final accessors must not be merged. `ANY_ACCESSOR` itself remains implicit and
+is never stored in the field slot.
 
 An eligible edge belongs to the group:
 
@@ -155,14 +158,17 @@ representative.
 
 ## Exclusions
 
-The generalized representative uses `ExclusionSet.Empty`.
+The generalized representative uses the union of every member exclusion:
 
-This is deliberate. Exclusions name precisely the field distinctions being
-forgotten. Unioning them can exclude every enumerated field and make the
-generalized edge fail to cover its contributors. This rule is specific to
-field-erasing widening; it does not change exact-key exclusion intersection or
-the existing fallback rule for a representation that merely merges different
-exact finals.
+```text
+E = E1 union E2 union ... union En
+```
+
+The suffix remains `ABSTRACT_MARK` after structural-accessor erasure, so the
+exclusions still belong to that suffix and must be retained. A later absorbed
+member extends this union; if the union changes, storage publishes the updated
+representative as an insertion delta. Exact-key exclusion intersection remains
+unchanged before generalization.
 
 ## Storage organization
 
@@ -186,8 +192,8 @@ published canonical summaries
 ```
 
 Once a group is generalized, its exact aggregates and membership can be
-dropped. They are no longer needed because the empty-exclusion representative
-cannot become narrower.
+dropped. The group key and accumulated exclusion union remain so later members
+can update the representative without restoring accessor enumeration.
 
 Collection does not perform generalization. It reads the published primary
 snapshot, applies the existing initial-pattern filter, and derives normalized
@@ -201,16 +207,18 @@ Publishing it only from
 resolution still searches only the concrete
 `MethodEdgesInitialToFinalBaseOnlyApSet` entries.
 
-Before enabling the optimization, use one shared generalization operation for
-both:
+The method F2F fact set remains exact during forward analysis. It must not
+replace or emit exact edges with generalized edges.
 
-- the method-exit F2F edge set used by trace resolution; and
-- the method F2F summary storage used by callers.
-
-Alternatively, retain explicit provenance from the generalized summary to a
-method-side generalized witness and teach trace resolution to consume that
-witness. Retaining all concrete contributors as provenance is not acceptable:
-it restores the same quadratic memory cost.
+As a temporary trace-resolution bridge, `BaseOnlyApManager` has a one-way
+trace-resolution mode. While that mode is disabled, fact-set insertion and
+collection retain their original exact behavior. While it is enabled,
+collection may additionally project eligible exact witnesses into the same
+field-erased shape used by summary storage. This trace view does not apply the
+summary-storage budget: a statement containing one eligible exact edge may
+witness a generalized method summary created from edges accumulated elsewhere.
+The projected edge is never inserted into the fact set and never enters the
+forward worklist.
 
 The generalized trace is an abstract witness, so it need not enumerate all
 concrete read/write paths. It must, however, connect the method entry and exit
@@ -239,7 +247,10 @@ facts accepted by the generalized forward edge.
 - any edge with a non-empty initial or final static slot is never generalized;
 - static-prefixed edges continue to use ordinary subsumption;
 - Normal/Value and semantic/type/final suffixes do not merge;
-- the representative has empty exclusions even when contributors do not;
+- the representative has the union of all contributor exclusions;
+- element-accessor members participate in the same budget as field members;
+- a later absorbed member updates and re-emits the representative only when
+  its exclusion grows the union;
 - unrelated summaries remain unchanged;
 - normalized aliases remain collection-only.
 

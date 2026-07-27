@@ -37,16 +37,14 @@ class BaseOnlyApManager(
     val interner = AccessorInterner()
 
     @Volatile
-    private var summaryQueryPhase = SummaryQueryPhase.Forward
+    private var traceResolutionMode = false
 
     /** One-way analyzer phase transition; individual queries capture the phase at entry. */
-    fun enableNormalizedEdges() {
-        summaryQueryPhase = SummaryQueryPhase.TraceResolution
+    fun enableTraceResolutionMode() {
+        traceResolutionMode = true
     }
 
-    fun normalizedEdgesEnabled(): Boolean = summaryQueryPhase == SummaryQueryPhase.TraceResolution
-
-    private enum class SummaryQueryPhase { Forward, TraceResolution }
+    fun traceResolutionModeEnabled(): Boolean = traceResolutionMode
 
     val Accessor.idx: AccessorIdx get() = interner.index(this)
 

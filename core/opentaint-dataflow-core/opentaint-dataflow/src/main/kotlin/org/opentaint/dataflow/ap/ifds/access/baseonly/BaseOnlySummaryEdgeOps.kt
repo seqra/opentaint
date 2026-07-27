@@ -17,6 +17,16 @@ internal data class BaseOnlySummaryEdge(
  * correlation is already fixed and directional conclusion coverage is sufficient.
  */
 internal object BaseOnlySummaryEdgeOps {
+    fun canonicallyCovers(
+        manager: BaseOnlyApManager,
+        cover: BaseOnlySummaryEdge,
+        covered: BaseOnlySummaryEdge,
+    ): Boolean {
+        if (!subsumes(manager, cover, covered)) return false
+        if (!subsumes(manager, covered, cover)) return true
+        return BASE_ONLY_SUMMARY_EDGE_ORDER.compare(cover, covered) < 0
+    }
+
     fun subsumes(
         manager: BaseOnlyApManager,
         general: BaseOnlySummaryEdge,

@@ -20,6 +20,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         )
 
         private val mergedExclusions = linkedMapOf<EdgeKey, ExclusionSet>()
+        private val fieldGeneralizer = BaseOnlyF2FFieldGeneralizer()
 
         @Volatile
         private var summaries: List<BaseOnlySummaryEdge> = emptyList()
@@ -28,13 +29,19 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             edges: List<StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>,
             added: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
         ) {
-            val newEdges = edges.filterNot { it.initial.isCollapsed || it.final.isCollapsed }
+            val newEdges = edges.filterNot {
+                it.initial.isCollapsed ||
+                    it.final.isCollapsed
+            }
             if (newEdges.isEmpty()) return
 
             val candidates = mergeExactEdges(newEdges)
             val previous = summaries
-            summaries = retainCanonicalSummaries(previous, candidates)
-            appendAddedSummaries(previous, summaries, added)
+            val canonical = retainCanonicalSummaries(previous, candidates)
+            val generalization = fieldGeneralizer.rewrite(canonical)
+            purgeGeneralizedExactEdges()
+            summaries = generalization.summaries
+            appendAddedSummaries(previous, summaries, generalization.newlyGeneralized, added)
         }
 
         override fun collectSummariesTo(
@@ -75,30 +82,31 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
         ): List<BaseOnlySummaryEdge> {
             val affectedKeys = candidates.mapTo(hashSetOf()) { it.key }
             val retained = previous.filterTo(arrayListOf()) { it.key !in affectedKeys }
-            candidates.sortedWith(edgeOrder).forEach { candidate ->
-                if (retained.any { isCanonicalCover(it, candidate) }) return@forEach
-                retained.removeAll { isCanonicalCover(candidate, it) }
+            candidates.sortedWith(BASE_ONLY_SUMMARY_EDGE_ORDER).forEach { candidate ->
+                if (retained.any { BaseOnlySummaryEdgeOps.canonicallyCovers(manager, it, candidate) }) {
+                    return@forEach
+                }
+                retained.removeAll { BaseOnlySummaryEdgeOps.canonicallyCovers(manager, candidate, it) }
                 retained += candidate
             }
-            return retained.sortedWith(edgeOrder)
+            return retained.sortedWith(BASE_ONLY_SUMMARY_EDGE_ORDER)
         }
 
-        private fun isCanonicalCover(
-            cover: BaseOnlySummaryEdge,
-            covered: BaseOnlySummaryEdge,
-        ): Boolean {
-            if (!BaseOnlySummaryEdgeOps.subsumes(manager, cover, covered)) return false
-            if (!BaseOnlySummaryEdgeOps.subsumes(manager, covered, cover)) return true
-            return edgeOrder.compare(cover, covered) < 0
+        private fun purgeGeneralizedExactEdges() {
+            mergedExclusions.entries.removeAll { (key, _) ->
+                fieldGeneralizer.isGeneralized(key.initial, key.final)
+            }
         }
 
         private fun appendAddedSummaries(
             previous: List<BaseOnlySummaryEdge>,
             current: List<BaseOnlySummaryEdge>,
+            newlyGeneralized: Set<BaseOnlyFieldErasureGroup>,
             added: MutableList<F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>,
         ) {
             val previousSet = previous.toHashSet()
-            current.filterNot { it in previousSet }.forEach { edge ->
+            val forcedRepresentatives = newlyGeneralized.mapTo(linkedSetOf(), fieldGeneralizer::representative)
+            current.filter { it in forcedRepresentatives || it !in previousSet }.forEach { edge ->
                 added += edge.toBuilder()
             }
         }
@@ -108,7 +116,7 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
             summaries.forEach { edge ->
                 views.addIfMatches(initialFactPattern, edge.initial, edge.final, edge.exclusion)
 
-                if (manager.normalizedEdgesEnabled()) {
+                if (manager.traceResolutionModeEnabled()) {
                     val normalizedInitial = normalizeSummaryInitialAccess(edge.initial, edge.final)
                     if (normalizedInitial != edge.initial) {
                         views.addIfMatches(initialFactPattern, normalizedInitial, edge.final, edge.exclusion)
@@ -135,10 +143,6 @@ class MethodInitialToFinalBaseOnlyApSummariesStorage(
                 .setExitAp(final)
                 .setExclusion(exclusion)
 
-        private val edgeOrder = compareBy<BaseOnlySummaryEdge>(
-            { it.initial },
-            { it.final },
-        )
     }
 
     private class Builder(override val apManager: BaseOnlyApManager) :

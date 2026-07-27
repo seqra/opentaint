@@ -9,82 +9,84 @@ public class BaseOnlySummaryFieldExplosionSample {
     }
 
     public static void fieldEnumerationExplosion(int readSelector, int writeSelector) {
-        Fields fields = new Fields();
+        Fields input = new Fields();
         String tainted = source();
-        fields.f00 = tainted;
-        fields.f01 = tainted;
-        fields.f02 = tainted;
-        fields.f03 = tainted;
-        fields.f04 = tainted;
-        fields.f05 = tainted;
-        fields.f06 = tainted;
-        fields.f07 = tainted;
-        fields.f08 = tainted;
-        fields.f09 = tainted;
-        fields.f10 = tainted;
-        fields.f11 = tainted;
-        fields.f12 = tainted;
-        fields.f13 = tainted;
-        fields.f14 = tainted;
-        fields.f15 = tainted;
-        fields.f16 = tainted;
-        fields.f17 = tainted;
-        fields.f18 = tainted;
-        fields.f19 = tainted;
+        input.f00 = tainted;
+        input.f01 = tainted;
+        input.f02 = tainted;
+        input.f03 = tainted;
+        input.f04 = tainted;
+        input.f05 = tainted;
+        input.f06 = tainted;
+        input.f07 = tainted;
+        input.f08 = tainted;
+        input.f09 = tainted;
+        input.f10 = tainted;
+        input.f11 = tainted;
+        input.f12 = tainted;
+        input.f13 = tainted;
+        input.f14 = tainted;
+        input.f15 = tainted;
+        input.f16 = tainted;
+        input.f17 = tainted;
+        input.f18 = tainted;
+        input.f19 = tainted;
 
-        Fields result = permuteField(fields, readSelector, writeSelector);
+        Fields result = permuteField(input, readSelector, writeSelector);
         sink(result.f00);
     }
 
-    private static Fields permuteField(Fields fields, int readSelector, int writeSelector) {
+    private static Fields permuteField(
+            Fields input,
+            int readSelector,
+            int writeSelector) {
         String selected;
         switch (readSelector) {
-            case 0: selected = fields.f00; break;
-            case 1: selected = fields.f01; break;
-            case 2: selected = fields.f02; break;
-            case 3: selected = fields.f03; break;
-            case 4: selected = fields.f04; break;
-            case 5: selected = fields.f05; break;
-            case 6: selected = fields.f06; break;
-            case 7: selected = fields.f07; break;
-            case 8: selected = fields.f08; break;
-            case 9: selected = fields.f09; break;
-            case 10: selected = fields.f10; break;
-            case 11: selected = fields.f11; break;
-            case 12: selected = fields.f12; break;
-            case 13: selected = fields.f13; break;
-            case 14: selected = fields.f14; break;
-            case 15: selected = fields.f15; break;
-            case 16: selected = fields.f16; break;
-            case 17: selected = fields.f17; break;
-            case 18: selected = fields.f18; break;
-            default: selected = fields.f19;
+            case 0: selected = input.f00; break;
+            case 1: selected = input.f01; break;
+            case 2: selected = input.f02; break;
+            case 3: selected = input.f03; break;
+            case 4: selected = input.f04; break;
+            case 5: selected = input.f05; break;
+            case 6: selected = input.f06; break;
+            case 7: selected = input.f07; break;
+            case 8: selected = input.f08; break;
+            case 9: selected = input.f09; break;
+            case 10: selected = input.f10; break;
+            case 11: selected = input.f11; break;
+            case 12: selected = input.f12; break;
+            case 13: selected = input.f13; break;
+            case 14: selected = input.f14; break;
+            case 15: selected = input.f15; break;
+            case 16: selected = input.f16; break;
+            case 17: selected = input.f17; break;
+            case 18: selected = input.f18; break;
+            default: selected = input.f19;
         }
 
         switch (writeSelector) {
-            case 0: fields.f00 = selected; break;
-            case 1: fields.f01 = selected; break;
-            case 2: fields.f02 = selected; break;
-            case 3: fields.f03 = selected; break;
-            case 4: fields.f04 = selected; break;
-            case 5: fields.f05 = selected; break;
-            case 6: fields.f06 = selected; break;
-            case 7: fields.f07 = selected; break;
-            case 8: fields.f08 = selected; break;
-            case 9: fields.f09 = selected; break;
-            case 10: fields.f10 = selected; break;
-            case 11: fields.f11 = selected; break;
-            case 12: fields.f12 = selected; break;
-            case 13: fields.f13 = selected; break;
-            case 14: fields.f14 = selected; break;
-            case 15: fields.f15 = selected; break;
-            case 16: fields.f16 = selected; break;
-            case 17: fields.f17 = selected; break;
-            case 18: fields.f18 = selected; break;
-            default: fields.f19 = selected;
+            case 0: input.f00 = selected; break;
+            case 1: input.f01 = selected; break;
+            case 2: input.f02 = selected; break;
+            case 3: input.f03 = selected; break;
+            case 4: input.f04 = selected; break;
+            case 5: input.f05 = selected; break;
+            case 6: input.f06 = selected; break;
+            case 7: input.f07 = selected; break;
+            case 8: input.f08 = selected; break;
+            case 9: input.f09 = selected; break;
+            case 10: input.f10 = selected; break;
+            case 11: input.f11 = selected; break;
+            case 12: input.f12 = selected; break;
+            case 13: input.f13 = selected; break;
+            case 14: input.f14 = selected; break;
+            case 15: input.f15 = selected; break;
+            case 16: input.f16 = selected; break;
+            case 17: input.f17 = selected; break;
+            case 18: input.f18 = selected; break;
+            default: input.f19 = selected;
         }
-
-        return fields;
+        return input;
     }
 
     private static class Fields {

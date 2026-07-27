@@ -76,7 +76,7 @@ class BaseOnlySummaryNormalizationTest {
         assertEquals(initialAccess, added.single().buildForTest().initialAccess)
         assertFalse(normalizedAccess in storage.initialAccesses(), "normalized aliases stay hidden until trace resolution")
 
-        manager.enableNormalizedEdges()
+        manager.enableTraceResolutionMode()
 
         val queried = storage.initialAccesses()
         assertTrue(initialAccess in queried, "the original summary remains queryable")
@@ -100,7 +100,7 @@ class BaseOnlySummaryNormalizationTest {
         )
 
         storage.add(listOf(edge(originalInitial), edge(normalizedInitial)), mutableListOf())
-        manager.enableNormalizedEdges()
+        manager.enableTraceResolutionMode()
 
         val result = mutableListOf<FactToFactEdgeBuilder>()
         storage.filterEdgesTo(result, initialFactPattern = null, finalFactBase = AccessPathBase.Return)

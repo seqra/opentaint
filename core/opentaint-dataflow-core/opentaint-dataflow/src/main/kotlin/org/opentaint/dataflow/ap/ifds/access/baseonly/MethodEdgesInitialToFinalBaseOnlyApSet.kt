@@ -42,6 +42,11 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
             finalPattern: BaseOnlyAccess,
         ) {
             perInitial.forEach { (initial, ps) -> ps.collectAt(statement) { dst.add(initial to it) } }
+
+            traceGeneralizationAt(statement)?.let { edge ->
+                val generalized = edge.initial to AccessWithExclusion(edge.final, edge.exclusion)
+                if (generalized !in dst) dst += generalized
+            }
         }
 
         override fun filter(
@@ -52,14 +57,36 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
         ) {
             perInitial[initial]?.collectAt(statement) { dst.add(it) }
 
-            if (apManager.normalizedEdgesEnabled()) {
-                // Trace-time summary normalization exposes a field-abstract initial as a
-                // suffix-abstract alias. Resolve that view back to the primary intraprocedural
-                // key; the alias itself is never stored.
-                if (initial.apSlot != 2 || finalPattern.apSlot != 2) return
+            if (!apManager.traceResolutionModeEnabled()) return
+
+            // Trace-time summary normalization exposes a field-abstract initial as a
+            // suffix-abstract alias. Resolve that view back to the primary intraprocedural
+            // key; the alias itself is never stored.
+            if (initial.apSlot == 2 && finalPattern.apSlot == 2) {
                 val primary = packBaseOnlyAccess(initial.staticIdx, ABSTRACT_MARK, NO_ACCESSOR)
-                perInitial[primary]?.collectAt(statement) { dst.add(it) }
+                perInitial[primary]?.collectAt(statement) { dst.addDistinct(it) }
             }
+
+            traceGeneralizationAt(statement)
+                ?.takeIf { baseOnlySummaryInitialMatches(initial, it.initial) }
+                ?.let { dst.addDistinct(AccessWithExclusion(it.final, it.exclusion)) }
+        }
+
+        private fun traceGeneralizationAt(statement: CommonInst): BaseOnlySummaryEdge? {
+            if (!apManager.traceResolutionModeEnabled()) return null
+
+            val exact = arrayListOf<BaseOnlySummaryEdge>()
+            perInitial.forEach { (initial, ps) ->
+                ps.collectAt(statement) { final ->
+                    exact += BaseOnlySummaryEdge(initial, final.access, final.exclusion)
+                }
+            }
+            if (exact.isEmpty()) return null
+
+            val generalizer = BaseOnlyF2FFieldGeneralizer(maxEnumeratedEdges = 0)
+            val result = generalizer.rewrite(exact)
+            val group = result.newlyGeneralized.singleOrNull() ?: return null
+            return generalizer.representative(group)
         }
     }
 
@@ -107,5 +134,11 @@ class MethodEdgesInitialToFinalBaseOnlyApSet(
         fun collectAt(statement: CommonInst, out: (AccessWithExclusion<BaseOnlyAccess>) -> Unit) {
             entries[instructionStorageIdx(statement, languageManager)]?.collect(out)
         }
+    }
+
+    private fun MutableList<AccessWithExclusion<BaseOnlyAccess>>.addDistinct(
+        value: AccessWithExclusion<BaseOnlyAccess>,
+    ) {
+        if (value !in this) add(value)
     }
 }
