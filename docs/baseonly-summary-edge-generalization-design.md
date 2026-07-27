@@ -23,7 +23,21 @@ writes the selected value to 20 fields. Its helper retains:
 401      F2F summaries
 ```
 
-The desired bounded representation is:
+Correct conclusion subsumption first reduces this family to:
+
+```text
+1   field-abstract identity
+20  concrete-field -> abstract-tail edges
+--
+21  F2F summaries
+```
+
+For each fixed `x`, the edge
+`(-1, x, -2) -> (-1, -1, -2)` subsumes every
+`(-1, x, -2) -> (-1, y, -2)`: the premise is identical and the abstract-tail
+conclusion implies every concrete-field conclusion.
+
+The desired bounded representation after field generalization is:
 
 ```text
 (-1, -1, -2) /{} -> (-1, -1, -2) /{}
@@ -32,23 +46,33 @@ The desired bounded representation is:
 This is an explicit field-erasing widening. It is not ordinary summary-edge
 subsumption.
 
-## Why exact subsumption cannot perform this collapse
+## Boundary between subsumption and generalization
 
 An F2F summary is a correlated transformation. Under exact summary semantics,
 
 ```text
-.* -> .*
+(-1, x, -2) -> (-1, -1, -2)
 ```
 
-does not subsume:
+subsumes:
 
 ```text
-.x.* -> .y.*
+(-1, x, -2) -> (-1, y, -2)
 ```
 
-The latter installs the input residual under `y`; the identity edge does not.
-`BaseOnlySummaryEdgeOps.subsumes` must therefore remain exact and must not be
-weakened for this optimization.
+The premise is the same and the first conclusion directionally covers the
+second. This is ordinary summary-edge subsumption and must happen before
+generalization.
+
+What subsumption does not remove is variation in the premise:
+
+```text
+(-1, x, -2) -> (-1, -1, -2)
+(-1, z, -2) -> (-1, -1, -2)
+```
+
+Field generalization forgets that remaining `x` versus `z` distinction. It
+must remain a separate operation from `BaseOnlySummaryEdgeOps.subsumes`.
 
 Generalization instead forgets which field was read and which field was
 written. Applying the generalized edge produces an abstract final fact that
@@ -58,26 +82,33 @@ of the widening; losing a forward result is not.
 ## Field-erasure projection
 
 Generalization is local to one method entry, initial base, and final base.
-Those bases are never merged.
+Those bases are never merged. It is eligible only when both the initial and
+final static slots are empty:
+
+```text
+initial.staticIdx == NO_ACCESSOR
+final.staticIdx == NO_ACCESSOR
+```
+
+An edge with any non-empty static slot is never field-generalized. Such edges
+are reduced only by ordinary summary-edge subsumption.
 
 The eligible access shapes are:
 
 ```text
-(static, ABSTRACT_MARK, NO_ACCESSOR)
-(static, concreteField, ABSTRACT_MARK)
-(static, NO_ACCESSOR, ABSTRACT_MARK)
+(-1, ABSTRACT_MARK, NO_ACCESSOR)
+(-1, concreteField, ABSTRACT_MARK)
+(-1, NO_ACCESSOR, ABSTRACT_MARK)
 ```
 
 They all project to:
 
 ```text
-eraseField(access) =
-    (access.staticIdx, NO_ACCESSOR, ABSTRACT_MARK)
+eraseField(access) = (NO_ACCESSOR, NO_ACCESSOR, ABSTRACT_MARK)
 ```
 
-The static slot is preserved. Normal and Value suffix states, semantic marks,
-type-information accessors, final accessors, and incompatible static prefixes
-must not be merged.
+Normal and Value suffix states, semantic marks, type-information accessors, and
+final accessors must not be merged.
 
 An eligible edge belongs to the group:
 
@@ -102,8 +133,9 @@ budget:
 MAX_FIELD_ENUMERATION_EDGES
 ```
 
-Count distinct primary `(initialAccess, finalAccess)` keys in the group. When
-adding a batch would make the count exceed the budget:
+Count distinct primary `(initialAccess, finalAccess)` keys remaining after
+ordinary subsumption. When adding a batch would make the count exceed the
+budget:
 
 1. remove every retained primary edge in that group;
 2. mark the group permanently generalized;
@@ -111,10 +143,11 @@ adding a batch would make the count exceed the budget:
 4. publish the representative in the insertion delta;
 5. absorb every later eligible edge in that group without re-enumerating it.
 
-A value such as 64 makes the 401-edge reproduction deterministic while not
-widening small ordinary field transfers. The constant must be configurable or
-at least isolated so E2E performance/precision evaluation can tune it without
-changing semantics.
+A value below 20, such as 16, makes the 20-field reproduction deterministic
+after conclusion subsumption has reduced it to 21 edges, while not widening
+small ordinary field transfers. The constant must be configurable or at least
+isolated so E2E performance/precision evaluation can tune it without changing
+semantics.
 
 The transition is monotone for IFDS consumers. Previously emitted concrete
 edges are not retracted, but all later collection observes only the generalized
@@ -188,7 +221,8 @@ facts accepted by the generalized forward edge.
 ### End-to-end reproduction
 
 - The 20-field sample finds the vulnerability.
-- Before generalization it demonstrates the 401-edge family.
+- Before the corrected subsumption it demonstrates the 401-edge family.
+- Correct conclusion subsumption reduces it to 21 retained edges.
 - After generalization the same method/base pair collects one field-erased
   summary and still finds the vulnerability.
 - Tree remains the precision oracle; every Tree finding remains reachable in
@@ -202,7 +236,8 @@ facts accepted by the generalized forward edge.
 - a batch crossing the budget emits only the representative from that batch;
 - later members of a generalized group do not re-expand it;
 - different initial/final bases do not share a budget;
-- different static prefixes do not merge;
+- any edge with a non-empty initial or final static slot is never generalized;
+- static-prefixed edges continue to use ordinary subsumption;
 - Normal/Value and semantic/type/final suffixes do not merge;
 - the representative has empty exclusions even when contributors do not;
 - unrelated summaries remain unchanged;
@@ -221,5 +256,6 @@ facts accepted by the generalized forward edge.
 ### Performance gate
 
 Instrument retained primary summaries and summary applications. The 20-field
-sample must retain one generalized member for the affected group rather than
-401 members, and repeated calls must not recreate the concrete matrix.
+sample must progress from 401 current members to 21 after corrected
+subsumption, then to one generalized member. Repeated calls must not recreate
+the concrete matrix.

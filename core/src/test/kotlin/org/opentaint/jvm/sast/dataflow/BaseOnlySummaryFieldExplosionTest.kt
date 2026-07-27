@@ -91,11 +91,9 @@ class BaseOnlySummaryFieldExplosionTest : AnalysisTest() {
                 final.access.suffixIdx == ABSTRACT_MARK
         }
 
-        assertEquals(20, fieldTransfers.mapTo(hashSetOf()) { it.first }.size)
-        assertEquals(20, fieldTransfers.mapTo(hashSetOf()) { it.second }.size)
-        assertEquals(20 * 19, fieldTransfers.size, "all off-diagonal field relocations are stored")
+        assertTrue(fieldTransfers.isEmpty(), "abstract conclusions subsume all concrete-field relocations")
         assertEquals(20, fieldErasureEdges, "every selected field also flows to the abstract object tail")
         assertEquals(1, fieldAbstractIdentityEdges, "the object identity is stored as (-1, -2, -1) -> itself")
-        assertEquals(1 + 20 + 20 * 19, helperSummaries.size, "the helper stores a 401-edge family")
+        assertEquals(1 + 20, helperSummaries.size, "conclusion subsumption reduces 401 edges to 21")
     }
 }

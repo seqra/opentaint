@@ -12,8 +12,9 @@ internal data class BaseOnlySummaryEdge(
  * Semantic operations on a single BaseOnly fact-to-fact summary edge.
  *
  * An edge is a correlated transformation: the residual consumed after [BaseOnlySummaryEdge.initial]
- * must be grafted after [BaseOnlySummaryEdge.final]. Consequently, independently comparing the two
- * access paths is not a valid subsumption test.
+ * must be grafted after [BaseOnlySummaryEdge.final]. When premises differ, independently comparing
+ * the two access paths is therefore not a valid subsumption test. When premises are identical,
+ * correlation is already fixed and directional conclusion coverage is sufficient.
  */
 internal object BaseOnlySummaryEdgeOps {
     fun subsumes(
@@ -21,6 +22,12 @@ internal object BaseOnlySummaryEdgeOps {
         general: BaseOnlySummaryEdge,
         specific: BaseOnlySummaryEdge,
     ): Boolean {
+        if (general.initial == specific.initial) {
+            val effectiveExclusion = specific.exclusion.union(general.exclusion)
+            return effectiveExclusion == specific.exclusion &&
+                BaseOnlyAccessOps.covers(general.final, specific.final)
+        }
+
         val specificInitial = SummaryFact(specific.initial, specific.exclusion)
         val specificFinal = SummaryFact(specific.final, specific.exclusion)
         val application = applyEdge(manager, general, specificInitial) ?: return false

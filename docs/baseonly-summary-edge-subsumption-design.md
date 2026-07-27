@@ -60,15 +60,34 @@ example, `a.* -> b.*` covers `a.M -> b.M`, but it does not cover
 
 The authoritative predicate must therefore:
 
-1. apply `cover` to `covered.initial` using the same residual operation as
+1. handle equal premises by directional conclusion coverage: if the initial
+   facts are equal, `cover` subsumes `covered` when `cover.final` contains
+   `covered.final`, subject to the exclusion rules below;
+2. otherwise apply `cover` to `covered.initial` using the same residual operation as
    `FinalFactAp.delta`;
-2. graft each surviving residual onto `cover.final` using the same operation as
+3. graft each surviving residual onto `cover.final` using the same operation as
    `FinalFactAp.concat`;
-3. accept only if one produced final fact, including its effective exclusions,
+4. accept only if one produced final fact, including its effective exclusions,
    is exactly `covered.final / covered.exclusions`;
-4. verify that backward `InitialFactAp.splitDelta` on `covered.final` and
+5. verify that backward `InitialFactAp.splitDelta` on `covered.final` and
    `cover.final` can recover the same residual and that concatenating it with
    `cover.initial` exactly reconstructs `covered.initial`.
+
+The equal-premise rule is implication between two conclusions, not residual
+grafting. For example:
+
+```text
+(-1, x, -2) -> (-1, -1, -2)
+```
+
+subsumes:
+
+```text
+(-1, x, -2) -> (-1, y, -2)
+```
+
+because `(-1, -1, -2)` contains `(-1, y, -2)`. Requiring exact final equality
+in this case incorrectly retains every enumerated `y`.
 
 In notation, for at least one residual `d`:
 
@@ -201,6 +220,10 @@ observe the new antichain.
 ### Core examples
 
 - `a.* -> b.*` subsumes `a.M -> b.M`, in both insertion orders.
+- `a.* -> .*` subsumes `a.* -> b.*`: the premise is identical and the first
+  conclusion contains the second.
+- `(-1, x, -2) -> (-1, -1, -2)` subsumes
+  `(-1, x, -2) -> (-1, y, -2)`.
 - `a.* -> b.*` does not subsume `a.M -> b.N`.
 - `a.* -> b.M` does not subsume `a.N -> b.M` when graft cannot preserve the
   residual.

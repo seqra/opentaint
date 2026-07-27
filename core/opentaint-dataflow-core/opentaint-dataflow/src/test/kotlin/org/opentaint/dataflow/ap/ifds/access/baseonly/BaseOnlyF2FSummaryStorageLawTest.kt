@@ -264,30 +264,33 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
-    fun `abstract identity does not subsume an abstract field installation`() {
-        val abstractIdentity = BaseOnlySummaryEdge(
-            initial = ABSTRACT_EMPTY_ACCESS,
+    fun `same premise with abstract conclusion subsumes a concrete field conclusion`() {
+        val premise = packBaseOnlyAccess(NO_ACCESSOR, field("premise-field"), ABSTRACT_MARK)
+        val abstractConclusion = BaseOnlySummaryEdge(
+            initial = premise,
             final = ABSTRACT_EMPTY_ACCESS,
             exclusion = ExclusionSet.Empty,
         )
-        val fieldInstallation = BaseOnlySummaryEdge(
-            initial = ABSTRACT_EMPTY_ACCESS,
-            final = packBaseOnlyAccess(NO_ACCESSOR, field("installed-field"), ABSTRACT_MARK),
+        val concreteConclusion = BaseOnlySummaryEdge(
+            initial = premise,
+            final = packBaseOnlyAccess(NO_ACCESSOR, field("conclusion-field"), ABSTRACT_MARK),
             exclusion = ExclusionSet.Empty,
         )
 
-        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, abstractIdentity, fieldInstallation))
+        assertTrue(BaseOnlySummaryEdgeOps.subsumes(manager, abstractConclusion, concreteConclusion))
+        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, concreteConclusion, abstractConclusion))
     }
 
     @Test
-    fun `summary antichain retains abstract identity and field installation in either order`() {
-        val identity = storageEdge(
-            initial = ABSTRACT_EMPTY_ACCESS,
+    fun `summary antichain keeps the abstract conclusion for a shared premise in either order`() {
+        val premise = packBaseOnlyAccess(NO_ACCESSOR, field("antichain-premise"), ABSTRACT_MARK)
+        val abstractConclusion = storageEdge(
+            initial = premise,
             final = ABSTRACT_EMPTY_ACCESS,
         )
-        val installation = storageEdge(
-            initial = ABSTRACT_EMPTY_ACCESS,
-            final = packBaseOnlyAccess(NO_ACCESSOR, field("retained-field"), ABSTRACT_MARK),
+        val concreteConclusion = storageEdge(
+            initial = premise,
+            final = packBaseOnlyAccess(NO_ACCESSOR, field("antichain-conclusion"), ABSTRACT_MARK),
         )
 
         fun run(edges: List<CommonF2FSummary.StorageEdge<BaseOnlyAccess, BaseOnlyAccess>>): Set<Record> {
@@ -298,12 +301,29 @@ class BaseOnlyF2FSummaryStorageLawTest {
             return current.mapTo(hashSetOf(), ::record)
         }
 
-        val expected = setOf(
-            Record(identity.initial, identity.final, ExclusionSet.Empty),
-            Record(installation.initial, installation.final, ExclusionSet.Empty),
+        val expected = setOf(Record(premise, ABSTRACT_EMPTY_ACCESS, ExclusionSet.Empty))
+        assertEquals(expected, run(listOf(abstractConclusion, concreteConclusion)))
+        assertEquals(expected, run(listOf(concreteConclusion, abstractConclusion)))
+    }
+
+    @Test
+    fun `same premise conclusion subsumption preserves exclusion ordering`() {
+        val premise = packBaseOnlyAccess(NO_ACCESSOR, field("exclusion-premise"), ABSTRACT_MARK)
+        val generalWithExclusion = BaseOnlySummaryEdge(
+            initial = premise,
+            final = ABSTRACT_EMPTY_ACCESS,
+            exclusion = exA,
         )
-        assertEquals(expected, run(listOf(identity, installation)))
-        assertEquals(expected, run(listOf(installation, identity)))
+        val specificWithoutExclusion = BaseOnlySummaryEdge(
+            initial = premise,
+            final = packBaseOnlyAccess(NO_ACCESSOR, field("exclusion-conclusion"), ABSTRACT_MARK),
+            exclusion = ExclusionSet.Empty,
+        )
+        val generalWithoutExclusion = generalWithExclusion.copy(exclusion = ExclusionSet.Empty)
+        val specificWithExclusion = specificWithoutExclusion.copy(exclusion = exA)
+
+        assertFalse(BaseOnlySummaryEdgeOps.subsumes(manager, generalWithExclusion, specificWithoutExclusion))
+        assertTrue(BaseOnlySummaryEdgeOps.subsumes(manager, generalWithoutExclusion, specificWithExclusion))
     }
 
     @Test
