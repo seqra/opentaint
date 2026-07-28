@@ -581,7 +581,7 @@ class MethodTaintConfigurationResolver(
                 if (taintKind == null) {
                     RemoveAllMarks(pos)
                 } else {
-                    RemoveMark(taintMarkManager.taintMark(taintKind), pos)
+                    RemoveMark(taintMarkManager.taintMark(taintKind), pos, reach)
                 }
             }
 

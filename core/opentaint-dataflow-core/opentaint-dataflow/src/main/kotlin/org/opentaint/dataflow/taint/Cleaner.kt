@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.configuration.TaintCleanReach
 
 /** A cleaner expressed in the same position language as sources and sinks. */
 sealed interface Cleaner {
@@ -17,6 +18,7 @@ sealed interface Cleaner {
     data class Mark(
         override val position: PositionAccess,
         val mark: TaintMarkAccessor,
+        val reach: TaintCleanReach = TaintCleanReach.Exact,
     ) : Cleaner
 }
 
@@ -50,10 +52,11 @@ class TaintCleanActionEvaluator {
         markRestriction: TaintMarkAccessor,
         rule: CommonTaintConfigurationItem,
         action: CommonTaintAction,
+        reach: TaintCleanReach = TaintCleanReach.Exact,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
         if (from.base() != fact.factAp.base) return listOf(evc)
-        val cleaned = fact.clean(Cleaner.Mark(from, markRestriction)) ?: return listOf(evc)
+        val cleaned = fact.clean(Cleaner.Mark(from, markRestriction, reach)) ?: return listOf(evc)
         return clean(cleaned, fact, rule, action, evc)
     }
 

@@ -47,7 +47,14 @@ class JIRTaintCleanActionEvaluator(
     ): List<EvaluatedCleanAction> {
         val variable = action.position.resolveAp()
         val mark = TaintMarkAccessor(action.mark.name)
-        val cleaned = evaluator.removeFinalFact(initialFact, variable, mark, rule, action)
+        val cleaned = evaluator.removeFinalFact(
+            initialFact,
+            variable,
+            mark,
+            rule,
+            action,
+            action.reach,
+        )
 
         val positionType = positionTypeResolver.resolve(variable)
         if (positionType?.typeName != STRING) {
@@ -56,7 +63,7 @@ class JIRTaintCleanActionEvaluator(
 
         val stringBytesVar = PositionWithAccess(action.position, stringBytes).resolveAp()
         return cleaned.flatMap { f ->
-            evaluator.removeFinalFact(f, stringBytesVar, mark, rule, action)
+            evaluator.removeFinalFact(f, stringBytesVar, mark, rule, action, action.reach)
         }
     }
 

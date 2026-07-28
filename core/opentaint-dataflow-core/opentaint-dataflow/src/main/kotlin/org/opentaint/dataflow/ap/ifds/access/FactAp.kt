@@ -2,8 +2,10 @@ package org.opentaint.dataflow.ap.ifds.access
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.taint.Cleaner
 
 interface AccessorList {
@@ -95,6 +97,27 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
      * materializes later. Callers do not distinguish those cases.
      */
     fun clean(cleaner: Cleaner): CleanResult
+
+    /**
+     * Removes a mark from both the exact position and its currently represented any-field
+     * alternative, without creating a persistent any-field cleaner effect.
+     */
+    fun cleanExactAndAnyField(mark: TaintMarkAccessor): CleanResult {
+        val afterAny = readAccessor(AnyAccessor)
+            ?: error("Fact reports an any-field accessor but cannot read it")
+
+        val clearedAfterAny = afterAny.clearAccessor(mark)
+        val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
+
+        val withoutAny = clearAccessor(AnyAccessor)
+        val cleanedWithoutAny = withoutAny?.clearAccessor(mark)
+
+        val cleaned = clearedAfterAny != afterAny || cleanedWithoutAny != withoutAny
+        return CleanResult(
+            listOfNotNull(restoredAfterAny, cleanedWithoutAny),
+            removedAlternative = cleaned,
+        )
+    }
 
     data class CleanResult(
         val survivingFacts: List<FinalFactAp>,

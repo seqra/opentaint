@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.taint.Cleaner
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
@@ -121,11 +122,13 @@ class FactCleanerContractTest {
     @Test
     fun `mark cleanup explicitly chooses whether AnyField is a target`() {
         for (manager in managers()) {
-            val anyPosition = PositionAccess.Simple(base).withSuffix(listOf(AnyAccessor))
-            val fact = manager.mkAccessPath(anyPosition, ExclusionSet.Empty, mark)
+            var fact = manager.createFinalAp(base, ExclusionSet.Empty)
+            for (accessor in listOf(AnyAccessor, mark).asReversed()) {
+                fact = fact.prependAccessor(accessor)
+            }
             val exactCleaner = cleaner()
             val anyFieldCleaner = exactCleaner.copy(
-                reach = Cleaner.MarkReach.ExactAndAnyField,
+                reach = TaintCleanReach.ExactAndAnyField,
             )
 
             val exactResult = fact.clean(exactCleaner)
@@ -138,7 +141,8 @@ class FactCleanerContractTest {
                         FinalFactReader(it, manager)
                             .containsAnyPosition(PositionAccess.Simple(base).withSuffix(listOf(mark))) != null
                     },
-                "${manager::class.simpleName} retained a targeted AnyField mark",
+                "${manager::class.simpleName} retained a targeted AnyField mark: " +
+                    "$fact -> ${anyFieldResult.survivingFacts}",
             )
         }
     }
