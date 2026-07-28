@@ -2,7 +2,8 @@ rules:
   - id: java-path-traversal-sinks
     options:
       lib: true
-    tags: [path-traversal-sink]
+    tags:
+      - path-traversal-sink
     severity: NOTE
     message: Use a file with untrusted path
     metadata:
