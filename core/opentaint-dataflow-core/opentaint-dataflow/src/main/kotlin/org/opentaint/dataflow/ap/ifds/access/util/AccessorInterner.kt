@@ -3,7 +3,6 @@ package org.opentaint.dataflow.ap.ifds.access.util
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -49,8 +48,6 @@ class AccessorInterner {
             is FieldAccessor -> FIELD_KIND
             is ClassStaticAccessor -> STATIC_KIND
             is TaintMarkAccessor -> TAINT_KIND
-            is DeepMarkExclusion ->
-                error("DeepMarkExclusion is exclusion-set-only and must not be interned as a path accessor: $accessor")
             is TypeInfoAccessor -> TYPES_KIND
             is AnyAccessor -> return ANY_ACCESSOR_IDX
             is ElementAccessor -> return ELEMENT_ACCESSOR_IDX

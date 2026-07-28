@@ -2,11 +2,11 @@ package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Edge
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.MethodSummaryFactEdgesForExitPoint
 import org.opentaint.dataflow.ap.ifds.SummaryFactStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.MethodInitialToFinalApSummariesStorage
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -14,7 +14,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 abstract class CommonF2FSummary<IAP, FAP: Any>(val methodEntryPoint: CommonInst):
     MethodInitialToFinalApSummariesStorage, InitialApAccess<IAP>, FinalApAccess<FAP> {
 
-    data class StorageEdge<IAP, FAP>(val initial: IAP, val final: FAP, val exclusion: ExclusionSet)
+    data class StorageEdge<IAP, FAP>(val initial: IAP, val final: FAP, val flowState: FactFlowState)
 
     interface Storage<IAP, FAP : Any> {
         fun add(edges: List<StorageEdge<IAP, FAP>>, added: MutableList<F2FBBuilder<IAP, FAP>>)
@@ -113,7 +113,7 @@ abstract class CommonF2FSummary<IAP, FAP: Any>(val methodEntryPoint: CommonInst)
                     StorageEdge(
                         getInitialAccess(it.initialFactAp),
                         getFinalAccess(it.factAp),
-                        it.initialFactAp.exclusions
+                        it.initialFactAp.flowState
                     )
                 }
 
@@ -155,19 +155,19 @@ abstract class CommonF2FSummary<IAP, FAP: Any>(val methodEntryPoint: CommonInst)
     abstract class F2FBBuilder<IAP, FAP: Any>(
         private var initialBase: AccessPathBase? = null,
         private var exitBase: AccessPathBase? = null,
-        private var exclusion: ExclusionSet? = null,
+        private var flowState: FactFlowState? = null,
         private var initialAp: IAP? = null,
         private var exitAp: FAP? = null,
     ): InitialApAccess<IAP>, FinalApAccess<FAP> {
         abstract fun nonNullIAP(iap: IAP?): IAP
 
         fun build(): FactToFactEdgeBuilder = FactToFactEdgeBuilder()
-            .setInitialAp(createInitial(initialBase!!, nonNullIAP(initialAp), exclusion!!))
-            .setExitAp(createFinal(exitBase!!, exitAp!!, exclusion!!))
+            .setInitialAp(createInitial(initialBase!!, nonNullIAP(initialAp), flowState!!))
+            .setExitAp(createFinal(exitBase!!, exitAp!!, flowState!!))
 
         fun setInitialFactBase(base: AccessPathBase) = this.also { initialBase = base }
         fun setExitFactBase(base: AccessPathBase) = this.also { exitBase = base }
-        fun setExclusion(exclusion: ExclusionSet) = this.also { this.exclusion = exclusion }
+        fun setFlowState(flowState: FactFlowState) = this.also { this.flowState = flowState }
         fun setInitialAp(ap: IAP) = this.also { initialAp = ap }
         fun setExitAp(ap: FAP) = this.also { exitAp = ap }
     }

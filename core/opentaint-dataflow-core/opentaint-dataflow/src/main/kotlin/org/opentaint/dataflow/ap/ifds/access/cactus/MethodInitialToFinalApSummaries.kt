@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import kotlinx.collections.immutable.persistentHashMapOf
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -51,7 +51,7 @@ private class MethodTaintedSummariesGroupedByFactStorage
         val modifiedStorages = mutableListOf<MethodTaintedSummariesMergingStorage>()
 
         for (edge in edges) {
-            addNonUniverseEdge(edge.initial, edge.final, edge.exclusion, modifiedStorages)
+            addNonUniverseEdge(edge.initial, edge.final, edge.flowState, modifiedStorages)
         }
 
         modifiedStorages.flatMapTo(added) { it.getAndResetDelta() }
@@ -60,11 +60,11 @@ private class MethodTaintedSummariesGroupedByFactStorage
     private fun addNonUniverseEdge(
         initialAccess: AccessPathWithCycles.AccessNode?,
         exitAccess: AccessCactusNode,
-        exclusion: ExclusionSet,
+        flowState: FactFlowState,
         modifiedStorages: MutableList<MethodTaintedSummariesMergingStorage>
     ) {
         val storage = nonUniverseAccessPath.getOrCreate(initialAccess)
-        val storageModified = storage.add(exitAccess, exclusion)
+        val storageModified = storage.add(exitAccess, flowState)
 
         if (storageModified) {
             modifiedStorages.add(storage)
@@ -80,22 +80,22 @@ private class MethodTaintedSummariesGroupedByFactStorage
 }
 
 private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPathWithCycles.AccessNode?) {
-    private var exclusion: ExclusionSet? = null
+    private var flowState: FactFlowState? = null
     private var edges: AccessCactusNode? = null
     private var edgesDelta: AccessCactusNode? = null
 
-    fun add(exitAccess: AccessCactusNode, addedEx: ExclusionSet): Boolean {
-        val currentExclusion = exclusion
-        if (currentExclusion == null) {
-            exclusion = addedEx
+    fun add(exitAccess: AccessCactusNode, addedState: FactFlowState): Boolean {
+        val currentState = flowState
+        if (currentState == null) {
+            flowState = addedState
             edges = exitAccess
             edgesDelta = exitAccess
             return true
         }
 
         val currentEdges = edges!!
-        val mergedExclusion = currentExclusion.mergeAndIntersectDeep(addedEx)
-        if (mergedExclusion === currentExclusion) {
+        val mergedState = currentState join addedState
+        if (mergedState === currentState) {
             val (modifiedEdges, modificationDelta) = currentEdges.mergeAddDelta(exitAccess)
             if (modificationDelta == null) return false
 
@@ -105,7 +105,7 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         }
 
         val mergedAp = currentEdges.mergeAdd(exitAccess)
-        exclusion = mergedExclusion
+        flowState = mergedState
         edges = mergedAp
         edgesDelta = mergedAp
 
@@ -119,17 +119,17 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         return FactToFactEdgeBuilderBuilder()
             .setInitialAp(initialAccess)
             .setExitAp(delta)
-            .setExclusion(exclusion!!)
+            .setFlowState(flowState!!)
             .let { sequenceOf(it) }
     }
 
     fun summaries(): F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>? {
-        val exclusion = this.exclusion ?: return null
+        val flowState = this.flowState ?: return null
         val edges = this.edges!!
         return FactToFactEdgeBuilderBuilder()
             .setInitialAp(initialAccess)
             .setExitAp(edges)
-            .setExclusion(exclusion)
+            .setFlowState(flowState)
     }
 }
 

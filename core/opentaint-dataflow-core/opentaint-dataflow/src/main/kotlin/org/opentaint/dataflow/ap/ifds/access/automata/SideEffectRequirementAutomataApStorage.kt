@@ -1,10 +1,10 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.util.forEach
 import org.opentaint.dataflow.util.getOrCreateIndex
 import org.opentaint.dataflow.util.object2IntMap
@@ -21,7 +21,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
             requirement as AccessGraphInitialFactAp
 
             val storage = based.computeIfAbsent(requirement.base) { Storage(requirement.base) }
-            storage.mergeAdd(requirement.access, requirement.exclusions) ?: continue
+            storage.mergeAdd(requirement.access, requirement.flowState) ?: continue
             modifiedStorages.add(storage)
         }
 
@@ -48,22 +48,22 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
         private val requirementGraphs = arrayListOf<AccessGraph>()
         private val overrides = arrayListOf<BitSet>()
         private val removedRequirementGraphs = BitSet()
-        private val requirementExclusions = arrayListOf<ExclusionSet>()
+        private val requirementFlowStates = arrayListOf<FactFlowState>()
 
         private val graphIndex = GraphIndex()
         private val delta = BitSet()
 
-        fun mergeAdd(requirementGraph: AccessGraph, requirementExclusion: ExclusionSet): Unit? {
+        fun mergeAdd(requirementGraph: AccessGraph, requirementFlowState: FactFlowState): Unit? {
             val currentValueIndex = requirementGraphIndex.getOrCreateIndex(requirementGraph) { newIndex ->
-                return addCompressed(requirementGraph, requirementExclusion, newIndex)
+                return addCompressed(requirementGraph, requirementFlowState, newIndex)
             }
 
-            return updateExclusionAtIdx(currentValueIndex, requirementExclusion)
+            return updateFlowStateAtIdx(currentValueIndex, requirementFlowState)
         }
 
-        private fun addCompressed(graph: AccessGraph, exclusion: ExclusionSet, idx: Int): Unit? {
+        private fun addCompressed(graph: AccessGraph, flowState: FactFlowState, idx: Int): Unit? {
             requirementGraphs.add(graph)
-            requirementExclusions.add(exclusion)
+            requirementFlowStates.add(flowState)
             overrides.add(BitSet())
 
             val weakerGraphIdx = graphIndex.localizeGraphContainsAllIndexedGraph(graph)
@@ -75,7 +75,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
                 requirementGraphIndex.put(graph, weakerIdx)
                 overrides[weakerIdx].set(idx)
 
-                return updateExclusionAtIdx(weakerIdx, exclusion)
+                return updateFlowStateAtIdx(weakerIdx, flowState)
             }
 
             val strongerGraphIdx = graphIndex.localizeIndexedGraphContainsAllGraph(graph)
@@ -85,11 +85,11 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
                 delta.clear(graphIdx)
 
                 val removedGraph = requirementGraphs[graphIdx]
-                val removedExclusion = requirementExclusions[graphIdx]
+                val removedFlowState = requirementFlowStates[graphIdx]
                 val removedGraphOverrides = overrides[graphIdx]
 
                 requirementGraphIndex.put(removedGraph, idx)
-                updateExclusionAtIdx(idx, removedExclusion)
+                updateFlowStateAtIdx(idx, removedFlowState)
 
                 removedGraphOverrides.forEach { overrideIdx ->
                     val overrideGraph = requirementGraphs[overrideIdx]
@@ -106,16 +106,16 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
             return Unit
         }
 
-        private fun updateExclusionAtIdx(idx: Int, exclusion: ExclusionSet): Unit? {
-            val oldExclusion = requirementExclusions[idx]
+        private fun updateFlowStateAtIdx(idx: Int, flowState: FactFlowState): Unit? {
+            val oldState = requirementFlowStates[idx]
 
-            val newValue = oldExclusion.mergeAndIntersectDeep(exclusion)
+            val newValue = oldState join flowState
 
-            if (oldExclusion === newValue) {
+            if (oldState === newValue) {
                 return null
             }
 
-            requirementExclusions[idx] = newValue
+            requirementFlowStates[idx] = newValue
             delta.set(idx)
 
             return Unit
@@ -124,8 +124,12 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
         fun getAndResetDelta(dst: MutableCollection<InitialFactAp>) {
             delta.forEach { idx ->
                 val graph = requirementGraphs[idx]
-                val exclusion = requirementExclusions[idx]
-                dst.add(AccessGraphInitialFactAp(base, graph, exclusion))
+                val flowState = requirementFlowStates[idx]
+                dst.add(
+                    AccessGraphInitialFactAp(
+                        base, graph, flowState.exclusions, flowState.deepCleanEffects
+                    )
+                )
             }
             delta.clear()
         }
@@ -140,8 +144,10 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
 
                 allIndices.forEach { i ->
                     val graph = requirementGraphs[i]
-                    val exclusion = requirementExclusions[i]
-                    collection += AccessGraphInitialFactAp(base, graph, exclusion)
+                    val flowState = requirementFlowStates[i]
+                    collection += AccessGraphInitialFactAp(
+                        base, graph, flowState.exclusions, flowState.deepCleanEffects
+                    )
                 }
                 return
             }
@@ -162,8 +168,10 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
                     return@forEach
                 }
 
-                val exclusion = requirementExclusions[graphIdx]
-                collection += AccessGraphInitialFactAp(base, graph, exclusion)
+                val flowState = requirementFlowStates[graphIdx]
+                collection += AccessGraphInitialFactAp(
+                    base, graph, flowState.exclusions, flowState.deepCleanEffects
+                )
             }
         }
     }

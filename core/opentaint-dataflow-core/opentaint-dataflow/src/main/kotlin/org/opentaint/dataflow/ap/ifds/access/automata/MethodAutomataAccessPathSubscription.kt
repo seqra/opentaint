@@ -63,7 +63,7 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
                 return FactEdgeSubBuilder()
                     .setCallerNode(callerExitAp)
                     .setCallerInitialAp(callerInitialAp)
-                    .setCallerExclusion(callerInitialAp.exclusions)
+                    .setCallerFlowState(callerInitialAp.flowState)
             }
 
             return null
@@ -88,7 +88,7 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
                     dst += FactEdgeSubBuilder()
                         .setCallerInitialAp(initialAp)
                         .setCallerNode(final)
-                        .setCallerExclusion(initialAp.exclusions)
+                        .setCallerFlowState(initialAp.flowState)
                 }
             } else {
                 collectEmptyDelta(dst, summaryInitialFact)
@@ -109,7 +109,7 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
                 collection += FactEdgeSubBuilder()
                     .setCallerInitialAp(initialAp)
                     .setCallerNode(final)
-                    .setCallerExclusion(initialAp.exclusions)
+                    .setCallerFlowState(initialAp.flowState)
             }
         }
     }

@@ -6,7 +6,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.AlwaysAcceptFilter
@@ -126,7 +125,6 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
                 is TypeInfoAccessor -> return FilterResult.Accept
                 TypeInfoGroupAccessor -> return FilterResult.Accept
 
-                is DeepMarkExclusion -> error("DeepMarkExclusion must not occur in access paths: $accessor")
             }
         }
 
@@ -213,7 +211,6 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
             is TaintMarkAccessor, FinalAccessor, AnyAccessor, is ClassStaticAccessor -> null
             is TypeInfoAccessor, TypeInfoGroupAccessor -> null
-            is DeepMarkExclusion -> error("DeepMarkExclusion must not occur in access paths: $accessor")
         }
     }
 

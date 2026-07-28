@@ -2,28 +2,22 @@ package org.opentaint.dataflow.ap.ifds
 
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.persistentHashSetOf
-import kotlinx.collections.immutable.toPersistentHashSet
 
+/**
+ * Access-path alternatives excluded from demand-driven fact analysis.
+ *
+ * Cleaner effects are a different domain and live in
+ * [org.opentaint.dataflow.ap.ifds.access.FactFlowState].
+ */
 sealed interface ExclusionSet {
     operator fun contains(accessor: Accessor): Boolean
     fun add(accessor: Accessor): ExclusionSet
+
     fun union(other: ExclusionSet): ExclusionSet
     fun intersect(other: ExclusionSet): ExclusionSet
     fun subtract(accessor: Accessor): ExclusionSet
 
     fun contains(other: ExclusionSet): Boolean
-
-    /**
-     * LEGACY deep-exclusion channel, automata/cactus only. Tree facts carry a starred sanitizer's
-     * claim structurally, on the abstract nodes of the access tree
-     * ([org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions]), and their exclusion
-     * sets are deep-free — tree merge sites use [union], which asserts that. This operator and
-     * [deepExclusion]/[withDeepExclusion] remain for the modes still on the flat channel and are
-     * deleted when those migrate.
-     */
-    fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet
-    fun deepExclusion(): Set<DeepMarkExclusion>
-    fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet
 
     data object Empty : ExclusionSet {
         override fun contains(accessor: Accessor): Boolean = false
@@ -35,18 +29,6 @@ sealed interface ExclusionSet {
 
         override fun toString(): String = "{}"
 
-        override fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet = when (other) {
-            is Empty, is Universe -> other
-            is Concrete -> other.mergeAndIntersectDeep(this)
-        }
-
-        override fun deepExclusion(): Set<DeepMarkExclusion> = emptySet()
-
-        override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet = if (accessors.isEmpty()) {
-            this
-        } else {
-            Concrete(persistentHashSetOf(), accessors.toPersistentHashSet(), accessors.hashCode())
-        }
     }
 
     data object Universe : ExclusionSet {
@@ -59,30 +41,13 @@ sealed interface ExclusionSet {
 
         override fun toString(): String = "*"
 
-        override fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet = this
-        override fun deepExclusion(): Set<DeepMarkExclusion> = emptySet()
-        override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet = this
     }
 
     data class Concrete(
-        private val set: PersistentSet<Accessor>,
-        private val deepExclusion: PersistentSet<DeepMarkExclusion>,
+        val set: PersistentSet<Accessor>,
         private val hash: Int,
     ) : ExclusionSet {
-        constructor(accessor: Accessor) : this(
-            set = if (accessor !is DeepMarkExclusion) persistentHashSetOf(accessor) else persistentHashSetOf(),
-            deepExclusion = if (accessor is DeepMarkExclusion) persistentHashSetOf(accessor) else persistentHashSetOf(),
-            accessor.hashCode()
-        )
-
-        constructor(
-            accessors: Set<Accessor>,
-            deepExclusion: Set<DeepMarkExclusion>
-        ) : this(
-            accessors.toPersistentHashSet(),
-            deepExclusion.toPersistentHashSet(),
-            accessors.hashCode() + deepExclusion.hashCode()
-        )
+        constructor(accessor: Accessor) : this(persistentHashSetOf(accessor), accessor.hashCode())
 
         override fun hashCode(): Int = hash
 
@@ -91,73 +56,25 @@ sealed interface ExclusionSet {
             if (other !is Concrete) return false
 
             if (hash != other.hash) return false
-            return set == other.set && deepExclusion == other.deepExclusion
+            return set == other.set
         }
 
-        override fun contains(accessor: Accessor): Boolean =
-            if (accessor !is DeepMarkExclusion) {
-                set.contains(accessor)
-            } else {
-                deepExclusion.contains(accessor)
-            }
+        override fun contains(accessor: Accessor): Boolean = set.contains(accessor)
 
         override fun add(accessor: Accessor): ExclusionSet {
-            if (accessor !is DeepMarkExclusion) {
-                val setWithAccessor = set.add(accessor)
-                if (setWithAccessor === set) return this
+            val setWithAccessor = set.add(accessor)
+            if (setWithAccessor === set) return this
 
-                return Concrete(setWithAccessor, deepExclusion, hash + accessor.hashCode())
-            } else {
-                val setWithAccessor = deepExclusion.add(accessor)
-                if (setWithAccessor === deepExclusion) return this
-
-                return Concrete(set, setWithAccessor, hash + accessor.hashCode())
-            }
+            return Concrete(setWithAccessor, hash + accessor.hashCode())
         }
 
         override fun union(other: ExclusionSet): ExclusionSet = when (other) {
             Empty -> this
             Universe -> other
             is Concrete -> {
-                // `union` composes refinements, and a deep entry is not one: it is a must-clean
-                // claim that a starred sanitizer writes straight onto the fact it cleaned. Nothing
-                // that reaches this operator carries one.
-                check(this.deepExclusion.isEmpty() && other.deepExclusion.isEmpty()) {
-                    "Union of deep exclusions is impossible"
-                }
-
                 val union = set.addAll(other.set)
-                if (union === set) this else Concrete(union, deepExclusion, union.hashCode())
+                if (union === set) this else Concrete(union, union.hashCode())
             }
-        }
-
-        override fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet = when (other) {
-            is Universe -> other
-            is Empty -> when {
-                set.isEmpty() -> Empty
-                deepExclusion.isEmpty() -> this
-                else -> Concrete(set, persistentHashSetOf(), set.hashCode())
-            }
-
-            is Concrete -> {
-                val mergedSet = set.addAll(other.set)
-                val mergedDeep = deepExclusion.retainAll(other.deepExclusion)
-                if (mergedSet === set && mergedDeep === deepExclusion) {
-                    this
-                } else {
-                    Concrete(mergedSet, mergedDeep, mergedSet.hashCode() + mergedDeep.hashCode())
-                }
-            }
-        }
-
-        override fun deepExclusion(): Set<DeepMarkExclusion> = deepExclusion
-
-        fun nonDeepExclusion(): Set<Accessor> = set
-
-        override fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet {
-            val mergedDeep = deepExclusion.addAll(accessors)
-            if (mergedDeep === deepExclusion) return this
-            return Concrete(set, mergedDeep, set.hashCode() + mergedDeep.hashCode())
         }
 
         override fun intersect(other: ExclusionSet): ExclusionSet = when (other) {
@@ -165,43 +82,29 @@ sealed interface ExclusionSet {
             Universe -> this
             is Concrete -> {
                 val intersection = set.retainAll(other.set)
-                val deepIntersection = deepExclusion.retainAll(other.deepExclusion)
                 when {
-                    intersection === set && deepIntersection === deepExclusion -> this
-                    intersection.isEmpty() && deepIntersection.isEmpty() -> Empty
-                    else -> Concrete(intersection, deepIntersection, intersection.hashCode() + deepIntersection.hashCode())
+                    intersection === set -> this
+                    intersection.isEmpty() -> Empty
+                    else -> Concrete(intersection, intersection.hashCode())
                 }
             }
         }
 
         override fun subtract(accessor: Accessor): ExclusionSet {
-            if (accessor !is DeepMarkExclusion) {
-                val subtractResult = set.remove(accessor)
-                return when {
-                    subtractResult === set -> this
-                    subtractResult.isEmpty() && deepExclusion.isEmpty() -> Empty
-                    else -> Concrete(subtractResult, deepExclusion, hash - accessor.hashCode())
-                }
-            } else {
-                val subtractResult = deepExclusion.remove(accessor)
-                return when {
-                    subtractResult === deepExclusion -> this
-                    set.isEmpty() && subtractResult.isEmpty() -> Empty
-                    else -> Concrete(set, subtractResult, hash - accessor.hashCode())
-                }
+            val subtractResult = set.remove(accessor)
+            return when {
+                subtractResult === set -> this
+                subtractResult.isEmpty() -> Empty
+                else -> Concrete(subtractResult, hash - accessor.hashCode())
             }
         }
 
         override fun contains(other: ExclusionSet): Boolean = when (other) {
             Empty -> true
             Universe -> false
-            is Concrete -> set.containsAll(other.set) && deepExclusion.containsAll(other.deepExclusion)
+            is Concrete -> set.containsAll(other.set)
         }
 
-        override fun toString(): String {
-            val setEx = set.joinToString(prefix = "{", postfix = "}") { it.toSuffix() }
-            val deepSetEx = deepExclusion.joinToString(prefix = "{", postfix = "}") { it.toSuffix() }
-            return if (deepExclusion.isEmpty()) setEx else "$setEx U D$deepSetEx"
-        }
+        override fun toString(): String = set.joinToString(prefix = "{", postfix = "}") { it.toSuffix() }
     }
 }

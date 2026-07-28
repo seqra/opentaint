@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
@@ -161,7 +162,7 @@ private class SummariesIdStorageNode(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(finalAccess)
-            .setExclusion(d)
+            .setFlowState(FactFlowState(d))
             .let { sequenceOf(it) }
     }
 
@@ -170,7 +171,7 @@ private class SummariesIdStorageNode(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(finalAccess)
-            .setExclusion(exclusion)
+            .setFlowState(FactFlowState(exclusion))
     }
 }
 
@@ -194,7 +195,8 @@ private class MethodTaintedSummariesGroupedByFactStorage(
         val modifiedStorages = mutableListOf<ModifiableStorage>()
 
         for (edge in edges) {
-            addNonUniverseEdge(edge.initial, edge.final, edge.exclusion, modifiedStorages)
+            check(edge.flowState.deepCleanEffects.isEmpty) { "Tree cleaner effects must be structural" }
+            addNonUniverseEdge(edge.initial, edge.final, edge.flowState.exclusions, modifiedStorages)
         }
 
         modifiedStorages.flatMapTo(added) { it.getAndResetDelta() }
@@ -285,7 +287,7 @@ private class MethodTaintedSummariesMergingStorage(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(delta)
-            .setExclusion(exclusion!!)
+            .setFlowState(FactFlowState(exclusion!!))
             .let { sequenceOf(it) }
     }
 
@@ -295,7 +297,7 @@ private class MethodTaintedSummariesMergingStorage(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(edges)
-            .setExclusion(exclusion)
+            .setFlowState(FactFlowState(exclusion))
     }
 }
 

@@ -2,13 +2,13 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageIdx
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -52,7 +52,11 @@ class MethodEdgesInitialToFinalAutomataApSet(
                 collectToListWithPostProcess(
                     collection,
                     { storage.collectTo(it, statement, finalFactPattern) },
-                    { AccessGraphInitialFactAp(initialBase, initialAg, it.exclusions) to it }
+                    {
+                        AccessGraphInitialFactAp(
+                            initialBase, initialAg, it.exclusions, it.deepCleanEffects
+                        ) to it
+                    }
                 )
             }
         }
@@ -74,20 +78,20 @@ class MethodEdgesInitialToFinalAutomataApSet(
         initialAp: AccessGraphInitialFactAp,
         finalAp: AccessGraphFinalFactAp
     ): Pair<InitialFactAp, FinalFactAp>? {
-        check(initialAp.exclusions == finalAp.exclusions)
+        check(initialAp.flowState == finalAp.flowState)
 
         val storage = this.storage
             .getOrCreate(initialAp.base)
             .getOrCreate(initialAp.access)
 
-        val exclusion = initialAp.exclusions
-        val addedExclusion = storage.add(statement, finalAp.base, finalAp.access, exclusion)
+        val flowState = initialAp.flowState
+        val addedState = storage.add(statement, finalAp.base, finalAp.access, flowState)
 
-        if (addedExclusion === exclusion) return initialAp to finalAp
-        if (addedExclusion == null) return null
+        if (addedState === flowState) return initialAp to finalAp
+        if (addedState == null) return null
 
-        val newInitial = initialAp.replaceExclusions(addedExclusion)
-        val newFinal = finalAp.replaceExclusions(addedExclusion)
+        val newInitial = initialAp.replaceFlowState(addedState)
+        val newFinal = finalAp.replaceFlowState(addedState)
         return newInitial to newFinal
     }
 
@@ -124,12 +128,17 @@ class MethodEdgesInitialToFinalAutomataApSet(
     ) {
         private val factStorage = FinalFactBaseStorage(initialStatement, maxInstIdx, languageManager)
 
-        fun add(statement: CommonInst, finalBase: AccessPathBase, finalAg: AccessGraph, exclusion: ExclusionSet): ExclusionSet? {
+        fun add(
+            statement: CommonInst,
+            finalBase: AccessPathBase,
+            finalAg: AccessGraph,
+            flowState: FactFlowState,
+        ): FactFlowState? {
             val finalFactStorage = factStorage.getOrCreate(finalBase)
             val factUpdated = finalFactStorage.addFact(statement, finalAg)
 
-            return finalFactStorage.addExclusion(
-                statement, exclusion, returnNullIfNotUpdated = !factUpdated
+            return finalFactStorage.addFlowState(
+                statement, flowState, returnNullIfNotUpdated = !factUpdated
             )
         }
 
@@ -150,12 +159,16 @@ class MethodEdgesInitialToFinalAutomataApSet(
             statement: CommonInst,
             base: AccessPathBase,
         ) {
-            val exclusion = exclusion(statement) ?: return
+            val flowState = flowState(statement) ?: return
 
             collectToListWithPostProcess(
                 collection,
                 { collectTo(it, statement) },
-                { AccessGraphFinalFactAp(base, it, exclusion) }
+                {
+                    AccessGraphFinalFactAp(
+                        base, it, flowState.exclusions, flowState.deepCleanEffects
+                    )
+                }
             )
         }
     }
@@ -193,33 +206,33 @@ class MethodEdgesInitialToFinalAutomataApSet(
             finalFacts[edgeSetIdx]?.toList(collection)
         }
 
-        private val exclusions = arrayOfNulls<ExclusionSet>(instructionStorageSize(maxInstIdx))
+        private val flowStates = arrayOfNulls<FactFlowState>(instructionStorageSize(maxInstIdx))
 
-        fun addExclusion(
+        fun addFlowState(
             statement: CommonInst,
-            exclusion: ExclusionSet,
+            flowState: FactFlowState,
             returnNullIfNotUpdated: Boolean
-        ): ExclusionSet? {
-            val exclusionIdx = instructionStorageIdx(statement, languageManager)
-            val currentExclusion = exclusions[exclusionIdx]
+        ): FactFlowState? {
+            val stateIdx = instructionStorageIdx(statement, languageManager)
+            val currentState = flowStates[stateIdx]
 
-            if (currentExclusion == null) {
-                exclusions[exclusionIdx] = exclusion
-                return exclusion
+            if (currentState == null) {
+                flowStates[stateIdx] = flowState
+                return flowState
             }
 
-            val merged = currentExclusion.mergeAndIntersectDeep(exclusion)
-            if (merged === currentExclusion) {
+            val merged = currentState join flowState
+            if (merged === currentState) {
                 return if (returnNullIfNotUpdated) null else merged
             }
 
-            exclusions[exclusionIdx] = merged
+            flowStates[stateIdx] = merged
             return merged
         }
 
-        fun exclusion(statement: CommonInst): ExclusionSet? {
-            val exclusionIdx = instructionStorageIdx(statement, languageManager)
-            return exclusions[exclusionIdx]
+        fun flowState(statement: CommonInst): FactFlowState? {
+            val stateIdx = instructionStorageIdx(statement, languageManager)
+            return flowStates[stateIdx]
         }
 
         override fun toString(): String = "${finalFacts.indices.sumOf { finalFacts[it]?.graphSize ?: 0 }}"

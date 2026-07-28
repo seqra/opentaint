@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -79,8 +78,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             is TypeInfoAccessor,
             is TypeInfoGroupAccessor -> false
 
-            is ValueAccessor,
-            is DeepMarkExclusion -> error("Unexpected accessor to unroll: $accessor")
+            is ValueAccessor -> error("Unexpected accessor to unroll: $accessor")
         }
     }
 

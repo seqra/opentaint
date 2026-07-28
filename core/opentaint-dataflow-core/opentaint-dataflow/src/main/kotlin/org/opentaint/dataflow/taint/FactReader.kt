@@ -2,7 +2,6 @@ package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -51,10 +50,6 @@ class FinalFactReader(
         )
 
     fun replaceFact(factAp: FinalFactAp) = FinalFactReader(factAp, apManager).also { it.refinement = refinement }
-
-    fun excludeDeep(mark: TaintMarkAccessor) {
-        refinement = refinement.add(DeepMarkExclusion(mark.mark))
-    }
 
     fun refineFact(factAp: InitialFactAp): InitialFactAp {
         if (!hasRefinement) return factAp

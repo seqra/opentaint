@@ -2,7 +2,6 @@ package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
@@ -55,11 +54,6 @@ class TaintCleanActionEvaluator {
                     return listOf(EvaluatedCleanAction(fact.replaceFact(result.fact), actionInfo, evc))
                 }
 
-                // Legacy flat channel for representations without the structural clean.
-                FinalFactAp.DeepCleanResult.Unsupported ->
-                    if (fact.factAp.containsAbstractNode()) {
-                        fact.excludeDeep(markRestriction)
-                    }
             }
         }
 
@@ -71,24 +65,6 @@ class TaintCleanActionEvaluator {
 
     private fun PositionAccess.isBaseAnyFieldPosition(): Boolean =
         this is PositionAccess.Complex && accessor is AnyAccessor && base is PositionAccess.Simple
-
-    private fun FinalFactAp.containsAbstractNode(): Boolean {
-        if (exclusions is ExclusionSet.Universe) return false
-        if (isAbstract()) return true
-
-        val visited = hashSetOf<FinalFactAp>()
-        val queue = ArrayDeque<FinalFactAp>()
-        queue.add(this)
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            if (current.isAbstract()) return true
-            for (accessor in current.getStartAccessors()) {
-                val child = current.readAccessor(accessor) ?: continue
-                if (visited.add(child)) queue.add(child)
-            }
-        }
-        return false
-    }
 
     private fun cleanAccessors(
         accessors: List<Accessor>,

@@ -20,20 +20,12 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
  * A whole-object (`$*`) sanitizer inside a summarized wrapper must stay effective when the
  * wrapper ALSO has an unsanitized flow from the same initial fact.
  *
- * `wrap` copies its whole argument twice — once before the starred clean (`p.raw`) and once
- * after it (`p.val`). Both summary edges share the initial fact `b`, so the summary storage
- * merges their exclusion sets with `intersect`, which silently drops the sanitized edge's
- * [org.opentaint.dataflow.ap.ifds.DeepMarkExclusion] unless the edges are grouped by their
- * deep subset. The caller's whole-object mark (`b.[any].![m]`) is then re-admitted below
- * `p.val` and the sanitized read reports a false positive, while the unsanitized read
- * (`p.raw`) must of course stay reported.
+ * `wrap` copies its whole argument twice — once before the starred clean (`p.raw`) and once after
+ * it (`p.val`). Both summary edges share the initial fact `b`; the cleaner state must stay attached
+ * to the sanitized branch while the unsanitized branch remains reported.
  *
- * The Tree subclass exercises the storage grouping (red before the fix). The Automata
- * subclass exercises the same contract plus the cleaner-lineage continuation: the cleaned
- * fact enters the resolved `clean` via call-to-start and must re-emerge from its identity
- * summary — which requires the exit-point compatibility filter to keep fully abstract
- * final facts (see AccessGraphCompatibilityFilterTest; the base-only-clean case was red
- * before that fix).
+ * The Tree subclass exercises structural cleaner state. The Automata subclass exercises the same
+ * contract with edge-level cleaner effects, including transport through an identity summary.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
@@ -145,7 +137,7 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
     fun `branch-conditional clean keeps the unsanitized path reported`() {
         // One branch cleans, the other does not: the unsanitized path must stay reported.
         // PROBE for reviewer's concern: intra-method edge storages union one exclusion slot
-        // per (initial AP, statement) across lineages, smearing the sanitizer's exclusions
+        // per (initial AP, statement) across alternatives, smearing the sanitizer's exclusions
         // onto the unsanitized branch at the join.
         assertReachable(
             config = config("conditionalCleanFlow"),
@@ -160,8 +152,8 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
     @Disabled // todo: fix automata
     fun `base-only clean keeps the whole-object field taint through the wrapper`() {
         // The clean removes only the base-value mark; the any-field mark survives the call
-        // and the sanitized-side read stays tainted. This pins the cleaner-lineage
-        // CONTINUATION: the fact enters the resolved `clean` via call-to-start and must
+        // and the sanitized-side read stays tainted. This pins cleaner-state transport:
+        // the fact enters the resolved `clean` via call-to-start and must
         // re-emerge from its identity summary.
         assertReachable(
             config = baseOnlyCleanConfig("cleanedFlow"),

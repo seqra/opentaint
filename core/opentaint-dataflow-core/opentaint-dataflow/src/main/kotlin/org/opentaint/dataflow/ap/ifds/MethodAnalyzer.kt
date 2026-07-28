@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryE
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
@@ -1242,7 +1243,7 @@ class NormalMethodAnalyzer(
                         ndSummaryInitial.isEmpty() -> {
                             summaryHandler.handleZeroToFact(
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
+                                SummaryExclusionRefinement(FactFlowState.Universe, emptyDelta = null),
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1252,7 +1253,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleFactToFact(
                                 initialFact,
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(initialFact.exclusions, emptyDelta = null),
+                                SummaryExclusionRefinement(initialFact.flowState, emptyDelta = null),
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1261,7 +1262,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleNDFactToFact(
                                 ndSummaryInitial,
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
+                                SummaryExclusionRefinement(FactFlowState.Universe, emptyDelta = null),
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1275,7 +1276,7 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleFactToFact(
                                     currentEdge.initialFactAp,
                                     currentEdgeFactAp,
-                                    SummaryExclusionRefinement(currentEdge.initialFactAp.exclusions, emptyDelta = null),
+                                    SummaryExclusionRefinement(currentEdge.initialFactAp.flowState, emptyDelta = null),
                                     summaryEdge.summaryEdge()
                                 )
                             }
@@ -1284,7 +1285,7 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleNDFactToFact(
                                     ndSummaryInitial,
                                     currentEdgeFactAp,
-                                    SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
+                                    SummaryExclusionRefinement(FactFlowState.Universe, emptyDelta = null),
                                     summaryEdge.summaryEdge()
                                 )
                             }
@@ -1295,7 +1296,7 @@ class NormalMethodAnalyzer(
                         summaryHandler.handleNDFactToFact(
                             ndSummaryInitial + currentEdge.initialFacts,
                             currentEdgeFactAp,
-                            SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
+                            SummaryExclusionRefinement(FactFlowState.Universe, emptyDelta = null),
                             summaryEdge.summaryEdge()
                         )
                     }

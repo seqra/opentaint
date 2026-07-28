@@ -2,10 +2,10 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSet
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -28,8 +28,8 @@ class MethodEdgesInitialToFinalCactusApSet(
         override fun add(
             statement: CommonInst,
             initial: AccessPathWithCycles.AccessNode?,
-            final: AccessWithExclusion<AccessCactus.AccessNode>
-        ): AccessWithExclusion<AccessCactus.AccessNode>? {
+            final: AccessWithState<AccessCactus.AccessNode>
+        ): AccessWithState<AccessCactus.AccessNode>? {
             val storage = sameInitialAccessEdges.getOrPut(initial) {
                 EdgeNonUniverseExclusionMergingStorage(maxInstIdx, languageManager)
             }
@@ -38,7 +38,7 @@ class MethodEdgesInitialToFinalCactusApSet(
         }
 
         override fun filter(
-            dst: MutableList<Pair<AccessPathWithCycles.AccessNode?, AccessWithExclusion<AccessCactus.AccessNode>>>,
+            dst: MutableList<Pair<AccessPathWithCycles.AccessNode?, AccessWithState<AccessCactus.AccessNode>>>,
             statement: CommonInst,
             finalPattern: AccessPathWithCycles.AccessNode?,
         ) {
@@ -52,7 +52,7 @@ class MethodEdgesInitialToFinalCactusApSet(
         }
 
         override fun filter(
-            dst: MutableList<AccessWithExclusion<AccessCactus.AccessNode>>,
+            dst: MutableList<AccessWithState<AccessCactus.AccessNode>>,
             statement: CommonInst,
             initial: AccessPathWithCycles.AccessNode?,
             finalPattern: AccessPathWithCycles.AccessNode?,
@@ -65,42 +65,42 @@ class MethodEdgesInitialToFinalCactusApSet(
     private class EdgeNonUniverseExclusionMergingStorage(
         maxInstIdx: Int, private val languageManager: LanguageManager
     ) {
-        private val exclusions = arrayOfNulls<ExclusionSet>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
+        private val flowStates = arrayOfNulls<FactFlowState>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
         private val edges = arrayOfNulls<AccessCactus.AccessNode>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
 
         fun add(
             statement: CommonInst,
-            accessWithExclusion: AccessWithExclusion<AccessCactus.AccessNode>,
-        ): AccessWithExclusion<AccessCactus.AccessNode>? {
+            accessWithState: AccessWithState<AccessCactus.AccessNode>,
+        ): AccessWithState<AccessCactus.AccessNode>? {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentExclusion = exclusions[edgeSetIdx]
+            val currentState = flowStates[edgeSetIdx]
 
-            if (currentExclusion == null) {
-                exclusions[edgeSetIdx] = accessWithExclusion.exclusion
-                edges[edgeSetIdx] = accessWithExclusion.access
-                return accessWithExclusion
+            if (currentState == null) {
+                flowStates[edgeSetIdx] = accessWithState.flowState
+                edges[edgeSetIdx] = accessWithState.access
+                return accessWithState
             }
 
             val currentAccess = edges[edgeSetIdx]!!
-            val mergedExclusion = currentExclusion.mergeAndIntersectDeep(accessWithExclusion.exclusion)
-            exclusions[edgeSetIdx] = mergedExclusion
+            val mergedState = currentState join accessWithState.flowState
+            flowStates[edgeSetIdx] = mergedState
 
-            val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
+            val mergedAccess = currentAccess.mergeAdd(accessWithState.access)
             if (mergedAccess === currentAccess) {
-                if (mergedExclusion === currentExclusion) return null
+                if (mergedState === currentState) return null
 
-                return AccessWithExclusion(mergedAccess, mergedExclusion)
+                return AccessWithState(mergedAccess, mergedState)
             }
 
             edges[edgeSetIdx] = mergedAccess
-            return AccessWithExclusion(mergedAccess, mergedExclusion)
+            return AccessWithState(mergedAccess, mergedState)
         }
 
-        fun allApAtStatement(dst: MutableList<AccessWithExclusion<AccessCactus.AccessNode>>, statement: CommonInst) {
+        fun allApAtStatement(dst: MutableList<AccessWithState<AccessCactus.AccessNode>>, statement: CommonInst) {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentExclusion = exclusions[edgeSetIdx] ?: return
+            val flowState = flowStates[edgeSetIdx] ?: return
             val access = edges[edgeSetIdx] ?: return
-            dst += AccessWithExclusion(access, currentExclusion)
+            dst += AccessWithState(access, flowState)
         }
     }
 }

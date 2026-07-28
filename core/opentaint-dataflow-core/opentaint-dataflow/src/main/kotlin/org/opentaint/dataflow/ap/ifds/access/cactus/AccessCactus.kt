@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
@@ -16,6 +15,8 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.DeepCleanEffects
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.serialization.readEnum
@@ -28,26 +29,31 @@ typealias Cycle = List<Accessor>
 class AccessCactus(
     override val base: AccessPathBase,
     val access: AccessNode,
-    override val exclusions: ExclusionSet
+    override val exclusions: ExclusionSet,
+    override val deepCleanEffects: DeepCleanEffects = DeepCleanEffects.Empty,
 ): FinalFactAp {
     init {
         assert({ access.isWellFormed() }) {
             "Ill-formed AccessTree"
         }
+        FactFlowState(exclusions, deepCleanEffects)
     }
 
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
-        AccessCactus(newBase, access, exclusions)
+        AccessCactus(newBase, access, exclusions, deepCleanEffects)
 
     override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessCactus(base, access, exclusions.add(accessor))
+        AccessCactus(base, access, exclusions.add(accessor), deepCleanEffects)
 
-    // cactus carries the deep claim on the flat exclusion channel, which is preserved here
+    // Cactus transports residual cleaner effects beside its access structure.
     override fun abstractPart(): FinalFactAp =
-        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
+        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions, deepCleanEffects)
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
-        AccessCactus(base, access, exclusions)
+        replaceFlowState(flowState.withExclusions(exclusions))
+
+    override fun replaceFlowState(flowState: FactFlowState): FinalFactAp =
+        AccessCactus(base, access, flowState.exclusions, flowState.deepCleanEffects)
 
     override fun getAllAccessors(): Set<Accessor> {
         val result = hashSetOf<Accessor>()
@@ -60,29 +66,54 @@ class AccessCactus(
     override fun isAbstract(): Boolean = access.isAbstract
 
     override fun readAccessor(accessor: Accessor): FinalFactAp? =
-        access.getChild(accessor)?.let { AccessCactus(base, it, exclusions) }
+        access.getChild(accessor)?.let { AccessCactus(base, it, exclusions, deepCleanEffects) }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp {
-        check(accessor !is DeepMarkExclusion) {
-            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
-        }
-        return AccessCactus(base, access.addParent(accessor), exclusions)
+        return AccessCactus(base, access.addParent(accessor), exclusions, deepCleanEffects)
     }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? {
         val newAccess = access.clearChild(accessor).takeIf { !it.isEmpty } ?: return null
-        return AccessCactus(base, newAccess, exclusions)
+        return AccessCactus(base, newAccess, exclusions, deepCleanEffects)
     }
 
     override fun removeAbstraction(): FinalFactAp? =
-        access.removeAbstraction().takeIf { !it.isEmpty }?.let { AccessCactus(base, it, exclusions) }
+        access.removeAbstraction().takeIf { !it.isEmpty }?.let {
+            AccessCactus(base, it, exclusions, deepCleanEffects)
+        }
 
     override fun abstractOnly(): FinalFactAp =
         AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
-        return AccessCactus(base, filteredAccess, exclusions)
+        return AccessCactus(base, filteredAccess, exclusions, deepCleanEffects)
+    }
+
+    override fun deepClean(mark: TaintMarkAccessor): FinalFactAp.DeepCleanResult {
+        val belowBaseFilter = object : FactTypeChecker.FactApFilter {
+            override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
+                if (accessor == mark) {
+                    FactTypeChecker.FilterResult.Reject
+                } else {
+                    FactTypeChecker.FilterResult.FilterNext(this)
+                }
+        }
+        val atBaseFilter = object : FactTypeChecker.FactApFilter {
+            override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
+                FactTypeChecker.FilterResult.FilterNext(belowBaseFilter)
+        }
+        val cleaned = access.filterAccessNode(atBaseFilter)
+            ?: return FinalFactAp.DeepCleanResult.RemovedCompletely
+        val cleanedState = flowState.cleanDeep(mark)
+        return FinalFactAp.DeepCleanResult.Cleaned(
+            AccessCactus(
+                base,
+                cleaned,
+                cleanedState.exclusions,
+                cleanedState.deepCleanEffects,
+            )
+        )
     }
 
     // todo: rewrite stub implementation
@@ -101,9 +132,13 @@ class AccessCactus(
     override fun getStartAccessors(): Set<Accessor> =
         access.allEdges.mapTo(hashSetOf()) { it.accessor }
 
-    private sealed interface Delta : FinalFactAp.Delta
+    private sealed interface Delta : FinalFactAp.Delta {
+        override val deepCleanEffects: DeepCleanEffects
+    }
 
-    data object EmptyDelta : Delta {
+    data class EmptyDelta(
+        override val deepCleanEffects: DeepCleanEffects,
+    ) : Delta {
         override val isEmpty: Boolean get() = true
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
         override fun getStartAccessors(): Set<Accessor> = emptySet()
@@ -112,7 +147,10 @@ class AccessCactus(
         override fun isAbstract(): Boolean = true
     }
 
-    data class NodeDelta(val node: AccessNode) : Delta {
+    data class NodeDelta(
+        val node: AccessNode,
+        override val deepCleanEffects: DeepCleanEffects,
+    ) : Delta {
         override val isEmpty: Boolean get() = false
         override fun startsWithAccessor(accessor: Accessor): Boolean = node.contains(accessor)
         override fun getStartAccessors(): Set<Accessor> = node.allEdges.mapTo(hashSetOf()) { it.accessor }
@@ -122,7 +160,7 @@ class AccessCactus(
             return s
         }
         override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? =
-            node.getChild(accessor)?.let { NodeDelta(it) }
+            node.getChild(accessor)?.let { NodeDelta(it, deepCleanEffects) }
 
         override fun isAbstract(): Boolean = node.isAbstract
     }
@@ -159,20 +197,33 @@ class AccessCactus(
 
         return buildList {
             if (emptyDeltaNeeded) {
-                add(EmptyDelta)
+                add(EmptyDelta(deepCleanEffects))
             }
             if (apRefinements.isNotEmpty()) {
-                addAll(apRefinements.map(AccessCactus::NodeDelta))
+                addAll(apRefinements.map { NodeDelta(it, deepCleanEffects) })
             }
         }
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
         when (val d = delta as Delta) {
-            EmptyDelta -> return this
+            is EmptyDelta -> {
+                val state = flowState then FactFlowState(ExclusionSet.Empty, d.deepCleanEffects)
+                return replaceFlowState(state)
+            }
             is NodeDelta -> {
-                val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, d.node) ?: return null
-                return AccessCactus(base, concatenatedAccess, exclusions)
+                val filteredDelta = d.node.filterDeep(d.deepCleanEffects)
+                    ?: return replaceFlowState(
+                        flowState then FactFlowState(ExclusionSet.Empty, d.deepCleanEffects)
+                    )
+                val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, filteredDelta) ?: return null
+                val composedState = flowState then FactFlowState(ExclusionSet.Empty, d.deepCleanEffects)
+                return AccessCactus(
+                    base,
+                    concatenatedAccess,
+                    composedState.exclusions,
+                    composedState.deepCleanEffects,
+                )
             }
         }
     }
@@ -199,6 +250,7 @@ class AccessCactus(
         if (base != other.base) return false
         if (access != other.access) return false
         if (exclusions != other.exclusions) return false
+        if (deepCleanEffects != other.deepCleanEffects) return false
 
         return true
     }
@@ -207,6 +259,7 @@ class AccessCactus(
         var result = base.hashCode()
         result = 31 * result + access.hashCode()
         result = 31 * result + exclusions.hashCode()
+        result = 31 * result + deepCleanEffects.hashCode()
         return result
     }
 
@@ -777,6 +830,19 @@ class AccessCactus(
             }
         }
 
+        fun filterDeep(effects: DeepCleanEffects): AccessNode? {
+            if (effects.isEmpty) return this
+            val filter = object : FactTypeChecker.FactApFilter {
+                override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
+                    if (accessor is TaintMarkAccessor && accessor in effects) {
+                        FactTypeChecker.FilterResult.Reject
+                    } else {
+                        FactTypeChecker.FilterResult.FilterNext(this)
+                    }
+            }
+            return filterAccessNode(filter)
+        }
+
         fun concatToLeafAbstractNodes(typeChecker: FactTypeChecker?, other: AccessNode): AccessNode? =
             concatToLeafAbstractNodes(
                 typeChecker, other, mutableListOf()
@@ -1213,7 +1279,6 @@ class AccessCactus(
                     is FieldAccessor -> (low is FieldAccessor) && (low.className == high.className)
                     is ClassStaticAccessor -> low is ClassStaticAccessor
                     is TaintMarkAccessor -> error("Unexpected TaintMarkAccessor")
-                    is DeepMarkExclusion -> error("DeepMarkExclusion must not occur in access paths: $high")
                     FinalAccessor -> error("Unexpected FinalAccessor")
                     AnyAccessor -> low === AnyAccessor
                     ValueAccessor -> TODO()

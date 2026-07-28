@@ -1,8 +1,8 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import kotlinx.collections.immutable.persistentHashMapOf
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.FactSEBuilder
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.Storage
@@ -29,12 +29,12 @@ private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, Access
 
     override fun add(
         iap: AccessPathWithCycles.AccessNode?,
-        se: Map<SideEffectKind, ExclusionSet>,
+        se: Map<SideEffectKind, FactFlowState>,
         added: MutableList<FactSEBuilder<AccessPathWithCycles.AccessNode?>>
     ) {
         val storageNode = getOrCreate(iap)
-        for ((kind, exclusion) in se) {
-            storageNode.add(kind, exclusion)?.let { added += it }
+        for ((kind, flowState) in se) {
+            storageNode.add(kind, flowState)?.let { added += it }
         }
     }
 
