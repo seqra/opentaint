@@ -4,7 +4,14 @@
 
 **Goal:** Make a starred cleaner correct. `clean($*A)` inside a summarized wrapper must clean only the paths that actually flowed through it, not every path below the same base.
 
-**Architecture:** A `DeepMarkExclusion` moves out of the flat per-edge `ExclusionSet` and becomes a **per-node annotation on the access tree** — "at this node and below, mark `m` is removed". The node position replaces the depth threshold that is the claim's only coordinate today. Because the annotation lives on the node, `prependAccessor` carries it down with the path for free and `readAccessor` either descends past it or never meets it, which is exactly the branch discrimination the flat set cannot express.
+**Architecture:** A starred clean becomes the base cleaner's idea — node deletion — applied to both node kinds a fact can contain:
+
+- the **concrete part** of the fact is closed (every path is enumerated), so the clean traverses it and deletes every `![m]` node below the position. Nothing is recorded, because nothing can reappear there;
+- an **abstract node** is the one place the fact can still grow — by unfolding, or by a summary delta concatenated onto it — so it is the one place a residual claim is needed. The node is annotated: "below here, mark `m` is excluded".
+
+`DeepMarkExclusion` therefore leaves the flat per-edge `ExclusionSet` and becomes part of the **abstraction state of the node** (`isAbstract` generalizes to "abstract, excluding {…}"). Enforcement collapses to two local rules: **concat** drops excluded marks from a delta attached below an annotated abstract node, and **unfold** makes refinement children inherit the annotation. The `removeAccessors` sweep with its depth thresholds, and the deep half of `AccessPath.filter`, are what those two rules replace.
+
+Branch discrimination then needs no machinery at all. `p.raw = b` snapshots the pre-clean fact (abstract node unannotated); `p.val = b` the post-clean one (annotated). The exit-tree merge keeps `.raw` and `.val` as separate branches, each with its own abstract node — the merge-combinator dilemma at the storage sites does not get solved, it stops existing.
 
 **Tech Stack:** Kotlin, JUnit 5, Gradle. The Gradle root is `core/` — the wrapper is `core/gradlew` and every task is invoked from `core/`.
 
@@ -41,6 +48,14 @@ Pair
 Cleaned-ness is encoded positionally, and the two summary edges can share a storage slot without harm because the merge is a **tree** merge — `.raw` and `.val` are different branches.
 
 A **starred** cleaner cannot do this. `b.[any].![tainted]` stands for unboundedly many paths, so there is no node to delete. `FinalFactReader.excludeDeep` (`FactReader.kt:55`) records `DeepMarkExclusion(mark)` on the *edge's exclusion set* instead — a flat side-channel with no position in the tree. Its only coordinate is a depth threshold (`AccessTree.kt:193`, `minPruneDepth = if (initialAccessDepth == 0) 2 else 1`), and the sweep recurses the whole subtree from the landing point (`removeAccessors`, `AccessTree.kt:625`). It cannot say "below `.val` only", so it either covers both branches or neither.
+
+### Two facts that scope the fix — verified in code, do not re-derive
+
+**The fact at the clean is almost always abstract, even when every caller's fact is concrete.** Callee summaries are computed on *abstracted* initial facts (`TreeInitialFactAbstraction`, and the automata/cactus counterparts). This is why the depth-2 row below fails despite a fully concrete source: inside `wrap`/`clean`'s summary analysis the cleaner sees the abstract initial fact, not the caller's concrete one. The abstract-node annotation is therefore the main path of this plan, not a corner case.
+
+**The concrete half of a starred clean is missing entirely today.** On `arg0.*`, `removeFinalFact` (`Cleaner.kt:31-49`) routes the concrete cleanup through `clearPosition` with accessor list `[AnyAccessor, ![m]]`, and `clearPosition` navigates positionally: a concrete fact does not start with `[any]`, so the fact comes back unchanged. There is no traverse-and-delete anywhere. This is the same defect `2026-07-28-clean-accessors-deep-exclusion-split.md` records as "a starred cleaner applied INLINE does not clear a concrete mark at any depth ≥ 1" — Task 3's traversal half fixes it as a side effect, and that plan's red cases join the acceptance list here.
+
+**Why annotating ONLY abstract nodes is sufficient:** a fact's tree grows only at its abstract nodes — by unfolding or by a delta concatenated there. The concrete part is closed, so traversal deletion is complete and needs no residual claim; any mark that materializes later necessarily passes through an abstract node, where the annotation blocks it.
 
 ### Why neither combinator can rescue it — measured
 
@@ -93,13 +108,14 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 | file | responsibility after this plan |
 | --- | --- |
-| `.../ap/ifds/access/tree/AccessTree.kt` | `AccessNode` carries excluded marks; `removeAccessors` becomes a local descent; `prependAccessor`/`readAccessor` need no exclusion handling |
-| `.../ap/ifds/access/tree/AccessPath.kt` | initial-side filter reads the node annotation instead of the flat deep set |
-| `.../ap/ifds/Accessors.kt` | `DeepMarkExclusion` stops being an `Accessor`; becomes a mark-set element |
+| `.../ap/ifds/access/tree/AccessTree.kt` | abstract nodes carry excluded marks as part of their abstraction state; `concat` filters deltas by the annotation at the attach point; unfold children inherit it; `removeAccessors` and its depth thresholds are deleted |
+| `.../ap/ifds/access/tree/AccessPath.kt` | the deep half of `filter` and of the `delta` sweep is deleted; plain filtering unchanged |
+| `.../dataflow/taint/Cleaner.kt` | `arg0.*` on the concrete part = traverse and delete every `![m]` below the position; on each abstract node = annotate |
+| `.../dataflow/taint/FactReader.kt` | `excludeDeep` is replaced by the two mechanisms above; the refinement channel carries plain accessors only |
+| `.../ap/ifds/Accessors.kt` | `DeepMarkExclusion` stops being an `Accessor`; becomes an element of the abstract node's mark set |
 | `.../ap/ifds/ExclusionSet.kt` | loses `deepExclusion` / `withDeepExclusion` / `mergeAndIntersectDeep`; `union` becomes unconditional again |
-| `.../dataflow/taint/FactReader.kt` | `excludeDeep` annotates the node at the fact's position instead of writing the refinement channel |
 | `.../ap/ifds/access/tree/MethodInitialToFinalApSummaries.kt` | one merge operator; no deep special-casing |
-| `.../ap/ifds/serialization/ExclusionSetSerializer.kt`, `.../jvm/ap/ifds/JIRSummariesFeature.kt` | fact and summary formats carry the annotation |
+| `.../ap/ifds/serialization/ExclusionSetSerializer.kt`, `.../jvm/ap/ifds/JIRSummariesFeature.kt` | fact and summary formats carry the abstract-node annotation |
 
 ---
 
@@ -107,27 +123,32 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 ### Task 1 — Unit-pin the combination laws before touching the engine
 
-- [ ] Add `AccessNodeExclusionTest` to the dataflow unit suite covering: annotating a node; the annotation surviving a parent prepend; a sibling branch NOT inheriting it; two annotations on the same node combining by intersection (the join of a cleaned and an uncleaned lineage is uncleaned); annotations on different nodes coexisting.
+- [ ] Add `AbstractNodeExclusionTest` to the dataflow unit suite covering: annotating an abstract node; the annotation surviving a parent prepend; a sibling branch NOT carrying it; a delta concatenated below an annotated abstract node losing its excluded marks and keeping the rest; unfold children inheriting the annotation; two annotations meeting on the SAME abstract node combining by intersection (the join of a cleaned and an uncleaned lineage is uncleaned — the conditional-clean shape, not the sibling shape).
 - [ ] The same-node intersection is the one piece of the old law that survives, now at the right granularity. Assert it explicitly.
 - [ ] Verify: `:opentaint-dataflow-core:opentaint-dataflow:test` **126 + new / 0 / 0**.
 
 **Why first:** this is the part most likely to be wrong and the cheapest place to be wrong in.
 
-### Task 2 — Carry an excluded-mark set on `AccessNode` (behaviour-preserving)
+### Task 2 — Carry the excluded-mark set in the abstraction state (behaviour-preserving)
 
-- [ ] Add the set to `AccessNode` and thread it through `manager.create(isAbstract, isFinal, accessors, accessorNodes)` (`AccessTree.kt:622`), node equality, hashing and interning.
-- [ ] Every construction site passes an empty set. Nothing reads it yet.
-- [ ] Verify: both suites at baseline, unchanged. **Also record heap and wall-clock for `:test`** — every node in the engine just grew a field, and this is the task where that cost lands.
+- [ ] Generalize `isAbstract` to an abstraction descriptor carrying the excluded-mark set (empty in the common case — intern the empty descriptor so plain-abstract costs what the boolean did). Concrete nodes — the bulk — pay nothing.
+- [ ] Thread it through `manager.create(isAbstract, isFinal, accessors, accessorNodes)` (`AccessTree.kt:622`), node equality, hashing and interning.
+- [ ] Every construction site passes the empty descriptor. Nothing reads the set yet.
+- [ ] Verify: both suites at baseline, unchanged. **Record heap and wall-clock for `:test`** — node identity changed even if only abstract nodes carry payload.
 
-**Stop-and-report gate:** if `:test` wall-clock regresses more than ~15%, stop and report before Task 3. The alternative design (a path prefix inside `DeepMarkExclusion`) trades this cost for reimplementing tree navigation, and that trade should be made on measured numbers, not guessed.
+**Stop-and-report gate:** if `:test` wall-clock regresses more than ~15%, stop and report before Task 3. Expected cost is far below the every-node design this plan replaced, but the gate stays until measured.
 
-### Task 3 — Attach the claim to the node
+### Task 3 — The clean becomes deletion-plus-annotation
 
-- [ ] `FinalFactReader.excludeDeep` (`FactReader.kt:55`) annotates the node at the fact's current position instead of adding to `refinement`.
-- [ ] `refineFact` (`FactReader.kt:59-69`) no longer carries deep entries; the refinement channel goes back to plain accessors only.
-- [ ] `removeAccessors` (`AccessTree.kt:625`) becomes a local descent: union the node's annotation into an active set on the way down, drop children in that set. Delete the `minPruneDepth` threshold — the node position is the anchor.
-- [ ] `prependAccessor` and `readAccessor` get **no** exclusion-specific code. If either needs any, the annotation is in the wrong place.
-- [ ] Verify: the four red cases above go green in Tree with their non-vacuity controls still green; remove their `@Disabled`.
+- [ ] `removeFinalFact` (`Cleaner.kt:31-49`), `arg0.*` branch, replaces both current mechanisms:
+  - traverse the fact's concrete part and delete every `![m]` node strictly below the position's base (the base mark belongs to the rule's `arg0` action). This is the traversal that `clearPosition` does not do today;
+  - annotate every abstract node in the fact with `m`.
+- [ ] Delete `FinalFactReader.excludeDeep` (`FactReader.kt:55`); `refineFact` (`FactReader.kt:59-69`) carries plain accessors only. The claim now lives on the CLEANED fact, structurally — not on the reader refinement that `propagateCleanedFact` moves onto the caller's original fact.
+- [ ] Enforcement: `concat` filters a delta's marks by the annotation at the attach point; unfold children inherit. Delete `removeAccessors` (`AccessTree.kt:625`) and the deep branch of the `delta()` sweep (`AccessTree.kt:186-196`) and of `AccessPath.filter` (`AccessPath.kt:177-191`).
+- [ ] `prependAccessor` and `readAccessor` get **no** exclusion-specific code — the annotation moves because the node moves. If either needs any, the design is being misread.
+- [ ] Verify: the four red cases below go green in Tree with their non-vacuity controls still green; remove their `@Disabled`.
+- [ ] Verify: the three red cases of `2026-07-28-clean-accessors-deep-exclusion-split.md` (`AssignmentFormCleanAnalysisTest` ×2, `AnyFieldMonotonicityAnalysisTest` inline-clean) — the traversal half should green them; if not, say which and why.
+- [ ] **Regression guard:** that plan also records that a previous attempt to attach the claim to the cleaned fact regressed three `DeepCleanSummaryAnalysisTest` cases into false negatives. The mechanism there was a flat exclusion lost in transit and should not reproduce structurally, but run the full class in both modes and report, do not assume.
 
 ### Task 4 — Collapse the combination laws
 
@@ -173,13 +194,13 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 ## Risks, ranked by how likely they are to bite
 
-1. **`AccessNode` interning and memory** (Task 2). Every node grows a field, and nodes are interned, cached, hashed and merged throughout the engine. This is a footprint change to the hottest structure in the analysis, and it is why Task 2 has an explicit stop-and-report gate.
-2. **Same-node merge law** (Task 1). Subtle, but cheap to pin.
-3. **Over-eager annotation drop in `readAccessor`** (Task 3). Dropping a claim too readily is a silent false negative — the direction that matters. The unsanitized-sibling cases are the guard.
+1. **Concat filtering** (Task 3). It is the one place the annotation gets teeth, and an over-eager filter is a silent false negative — the direction that matters. The unsanitized-sibling cases and the Task 3 regression guard are the defense.
+2. **Same-node merge law and unfold inheritance** (Task 1). Subtle, but cheap to pin before the engine is touched.
+3. **Node identity and interning** (Task 2). Much smaller than in the every-node design — only abstract nodes carry payload — but node equality still changed, hence the retained gate.
 4. **Automata** (Task 6). May not be reachable at all without the intervening-call fix first.
 
-## A cheaper partial, if the full change is not affordable
+## Alternatives considered and rejected
 
-At `excludeDeep`, when the fact's path is fully concrete (no abstract node), delete the node positionally instead of recording a claim. That closes the "starred cleaner over a concrete fact" subclass — the depth-2 row of the table above — with no changes to `AccessNode`, `ExclusionSet` or serialization.
-
-It does **not** fix the `DeepCleanSummaryAnalysisTest` cases, where the source itself is any-field and the fact genuinely is abstract. Treat it as a stopgap, and measure first: instrument `excludeDeep` to count concrete versus abstract fact paths across an OWASP run before deciding it is worth landing on its own. **This is an untested hypothesis, not a measured result.**
+- **Per-node "at and below" annotation on every `AccessNode`** — the first draft of this plan. Superseded: growth happens only at abstract nodes, so annotating concrete nodes buys nothing and puts a field on the hottest structure in the engine for no return.
+- **A path prefix inside `DeepMarkExclusion`** — keeps the flat set but reimplements tree navigation inside the accessor, needs its own k-limit, and must be rebased by hand at every prepend site in all four AP representations. The tree already does all of that.
+- **A different merge combinator at the storage sites** — measured, both directions: `mergeAndIntersectDeep` gives 2 false positives, deep-aware `union` gives 2 false negatives. No operator recovers what the flat representation already discarded.
