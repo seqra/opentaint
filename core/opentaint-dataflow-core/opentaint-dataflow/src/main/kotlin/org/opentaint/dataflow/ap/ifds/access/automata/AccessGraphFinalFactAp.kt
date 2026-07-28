@@ -6,41 +6,47 @@ import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.DeepCleanEffects
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.clean
+import org.opentaint.dataflow.ap.ifds.access.forExclusions
 import org.opentaint.dataflow.ap.ifds.tryAnyAccessorOrNull
 
 data class AccessGraphFinalFactAp(
     override val base: AccessPathBase,
     override val access: AccessGraph,
     override val exclusions: ExclusionSet,
-    override val deepCleanEffects: DeepCleanEffects = DeepCleanEffects.Empty,
+    val anyFieldCleanerEffects: AnyFieldCleanerEffects = AnyFieldCleanerEffects.Empty,
 ) : FinalFactAp, AccessGraphAccessorList {
     init {
-        FactFlowState(exclusions, deepCleanEffects)
+        check(exclusions !is ExclusionSet.Universe || anyFieldCleanerEffects.isEmpty) {
+            "Universe facts cannot carry cleaner effects"
+        }
     }
 
     override val size: Int get() = access.size
     override val depth: Int get() = size
 
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
-        AccessGraphFinalFactAp(newBase, access, exclusions, deepCleanEffects)
+        AccessGraphFinalFactAp(newBase, access, exclusions, anyFieldCleanerEffects)
 
     override fun exclude(accessor: Accessor): FinalFactAp {
         check(accessor !is AnyAccessor)
-        return AccessGraphFinalFactAp(base, access, exclusions.add(accessor), deepCleanEffects)
+        return AccessGraphFinalFactAp(base, access, exclusions.add(accessor), anyFieldCleanerEffects)
     }
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
-        replaceFlowState(flowState.withExclusions(exclusions))
-
-    override fun replaceFlowState(flowState: FactFlowState): FinalFactAp =
-        AccessGraphFinalFactAp(base, access, flowState.exclusions, flowState.deepCleanEffects)
+        AccessGraphFinalFactAp(
+            base,
+            access,
+            exclusions,
+            anyFieldCleanerEffects.takeUnless { exclusions is ExclusionSet.Universe }
+                ?: AnyFieldCleanerEffects.Empty,
+        )
 
     // Automata transports residual cleaner effects beside its graph.
     override fun abstractPart(): FinalFactAp =
-        AccessGraphFinalFactAp(base, access.manager.emptyGraph(), exclusions, deepCleanEffects)
+        AccessGraphFinalFactAp(base, access.manager.emptyGraph(), exclusions, anyFieldCleanerEffects)
 
     override fun isAbstract(): Boolean =
         exclusions !is ExclusionSet.Universe && access.initialNodeIsFinal()
@@ -49,28 +55,36 @@ data class AccessGraphFinalFactAp(
         val graph = access.read(accessor.idx)
             ?: tryAnyAccessorOrNull(accessor) { access.read(anyAccessorIdx) }
 
-        return graph?.let { AccessGraphFinalFactAp(base, it, exclusions, deepCleanEffects) }
+        return graph?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldCleanerEffects) }
     }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp = with(access.manager) {
-        AccessGraphFinalFactAp(base, access.prepend(accessor.idx), exclusions, deepCleanEffects)
+        AccessGraphFinalFactAp(base, access.prepend(accessor.idx), exclusions, anyFieldCleanerEffects)
     }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? = with(access.manager) {
-        return access.clear(accessor.idx)?.let { AccessGraphFinalFactAp(base, it, exclusions, deepCleanEffects) }
+        return access.clear(accessor.idx)?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldCleanerEffects) }
     }
 
-    override fun deepClean(mark: org.opentaint.dataflow.ap.ifds.TaintMarkAccessor): FinalFactAp.DeepCleanResult {
-        val cleaned = with(access.manager) { access.deepClean(mark.idx) }
-            ?: return FinalFactAp.DeepCleanResult.RemovedCompletely
-        val cleanedState = flowState.cleanDeep(mark)
-        return FinalFactAp.DeepCleanResult.Cleaned(
-            AccessGraphFinalFactAp(
-                base,
-                cleaned,
-                cleanedState.exclusions,
-                cleanedState.deepCleanEffects,
-            )
+    override fun clean(accessors: List<Accessor>): FinalFactAp.CleanResult =
+        clean(accessors, ::cleanAnyField)
+
+    private fun cleanAnyField(
+        mark: org.opentaint.dataflow.ap.ifds.TaintMarkAccessor,
+    ): FinalFactAp.CleanResult {
+        val cleaned = with(access.manager) { access.cleanAnyField(mark.idx) }
+            ?: return FinalFactAp.CleanResult(emptyList(), removedAlternative = true)
+        val cleanedEffects = anyFieldCleanerEffects.add(mark).forExclusions(exclusions)
+        return FinalFactAp.CleanResult(
+            survivingFacts = listOf(
+                AccessGraphFinalFactAp(
+                    base,
+                    cleaned,
+                    exclusions,
+                    cleanedEffects,
+                )
+            ),
+            removedAlternative = false,
         )
     }
 
@@ -86,7 +100,7 @@ data class AccessGraphFinalFactAp(
 
     data class Delta(
         override val access: AccessGraph,
-        override val deepCleanEffects: DeepCleanEffects,
+        val anyFieldCleanerEffects: AnyFieldCleanerEffects,
     ) : FinalFactAp.Delta, AccessGraphAccessorList {
         override val isEmpty: Boolean get() = access.isEmpty()
 
@@ -94,7 +108,7 @@ data class AccessGraphFinalFactAp(
             val newGraph = access.read(accessor.idx)
                 ?: tryAnyAccessorOrNull(accessor) { access.read(anyAccessorIdx) }
 
-            return newGraph?.let { Delta(it, deepCleanEffects) }
+            return newGraph?.let { Delta(it, anyFieldCleanerEffects) }
         }
 
         override fun isAbstract(): Boolean = access.initialNodeIsFinal()
@@ -107,9 +121,9 @@ data class AccessGraphFinalFactAp(
         return access.delta(other.access).mapNotNull { delta ->
             val filteredDelta = delta
                 .filter(other.exclusions)
-                ?.filterDeep(other.deepCleanEffects, keepInitialLevel = other.access.isEmpty())
+                ?.enforceAnyFieldCleaners(other.anyFieldCleanerEffects, keepInitialLevel = other.access.isEmpty())
                 ?: return@mapNotNull null
-            Delta(filteredDelta, deepCleanEffects)
+            Delta(filteredDelta, anyFieldCleanerEffects)
         }
     }
 
@@ -122,29 +136,32 @@ data class AccessGraphFinalFactAp(
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
         delta as Delta
-        val composedState = flowState then FactFlowState(ExclusionSet.Empty, delta.deepCleanEffects)
-        if (delta.isEmpty) return replaceFlowState(composedState)
+        val composedEffects = (anyFieldCleanerEffects then delta.anyFieldCleanerEffects)
+            .forExclusions(exclusions)
+        if (delta.isEmpty) {
+            return AccessGraphFinalFactAp(base, access, exclusions, composedEffects)
+        }
 
         val filter = access.manager.createFilter(access, typeChecker)
         val filteredDelta = delta.access.filter(filter) ?: return null
 
         if (access.isEmpty()) {
             return AccessGraphFinalFactAp(
-                base, filteredDelta, composedState.exclusions, composedState.deepCleanEffects
+                base, filteredDelta, exclusions, composedEffects
             )
         }
 
         val concatenatedGraph = access.concat(filteredDelta)
         return AccessGraphFinalFactAp(
-            base, concatenatedGraph, composedState.exclusions, composedState.deepCleanEffects
+            base, concatenatedGraph, exclusions, composedEffects
         )
     }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? =
-        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions, deepCleanEffects) }
+        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldCleanerEffects) }
 
     override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp? =
-        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions, deepCleanEffects) }
+        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldCleanerEffects) }
 
     override fun contains(factAp: InitialFactAp): Boolean {
         factAp as AccessGraphInitialFactAp

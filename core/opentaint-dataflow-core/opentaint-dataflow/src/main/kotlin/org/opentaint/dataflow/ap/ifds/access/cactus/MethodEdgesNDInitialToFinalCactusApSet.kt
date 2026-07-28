@@ -10,33 +10,33 @@ class MethodEdgesNDInitialToFinalCactusApSet(
     initialStatement: CommonInst,
     languageManager: LanguageManager,
     maxInstIdx: Int,
-) : CommonNDF2FSet<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(
+) : CommonNDF2FSet<CactusInitialAccess, CactusFinalAccess>(
     initialStatement, languageManager, maxInstIdx
 ), CactusFinalApAccess, CactusInitialApAccess {
     override fun createApStorage() =
-        object : DefaultNDF2FSetStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>() {
-            override fun createStorage(): Storage<AccessCactus.AccessNode> = DefaultStorage()
+        object : DefaultNDF2FSetStorage<CactusInitialAccess, CactusFinalAccess>() {
+            override fun createStorage(): Storage<CactusFinalAccess> = DefaultStorage()
         }
 
-    override fun mostAbstractPattern(base: AccessPathBase): AccessPathWithCycles.AccessNode? = null
+    override fun mostAbstractPattern(base: AccessPathBase): CactusInitialAccess =
+        CactusInitialAccess(null, org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects.Empty)
 
-    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AccessCactus.AccessNode> {
-        private var current: AccessCactus.AccessNode? = null
+    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<CactusFinalAccess> {
+        private var current: CactusFinalAccess? = null
 
-        override fun add(element: AccessCactus.AccessNode): AccessCactus.AccessNode? {
+        override fun add(element: CactusFinalAccess): CactusFinalAccess? {
             val cur = current
             if (cur == null) {
                 current = element
                 return element
             }
 
-            val mergedAccess = cur.mergeAdd(element)
-            if (mergedAccess === cur) return null
-            current = mergedAccess
-            return mergedAccess
+            val merged = cur.mergeAdd(element)
+            if (merged === cur) return null
+            return merged.also { current = it }
         }
 
-        override fun collect(dst: MutableList<AccessCactus.AccessNode>) {
+        override fun collect(dst: MutableList<CactusFinalAccess>) {
             current?.let { dst.add(it) }
         }
     }

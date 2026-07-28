@@ -2,11 +2,11 @@ package org.opentaint.dataflow.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryApRefinement
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryDemandRefinement
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.SideEffectSummary
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 
@@ -29,23 +29,19 @@ interface MethodSideEffectSummaryHandler {
         summaryEffect: SummaryEdgeApplication,
         kind: SideEffectKind
     ): Set<Sequent> = handleSummary(summaryEffect, kind) { ex, k ->
-        val refined = FactFlowState(
-            ex.exclusions,
-            currentInitialFactAp.deepCleanEffects then ex.deepCleanEffects,
-        )
-        Sequent.FactSideEffect(currentInitialFactAp.replaceFlowState(refined), k)
+        Sequent.FactSideEffect(currentInitialFactAp.replaceDemandState(ex), k)
     }
 
     fun handleSummary(
         summaryEffect: SummaryEdgeApplication,
         kind: SideEffectKind,
-        handleSE: (initialFactRefinement: FactFlowState, kind: SideEffectKind) -> Sequent
+        handleSE: (initialFactRefinement: FactDemandState, kind: SideEffectKind) -> Sequent
     ): Set<Sequent> = when (summaryEffect) {
         // Side effect requires more concrete fact
         is SummaryApRefinement -> emptySet()
 
-        is SummaryExclusionRefinement -> {
-            setOf(handleSE(summaryEffect.flowState, kind))
+        is SummaryDemandRefinement -> {
+            setOf(handleSE(summaryEffect.demandState, kind))
         }
     }
 }

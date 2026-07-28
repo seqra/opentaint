@@ -20,7 +20,7 @@ Branch discrimination then needs no machinery at all. `p.raw = b` snapshots the 
 - The Gradle root is `core/`. Run `./gradlew` from `core/`, never from the repository root. `:test` is the JVM SAST suite; `:opentaint-dataflow-core:opentaint-dataflow:test` is the dataflow unit suite.
 - Baseline at the start of this plan, measured: `:test` **700 passed / 0 failed / 19 skipped**; `:opentaint-dataflow-core:opentaint-dataflow:test` **126 / 0 / 0**. No task may reduce the passing count or add a skip it does not name.
 - **This plan deliberately retires the "exclusion-set-only" invariant.** Nine call sites currently assert that a `DeepMarkExclusion` never appears in an access path (`AccessTree`, `AccessPath`, `AccessCactus`, `AccessPathWithCycles`, `AccessGraphInitialFactAp`, `AccessGraphFinalFactAp`, `AccessorInterner`, `AutomataFactFilter`, `JIRFactTypeChecker`). It stops being an `Accessor` altogether and becomes node metadata, so those checks are deleted rather than relaxed. This supersedes the corresponding constraint in `2026-07-28-clean-accessors-deep-exclusion-split.md`.
-- Do **not** reintroduce per-lineage grouping in the summary storages (`ba79279ef`). It was measured green on the sibling cases, but it works by keeping two edges from ever meeting rather than by giving the claim a coordinate — Task 4 removes the need for it entirely.
+- Do **not** reintroduce grouping by execution path in the summary storages (`ba79279ef`). It was measured green on the sibling cases, but it works by keeping two edges from ever meeting rather than by giving the claim a coordinate — Task 4 removes the need for it entirely.
 - Every new assertion that a finding is ABSENT must be accompanied by a control that produces it: same program, same sink, cleaner rule deleted. This rule is what exposed the vacuous Automata passes recorded below.
 - **Automata greens are not evidence in this area.** Automata drops the taint entirely across an intervening `clean` call, so every `*CleanedFlow` entry point reports nothing regardless of the cleaner. All four non-vacuity controls in `CleanerFieldSensitivityAnalysisTest` are red in that mode and its six `is silent` cases are disabled for exactly that reason. Tree is the mode where this work is measurable.
 - Cactus is out of scope. It fails the sibling cases with and without any of this; the gap is in the cactus access representation.
@@ -123,7 +123,7 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 ### Task 1 — Unit-pin the combination laws before touching the engine
 
-- [x] Add `AbstractNodeExclusionTest` to the dataflow unit suite covering: annotating an abstract node; the annotation surviving a parent prepend; a sibling branch NOT carrying it; a delta concatenated below an annotated abstract node losing its excluded marks and keeping the rest; unfold children inheriting the annotation; two annotations meeting on the SAME abstract node combining by intersection (the join of a cleaned and an uncleaned lineage is uncleaned — the conditional-clean shape, not the sibling shape).
+- [x] Add `AbstractNodeExclusionTest` to the dataflow unit suite covering: annotating an abstract node; the annotation surviving a parent prepend; a sibling branch NOT carrying it; a delta concatenated below an annotated abstract node losing its excluded marks and keeping the rest; unfold children inheriting the annotation; two annotations meeting on the SAME abstract node combining by intersection (the join of a cleaned and an uncleaned execution path is uncleaned — the conditional-clean shape, not the sibling shape).
 - [x] The same-node intersection is the one piece of the old law that survives, now at the right granularity. Assert it explicitly.
 - [x] Verify: `:opentaint-dataflow-core:opentaint-dataflow:test` **126 + new / 0 / 0**.
 
@@ -191,20 +191,20 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 - [x] `EXPECTED_TRACES` must not lose traces. A *gain* in precision (fewer false positives) is the goal; any lost trace is a false negative and blocks the change.
 - [x] Record before/after counts in the completion report.
 
-### Task 8 — Universal flow-state layer with dedicated representations
+### Task 8 — Universal contracts with dedicated representations
 
 - [x] Separate demand-analysis exclusions from deferred cleaner effects. `ExclusionSet` contains
-  only analysis exclusions; `FactFlowState` carries both domains without mixing their operators.
-- [x] Express code-flow shape in the common layer: `then` composes sequential flow and `join`
-  combines alternative executions. Cleaner set operations do not leak into summary/storage code.
-- [x] Put the cleaner operation on the universal `FinalFactAp` contract, with no fallback or
-  representation type checks in generic cleaner code.
+  only analysis exclusions, and `FactDemandState` carries only that domain.
+- [x] Express demand-flow shape in the common layer: `then` composes sequential demand refinements
+  and `join` combines alternative executions.
+- [x] Put one `clean(position)` operation on the universal `FinalFactAp` contract. Plain and
+  any-field cleaners use the same call; generic cleaner code has no representation type checks.
 - [x] Keep dedicated implementations: Tree stores cleaner state structurally on abstract nodes;
-  Automata and Cactus transport deferred effects beside their native access structures and enforce
-  them at their demand-matching boundaries.
-- [x] Migrate fact edges, summaries, side effects, subscriptions, and persistence to
-  `FactFlowState`; bump the incompatible summary format.
-- [x] Add common algebra and deep-clean contract tests, then verify the Tree and Automata
+  Automata and Cactus include deferred effects in their semantic access values and enforce them at
+  their demand-matching boundaries.
+- [x] Migrate fact edges, summaries, side effects, subscriptions, and persistence so demand state
+  and representation-specific cleaner state travel independently.
+- [x] Add common algebra and cleaner-contract tests, then verify the Tree and Automata
   field-sensitivity/summary suites.
 
 ---
@@ -231,10 +231,10 @@ intervening-call fix first). Deviations, each sanctioned by the shim clause or n
 
 - **Three seams the plan had not named** were required to make the claim survive to the
   caller, found by measurement on `cleanOnlyFlow`: the empty-delta summary application
-  (`SummaryExclusionRefinement` now carries the empty delta and appliers concat it),
+  (`SummaryDemandRefinement` now carries the representation delta and appliers concat it),
   the id-edge storage (`splitOnMatching` no longer matches an annotated abstraction),
   and `AbstractionExclusions.union` for accumulating caller and callee claims on one
-  lineage.
+  execution path.
 - **Task 3 acceptance**: the split plan's red cases (`AssignmentFormCleanAnalysisTest`,
   `AnyFieldMonotonicityAnalysisTest`) do not exist on this branch — removed in the
   history squash. The traversal half is pinned by `AbstractNodeExclusionTest` instead.
@@ -254,6 +254,6 @@ trace lost, none gained.
 
 ## Task 8 execution record (2026-07-28)
 
-The follow-up replaced the remaining flat deep-exclusion shim with `FactFlowState`, migrated
+The follow-up replaced the remaining flat deep-exclusion shim with `FactDemandState`, migrated
 Automata and Cactus to dedicated cleaner-effect transport, and kept Tree's structural annotation.
 The dataflow unit suite and the focused Tree/Automata cleaner and summary suites pass.

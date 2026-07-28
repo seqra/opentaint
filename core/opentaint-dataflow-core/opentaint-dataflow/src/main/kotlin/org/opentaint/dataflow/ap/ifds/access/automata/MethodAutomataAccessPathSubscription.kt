@@ -12,29 +12,29 @@ import org.opentaint.dataflow.util.object2IntMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.BitSet
 
-class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGraph>(),
+class MethodAutomataAccessPathSubscription : CommonAPSub<AutomataAccess, AutomataAccess>(),
     AutomataInitialApAccess, AutomataFinalApAccess {
 
-    override fun createZ2FSubStorage(callerEp: CommonInst): Z2FSubStorage<AccessGraph, AccessGraph> = Z2FFactGraphs()
+    override fun createZ2FSubStorage(callerEp: CommonInst): Z2FSubStorage<AutomataAccess, AutomataAccess> = Z2FFactGraphs()
 
-    override fun createF2FSubStorage(callerEp: CommonInst): F2FSubStorage<AccessGraph, AccessGraph> = F2FFactGraphs()
+    override fun createF2FSubStorage(callerEp: CommonInst): F2FSubStorage<AutomataAccess, AutomataAccess> = F2FFactGraphs()
 
-    override fun createNDF2FSubStorage(callerEp: CommonInst): NDF2FSubStorage<AccessGraph, AccessGraph> = NdF2f(callerEp)
+    override fun createNDF2FSubStorage(callerEp: CommonInst): NDF2FSubStorage<AutomataAccess, AutomataAccess> = NdF2f(callerEp)
 
-    private class Z2FFactGraphs : Z2FSubStorage<AccessGraph, AccessGraph> {
-        private val facts = hashSetOf<AccessGraph>()
+    private class Z2FFactGraphs : Z2FSubStorage<AutomataAccess, AutomataAccess> {
+        private val facts = hashSetOf<AutomataAccess>()
 
-        override fun add(callerExitAp: AccessGraph): CommonZeroEdgeSubBuilder<AccessGraph>? {
+        override fun add(callerExitAp: AutomataAccess): CommonZeroEdgeSubBuilder<AutomataAccess>? {
             if (!facts.add(callerExitAp)) return null
             return ZeroEdgeSubBuilder().setNode(callerExitAp)
         }
 
         override fun find(
-            dst: MutableList<CommonZeroEdgeSubBuilder<AccessGraph>>,
-            summaryInitialFact: AccessGraph,
+            dst: MutableList<CommonZeroEdgeSubBuilder<AutomataAccess>>,
+            summaryInitialFact: AutomataAccess,
         ) {
             facts.mapNotNullTo(dst) {
-                val delta = it.delta(summaryInitialFact)
+                val delta = it.access.delta(summaryInitialFact.access)
                 if (delta.isEmpty()) return@mapNotNullTo null
 
                 ZeroEdgeSubBuilder().setNode(it)
@@ -42,16 +42,16 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
         }
     }
 
-    private class F2FFactGraphs : F2FSubStorage<AccessGraph, AccessGraph> {
-        private val edgeIndex = object2IntMap<Pair<AccessGraphInitialFactAp, AccessGraph>>()
-        private val edges = arrayListOf<Pair<AccessGraphInitialFactAp, AccessGraph>>()
+    private class F2FFactGraphs : F2FSubStorage<AutomataAccess, AutomataAccess> {
+        private val edgeIndex = object2IntMap<Pair<AccessGraphInitialFactAp, AutomataAccess>>()
+        private val edges = arrayListOf<Pair<AccessGraphInitialFactAp, AutomataAccess>>()
 
         private val graphIndex = GraphIndex()
 
         override fun add(
             callerInitialAp: InitialFactAp,
-            callerExitAp: AccessGraph,
-        ): CommonFactEdgeSubBuilder<AccessGraph>? {
+            callerExitAp: AutomataAccess,
+        ): CommonFactEdgeSubBuilder<AutomataAccess>? {
             callerInitialAp as AccessGraphInitialFactAp
 
             val entry = Pair(callerInitialAp, callerExitAp)
@@ -63,32 +63,32 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
                 return FactEdgeSubBuilder()
                     .setCallerNode(callerExitAp)
                     .setCallerInitialAp(callerInitialAp)
-                    .setCallerFlowState(callerInitialAp.flowState)
+                    .setCallerDemandState(callerInitialAp.demandState)
             }
 
             return null
         }
 
-        private fun updateGraphIndex(graph: AccessGraph, idx: Int) {
-            graphIndex.add(graph, idx)
+        private fun updateGraphIndex(graph: AutomataAccess, idx: Int) {
+            graphIndex.add(graph.access, idx)
         }
 
         override fun find(
-            dst: MutableList<CommonFactEdgeSubBuilder<AccessGraph>>,
-            summaryInitialFact: AccessGraph,
+            dst: MutableList<CommonFactEdgeSubBuilder<AutomataAccess>>,
+            summaryInitialFact: AutomataAccess,
             emptyDeltaRequired: Boolean,
         ) {
             if (!emptyDeltaRequired) {
-                graphIndex.localizeIndexedGraphHasDeltaWithGraph(summaryInitialFact).forEach { edgeIdx ->
+                graphIndex.localizeIndexedGraphHasDeltaWithGraph(summaryInitialFact.access).forEach { edgeIdx ->
                     val (initialAp, final) = edges[edgeIdx]
 
-                    val delta = final.delta(summaryInitialFact)
+                    val delta = final.access.delta(summaryInitialFact.access)
                     if (delta.isEmpty()) return@forEach
 
                     dst += FactEdgeSubBuilder()
                         .setCallerInitialAp(initialAp)
                         .setCallerNode(final)
-                        .setCallerFlowState(initialAp.flowState)
+                        .setCallerDemandState(initialAp.demandState)
                 }
             } else {
                 collectEmptyDelta(dst, summaryInitialFact)
@@ -96,66 +96,66 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
         }
 
         private fun collectEmptyDelta(
-            collection: MutableList<CommonFactEdgeSubBuilder<AccessGraph>>,
-            summaryInitialFactAp: AccessGraph,
+            collection: MutableList<CommonFactEdgeSubBuilder<AutomataAccess>>,
+            summaryInitialFactAp: AutomataAccess,
         ) {
-            graphIndex.localizeIndexedGraphContainsAllGraph(summaryInitialFactAp).forEach { edgeIdx ->
+            graphIndex.localizeIndexedGraphContainsAllGraph(summaryInitialFactAp.access).forEach { edgeIdx ->
                 val (initialAp, final) = edges[edgeIdx]
 
-                if (!final.containsAll(summaryInitialFactAp)) {
+                if (!final.access.containsAll(summaryInitialFactAp.access)) {
                     return@forEach
                 }
 
                 collection += FactEdgeSubBuilder()
                     .setCallerInitialAp(initialAp)
                     .setCallerNode(final)
-                    .setCallerFlowState(initialAp.flowState)
+                    .setCallerDemandState(initialAp.demandState)
             }
         }
     }
 
     private class NdF2f(callerEp: CommonInst) :
-        DefaultNDF2FSubStorageWithAp<AccessGraph, AccessGraph>(callerEp), AutomataInitialApAccess {
+        DefaultNDF2FSubStorageWithAp<AutomataAccess, AutomataAccess>(callerEp), AutomataInitialApAccess {
         private val graphIndex = GraphIndex()
 
-        override fun createBuilder(): CommonFactNDEdgeSubBuilder<AccessGraph> = FactNDEdgeSubBuilder()
+        override fun createBuilder(): CommonFactNDEdgeSubBuilder<AutomataAccess> = FactNDEdgeSubBuilder()
 
         private inner class FactStorage(
             private val storageIdx: Int,
-        ) : Storage<AccessGraph, AccessGraph> {
-            private val graphs = object2IntMap<AccessGraph>()
-            private val graphList = arrayListOf<AccessGraph>()
+        ) : Storage<AutomataAccess, AutomataAccess> {
+            private val graphs = object2IntMap<AutomataAccess>()
+            private val graphList = arrayListOf<AutomataAccess>()
 
-            override fun add(element: AccessGraph): AccessGraph? {
+            override fun add(element: AutomataAccess): AutomataAccess? {
                 graphs.getOrCreateIndex(element) {
                     graphList.add(element)
-                    graphIndex.add(element, storageIdx)
+                    graphIndex.add(element.access, storageIdx)
                     return element
                 }
 
                 return null
             }
 
-            override fun collect(dst: MutableList<AccessGraph>) {
+            override fun collect(dst: MutableList<AutomataAccess>) {
                 dst.addAll(graphList)
             }
 
-            override fun collect(dst: MutableList<AccessGraph>, summaryInitialFact: AccessGraph) {
+            override fun collect(dst: MutableList<AutomataAccess>, summaryInitialFact: AutomataAccess) {
                 for (graph in graphList) {
-                    if (graph.containsAll(summaryInitialFact)) {
+                    if (graph.access.containsAll(summaryInitialFact.access)) {
                         dst.add(graph)
                     }
                 }
             }
         }
 
-        override fun createStorage(idx: Int): Storage<AccessGraph, AccessGraph> = FactStorage(idx)
+        override fun createStorage(idx: Int): Storage<AutomataAccess, AutomataAccess> = FactStorage(idx)
 
-        override fun relevantStorageIndices(summaryInitialFact: AccessGraph): BitSet =
-            graphIndex.localizeIndexedGraphContainsAllGraph(summaryInitialFact)
+        override fun relevantStorageIndices(summaryInitialFact: AutomataAccess): BitSet =
+            graphIndex.localizeIndexedGraphContainsAllGraph(summaryInitialFact.access)
     }
 }
 
-private class ZeroEdgeSubBuilder : CommonZeroEdgeSubBuilder<AccessGraph>(), AutomataFinalApAccess
-private class FactEdgeSubBuilder : CommonFactEdgeSubBuilder<AccessGraph>(), AutomataFinalApAccess
-private class FactNDEdgeSubBuilder : CommonFactNDEdgeSubBuilder<AccessGraph>(), AutomataFinalApAccess
+private class ZeroEdgeSubBuilder : CommonZeroEdgeSubBuilder<AutomataAccess>(), AutomataFinalApAccess
+private class FactEdgeSubBuilder : CommonFactEdgeSubBuilder<AutomataAccess>(), AutomataFinalApAccess
+private class FactNDEdgeSubBuilder : CommonFactNDEdgeSubBuilder<AutomataAccess>(), AutomataFinalApAccess

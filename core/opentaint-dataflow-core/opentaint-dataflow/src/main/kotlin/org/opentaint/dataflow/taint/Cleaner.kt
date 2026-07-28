@@ -3,7 +3,6 @@ package org.opentaint.dataflow.taint
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
-import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 
@@ -36,34 +35,22 @@ class TaintCleanActionEvaluator {
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
 
-        // A whole-object clean (`base.[any]`) removes the mark at every depth >= 2 under the base.
-        if (from.isBaseAnyFieldPosition()) {
-            when (val result = fact.factAp.deepClean(markRestriction)) {
-                // Structural form: concrete marks below the base are deleted, abstract nodes carry
-                // the residual claim. Subsumes the positional `[any].![m]` clear below, so the
-                // result is final for this action.
-                is FinalFactAp.DeepCleanResult.RemovedCompletely -> {
-                    val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-                    return listOf(EvaluatedCleanAction(fact = null, actionInfo, evc))
-                }
-
-                is FinalFactAp.DeepCleanResult.Cleaned -> {
-                    if (result.fact === fact.factAp) return listOf(evc)
-
-                    val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-                    return listOf(EvaluatedCleanAction(fact.replaceFact(result.fact), actionInfo, evc))
-                }
-
-            }
+        if (!from.isAnyFieldCleaner() &&
+            !fact.containsPositionWithTaintMark(from, markRestriction)
+        ) {
+            return listOf(evc)
         }
-
-        if (!fact.containsPositionWithTaintMark(from, markRestriction)) return listOf(evc)
 
         val cleanAccessors = from.accessorList() + markRestriction
         return cleanAccessors(cleanAccessors, fact, rule, action, evc)
     }
 
-    private fun PositionAccess.isBaseAnyFieldPosition(): Boolean =
+    /**
+     * An any-field cleaner is a persistent effect on the represented fact, even when no matching
+     * concrete path exists yet. Concrete cleaners instead query [FinalFactReader] first so a
+     * missing path becomes a demand refinement.
+     */
+    private fun PositionAccess.isAnyFieldCleaner(): Boolean =
         this is PositionAccess.Complex && accessor is AnyAccessor && base is PositionAccess.Simple
 
     private fun cleanAccessors(
@@ -73,59 +60,19 @@ class TaintCleanActionEvaluator {
         action: CommonTaintAction,
         evc: EvaluatedCleanAction
     ): List<EvaluatedCleanAction> {
-        val (cleanedFacts, factCleaned) = clearPosition(accessors, fact.factAp)
+        val cleaned = fact.factAp.clean(accessors)
 
         val result = mutableListOf<EvaluatedCleanAction>()
-        if (factCleaned) {
+        if (cleaned.removedAlternative) {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
             result += EvaluatedCleanAction(null, actionInfo, evc)
         }
 
-        return cleanedFacts.mapTo(result) { cleanedFact ->
+        return cleaned.survivingFacts.mapTo(result) { cleanedFact ->
             val resultFact = fact.replaceFact(cleanedFact)
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
             EvaluatedCleanAction(resultFact, actionInfo, evc)
         }
-    }
-
-    private fun clearPosition(accessors: List<Accessor>, fact: FinalFactAp): Pair<List<FinalFactAp>, Boolean> {
-        val head = accessors.first()
-        val tail = accessors.drop(1)
-        if (tail.isEmpty()) {
-            if (fact.startsWithAccessor(AnyAccessor)) {
-                val factAfterAny = fact.readAccessor(AnyAccessor)
-                    ?: error("Impossible")
-
-                val clearedAfterAny = factAfterAny.clearAccessor(head)
-                val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
-
-                val factWithoutAny = fact.clearAccessor(AnyAccessor)
-                val cleanedWithoutAny = factWithoutAny?.clearAccessor(head)
-
-                val cleaned = clearedAfterAny != factAfterAny || cleanedWithoutAny != factWithoutAny
-
-                return listOfNotNull(restoredAfterAny, cleanedWithoutAny) to cleaned
-            }
-
-            if (!fact.startsWithAccessor(head)) {
-                return listOf(fact) to false
-            }
-
-            val clearedFact = fact.clearAccessor(head)
-            val cleaned = clearedFact != fact
-
-            return listOfNotNull(clearedFact) to cleaned
-        }
-
-        val child = fact.readAccessor(head)
-            ?: return listOf(fact) to false
-
-        val remaining = listOfNotNull(fact.clearAccessor(head))
-        val (cleanChild, childCleaned) = clearPosition(tail, child)
-        val cleanChildWithAccessor = cleanChild.map { it.prependAccessor(head) }
-        val fullFact = remaining + cleanChildWithAccessor
-
-        return fullFact to childCleaned
     }
 
     private fun PositionAccess.accessorList(): List<Accessor> = when (this) {

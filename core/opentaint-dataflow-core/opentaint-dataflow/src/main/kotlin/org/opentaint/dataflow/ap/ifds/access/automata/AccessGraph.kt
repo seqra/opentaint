@@ -12,7 +12,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
-import org.opentaint.dataflow.ap.ifds.access.DeepCleanEffects
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.tryAnyAccessorOrNull
 import org.opentaint.dataflow.util.PersistentArrayBuilder
@@ -322,7 +322,7 @@ class AccessGraph(
         }
     }
 
-    fun filterDeep(effects: DeepCleanEffects, keepInitialLevel: Boolean): AccessGraph? = with(manager) {
+    fun enforceAnyFieldCleaners(effects: AnyFieldCleanerEffects, keepInitialLevel: Boolean): AccessGraph? = with(manager) {
         if (effects.isEmpty) return this@AccessGraph
 
         val deepAccessors = BitSet()
@@ -330,7 +330,7 @@ class AccessGraph(
         removeDeepAccessors(deepAccessors, keepInitialLevel)
     }
 
-    fun deepClean(mark: AccessorIdx): AccessGraph? =
+    fun cleanAnyField(mark: AccessorIdx): AccessGraph? =
         removeDeepAccessors(bitSetOf(mark), keepInitialLevel = true)
 
     private fun removeDeepAccessors(deepAccessors: BitSet, keepInitialLevel: Boolean): AccessGraph? {

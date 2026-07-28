@@ -1,17 +1,16 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import kotlinx.collections.immutable.persistentHashMapOf
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.dataflow.ap.ifds.access.cactus.AccessCactus.AccessNode as AccessCactusNode
 
 class MethodInitialToFinalApSummaries(
     methodInitialStatement: CommonInst,
-) : CommonF2FSummary<AccessPathWithCycles.AccessNode?, AccessCactusNode>(methodInitialStatement),
+) : CommonF2FSummary<CactusInitialAccess, CactusFinalAccess>(methodInitialStatement),
     CactusInitialApAccess, CactusFinalApAccess {
-    override fun createStorage(): Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
+    override fun createStorage(): Storage<CactusInitialAccess, CactusFinalAccess> =
         MethodTaintedSummariesGroupedByFactStorage()
 }
 
@@ -26,7 +25,7 @@ private class MethodTaintedSummariesInitialApStorage {
             }
         }
 
-    fun collectAllSummaries(dst: MutableList<F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>) {
+    fun collectAllSummaries(dst: MutableList<F2FBBuilder<CactusInitialAccess, CactusFinalAccess>>) {
         initialAccessToStorage.values.forEach { storage ->
             storage.summaries()?.let { dst.add(it) }
         }
@@ -34,24 +33,30 @@ private class MethodTaintedSummariesInitialApStorage {
 }
 
 private class MethodTaintedSummariesGroupedByFactStorage
-    : CommonF2FSummary.Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
+    : CommonF2FSummary.Storage<CactusInitialAccess, CactusFinalAccess> {
     private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage()
 
     override fun add(
-        edges: List<CommonF2FSummary.StorageEdge<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>,
-        added: MutableList<F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>
+        edges: List<CommonF2FSummary.StorageEdge<CactusInitialAccess, CactusFinalAccess>>,
+        added: MutableList<F2FBBuilder<CactusInitialAccess, CactusFinalAccess>>
     ) {
         addNonUniverseEdges(edges, added)
     }
 
     private fun addNonUniverseEdges(
-        edges: List<CommonF2FSummary.StorageEdge<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>,
-        added: MutableList<F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>
+        edges: List<CommonF2FSummary.StorageEdge<CactusInitialAccess, CactusFinalAccess>>,
+        added: MutableList<F2FBBuilder<CactusInitialAccess, CactusFinalAccess>>
     ) {
         val modifiedStorages = mutableListOf<MethodTaintedSummariesMergingStorage>()
 
         for (edge in edges) {
-            addNonUniverseEdge(edge.initial, edge.final, edge.flowState, modifiedStorages)
+            check(edge.initial.cleanerEffects == edge.final.cleanerEffects)
+            addNonUniverseEdge(
+                edge.initial.access,
+                edge.final,
+                edge.demandState,
+                modifiedStorages,
+            )
         }
 
         modifiedStorages.flatMapTo(added) { it.getAndResetDelta() }
@@ -59,12 +64,12 @@ private class MethodTaintedSummariesGroupedByFactStorage
 
     private fun addNonUniverseEdge(
         initialAccess: AccessPathWithCycles.AccessNode?,
-        exitAccess: AccessCactusNode,
-        flowState: FactFlowState,
+        exitAccess: CactusFinalAccess,
+        demandState: FactDemandState,
         modifiedStorages: MutableList<MethodTaintedSummariesMergingStorage>
     ) {
         val storage = nonUniverseAccessPath.getOrCreate(initialAccess)
-        val storageModified = storage.add(exitAccess, flowState)
+        val storageModified = storage.add(exitAccess, demandState)
 
         if (storageModified) {
             modifiedStorages.add(storage)
@@ -72,22 +77,22 @@ private class MethodTaintedSummariesGroupedByFactStorage
     }
 
     override fun collectSummariesTo(
-        dst: MutableList<F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>,
-        initialFactPatter: AccessCactus.AccessNode?
+        dst: MutableList<F2FBBuilder<CactusInitialAccess, CactusFinalAccess>>,
+        initialFactPatter: CactusFinalAccess?
     ) {
         nonUniverseAccessPath.collectAllSummaries(dst)
     }
 }
 
 private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPathWithCycles.AccessNode?) {
-    private var flowState: FactFlowState? = null
-    private var edges: AccessCactusNode? = null
-    private var edgesDelta: AccessCactusNode? = null
+    private var demandState: FactDemandState? = null
+    private var edges: CactusFinalAccess? = null
+    private var edgesDelta: CactusFinalAccess? = null
 
-    fun add(exitAccess: AccessCactusNode, addedState: FactFlowState): Boolean {
-        val currentState = flowState
+    fun add(exitAccess: CactusFinalAccess, addedState: FactDemandState): Boolean {
+        val currentState = demandState
         if (currentState == null) {
-            flowState = addedState
+            demandState = addedState
             edges = exitAccess
             edgesDelta = exitAccess
             return true
@@ -105,36 +110,37 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         }
 
         val mergedAp = currentEdges.mergeAdd(exitAccess)
-        flowState = mergedState
+        demandState = mergedState
         edges = mergedAp
         edgesDelta = mergedAp
 
         return true
     }
 
-    fun getAndResetDelta(): Sequence<F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>> {
+    fun getAndResetDelta(): Sequence<F2FBBuilder<CactusInitialAccess, CactusFinalAccess>> {
         val delta = edgesDelta ?: return emptySequence()
         edgesDelta = null
 
         return FactToFactEdgeBuilderBuilder()
-            .setInitialAp(initialAccess)
+            .setInitialAp(CactusInitialAccess(initialAccess, delta.cleanerEffects))
             .setExitAp(delta)
-            .setFlowState(flowState!!)
+            .setDemandState(demandState!!)
             .let { sequenceOf(it) }
     }
 
-    fun summaries(): F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>? {
-        val flowState = this.flowState ?: return null
+    fun summaries(): F2FBBuilder<CactusInitialAccess, CactusFinalAccess>? {
+        val demandState = this.demandState ?: return null
         val edges = this.edges!!
         return FactToFactEdgeBuilderBuilder()
-            .setInitialAp(initialAccess)
+            .setInitialAp(CactusInitialAccess(initialAccess, edges.cleanerEffects))
             .setExitAp(edges)
-            .setFlowState(flowState)
+            .setDemandState(demandState)
     }
 }
 
 private class FactToFactEdgeBuilderBuilder :
-    F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactusNode>(),
+    F2FBBuilder<CactusInitialAccess, CactusFinalAccess>(),
     CactusInitialApAccess, CactusFinalApAccess {
-    override fun nonNullIAP(iap: AccessPathWithCycles.AccessNode?): AccessPathWithCycles.AccessNode? = iap
+    override fun nonNullIAP(iap: CactusInitialAccess?): CactusInitialAccess =
+        iap ?: error("iap not initialized")
 }

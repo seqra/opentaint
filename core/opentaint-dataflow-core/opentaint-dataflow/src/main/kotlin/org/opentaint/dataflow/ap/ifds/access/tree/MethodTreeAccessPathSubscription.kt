@@ -141,7 +141,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
             return FactEdgeSubBuilder(apManager)
                 .setCallerNode(callerExitAp)
                 .setCallerInitialAp(callerInitialAp)
-                .setCallerFlowState(callerInitialAp.flowState)
+                .setCallerDemandState(callerInitialAp.demandState)
         }
 
         val current = storageFinalFacts[currentIndex]
@@ -156,7 +156,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
         return FactEdgeSubBuilder(apManager)
             .setCallerNode(delta)
             .setCallerInitialAp(callerInitialAp)
-            .setCallerFlowState(callerInitialAp.flowState)
+            .setCallerDemandState(callerInitialAp.demandState)
     }
 
     private fun updateIndex(final: AccessTree.AccessNode, idx: Int) {
@@ -192,7 +192,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
         this += FactEdgeSubBuilder(apManager)
             .setCallerNode(exitAp)
             .setCallerInitialAp(initial)
-            .setCallerFlowState(initial.flowState)
+            .setCallerDemandState(initial.demandState)
     }
 }
 

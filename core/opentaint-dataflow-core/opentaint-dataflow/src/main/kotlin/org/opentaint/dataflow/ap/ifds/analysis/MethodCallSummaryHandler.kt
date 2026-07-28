@@ -5,9 +5,9 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryApRefinement
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryDemandRefinement
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
@@ -45,7 +45,7 @@ interface MethodCallSummaryHandler {
             check(it.exclusions is ExclusionSet.Universe) { "Incorrect refinement" }
             null
         }
-    ) { initialFactRefinement: FactFlowState?, summaryFactAp ->
+    ) { initialFactRefinement: FactDemandState?, summaryFactAp ->
         check(initialFactRefinement == null || initialFactRefinement.exclusions is ExclusionSet.Universe) {
             "Incorrect refinement"
         }
@@ -65,7 +65,7 @@ interface MethodCallSummaryHandler {
         createSideEffectRequirement = { refinement ->
             Sequent.SideEffectRequirement(initialFactAp.refine(refinement))
         }
-    ) { initialFactRefinement: FactFlowState?, summaryFactAp: FinalFactAp ->
+    ) { initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp ->
         Sequent.FactToFact(initialFactAp.refine(initialFactRefinement), summaryFactAp, TraceInfo.ApplySummary)
     }
 
@@ -84,7 +84,7 @@ interface MethodCallSummaryHandler {
             check(it.exclusions is ExclusionSet.Universe) { "Incorrect refinement" }
             null
         }
-    ) { initialFactRefinement: FactFlowState?, summaryFactAp: FinalFactAp ->
+    ) { initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp ->
         check(initialFactRefinement == null || initialFactRefinement.exclusions is ExclusionSet.Universe) {
             "Incorrect refinement"
         }
@@ -98,22 +98,17 @@ interface MethodCallSummaryHandler {
 
     fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> = listOf(summaryEdge)
 
-    fun InitialFactAp.refine(flowState: FactFlowState?) = when {
-        flowState == null -> this
-        else -> replaceFlowState(
-            FactFlowState(flowState.exclusions) then FactFlowState(
-                ExclusionSet.Empty,
-                deepCleanEffects then flowState.deepCleanEffects,
-            )
-        )
+    fun InitialFactAp.refine(demandState: FactDemandState?) = when {
+        demandState == null -> this
+        else -> replaceDemandState(demandState)
     }
 
     fun handleSummary(
         currentFactAp: FinalFactAp,
         summaryEffect: SummaryEdgeApplication,
         summaryEdge: SummaryEdge,
-        createSideEffectRequirement: (refinement: FactFlowState) -> Sequent?,
-        handleSummaryEdge: (initialFactRefinement: FactFlowState?, summaryFactAp: FinalFactAp) -> Sequent
+        createSideEffectRequirement: (refinement: FactDemandState) -> Sequent?,
+        handleSummaryEdge: (initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp) -> Sequent
     ): Set<Sequent> {
         val mappedSummaryFacts = mapMethodExitToReturnFlowFact(summaryEdge.final)
 
@@ -121,30 +116,21 @@ interface MethodCallSummaryHandler {
             is SummaryApRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
                 val summaryFactAp = mappedSummaryFact
                     .concat(factTypeChecker, summaryEffect.delta)
-                    ?.replaceFlowState(
-                        FactFlowState(currentFactAp.exclusions) then FactFlowState(
-                            ExclusionSet.Empty,
-                            mappedSummaryFact.deepCleanEffects then
-                                summaryEffect.delta.deepCleanEffects
-                        )
-                    )
+                    ?.replaceDemandState(FactDemandState(currentFactAp.exclusions))
                     ?: return@mapNotNullTo null
 
-                handleSummaryEdge(summaryFactAp.flowState, summaryFactAp)
+                handleSummaryEdge(summaryFactAp.demandState, summaryFactAp)
             }
 
-            is SummaryExclusionRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
+            is SummaryDemandRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
                 // todo: filter exclusions
-                // The empty delta carries the caller abstraction's excluded-mark claim; the
-                // concat transfers it onto the exit fact's abstraction so the claim survives
-                // the transit (tree mode; a no-op elsewhere).
-                val summaryAccess = summaryEffect.emptyDelta
+                val summaryAccess = summaryEffect.representationDelta
                     ?.let { mappedSummaryFact.concat(factTypeChecker, it) ?: return@mapNotNullTo null }
                     ?: mappedSummaryFact
 
-                val summaryFactAp = summaryAccess.replaceFlowState(summaryEffect.flowState)
+                val summaryFactAp = summaryAccess.replaceDemandState(summaryEffect.demandState)
 
-                handleSummaryEdge(summaryEffect.flowState, summaryFactAp)
+                handleSummaryEdge(summaryEffect.demandState, summaryFactAp)
             }
         }
     }

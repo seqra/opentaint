@@ -4,22 +4,27 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.serialization.AccessPathBaseSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
-import org.opentaint.dataflow.ap.ifds.serialization.FactFlowStateSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.FactDemandStateSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldCleanerEffectsSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
 internal class CactusSerializer(private val context : SummarySerializationContext) : ApSerializer {
     private val accessNodeSerializer = AccessCactus.AccessNode.Serializer(context)
-    private val flowStateSerializer = FactFlowStateSerializer(context)
+    private val demandStateSerializer = FactDemandStateSerializer(context)
+    private val cleanerEffectsSerializer = AnyFieldCleanerEffectsSerializer(context)
 
     override fun DataOutputStream.writeFinalAp(ap: FinalFactAp) {
         (ap as AccessCactus)
         with (AccessPathBaseSerializer) {
             writeAccessPathBase(ap.base)
         }
-        with (flowStateSerializer) {
-            writeFactFlowState(ap.flowState)
+        with (demandStateSerializer) {
+            writeFactDemandState(ap.demandState)
+        }
+        with(cleanerEffectsSerializer) {
+            writeAnyFieldCleanerEffects(ap.anyFieldCleanerEffects)
         }
         with (accessNodeSerializer) {
             writeAccessNode(ap.access)
@@ -31,8 +36,11 @@ internal class CactusSerializer(private val context : SummarySerializationContex
         with (AccessPathBaseSerializer) {
             writeAccessPathBase(ap.base)
         }
-        with (flowStateSerializer) {
-            writeFactFlowState(ap.flowState)
+        with (demandStateSerializer) {
+            writeFactDemandState(ap.demandState)
+        }
+        with(cleanerEffectsSerializer) {
+            writeAnyFieldCleanerEffects(ap.anyFieldCleanerEffects)
         }
         val nodes = ap.access?.toList() ?: emptyList()
 
@@ -53,21 +61,27 @@ internal class CactusSerializer(private val context : SummarySerializationContex
         val base = with (AccessPathBaseSerializer) {
             readAccessPathBase()
         }
-        val flowState = with (flowStateSerializer) {
-            readFactFlowState()
+        val demandState = with (demandStateSerializer) {
+            readFactDemandState()
+        }
+        val cleanerEffects = with(cleanerEffectsSerializer) {
+            readAnyFieldCleanerEffects()
         }
         val access = with (accessNodeSerializer) {
             readAccessNode()
         }
-        return AccessCactus(base, access, flowState.exclusions, flowState.deepCleanEffects)
+        return AccessCactus(base, access, demandState.exclusions, cleanerEffects)
     }
 
     override fun DataInputStream.readInitialAp(): InitialFactAp {
         val base = with(AccessPathBaseSerializer) {
             readAccessPathBase()
         }
-        val flowState = with (flowStateSerializer) {
-            readFactFlowState()
+        val demandState = with (demandStateSerializer) {
+            readFactDemandState()
+        }
+        val cleanerEffects = with(cleanerEffectsSerializer) {
+            readAnyFieldCleanerEffects()
         }
         val nodesSize = readInt()
         val nodeBuilder = AccessPathWithCycles.AccessNode.Builder()
@@ -85,7 +99,7 @@ internal class CactusSerializer(private val context : SummarySerializationContex
 
         val access = nodeBuilder.build()
         return AccessPathWithCycles(
-            base, access, flowState.exclusions, flowState.deepCleanEffects
+            base, access, demandState.exclusions, cleanerEffects
         )
     }
 }

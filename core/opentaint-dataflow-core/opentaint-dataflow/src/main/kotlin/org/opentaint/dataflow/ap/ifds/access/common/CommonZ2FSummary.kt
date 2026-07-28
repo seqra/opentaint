@@ -6,7 +6,7 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryZeroEdgesForExitPoint
 import org.opentaint.dataflow.ap.ifds.SummaryFactStorage
 import org.opentaint.dataflow.ap.ifds.ZeroToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.access.MethodFinalApSummariesStorage
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -90,7 +90,7 @@ abstract class CommonZ2FSummary<FAP : Any>(
         private var node: FAP? = null,
     ) : FinalApAccess<FAP> {
         fun build(): ZeroToFactEdgeBuilder = ZeroToFactEdgeBuilder()
-            .setExitAp(createFinal(base!!, node!!, FactFlowState.Universe))
+            .setExitAp(createFinal(base!!, node!!, FactDemandState.Universe))
 
         fun setBase(base: AccessPathBase) = this.also { this.base = base }
         fun setNode(node: FAP) = this.also { this.node = node }
