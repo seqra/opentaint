@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 
 interface AccessorList {
     fun startsWithAccessor(accessor: Accessor): Boolean
@@ -71,4 +72,26 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
 
     fun hasEmptyDelta(other: InitialFactAp): Boolean =
         delta(other).any { it.isEmpty }
+
+    /**
+     * A starred sanitizer's whole-subtree clean, expressed structurally: every concrete `![mark]`
+     * node strictly below at least one accessor is deleted (the mark carried by the base directly
+     * is the rule's base clean action's job), and every abstract node is annotated with the
+     * residual claim that the mark stays excluded from whatever materializes below it later.
+     *
+     * Representations that do not support the structural form return [DeepCleanResult.Unsupported]
+     * and keep the legacy flat [org.opentaint.dataflow.ap.ifds.DeepMarkExclusion] channel.
+     */
+    fun deepClean(mark: TaintMarkAccessor): DeepCleanResult = DeepCleanResult.Unsupported
+
+    sealed interface DeepCleanResult {
+        /** This representation has no structural deep clean; use the legacy exclusion channel. */
+        data object Unsupported : DeepCleanResult
+
+        /** Nothing of the fact survived the clean. */
+        data object RemovedCompletely : DeepCleanResult
+
+        /** The fact after the clean; identical to the receiver when the clean found nothing. */
+        data class Cleaned(val fact: FinalFactAp) : DeepCleanResult
+    }
 }
