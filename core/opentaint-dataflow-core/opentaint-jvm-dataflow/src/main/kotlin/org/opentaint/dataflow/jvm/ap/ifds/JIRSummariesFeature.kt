@@ -298,6 +298,10 @@ class JIRSummariesFeature(
                 val summaryEntry = context.txn
                     .find(METHOD_SUMMARIES_TYPE, "methodId", methodId)
                     .filter { it.get<Int>("apModeId") == apModeId }
+                    // Entities written before the format version existed have no property here
+                    // and are rejected rather than misread (the tree node format changed when
+                    // abstraction annotations replaced flat deep exclusions).
+                    .filter { it.get<Int>("formatVersion") == SUMMARIES_FORMAT_VERSION }
                     .singleOrNull()
                 summaryEntry?.getRawBlob("summaries")
             } ?: ByteArray(0)
@@ -324,12 +328,14 @@ class JIRSummariesFeature(
 
                 if (oldEntity != null) {
                     if (updateExistingSummaries) {
+                        oldEntity["formatVersion"] = SUMMARIES_FORMAT_VERSION
                         oldEntity.setRawBlob("summaries", summaries)
                     }
                 } else {
                     context.txn.newEntity(METHOD_SUMMARIES_TYPE).also { summariesEntity ->
                         summariesEntity["methodId"] = methodId
                         summariesEntity["apModeId"] = apModeId
+                        summariesEntity["formatVersion"] = SUMMARIES_FORMAT_VERSION
                         summariesEntity.setRawBlob("summaries", summaries)
                     }
                 }
@@ -429,6 +435,14 @@ class JIRSummariesFeature(
         private const val METHOD_IDS_TYPE = "MethodIds"
         private const val ACCESSOR_IDS_TYPE = "AccessorIds"
         private const val METHOD_SUMMARIES_TYPE = "MethodSummaries"
+
+        /**
+         * Bump when the serialized summary format changes incompatibly. 2: tree access nodes
+         * carry the abstraction's excluded-mark annotation (AbstractionExclusions) and tree
+         * exclusion sets are deep-free. Entities written before this property existed read as
+         * null and never match.
+         */
+        private const val SUMMARIES_FORMAT_VERSION = 2
 
         private const val ANY_ACCESSOR_ID = 0L
         private const val FINAL_ACCESSOR_ID = 1L

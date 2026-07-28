@@ -1569,7 +1569,12 @@ class AccessTree(
                 if (node.isAbstract) {
                     mask += 2
                 }
+                if (node.abstraction != null) {
+                    mask += 4
+                }
                 write(mask)
+
+                node.abstraction?.let { writeAbstractionExclusions(it) }
 
                 writeInt(node.accessors?.size ?: 0)
                 if (node.accessors != null) {
@@ -1583,14 +1588,43 @@ class AccessTree(
                 }
             }
 
+            private fun DataOutputStream.writeAbstractionExclusions(abstraction: AbstractionExclusions) {
+                writeMarks(abstraction.marksFromDepth1)
+                writeMarks(abstraction.marksFromDepth2)
+            }
+
+            private fun DataOutputStream.writeMarks(marks: IntArray) {
+                writeInt(marks.size)
+                marks.forEach {
+                    val accessor = with(manager) { it.accessor }
+                    writeLong(context.getIdByAccessor(accessor))
+                }
+            }
+
+            private fun DataInputStream.readAbstractionExclusions(): AbstractionExclusions? =
+                AbstractionExclusions.create(readMarks(), readMarks())
+
+            private fun DataInputStream.readMarks(): IntArray {
+                val size = readInt()
+                val marks = IntArray(size) {
+                    val accessor = context.getAccessorById(readLong())
+                    with(manager) { accessor.idx }
+                }
+                marks.sort()
+                return marks
+            }
+
             fun DataInputStream.readAccessNode(): AccessNode {
                 val mask = read()
                 val isFinal = mask.and(1) > 0
                 val isAbstract = mask.and(2) > 0
 
+                val abstraction = if (mask.and(4) > 0) readAbstractionExclusions() else null
+
                 val accessorsSize = readInt()
                 if (accessorsSize == 0) {
-                    return manager.create(isAbstract, isFinal)
+                    if (abstraction == null) return manager.create(isAbstract, isFinal)
+                    return manager.create(isAbstract, isFinal, abstraction, accessors = null, accessorNodes = null)
                 }
 
                 val deserializedAccessors = Array(accessorsSize) {
@@ -1617,8 +1651,7 @@ class AccessTree(
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
                 }
 
-                // todo(Task 5): serialize the abstraction annotation; until then summaries carry none
-                return AccessNode(manager, interned = false, isAbstract, isFinal, abstraction = null, accessors, accessNodes)
+                return AccessNode(manager, interned = false, isAbstract, isFinal, abstraction, accessors, accessNodes)
             }
         }
 
