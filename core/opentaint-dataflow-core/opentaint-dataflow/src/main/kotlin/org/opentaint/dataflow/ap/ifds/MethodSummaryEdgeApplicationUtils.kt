@@ -11,11 +11,13 @@ object MethodSummaryEdgeApplicationUtils {
          * The empty-delta application. [emptyDelta] carries the caller abstraction's excluded-mark
          * claim from the match point (tree mode); appliers concat it onto the summary's exit fact
          * so the claim survives the transit — the structural counterpart of this refinement
-         * carrying the caller's exclusion set.
+         * carrying the caller's exclusion set. Deliberately has no default: a construction site
+         * without a caller-side delta must say `emptyDelta = null` and own that the claim, if any,
+         * does not transfer on its path.
          */
         data class SummaryExclusionRefinement(
             val exclusion: ExclusionSet,
-            val emptyDelta: FinalFactAp.Delta? = null,
+            val emptyDelta: FinalFactAp.Delta?,
         ) : SummaryEdgeApplication
     }
 

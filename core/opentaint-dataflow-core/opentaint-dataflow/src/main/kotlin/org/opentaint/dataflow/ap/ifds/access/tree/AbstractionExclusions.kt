@@ -47,17 +47,7 @@ class AbstractionExclusions private constructor(
     operator fun contains(mark: AccessorIdx): Boolean =
         marksFromDepth1.binarySearch(mark) >= 0 || marksFromDepth2.binarySearch(mark) >= 0
 
-    fun excludesAtDepth(mark: AccessorIdx, relativeDepth: Int): Boolean = when {
-        relativeDepth >= 2 -> contains(mark)
-        relativeDepth == 1 -> marksFromDepth1.binarySearch(mark) >= 0
-        else -> false
-    }
-
-    fun allMarks(): IntArray = (marksFromDepth1 + marksFromDepth2).also { it.sort() }
-
-    /** The claim after one more accessor of concrete prefix is known: depth-2 marks become depth-1. */
-    fun afterOneAccessor(): AbstractionExclusions =
-        if (marksFromDepth2.isEmpty()) this else create(allMarks(), EMPTY)!!
+    private fun allMarks(): IntArray = (marksFromDepth1 + marksFromDepth2).also { it.sort() }
 
     override fun toString(): String = buildString {
         append("!*{d1=")
@@ -86,9 +76,9 @@ class AbstractionExclusions private constructor(
             return AbstractionExclusions(marksFromDepth1, d2)
         }
 
-        fun fromDepth1(mark: AccessorIdx): AbstractionExclusions = AbstractionExclusions(intArrayOf(mark), EMPTY)
+        private fun fromDepth1(mark: AccessorIdx): AbstractionExclusions = AbstractionExclusions(intArrayOf(mark), EMPTY)
 
-        fun fromDepth2(mark: AccessorIdx): AbstractionExclusions = AbstractionExclusions(EMPTY, intArrayOf(mark))
+        private fun fromDepth2(mark: AccessorIdx): AbstractionExclusions = AbstractionExclusions(EMPTY, intArrayOf(mark))
 
         fun AbstractionExclusions?.addMarkFromDepth1(mark: AccessorIdx): AbstractionExclusions {
             if (this == null) return fromDepth1(mark)
