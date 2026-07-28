@@ -372,6 +372,34 @@ public class CleanerDslSample {
         sinkX(y);
     }
 
+    public void returningPlainCleaner(Node value) {
+        Node cleaned = cleanPlain(value);
+        returningPlainSink(cleaned);
+    }
+
+    public void returningAnyCleaner(Node value) {
+        Node cleaned = cleanAny(value);
+        returningAnySink(cleaned);
+    }
+
+    public void anyOnlySourceExample() {
+        Node value = sourceAnyOnly();
+        anyOnlyRootSink(value);
+        anyOnlyChildSink(value.child);
+    }
+
+    public void recursiveAnyOnlyStoreExample() {
+        Node root = new Node();
+        root.child = sourceAnyOnly();
+        recursiveAnyOnlyRootSink(root);
+        recursiveAnyOnlyChildSink(root.child);
+        recursiveAnyOnlyDepth2Sink(root.child.child);
+    }
+
+    public Node sourceAnyOnly() {
+        return new Node();
+    }
+
     public Node sourceA() {
         return new Node();
     }
@@ -387,6 +415,14 @@ public class CleanerDslSample {
     public Node cleanX(Node value) {
         return value;
     }
+
+    public void returningPlainSink(Node value) { }
+    public void returningAnySink(Node value) { }
+    public void anyOnlyRootSink(Node value) { }
+    public void anyOnlyChildSink(Node value) { }
+    public void recursiveAnyOnlyRootSink(Node value) { }
+    public void recursiveAnyOnlyChildSink(Node value) { }
+    public void recursiveAnyOnlyDepth2Sink(Node value) { }
 
     // Every matrix endpoint has a distinct method so its rule id identifies one exact coordinate.
 

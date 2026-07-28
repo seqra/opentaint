@@ -102,6 +102,20 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             }
         )
 
+    private fun anyOnlySourceRule(method: String, mark: String) =
+        SerializedRule.Source(
+            function = functionMatcher(TEST_CLS, method),
+            taint = listOf(
+                SerializedTaintAssignAction(
+                    kind = mark,
+                    pos = PositionBaseWithModifiers.WithModifiers(
+                        PositionBase.Result,
+                        listOf(PositionModifier.AnyField),
+                    ),
+                )
+            ),
+        )
+
     private fun cleanerRule(
         method: String,
         reach: Reach,
@@ -404,5 +418,141 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             .mapTo(hashSetOf()) { it.vulnerability.rule.id }
 
         assertEquals(setOf("conditional-a", "conditional-x"), findings)
+    }
+
+    @Test
+    fun `returning exact cleaner preserves AnyField taint and unrelated marks`() {
+        val cleanedMark = "cleaned"
+        val unrelatedMark = "unrelated"
+        val config = SerializedTaintConfig(
+            entryPoint = listOf(
+                SerializedRule.EntryPoint(
+                    function = functionMatcher(TEST_CLS, "returningPlainCleaner"),
+                    taint = listOf(cleanedMark, unrelatedMark).flatMap { mark ->
+                        positions(Argument(0), Reach.AnyField).map { position ->
+                            SerializedTaintAssignAction(kind = mark, pos = position)
+                        }
+                    },
+                )
+            ),
+            cleaner = listOf(
+                cleanerRule(
+                    "cleanPlain",
+                    Reach.Plain,
+                    listOf(cleanedMark),
+                    cleansResult = true,
+                )
+            ),
+            sink = listOf(
+                sinkRule(
+                    "returningPlainSink",
+                    Reach.AnyField,
+                    cleanedMark,
+                    "returning-cleaned-any",
+                ),
+                sinkRule(
+                    "returningPlainSink",
+                    Reach.Plain,
+                    unrelatedMark,
+                    "returning-unrelated-exact",
+                ),
+            ),
+        )
+
+        assertEquals(
+            setOf("returning-cleaned-any", "returning-unrelated-exact"),
+            findingIds(config, "returningPlainCleaner"),
+        )
+    }
+
+    @Test
+    fun `result AnyField cleaner does not abort an unrelated fact`() {
+        val cleanedMark = "absent"
+        val unrelatedMark = "unrelated"
+        val config = SerializedTaintConfig(
+            entryPoint = listOf(
+                SerializedRule.EntryPoint(
+                    function = functionMatcher(TEST_CLS, "returningAnyCleaner"),
+                    taint = positions(Argument(0), Reach.AnyField).map { position ->
+                        SerializedTaintAssignAction(kind = unrelatedMark, pos = position)
+                    },
+                )
+            ),
+            cleaner = listOf(
+                cleanerRule(
+                    "cleanAny",
+                    Reach.AnyField,
+                    listOf(cleanedMark),
+                    cleansResult = true,
+                )
+            ),
+            sink = listOf(
+                sinkRule(
+                    "returningAnySink",
+                    Reach.Plain,
+                    unrelatedMark,
+                    "returning-any-unrelated",
+                )
+            ),
+        )
+
+        assertEquals(
+            setOf("returning-any-unrelated"),
+            findingIds(config, "returningAnyCleaner"),
+        )
+    }
+
+    @Test
+    fun `AnyField-only source matches the root and materialized child`() {
+        val mark = "any-only"
+        val config = SerializedTaintConfig(
+            source = listOf(anyOnlySourceRule("sourceAnyOnly", mark)),
+            sink = listOf(
+                sinkRule("anyOnlyRootSink", Reach.AnyField, mark, "any-only-root"),
+                sinkRule("anyOnlyChildSink", Reach.Plain, mark, "any-only-child"),
+            ),
+        )
+
+        assertEquals(
+            setOf("any-only-root", "any-only-child"),
+            findingIds(config, "anyOnlySourceExample"),
+        )
+    }
+
+    @Test
+    fun `AnyField-only source survives a recursive field store`() {
+        val mark = "recursive-any-only"
+        val config = SerializedTaintConfig(
+            source = listOf(anyOnlySourceRule("sourceAnyOnly", mark)),
+            sink = listOf(
+                sinkRule(
+                    "recursiveAnyOnlyRootSink",
+                    Reach.AnyField,
+                    mark,
+                    "recursive-any-only-root",
+                ),
+                sinkRule(
+                    "recursiveAnyOnlyChildSink",
+                    Reach.AnyField,
+                    mark,
+                    "recursive-any-only-child",
+                ),
+                sinkRule(
+                    "recursiveAnyOnlyDepth2Sink",
+                    Reach.Plain,
+                    mark,
+                    "recursive-any-only-depth2",
+                ),
+            ),
+        )
+
+        assertEquals(
+            setOf(
+                "recursive-any-only-root",
+                "recursive-any-only-child",
+                "recursive-any-only-depth2",
+            ),
+            findingIds(config, "recursiveAnyOnlyStoreExample"),
+        )
     }
 }
