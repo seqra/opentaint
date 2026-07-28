@@ -42,6 +42,10 @@ class AccessCactus(
     override fun exclude(accessor: Accessor): FinalFactAp =
         AccessCactus(base, access, exclusions.add(accessor))
 
+    // cactus carries the deep claim on the flat exclusion channel, which is preserved here
+    override fun abstractPart(): FinalFactAp =
+        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
+
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessCactus(base, access, exclusions)
 

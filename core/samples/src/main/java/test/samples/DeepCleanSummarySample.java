@@ -55,6 +55,37 @@ public class DeepCleanSummarySample {
         sink(r.f);
     }
 
+    // The whole cleaned flow inside ONE summarized helper: clean, then read, then return the
+    // read value. The claim never has to reach the entry point's own fact -- it must be
+    // effective inside the helper's summary computation.
+    String helperCleanThenRead(Box b) {
+        clean(b);
+        return b.f;
+    }
+
+    public void helperCleanReadFlow(Box b) {
+        sink(helperCleanThenRead(b));
+    }
+
+    // Non-vacuity control for the same frame shape: no clean, the read must report.
+    String helperReadOnly(Box b) {
+        return b.f;
+    }
+
+    public void helperReadFlow(Box b) {
+        sink(helperReadOnly(b));
+    }
+
+    // Same, with the clean one summary level deeper.
+    String helperNestedCleanThenRead(Box b) {
+        Box c = wrapCleanOnly(b);
+        return c.f;
+    }
+
+    public void helperNestedCleanReadFlow(Box b) {
+        sink(helperNestedCleanThenRead(b));
+    }
+
     public void sinkBox(Box b) { }
 
     public void boxCleanedFlow(Box b) {
@@ -98,5 +129,18 @@ public class DeepCleanSummarySample {
     public void nodeUncleanedFlow(Node b) {
         NodePair p = wrapNode(b);
         sink(p.raw.f.k);
+    }
+
+    // Clean plus a depth-2 constant store inside one summarized helper; the object is
+    // returned and the caller reads the stored path.
+    Node cleanThenAssignLeaf(Node b) {
+        cleanNode(b);
+        b.f.k = "safe";
+        return b;
+    }
+
+    public void nodeCleanAssignFlow(Node b) {
+        Node r = cleanThenAssignLeaf(b);
+        sink(r.f.k);
     }
 }

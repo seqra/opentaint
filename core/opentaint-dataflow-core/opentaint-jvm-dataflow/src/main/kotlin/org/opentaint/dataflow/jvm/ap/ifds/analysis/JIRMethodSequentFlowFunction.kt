@@ -591,7 +591,10 @@ class JIRMethodSequentFlowFunction(
         accessor: Accessor,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
-        val abstractAp = apManager.createAbstractAp(factAp.base, factAp.exclusions)
+        // abstractPart, not createAbstractAp: the partition must keep everything the fact's
+        // abstraction carries — in tree mode a starred sanitizer's excluded-mark annotation —
+        // or the store resurrects the cleaned mark on the surviving abstract remainder
+        val abstractAp = factAp.abstractPart()
         propagateFactWithAccessorExclude(abstractAp, accessor)
 
         analysisContext.aliasAnalysis?.forEachAliasAtStatement(currentInst, abstractAp) { aliased ->

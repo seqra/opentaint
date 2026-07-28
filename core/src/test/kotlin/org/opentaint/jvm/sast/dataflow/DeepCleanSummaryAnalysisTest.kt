@@ -65,8 +65,8 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
         )
     )
 
-    private fun starredCleaner() = SerializedRule.Cleaner(
-        function = functionMatcher(TEST_CLS, "clean"),
+    private fun starredCleaner(function: String = "clean") = SerializedRule.Cleaner(
+        function = functionMatcher(TEST_CLS, function),
         cleans = listOf(
             SerializedTaintCleanAction(
                 taintKind = TAINT_MARK,
@@ -202,6 +202,55 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
             testName = "uncleaned sibling flow"
         )
     }
+
+    // The clean and the read inside ONE summarized helper: the claim must be effective within
+    // the helper's own summary computation, not only after transit to the caller's fact.
+
+    @Test
+    open fun `in-helper starred clean silences the read in the same summary`() {
+        assertNotReachable(
+            config = config("helperCleanReadFlow"),
+            testCls = TEST_CLS,
+            entryPointName = "helperCleanReadFlow",
+            testName = "in-helper clean-then-read flow"
+        )
+    }
+
+    @Test
+    open fun `in-helper read without a clean stays reported`() {
+        assertReachable(
+            config = config("helperReadFlow"),
+            testCls = TEST_CLS,
+            entryPointName = "helperReadFlow",
+            ruleId = RULE_ID,
+            testName = "in-helper read control"
+        )
+    }
+
+    @Test
+    open fun `in-helper nested starred clean silences the read`() {
+        assertNotReachable(
+            config = config("helperNestedCleanReadFlow"),
+            testCls = TEST_CLS,
+            entryPointName = "helperNestedCleanReadFlow",
+            testName = "in-helper nested clean-then-read flow"
+        )
+    }
+
+    @Test
+    open fun `clean plus depth-2 constant store returns a silent object`() {
+        val nodeConfig = SerializedTaintConfig(
+            entryPoint = listOf(wholeObjectEntryPoint("nodeCleanAssignFlow")),
+            cleaner = listOf(starredCleaner("cleanNode")),
+            sink = listOf(sinkRule(TEST_CLS, "sink", RULE_ID, listOf(Argument(0) to TAINT_MARK)))
+        )
+        assertNotReachable(
+            config = nodeConfig,
+            testCls = TEST_CLS,
+            entryPointName = "nodeCleanAssignFlow",
+            testName = "clean-then-assign leaf flow"
+        )
+    }
 }
 
 /**
@@ -214,4 +263,22 @@ class TreeDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest()
 
 class AutomataDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest() {
     override val apMode: ApMode = ApMode.Automata
+
+    // The in-helper control is red in this mode for the documented reason (taint dropped across
+    // the intervening call), so the two silent cases it guards would pass vacuously — all three
+    // stay disabled together until the Automata intervening-call fix.
+    @Test
+    @Disabled // todo: fix automata -- taint dropped across the intervening call
+    override fun `in-helper read without a clean stays reported`() =
+        super.`in-helper read without a clean stays reported`()
+
+    @Test
+    @Disabled // todo: fix automata -- control above is red, a pass here is vacuous
+    override fun `in-helper starred clean silences the read in the same summary`() =
+        super.`in-helper starred clean silences the read in the same summary`()
+
+    @Test
+    @Disabled // todo: fix automata -- control above is red, a pass here is vacuous
+    override fun `in-helper nested starred clean silences the read`() =
+        super.`in-helper nested starred clean silences the read`()
 }

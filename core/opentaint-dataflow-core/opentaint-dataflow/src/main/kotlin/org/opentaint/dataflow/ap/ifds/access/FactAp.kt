@@ -57,6 +57,15 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     fun clearAccessor(accessor: Accessor): FinalFactAp?
     fun removeAbstraction(): FinalFactAp?
 
+    /**
+     * The dual of [removeAbstraction]: the fact reduced to its root abstraction — no concrete
+     * children, but everything the abstraction itself carries kept, in particular a starred
+     * sanitizer's excluded-mark annotation (tree mode). Callers partitioning an abstract fact
+     * must use this rather than rebuilding via `createAbstractAp`, which starts from a bare
+     * abstract node and silently drops the claim. Only meaningful when [isAbstract] is true.
+     */
+    fun abstractPart(): FinalFactAp
+
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean
     }
