@@ -123,7 +123,12 @@ interface MethodCallSummaryHandler {
                     ?.replaceExclusions(exclusion)
                     ?: return@mapNotNullTo null
 
-                handleSummaryEdge(null, summaryFactAp)
+                // An edge carries a single exclusion set, so the summary's deep entries that were
+                // just attached to the exit fact must reach the initial fact too. Passing `null`
+                // here would leave the initial fact without them and break the edge invariant
+                // (`CommonF2FSet.add`). For zero/ND edges the caller exclusion is Universe, and
+                // `withDeepExclusion` keeps Universe, so their refinement checks still hold.
+                handleSummaryEdge(exclusion, summaryFactAp)
             }
 
             is SummaryExclusionRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) { mappedSummaryFact ->
