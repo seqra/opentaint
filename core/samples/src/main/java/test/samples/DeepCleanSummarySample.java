@@ -54,4 +54,49 @@ public class DeepCleanSummarySample {
         Box r = wrapCleanOnly(b);
         sink(r.f);
     }
+
+    public void sinkBox(Box b) { }
+
+    public void boxCleanedFlow(Box b) {
+        Pair p = wrap(b);
+        sinkBox(p.val);
+    }
+
+    public void boxUncleanedFlow(Box b) {
+        Pair p = wrap(b);
+        sinkBox(p.raw);
+    }
+
+    public static class Leaf {
+        public String k;
+    }
+
+    public static class Node {
+        public Leaf f;
+    }
+
+    public static class NodePair {
+        public Node raw;
+        public Node val;
+    }
+
+    public void cleanNode(Node b) { }
+
+    NodePair wrapNode(Node b) {
+        NodePair p = new NodePair();
+        p.raw = b;
+        cleanNode(b);
+        p.val = b;
+        return p;
+    }
+
+    public void nodeCleanedFlow(Node b) {
+        NodePair p = wrapNode(b);
+        sink(p.val.f.k);
+    }
+
+    public void nodeUncleanedFlow(Node b) {
+        NodePair p = wrapNode(b);
+        sink(p.raw.f.k);
+    }
 }
