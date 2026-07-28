@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds
 
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 
 object MethodSummaryEdgeApplicationUtils {
@@ -16,7 +17,7 @@ object MethodSummaryEdgeApplicationUtils {
          * does not transfer on its path.
          */
         data class SummaryExclusionRefinement(
-            val exclusion: ExclusionSet,
+            val flowState: FactFlowState,
             val emptyDelta: FinalFactAp.Delta?,
         ) : SummaryEdgeApplication
     }
@@ -28,7 +29,7 @@ object MethodSummaryEdgeApplicationUtils {
         methodInitialFactAp.delta(methodSummaryInitialFactAp).map { delta ->
             if (delta.isEmpty) {
                 SummaryEdgeApplication.SummaryExclusionRefinement(
-                    methodInitialFactAp.exclusions.union(methodSummaryInitialFactAp.exclusions),
+                    methodInitialFactAp.flowState then methodSummaryInitialFactAp.flowState,
                     emptyDelta = delta,
                 )
             } else {

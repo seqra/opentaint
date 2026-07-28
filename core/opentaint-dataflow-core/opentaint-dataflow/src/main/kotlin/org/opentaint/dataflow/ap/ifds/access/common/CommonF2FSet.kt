@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.EdgeStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -13,12 +13,12 @@ abstract class CommonF2FSet<IAP, FAP>(
     private val initialStatement: CommonInst
 ): MethodEdgesInitialToFinalApSet, InitialApAccess<IAP>, FinalApAccess<FAP> {
 
-    data class AccessWithExclusion<FAP>(val access: FAP, val exclusion: ExclusionSet)
+    data class AccessWithState<FAP>(val access: FAP, val flowState: FactFlowState)
 
     interface ApStorage<IAP, FAP> {
-        fun add(statement: CommonInst, initial: IAP, final: AccessWithExclusion<FAP>): AccessWithExclusion<FAP>?
-        fun filter(dst: MutableList<Pair<IAP, AccessWithExclusion<FAP>>>, statement: CommonInst, finalPattern: IAP)
-        fun filter(dst: MutableList<AccessWithExclusion<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
+        fun add(statement: CommonInst, initial: IAP, final: AccessWithState<FAP>): AccessWithState<FAP>?
+        fun filter(dst: MutableList<Pair<IAP, AccessWithState<FAP>>>, statement: CommonInst, finalPattern: IAP)
+        fun filter(dst: MutableList<AccessWithState<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
     }
 
     abstract fun createApStorage(): ApStorage<IAP, FAP>
@@ -30,20 +30,20 @@ abstract class CommonF2FSet<IAP, FAP>(
         initialAp: InitialFactAp,
         finalAp: FinalFactAp,
     ): Pair<InitialFactAp, FinalFactAp>? {
-        check(initialAp.exclusions == finalAp.exclusions) { "Edge exclusion mismatch" }
+        check(initialAp.flowState == finalAp.flowState) { "Edge flow-state mismatch" }
 
         val edgeStorage = storage.getOrCreate(finalAp.base).getOrCreate(initialAp.base)
 
-        val final = AccessWithExclusion(getFinalAccess(finalAp), finalAp.exclusions)
-        val addedAccessWithExclusion = edgeStorage.add(statement, getInitialAccess(initialAp), final)
+        val final = AccessWithState(getFinalAccess(finalAp), finalAp.flowState)
+        val addedAccessWithState = edgeStorage.add(statement, getInitialAccess(initialAp), final)
             ?: return null
 
-        if (addedAccessWithExclusion === final) return initialAp to finalAp
+        if (addedAccessWithState === final) return initialAp to finalAp
 
-        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithExclusion.exclusion)
+        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithState.flowState)
 
         val newExitAp = createFinal(
-            finalAp.base, addedAccessWithExclusion.access, addedAccessWithExclusion.exclusion
+            finalAp.base, addedAccessWithState.access, addedAccessWithState.flowState
         )
 
         return newInitialAp to newExitAp
@@ -85,8 +85,8 @@ abstract class CommonF2FSet<IAP, FAP>(
                 collection,
                 { storage.filter(it, statement, pattern) },
                 {
-                    val initialAp = createInitial(initialBase, it.first, it.second.exclusion)
-                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.exclusion)
+                    val initialAp = createInitial(initialBase, it.first, it.second.flowState)
+                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.flowState)
                     initialAp to finalAp
                 }
             )
@@ -108,7 +108,7 @@ abstract class CommonF2FSet<IAP, FAP>(
         collectToListWithPostProcess(
             collection,
             { factStorage.filter(it, statement, getInitialAccess(initialAp), getInitialAccess(finalFactPattern)) },
-            { createFinal(finalFactBase, it.access, it.exclusion) }
+            { createFinal(finalFactBase, it.access, it.flowState) }
         )
     }
 

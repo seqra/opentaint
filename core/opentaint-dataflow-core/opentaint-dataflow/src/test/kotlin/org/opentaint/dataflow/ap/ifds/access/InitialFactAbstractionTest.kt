@@ -4,7 +4,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
@@ -39,7 +38,6 @@ abstract class InitialFactAbstractionTest {
 
         val MARK = TaintMarkAccessor("test-mark")
         val MARK_2 = TaintMarkAccessor("test-mark-2")
-        val DEEP_MARK = DeepMarkExclusion("test-mark")
         val TYPE_INFO_A = TypeInfoAccessor("A")
         val TYPE_INFO_B = TypeInfoAccessor("B")
     }
@@ -59,8 +57,7 @@ abstract class InitialFactAbstractionTest {
             is TypeInfoAccessor,
             is TypeInfoGroupAccessor -> false
 
-            is ValueAccessor,
-            is DeepMarkExclusion -> error("Unexpected accessor to unroll: $accessor")
+            is ValueAccessor -> error("Unexpected accessor to unroll: $accessor")
         }
     }
 
@@ -501,45 +498,6 @@ abstract class InitialFactAbstractionTest {
             }",
         )
     }
-
-    // ---- Deep mark exclusions and the coverage trie ----
-    // A deep entry (DeepMarkExclusion) excludes MARK at every depth >= 2 under the base, but is
-    // registered only on REFINED initials whose deep-free weakening was analyzed first (edges
-    // accumulate; refinement never removes the original edge). Coverage decisions therefore
-    // ignore deep entries: the weaker variant justifies subsumption. These scenarios pin that
-    // contract; the depth-1 PLAIN conflict semantics is pinned by scenario `root exclusion on
-    // mark with mark chain` above.
-
-    @Test
-    fun `deep exclusion after unrefined variant - nested mark still covered`() = runScenario(
-        "deep exclusion after unrefined variant is ignored for coverage",
-        listOf(
-            initialFact(AccessPathBase.This),
-            initialFact(AccessPathBase.This).exclude(DEEP_MARK),
-        ),
-        finalFact(AccessPathBase.This, FIELD_A_B, MARK),
-        expectedEmpty = true,
-    )
-
-    @Test
-    fun `deep-only registration - nested mark treated as covered (invariant boundary)`() = runScenario(
-        // NOT reachable in production: a deep-refined initial is only ever registered after its
-        // deep-free weakening. If that ordering invariant ever breaks (e.g. a persisted-summaries
-        // store missing the unrefined edge), this scenario documents the failure mode: the added
-        // fact is swallowed as covered even though the analyzed initial excluded the mark deep.
-        "deep-only registration still reports covered - guarded by the ordering invariant",
-        listOf(initialFact(AccessPathBase.This).exclude(DEEP_MARK)),
-        finalFact(AccessPathBase.This, FIELD_A_B, MARK),
-        expectedEmpty = true,
-    )
-
-    @Test
-    fun `deep exclusion does not trigger a depth-1 push`() = runScenario(
-        "deep exclusion is not a depth-1 conflict",
-        listOf(initialFact(AccessPathBase.This).exclude(DEEP_MARK)),
-        finalFact(AccessPathBase.This, MARK),
-        expectedEmpty = true,
-    )
 
     private fun initialFact(base: AccessPathBase, vararg accessors: Accessor): InitialFactAp {
         var fact = apManager.mostAbstractInitialAp(base)

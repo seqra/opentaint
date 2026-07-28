@@ -38,7 +38,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSub
             return FactEdgeSubBuilder()
                 .setCallerNode(callerExitAp)
                 .setCallerInitialAp(callerInitialAp)
-                .setCallerExclusion(callerInitialAp.exclusions)
+                .setCallerFlowState(callerInitialAp.flowState)
         }
 
         val (mergedExitAp, delta) = current.mergeAddDelta(callerExitAp)
@@ -49,7 +49,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSub
         return FactEdgeSubBuilder()
             .setCallerNode(delta)
             .setCallerInitialAp(callerInitialAp)
-            .setCallerExclusion(callerInitialAp.exclusions)
+            .setCallerFlowState(callerInitialAp.flowState)
     }
 
     // todo: filter
@@ -62,7 +62,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSub
             FactEdgeSubBuilder()
                 .setCallerNode(callerExitAp)
                 .setCallerInitialAp(callerInitialAp)
-                .setCallerExclusion(callerInitialAp.exclusions)
+                .setCallerFlowState(callerInitialAp.flowState)
         }
     }
 }

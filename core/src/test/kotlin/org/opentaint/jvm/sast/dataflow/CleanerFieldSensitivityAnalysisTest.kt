@@ -41,9 +41,9 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
  *    materializes below it. The claim is part of the node, so it travels with `.val` and never
  *    meets `.raw` -- the same branch discrimination the concrete clean gets from the tree.
  *
- * The starred cases pin that structural clean across a summary; before it existed the claim was a
- * flat per-edge DeepMarkExclusion with no position in the tree, and exactly the deeper starred
- * reads (depths 2 and 3) reported false positives.
+ * The starred cases pin that structural clean across a summary; a flat edge-level flag has no
+ * position in the tree and made exactly the deeper starred reads (depths 2 and 3) report false
+ * positives.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class CleanerFieldSensitivityAnalysisTest : AnalysisTest() {

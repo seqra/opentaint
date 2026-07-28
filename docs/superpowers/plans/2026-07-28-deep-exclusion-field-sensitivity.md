@@ -178,17 +178,34 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 - [x] Delete the nine "must not be prepended to a fact path" checks now that `DeepMarkExclusion` is not an `Accessor`.
 - [x] Verify: a summary written before the change is rejected by version, not silently misread.
 
-### Task 6 — Automata (separate decision point)
+### Task 6 — Automata (superseded by Task 8)
 
-- [ ] **Do not start this without first fixing the intervening-call taint drop**, or there is no way to tell a fix from the existing vacuity. Re-run the four `CleanerFieldSensitivityAnalysisTest` non-vacuity controls in Automata mode; they must be green before any Automata claim is believable.
-- [ ] Give `AccessGraph` the same node annotation (`AccessGraph.kt:328` builds the excluded-accessor bitset today).
-- [ ] Verify: the ten Automata skips in `CleanerFieldSensitivityAnalysisTest` and the Automata `base-only clean` skip are re-enabled or individually re-justified.
+- [x] Fix the intervening-call taint drop and re-run the Automata non-vacuity controls.
+- [x] Keep Automata's implementation native to its representation rather than copying Tree node
+  annotations; Task 8 defines the common contract.
+- [x] Re-enable the measurable Automata cleaner tests; leave only individually justified skips.
 
 ### Task 7 — Corpus regression gate
 
 - [x] Run the full querylang suites and the OWASP benchmark, not a subset. Partial runs have misled on exactly this code before.
 - [x] `EXPECTED_TRACES` must not lose traces. A *gain* in precision (fewer false positives) is the goal; any lost trace is a false negative and blocks the change.
 - [x] Record before/after counts in the completion report.
+
+### Task 8 — Universal flow-state layer with dedicated representations
+
+- [x] Separate demand-analysis exclusions from deferred cleaner effects. `ExclusionSet` contains
+  only analysis exclusions; `FactFlowState` carries both domains without mixing their operators.
+- [x] Express code-flow shape in the common layer: `then` composes sequential flow and `join`
+  combines alternative executions. Cleaner set operations do not leak into summary/storage code.
+- [x] Put the cleaner operation on the universal `FinalFactAp` contract, with no fallback or
+  representation type checks in generic cleaner code.
+- [x] Keep dedicated implementations: Tree stores cleaner state structurally on abstract nodes;
+  Automata and Cactus transport deferred effects beside their native access structures and enforce
+  them at their demand-matching boundaries.
+- [x] Migrate fact edges, summaries, side effects, subscriptions, and persistence to
+  `FactFlowState`; bump the incompatible summary format.
+- [x] Add common algebra and deep-clean contract tests, then verify the Tree and Automata
+  field-sensitivity/summary suites.
 
 ---
 
@@ -207,7 +224,7 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 ---
 
-## Execution record (2026-07-28)
+## Initial execution record (2026-07-28, before Task 8)
 
 Executed Tasks 1–5 and 7; Task 6 deferred by its own gate (requires the Automata
 intervening-call fix first). Deviations, each sanctioned by the shim clause or noted:
@@ -234,3 +251,9 @@ red acceptance cases re-enabled and green, wall-clock unchanged, Task 2 perf gat
 +1.4%); java-querylang 197/0/23; go-querylang 761/0/4; OWASP (explyt fork corpus,
 documented expectation 4112 + 226 = 4338): **total=4338, generationFailed=0** — no
 trace lost, none gained.
+
+## Task 8 execution record (2026-07-28)
+
+The follow-up replaced the remaining flat deep-exclusion shim with `FactFlowState`, migrated
+Automata and Cactus to dedicated cleaner-effect transport, and kept Tree's structural annotation.
+The dataflow unit suite and the focused Tree/Automata cleaner and summary suites pass.

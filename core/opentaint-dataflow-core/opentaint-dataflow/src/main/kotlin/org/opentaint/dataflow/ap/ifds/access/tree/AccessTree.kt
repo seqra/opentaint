@@ -8,7 +8,6 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions.Companion.addMarkFromDepth1
 import org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions.Companion.addMarkFromDepth2
@@ -83,9 +82,6 @@ class AccessTree(
     }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp = with(apManager) {
-        check(accessor !is DeepMarkExclusion) {
-            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
-        }
         AccessTree(apManager, base, access.addParent(accessor.idx), exclusions)
     }
 
@@ -617,7 +613,7 @@ class AccessTree(
                 node.annotateAbstractNodes(belowClaim, cache)
             }
             if (annotated.isAbstract) {
-                val merged = AbstractionExclusions.union(annotated.abstraction, abstraction)
+                val merged = AbstractionExclusions.then(annotated.abstraction, abstraction)
                 if (merged != annotated.abstraction) {
                     annotated = manager.create(
                         annotated.isAbstract, annotated.isFinal, merged, annotated.accessors, annotated.accessorNodes
@@ -787,7 +783,7 @@ class AccessTree(
             val result = if (!transformed.isAbstract) {
                 transformed
             } else {
-                val merged = AbstractionExclusions.union(transformed.abstraction, incoming)
+                val merged = AbstractionExclusions.then(transformed.abstraction, incoming)
                 if (merged == transformed.abstraction) {
                     transformed
                 } else {
@@ -862,10 +858,10 @@ class AccessTree(
             }
 
         /**
-         * The abstraction join of two lineages meeting at the same node. "Not abstract" is the
-         * identity — when only one operand can grow, the growth (and its excluded-mark claim)
-         * comes from that operand alone. Two abstract operands intersect their claims: the join
-         * of a cleaned and an uncleaned lineage is uncleaned.
+         * The abstraction join of two alternative executions meeting at the same node. "Not
+         * abstract" is the identity — when only one operand can grow, the growth (and its
+         * excluded-mark claim) comes from that operand alone. Two abstract operands intersect
+         * their claims, so a cleaner effect is retained only when both alternatives performed it.
          */
         private fun joinAbstraction(other: AccessNode): AbstractionExclusions? = when {
             !this.isAbstract -> other.abstraction

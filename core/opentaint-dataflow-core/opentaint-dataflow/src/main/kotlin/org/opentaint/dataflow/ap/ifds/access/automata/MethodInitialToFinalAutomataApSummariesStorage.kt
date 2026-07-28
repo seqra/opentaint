@@ -1,6 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -35,7 +35,7 @@ private class InitialToFinalApStorage : CommonF2FSummary.Storage<AccessGraph, Ac
             val storageIdx = getOrCreateStorageIdx(edge.initial)
             val storage = finalFactGraphStorages[storageIdx]
 
-            if (storage.add(edge.exclusion, edge.final)) {
+            if (storage.add(edge.flowState, edge.final)) {
                 modifiedStorages.set(storageIdx)
             }
         }
@@ -109,54 +109,54 @@ private class InitialToFinalApStorage : CommonF2FSummary.Storage<AccessGraph, Ac
 }
 
 private class FinalApStorage {
-    private var exclusionStorage: ExclusionSet? = null
+    private var flowStateStorage: FactFlowState? = null
     private val agStorage = AccessGraphStorageWithCompression()
-    private var exclusionModified: Boolean = false
+    private var stateModified: Boolean = false
 
     fun addAndResetDelta(modified: MutableList<F2FBBuilder<AccessGraph, AccessGraph>>) {
-        val exclusion = exclusionStorage ?: return
-        if (exclusionModified) {
+        val flowState = flowStateStorage ?: return
+        if (stateModified) {
             agStorage.allGraphs().forEach { ag ->
                 modified += FactToFactEdgeBuilderBuilder()
-                    .setExclusion(exclusion)
+                    .setFlowState(flowState)
                     .setExitAp(ag)
             }
         } else {
             agStorage.mapAndResetDelta { ag ->
                 modified += FactToFactEdgeBuilderBuilder()
-                    .setExclusion(exclusion)
+                    .setFlowState(flowState)
                     .setExitAp(ag)
             }
         }
 
-        exclusionModified = false
+        stateModified = false
     }
 
-    fun add(exclusion: ExclusionSet, finalApAg: AccessGraph): Boolean {
-        val mergedExclusion = exclusionStorage?.mergeAndIntersectDeep(exclusion) ?: exclusion
-        if (mergedExclusion === exclusionStorage) {
+    fun add(flowState: FactFlowState, finalApAg: AccessGraph): Boolean {
+        val mergedState = flowStateStorage?.join(flowState) ?: flowState
+        if (mergedState === flowStateStorage) {
             return agStorage.add(finalApAg)
         }
 
-        exclusionStorage = mergedExclusion
+        flowStateStorage = mergedState
         agStorage.add(finalApAg)
-        exclusionModified = true
+        stateModified = true
 
         return true
     }
 
     fun allEdgesTo(dst: MutableList<F2FBBuilder<AccessGraph, AccessGraph>>) {
-        val exclusion = exclusionStorage ?: return
+        val flowState = flowStateStorage ?: return
         collectToListWithPostProcess(dst, {
             agStorage.allGraphsTo(it)
         }, { ag ->
             FactToFactEdgeBuilderBuilder()
-                .setExclusion(exclusion)
+                .setFlowState(flowState)
                 .setExitAp(ag)
         })
     }
 
-    override fun toString(): String = "($exclusionStorage -> $agStorage)"
+    override fun toString(): String = "($flowStateStorage -> $agStorage)"
 }
 
 class FactToFactEdgeBuilderBuilder : F2FBBuilder<AccessGraph, AccessGraph>(),

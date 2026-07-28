@@ -25,7 +25,7 @@ import kotlin.test.assertTrue
  * below the base are deleted outright, and each abstract node picks up the residual claim that the
  * mark stays excluded from whatever materializes below it later. The claim is PART OF THE NODE, so
  * it travels with a prepend, is confined to its branch, is enforced when a summary delta is
- * concatenated at the node, and joins by intersection when two lineages meet at the same node.
+ * concatenated at the node, and joins by intersection when two alternatives meet at the same node.
  */
 class AbstractNodeExclusionTest {
 
@@ -210,7 +210,7 @@ class AbstractNodeExclusionTest {
     @Test
     fun `the transit unions the caller claim with the callee's own`() {
         // the caller had cleaned m when the callee's summary, continuing the same object,
-        // cleaned n: both claims hold for this lineage
+        // cleaned n: both claims hold on this execution
         val cleanedCallerFact = abstractFact().deepCleaned(MARK)
         val calleeExit = abstractFact().deepCleaned(MARK_2)
 
@@ -223,10 +223,10 @@ class AbstractNodeExclusionTest {
         assertTrue(with(manager) { MARK_2.idx } in claim, "the callee's mark is claimed too")
     }
 
-    /* ---------- the join of lineages ---------- */
+    /* ---------- joining alternative executions ---------- */
 
     @Test
-    fun `merging a cleaned and an uncleaned lineage at the same node drops the claim`() {
+    fun `merging cleaned and uncleaned alternatives at the same node drops the claim`() {
         val cleaned = abstractFact().deepCleaned()
         val uncleaned = abstractFact()
         val joined = merged(cleaned, uncleaned)
@@ -236,11 +236,11 @@ class AbstractNodeExclusionTest {
         val delta = deltaOf(concreteFact(FIELD_F, MARK))
         val applied = joined.concat(FactTypeChecker.Dummy, delta)
         assertNotNull(applied)
-        assertTrue(applied.readsMarkAt(FIELD_F), "the uncleaned lineage's materialization must not be blocked")
+        assertTrue(applied.readsMarkAt(FIELD_F), "the uncleaned alternative's materialization must not be blocked")
     }
 
     @Test
-    fun `merging two cleaned lineages intersects their claims`() {
+    fun `merging two cleaned alternatives intersects their claims`() {
         val cleanedBoth = abstractFact().deepCleaned(MARK).deepCleaned(MARK_2)
         val cleanedM = abstractFact().deepCleaned(MARK)
         val joined = merged(cleanedBoth, cleanedM)
@@ -249,10 +249,10 @@ class AbstractNodeExclusionTest {
         val applied = joined.concat(FactTypeChecker.Dummy, delta)
 
         assertNotNull(applied)
-        assertFalse(applied.readsMarkAt(FIELD_F), "m is claimed by both lineages: blocked")
+        assertFalse(applied.readsMarkAt(FIELD_F), "m is claimed by both alternatives: blocked")
         assertTrue(
             applied.readAccessor(FIELD_F)?.startsWithAccessor(MARK_2) == true,
-            "n is claimed by one lineage only: it must survive the join"
+            "n is claimed by one alternative only: it must survive the join"
         )
     }
 

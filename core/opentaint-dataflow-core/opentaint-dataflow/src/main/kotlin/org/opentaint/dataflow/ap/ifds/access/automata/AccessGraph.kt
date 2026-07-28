@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
+import org.opentaint.dataflow.ap.ifds.access.DeepCleanEffects
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.tryAnyAccessorOrNull
 import org.opentaint.dataflow.util.PersistentArrayBuilder
@@ -317,20 +318,20 @@ class AccessGraph(
         ExclusionSet.Empty -> this
         ExclusionSet.Universe -> if (initialNodeIsFinal()) manager.emptyGraph() else null
         is ExclusionSet.Concrete -> with(manager) {
-            filter(exclusionSet.nonDeepExclusion().toBitSet { it.idx })
+            filter(exclusionSet.set.toBitSet { it.idx })
         }
     }
 
-    fun filterDeep(exclusionSet: ExclusionSet, keepInitialLevel: Boolean): AccessGraph? = when (exclusionSet) {
-        ExclusionSet.Empty -> this
-        ExclusionSet.Universe -> this
-        is ExclusionSet.Concrete -> with(manager) {
-            val deepAccessors = exclusionSet.deepExclusion().toBitSet { it.excludedAccessor().idx }
-            if (deepAccessors.isEmpty) return this@AccessGraph
+    fun filterDeep(effects: DeepCleanEffects, keepInitialLevel: Boolean): AccessGraph? = with(manager) {
+        if (effects.isEmpty) return this@AccessGraph
 
-            removeDeepAccessors(deepAccessors, keepInitialLevel)
-        }
+        val deepAccessors = BitSet()
+        effects.forEach { deepAccessors.set(it.idx) }
+        removeDeepAccessors(deepAccessors, keepInitialLevel)
     }
+
+    fun deepClean(mark: AccessorIdx): AccessGraph? =
+        removeDeepAccessors(bitSetOf(mark), keepInitialLevel = true)
 
     private fun removeDeepAccessors(deepAccessors: BitSet, keepInitialLevel: Boolean): AccessGraph? {
         val keepAtInitial = keepInitialLevel && nodePred[initial].let { it == null || it.isEmpty }

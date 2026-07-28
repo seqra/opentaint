@@ -11,8 +11,8 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
  * (every path enumerated), so a starred clean deletes concrete mark nodes outright and needs no
  * residue there; an abstract node is the one place the fact can still grow, so it is the one place
  * the claim is needed. Because the annotation is part of the node, a `prependAccessor` carries it
- * down with the path and a sibling branch simply never meets it — the branch discrimination the
- * old flat per-edge `DeepMarkExclusion` could not express.
+ * down with the path and a sibling branch simply never meets it — discrimination that a flat
+ * edge-level cleaner flag cannot express.
  *
  * Each mark carries the minimal RELATIVE depth below the annotated node at which it is excluded:
  *
@@ -23,7 +23,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
  *  - [marksFromDepth2] — excluded only below at least one further accessor. Used for the abstract
  *    node at the cleaned base itself: `base.*` does not cover the mark carried by the base
  *    directly (that is the rule's `base` clean action's job), so a direct mark-child of this node
- *    survives. This mirrors the `minPruneDepth = 2` rule of the flat mechanism it replaces.
+     *    survives.
  *
  * Instances are canonical: arrays are sorted, disjoint, and never both empty ([create] returns
  * null instead — "abstract with no exclusions" is represented by the absence of the annotation).
@@ -70,8 +70,8 @@ class AbstractionExclusions private constructor(
 
         /**
          * [marksFromDepth1] and [marksFromDepth2] must each be sorted; a mark present in both is
-         * kept at depth 1 (the stronger claim — callers merging lineages must intersect via [join]
-         * instead, which resolves the conflict in the weaker direction).
+         * kept at depth 1. Alternative executions must instead combine through [join], which
+         * resolves the conflict in the weaker direction.
          */
         fun create(marksFromDepth1: IntArray, marksFromDepth2: IntArray): AbstractionExclusions? {
             val d2 = if (marksFromDepth2.any { marksFromDepth1.binarySearch(it) >= 0 }) {
@@ -109,10 +109,10 @@ class AbstractionExclusions private constructor(
         }
 
         /**
-         * The join of two lineages meeting at the SAME abstract node: a mark survives only when
-         * both lineages exclude it (the join of a cleaned and an uncleaned lineage is uncleaned),
-         * and at the weaker of the two depths (max — a claim both lineages make only from depth 2
-         * cannot be strengthened to depth 1).
+         * The join of two alternative executions meeting at the SAME abstract node: a mark
+         * survives only when both alternatives exclude it, and at the weaker of the two depths
+         * (max — a claim both alternatives make only from depth 2 cannot be strengthened to
+         * depth 1).
          *
          * The abstraction state itself joins with "not abstract" as the identity: when only one
          * operand is abstract, all abstraction (and its annotation) comes from that operand —
@@ -132,12 +132,12 @@ class AbstractionExclusions private constructor(
         }
 
         /**
-         * The accumulation of two claims that BOTH hold for one lineage — the caller had already
-         * cleaned one mark when the callee's summary, whose exit abstraction continues the same
-         * object, cleaned another. Marks union; a mark claimed at both depths keeps the stronger
-         * (min — depth 1 covers everything depth 2 does).
+         * Sequential composition of two claims that BOTH hold: the caller had already cleaned one
+         * mark when the callee's summary, whose exit abstraction continues the same object,
+         * cleaned another. Marks union; a mark claimed at both depths keeps the stronger (min —
+         * depth 1 covers everything depth 2 does).
          */
-        fun union(a: AbstractionExclusions?, b: AbstractionExclusions?): AbstractionExclusions? {
+        fun then(a: AbstractionExclusions?, b: AbstractionExclusions?): AbstractionExclusions? {
             if (a == null) return b
             if (b == null) return a
             if (a == b) return a

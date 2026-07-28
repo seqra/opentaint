@@ -1,11 +1,11 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.EdgeStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesNDInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -34,7 +34,7 @@ abstract class CommonNDF2FSet<IAP, FAP>(
     ): Pair<Set<InitialFactAp>, FinalFactAp>? {
         val edgeStorage = storage.getOrCreate(finalAp.base)
         val addedFinal = edgeStorage.add(statement, initial, getFinalAccess(finalAp)) ?: return null
-        val newExitAp = createFinal(finalAp.base, addedFinal, ExclusionSet.Universe)
+        val newExitAp = createFinal(finalAp.base, addedFinal, FactFlowState.Universe)
         return initial to newExitAp
     }
 
@@ -73,7 +73,7 @@ abstract class CommonNDF2FSet<IAP, FAP>(
             collection,
             { collectApAtStatement(it, statement, pattern) },
             {
-                val finalAp = createFinal(finalFactBase, it.second, ExclusionSet.Universe)
+                val finalAp = createFinal(finalFactBase, it.second, FactFlowState.Universe)
                 it.first to finalAp
             }
         )
@@ -91,7 +91,7 @@ abstract class CommonNDF2FSet<IAP, FAP>(
         collectToListWithPostProcess(
             collection,
             { finalStorage.collectApAtStatement(it, statement, initial, getInitialAccess(finalFactPattern)) },
-            { createFinal(finalFactBase, it, ExclusionSet.Universe) }
+            { createFinal(finalFactBase, it, FactFlowState.Universe) }
         )
     }
 

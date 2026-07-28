@@ -5,7 +5,6 @@ import it.unimi.dsi.fastutil.ints.IntList
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -60,9 +59,6 @@ class AccessPath(
     }
 
     override fun prependAccessor(accessor: Accessor): InitialFactAp {
-        check(accessor !is DeepMarkExclusion) {
-            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
-        }
         val accessorIdx = with(apManager) { accessor.idx }
 
         if (access == null) {

@@ -2,29 +2,38 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.DeepCleanEffects
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 
 class AccessPathWithCycles(
     override val base: AccessPathBase,
     val access: AccessNode?,
-    override val exclusions: ExclusionSet
+    override val exclusions: ExclusionSet,
+    override val deepCleanEffects: DeepCleanEffects = DeepCleanEffects.Empty,
 ): InitialFactAp {
+    init {
+        FactFlowState(exclusions, deepCleanEffects)
+    }
+
     override fun rebase(newBase: AccessPathBase): InitialFactAp =
-        AccessPathWithCycles(newBase, access, exclusions)
+        AccessPathWithCycles(newBase, access, exclusions, deepCleanEffects)
 
     override fun isAbstract(): Boolean {
         TODO("Not yet implemented")
     }
 
     override fun exclude(accessor: Accessor): InitialFactAp =
-        AccessPathWithCycles(base, access, exclusions.add(accessor))
+        AccessPathWithCycles(base, access, exclusions.add(accessor), deepCleanEffects)
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
-        AccessPathWithCycles(base, access, exclusions)
+        replaceFlowState(flowState.withExclusions(exclusions))
+
+    override fun replaceFlowState(flowState: FactFlowState): InitialFactAp =
+        AccessPathWithCycles(base, access, flowState.exclusions, flowState.deepCleanEffects)
 
     override fun getAllAccessors(): Set<Accessor> {
         val result = hashSetOf<Accessor>()
@@ -51,18 +60,15 @@ class AccessPathWithCycles(
     override fun readAccessor(accessor: Accessor): InitialFactAp? {
         if (access == null) return null
         if (access.accessor == accessor) {
-            return AccessPathWithCycles(base, access.next, exclusions)
+            return AccessPathWithCycles(base, access.next, exclusions, deepCleanEffects)
         }
         return null
     }
 
     // todo: rewrite stub implementation
     override fun prependAccessor(accessor: Accessor): InitialFactAp {
-        check(accessor !is DeepMarkExclusion) {
-            "DeepMarkExclusion is exclusion-set-only and must not be prepended to a fact path"
-        }
         val node = AccessNode(accessor, next = access, cycles = emptyList())
-        return AccessPathWithCycles(base, node, exclusions)
+        return AccessPathWithCycles(base, node, exclusions, deepCleanEffects)
     }
 
     // todo: rewrite stub implementation
@@ -72,7 +78,8 @@ class AccessPathWithCycles(
 
     // todo: rewrite stub implementation
     override fun concat(delta: InitialFactAp.Delta): InitialFactAp {
-        return this
+        val state = flowState then FactFlowState(ExclusionSet.Empty, delta.deepCleanEffects)
+        return replaceFlowState(state)
     }
 
     // todo: rewrite stub implementation
@@ -105,6 +112,7 @@ class AccessPathWithCycles(
         if (base != other.base) return false
         if (access != other.access) return false
         if (exclusions != other.exclusions) return false
+        if (deepCleanEffects != other.deepCleanEffects) return false
 
         return true
     }
@@ -113,6 +121,7 @@ class AccessPathWithCycles(
         var result = base.hashCode()
         result = 31 * result + access.hashCode()
         result = 31 * result + exclusions.hashCode()
+        result = 31 * result + deepCleanEffects.hashCode()
         return result
     }
 

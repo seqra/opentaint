@@ -1,9 +1,9 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.EdgeStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.FactFlowState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -32,7 +32,7 @@ abstract class CommonZ2FSet<AP>(
         val addedAccess = edgeSet.addEdge(statement, edgeAccess) ?: return null
         if (addedAccess === edgeAccess) return ap
 
-        return createFinal(ap.base, addedAccess, ExclusionSet.Universe)
+        return createFinal(ap.base, addedAccess, FactFlowState.Universe)
     }
 
     override fun collectApAtStatement(collection: MutableList<FinalFactAp>, statement: CommonInst) {
@@ -59,7 +59,7 @@ abstract class CommonZ2FSet<AP>(
         collectToListWithPostProcess(
             collection,
             { collectApAtStatement(statement, it) },
-            { createFinal(base, it, ExclusionSet.Universe) }
+            { createFinal(base, it, FactFlowState.Universe) }
         )
     }
 }

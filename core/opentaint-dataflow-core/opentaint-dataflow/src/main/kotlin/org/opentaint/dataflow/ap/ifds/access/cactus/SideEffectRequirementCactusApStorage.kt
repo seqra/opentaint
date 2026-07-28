@@ -69,13 +69,15 @@ private fun AccessPathWithCycles?.mergeAdd(requirement: AccessPathWithCycles): A
         return requirement
     }
 
-    val currentExclusion = exclusions
-    val mergedExclusion = currentExclusion.mergeAndIntersectDeep(requirement.exclusions)
+    val currentState = flowState
+    val mergedState = currentState join requirement.flowState
 
-    if (mergedExclusion === currentExclusion) return null
+    if (mergedState === currentState) return null
 
     val mergedAp = with(requirement) {
-        AccessPathWithCycles(base, access, mergedExclusion)
+        AccessPathWithCycles(
+            base, access, mergedState.exclusions, mergedState.deepCleanEffects
+        )
     }
 
     return mergedAp

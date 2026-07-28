@@ -21,6 +21,8 @@ interface ReadableAccessorList<T : Any> : AccessorList {
 interface FactAp: AccessorList {
     val base: AccessPathBase
     val exclusions: ExclusionSet
+    val deepCleanEffects: DeepCleanEffects get() = DeepCleanEffects.Empty
+    val flowState: FactFlowState get() = FactFlowState(exclusions, deepCleanEffects)
 
     val size: Int
     val depth: Int
@@ -30,12 +32,19 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
     fun rebase(newBase: AccessPathBase): InitialFactAp
     fun exclude(accessor: Accessor): InitialFactAp
     fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp
+    fun replaceFlowState(flowState: FactFlowState): InitialFactAp {
+        check(flowState.deepCleanEffects.isEmpty) {
+            "${this::class.simpleName} must implement cleaner-effect transport"
+        }
+        return replaceExclusions(flowState.exclusions)
+    }
 
     fun prependAccessor(accessor: Accessor): InitialFactAp
     fun clearAccessor(accessor: Accessor): InitialFactAp?
 
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean
+        val deepCleanEffects: DeepCleanEffects get() = DeepCleanEffects.Empty
 
         fun concat(other: Delta): Delta
     }
@@ -52,6 +61,12 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     fun rebase(newBase: AccessPathBase): FinalFactAp
     fun exclude(accessor: Accessor): FinalFactAp
     fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp
+    fun replaceFlowState(flowState: FactFlowState): FinalFactAp {
+        check(flowState.deepCleanEffects.isEmpty) {
+            "${this::class.simpleName} must implement cleaner-effect transport"
+        }
+        return replaceExclusions(flowState.exclusions)
+    }
 
     fun prependAccessor(accessor: Accessor): FinalFactAp
     fun clearAccessor(accessor: Accessor): FinalFactAp?
@@ -68,6 +83,7 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
 
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean
+        val deepCleanEffects: DeepCleanEffects get() = DeepCleanEffects.Empty
     }
 
     fun delta(other: InitialFactAp): List<Delta>
@@ -88,15 +104,12 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
      * is the rule's base clean action's job), and every abstract node is annotated with the
      * residual claim that the mark stays excluded from whatever materializes below it later.
      *
-     * Representations that do not support the structural form return [DeepCleanResult.Unsupported]
-     * and keep the legacy flat [org.opentaint.dataflow.ap.ifds.DeepMarkExclusion] channel.
+     * Each representation owns the implementation. Generic cleaner and summary code never inspect
+     * representation-specific abstraction state.
      */
-    fun deepClean(mark: TaintMarkAccessor): DeepCleanResult = DeepCleanResult.Unsupported
+    fun deepClean(mark: TaintMarkAccessor): DeepCleanResult
 
     sealed interface DeepCleanResult {
-        /** This representation has no structural deep clean; use the legacy exclusion channel. */
-        data object Unsupported : DeepCleanResult
-
         /** Nothing of the fact survived the clean. */
         data object RemovedCompletely : DeepCleanResult
 
