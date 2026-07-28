@@ -10,12 +10,15 @@ import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.taint.Cleaner
+import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.mkAccessPath
 import org.opentaint.dataflow.taint.withSuffix
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FactCleanerContractTest {
@@ -101,4 +104,18 @@ class FactCleanerContractTest {
             )
         }
     }
+
+    @Test
+    fun `every representation finds a mark behind AnyField`() {
+        for (manager in managers()) {
+            val anyPosition = PositionAccess.Simple(base).withSuffix(listOf(AnyAccessor))
+            val fact = manager.mkAccessPath(anyPosition, ExclusionSet.Empty, mark)
+            val requiredMark = PositionAccess.Simple(base).withSuffix(listOf(mark))
+            assertNotNull(
+                FinalFactReader(fact, manager).containsAnyPosition(requiredMark),
+                "${manager::class.simpleName} did not find $requiredMark in $fact",
+            )
+        }
+    }
+
 }

@@ -24,10 +24,11 @@ fun <R : CommonTaintConfigurationSource, A : CommonTaintAssignAction> evaluateSo
     ruleActions: List<A>,
     sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
     evalAction: TaintSourceActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>>,
+    evalProducedFact: TaintSourceActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>>,
 ): List<TaintRulePrecondition> {
     val result = mutableListOf<TaintRulePrecondition>()
     evaluateSourceRulePrecondition(
-        ruleWithCond, ruleActions, sourcePreconditionEvaluator, evalAction,
+        ruleWithCond, ruleActions, sourcePreconditionEvaluator, evalAction, evalProducedFact,
         mkSource = { r, a -> result += TaintRulePrecondition.Source(r, a) },
         mkPass = { r, a, e -> result += TaintRulePrecondition.Pass(r, a, PassRuleCondition.Expr(e)) }
     )
@@ -39,13 +40,21 @@ fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction> evaluateSour
     ruleActions: List<A>,
     sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
     evalAction: TaintSourceActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>>,
+    evalProducedFact: TaintSourceActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>>,
     mkSource: (R, Set<CommonTaintAssignAction>) -> Unit,
     mkPass: (R, Set<CommonTaintAssignAction>, TaintMarkAwareConditionExpr) -> Unit,
 ) {
     val rule = ruleWithCond.rule
 
-    val assignedMarks = ruleActions.maybeFlatMap {
+    val directlyAssignedMarks = ruleActions.maybeFlatMap {
         sourcePreconditionEvaluator.evalAction(rule, it)
+    }
+    val assignedMarks = if (directlyAssignedMarks.isSome) {
+        directlyAssignedMarks
+    } else {
+        ruleActions.maybeFlatMap {
+            sourcePreconditionEvaluator.evalProducedFact(rule, it)
+        }
     }
     if (assignedMarks.isNone) return
 

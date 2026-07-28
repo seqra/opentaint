@@ -139,6 +139,9 @@ class GoMethodCallPrecondition(
                 rule.rule.actionsAfter,
                 sourcePreconditionEvaluator = sourcePreconditionEvaluator,
                 evalAction = { r, a -> evaluate(r, a, a.resolvePosAccess(), TaintMarkAccessor(a.mark)) },
+                evalProducedFact = { r, a ->
+                    evaluateProducedFact(r, a, a.resolvePosAccess(), TaintMarkAccessor(a.mark))
+                },
             )
         }
 

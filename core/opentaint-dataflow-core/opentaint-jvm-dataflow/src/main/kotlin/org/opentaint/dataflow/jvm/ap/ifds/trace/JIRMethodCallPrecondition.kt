@@ -153,6 +153,9 @@ class JIRMethodCallPrecondition(
             rule.rule.actionsAfter,
             sourcePreconditionEvaluator = sourcePreconditionEvaluator,
             evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
+            evalProducedFact = { r, a ->
+                evaluateProducedFact(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name))
+            },
         )
     }
 

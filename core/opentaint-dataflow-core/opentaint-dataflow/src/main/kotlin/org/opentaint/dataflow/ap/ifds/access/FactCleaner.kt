@@ -43,23 +43,6 @@ private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): FinalFactAp.CleanResult
     val head = accessors.first()
     val tail = accessors.drop(1)
     if (tail.isEmpty()) {
-        if (startsWithAccessor(AnyAccessor)) {
-            val afterAny = readAccessor(AnyAccessor)
-                ?: error("Fact reports an any-field accessor but cannot read it")
-
-            val clearedAfterAny = afterAny.clearAccessor(head)
-            val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
-
-            val withoutAny = clearAccessor(AnyAccessor)
-            val cleanedWithoutAny = withoutAny?.clearAccessor(head)
-
-            val cleaned = clearedAfterAny != afterAny || cleanedWithoutAny != withoutAny
-            return FinalFactAp.CleanResult(
-                listOfNotNull(restoredAfterAny, cleanedWithoutAny),
-                removedAlternative = cleaned,
-            )
-        }
-
         if (!startsWithAccessor(head)) {
             return FinalFactAp.CleanResult(listOf(this), removedAlternative = false)
         }

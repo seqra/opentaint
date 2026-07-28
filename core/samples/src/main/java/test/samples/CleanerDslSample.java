@@ -330,8 +330,9 @@ public class CleanerDslSample {
     }
 
     private Node helperAnyClean(Node value) {
-        value.k.p = cleanAny(value.k.p);
-        return value;
+        Node cleaned = new Node();
+        cleaned.k.p = cleanAny(value.k.p);
+        return cleaned;
     }
 
     public void helperSourceAndCleanerExample() {

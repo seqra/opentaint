@@ -39,6 +39,7 @@ class TaintCleanActionEvaluator {
         action: CommonTaintAction,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
+        if (from.base() != fact.factAp.base) return listOf(evc)
         val cleaned = fact.clean(Cleaner.AllMarks(from)) ?: return listOf(evc)
         return clean(cleaned, fact, rule, action, evc)
     }
@@ -51,6 +52,7 @@ class TaintCleanActionEvaluator {
         action: CommonTaintAction,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
+        if (from.base() != fact.factAp.base) return listOf(evc)
         val cleaned = fact.clean(Cleaner.Mark(from, markRestriction)) ?: return listOf(evc)
         return clean(cleaned, fact, rule, action, evc)
     }

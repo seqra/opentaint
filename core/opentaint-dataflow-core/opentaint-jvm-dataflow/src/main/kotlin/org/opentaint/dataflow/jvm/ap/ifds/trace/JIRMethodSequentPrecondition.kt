@@ -319,6 +319,9 @@ class JIRMethodSequentPrecondition(
             evaluateSourceRulePrecondition(
                 ruleWithCond, ruleWithCond.rule.actionsAfter, sourcePreconditionEvaluator,
                 evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
+                evalProducedFact = { r, a ->
+                    evaluateProducedFact(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name))
+                },
                 mkSource = { r, a ->
                     val src = TaintRulePrecondition.Source(r, a)
                     this += MethodSequentPrecondition.SequentSource(fact, src)
