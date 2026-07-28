@@ -30,7 +30,8 @@ rules:
   - id: java-http-parameter-pollution-sinks
     options:
       lib: true
-    tags: [http-parameter-pollution-sink]
+    tags:
+      - http-parameter-pollution-sink
     severity: NOTE
     message: Unvalidated user input has been included into a URL
     metadata:
