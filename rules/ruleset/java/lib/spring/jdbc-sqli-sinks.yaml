@@ -2,7 +2,8 @@ rules:
   - id: spring-sqli-sink
     options:
       lib: true
-    tags: [sqli-sink]
+    tags:
+      - sqli-sink
     severity: NOTE
     message: SQL query with unescaped untrusted data
     metadata:
