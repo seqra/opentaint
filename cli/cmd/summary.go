@@ -134,7 +134,7 @@ func init() {
 	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (defaults to file-path)")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
 	addBaselineFlags(summaryCmd, &summaryBaseline, &summaryFingerprintKey)
-	summaryCmd.Flags().StringArrayVar(&summaryBaselineStates, "baseline-state", nil, "Show only findings in this baseline state: new, unchanged, updated, absent (repeatable, needs --baseline)")
+	summaryCmd.Flags().StringArrayVar(&summaryBaselineStates, "baseline-state", nil, "Show only findings whose baseline state is one of: new | unchanged | updated | absent (repeatable, needs --baseline)")
 	summaryCmd.Flags().BoolVar(&summaryShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
 }
 

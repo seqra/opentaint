@@ -77,7 +77,7 @@ func init() {
 	rootCmd.AddCommand(triageCmd)
 
 	addBaselineFlags(triageCmd, &triageFlags.Baseline, &triageFlags.FingerprintKey)
-	triageCmd.Flags().BoolVar(&triageFlags.WriteBaselineState, "baseline-state", false, "Write result.baselineState and run.baselineGuid into the report")
+	triageCmd.Flags().BoolVar(&triageFlags.WriteBaselineState, "write-baseline-state", false, "Persist result.baselineState and run.baselineGuid into the output report (needs --baseline)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Accept, "accept", nil, "Accept the finding with this fingerprint prefix: won't fix (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Defer, "defer", nil, "Defer the finding with this fingerprint prefix: not fixing for now (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Unsuppress, "unsuppress", nil, "Remove the suppression from the finding with this fingerprint prefix (repeatable)")
@@ -117,7 +117,7 @@ func runTriage(cfg TriageConfig, reportPath string) {
 	if cfg.Baseline != "" {
 		opts.Baseline, opts.BaselinePath = loadBaselineOrExit(cfg.Baseline, absReportPath)
 	} else if cfg.WriteBaselineState {
-		out.Fatalf("--baseline-state needs a --baseline to compare against")
+		out.Fatalf("--write-baseline-state needs a --baseline to compare against")
 	}
 
 	outcome, err := triage.Apply(report, opts)

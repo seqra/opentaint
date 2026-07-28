@@ -115,7 +115,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | Flag | Description |
 |------|-------------|
 | `--baseline` | Previous SARIF report to compare against and inherit suppressions from |
-| `--baseline-state` | Write `result.baselineState` and `run.baselineGuid` into the report (needs `--baseline`) |
+| `--write-baseline-state` | Persist `result.baselineState` and `run.baselineGuid` into the output report (needs `--baseline`) |
 | `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
 | `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
 | `--error-on-severity` | Restrict `--error-on-findings` to these levels: `error`, `warning`, `note`, `none` (repeatable, default all) |
@@ -226,7 +226,7 @@ reflects the full set the tool ran.
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
 | `--code-flow` | Render code flows: `all`, a 1-based index, or unset (first flow only). On multi-flow findings the listing also shows a `Code flows: <N>` field. |
 | `--baseline` | Compare against this SARIF report and show new/unchanged/updated/fixed counts. The file is never modified. |
-| `--baseline-state` | Show only findings in this state: `new`, `unchanged`, `updated`, `absent` (repeatable, needs `--baseline`) |
+| `--baseline-state` | Show only findings whose state is one of `new` \| `unchanged` \| `updated` \| `absent` (repeatable, needs `--baseline`) |
 | `--suppressed` | Include suppressed findings in the listing (hidden by default) |
 | `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
 
@@ -252,7 +252,7 @@ opentaint triage scan.sarif --defer 8bc1d2 --justification "waiting on OT-412"
 | Flag | Description |
 |------|-------------|
 | `--baseline` | Previous SARIF report to compare against and inherit suppressions from |
-| `--baseline-state` | Write `result.baselineState` and `run.baselineGuid` into the report (needs `--baseline`) |
+| `--write-baseline-state` | Persist `result.baselineState` and `run.baselineGuid` into the output report (needs `--baseline`) |
 | `--accept` | Accept the finding with this fingerprint prefix — won't fix (repeatable) |
 | `--defer` | Defer the finding with this fingerprint prefix — not fixing for now (repeatable) |
 | `--unsuppress` | Remove the suppression from the finding with this fingerprint prefix (repeatable) |
@@ -284,8 +284,9 @@ it, both expressed in SARIF 2.1.0's own vocabulary.
 **Baseline comparison** answers "is this new?". `--baseline old.sarif`
 classifies every finding as new, unchanged, updated (same source and sink, a
 different path through the code), or fixed. By default this only affects what is
-printed; `--baseline-state` also writes `result.baselineState` and
-`run.baselineGuid` into the report. Findings are matched by fingerprint, not by
+printed; `--write-baseline-state` also persists `result.baselineState` and
+`run.baselineGuid` into the report. (Not to be confused with `summary
+--baseline-state <state>`, which *filters* the listing by state.) Findings are matched by fingerprint, not by
 line number, so moving code around does not invent new findings.
 
 **Suppression** answers "did a human accept this?". Presence in a baseline is
