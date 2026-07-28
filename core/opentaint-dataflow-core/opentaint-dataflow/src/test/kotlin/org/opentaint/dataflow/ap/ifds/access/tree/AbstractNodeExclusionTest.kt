@@ -275,4 +275,42 @@ class AbstractNodeExclusionTest {
 
         assertEquals(a.access.abstraction, merged(a, b).access.abstraction)
     }
+
+    /* ---------- persistence ---------- */
+
+    @Test
+    fun `the annotation survives a serialization round-trip`() {
+        // the sibling shape: an annotated branch and a plain one, in one tree
+        val fact = merged(
+            abstractFact().deepCleaned().prependAccessor(FIELD_VAL) as AccessTree,
+            abstractFact().prependAccessor(FIELD_RAW) as AccessTree,
+        )
+
+        val context = object : org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext {
+            private val byId = mutableMapOf<Long, Accessor>()
+            private val byAccessor = mutableMapOf<Accessor, Long>()
+            private var next = 1L
+
+            override fun getIdByAccessor(accessor: Accessor): Long =
+                byAccessor.getOrPut(accessor) { (next++).also { byId[it] = accessor } }
+
+            override fun getAccessorById(id: Long): Accessor = byId.getValue(id)
+            override fun getIdByMethod(method: org.opentaint.ir.api.common.CommonMethod): Long = error("unused")
+            override fun getMethodById(id: Long): org.opentaint.ir.api.common.CommonMethod = error("unused")
+            override fun loadSummaries(method: org.opentaint.ir.api.common.CommonMethod): ByteArray? = null
+            override fun storeSummaries(method: org.opentaint.ir.api.common.CommonMethod, summaries: ByteArray) = Unit
+            override fun flush() = Unit
+        }
+
+        val serializer = AccessTree.AccessNode.Serializer(manager, context)
+        val bytes = java.io.ByteArrayOutputStream()
+        with(serializer) { java.io.DataOutputStream(bytes).writeAccessNode(fact.access) }
+        val read = with(serializer) {
+            java.io.DataInputStream(java.io.ByteArrayInputStream(bytes.toByteArray())).readAccessNode()
+        }
+
+        assertEquals(fact.access, read, "the annotated and the plain branch must both round-trip")
+        assertNotNull(read.getChild(with(manager) { FIELD_VAL.idx })?.abstraction)
+        assertNull(read.getChild(with(manager) { FIELD_RAW.idx })?.abstraction)
+    }
 }
