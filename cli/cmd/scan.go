@@ -183,7 +183,7 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 
 	addBaselineFlags(cmd, &scanFlags.Baseline, &scanFlags.FingerprintKey)
-	cmd.Flags().BoolVar(&scanFlags.WriteBaselineState, "baseline-state", false, "Write result.baselineState and run.baselineGuid into the report")
+	cmd.Flags().BoolVar(&scanFlags.WriteBaselineState, "write-baseline-state", false, "Persist result.baselineState and run.baselineGuid into the output report (needs --baseline)")
 	addGateFlags(cmd, &scanFlags.ErrorOnFindings, &scanFlags.ErrorOnSeverity)
 }
 
@@ -200,7 +200,7 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithDataflowApproximations(cfg.DataflowApproximations).
 		WithTrackExternalMethods(cfg.TrackExternalMethods).
 		WithBaseline(cfg.Baseline).
-		WithBaselineState(cfg.WriteBaselineState).
+		WithWriteBaselineState(cfg.WriteBaselineState).
 		WithFingerprintKey(cfg.FingerprintKey).
 		WithErrorOnFindings(cfg.ErrorOnFindings).
 		WithErrorOnSeverity(cfg.ErrorOnSeverity)
@@ -352,7 +352,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.Fatalf("%s", err)
 	}
 	if cfg.WriteBaselineState && cfg.Baseline == "" {
-		out.Fatalf("--baseline-state needs a --baseline to compare against")
+		out.Fatalf("--write-baseline-state needs a --baseline to compare against")
 	}
 	var baseline *sarif.Report
 	var absBaselinePath string

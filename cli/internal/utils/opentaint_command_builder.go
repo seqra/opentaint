@@ -398,10 +398,10 @@ func (cb *OpentaintCommandBuilder) WithBaseline(path string) *OpentaintCommandBu
 	return cb
 }
 
-// WithBaselineState sets the --baseline-state flag.
-func (cb *OpentaintCommandBuilder) WithBaselineState(enabled bool) *OpentaintCommandBuilder {
+// WithWriteBaselineState sets the --write-baseline-state flag (scan/triage).
+func (cb *OpentaintCommandBuilder) WithWriteBaselineState(enabled bool) *OpentaintCommandBuilder {
 	if enabled {
-		cb.boolFlags["baseline-state"] = true
+		cb.boolFlags["write-baseline-state"] = true
 	}
 	return cb
 }
