@@ -103,7 +103,8 @@ rules:
   - id: java-string-format-sinks
     options:
       lib: true
-    tags: [format-string-sink]
+    tags:
+      - format-string-sink
     severity: NOTE
     message: String formatter is obtained from untrusted data source
     metadata:
