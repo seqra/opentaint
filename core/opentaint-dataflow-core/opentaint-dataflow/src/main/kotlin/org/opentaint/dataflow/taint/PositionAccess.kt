@@ -58,3 +58,11 @@ fun PositionAccess.removePrefix(prefix: Accessor): PositionAccess = when (this) 
 
     is PositionAccess.Simple -> error("Prefix mismatch")
 }
+
+fun PositionAccess.accessors(): List<Accessor> = when (this) {
+    is PositionAccess.Simple -> emptyList()
+    is PositionAccess.Complex -> base.accessors() + accessor
+}
+
+fun PositionAccess.hasAnyField(): Boolean =
+    accessors().any { it is AnyAccessor }

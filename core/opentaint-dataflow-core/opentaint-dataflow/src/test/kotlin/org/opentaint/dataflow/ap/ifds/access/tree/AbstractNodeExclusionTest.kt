@@ -9,6 +9,9 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.taint.Cleaner
+import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.withSuffix
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
@@ -58,7 +61,11 @@ class AbstractNodeExclusionTest {
     }
 
     private fun FinalFactAp.anyFieldCleaned(mark: TaintMarkAccessor = MARK): AccessTree {
-        val result = clean(listOf(AnyAccessor, mark))
+        val cleaner = Cleaner.Mark(
+            PositionAccess.Simple(base).withSuffix(listOf(AnyAccessor)),
+            mark,
+        )
+        val result = clean(cleaner)
         assertEquals(1, result.survivingFacts.size, "expected a surviving fact")
         return result.survivingFacts.single() as AccessTree
     }
@@ -97,7 +104,11 @@ class AbstractNodeExclusionTest {
     fun `any-field clean removes a fact that was only nested marks`() {
         val fact = concreteFact(FIELD_F, MARK)
 
-        assertTrue(fact.clean(listOf(AnyAccessor, MARK)).survivingFacts.isEmpty())
+        val cleaner = Cleaner.Mark(
+            PositionAccess.Simple(base).withSuffix(listOf(AnyAccessor)),
+            MARK,
+        )
+        assertTrue(fact.clean(cleaner).survivingFacts.isEmpty())
     }
 
     @Test

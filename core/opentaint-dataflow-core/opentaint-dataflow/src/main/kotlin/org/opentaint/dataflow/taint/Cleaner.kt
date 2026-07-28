@@ -1,10 +1,35 @@
 package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+
+/** A cleaner expressed in the same position language as sources and sinks. */
+sealed interface Cleaner {
+    val position: PositionAccess
+
+    data class AllMarks(
+        override val position: PositionAccess,
+    ) : Cleaner
+
+    data class Mark(
+        override val position: PositionAccess,
+        val mark: TaintMarkAccessor,
+    ) : Cleaner
+}
+
+internal val Cleaner.requiresDemandResolution: Boolean
+    get() = this is Cleaner.AllMarks || !position.hasAnyField()
+
+internal fun Cleaner.removePrefix(prefix: Accessor): Cleaner {
+    val remainingPosition = position.removePrefix(prefix)
+    return when (this) {
+        is Cleaner.AllMarks -> copy(position = remainingPosition)
+        is Cleaner.Mark -> copy(position = remainingPosition)
+    }
+}
 
 class TaintCleanActionEvaluator {
     fun removeAllFacts(
@@ -14,16 +39,8 @@ class TaintCleanActionEvaluator {
         action: CommonTaintAction,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
-
-        if (!fact.containsPosition(from)) return listOf(evc)
-
-        if (from is PositionAccess.Simple) {
-            val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            return listOf(EvaluatedCleanAction(fact = null, actionInfo, evc))
-        }
-
-        val cleanAccessors = from.accessorList()
-        return cleanAccessors(cleanAccessors, fact, rule, action, evc)
+        val cleaned = fact.clean(Cleaner.AllMarks(from)) ?: return listOf(evc)
+        return clean(cleaned, fact, rule, action, evc)
     }
 
     fun removeFinalFact(
@@ -34,34 +51,17 @@ class TaintCleanActionEvaluator {
         action: CommonTaintAction,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
-
-        if (!from.isAnyFieldCleaner() &&
-            !fact.containsPositionWithTaintMark(from, markRestriction)
-        ) {
-            return listOf(evc)
-        }
-
-        val cleanAccessors = from.accessorList() + markRestriction
-        return cleanAccessors(cleanAccessors, fact, rule, action, evc)
+        val cleaned = fact.clean(Cleaner.Mark(from, markRestriction)) ?: return listOf(evc)
+        return clean(cleaned, fact, rule, action, evc)
     }
 
-    /**
-     * An any-field cleaner is a persistent effect on the represented fact, even when no matching
-     * concrete path exists yet. Concrete cleaners instead query [FinalFactReader] first so a
-     * missing path becomes a demand refinement.
-     */
-    private fun PositionAccess.isAnyFieldCleaner(): Boolean =
-        this is PositionAccess.Complex && accessor is AnyAccessor && base is PositionAccess.Simple
-
-    private fun cleanAccessors(
-        accessors: List<Accessor>,
+    private fun clean(
+        cleaned: FinalFactAp.CleanResult,
         fact: FinalFactReader,
         rule: CommonTaintConfigurationItem,
         action: CommonTaintAction,
         evc: EvaluatedCleanAction
     ): List<EvaluatedCleanAction> {
-        val cleaned = fact.factAp.clean(accessors)
-
         val result = mutableListOf<EvaluatedCleanAction>()
         if (cleaned.removedAlternative) {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
@@ -73,11 +73,6 @@ class TaintCleanActionEvaluator {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
             EvaluatedCleanAction(resultFact, actionInfo, evc)
         }
-    }
-
-    private fun PositionAccess.accessorList(): List<Accessor> = when (this) {
-        is PositionAccess.Simple -> emptyList()
-        is PositionAccess.Complex -> base.accessorList() + accessor
     }
 }
 

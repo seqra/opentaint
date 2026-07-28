@@ -18,6 +18,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.clean
+import org.opentaint.dataflow.taint.Cleaner
 import org.opentaint.dataflow.ap.ifds.access.forExclusions
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.serialization.readEnum
@@ -96,8 +97,8 @@ class AccessCactus(
         return AccessCactus(base, filteredAccess, exclusions, anyFieldCleanerEffects)
     }
 
-    override fun clean(accessors: List<Accessor>): FinalFactAp.CleanResult =
-        clean(accessors, ::cleanAnyField)
+    override fun clean(cleaner: Cleaner): FinalFactAp.CleanResult =
+        clean(cleaner, ::cleanAnyField)
 
     private fun cleanAnyField(mark: TaintMarkAccessor): FinalFactAp.CleanResult {
         val belowBaseFilter = object : FactTypeChecker.FactApFilter {
