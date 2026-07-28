@@ -13,6 +13,14 @@ sealed interface ExclusionSet {
 
     fun contains(other: ExclusionSet): Boolean
 
+    /**
+     * LEGACY deep-exclusion channel, automata/cactus only. Tree facts carry a starred sanitizer's
+     * claim structurally, on the abstract nodes of the access tree
+     * ([org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions]), and their exclusion
+     * sets are deep-free — tree merge sites use [union], which asserts that. This operator and
+     * [deepExclusion]/[withDeepExclusion] remain for the modes still on the flat channel and are
+     * deleted when those migrate.
+     */
     fun mergeAndIntersectDeep(other: ExclusionSet): ExclusionSet
     fun deepExclusion(): Set<DeepMarkExclusion>
     fun withDeepExclusion(accessors: Set<DeepMarkExclusion>): ExclusionSet
