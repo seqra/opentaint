@@ -38,8 +38,29 @@ class TaintCleanActionEvaluator {
         val fact = evc.fact ?: return listOf(evc)
 
         // A whole-object clean (`base.[any]`) removes the mark at every depth >= 2 under the base.
-        if (from.isBaseAnyFieldPosition() && fact.factAp.containsAbstractNode()) {
-            fact.excludeDeep(markRestriction)
+        if (from.isBaseAnyFieldPosition()) {
+            when (val result = fact.factAp.deepClean(markRestriction)) {
+                // Structural form: concrete marks below the base are deleted, abstract nodes carry
+                // the residual claim. Subsumes the positional `[any].![m]` clear below, so the
+                // result is final for this action.
+                is FinalFactAp.DeepCleanResult.RemovedCompletely -> {
+                    val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
+                    return listOf(EvaluatedCleanAction(fact = null, actionInfo, evc))
+                }
+
+                is FinalFactAp.DeepCleanResult.Cleaned -> {
+                    if (result.fact === fact.factAp) return listOf(evc)
+
+                    val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
+                    return listOf(EvaluatedCleanAction(fact.replaceFact(result.fact), actionInfo, evc))
+                }
+
+                // Legacy flat channel for representations without the structural clean.
+                FinalFactAp.DeepCleanResult.Unsupported ->
+                    if (fact.factAp.containsAbstractNode()) {
+                        fact.excludeDeep(markRestriction)
+                    }
+            }
         }
 
         if (!fact.containsPositionWithTaintMark(from, markRestriction)) return listOf(evc)

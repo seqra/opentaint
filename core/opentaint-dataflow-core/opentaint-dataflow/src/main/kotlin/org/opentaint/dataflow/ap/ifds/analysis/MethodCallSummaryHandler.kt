@@ -131,9 +131,16 @@ interface MethodCallSummaryHandler {
                 handleSummaryEdge(exclusion, summaryFactAp)
             }
 
-            is SummaryExclusionRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) { mappedSummaryFact ->
+            is SummaryExclusionRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
                 // todo: filter exclusions
-                val summaryFactAp = mappedSummaryFact.replaceExclusions(summaryEffect.exclusion)
+                // The empty delta carries the caller abstraction's excluded-mark claim; the
+                // concat transfers it onto the exit fact's abstraction so the claim survives
+                // the transit (tree mode; a no-op elsewhere).
+                val summaryAccess = summaryEffect.emptyDelta
+                    ?.let { mappedSummaryFact.concat(factTypeChecker, it) ?: return@mapNotNullTo null }
+                    ?: mappedSummaryFact
+
+                val summaryFactAp = summaryAccess.replaceExclusions(summaryEffect.exclusion)
 
                 handleSummaryEdge(summaryEffect.exclusion, summaryFactAp)
             }

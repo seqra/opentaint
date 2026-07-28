@@ -174,17 +174,13 @@ class AccessPath(
         }
     }
 
+    // Tree exclusion sets never carry deep entries: a starred sanitizer's claim lives on the
+    // final fact's abstract nodes (AbstractionExclusions), so only plain exclusions filter here.
     private fun AccessNode.filter(exclusion: ExclusionSet): AccessNode? = when (exclusion) {
         ExclusionSet.Empty -> this
         ExclusionSet.Universe -> null
         is ExclusionSet.Concrete -> with(apManager) {
             if (accessor.accessor in exclusion) return@with null
-
-            val deepExclusion = exclusion.deepExclusion()
-            if (deepExclusion.isNotEmpty()) {
-                val accessors = IntOpenHashSet(toList())
-                if (deepExclusion.any { accessors.contains(it.excludedAccessor().idx) }) return@with null
-            }
 
             this@filter
         }

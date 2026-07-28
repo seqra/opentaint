@@ -205,26 +205,12 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
 }
 
 /**
- * Both disabled cases are the deep-exclusion field-sensitivity gap. `wrap` stores its argument into
- * `p.raw` before the starred clean and into `p.val` after it; the clean is recorded as a flat
- * [org.opentaint.dataflow.ap.ifds.DeepMarkExclusion] on the edge rather than as a node in the exit
- * access tree, so it cannot apply below `.val` alone and the sanitized read is reported.
- *
- * Both fail in the false-positive direction -- the unsanitized siblings stay green, so no finding is
- * lost. `cleanOnlyFlow`, the wrapper with no sibling edge at all, is green in every mode.
- * See docs/superpowers/plans/2026-07-28-deep-exclusion-field-sensitivity.md.
+ * The sibling cases pass precisely: `wrap` stores its argument into `p.raw` before the starred
+ * clean and into `p.val` after it, and the clean's residual claim rides the exit tree's `.val`
+ * abstraction (AbstractionExclusions) without ever meeting `.raw`. The unsanitized sibling stays
+ * reported, the sanitized one stays silent.
  */
-class TreeDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest() {
-    @Test
-    @Disabled // todo: deep exclusion is not field-sensitive -- see the plan above
-    override fun `starred clean survives an unsanitized sibling edge from the same initial fact`() =
-        super.`starred clean survives an unsanitized sibling edge from the same initial fact`()
-
-    @Test
-    @Disabled // todo: deep exclusion is not field-sensitive -- see the plan above
-    override fun `any-field-only taint - sanitized sibling edge stays clean`() =
-        super.`any-field-only taint - sanitized sibling edge stays clean`()
-}
+class TreeDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest()
 
 class AutomataDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest() {
     override val apMode: ApMode = ApMode.Automata

@@ -34,14 +34,16 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
  *    correct even when the SOURCE is abstract: the demand-driven refinement splits an any-field
  *    fact into concrete facts until the cleaner's path is one of them, and each carries its own
  *    access path;
- *  - a STARRED position (`arg0.*`) names unboundedly many paths, so there is no node to delete.
- *    The removal is recorded as a [org.opentaint.dataflow.ap.ifds.DeepMarkExclusion] on the edge's
- *    exclusion set -- a flat side-channel with no position in the tree -- and the `.raw`/`.val`
- *    distinction the tree was holding is lost at that moment.
+ *  - a STARRED position (`arg0.*`) names unboundedly many paths, so there is no single node to
+ *    delete. In tree mode the clean is still structural ([FinalFactAp.deepClean]): concrete
+ *    `![m]` nodes below the base are deleted outright, and each abstract node is annotated with
+ *    the residual claim (AbstractionExclusions) that the mark stays excluded from whatever
+ *    materializes below it. The claim is part of the node, so it travels with `.val` and never
+ *    meets `.raw` -- the same branch discrimination the concrete clean gets from the tree.
  *
- * The starred cases are therefore the defect these tests exist to pin, and they fail in exactly
- * the shape predicted: correct wherever the starred cleaner's BASE component happens to do the
- * work (the depth-1 read), wrong as soon as the answer depends on the star (deeper reads).
+ * The starred cases pin that structural clean across a summary; before it existed the claim was a
+ * flat per-edge DeepMarkExclusion with no position in the tree, and exactly the deeper starred
+ * reads (depths 2 and 3) reported false positives.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class CleanerFieldSensitivityAnalysisTest : AnalysisTest() {
@@ -317,25 +319,10 @@ abstract class CleanerFieldSensitivityAnalysisTest : AnalysisTest() {
 
 /**
  * The mode where these cases are measurable: all four non-vacuity controls are green, so the
- * `is silent` assertions are evidence rather than an artefact.
- *
- * The two disabled cases are the defect itself, not a mode quirk. A starred cleaner's removal is
- * recorded as a flat [org.opentaint.dataflow.ap.ifds.DeepMarkExclusion] on the edge instead of a
- * node in the access tree, so it cannot say "below `.val` only" and the sanitized read is reported.
- * Both fail in the false-positive direction; their unsanitized siblings stay green, so no finding
- * is lost. See docs/superpowers/plans/2026-07-28-deep-exclusion-field-sensitivity.md.
+ * `is silent` assertions are evidence rather than an artefact. All twelve cases pass, including
+ * the deep starred reads -- the structural deep clean at work.
  */
-class TreeCleanerFieldSensitivityAnalysisTest : CleanerFieldSensitivityAnalysisTest() {
-    @Test
-    @Disabled // todo: deep exclusion is not field-sensitive -- see the plan above
-    override fun `starred clean at depth 2 - the sanitized field is silent`() =
-        super.`starred clean at depth 2 - the sanitized field is silent`()
-
-    @Test
-    @Disabled // todo: deep exclusion is not field-sensitive -- see the plan above
-    override fun `starred clean at depth 3 - the sanitized field is silent`() =
-        super.`starred clean at depth 3 - the sanitized field is silent`()
-}
+class TreeCleanerFieldSensitivityAnalysisTest : CleanerFieldSensitivityAnalysisTest()
 
 /**
  * Automata drops the taint entirely across the intervening `clean`/`cleanNode` call, so every

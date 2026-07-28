@@ -186,6 +186,43 @@ class AbstractNodeExclusionTest {
         assertNull(applied, "a direct mark below a non-base abstract node is at base depth >= 2")
     }
 
+    /* ---------- the claim survives a summary transit ---------- */
+
+    @Test
+    fun `the empty delta carries the claim onto the transited summary's exit fact`() {
+        // the cleaned abstract fact passes through an unrelated callee's identity summary:
+        // delta vs the callee's abstract initial is empty, and the callee's exit abstraction
+        // continues the same object, so the claim must arrive on it
+        val cleanedCallerFact = abstractFact().deepCleaned()
+        val calleeExit = abstractFact()
+
+        val emptyDelta = cleanedCallerFact.delta(manager.mostAbstractInitialAp(base)).single { it.isEmpty }
+        val transited = calleeExit.concat(FactTypeChecker.Dummy, emptyDelta) as AccessTree?
+
+        assertNotNull(transited)
+        assertEquals(
+            cleanedCallerFact.access.abstraction,
+            transited.access.abstraction,
+            "the caller's claim must ride the empty delta onto the exit abstraction"
+        )
+    }
+
+    @Test
+    fun `the transit unions the caller claim with the callee's own`() {
+        // the caller had cleaned m when the callee's summary, continuing the same object,
+        // cleaned n: both claims hold for this lineage
+        val cleanedCallerFact = abstractFact().deepCleaned(MARK)
+        val calleeExit = abstractFact().deepCleaned(MARK_2)
+
+        val emptyDelta = cleanedCallerFact.delta(manager.mostAbstractInitialAp(base)).single { it.isEmpty }
+        val transited = calleeExit.concat(FactTypeChecker.Dummy, emptyDelta) as AccessTree?
+
+        assertNotNull(transited)
+        val claim = assertNotNull(transited.access.abstraction)
+        assertTrue(with(manager) { MARK.idx } in claim, "the caller's mark is still claimed")
+        assertTrue(with(manager) { MARK_2.idx } in claim, "the callee's mark is claimed too")
+    }
+
     /* ---------- the join of lineages ---------- */
 
     @Test
