@@ -10,6 +10,8 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions.Companion.addMarkFromDepth1
+import org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions.Companion.addMarkFromDepth2
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -139,7 +141,7 @@ class AccessTree(
      * the structural counterpart.
      */
     data class EmptyAccessTreeDelta(
-        val abstraction: AbstractionExclusions? = null,
+        val abstraction: AbstractionExclusions?,
     ) : AccessTreeDelta {
         override val isEmpty: Boolean get() = true
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
@@ -187,7 +189,7 @@ class AccessTree(
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
                 if (!node.isFinal) return emptyList()
-                return listOf(EmptyAccessTreeDelta())
+                return listOf(EmptyAccessTreeDelta(abstraction = null))
             }
 
             node = node.getChild(accessor) ?: return emptyList()
@@ -721,8 +723,10 @@ class AccessTree(
         private fun annotate(markIdx: AccessorIdx, fromBase: Boolean): AccessNode {
             if (!isAbstract) return this
 
-            val annotated = with(AbstractionExclusions.Companion) {
-                if (fromBase) abstraction.addMarkFromDepth2(markIdx) else abstraction.addMarkFromDepth1(markIdx)
+            val annotated = if (fromBase) {
+                abstraction.addMarkFromDepth2(markIdx)
+            } else {
+                abstraction.addMarkFromDepth1(markIdx)
             }
             if (annotated == abstraction) return this
 

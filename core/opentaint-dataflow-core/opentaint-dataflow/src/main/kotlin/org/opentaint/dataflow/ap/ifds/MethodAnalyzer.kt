@@ -1242,7 +1242,7 @@ class NormalMethodAnalyzer(
                         ndSummaryInitial.isEmpty() -> {
                             summaryHandler.handleZeroToFact(
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(ExclusionSet.Universe),
+                                SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1252,7 +1252,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleFactToFact(
                                 initialFact,
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(initialFact.exclusions),
+                                SummaryExclusionRefinement(initialFact.exclusions, emptyDelta = null),
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1261,7 +1261,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleNDFactToFact(
                                 ndSummaryInitial,
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(ExclusionSet.Universe),
+                                SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1275,7 +1275,7 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleFactToFact(
                                     currentEdge.initialFactAp,
                                     currentEdgeFactAp,
-                                    SummaryExclusionRefinement(currentEdge.initialFactAp.exclusions),
+                                    SummaryExclusionRefinement(currentEdge.initialFactAp.exclusions, emptyDelta = null),
                                     summaryEdge.summaryEdge()
                                 )
                             }
@@ -1284,7 +1284,7 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleNDFactToFact(
                                     ndSummaryInitial,
                                     currentEdgeFactAp,
-                                    SummaryExclusionRefinement(ExclusionSet.Universe),
+                                    SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
                                     summaryEdge.summaryEdge()
                                 )
                             }
@@ -1295,7 +1295,7 @@ class NormalMethodAnalyzer(
                         summaryHandler.handleNDFactToFact(
                             ndSummaryInitial + currentEdge.initialFacts,
                             currentEdgeFactAp,
-                            SummaryExclusionRefinement(ExclusionSet.Universe),
+                            SummaryExclusionRefinement(ExclusionSet.Universe, emptyDelta = null),
                             summaryEdge.summaryEdge()
                         )
                     }
