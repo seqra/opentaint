@@ -134,3 +134,39 @@ func TestParseGateSeverities(t *testing.T) {
 		t.Error("expected an error for an unknown severity")
 	}
 }
+
+func TestParseGateSeveritiesSplitsCommaSeparated(t *testing.T) {
+	got, err := ParseGateSeverities([]string{"error,warning"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 || got[0] != "error" || got[1] != "warning" {
+		t.Errorf("got %v, want [error warning]", got)
+	}
+}
+
+func TestParseGateSeveritiesMixesCommaAndRepeatedFlags(t *testing.T) {
+	got, err := ParseGateSeverities([]string{"error, warning", "note"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 3 {
+		t.Errorf("got %v, want error warning note", got)
+	}
+}
+
+func TestParseGateSeveritiesRejectsBadTokenInsideAList(t *testing.T) {
+	if _, err := ParseGateSeverities([]string{"error,bogus"}); err == nil {
+		t.Error("expected an error for a bad token in a comma list")
+	}
+}
+
+func TestParseGateSeveritiesIgnoresEmptyTokens(t *testing.T) {
+	got, err := ParseGateSeverities([]string{"error,,warning,"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("got %v, want [error warning]", got)
+	}
+}
