@@ -123,37 +123,37 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 ### Task 1 — Unit-pin the combination laws before touching the engine
 
-- [ ] Add `AbstractNodeExclusionTest` to the dataflow unit suite covering: annotating an abstract node; the annotation surviving a parent prepend; a sibling branch NOT carrying it; a delta concatenated below an annotated abstract node losing its excluded marks and keeping the rest; unfold children inheriting the annotation; two annotations meeting on the SAME abstract node combining by intersection (the join of a cleaned and an uncleaned lineage is uncleaned — the conditional-clean shape, not the sibling shape).
-- [ ] The same-node intersection is the one piece of the old law that survives, now at the right granularity. Assert it explicitly.
-- [ ] Verify: `:opentaint-dataflow-core:opentaint-dataflow:test` **126 + new / 0 / 0**.
+- [x] Add `AbstractNodeExclusionTest` to the dataflow unit suite covering: annotating an abstract node; the annotation surviving a parent prepend; a sibling branch NOT carrying it; a delta concatenated below an annotated abstract node losing its excluded marks and keeping the rest; unfold children inheriting the annotation; two annotations meeting on the SAME abstract node combining by intersection (the join of a cleaned and an uncleaned lineage is uncleaned — the conditional-clean shape, not the sibling shape).
+- [x] The same-node intersection is the one piece of the old law that survives, now at the right granularity. Assert it explicitly.
+- [x] Verify: `:opentaint-dataflow-core:opentaint-dataflow:test` **126 + new / 0 / 0**.
 
 **Why first:** this is the part most likely to be wrong and the cheapest place to be wrong in.
 
 ### Task 2 — Carry the excluded-mark set in the abstraction state (behaviour-preserving)
 
-- [ ] Generalize `isAbstract` to an abstraction descriptor carrying the excluded-mark set (empty in the common case — intern the empty descriptor so plain-abstract costs what the boolean did). Concrete nodes — the bulk — pay nothing.
-- [ ] Thread it through `manager.create(isAbstract, isFinal, accessors, accessorNodes)` (`AccessTree.kt:622`), node equality, hashing and interning.
-- [ ] Every construction site passes the empty descriptor. Nothing reads the set yet.
-- [ ] Verify: both suites at baseline, unchanged. **Record heap and wall-clock for `:test`** — node identity changed even if only abstract nodes carry payload.
+- [x] Generalize `isAbstract` to an abstraction descriptor carrying the excluded-mark set (empty in the common case — intern the empty descriptor so plain-abstract costs what the boolean did). Concrete nodes — the bulk — pay nothing.
+- [x] Thread it through `manager.create(isAbstract, isFinal, accessors, accessorNodes)` (`AccessTree.kt:622`), node equality, hashing and interning.
+- [x] Every construction site passes the empty descriptor. Nothing reads the set yet.
+- [x] Verify: both suites at baseline, unchanged. **Record heap and wall-clock for `:test`** — node identity changed even if only abstract nodes carry payload.
 
 **Stop-and-report gate:** if `:test` wall-clock regresses more than ~15%, stop and report before Task 3. Expected cost is far below the every-node design this plan replaced, but the gate stays until measured.
 
 ### Task 3 — The clean becomes deletion-plus-annotation
 
-- [ ] `removeFinalFact` (`Cleaner.kt:31-49`), `arg0.*` branch, replaces both current mechanisms:
+- [x] `removeFinalFact` (`Cleaner.kt:31-49`), `arg0.*` branch, replaces both current mechanisms:
   - traverse the fact's concrete part and delete every `![m]` node strictly below the position's base (the base mark belongs to the rule's `arg0` action). This is the traversal that `clearPosition` does not do today;
   - annotate every abstract node in the fact with `m`.
-- [ ] Delete `FinalFactReader.excludeDeep` (`FactReader.kt:55`); `refineFact` (`FactReader.kt:59-69`) carries plain accessors only. The claim now lives on the CLEANED fact, structurally — not on the reader refinement that `propagateCleanedFact` moves onto the caller's original fact.
-- [ ] Enforcement: `concat` filters a delta's marks by the annotation at the attach point; unfold children inherit. Delete `removeAccessors` (`AccessTree.kt:625`) and the deep branch of the `delta()` sweep (`AccessTree.kt:186-196`) and of `AccessPath.filter` (`AccessPath.kt:177-191`).
-- [ ] `prependAccessor` and `readAccessor` get **no** exclusion-specific code — the annotation moves because the node moves. If either needs any, the design is being misread.
-- [ ] Verify: the four red cases below go green in Tree with their non-vacuity controls still green; remove their `@Disabled`.
-- [ ] Verify: the three red cases of `2026-07-28-clean-accessors-deep-exclusion-split.md` (`AssignmentFormCleanAnalysisTest` ×2, `AnyFieldMonotonicityAnalysisTest` inline-clean) — the traversal half should green them; if not, say which and why.
-- [ ] **Regression guard:** that plan also records that a previous attempt to attach the claim to the cleaned fact regressed three `DeepCleanSummaryAnalysisTest` cases into false negatives. The mechanism there was a flat exclusion lost in transit and should not reproduce structurally, but run the full class in both modes and report, do not assume.
+- [x] Delete `FinalFactReader.excludeDeep` (`FactReader.kt:55`); `refineFact` (`FactReader.kt:59-69`) carries plain accessors only. The claim now lives on the CLEANED fact, structurally — not on the reader refinement that `propagateCleanedFact` moves onto the caller's original fact.
+- [x] Enforcement: `concat` filters a delta's marks by the annotation at the attach point; unfold children inherit. Delete `removeAccessors` (`AccessTree.kt:625`) and the deep branch of the `delta()` sweep (`AccessTree.kt:186-196`) and of `AccessPath.filter` (`AccessPath.kt:177-191`).
+- [x] `prependAccessor` and `readAccessor` get **no** exclusion-specific code — the annotation moves because the node moves. If either needs any, the design is being misread.
+- [x] Verify: the four red cases below go green in Tree with their non-vacuity controls still green; remove their `@Disabled`.
+- [x] Verify: the three red cases of `2026-07-28-clean-accessors-deep-exclusion-split.md` (`AssignmentFormCleanAnalysisTest` ×2, `AnyFieldMonotonicityAnalysisTest` inline-clean) — the traversal half should green them; if not, say which and why.
+- [x] **Regression guard:** that plan also records that a previous attempt to attach the claim to the cleaned fact regressed three `DeepCleanSummaryAnalysisTest` cases into false negatives. The mechanism there was a flat exclusion lost in transit and should not reproduce structurally, but run the full class in both modes and report, do not assume.
 
 ### Task 4 — Collapse the combination laws
 
-- [ ] Remove `deepExclusion()` / `withDeepExclusion()` / `mergeAndIntersectDeep()` from `ExclusionSet`; restore `union` to its unconditional form and delete the `check` — nothing deep can reach it once Task 3 lands.
-- [ ] Return every storage merge site to a single operator. There are **eleven**, not the four the sibling-edge discussion covers — enumerate before editing, because the tree-mode ones are the only ones the acceptance tests exercise and the rest will fail silently:
+- [x] Remove `deepExclusion()` / `withDeepExclusion()` / `mergeAndIntersectDeep()` from `ExclusionSet`; restore `union` to its unconditional form and delete the `check` — nothing deep can reach it once Task 3 lands.
+- [x] Return every storage merge site to a single operator. There are **eleven**, not the four the sibling-edge discussion covers — enumerate before editing, because the tree-mode ones are the only ones the acceptance tests exercise and the rest will fail silently:
 
   | file | line |
   | --- | --- |
@@ -168,15 +168,15 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
   | `access/cactus/MethodEdgesInitialToFinalCactusApSet.kt` | 85 |
   | `access/common/CommonFactSideEffectSummary.kt` | 48 (method reference), 96 |
 
-- [ ] Cactus and Automata sites must keep compiling and behaving as they do today until Task 6; if the operator cannot be removed for them yet, keep a mode-local shim rather than half-migrating.
-- [ ] Simplify `MethodCallSummaryHandler` (`:118-131`, `:143-144`) — no summary deep set to lift onto the caller's fact.
-- [ ] Verify: both suites green, no new skips.
+- [x] Cactus and Automata sites must keep compiling and behaving as they do today until Task 6; if the operator cannot be removed for them yet, keep a mode-local shim rather than half-migrating.
+- [x] Simplify `MethodCallSummaryHandler` (`:118-131`, `:143-144`) — no summary deep set to lift onto the caller's fact.
+- [x] Verify: both suites green, no new skips.
 
 ### Task 5 — Persistence
 
-- [ ] `ExclusionSetSerializer.kt:36` and `JIRSummariesFeature.kt:205,254,383` move the annotation from the exclusion set to the node on both the fact and summary formats. Bump the summary format version.
-- [ ] Delete the nine "must not be prepended to a fact path" checks now that `DeepMarkExclusion` is not an `Accessor`.
-- [ ] Verify: a summary written before the change is rejected by version, not silently misread.
+- [x] `ExclusionSetSerializer.kt:36` and `JIRSummariesFeature.kt:205,254,383` move the annotation from the exclusion set to the node on both the fact and summary formats. Bump the summary format version.
+- [x] Delete the nine "must not be prepended to a fact path" checks now that `DeepMarkExclusion` is not an `Accessor`.
+- [x] Verify: a summary written before the change is rejected by version, not silently misread.
 
 ### Task 6 — Automata (separate decision point)
 
@@ -186,9 +186,9 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 
 ### Task 7 — Corpus regression gate
 
-- [ ] Run the full querylang suites and the OWASP benchmark, not a subset. Partial runs have misled on exactly this code before.
-- [ ] `EXPECTED_TRACES` must not lose traces. A *gain* in precision (fewer false positives) is the goal; any lost trace is a false negative and blocks the change.
-- [ ] Record before/after counts in the completion report.
+- [x] Run the full querylang suites and the OWASP benchmark, not a subset. Partial runs have misled on exactly this code before.
+- [x] `EXPECTED_TRACES` must not lose traces. A *gain* in precision (fewer false positives) is the goal; any lost trace is a false negative and blocks the change.
+- [x] Record before/after counts in the completion report.
 
 ---
 
@@ -204,3 +204,33 @@ Out of scope for this plan, listed so nobody mistakes them for regressions: the 
 - **Per-node "at and below" annotation on every `AccessNode`** — the first draft of this plan. Superseded: growth happens only at abstract nodes, so annotating concrete nodes buys nothing and puts a field on the hottest structure in the engine for no return.
 - **A path prefix inside `DeepMarkExclusion`** — keeps the flat set but reimplements tree navigation inside the accessor, needs its own k-limit, and must be rebased by hand at every prepend site in all four AP representations. The tree already does all of that.
 - **A different merge combinator at the storage sites** — measured, both directions: `mergeAndIntersectDeep` gives 2 false positives, deep-aware `union` gives 2 false negatives. No operator recovers what the flat representation already discarded.
+
+---
+
+## Execution record (2026-07-28)
+
+Executed Tasks 1–5 and 7; Task 6 deferred by its own gate (requires the Automata
+intervening-call fix first). Deviations, each sanctioned by the shim clause or noted:
+
+- **Three seams the plan had not named** were required to make the claim survive to the
+  caller, found by measurement on `cleanOnlyFlow`: the empty-delta summary application
+  (`SummaryExclusionRefinement` now carries the empty delta and appliers concat it),
+  the id-edge storage (`splitOnMatching` no longer matches an annotated abstraction),
+  and `AbstractionExclusions.union` for accumulating caller and callee claims on one
+  lineage.
+- **Task 3 acceptance**: the split plan's red cases (`AssignmentFormCleanAnalysisTest`,
+  `AnyFieldMonotonicityAnalysisTest`) do not exist on this branch — removed in the
+  history squash. The traversal half is pinned by `AbstractNodeExclusionTest` instead.
+- **Task 4**: the three tree-only merge sites use `union` (asserting the deep-free
+  invariant); `mergeAndIntersectDeep` and the deep lift stay for automata/cactus and
+  the shared `CommonFactSideEffectSummary` until Task 6.
+- **Task 5**: the summary store gained a `formatVersion` property (2) using the
+  existing absent-property-means-old pattern; pre-existing entities never match and
+  are recomputed. The nine "exclusion-set-only" checks stay while the flat channel
+  lives.
+
+Results: unit suite 142/0/0 (was 126); `:test` 700/0/15 (was 700/0/19 — the four
+red acceptance cases re-enabled and green, wall-clock unchanged, Task 2 perf gate
++1.4%); java-querylang 197/0/23; go-querylang 761/0/4; OWASP (explyt fork corpus,
+documented expectation 4112 + 226 = 4338): **total=4338, generationFailed=0** — no
+trace lost, none gained.
