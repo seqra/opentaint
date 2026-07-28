@@ -64,18 +64,23 @@ func (g Gate) inScope(r *sarif.Result) bool {
 	return len(g.Severities) == 0 || sarif.MatchesSeverity(r, g.Severities)
 }
 
-// ParseGateSeverities validates --error-on-severity values.
+// ParseGateSeverities validates --error-on-severity values. The flag is
+// repeatable, and each value may also be a comma-separated list, so
+// "--error-on-severity error,warning" and "--error-on-severity error
+// --error-on-severity warning" mean the same thing.
 func ParseGateSeverities(values []string) ([]string, error) {
 	var out []string
 	for _, v := range values {
-		normalized := strings.ToLower(strings.TrimSpace(v))
-		if normalized == "" {
-			continue
+		for _, token := range strings.Split(v, ",") {
+			normalized := strings.ToLower(strings.TrimSpace(token))
+			if normalized == "" {
+				continue
+			}
+			if err := sarif.ValidateSeverity(normalized); err != nil {
+				return nil, err
+			}
+			out = append(out, normalized)
 		}
-		if err := sarif.ValidateSeverity(normalized); err != nil {
-			return nil, err
-		}
-		out = append(out, normalized)
 	}
 	return out, nil
 }

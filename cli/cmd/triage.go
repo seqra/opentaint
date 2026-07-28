@@ -91,7 +91,7 @@ func init() {
 // addGateFlags registers the failure-gate flags shared by scan and triage.
 func addGateFlags(cmd *cobra.Command, errorOnFindings *bool, severities *[]string) {
 	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain (new ones only, with --baseline)")
-	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: error, warning, note, none (repeatable, default all)")
+	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: error, warning, note, none (comma-separated or repeated; default all)")
 }
 
 func runTriage(cfg TriageConfig, reportPath string) {
