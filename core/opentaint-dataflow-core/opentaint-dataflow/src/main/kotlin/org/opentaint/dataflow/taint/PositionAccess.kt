@@ -3,8 +3,6 @@ package org.opentaint.dataflow.taint
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
-import org.opentaint.dataflow.ap.ifds.ElementAccessor
-import org.opentaint.dataflow.ap.ifds.FieldAccessor
 
 sealed interface PositionAccess {
     data class Simple(val base: AccessPathBase) : PositionAccess
@@ -14,11 +12,6 @@ sealed interface PositionAccess {
 fun PositionAccess.base(): AccessPathBase = when (this) {
     is PositionAccess.Complex -> this.base.base()
     is PositionAccess.Simple -> this.base
-}
-
-private fun PositionAccess.baseIsResult(): Boolean = when (this) {
-    is PositionAccess.Complex -> base.baseIsResult()
-    is PositionAccess.Simple -> base is AccessPathBase.Return
 }
 
 fun PositionAccess.withPrefix(prefix: Accessor): PositionAccess = when (this) {

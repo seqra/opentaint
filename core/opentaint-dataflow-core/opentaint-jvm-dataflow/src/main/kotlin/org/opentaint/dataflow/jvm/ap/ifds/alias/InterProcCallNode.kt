@@ -78,15 +78,8 @@ private class ResolvedCall(val methods: Map<JIRMethod, ResolvedCallMethod>?) {
 }
 
 private class NestedCallInstEvalCtx(val call: Stmt.Call, val ctx: ContextInfo) : InstEvalContext {
-    // A resolved callee can reference an argument index the call site does not
-    // provide -- an arity mismatch from bridge/synthetic methods, varargs
-    // adaptation, or an approximation whose positions exceed the actual call.
-    // Aborting here kills the whole package unit's analysis (losing every
-    // finding in it); fall back instead to a value that carries no reference
-    // aliasing, consistent with the Expr.Unknown fallbacks used elsewhere in
-    // this builder.
     override fun createArg(idx: Int): Value = call.args.getOrNull(idx)
-        ?: SimpleValue.Primitive
+        ?: error("Incorrect argument idx: $idx")
 
     override fun createThis(isOuter: Boolean): Value = call.instance
         ?: error("Non instance call")
@@ -99,6 +92,11 @@ private fun resolveCallNoCache(stmt: Stmt.Call, ctx: ContextInfo, callResolver: 
         ?: return ResolvedCall.empty
 
     val resolvedCall = methods.mapIndexedNotNull { idx, method ->
+        // Override approximation may return a bridge or synthetic target with a different
+        // descriptor. Such a method cannot be the target of this call and must not enter the
+        // nested analysis with arguments mapped to the wrong positions.
+        if (method.parameters.size != stmt.args.size) return@mapIndexedNotNull null
+
         val graph = callResolver.buildMethodGraph(method)
             ?: return@mapIndexedNotNull null
 
