@@ -2,7 +2,8 @@ rules:
   - id: java-ssrf-sink
     options:
       lib: true
-    tags: [ssrf-sink]
+    tags:
+      - ssrf-sink
     severity: NOTE
     message: Requesting URL obtained from untrusted data without
     metadata:
