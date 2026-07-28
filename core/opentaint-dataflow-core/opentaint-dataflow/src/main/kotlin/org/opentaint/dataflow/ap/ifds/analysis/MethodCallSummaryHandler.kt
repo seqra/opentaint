@@ -115,6 +115,8 @@ interface MethodCallSummaryHandler {
         return when (summaryEffect) {
             is SummaryApRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
                 // todo: filter exclusions
+                // The deep lift is the LEGACY flat channel (automata/cactus); tree summaries are
+                // deep-free and carry the claim on the exit tree's abstract nodes instead.
                 val summaryDeepExclusion = summaryEdge.summaryDeepExclusion()
                 val exclusion = currentFactAp.exclusions.withDeepExclusion(summaryDeepExclusion)
 

@@ -267,7 +267,8 @@ private class MethodTaintedSummariesMergingStorage(
             return true
         }
 
-        val mergedExclusion = currentExclusion.mergeAndIntersectDeep(addedEx)
+        // Tree exclusion sets are deep-free (the starred clean is structural); union asserts it.
+        val mergedExclusion = currentExclusion.union(addedEx)
         if (mergedExclusion === currentExclusion) {
             return treeStorage.add(exitAccess)
         }

@@ -66,7 +66,8 @@ private class SideEffectRequirementStorage(
         }
 
         val currentExclusion = current.exclusions
-        val mergedExclusion = currentExclusion.mergeAndIntersectDeep(requirement.exclusions)
+        // Tree exclusion sets are deep-free (the starred clean is structural); union asserts it.
+        val mergedExclusion = currentExclusion.union(requirement.exclusions)
 
         if (mergedExclusion === currentExclusion) return null
 

@@ -92,7 +92,8 @@ class MethodEdgesInitialToFinalTreeApSet(
                 return accessWithExclusion
             }
 
-            val mergedExclusion = currentExclusion.mergeAndIntersectDeep(accessWithExclusion.exclusion)
+            // Tree exclusion sets are deep-free (the starred clean is structural); union asserts it.
+            val mergedExclusion = currentExclusion.union(accessWithExclusion.exclusion)
             exclusions[edgeSetIdx] = mergedExclusion
 
             val currentAccess = edges[edgeSetIdx]!!
