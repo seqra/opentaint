@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.DeepMarkExclusion
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -94,6 +95,15 @@ class AccessTree(
 
     override fun abstractOnly(): FinalFactAp =
         AccessTree(apManager, base, apManager.abstractNode, exclusions)
+
+    override fun deepClean(mark: TaintMarkAccessor): FinalFactAp.DeepCleanResult {
+        val markIdx = with(apManager) { mark.idx }
+        val cleaned = access.deepCleanAtBase(markIdx, IdentityHashMap())
+            ?: return FinalFactAp.DeepCleanResult.RemovedCompletely
+
+        if (cleaned === access) return FinalFactAp.DeepCleanResult.Cleaned(this)
+        return FinalFactAp.DeepCleanResult.Cleaned(AccessTree(apManager, base, cleaned, exclusions))
+    }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
@@ -564,6 +574,26 @@ class AccessTree(
             // the annotation is a claim about the abstraction's future growth; it dies with it
             manager.create(isAbstract = false, isFinal, abstraction = null, accessors, accessorNodes)
 
+        /**
+         * The enforcement half of [FinalFactAp.deepClean]: content being attached below an
+         * annotated abstract node loses the excluded marks at the depths the annotation claims.
+         * Returns null when nothing of the attachment survives.
+         */
+        private fun AccessNode.filterByAbstraction(abstraction: AbstractionExclusions?): AccessNode? {
+            if (abstraction == null) return this
+
+            var filtered: AccessNode? = this
+            if (abstraction.marksFromDepth1.isNotEmpty()) {
+                val marks = IntOpenHashSet(abstraction.marksFromDepth1)
+                filtered = filtered?.removeAccessors(marks, depth = 1, minPruneDepth = 1)
+            }
+            if (abstraction.marksFromDepth2.isNotEmpty()) {
+                val marks = IntOpenHashSet(abstraction.marksFromDepth2)
+                filtered = filtered?.removeAccessors(marks, depth = 1, minPruneDepth = 2)
+            }
+            return filtered
+        }
+
         private fun prependAnyAccessor(): AccessNode {
             val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
             val nextNode = if (anyNode == null) {
@@ -650,6 +680,49 @@ class AccessTree(
                     node.removeAccessors(toRemove, depth + 1, minPruneDepth)
                 }
             }
+        }
+
+        /**
+         * The structural whole-subtree clean at the fact's base (see [FinalFactAp.deepClean]):
+         * direct mark children of the base survive (the base clean action's territory, mirroring
+         * the old `minPruneDepth = 2`), everything below at least one accessor loses the mark,
+         * and abstract nodes pick up the residual claim — the base itself from depth 2, deeper
+         * nodes from depth 1 because everything below them is already under an accessor of the
+         * base. Returns null when nothing of the node survives.
+         */
+        fun deepCleanAtBase(markIdx: AccessorIdx, cache: IdentityHashMap<AccessNode, AccessNode?>): AccessNode? {
+            // a direct mark child of the base is at depth 1 and stays; everything else is cleaned
+            val transformed = transformAccessorsNonEmpty { accessor, node ->
+                if (accessor == markIdx) node else node.deepCleanBelowBase(markIdx, cache)
+            } ?: return null // isEmpty implies neither abstract nor final: nothing survived
+
+            return transformed.annotate(markIdx, fromBase = true)
+        }
+
+        private fun deepCleanBelowBase(markIdx: AccessorIdx, cache: IdentityHashMap<AccessNode, AccessNode?>): AccessNode? {
+            if (cache.containsKey(this)) return cache[this]
+
+            manager.cancellation.checkpoint()
+
+            val transformed = transformAccessorsNonEmpty { accessor, node ->
+                if (accessor == markIdx) null else node.deepCleanBelowBase(markIdx, cache)
+            }
+
+            val result = transformed?.annotate(markIdx, fromBase = false)
+
+            cache[this] = result
+            return result
+        }
+
+        private fun annotate(markIdx: AccessorIdx, fromBase: Boolean): AccessNode {
+            if (!isAbstract) return this
+
+            val annotated = with(AbstractionExclusions.Companion) {
+                if (fromBase) abstraction.addMarkFromDepth2(markIdx) else abstraction.addMarkFromDepth1(markIdx)
+            }
+            if (annotated == abstraction) return this
+
+            return manager.create(isAbstract, isFinal, annotated, accessors, accessorNodes)
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {
@@ -1189,6 +1262,7 @@ class AccessTree(
             val concatNode = if (isAbstract && other != null) {
                 other.filterTypes(typeChecker, path)
                     ?.node?.limitElementAccess(limit = subsequentArrayElementLimit)
+                    ?.filterByAbstraction(abstraction)
             } else null
 
             val nestedAccessors = mutableListOf<IntObjectImmutablePair<AccessNode>>()
