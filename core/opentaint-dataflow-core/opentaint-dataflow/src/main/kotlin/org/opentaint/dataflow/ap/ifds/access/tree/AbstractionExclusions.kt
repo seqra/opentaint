@@ -132,5 +132,23 @@ class AbstractionExclusions private constructor(
             }
             return create(d1, d2.toIntArray())
         }
+
+        /**
+         * The accumulation of two claims that BOTH hold for one lineage — the caller had already
+         * cleaned one mark when the callee's summary, whose exit abstraction continues the same
+         * object, cleaned another. Marks union; a mark claimed at both depths keeps the stronger
+         * (min — depth 1 covers everything depth 2 does).
+         */
+        fun union(a: AbstractionExclusions?, b: AbstractionExclusions?): AbstractionExclusions? {
+            if (a == null) return b
+            if (b == null) return a
+            if (a == b) return a
+
+            val d1 = (a.marksFromDepth1.toSet() + b.marksFromDepth1.toSet()).toIntArray().also { it.sort() }
+            val d2 = (a.marksFromDepth2.toSet() + b.marksFromDepth2.toSet())
+                .filter { d1.binarySearch(it) < 0 }
+                .toIntArray().also { it.sort() }
+            return create(d1, d2)
+        }
     }
 }

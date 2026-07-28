@@ -131,7 +131,16 @@ class AccessTree(
 
     private sealed interface AccessTreeDelta : FinalFactAp.Delta
 
-    data object EmptyAccessTreeDelta : AccessTreeDelta {
+    /**
+     * The abstract remainder of a caller fact matched against a summary's initial AP. It carries
+     * the caller abstraction's excluded-mark claim from the match point: the summary's exit
+     * abstraction continues the same object, so the claim must ride the summary application onto
+     * it — the flat mechanism preserved the caller's exclusion set by construction, and this is
+     * the structural counterpart.
+     */
+    data class EmptyAccessTreeDelta(
+        val abstraction: AbstractionExclusions? = null,
+    ) : AccessTreeDelta {
         override val isEmpty: Boolean get() = true
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
         override fun getStartAccessors(): Set<Accessor> = emptySet()
@@ -174,35 +183,24 @@ class AccessTree(
         if (base != other.base) return emptyList()
 
         var node = access
-        var initialAccessDepth = 0
         val access = other.access
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
                 if (!node.isFinal) return emptyList()
-                return listOf(EmptyAccessTreeDelta)
+                return listOf(EmptyAccessTreeDelta())
             }
 
             node = node.getChild(accessor) ?: return emptyList()
-            initialAccessDepth++
         }
 
+        // Tree facts carry a starred sanitizer's claim on their abstract nodes (see
+        // AbstractionExclusions), not in the exclusion set, so there is no deep sweep here:
+        // enforcement happens where content attaches, in concatToLeafAbstractNodes.
         val exclusion = other.exclusions
-        var filteredNode = when (exclusion) {
+        val filteredNode = when (exclusion) {
             ExclusionSet.Empty -> node
             is ExclusionSet.Concrete -> node.filter(exclusion)
             ExclusionSet.Universe -> error("Unexpected universe exclusion in initial fact")
-        }
-
-        val deepExclusion = exclusion.deepExclusion()
-        if (deepExclusion.isNotEmpty()) {
-            val excludedAccessors = IntOpenHashSet()
-            deepExclusion.forEach {
-                excludedAccessors.add(with(apManager) { it.excludedAccessor().idx })
-            }
-
-            val minPruneDepth = if (initialAccessDepth == 0) 2 else 1
-            filteredNode = filteredNode.removeAccessors(excludedAccessors, depth = 1, minPruneDepth = minPruneDepth)
-                ?: return emptyList()
         }
 
         if (filteredNode.isEmpty) return emptyList()
@@ -214,12 +212,17 @@ class AccessTree(
             .takeIf { !it.isEmpty }
             ?.let { NodeAccessTreeDelta(apManager, it) }
 
-        return listOfNotNull(nonAbstractDelta, EmptyAccessTreeDelta)
+        return listOfNotNull(nonAbstractDelta, EmptyAccessTreeDelta(filteredNode.abstraction))
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
         when (val d = delta as AccessTreeDelta) {
-            EmptyAccessTreeDelta -> return this
+            is EmptyAccessTreeDelta -> {
+                val abstraction = d.abstraction ?: return this
+                val annotated = access.annotateAbstractNodes(abstraction, IdentityHashMap())
+                if (annotated === access) return this
+                return AccessTree(apManager, base, annotated, exclusions)
+            }
             is NodeAccessTreeDelta -> {
                 val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, d.node)
                     ?: return null
@@ -360,7 +363,8 @@ class AccessTree(
                 if (isFinal) {
                     appendLine(FinalAccessor.toSuffix())
                 } else {
-                    appendLine("/*$suffix")
+                    val annotation = abstraction?.toString().orEmpty()
+                    appendLine("/*$annotation$suffix")
                 }
             }
 
@@ -511,8 +515,11 @@ class AccessTree(
         }
 
         fun splitOnMatching(otherAccess: AccessPath.AccessNode?): MatchResult  {
+            // An ANNOTATED abstraction never matches: the id-edge storage represents the matched
+            // part as the initial fact's plain abstraction, which would silently drop the
+            // excluded-mark claim. Such an edge is stored with its real exit tree instead.
             if (otherAccess == null) {
-                if (!isAbstract) return MatchResult.NotMatched
+                if (!isAbstract || abstraction != null) return MatchResult.NotMatched
 
                 val remainder = removeAbstraction().takeIf { !it.isEmpty }
                 return MatchResult.MatchedWithRemainder(remainder)
@@ -533,7 +540,7 @@ class AccessTree(
                     ?: return MatchResult.NotMatched
             }
 
-            if (!node.isAbstract) return MatchResult.NotMatched
+            if (!node.isAbstract || node.abstraction != null) return MatchResult.NotMatched
 
             val remainder = this.reconstructRemainder(accessorsOnPath, idx = 0)
             return MatchResult.MatchedWithRemainder(remainder)
@@ -720,6 +727,38 @@ class AccessTree(
             if (annotated == abstraction) return this
 
             return manager.create(isAbstract, isFinal, annotated, accessors, accessorNodes)
+        }
+
+        /**
+         * Accumulates the caller's abstraction claim (see [EmptyAccessTreeDelta]) onto every
+         * abstract node of a summary's exit fact: for a fact-to-fact edge, every abstract node in
+         * the exit continues the initial fact's abstraction, which is the caller's.
+         */
+        fun annotateAbstractNodes(
+            incoming: AbstractionExclusions,
+            cache: IdentityHashMap<AccessNode, AccessNode>,
+        ): AccessNode {
+            cache[this]?.let { return it }
+
+            manager.cancellation.checkpoint()
+
+            val transformed = transformAccessors { _, node ->
+                node.annotateAbstractNodes(incoming, cache)
+            }
+
+            val result = if (!transformed.isAbstract) {
+                transformed
+            } else {
+                val merged = AbstractionExclusions.union(transformed.abstraction, incoming)
+                if (merged == transformed.abstraction) {
+                    transformed
+                } else {
+                    manager.create(transformed.isAbstract, transformed.isFinal, merged, transformed.accessors, transformed.accessorNodes)
+                }
+            }
+
+            cache[this] = result
+            return result
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {
