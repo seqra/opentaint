@@ -49,6 +49,14 @@ class AbstractionExclusions private constructor(
 
     private fun allMarks(): IntArray = (marksFromDepth1 + marksFromDepth2).also { it.sort() }
 
+    /**
+     * The claim as seen from any position at least one accessor below the annotated node:
+     * everything below such a position is at depth >= 2 relative to the annotated node, so every
+     * claimed mark — depth-1 and depth-2 alike — applies from relative depth 1 there.
+     */
+    fun collapseToDepth1(): AbstractionExclusions =
+        if (marksFromDepth2.isEmpty()) this else AbstractionExclusions(allMarks(), EMPTY)
+
     override fun toString(): String = buildString {
         append("!*{d1=")
         append(marksFromDepth1.joinToString(","))

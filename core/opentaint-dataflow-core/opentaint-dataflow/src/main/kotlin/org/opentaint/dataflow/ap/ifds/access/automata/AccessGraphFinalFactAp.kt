@@ -29,6 +29,10 @@ data class AccessGraphFinalFactAp(
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessGraphFinalFactAp(base, access, exclusions)
 
+    // automata carries the deep claim on the flat exclusion channel, which is preserved here
+    override fun abstractPart(): FinalFactAp =
+        AccessGraphFinalFactAp(base, access.manager.emptyGraph(), exclusions)
+
     override fun isAbstract(): Boolean =
         exclusions !is ExclusionSet.Universe && access.initialNodeIsFinal()
 

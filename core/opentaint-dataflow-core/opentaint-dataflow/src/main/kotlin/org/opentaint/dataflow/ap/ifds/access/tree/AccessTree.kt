@@ -53,6 +53,9 @@ class AccessTree(
     override fun exclude(accessor: Accessor): FinalFactAp =
         AccessTree(apManager, base, access, exclusions.add(accessor))
 
+    override fun abstractPart(): FinalFactAp =
+        AccessTree(apManager, base, access.abstractOnly(), exclusions)
+
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessTree(apManager, base, access, exclusions)
 
@@ -587,6 +590,15 @@ class AccessTree(
          * The enforcement half of [FinalFactAp.deepClean]: content being attached below an
          * annotated abstract node loses the excluded marks at the depths the annotation claims.
          * Returns null when nothing of the attachment survives.
+         *
+         * Removing the concrete marks is not the whole job: the attachment can itself contain
+         * abstract nodes, and there the continuation is NOT yet known — the fact can still grow
+         * below them after the attach point's own abstraction is consumed. The claim therefore
+         * outlives the attach point on those nodes: the attachment's root sits at the attach
+         * point itself and inherits the annotation verbatim, while every node strictly below it
+         * is at least one accessor down, where each claimed mark applies from relative depth 1.
+         * Without this, a purely abstract delta passes the mark-removal untouched and comes out
+         * unprotected — the shape of the in-helper clean-then-read false positive.
          */
         private fun AccessNode.filterByAbstraction(abstraction: AbstractionExclusions?): AccessNode? {
             if (abstraction == null) return this
@@ -600,7 +612,22 @@ class AccessTree(
                 val marks = IntOpenHashSet(abstraction.marksFromDepth2)
                 filtered = filtered?.removeAccessors(marks, depth = 1, minPruneDepth = 2)
             }
-            return filtered
+            if (filtered == null) return null
+
+            val belowClaim = abstraction.collapseToDepth1()
+            val cache = IdentityHashMap<AccessNode, AccessNode>()
+            var annotated = filtered.transformAccessors { _, node ->
+                node.annotateAbstractNodes(belowClaim, cache)
+            }
+            if (annotated.isAbstract) {
+                val merged = AbstractionExclusions.union(annotated.abstraction, abstraction)
+                if (merged != annotated.abstraction) {
+                    annotated = manager.create(
+                        annotated.isAbstract, annotated.isFinal, merged, annotated.accessors, annotated.accessorNodes
+                    )
+                }
+            }
+            return annotated
         }
 
         private fun prependAnyAccessor(): AccessNode {
@@ -722,6 +749,13 @@ class AccessTree(
             cache[this] = result
             return result
         }
+
+        /**
+         * The node reduced to its abstraction: no concrete children, but the abstraction and its
+         * excluded-mark annotation kept. See [FinalFactAp.abstractPart].
+         */
+        fun abstractOnly(): AccessNode =
+            manager.create(isAbstract = true, isFinal = false, abstraction, accessors = null, accessorNodes = null)
 
         private fun annotate(markIdx: AccessorIdx, fromBase: Boolean): AccessNode {
             if (!isAbstract) return this
