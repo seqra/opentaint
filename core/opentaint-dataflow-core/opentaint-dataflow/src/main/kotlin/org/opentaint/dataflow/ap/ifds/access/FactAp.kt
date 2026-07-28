@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.taint.Cleaner
 
 interface AccessorList {
     fun startsWithAccessor(accessor: Accessor): Boolean
@@ -92,7 +93,7 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
      * the representation also retains whatever residual effect is needed to clean content that
      * materializes later. Callers do not distinguish those cases.
      */
-    fun clean(accessors: List<Accessor>): CleanResult
+    fun clean(cleaner: Cleaner): CleanResult
 
     data class CleanResult(
         val survivingFacts: List<FinalFactAp>,

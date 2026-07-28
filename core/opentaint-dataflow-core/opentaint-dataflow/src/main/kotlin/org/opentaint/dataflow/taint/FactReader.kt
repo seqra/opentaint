@@ -49,6 +49,18 @@ class FinalFactReader(
             matchedNode = { true }
         )
 
+    fun clean(cleaner: Cleaner): FinalFactAp.CleanResult? {
+        if (cleaner.requiresDemandResolution) {
+            val present = when (cleaner) {
+                is Cleaner.AllMarks -> containsPosition(cleaner.position)
+                is Cleaner.Mark -> containsPositionWithTaintMark(cleaner.position, cleaner.mark)
+            }
+            if (!present) return null
+        }
+
+        return factAp.clean(cleaner)
+    }
+
     fun replaceFact(factAp: FinalFactAp) = FinalFactReader(factAp, apManager).also { it.refinement = refinement }
 
     fun refineFact(factAp: InitialFactAp): InitialFactAp {

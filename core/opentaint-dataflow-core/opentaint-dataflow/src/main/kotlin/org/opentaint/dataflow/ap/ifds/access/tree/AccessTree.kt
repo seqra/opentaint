@@ -30,6 +30,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isS
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
+import org.opentaint.dataflow.taint.Cleaner
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.util.forEachIntEntry
@@ -95,8 +96,8 @@ class AccessTree(
         access.removeAbstraction().takeIf { !it.isEmpty }
             ?.let { AccessTree(apManager, base, it, exclusions) }
 
-    override fun clean(accessors: List<Accessor>): FinalFactAp.CleanResult =
-        clean(accessors, ::cleanAnyField)
+    override fun clean(cleaner: Cleaner): FinalFactAp.CleanResult =
+        clean(cleaner, ::cleanAnyField)
 
     private fun cleanAnyField(mark: TaintMarkAccessor): FinalFactAp.CleanResult {
         val markIdx = with(apManager) { mark.idx }

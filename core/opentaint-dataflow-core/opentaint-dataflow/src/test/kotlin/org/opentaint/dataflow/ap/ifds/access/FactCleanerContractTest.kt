@@ -9,6 +9,9 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.taint.Cleaner
+import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.withSuffix
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
@@ -18,7 +21,11 @@ import kotlin.test.assertTrue
 class FactCleanerContractTest {
     private val base = AccessPathBase.This
     private val field = FieldAccessor("Box", "value", "String")
+    private val nestedField = FieldAccessor("String", "nested", "String")
     private val mark = TaintMarkAccessor("tainted")
+
+    private fun cleaner(vararg accessors: Accessor): Cleaner.Mark =
+        Cleaner.Mark(PositionAccess.Simple(base).withSuffix(accessors.toList()), mark)
 
     private object UnrollStrategy : AnyAccessorUnrollStrategy {
         override fun unrollAccessor(accessor: Accessor): Boolean = false
@@ -36,7 +43,7 @@ class FactCleanerContractTest {
             assertEquals(
                 1,
                 manager.mostAbstractFinalAp(base)
-                    .clean(listOf(AnyAccessor, mark))
+                    .clean(cleaner(AnyAccessor))
                     .survivingFacts.size,
                 "${manager::class.simpleName} must preserve a cleaned abstract fact",
             )
@@ -46,7 +53,7 @@ class FactCleanerContractTest {
                 concrete = concrete.prependAccessor(accessor)
             }
 
-            val cleanResult = concrete.clean(listOf(AnyAccessor, mark))
+            val cleanResult = concrete.clean(cleaner(AnyAccessor))
             assertTrue(
                 cleanResult.survivingFacts.isEmpty() ||
                     cleanResult.survivingFacts.none {
@@ -65,11 +72,33 @@ class FactCleanerContractTest {
                 concrete = concrete.prependAccessor(accessor)
             }
 
-            val plain = concrete.clean(listOf(field, mark))
-            val anyField = concrete.clean(listOf(AnyAccessor, mark))
+            val plain = concrete.clean(cleaner(field))
+            val anyField = concrete.clean(cleaner(AnyAccessor))
 
             assertTrue(plain.survivingFacts.isEmpty())
             assertTrue(anyField.survivingFacts.isEmpty())
+        }
+    }
+
+    @Test
+    fun `any-field keeps its meaning below an exact position`() {
+        for (manager in managers()) {
+            var concrete = manager.createFinalAp(base, ExclusionSet.Empty)
+            for (accessor in listOf(field, nestedField, mark).asReversed()) {
+                concrete = concrete.prependAccessor(accessor)
+            }
+
+            val cleaned = concrete.clean(cleaner(field, AnyAccessor))
+
+            assertTrue(
+                cleaned.survivingFacts.isEmpty() ||
+                    cleaned.survivingFacts.none {
+                        it.readAccessor(field)
+                            ?.readAccessor(nestedField)
+                            ?.startsWithAccessor(mark) == true
+                    },
+                "${manager::class.simpleName} changed nested AnyField semantics",
+            )
         }
     }
 }
