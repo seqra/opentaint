@@ -5,7 +5,7 @@ import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
@@ -41,8 +41,8 @@ class JIRMethodCallSummaryHandler(
         currentFactAp: FinalFactAp,
         summaryEffect: MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication,
         summaryEdge: SummaryEdge,
-        createSideEffectRequirement: (refinement: FactFlowState) -> Sequent?,
-        handleSummaryEdge: (initialFactRefinement: FactFlowState?, summaryFactAp: FinalFactAp) -> Sequent
+        createSideEffectRequirement: (refinement: FactDemandState) -> Sequent?,
+        handleSummaryEdge: (initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp) -> Sequent
     ): Set<Sequent> {
         val result = hashSetOf<Sequent>()
 
@@ -51,7 +51,7 @@ class JIRMethodCallSummaryHandler(
             summaryEffect,
             summaryEdge,
             createSideEffectRequirement,
-        ) { initialFactRefinement: FactFlowState?, summaryFactAp: FinalFactAp ->
+        ) { initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp ->
             if (initialFactRefinement != null) {
                 createSideEffectRequirement(initialFactRefinement)?.also { result.add(it) }
             }

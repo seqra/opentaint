@@ -2,7 +2,8 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import kotlinx.collections.immutable.persistentHashMapOf
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.FactSEBuilder
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.Storage
@@ -10,13 +11,13 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class FactSESummariesCactusStorage(
     methodInitialInst: CommonInst
-) : CommonFactSideEffectSummary<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(methodInitialInst),
+) : CommonFactSideEffectSummary<CactusInitialAccess, CactusFinalAccess>(methodInitialInst),
     CactusInitialApAccess, CactusFinalApAccess {
-    override fun createStorage(): Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
+    override fun createStorage(): Storage<CactusInitialAccess, CactusFinalAccess> =
         CactusSEStorage()
 }
 
-private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
+private class CactusSEStorage : Storage<CactusInitialAccess, CactusFinalAccess> {
     private var initialAccessToStorage =
         persistentHashMapOf<AccessPathWithCycles.AccessNode?, CactusSEMergeStorage>()
 
@@ -28,19 +29,19 @@ private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, Access
         }
 
     override fun add(
-        iap: AccessPathWithCycles.AccessNode?,
-        se: Map<SideEffectKind, FactFlowState>,
-        added: MutableList<FactSEBuilder<AccessPathWithCycles.AccessNode?>>
+        iap: CactusInitialAccess,
+        se: Map<SideEffectKind, FactDemandState>,
+        added: MutableList<FactSEBuilder<CactusInitialAccess>>
     ) {
-        val storageNode = getOrCreate(iap)
-        for ((kind, flowState) in se) {
-            storageNode.add(kind, flowState)?.let { added += it }
+        val storageNode = getOrCreate(iap.access)
+        for ((kind, demandState) in se) {
+            storageNode.add(kind, demandState, iap.cleanerEffects)?.let { added += it }
         }
     }
 
     override fun collectSummariesTo(
-        dst: MutableList<FactSEBuilder<AccessPathWithCycles.AccessNode?>>,
-        initialFactPattern: AccessCactus.AccessNode?
+        dst: MutableList<FactSEBuilder<CactusInitialAccess>>,
+        initialFactPattern: CactusFinalAccess?
     ) {
         initialAccessToStorage.values.forEach { storage ->
             dst += storage.summaries()
@@ -48,13 +49,46 @@ private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, Access
     }
 }
 
-private class CactusSEMergeStorage(val initialAccess: AccessPathWithCycles.AccessNode?) :
-    CommonFactSideEffectSummary.SideEffectExclusionMergingStorage<AccessPathWithCycles.AccessNode?>() {
-    override fun createBuilder(): FactSEBuilder<AccessPathWithCycles.AccessNode?> =
-        FactSECactusApBuilder().setInitialAp(initialAccess)
+private class CactusSEMergeStorage(
+    private val initialAccess: AccessPathWithCycles.AccessNode?,
+) {
+    private data class State(
+        val demandState: FactDemandState,
+        val cleanerEffects: AnyFieldCleanerEffects,
+    )
+
+    private var sideEffects = persistentHashMapOf<SideEffectKind, State>()
+
+    fun add(
+        kind: SideEffectKind,
+        demandState: FactDemandState,
+        cleanerEffects: AnyFieldCleanerEffects,
+    ): FactSEBuilder<CactusInitialAccess>? {
+        val current = sideEffects[kind]
+        val merged = current?.let {
+            State(it.demandState join demandState, it.cleanerEffects join cleanerEffects)
+        } ?: State(demandState, cleanerEffects)
+        if (merged == current) return null
+
+        sideEffects = sideEffects.put(kind, merged)
+        return builder(kind, merged)
+    }
+
+    fun summaries(): List<FactSEBuilder<CactusInitialAccess>> =
+        sideEffects.map { (kind, state) -> builder(kind, state) }
+
+    private fun builder(
+        kind: SideEffectKind,
+        state: State,
+    ): FactSEBuilder<CactusInitialAccess> =
+        FactSECactusApBuilder()
+            .setInitialAp(CactusInitialAccess(initialAccess, state.cleanerEffects))
+            .setDemandState(state.demandState)
+            .setKind(kind)
 }
 
-private class FactSECactusApBuilder: FactSEBuilder<AccessPathWithCycles.AccessNode?>(),
+private class FactSECactusApBuilder: FactSEBuilder<CactusInitialAccess>(),
     CactusInitialApAccess, CactusFinalApAccess {
-    override fun nonNullIAP(iap: AccessPathWithCycles.AccessNode?): AccessPathWithCycles.AccessNode? = iap
+    override fun nonNullIAP(iap: CactusInitialAccess?): CactusInitialAccess =
+        iap ?: error("iap not initialized")
 }

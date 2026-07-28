@@ -2,7 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.FactSEBuilder
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.SideEffectExclusionMergingStorage
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -51,13 +51,12 @@ private class TaintedSESummariesGroupedByFactStorage(
 
     override fun add(
         iap: AccessPath.AccessNode?,
-        se: Map<SideEffectKind, FactFlowState>,
+        se: Map<SideEffectKind, FactDemandState>,
         added: MutableList<FactSEBuilder<AccessPath.AccessNode?>>
     ) {
         val storageNode = storageRoot.getOrCreate(iap)
-        for ((kind, flowState) in se) {
-            check(flowState.deepCleanEffects.isEmpty) { "Tree cleaner effects must be structural" }
-            storageNode.add(kind, flowState)?.let { added += it }
+        for ((kind, demandState) in se) {
+            storageNode.add(kind, demandState)?.let { added += it }
         }
     }
 

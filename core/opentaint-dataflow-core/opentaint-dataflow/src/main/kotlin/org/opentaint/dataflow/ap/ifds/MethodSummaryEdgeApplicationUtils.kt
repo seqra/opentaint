@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds
 
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 
 object MethodSummaryEdgeApplicationUtils {
@@ -9,16 +9,15 @@ object MethodSummaryEdgeApplicationUtils {
         data class SummaryApRefinement(val delta: FinalFactAp.Delta) : SummaryEdgeApplication
 
         /**
-         * The empty-delta application. [emptyDelta] carries the caller abstraction's excluded-mark
-         * claim from the match point (tree mode); appliers concat it onto the summary's exit fact
-         * so the claim survives the transit — the structural counterpart of this refinement
-         * carrying the caller's exclusion set. Deliberately has no default: a construction site
-         * without a caller-side delta must say `emptyDelta = null` and own that the claim, if any,
-         * does not transfer on its path.
+         * Demand refinement selected by an empty access-path delta.
+         *
+         * [representationDelta] independently carries state attached to the caller's abstraction,
+         * such as an any-field cleaner effect. Synthetic applications must pass `null` explicitly
+         * because they have no caller-side representation state to transfer.
          */
-        data class SummaryExclusionRefinement(
-            val flowState: FactFlowState,
-            val emptyDelta: FinalFactAp.Delta?,
+        data class SummaryDemandRefinement(
+            val demandState: FactDemandState,
+            val representationDelta: FinalFactAp.Delta?,
         ) : SummaryEdgeApplication
     }
 
@@ -28,16 +27,16 @@ object MethodSummaryEdgeApplicationUtils {
     ): List<SummaryEdgeApplication> =
         methodInitialFactAp.delta(methodSummaryInitialFactAp).map { delta ->
             if (delta.isEmpty) {
-                SummaryEdgeApplication.SummaryExclusionRefinement(
-                    methodInitialFactAp.flowState then methodSummaryInitialFactAp.flowState,
-                    emptyDelta = delta,
+                SummaryEdgeApplication.SummaryDemandRefinement(
+                    methodInitialFactAp.demandState then methodSummaryInitialFactAp.demandState,
+                    representationDelta = delta,
                 )
             } else {
                 SummaryEdgeApplication.SummaryApRefinement(delta)
             }
         }
 
-    fun emptyDeltaExclusionRefinementOrNull(
+    fun emptyDeltaDemandExclusionsOrNull(
         methodInitialFactAp: FinalFactAp,
         methodSummaryInitialFactAp: InitialFactAp,
     ): ExclusionSet? {

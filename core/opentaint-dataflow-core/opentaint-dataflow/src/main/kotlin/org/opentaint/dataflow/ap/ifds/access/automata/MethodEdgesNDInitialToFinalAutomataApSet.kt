@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.access.common.CommonNDF2FSet
 import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSetStorage
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesNDInitialToFinalAutomataApSet(
@@ -11,20 +12,21 @@ class MethodEdgesNDInitialToFinalAutomataApSet(
     initialStatement: CommonInst,
     languageManager: LanguageManager,
     maxInstIdx: Int,
-) : CommonNDF2FSet<AccessGraph, AccessGraph>(initialStatement, languageManager, maxInstIdx),
+) : CommonNDF2FSet<AutomataAccess, AutomataAccess>(initialStatement, languageManager, maxInstIdx),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun createApStorage() = object : DefaultNDF2FSetStorage<AccessGraph, AccessGraph>() {
-        override fun createStorage(): Storage<AccessGraph> = DefaultStorage()
+    override fun createApStorage() = object : DefaultNDF2FSetStorage<AutomataAccess, AutomataAccess>() {
+        override fun createStorage(): Storage<AutomataAccess> = DefaultStorage()
     }
 
-    override fun mostAbstractPattern(base: AccessPathBase): AccessGraph = apManager.emptyGraph()
+    override fun mostAbstractPattern(base: AccessPathBase): AutomataAccess =
+        AutomataAccess(apManager.emptyGraph(), AnyFieldCleanerEffects.Empty)
 
-    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AccessGraph> {
-        private val storage = hashSetOf<AccessGraph>()
-        override fun add(element: AccessGraph): AccessGraph? =
+    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AutomataAccess> {
+        private val storage = hashSetOf<AutomataAccess>()
+        override fun add(element: AutomataAccess): AutomataAccess? =
             if (storage.add(element)) element else null
 
-        override fun collect(dst: MutableList<AccessGraph>) {
+        override fun collect(dst: MutableList<AutomataAccess>) {
             dst.addAll(storage)
         }
     }

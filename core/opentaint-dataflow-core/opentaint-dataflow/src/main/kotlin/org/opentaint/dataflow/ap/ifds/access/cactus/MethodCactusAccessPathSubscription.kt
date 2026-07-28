@@ -11,25 +11,25 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.BitSet
 
 class MethodCactusAccessPathSubscription :
-    CommonAPSub<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(),
+    CommonAPSub<CactusInitialAccess, CactusFinalAccess>(),
     CactusInitialApAccess, CactusFinalApAccess {
-    override fun createZ2FSubStorage(callerEp: CommonInst): Z2FSubStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
+    override fun createZ2FSubStorage(callerEp: CommonInst): Z2FSubStorage<CactusInitialAccess, CactusFinalAccess> =
         SummaryEdgeFactTreeSubscriptionStorage()
 
-    override fun createF2FSubStorage(callerEp: CommonInst): F2FSubStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
+    override fun createF2FSubStorage(callerEp: CommonInst): F2FSubStorage<CactusInitialAccess, CactusFinalAccess> =
         SummaryEdgeFactAbstractTreeSubscriptionStorage()
 
-    override fun createNDF2FSubStorage(callerEp: CommonInst): NDF2FSubStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
+    override fun createNDF2FSubStorage(callerEp: CommonInst): NDF2FSubStorage<CactusInitialAccess, CactusFinalAccess> =
         NDSubStorage(callerEp)
 }
 
-private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSubStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
-    private val storage = Object2ObjectOpenHashMap<AccessPathWithCycles, AccessCactus.AccessNode>()
+private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSubStorage<CactusInitialAccess, CactusFinalAccess> {
+    private val storage = Object2ObjectOpenHashMap<AccessPathWithCycles, CactusFinalAccess>()
 
     override fun add(
         callerInitialAp: InitialFactAp,
-        callerExitAp: AccessCactus.AccessNode
-    ): CommonFactEdgeSubBuilder<AccessCactus.AccessNode>? {
+        callerExitAp: CactusFinalAccess
+    ): CommonFactEdgeSubBuilder<CactusFinalAccess>? {
         callerInitialAp as AccessPathWithCycles
 
         val current = storage[callerInitialAp]
@@ -38,7 +38,7 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSub
             return FactEdgeSubBuilder()
                 .setCallerNode(callerExitAp)
                 .setCallerInitialAp(callerInitialAp)
-                .setCallerFlowState(callerInitialAp.flowState)
+                .setCallerDemandState(callerInitialAp.demandState)
         }
 
         val (mergedExitAp, delta) = current.mergeAddDelta(callerExitAp)
@@ -49,28 +49,28 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage: CommonAPSub.F2FSub
         return FactEdgeSubBuilder()
             .setCallerNode(delta)
             .setCallerInitialAp(callerInitialAp)
-            .setCallerFlowState(callerInitialAp.flowState)
+            .setCallerDemandState(callerInitialAp.demandState)
     }
 
     // todo: filter
     override fun find(
-        dst: MutableList<CommonFactEdgeSubBuilder<AccessCactus.AccessNode>>,
-        summaryInitialFact: AccessPathWithCycles.AccessNode?,
+        dst: MutableList<CommonFactEdgeSubBuilder<CactusFinalAccess>>,
+        summaryInitialFact: CactusInitialAccess,
         emptyDeltaRequired: Boolean
     ) {
         storage.mapTo(dst) { (callerInitialAp, callerExitAp) ->
             FactEdgeSubBuilder()
                 .setCallerNode(callerExitAp)
                 .setCallerInitialAp(callerInitialAp)
-                .setCallerFlowState(callerInitialAp.flowState)
+                .setCallerDemandState(callerInitialAp.demandState)
         }
     }
 }
 
-private class SummaryEdgeFactTreeSubscriptionStorage: CommonAPSub.Z2FSubStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
-    private var callerPathEdgeFactAp: AccessCactus.AccessNode? = null
+private class SummaryEdgeFactTreeSubscriptionStorage: CommonAPSub.Z2FSubStorage<CactusInitialAccess, CactusFinalAccess> {
+    private var callerPathEdgeFactAp: CactusFinalAccess? = null
 
-    override fun add(callerExitAp: AccessCactus.AccessNode): CommonZeroEdgeSubBuilder<AccessCactus.AccessNode>? {
+    override fun add(callerExitAp: CactusFinalAccess): CommonZeroEdgeSubBuilder<CactusFinalAccess>? {
         if (callerPathEdgeFactAp == null) {
             callerPathEdgeFactAp = callerExitAp
             return ZeroEdgeSubBuilder().setNode(callerExitAp)
@@ -85,8 +85,8 @@ private class SummaryEdgeFactTreeSubscriptionStorage: CommonAPSub.Z2FSubStorage<
     }
 
     override fun find(
-        dst: MutableList<CommonZeroEdgeSubBuilder<AccessCactus.AccessNode>>,
-        summaryInitialFact: AccessPathWithCycles.AccessNode?
+        dst: MutableList<CommonZeroEdgeSubBuilder<CactusFinalAccess>>,
+        summaryInitialFact: CactusInitialAccess,
     ) {
         callerPathEdgeFactAp?.filterStartsWith(summaryInitialFact)?.let {
             dst += ZeroEdgeSubBuilder().setNode(it)
@@ -95,20 +95,20 @@ private class SummaryEdgeFactTreeSubscriptionStorage: CommonAPSub.Z2FSubStorage<
 }
 
 private class NDSubStorage(callerEp: CommonInst) :
-    DefaultNDF2FSubStorageWithAp<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(callerEp),
+    DefaultNDF2FSubStorageWithAp<CactusInitialAccess, CactusFinalAccess>(callerEp),
     CactusInitialApAccess {
-    override fun createBuilder(): CommonFactNDEdgeSubBuilder<AccessCactus.AccessNode> = FactNDEdgeSubBuilder()
+    override fun createBuilder(): CommonFactNDEdgeSubBuilder<CactusFinalAccess> = FactNDEdgeSubBuilder()
 
     private var maxIdx = 0
-    override fun createStorage(idx: Int): Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
+    override fun createStorage(idx: Int): Storage<CactusInitialAccess, CactusFinalAccess> {
         maxIdx = maxOf(maxIdx, idx)
         return FactStorage()
     }
 
-    private inner class FactStorage : Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
-        private var current: AccessCactus.AccessNode? = null
+    private inner class FactStorage : Storage<CactusInitialAccess, CactusFinalAccess> {
+        private var current: CactusFinalAccess? = null
 
-        override fun add(element: AccessCactus.AccessNode): AccessCactus.AccessNode? {
+        override fun add(element: CactusFinalAccess): CactusFinalAccess? {
             val cur = current
             if (cur == null) {
                 current = element
@@ -122,21 +122,20 @@ private class NDSubStorage(callerEp: CommonInst) :
             return delta
         }
 
-        override fun collect(dst: MutableList<AccessCactus.AccessNode>) {
+        override fun collect(dst: MutableList<CactusFinalAccess>) {
             current?.let { dst.add(it) }
         }
 
-        override fun collect(dst: MutableList<AccessCactus.AccessNode>, summaryInitialFact: AccessPathWithCycles.AccessNode?) {
-            val filteredExitAp = current?.filterStartsWith(summaryInitialFact) ?: return
-            dst.add(filteredExitAp)
+        override fun collect(dst: MutableList<CactusFinalAccess>, summaryInitialFact: CactusInitialAccess) {
+            current?.filterStartsWith(summaryInitialFact)?.let { dst.add(it) }
         }
     }
 
-    override fun relevantStorageIndices(summaryInitialFact: AccessPathWithCycles.AccessNode?): BitSet {
+    override fun relevantStorageIndices(summaryInitialFact: CactusInitialAccess): BitSet {
         return BitSet().also { it.set(0, maxIdx + 1) }
     }
 }
 
-private class ZeroEdgeSubBuilder : CommonZeroEdgeSubBuilder<AccessCactus.AccessNode>(), CactusFinalApAccess
-private class FactEdgeSubBuilder : CommonFactEdgeSubBuilder<AccessCactus.AccessNode>(), CactusFinalApAccess
-private class FactNDEdgeSubBuilder : CommonFactNDEdgeSubBuilder<AccessCactus.AccessNode>(), CactusFinalApAccess
+private class ZeroEdgeSubBuilder : CommonZeroEdgeSubBuilder<CactusFinalAccess>(), CactusFinalApAccess
+private class FactEdgeSubBuilder : CommonFactEdgeSubBuilder<CactusFinalAccess>(), CactusFinalApAccess
+private class FactNDEdgeSubBuilder : CommonFactNDEdgeSubBuilder<CactusFinalAccess>(), CactusFinalApAccess

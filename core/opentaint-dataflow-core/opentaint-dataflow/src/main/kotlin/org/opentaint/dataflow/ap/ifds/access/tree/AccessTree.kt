@@ -16,6 +16,7 @@ import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.clean
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.ReversedApNode
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.foldRight
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
@@ -97,13 +98,16 @@ class AccessTree(
     override fun abstractOnly(): FinalFactAp =
         AccessTree(apManager, base, apManager.abstractNode, exclusions)
 
-    override fun deepClean(mark: TaintMarkAccessor): FinalFactAp.DeepCleanResult {
-        val markIdx = with(apManager) { mark.idx }
-        val cleaned = access.deepCleanAtBase(markIdx, IdentityHashMap())
-            ?: return FinalFactAp.DeepCleanResult.RemovedCompletely
+    override fun clean(accessors: List<Accessor>): FinalFactAp.CleanResult =
+        clean(accessors, ::cleanAnyField)
 
-        if (cleaned === access) return FinalFactAp.DeepCleanResult.Cleaned(this)
-        return FinalFactAp.DeepCleanResult.Cleaned(AccessTree(apManager, base, cleaned, exclusions))
+    private fun cleanAnyField(mark: TaintMarkAccessor): FinalFactAp.CleanResult {
+        val markIdx = with(apManager) { mark.idx }
+        val cleaned = access.cleanAnyFieldAtBase(markIdx, IdentityHashMap())
+            ?: return FinalFactAp.CleanResult(emptyList(), removedAlternative = true)
+
+        val fact = if (cleaned === access) this else AccessTree(apManager, base, cleaned, exclusions)
+        return FinalFactAp.CleanResult(listOf(fact), removedAlternative = false)
     }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
@@ -583,7 +587,7 @@ class AccessTree(
             manager.create(isAbstract = false, isFinal, abstraction = null, accessors, accessorNodes)
 
         /**
-         * The enforcement half of [FinalFactAp.deepClean]: content being attached below an
+         * The enforcement half of [FinalFactAp.clean]: content being attached below an
          * annotated abstract node loses the excluded marks at the depths the annotation claims.
          * Returns null when nothing of the attachment survives.
          *
@@ -715,29 +719,29 @@ class AccessTree(
         }
 
         /**
-         * The structural whole-subtree clean at the fact's base (see [FinalFactAp.deepClean]):
+         * The structural whole-subtree clean at the fact's base (see [FinalFactAp.clean]):
          * direct mark children of the base survive (the base clean action's territory, mirroring
          * the old `minPruneDepth = 2`), everything below at least one accessor loses the mark,
          * and abstract nodes pick up the residual claim — the base itself from depth 2, deeper
          * nodes from depth 1 because everything below them is already under an accessor of the
          * base. Returns null when nothing of the node survives.
          */
-        fun deepCleanAtBase(markIdx: AccessorIdx, cache: IdentityHashMap<AccessNode, AccessNode?>): AccessNode? {
+        fun cleanAnyFieldAtBase(markIdx: AccessorIdx, cache: IdentityHashMap<AccessNode, AccessNode?>): AccessNode? {
             // a direct mark child of the base is at depth 1 and stays; everything else is cleaned
             val transformed = transformAccessorsNonEmpty { accessor, node ->
-                if (accessor == markIdx) node else node.deepCleanBelowBase(markIdx, cache)
+                if (accessor == markIdx) node else node.cleanMarkBelowBase(markIdx, cache)
             } ?: return null // isEmpty implies neither abstract nor final: nothing survived
 
             return transformed.annotate(markIdx, fromBase = true)
         }
 
-        private fun deepCleanBelowBase(markIdx: AccessorIdx, cache: IdentityHashMap<AccessNode, AccessNode?>): AccessNode? {
+        private fun cleanMarkBelowBase(markIdx: AccessorIdx, cache: IdentityHashMap<AccessNode, AccessNode?>): AccessNode? {
             if (cache.containsKey(this)) return cache[this]
 
             manager.cancellation.checkpoint()
 
             val transformed = transformAccessorsNonEmpty { accessor, node ->
-                if (accessor == markIdx) null else node.deepCleanBelowBase(markIdx, cache)
+                if (accessor == markIdx) null else node.cleanMarkBelowBase(markIdx, cache)
             }
 
             val result = transformed?.annotate(markIdx, fromBase = false)

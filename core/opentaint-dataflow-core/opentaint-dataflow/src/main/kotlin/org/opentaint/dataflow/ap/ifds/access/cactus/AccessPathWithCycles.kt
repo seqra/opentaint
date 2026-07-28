@@ -5,35 +5,40 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.DeepCleanEffects
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.forExclusions
 
 class AccessPathWithCycles(
     override val base: AccessPathBase,
     val access: AccessNode?,
     override val exclusions: ExclusionSet,
-    override val deepCleanEffects: DeepCleanEffects = DeepCleanEffects.Empty,
+    val anyFieldCleanerEffects: AnyFieldCleanerEffects = AnyFieldCleanerEffects.Empty,
 ): InitialFactAp {
     init {
-        FactFlowState(exclusions, deepCleanEffects)
+        check(exclusions !is ExclusionSet.Universe || anyFieldCleanerEffects.isEmpty) {
+            "Universe facts cannot carry cleaner effects"
+        }
     }
 
     override fun rebase(newBase: AccessPathBase): InitialFactAp =
-        AccessPathWithCycles(newBase, access, exclusions, deepCleanEffects)
+        AccessPathWithCycles(newBase, access, exclusions, anyFieldCleanerEffects)
 
     override fun isAbstract(): Boolean {
         TODO("Not yet implemented")
     }
 
     override fun exclude(accessor: Accessor): InitialFactAp =
-        AccessPathWithCycles(base, access, exclusions.add(accessor), deepCleanEffects)
+        AccessPathWithCycles(base, access, exclusions.add(accessor), anyFieldCleanerEffects)
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
-        replaceFlowState(flowState.withExclusions(exclusions))
-
-    override fun replaceFlowState(flowState: FactFlowState): InitialFactAp =
-        AccessPathWithCycles(base, access, flowState.exclusions, flowState.deepCleanEffects)
+        AccessPathWithCycles(
+            base,
+            access,
+            exclusions,
+            anyFieldCleanerEffects.takeUnless { exclusions is ExclusionSet.Universe }
+                ?: AnyFieldCleanerEffects.Empty,
+        )
 
     override fun getAllAccessors(): Set<Accessor> {
         val result = hashSetOf<Accessor>()
@@ -60,7 +65,7 @@ class AccessPathWithCycles(
     override fun readAccessor(accessor: Accessor): InitialFactAp? {
         if (access == null) return null
         if (access.accessor == accessor) {
-            return AccessPathWithCycles(base, access.next, exclusions, deepCleanEffects)
+            return AccessPathWithCycles(base, access.next, exclusions, anyFieldCleanerEffects)
         }
         return null
     }
@@ -68,7 +73,7 @@ class AccessPathWithCycles(
     // todo: rewrite stub implementation
     override fun prependAccessor(accessor: Accessor): InitialFactAp {
         val node = AccessNode(accessor, next = access, cycles = emptyList())
-        return AccessPathWithCycles(base, node, exclusions, deepCleanEffects)
+        return AccessPathWithCycles(base, node, exclusions, anyFieldCleanerEffects)
     }
 
     // todo: rewrite stub implementation
@@ -78,8 +83,10 @@ class AccessPathWithCycles(
 
     // todo: rewrite stub implementation
     override fun concat(delta: InitialFactAp.Delta): InitialFactAp {
-        val state = flowState then FactFlowState(ExclusionSet.Empty, delta.deepCleanEffects)
-        return replaceFlowState(state)
+        delta as AccessCactus.Delta
+        val effects = (anyFieldCleanerEffects then delta.anyFieldCleanerEffects)
+            .forExclusions(exclusions)
+        return AccessPathWithCycles(base, access, exclusions, effects)
     }
 
     // todo: rewrite stub implementation
@@ -112,7 +119,7 @@ class AccessPathWithCycles(
         if (base != other.base) return false
         if (access != other.access) return false
         if (exclusions != other.exclusions) return false
-        if (deepCleanEffects != other.deepCleanEffects) return false
+        if (anyFieldCleanerEffects != other.anyFieldCleanerEffects) return false
 
         return true
     }
@@ -121,7 +128,7 @@ class AccessPathWithCycles(
         var result = base.hashCode()
         result = 31 * result + access.hashCode()
         result = 31 * result + exclusions.hashCode()
-        result = 31 * result + deepCleanEffects.hashCode()
+        result = 31 * result + anyFieldCleanerEffects.hashCode()
         return result
     }
 

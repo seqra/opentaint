@@ -11,17 +11,17 @@ class MethodEdgesFinalCactusApSet(
     methodInitialStatement: CommonInst,
     private val maxInstIdx: Int,
     private val languageManager: LanguageManager,
-) : CommonZ2FSet<AccessCactusNode>(methodInitialStatement), CactusFinalApAccess {
-    override fun createApStorage(): ApStorage<AccessCactus.AccessNode> =
+) : CommonZ2FSet<CactusFinalAccess>(methodInitialStatement), CactusFinalApAccess {
+    override fun createApStorage(): ApStorage<CactusFinalAccess> =
         ZeroInitialFactEdges(maxInstIdx, languageManager)
 
     private class ZeroInitialFactEdges(
         maxInstIdx: Int,
         private val languageManager: LanguageManager,
-    ): ApStorage<AccessCactusNode> {
-        private val edges = arrayOfNulls<AccessCactusNode?>(instructionStorageSize(maxInstIdx))
+    ): ApStorage<CactusFinalAccess> {
+        private val edges = arrayOfNulls<CactusFinalAccess?>(instructionStorageSize(maxInstIdx))
 
-        override fun addEdge(statement: CommonInst, accessPath: AccessCactusNode): AccessCactusNode? {
+        override fun addEdge(statement: CommonInst, accessPath: CactusFinalAccess): CactusFinalAccess? {
             val factSetIdx = instructionStorageIdx(statement, languageManager)
             val factSet = edges[factSetIdx]
 
@@ -31,15 +31,12 @@ class MethodEdgesFinalCactusApSet(
             }
 
             val mergedFacts = factSet.mergeAdd(accessPath)
-            if (mergedFacts == factSet) {
-                return null
-            }
-
+            if (mergedFacts === factSet) return null
             edges[factSetIdx] = mergedFacts
             return mergedFacts
         }
 
-        override fun collectApAtStatement(statement: CommonInst, dst: MutableList<AccessCactus.AccessNode>) {
+        override fun collectApAtStatement(statement: CommonInst, dst: MutableList<CactusFinalAccess>) {
             edges[instructionStorageIdx(statement, languageManager)]?.let { dst.add(it) }
         }
     }

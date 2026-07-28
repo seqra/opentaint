@@ -6,7 +6,7 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgesForExitPoint
 import org.opentaint.dataflow.ap.ifds.NDFactToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.SummaryFactStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.MethodNDInitialToFinalApSummariesStorage
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -117,7 +117,7 @@ abstract class CommonNDF2FSummary<FAP : Any>(
     ) : FinalApAccess<FAP> {
         fun build() = NDFactToFactEdgeBuilder()
             .setInitial(initial!!)
-            .setExitAp(createFinal(exitBase!!, exitAp!!, FactFlowState.Universe))
+            .setExitAp(createFinal(exitBase!!, exitAp!!, FactDemandState.Universe))
 
         fun setInitial(initial: Set<InitialFactAp>) = also { this.initial = initial }
         fun setExitAp(exitAp: FAP) = also { this.exitAp = exitAp }

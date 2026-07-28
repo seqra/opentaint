@@ -6,8 +6,7 @@ import kotlinx.collections.immutable.persistentHashSetOf
 /**
  * Access-path alternatives excluded from demand-driven fact analysis.
  *
- * Cleaner effects are a different domain and live in
- * [org.opentaint.dataflow.ap.ifds.access.FactFlowState].
+ * Cleaner effects are a different domain and live in the selected access-path representation.
  */
 sealed interface ExclusionSet {
     operator fun contains(accessor: Accessor): Boolean

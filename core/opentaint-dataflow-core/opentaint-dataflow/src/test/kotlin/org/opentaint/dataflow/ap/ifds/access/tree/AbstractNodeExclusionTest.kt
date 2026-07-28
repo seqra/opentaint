@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -13,7 +14,6 @@ import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 /**
  * The combination laws of the abstraction's excluded-mark annotation ([AbstractionExclusions]).
  *
- * A starred sanitizer cleans a fact structurally ([FinalFactAp.deepClean]): concrete `![m]` nodes
+ * A starred sanitizer cleans a fact structurally ([FinalFactAp.clean]): concrete `![m]` nodes
  * below the base are deleted outright, and each abstract node picks up the residual claim that the
  * mark stays excluded from whatever materializes below it later. The claim is PART OF THE NODE, so
  * it travels with a prepend, is confined to its branch, is enforced when a summary delta is
@@ -57,10 +57,10 @@ class AbstractNodeExclusionTest {
         return fact as AccessTree
     }
 
-    private fun FinalFactAp.deepCleaned(mark: TaintMarkAccessor = MARK): AccessTree {
-        val result = deepClean(mark)
-        assertIs<FinalFactAp.DeepCleanResult.Cleaned>(result, "expected a surviving fact")
-        return result.fact as AccessTree
+    private fun FinalFactAp.anyFieldCleaned(mark: TaintMarkAccessor = MARK): AccessTree {
+        val result = clean(listOf(AnyAccessor, mark))
+        assertEquals(1, result.survivingFacts.size, "expected a surviving fact")
+        return result.survivingFacts.single() as AccessTree
     }
 
     private fun merged(a: AccessTree, b: AccessTree): AccessTree =
@@ -83,28 +83,28 @@ class AbstractNodeExclusionTest {
     /* ---------- the clean itself ---------- */
 
     @Test
-    fun `deep clean deletes concrete marks below the base and keeps the base mark`() {
+    fun `any-field clean deletes concrete marks below the base and keeps the base mark`() {
         // this.![m], this.f.![m] — one is the base action's territory, one is the star's
         val fact = merged(concreteFact(MARK), concreteFact(FIELD_F, MARK))
 
-        val cleaned = fact.deepCleaned()
+        val cleaned = fact.anyFieldCleaned()
 
         assertTrue(cleaned.startsWithAccessor(MARK), "the direct base mark is the base action's job")
         assertFalse(cleaned.readsMarkAt(FIELD_F), "the mark below a field must be deleted")
     }
 
     @Test
-    fun `deep clean removes a fact that was only deep marks`() {
+    fun `any-field clean removes a fact that was only nested marks`() {
         val fact = concreteFact(FIELD_F, MARK)
 
-        assertIs<FinalFactAp.DeepCleanResult.RemovedCompletely>(fact.deepClean(MARK))
+        assertTrue(fact.clean(listOf(AnyAccessor, MARK)).survivingFacts.isEmpty())
     }
 
     @Test
-    fun `deep clean leaves an unrelated mark alone`() {
+    fun `any-field clean leaves an unrelated mark alone`() {
         val fact = concreteFact(FIELD_F, MARK_2)
 
-        val cleaned = fact.deepCleaned(MARK)
+        val cleaned = fact.anyFieldCleaned(MARK)
 
         assertTrue(
             cleaned.readAccessor(FIELD_F)?.startsWithAccessor(MARK_2) == true,
@@ -113,8 +113,8 @@ class AbstractNodeExclusionTest {
     }
 
     @Test
-    fun `deep clean annotates an abstract fact instead of dropping it`() {
-        val cleaned = abstractFact().deepCleaned()
+    fun `any-field clean annotates an abstract fact instead of dropping it`() {
+        val cleaned = abstractFact().anyFieldCleaned()
 
         assertTrue(cleaned.isAbstract(), "the abstraction itself survives the clean")
         assertNotNull(cleaned.access.abstraction, "the abstract node must carry the claim")
@@ -124,7 +124,7 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `a delta below the annotated base loses the mark under a field and keeps the direct mark`() {
-        val exit = abstractFact().deepCleaned()
+        val exit = abstractFact().anyFieldCleaned()
         val delta = deltaOf(merged(concreteFact(MARK), concreteFact(FIELD_F, MARK)))
 
         val applied = exit.concat(FactTypeChecker.Dummy, delta)
@@ -136,7 +136,7 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `a delta that is only excluded marks does not survive the concat`() {
-        val exit = abstractFact().deepCleaned()
+        val exit = abstractFact().anyFieldCleaned()
         val delta = deltaOf(concreteFact(FIELD_F, MARK))
 
         assertNull(exit.concat(FactTypeChecker.Dummy, delta), "nothing else was attached")
@@ -144,7 +144,7 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `an unrelated mark passes the annotated node untouched`() {
-        val exit = abstractFact().deepCleaned(MARK)
+        val exit = abstractFact().anyFieldCleaned(MARK)
         val delta = deltaOf(concreteFact(FIELD_F, MARK_2))
 
         val applied = exit.concat(FactTypeChecker.Dummy, delta)
@@ -162,7 +162,7 @@ class AbstractNodeExclusionTest {
     fun `the annotation survives a prepend and stays confined to its branch`() {
         // wrap: p.raw = b (before the clean), p.val = b (after it) — one merged exit tree
         val raw = abstractFact().prependAccessor(FIELD_RAW) as AccessTree
-        val cleanedVal = abstractFact().deepCleaned().prependAccessor(FIELD_VAL) as AccessTree
+        val cleanedVal = abstractFact().anyFieldCleaned().prependAccessor(FIELD_VAL) as AccessTree
         val exit = merged(raw, cleanedVal)
 
         val delta = deltaOf(concreteFact(FIELD_F, MARK))
@@ -177,8 +177,8 @@ class AbstractNodeExclusionTest {
     fun `an annotated node one accessor deep blocks even a direct mark`() {
         // an abstract node below a field of the base: everything under it is already below one
         // accessor of the cleaned base, so the claim applies from relative depth 1
-        val innerCleaned = abstractFact().deepCleaned().prependAccessor(FIELD_VAL) as AccessTree
-        val cleaned = innerCleaned.deepCleaned() // the prepended tree cleaned at ITS base
+        val innerCleaned = abstractFact().anyFieldCleaned().prependAccessor(FIELD_VAL) as AccessTree
+        val cleaned = innerCleaned.anyFieldCleaned() // the prepended tree cleaned at ITS base
 
         val delta = deltaOf(concreteFact(MARK))
         val applied = cleaned.readAccessor(FIELD_VAL)?.concat(FactTypeChecker.Dummy, delta)
@@ -193,7 +193,7 @@ class AbstractNodeExclusionTest {
         // the cleaned abstract fact passes through an unrelated callee's identity summary:
         // delta vs the callee's abstract initial is empty, and the callee's exit abstraction
         // continues the same object, so the claim must arrive on it
-        val cleanedCallerFact = abstractFact().deepCleaned()
+        val cleanedCallerFact = abstractFact().anyFieldCleaned()
         val calleeExit = abstractFact()
 
         val emptyDelta = cleanedCallerFact.delta(manager.mostAbstractInitialAp(base)).single { it.isEmpty }
@@ -211,8 +211,8 @@ class AbstractNodeExclusionTest {
     fun `the transit unions the caller claim with the callee's own`() {
         // the caller had cleaned m when the callee's summary, continuing the same object,
         // cleaned n: both claims hold on this execution
-        val cleanedCallerFact = abstractFact().deepCleaned(MARK)
-        val calleeExit = abstractFact().deepCleaned(MARK_2)
+        val cleanedCallerFact = abstractFact().anyFieldCleaned(MARK)
+        val calleeExit = abstractFact().anyFieldCleaned(MARK_2)
 
         val emptyDelta = cleanedCallerFact.delta(manager.mostAbstractInitialAp(base)).single { it.isEmpty }
         val transited = calleeExit.concat(FactTypeChecker.Dummy, emptyDelta) as AccessTree?
@@ -227,7 +227,7 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `merging cleaned and uncleaned alternatives at the same node drops the claim`() {
-        val cleaned = abstractFact().deepCleaned()
+        val cleaned = abstractFact().anyFieldCleaned()
         val uncleaned = abstractFact()
         val joined = merged(cleaned, uncleaned)
 
@@ -241,8 +241,8 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `merging two cleaned alternatives intersects their claims`() {
-        val cleanedBoth = abstractFact().deepCleaned(MARK).deepCleaned(MARK_2)
-        val cleanedM = abstractFact().deepCleaned(MARK)
+        val cleanedBoth = abstractFact().anyFieldCleaned(MARK).anyFieldCleaned(MARK_2)
+        val cleanedM = abstractFact().anyFieldCleaned(MARK)
         val joined = merged(cleanedBoth, cleanedM)
 
         val delta = deltaOf(merged(concreteFact(FIELD_F, MARK), concreteFact(FIELD_F, MARK_2)))
@@ -258,8 +258,8 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `the join is symmetric`() {
-        val a = abstractFact().deepCleaned(MARK).deepCleaned(MARK_2)
-        val b = abstractFact().deepCleaned(MARK)
+        val a = abstractFact().anyFieldCleaned(MARK).anyFieldCleaned(MARK_2)
+        val b = abstractFact().anyFieldCleaned(MARK)
 
         assertEquals(
             merged(a, b).access.abstraction,
@@ -270,8 +270,8 @@ class AbstractNodeExclusionTest {
 
     @Test
     fun `merging equal claims is identity`() {
-        val a = abstractFact().deepCleaned()
-        val b = abstractFact().deepCleaned()
+        val a = abstractFact().anyFieldCleaned()
+        val b = abstractFact().anyFieldCleaned()
 
         assertEquals(a.access.abstraction, merged(a, b).access.abstraction)
     }
@@ -282,7 +282,7 @@ class AbstractNodeExclusionTest {
     fun `the annotation survives a serialization round-trip`() {
         // the sibling shape: an annotated branch and a plain one, in one tree
         val fact = merged(
-            abstractFact().deepCleaned().prependAccessor(FIELD_VAL) as AccessTree,
+            abstractFact().anyFieldCleaned().prependAccessor(FIELD_VAL) as AccessTree,
             abstractFact().prependAccessor(FIELD_RAW) as AccessTree,
         )
 

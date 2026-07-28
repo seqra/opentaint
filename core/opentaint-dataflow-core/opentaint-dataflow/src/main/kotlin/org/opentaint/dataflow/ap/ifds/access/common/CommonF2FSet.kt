@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.EdgeStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -13,7 +13,7 @@ abstract class CommonF2FSet<IAP, FAP>(
     private val initialStatement: CommonInst
 ): MethodEdgesInitialToFinalApSet, InitialApAccess<IAP>, FinalApAccess<FAP> {
 
-    data class AccessWithState<FAP>(val access: FAP, val flowState: FactFlowState)
+    data class AccessWithState<FAP>(val access: FAP, val demandState: FactDemandState)
 
     interface ApStorage<IAP, FAP> {
         fun add(statement: CommonInst, initial: IAP, final: AccessWithState<FAP>): AccessWithState<FAP>?
@@ -30,20 +30,20 @@ abstract class CommonF2FSet<IAP, FAP>(
         initialAp: InitialFactAp,
         finalAp: FinalFactAp,
     ): Pair<InitialFactAp, FinalFactAp>? {
-        check(initialAp.flowState == finalAp.flowState) { "Edge flow-state mismatch" }
+        check(initialAp.demandState == finalAp.demandState) { "Edge demand-state mismatch" }
 
         val edgeStorage = storage.getOrCreate(finalAp.base).getOrCreate(initialAp.base)
 
-        val final = AccessWithState(getFinalAccess(finalAp), finalAp.flowState)
+        val final = AccessWithState(getFinalAccess(finalAp), finalAp.demandState)
         val addedAccessWithState = edgeStorage.add(statement, getInitialAccess(initialAp), final)
             ?: return null
 
         if (addedAccessWithState === final) return initialAp to finalAp
 
-        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithState.flowState)
+        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithState.demandState)
 
         val newExitAp = createFinal(
-            finalAp.base, addedAccessWithState.access, addedAccessWithState.flowState
+            finalAp.base, addedAccessWithState.access, addedAccessWithState.demandState
         )
 
         return newInitialAp to newExitAp
@@ -85,8 +85,8 @@ abstract class CommonF2FSet<IAP, FAP>(
                 collection,
                 { storage.filter(it, statement, pattern) },
                 {
-                    val initialAp = createInitial(initialBase, it.first, it.second.flowState)
-                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.flowState)
+                    val initialAp = createInitial(initialBase, it.first, it.second.demandState)
+                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.demandState)
                     initialAp to finalAp
                 }
             )
@@ -108,7 +108,7 @@ abstract class CommonF2FSet<IAP, FAP>(
         collectToListWithPostProcess(
             collection,
             { factStorage.filter(it, statement, getInitialAccess(initialAp), getInitialAccess(finalFactPattern)) },
-            { createFinal(finalFactBase, it.access, it.flowState) }
+            { createFinal(finalFactBase, it.access, it.demandState) }
         )
     }
 

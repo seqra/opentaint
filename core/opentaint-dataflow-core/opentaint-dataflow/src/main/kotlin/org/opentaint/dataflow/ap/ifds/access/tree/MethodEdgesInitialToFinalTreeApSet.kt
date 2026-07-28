@@ -4,7 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSet
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -77,23 +77,23 @@ class MethodEdgesInitialToFinalTreeApSet(
         private val languageManager: LanguageManager,
         manager: TreeApManager,
     ): TreeSetWithCompression(maxInstIdx, manager) {
-        private val flowStates = arrayOfNulls<FactFlowState>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
+        private val demandStates = arrayOfNulls<FactDemandState>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
 
         fun add(
             statement: CommonInst,
             accessWithState: AccessWithState<AccessTree.AccessNode>
         ): AccessWithState<AccessTree.AccessNode>? {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentState = flowStates[edgeSetIdx]
+            val currentState = demandStates[edgeSetIdx]
 
             if (currentState == null) {
-                flowStates[edgeSetIdx] = accessWithState.flowState
+                demandStates[edgeSetIdx] = accessWithState.demandState
                 edges[edgeSetIdx] = internIfRequired(accessWithState.access)
                 return accessWithState
             }
 
-            val mergedState = currentState join accessWithState.flowState
-            flowStates[edgeSetIdx] = mergedState
+            val mergedState = currentState join accessWithState.demandState
+            demandStates[edgeSetIdx] = mergedState
 
             val currentAccess = edges[edgeSetIdx]!!
             val mergedAccess = currentAccess.mergeAdd(accessWithState.access)
@@ -111,9 +111,9 @@ class MethodEdgesInitialToFinalTreeApSet(
 
         fun allApAtStatement(dst: MutableList<AccessWithState<AccessTree.AccessNode>>, statement: CommonInst) {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val flowState = flowStates[edgeSetIdx] ?: return
+            val demandState = demandStates[edgeSetIdx] ?: return
             val access = edges[edgeSetIdx] ?: return
-            dst += AccessWithState(access, flowState)
+            dst += AccessWithState(access, demandState)
         }
     }
 }

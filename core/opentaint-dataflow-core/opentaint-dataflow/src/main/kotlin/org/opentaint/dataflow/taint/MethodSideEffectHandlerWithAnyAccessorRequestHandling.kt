@@ -26,7 +26,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
                     }
                 }
 
-                is MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement -> {
+                is MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryDemandRefinement -> {
                     // taint mark requested -> mark not in initial fact, delta is empty -> mark not in fact
                 }
             }

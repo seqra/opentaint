@@ -8,7 +8,8 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionS
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -18,6 +19,11 @@ class MethodEdgesInitialToFinalAutomataApSet(
     maxInstIdx: Int,
     languageManager: LanguageManager
 ) : MethodEdgesInitialToFinalApSet {
+    private data class StoredState(
+        val demandState: FactDemandState,
+        val cleanerEffects: AnyFieldCleanerEffects,
+    )
+
     private val storage = InitialFactBaseStorage(methodInitialStatement, maxInstIdx, languageManager)
 
     override fun add(
@@ -54,7 +60,10 @@ class MethodEdgesInitialToFinalAutomataApSet(
                     { storage.collectTo(it, statement, finalFactPattern) },
                     {
                         AccessGraphInitialFactAp(
-                            initialBase, initialAg, it.exclusions, it.deepCleanEffects
+                            initialBase,
+                            initialAg,
+                            it.exclusions,
+                            (it as AccessGraphFinalFactAp).anyFieldCleanerEffects,
                         ) to it
                     }
                 )
@@ -78,20 +87,31 @@ class MethodEdgesInitialToFinalAutomataApSet(
         initialAp: AccessGraphInitialFactAp,
         finalAp: AccessGraphFinalFactAp
     ): Pair<InitialFactAp, FinalFactAp>? {
-        check(initialAp.flowState == finalAp.flowState)
+        check(initialAp.demandState == finalAp.demandState)
 
         val storage = this.storage
             .getOrCreate(initialAp.base)
             .getOrCreate(initialAp.access)
 
-        val flowState = initialAp.flowState
-        val addedState = storage.add(statement, finalAp.base, finalAp.access, flowState)
+        check(initialAp.anyFieldCleanerEffects == finalAp.anyFieldCleanerEffects)
+        val state = StoredState(initialAp.demandState, initialAp.anyFieldCleanerEffects)
+        val addedState = storage.add(statement, finalAp.base, finalAp.access, state)
 
-        if (addedState === flowState) return initialAp to finalAp
+        if (addedState === state) return initialAp to finalAp
         if (addedState == null) return null
 
-        val newInitial = initialAp.replaceFlowState(addedState)
-        val newFinal = finalAp.replaceFlowState(addedState)
+        val newInitial = AccessGraphInitialFactAp(
+            initialAp.base,
+            initialAp.access,
+            addedState.demandState.exclusions,
+            addedState.cleanerEffects,
+        )
+        val newFinal = AccessGraphFinalFactAp(
+            finalAp.base,
+            finalAp.access,
+            addedState.demandState.exclusions,
+            addedState.cleanerEffects,
+        )
         return newInitial to newFinal
     }
 
@@ -132,13 +152,13 @@ class MethodEdgesInitialToFinalAutomataApSet(
             statement: CommonInst,
             finalBase: AccessPathBase,
             finalAg: AccessGraph,
-            flowState: FactFlowState,
-        ): FactFlowState? {
+            state: StoredState,
+        ): StoredState? {
             val finalFactStorage = factStorage.getOrCreate(finalBase)
             val factUpdated = finalFactStorage.addFact(statement, finalAg)
 
-            return finalFactStorage.addFlowState(
-                statement, flowState, returnNullIfNotUpdated = !factUpdated
+            return finalFactStorage.addState(
+                statement, state, returnNullIfNotUpdated = !factUpdated
             )
         }
 
@@ -159,14 +179,17 @@ class MethodEdgesInitialToFinalAutomataApSet(
             statement: CommonInst,
             base: AccessPathBase,
         ) {
-            val flowState = flowState(statement) ?: return
+            val state = state(statement) ?: return
 
             collectToListWithPostProcess(
                 collection,
                 { collectTo(it, statement) },
                 {
                     AccessGraphFinalFactAp(
-                        base, it, flowState.exclusions, flowState.deepCleanEffects
+                        base,
+                        it,
+                        state.demandState.exclusions,
+                        state.cleanerEffects,
                     )
                 }
             )
@@ -206,33 +229,37 @@ class MethodEdgesInitialToFinalAutomataApSet(
             finalFacts[edgeSetIdx]?.toList(collection)
         }
 
-        private val flowStates = arrayOfNulls<FactFlowState>(instructionStorageSize(maxInstIdx))
+        private val states = arrayOfNulls<StoredState>(instructionStorageSize(maxInstIdx))
 
-        fun addFlowState(
+        fun addState(
             statement: CommonInst,
-            flowState: FactFlowState,
+            state: StoredState,
             returnNullIfNotUpdated: Boolean
-        ): FactFlowState? {
+        ): StoredState? {
             val stateIdx = instructionStorageIdx(statement, languageManager)
-            val currentState = flowStates[stateIdx]
+            val currentState = states[stateIdx]
 
             if (currentState == null) {
-                flowStates[stateIdx] = flowState
-                return flowState
+                states[stateIdx] = state
+                return state
             }
 
-            val merged = currentState join flowState
-            if (merged === currentState) {
-                return if (returnNullIfNotUpdated) null else merged
+            val mergedDemandState = currentState.demandState join state.demandState
+            val mergedEffects = currentState.cleanerEffects join state.cleanerEffects
+            if (mergedDemandState === currentState.demandState &&
+                mergedEffects === currentState.cleanerEffects
+            ) {
+                return if (returnNullIfNotUpdated) null else currentState
             }
 
-            flowStates[stateIdx] = merged
+            val merged = StoredState(mergedDemandState, mergedEffects)
+            states[stateIdx] = merged
             return merged
         }
 
-        fun flowState(statement: CommonInst): FactFlowState? {
+        fun state(statement: CommonInst): StoredState? {
             val stateIdx = instructionStorageIdx(statement, languageManager)
-            return flowStates[stateIdx]
+            return states[stateIdx]
         }
 
         override fun toString(): String = "${finalFacts.indices.sumOf { finalFacts[it]?.graphSize ?: 0 }}"

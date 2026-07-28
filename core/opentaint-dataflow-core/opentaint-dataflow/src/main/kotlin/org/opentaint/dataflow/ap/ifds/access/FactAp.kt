@@ -4,7 +4,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 
 interface AccessorList {
     fun startsWithAccessor(accessor: Accessor): Boolean
@@ -21,8 +20,7 @@ interface ReadableAccessorList<T : Any> : AccessorList {
 interface FactAp: AccessorList {
     val base: AccessPathBase
     val exclusions: ExclusionSet
-    val deepCleanEffects: DeepCleanEffects get() = DeepCleanEffects.Empty
-    val flowState: FactFlowState get() = FactFlowState(exclusions, deepCleanEffects)
+    val demandState: FactDemandState get() = FactDemandState(exclusions)
 
     val size: Int
     val depth: Int
@@ -32,19 +30,14 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
     fun rebase(newBase: AccessPathBase): InitialFactAp
     fun exclude(accessor: Accessor): InitialFactAp
     fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp
-    fun replaceFlowState(flowState: FactFlowState): InitialFactAp {
-        check(flowState.deepCleanEffects.isEmpty) {
-            "${this::class.simpleName} must implement cleaner-effect transport"
-        }
-        return replaceExclusions(flowState.exclusions)
-    }
+    fun replaceDemandState(demandState: FactDemandState): InitialFactAp =
+        replaceExclusions(demandState.exclusions)
 
     fun prependAccessor(accessor: Accessor): InitialFactAp
     fun clearAccessor(accessor: Accessor): InitialFactAp?
 
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean
-        val deepCleanEffects: DeepCleanEffects get() = DeepCleanEffects.Empty
 
         fun concat(other: Delta): Delta
     }
@@ -61,12 +54,8 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     fun rebase(newBase: AccessPathBase): FinalFactAp
     fun exclude(accessor: Accessor): FinalFactAp
     fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp
-    fun replaceFlowState(flowState: FactFlowState): FinalFactAp {
-        check(flowState.deepCleanEffects.isEmpty) {
-            "${this::class.simpleName} must implement cleaner-effect transport"
-        }
-        return replaceExclusions(flowState.exclusions)
-    }
+    fun replaceDemandState(demandState: FactDemandState): FinalFactAp =
+        replaceExclusions(demandState.exclusions)
 
     fun prependAccessor(accessor: Accessor): FinalFactAp
     fun clearAccessor(accessor: Accessor): FinalFactAp?
@@ -75,16 +64,14 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
 
     /**
      * The dual of [removeAbstraction]: the fact reduced to its root abstraction — no concrete
-     * children, but everything the abstraction itself carries kept, in particular a starred
-     * sanitizer's excluded-mark annotation (tree mode). Callers partitioning an abstract fact
-     * must use this rather than rebuilding via `createAbstractAp`, which starts from a bare
-     * abstract node and silently drops the claim. Only meaningful when [isAbstract] is true.
+     * children, but all representation state attached to the abstraction preserved. Callers
+     * partitioning an abstract fact must use this rather than rebuilding a bare abstraction.
+     * Only meaningful when [isAbstract] is true.
      */
     fun abstractPart(): FinalFactAp
 
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean
-        val deepCleanEffects: DeepCleanEffects get() = DeepCleanEffects.Empty
     }
 
     fun delta(other: InitialFactAp): List<Delta>
@@ -100,21 +87,16 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
         delta(other).any { it.isEmpty }
 
     /**
-     * A starred sanitizer's whole-subtree clean, expressed structurally: every concrete `![mark]`
-     * node strictly below at least one accessor is deleted (the mark carried by the base directly
-     * is the rule's base clean action's job), and every abstract node is annotated with the
-     * residual claim that the mark stays excluded from whatever materializes below it later.
+     * Applies one cleaner position to this fact.
      *
-     * Each representation owns the implementation. Generic cleaner and summary code never inspect
-     * representation-specific abstraction state.
+     * A concrete position is removed directly. If the position crosses an abstract any-field,
+     * the representation also retains whatever residual effect is needed to clean content that
+     * materializes later. Callers do not distinguish those cases.
      */
-    fun deepClean(mark: TaintMarkAccessor): DeepCleanResult
+    fun clean(accessors: List<Accessor>): CleanResult
 
-    sealed interface DeepCleanResult {
-        /** Nothing of the fact survived the clean. */
-        data object RemovedCompletely : DeepCleanResult
-
-        /** The fact after the clean; identical to the receiver when the clean found nothing. */
-        data class Cleaned(val fact: FinalFactAp) : DeepCleanResult
-    }
+    data class CleanResult(
+        val survivingFacts: List<FinalFactAp>,
+        val removedAlternative: Boolean,
+    )
 }

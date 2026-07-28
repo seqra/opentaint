@@ -5,7 +5,7 @@ import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.EdgeStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactFlowState
+import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesNDInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -34,7 +34,7 @@ abstract class CommonNDF2FSet<IAP, FAP>(
     ): Pair<Set<InitialFactAp>, FinalFactAp>? {
         val edgeStorage = storage.getOrCreate(finalAp.base)
         val addedFinal = edgeStorage.add(statement, initial, getFinalAccess(finalAp)) ?: return null
-        val newExitAp = createFinal(finalAp.base, addedFinal, FactFlowState.Universe)
+        val newExitAp = createFinal(finalAp.base, addedFinal, FactDemandState.Universe)
         return initial to newExitAp
     }
 
@@ -73,7 +73,7 @@ abstract class CommonNDF2FSet<IAP, FAP>(
             collection,
             { collectApAtStatement(it, statement, pattern) },
             {
-                val finalAp = createFinal(finalFactBase, it.second, FactFlowState.Universe)
+                val finalAp = createFinal(finalFactBase, it.second, FactDemandState.Universe)
                 it.first to finalAp
             }
         )
@@ -91,7 +91,7 @@ abstract class CommonNDF2FSet<IAP, FAP>(
         collectToListWithPostProcess(
             collection,
             { finalStorage.collectApAtStatement(it, statement, initial, getInitialAccess(finalFactPattern)) },
-            { createFinal(finalFactBase, it, FactFlowState.Universe) }
+            { createFinal(finalFactBase, it, FactDemandState.Universe) }
         )
     }
 

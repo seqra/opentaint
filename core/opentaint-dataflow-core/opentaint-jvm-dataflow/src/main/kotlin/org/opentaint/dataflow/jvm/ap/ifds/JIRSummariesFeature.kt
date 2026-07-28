@@ -410,7 +410,7 @@ class JIRSummariesFeature(
 
         /**
          * Bump when the serialized summary format changes incompatibly. 3 separates analysis
-         * exclusions from cleaner effects and serializes their universal flow state.
+         * exclusions from representation-specific any-field cleaner effects.
          */
         private const val SUMMARIES_FORMAT_VERSION = 3
 

@@ -591,9 +591,8 @@ class JIRMethodSequentFlowFunction(
         accessor: Accessor,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
-        // abstractPart, not createAbstractAp: the partition must keep everything the fact's
-        // abstraction carries — in tree mode a starred sanitizer's excluded-mark annotation —
-        // or the store resurrects the cleaned mark on the surviving abstract remainder
+        // abstractPart, not createAbstractAp: the partition must keep representation state
+        // attached to the abstraction or the store can resurrect cleaned content.
         val abstractAp = factAp.abstractPart()
         propagateFactWithAccessorExclude(abstractAp, accessor)
 
