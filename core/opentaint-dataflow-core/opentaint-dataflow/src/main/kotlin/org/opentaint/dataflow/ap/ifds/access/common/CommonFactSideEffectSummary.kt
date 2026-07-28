@@ -45,7 +45,7 @@ abstract class CommonFactSideEffectSummary<IAP, FAP: Any>(val methodEntryPoint: 
                 val baseStorage = getOrCreate(initialBase)
                 for ((iap, se) in ses) {
                     val sameKindSe = se.groupBy({ it.first }, { it.second })
-                        .mapValues { (_, exclusions) -> exclusions.reduce(ExclusionSet::union) }
+                        .mapValues { (_, exclusions) -> exclusions.reduce(ExclusionSet::mergeAndIntersectDeep) }
 
                     collectToListWithPostProcess(
                         added,
@@ -93,7 +93,7 @@ abstract class CommonFactSideEffectSummary<IAP, FAP: Any>(val methodEntryPoint: 
                 return toBuilder(kind, exclusions)
             }
 
-            val mergedExclusion = currentExclusion.union(exclusions)
+            val mergedExclusion = currentExclusion.mergeAndIntersectDeep(exclusions)
             if (currentExclusion === mergedExclusion) return null
 
             sideEffects[kind] = mergedExclusion

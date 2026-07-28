@@ -66,7 +66,7 @@ private class SideEffectRequirementStorage(
         }
 
         val currentExclusion = current.exclusions
-        val mergedExclusion = currentExclusion.union(requirement.exclusions)
+        val mergedExclusion = currentExclusion.mergeAndIntersectDeep(requirement.exclusions)
 
         if (mergedExclusion === currentExclusion) return null
 

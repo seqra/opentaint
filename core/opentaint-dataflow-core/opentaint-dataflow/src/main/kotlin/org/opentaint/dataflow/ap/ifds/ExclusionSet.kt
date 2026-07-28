@@ -111,6 +111,9 @@ sealed interface ExclusionSet {
             Empty -> this
             Universe -> other
             is Concrete -> {
+                // `union` composes refinements, and a deep entry is not one: it is a must-clean
+                // claim that a starred sanitizer writes straight onto the fact it cleaned. Nothing
+                // that reaches this operator carries one.
                 check(this.deepExclusion.isEmpty() && other.deepExclusion.isEmpty()) {
                     "Union of deep exclusions is impossible"
                 }
@@ -134,7 +137,7 @@ sealed interface ExclusionSet {
                 if (mergedSet === set && mergedDeep === deepExclusion) {
                     this
                 } else {
-                    Concrete(mergedSet, deepExclusion, mergedSet.hashCode() + mergedDeep.hashCode())
+                    Concrete(mergedSet, mergedDeep, mergedSet.hashCode() + mergedDeep.hashCode())
                 }
             }
         }

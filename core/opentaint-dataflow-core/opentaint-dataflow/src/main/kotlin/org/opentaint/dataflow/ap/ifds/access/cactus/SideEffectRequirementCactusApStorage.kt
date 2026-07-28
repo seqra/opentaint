@@ -70,7 +70,7 @@ private fun AccessPathWithCycles?.mergeAdd(requirement: AccessPathWithCycles): A
     }
 
     val currentExclusion = exclusions
-    val mergedExclusion = currentExclusion.union(requirement.exclusions)
+    val mergedExclusion = currentExclusion.mergeAndIntersectDeep(requirement.exclusions)
 
     if (mergedExclusion === currentExclusion) return null
 

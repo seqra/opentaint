@@ -109,7 +109,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
         private fun updateExclusionAtIdx(idx: Int, exclusion: ExclusionSet): Unit? {
             val oldExclusion = requirementExclusions[idx]
 
-            val newValue = oldExclusion.union(exclusion)
+            val newValue = oldExclusion.mergeAndIntersectDeep(exclusion)
 
             if (oldExclusion === newValue) {
                 return null
