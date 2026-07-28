@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.Position
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
@@ -100,7 +101,9 @@ class JIRMethodCallRuleBasedSummaryRewriter(
                 itemRule = { it.rule },
                 itemActions = { ruleDefinedAction ->
                     val taintMark = TaintMark(mark)
-                    ruleDefinedAction.positions.map { RemoveMark(taintMark, it) }
+                    ruleDefinedAction.positions.map {
+                        RemoveMark(taintMark, it, TaintCleanReach.ExactAndAnyField)
+                    }
                 },
                 initial = current
             )
