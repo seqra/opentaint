@@ -118,4 +118,29 @@ class FactCleanerContractTest {
         }
     }
 
+    @Test
+    fun `mark cleanup explicitly chooses whether AnyField is a target`() {
+        for (manager in managers()) {
+            val anyPosition = PositionAccess.Simple(base).withSuffix(listOf(AnyAccessor))
+            val fact = manager.mkAccessPath(anyPosition, ExclusionSet.Empty, mark)
+            val exactCleaner = cleaner()
+            val anyFieldCleaner = exactCleaner.copy(
+                reach = Cleaner.MarkReach.ExactAndAnyField,
+            )
+
+            val exactResult = fact.clean(exactCleaner)
+            val anyFieldResult = fact.clean(anyFieldCleaner)
+
+            assertEquals(listOf(fact), exactResult.survivingFacts)
+            assertTrue(
+                anyFieldResult.survivingFacts.isEmpty() ||
+                    anyFieldResult.survivingFacts.none {
+                        FinalFactReader(it, manager)
+                            .containsAnyPosition(PositionAccess.Simple(base).withSuffix(listOf(mark))) != null
+                    },
+                "${manager::class.simpleName} retained a targeted AnyField mark",
+            )
+        }
+    }
+
 }
