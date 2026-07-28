@@ -333,6 +333,9 @@ class AccessGraph(
     fun cleanAnyField(mark: AccessorIdx): AccessGraph? =
         removeDeepAccessors(bitSetOf(mark), keepInitialLevel = true)
 
+    fun cleanExactAndAnyField(mark: AccessorIdx): AccessGraph? =
+        removeDeepAccessors(bitSetOf(mark), keepInitialLevel = false)
+
     private fun removeDeepAccessors(deepAccessors: BitSet, keepInitialLevel: Boolean): AccessGraph? {
         val keepAtInitial = keepInitialLevel && nodePred[initial].let { it == null || it.isEmpty }
 

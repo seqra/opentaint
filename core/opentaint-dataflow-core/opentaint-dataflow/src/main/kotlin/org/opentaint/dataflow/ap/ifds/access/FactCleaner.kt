@@ -3,6 +3,7 @@ package org.opentaint.dataflow.ap.ifds.access
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.taint.Cleaner
 import org.opentaint.dataflow.taint.accessors
 import org.opentaint.dataflow.taint.base
@@ -43,6 +44,13 @@ private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): FinalFactAp.CleanResult
     val head = accessors.first()
     val tail = accessors.drop(1)
     if (tail.isEmpty()) {
+        if (cleaner is Cleaner.Mark &&
+            cleaner.reach == TaintCleanReach.ExactAndAnyField &&
+            startsWithAccessor(AnyAccessor)
+        ) {
+            return cleanExactAndAnyField(cleaner.mark)
+        }
+
         if (!startsWithAccessor(head)) {
             return FinalFactAp.CleanResult(listOf(this), removedAlternative = false)
         }

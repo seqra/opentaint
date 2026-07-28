@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -70,8 +71,22 @@ data class AccessGraphFinalFactAp(
     override fun clean(cleaner: Cleaner): FinalFactAp.CleanResult =
         clean(cleaner, ::cleanAnyField)
 
+    override fun cleanExactAndAnyField(
+        mark: TaintMarkAccessor,
+    ): FinalFactAp.CleanResult {
+        val cleaned = with(access.manager) { access.cleanExactAndAnyField(mark.idx) }
+            ?: return FinalFactAp.CleanResult(emptyList(), removedAlternative = true)
+        if (cleaned === access) {
+            return FinalFactAp.CleanResult(listOf(this), removedAlternative = false)
+        }
+        return FinalFactAp.CleanResult(
+            listOf(AccessGraphFinalFactAp(base, cleaned, exclusions, anyFieldCleanerEffects)),
+            removedAlternative = true,
+        )
+    }
+
     private fun cleanAnyField(
-        mark: org.opentaint.dataflow.ap.ifds.TaintMarkAccessor,
+        mark: TaintMarkAccessor,
     ): FinalFactAp.CleanResult {
         val cleaned = with(access.manager) { access.cleanAnyField(mark.idx) }
             ?: return FinalFactAp.CleanResult(emptyList(), removedAlternative = true)
