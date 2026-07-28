@@ -46,6 +46,7 @@ class TaintSourceActionPreconditionEvaluator(
         position: PositionAccess,
         mark: TaintMarkAccessor,
     ): Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>> {
+        if (!position.hasAnyField()) return Maybe.none()
         val sourceFact = factReader.apManager.mkAccessPath(position, ExclusionSet.Universe, mark)
         if (!sourceFact.contains(factReader.fact)) return Maybe.none()
         return Maybe.some(listOf(rule to action))
