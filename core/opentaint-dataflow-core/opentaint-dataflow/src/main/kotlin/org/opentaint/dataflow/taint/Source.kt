@@ -22,7 +22,7 @@ class TaintSourceActionEvaluator(
         position: PositionAccess,
         mark: TaintMarkAccessor
     ): Maybe<List<FinalFactAp>> {
-         val fact = apManager.mkAccessPath(position, exclusion, mark)
+        val fact = apManager.mkAccessPath(position, exclusion, mark)
         return Maybe.from(listOf(fact))
     }
 }
@@ -37,6 +37,17 @@ class TaintSourceActionPreconditionEvaluator(
         mark: TaintMarkAccessor
     ): Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>> {
         if (!factReader.containsPositionWithTaintMark(position, mark)) return Maybe.none()
+        return Maybe.some(listOf(rule to action))
+    }
+
+    fun evaluateProducedFact(
+        rule: CommonTaintConfigurationItem,
+        action: CommonTaintAssignAction,
+        position: PositionAccess,
+        mark: TaintMarkAccessor,
+    ): Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>> {
+        val sourceFact = factReader.apManager.mkAccessPath(position, ExclusionSet.Universe, mark)
+        if (!sourceFact.contains(factReader.fact)) return Maybe.none()
         return Maybe.some(listOf(rule to action))
     }
 }
