@@ -169,7 +169,7 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
-- function: 
+- function:
     org.springframework.core.io.ClassRelativeResourceLoader$ClassRelativeContextResource#createRelative
   signature: (*) org.springframework.core.io.Resource
   copy:
@@ -701,7 +701,7 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: 
+- function:
     org.springframework.core.io.DefaultResourceLoader$ClassPathContextResource#createRelative
   signature: (*) org.springframework.core.io.Resource
   copy:
