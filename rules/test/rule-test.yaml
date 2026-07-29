@@ -497,12 +497,14 @@ tests:
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeUnvalidatedRedirectServlet#doGet
     negative:
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeRequestUriRedirectServlet#doGet
   - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-spring-app
     positive:
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirectView
     negative:
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeInternalRedirect
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeRequestUriRedirect
   - rule-id: java/security/weak-authentication.yaml#java-jwt-decode-without-verify
     positive:
       - security.weakauthentication.WeakAuthenticationSamples#decodeJwtWithoutVerifyInsecure

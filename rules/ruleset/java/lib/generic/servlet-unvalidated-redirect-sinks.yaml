@@ -20,5 +20,8 @@ rules:
           - focus-metavariable: $URL
     pattern-sanitizers:
       - patterns:
-        - pattern: $URL = (HttpServletRequest $REQ).getContextPath();
+        - pattern: $*URI = (HttpServletRequest $REQ).getRequestURI();
+        - focus-metavariable: $URI
+      - patterns:
+        - pattern: $*URL = (HttpServletRequest $REQ).getContextPath();
         - focus-metavariable: $URL
