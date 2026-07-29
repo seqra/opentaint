@@ -433,13 +433,16 @@ class MethodTraceResolver(
                 factAtStatement.contains(targetFactPattern)
         }
 
-        val matchingInitialFacts = searcher.searchInitialFacts(statement, fact, includeStatement)
+        val universeFact = fact.replaceExclusions(ExclusionSet.Universe)
+        val matchingInitialFacts = searcher.searchInitialFacts(statement, universeFact, includeStatement)
 
         return matchingInitialFacts.map { initialFacts ->
-            when (initialFacts.size) {
-                0 -> TraceEdge.SourceTraceEdge(fact)
-                1 -> TraceEdge.MethodTraceEdge(initialFacts.first(), fact)
-                else -> TraceEdge.MethodTraceNDEdge(initialFacts, fact)
+            val universeInitial = initialFacts.mapTo(hashSetOf()) { it.replaceExclusions(ExclusionSet.Universe) }
+
+            when (universeInitial.size) {
+                0 -> TraceEdge.SourceTraceEdge(universeFact)
+                1 -> TraceEdge.MethodTraceEdge(universeInitial.first(), universeFact)
+                else -> TraceEdge.MethodTraceNDEdge(universeInitial, universeFact)
             }
         }
     }
@@ -490,16 +493,17 @@ class MethodTraceResolver(
         summaryTrace: SummaryTrace,
         cancellation: Cancellation,
     ): List<Start2FinalTrace> {
-        check(summaryTrace.method == methodEntryPoint) { "Incorrect summary trace" }
+        val st = summaryTrace.universeTrace()
+        check(st.method == methodEntryPoint) { "Incorrect summary trace" }
 
-        val builder = TraceBuilder(entryManager.entryId(summaryTrace.final), cancellation)
-        builder.resolveTrace(summaryTrace.traceKind)
+        val builder = TraceBuilder(entryManager.entryId(st.final), cancellation)
+        builder.resolveTrace(st.traceKind)
         stats.traceResolverSteps += builder.steps
 
         val traces = mutableListOf<Start2FinalTrace>()
         builder.startEntryIds.forEach { startEntryId ->
             val startEntry = entryManager.entryById(startEntryId) as TraceEntry.StartTraceEntry
-            traces += Start2FinalTrace(methodEntryPoint, startEntry, summaryTrace.final, summaryTrace.traceKind)
+            traces += Start2FinalTrace(methodEntryPoint, startEntry, st.final, st.traceKind)
         }
         return traces
     }
@@ -509,17 +513,18 @@ class MethodTraceResolver(
         cancellation: Cancellation,
         collapseUnchangedNodes: Boolean
     ): List<FullStart2FinalTrace> {
-        check(summaryTrace.method == methodEntryPoint) { "Incorrect summary trace" }
+        val st = summaryTrace.universeTrace()
+        check(st.method == methodEntryPoint) { "Incorrect summary trace" }
 
-        val builder = TraceBuilder(entryManager.entryId(summaryTrace.final), cancellation)
-        builder.resolveTrace(summaryTrace.traceKind)
+        val builder = TraceBuilder(entryManager.entryId(st.final), cancellation)
+        builder.resolveTrace(st.traceKind)
         stats.traceResolverSteps += builder.steps
 
         builder.removeUnreachableNodes()
         if (collapseUnchangedNodes) {
             builder.collapseUnchangedNodes()
         }
-        val fullTrace = builder.fullTrace(summaryTrace.traceKind)
+        val fullTrace = builder.fullTrace(st.traceKind)
         return fullTrace
     }
 
@@ -1729,5 +1734,24 @@ class MethodTraceResolver(
     companion object {
         private val logger = object : KLogging() {}.logger
         private const val TRACE_RESOLUTION_ACTION_HARD_LIMIT = 10_000
+
+        private fun SummaryTrace.universeTrace() =
+            copy(final = final.run { copy(edges = edges.mapTo(hashSetOf()) { it.universeEdge() }) })
+
+        private fun TraceEdge.universeEdge() = when (this) {
+            is TraceEdge.SourceTraceEdge -> TraceEdge.SourceTraceEdge(
+                fact.replaceExclusions(ExclusionSet.Universe)
+            )
+
+            is TraceEdge.MethodTraceEdge -> TraceEdge.MethodTraceEdge(
+                initialFact.replaceExclusions(ExclusionSet.Universe),
+                fact.replaceExclusions(ExclusionSet.Universe)
+            )
+
+            is TraceEdge.MethodTraceNDEdge -> TraceEdge.MethodTraceNDEdge(
+                initialFacts.mapTo(hashSetOf()) { it.replaceExclusions(ExclusionSet.Universe) },
+                fact.replaceExclusions(ExclusionSet.Universe)
+            )
+        }
     }
 }
