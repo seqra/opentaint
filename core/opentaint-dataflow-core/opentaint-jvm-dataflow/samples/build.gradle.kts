@@ -4,8 +4,10 @@ plugins {
 
 tasks {
     withType<JavaCompile> {
-        sourceCompatibility = JavaVersion.VERSION_1_8.toString()
-        targetCompatibility = JavaVersion.VERSION_1_8.toString()
+        // Records provide a real unresolved invokedynamic call site for the
+        // alias-analysis samples. Existing samples remain source-compatible.
+        sourceCompatibility = JavaVersion.VERSION_17.toString()
+        targetCompatibility = JavaVersion.VERSION_17.toString()
         options.compilerArgs.add("-g")
     }
 }

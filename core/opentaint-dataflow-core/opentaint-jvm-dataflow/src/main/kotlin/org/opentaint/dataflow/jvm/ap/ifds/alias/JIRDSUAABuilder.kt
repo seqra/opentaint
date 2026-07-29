@@ -18,6 +18,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRNewArrayExpr
 import org.opentaint.ir.api.jvm.cfg.JIRNewExpr
 import org.opentaint.ir.api.jvm.cfg.JIRRef
@@ -91,7 +92,26 @@ sealed interface Stmt : Comparable<Stmt> {
 
     sealed interface NoCall: Stmt
 
-    data class Call(val method: JIRMethod, val lValue: RefValue.Local?, val instance: Value?, val args: List<Value>, override val originalIdx: Int) : Stmt
+    sealed interface Call : Stmt {
+        val lValue: RefValue.Local?
+        val instance: Value?
+        val args: List<Value>
+    }
+
+    data class MethodCall(
+        val method: JIRMethod,
+        override val lValue: RefValue.Local?,
+        override val instance: Value?,
+        override val args: List<Value>,
+        override val originalIdx: Int
+    ) : Call
+
+    data class OpaqueCall(
+        override val lValue: RefValue.Local?,
+        override val instance: Value?,
+        override val args: List<Value>,
+        override val originalIdx: Int
+    ) : Call
 
     data class Copy(val lValue: RefValue.Local, val rValue: RefValue, override val originalIdx: Int): NoCall
     data class Assign(val lValue: RefValue.Local, val expr: Expr, override val originalIdx: Int) : NoCall
@@ -192,15 +212,20 @@ private fun InstEvalContext.evalCall(
 ): Stmt? {
     val lhs = (lValue as? JIRLocalVar)?.let { createLocal(it.index) }
 
-    if (expr.method.method.isPrimitiveBoxAllocMethod()) {
+    val method = (expr as? JIRMethodCallExpr)?.method?.method
+    if (method?.isPrimitiveBoxAllocMethod() == true) {
         if (lhs == null) return null
         return Stmt.Assign(lhs, Expr.Alloc(loc), loc.location.index)
     }
 
     val args = expr.args.map { evalSimpleValue(it as JIRImmediate, loc) }
     val instance = (expr as? JIRInstanceCallExpr)?.instance?.let { evalSimpleValue(it as JIRImmediate, loc) }
-    val stmt = Stmt.Call(expr.method.method, lhs, instance, args, loc.location.index)
-    return stmt
+    return when (expr) {
+        is JIRMethodCallExpr -> Stmt.MethodCall(
+            expr.method.method, lhs, instance, args, loc.location.index
+        )
+        else -> Stmt.OpaqueCall(lhs, instance, args, loc.location.index)
+    }
 }
 
 private fun InstEvalContext.evalExpr(expr: JIRExpr, inst: JIRInst): ExprOrValue = when (expr) {

@@ -17,14 +17,14 @@ import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.dataflow.taint.TaintUtil
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.util.onSome
 
 class JIRMethodCallTaintUtil(
     apManager: ApManager,
     val statement: JIRInst,
-    val callExpr: JIRCallExpr,
+    val callExpr: JIRMethodCallExpr,
     val analysisContext: JIRMethodAnalysisContext,
     val generateTrace: Boolean,
 ) : TaintUtil<JirCondition, TaintMethodSource, TaintMethodSink, TraceInfo>(apManager) {

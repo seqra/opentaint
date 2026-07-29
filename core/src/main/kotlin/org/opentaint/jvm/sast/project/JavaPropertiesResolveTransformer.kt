@@ -11,6 +11,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstList
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.impl.fs.BuildFolderLocation
@@ -181,7 +182,7 @@ class JavaPropertiesResolveTransformer(
     private inline fun traverseCalls(
         start: JIRInst,
         instructions: JIRInstList<JIRInst>,
-        body: (JIRInst, JIRCallExpr) -> Unit
+        body: (JIRInst, JIRMethodCallExpr) -> Unit
     ): Nothing? {
         var instIdx = start.location.index
         while (instIdx >= 0) {
@@ -210,7 +211,7 @@ class JavaPropertiesResolveTransformer(
         )
     }
 
-    private fun JIRInst.findGetPropertyCall(): JIRCallExpr? {
+    private fun JIRInst.findGetPropertyCall(): JIRMethodCallExpr? {
         val call = findCallExpr() ?: return null
         if (!call.method.method.isGetProperty()) return null
         return call
@@ -225,9 +226,9 @@ class JavaPropertiesResolveTransformer(
     private fun JIRMethod.isGetResource(): Boolean =
         name == GET_RESOURCE && enclosingClass.name == CLASS_LOADER
 
-    private fun JIRInst.findCallExpr(): JIRCallExpr? = when (this) {
-        is JIRAssignInst -> rhv as? JIRCallExpr
-        is JIRCallInst -> callExpr
+    private fun JIRInst.findCallExpr(): JIRMethodCallExpr? = when (this) {
+        is JIRAssignInst -> rhv as? JIRMethodCallExpr
+        is JIRCallInst -> callExpr as? JIRMethodCallExpr
         else -> null
     }
 

@@ -9,6 +9,7 @@ import org.antlr.v4.runtime.tree.TerminalNode
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.jvm.sast.sarif.IntermediateLocation
 import org.opentaint.jvm.sast.sarif.JIRSarifTraits
@@ -188,7 +189,7 @@ class JavaAstSpanResolver(traits: JIRSarifTraits) : AbstractAstSpanResolver(trai
     }
 
     private fun findMethodCallNode(root: ParseTree, line: Int, inst: JIRInst): ParserRuleContext? {
-        val call = inst.callExpr ?: return oldFindMethodCallNode(root, line)
+        val call = inst.callExpr as? JIRMethodCallExpr ?: return oldFindMethodCallNode(root, line)
 
         val callee = call.callee.name
 
@@ -235,7 +236,7 @@ class JavaAstSpanResolver(traits: JIRSarifTraits) : AbstractAstSpanResolver(trai
     }
 
     private fun findObjectCreationNode(root: ParseTree, line: Int, inst: JIRInst): ParserRuleContext? {
-        val callExpr = inst.callExpr ?: return null
+        val callExpr = inst.callExpr as? JIRMethodCallExpr ?: return null
         val typeName = callExpr.method.method.enclosingClass.simpleName
         val creations = collectContexts(root, line) { checkCreatedType(it, typeName) }
         return adjustForAssignment(creations.maxByOrNull { spanLen(it) }, inst)

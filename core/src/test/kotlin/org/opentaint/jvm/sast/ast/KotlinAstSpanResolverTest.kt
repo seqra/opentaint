@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -61,7 +62,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
 
         val getValueAssign = assignInsts.find { inst ->
             val rhv = inst.rhv
-            rhv is JIRCallExpr && rhv.method.method.name == "getFieldValue"
+            rhv is JIRMethodCallExpr && rhv.method.method.name == "getFieldValue"
         }
 
         checkNotNull(getValueAssign) { "Assignment with getFieldValue() call not found" }
@@ -151,7 +152,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "createObject")
 
         val constructorCall = callInsts.find {
-            it.callExpr.method.method.isConstructor
+            it.callExpr.methodOrNull!!.method.isConstructor
         }
 
         checkNotNull(constructorCall) { "Constructor call not found" }
@@ -323,8 +324,8 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val instructions = method.instList
 
         val expectedSpans = mapOf(
-            "entry" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRCallExpr && (it.rhv as JIRCallExpr).method.method.name == "trim" },
-            "local" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRCallExpr && (it.rhv as JIRCallExpr).method.method.name == "trim" },
+            "entry" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRMethodCallExpr && (it.rhv as JIRMethodCallExpr).method.method.name == "trim" },
+            "local" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRMethodCallExpr && (it.rhv as JIRMethodCallExpr).method.method.name == "trim" },
             "fieldWrite" to findInstruction<JIRAssignInst>(instructions) { it.lhv is JIRFieldRef },
             "fieldRead" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRFieldRef },
             "return" to findInstruction<JIRReturnInst>(instructions) { true },
@@ -550,7 +551,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val extensionCall = assignInsts.find {
-            it.callExpr?.method?.method?.name == "myExtension"
+            it.callExpr?.methodOrNull?.method?.name == "myExtension"
         }
         checkNotNull(extensionCall) { "Extension function call not found" }
 
@@ -584,7 +585,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val plusCall = assignInsts.find {
-            it.callExpr?.method?.method?.name == "plus"
+            it.callExpr?.methodOrNull?.method?.name == "plus"
         }
         checkNotNull(plusCall) { "Plus operator call not found" }
 
@@ -722,7 +723,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(DATA_CLASS_WITH_INIT_FQN, "<init>")
 
         val printlnCall = callInsts.find { inst ->
-            inst.callExpr.method.method.name == "println"
+            inst.callExpr.methodOrNull!!.method.name == "println"
         }
         checkNotNull(printlnCall) { "println call in init block not found" }
 
@@ -772,7 +773,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val suspendCall = assignInsts.find {
-            it.callExpr?.method?.method?.name == "suspendFunction"
+            it.callExpr?.methodOrNull?.method?.name == "suspendFunction"
         }
         checkNotNull(suspendCall) { "Suspend function call not found" }
 
@@ -894,7 +895,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val uppercaseCall = assignInsts.find { inst ->
-            inst.callExpr?.method?.method?.name == "toUpperCase"
+            inst.callExpr?.methodOrNull?.method?.name == "toUpperCase"
         }
         checkNotNull(uppercaseCall) { "toUpperCase() call not found in suspend function body" }
 
@@ -910,7 +911,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val valueOfCall = assignInsts.find { inst ->
-            inst.callExpr?.method?.method?.name == "valueOf"
+            inst.callExpr?.methodOrNull?.method?.name == "valueOf"
         }
         checkNotNull(valueOfCall) { "valueOf() call from inlined body not found" }
 
@@ -962,7 +963,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val uppercaseCall = assignInsts.find { inst ->
-            inst.callExpr?.method?.method?.name == "toUpperCase"
+            inst.callExpr?.methodOrNull?.method?.name == "toUpperCase"
         }
         checkNotNull(uppercaseCall) { "uppercase() call inside for loop not found" }
 
@@ -978,7 +979,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val getCall = assignInsts.find { inst ->
-            inst.callExpr?.method?.method?.name == "get"
+            inst.callExpr?.methodOrNull?.method?.name == "get"
         }
         checkNotNull(getCall) { "get() call inside while loop not found" }
 
@@ -1009,10 +1010,10 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
 
         val expectedSpans = mutableMapOf<String, JIRInst?>()
         expectedSpans["complexLoopCall"] = findInstruction<JIRAssignInst>(instructions) {
-            it.callExpr?.method?.method?.name == "toUpperCase"
+            it.callExpr?.methodOrNull?.method?.name == "toUpperCase"
         }
         expectedSpans["complexWhileGet"] = findInstruction<JIRAssignInst>(instructions) {
-            it.callExpr?.method?.method?.name == "get"
+            it.callExpr?.methodOrNull?.method?.name == "get"
         }
         expectedSpans["complexReturn"] = findInstruction<JIRReturnInst>(instructions) { true }
         expectedSpans["complexMethodExit"] = findInstruction<JIRReturnInst>(instructions) { true }
@@ -1054,7 +1055,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         val assignInsts = method.instList.filterIsInstance<JIRAssignInst>()
 
         val processCall = assignInsts.find { inst ->
-            inst.callExpr?.method?.method?.name == "process"
+            inst.callExpr?.methodOrNull?.method?.name == "process"
         }
         checkNotNull(processCall) { "process() call not found in expression body" }
 
@@ -1197,7 +1198,7 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
         checkNotNull(defaultCtor) { "Default constructor not found" }
 
         val primaryCtorCall = findInstruction<JIRCallInst>(defaultCtor.instList) {
-            it.callExpr.method.method.isConstructor
+            it.callExpr.methodOrNull!!.method.isConstructor
         }
         checkNotNull(primaryCtorCall) { "Primary ctor call not found" }
 
@@ -1248,3 +1249,6 @@ class KotlinAstSpanResolverTest : BasicTestUtils() {
 
     private fun getAnnotatedSourcePath() = sourcesDir.resolve("test/samples/KotlinAnnotatedSample.kt")
 }
+
+private val JIRCallExpr.methodOrNull
+    get() = (this as? JIRMethodCallExpr)?.method

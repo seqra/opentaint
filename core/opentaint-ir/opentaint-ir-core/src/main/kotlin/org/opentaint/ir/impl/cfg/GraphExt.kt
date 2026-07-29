@@ -292,11 +292,7 @@ open class JIRExceptionResolver(
     }
 
     override fun visitJIRLambdaExpr(expr: JIRLambdaExpr): List<JIRClassType> {
-        return buildList {
-            add(runtimeExceptionType)
-            add(errorType)
-            addAll(expr.method.exceptions.thisOrThrowable())
-        }
+        return listOf(runtimeExceptionType, errorType)
     }
 
     override fun visitJIRDynamicCallExpr(expr: JIRDynamicCallExpr): List<JIRClassType> {

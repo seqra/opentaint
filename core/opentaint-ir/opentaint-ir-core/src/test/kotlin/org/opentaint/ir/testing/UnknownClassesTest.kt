@@ -1,6 +1,7 @@
 package org.opentaint.ir.testing
 
 import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.ir.api.jvm.ext.cfg.fieldRef
 import org.opentaint.ir.api.jvm.ext.findClass
@@ -80,7 +81,7 @@ class UnknownClassesTest : BaseTest() {
         val cfg = flowGraph()
         cfg.instructions.forEach {
             it.callExpr?.let {
-                assertNotNull(it.method)
+                assertNotNull((it as? JIRMethodCallExpr)?.method)
             }
             it.fieldRef?.let {
                 assertNotNull(it.field)

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRNullConstant
@@ -40,7 +41,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
 
         val getValueAssign = assignInsts.find { inst ->
             val rhv = inst.rhv
-            rhv is JIRCallExpr && rhv.method.method.name == "getValue"
+            rhv is JIRMethodCallExpr && rhv.method.method.name == "getValue"
         }
 
         checkNotNull(getValueAssign) { "Assignment with getValue() call not found" }
@@ -130,7 +131,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "createObject")
 
         val constructorCall = callInsts.find {
-            it.callExpr.method.method.isConstructor
+            it.callExpr.methodOrNull!!.method.isConstructor
         }
 
         checkNotNull(constructorCall) { "Constructor call not found" }
@@ -163,7 +164,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "chainedCall")
 
         val toUpperCaseCall = callInsts.find {
-            it.callExpr?.method?.method?.name == "toUpperCase"
+            it.callExpr?.methodOrNull?.method?.name == "toUpperCase"
         }
 
         checkNotNull(toUpperCaseCall) { "toUpperCase() call not found in chain" }
@@ -202,7 +203,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRAssignInst>(STATIC_SAMPLE_FQN, "staticMethod")
 
         val toLowerCaseCall = callInsts.find {
-            it.callExpr?.method?.method?.name == "toLowerCase"
+            it.callExpr?.methodOrNull?.method?.name == "toLowerCase"
         }
 
         checkNotNull(toLowerCaseCall) { "toLowerCase() call not found" }
@@ -246,7 +247,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "simpleMethodCall")
 
         val toUpperCaseCall = callInsts.find {
-            it.callExpr?.method?.method?.name == "toUpperCase"
+            it.callExpr?.methodOrNull?.method?.name == "toUpperCase"
         }
 
         checkNotNull(toUpperCaseCall) { "toUpperCase() call not found" }
@@ -382,11 +383,11 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val instructions = method.instList
 
         val expectedSpans = mapOf(
-            "entry" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRCallExpr && (it.rhv as JIRCallExpr).method.method.name == "trim" },
-            "local" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRCallExpr && (it.rhv as JIRCallExpr).method.method.name == "trim" },
+            "entry" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRMethodCallExpr && (it.rhv as JIRMethodCallExpr).method.method.name == "trim" },
+            "local" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRMethodCallExpr && (it.rhv as JIRMethodCallExpr).method.method.name == "trim" },
             "fieldWrite" to findInstruction<JIRAssignInst>(instructions) { it.lhv is JIRFieldRef },
             "fieldRead" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRFieldRef },
-            "call" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRCallExpr && (it.rhv as JIRCallExpr).method.method.name == "toUpperCase" },
+            "call" to findInstruction<JIRAssignInst>(instructions) { it.rhv is JIRMethodCallExpr && (it.rhv as JIRMethodCallExpr).method.method.name == "toUpperCase" },
             "return" to findInstruction<JIRReturnInst>(instructions) { true },
             "exit" to findInstruction<JIRReturnInst>(instructions) { true }
         )
@@ -540,7 +541,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "methodCallNoArgs")
 
         val noArgsCall = callInsts.find {
-            it.callExpr.method.method.name == "noArgsHelper"
+            it.callExpr.methodOrNull!!.method.name == "noArgsHelper"
         }
 
         checkNotNull(noArgsCall) { "noArgsHelper() call not found" }
@@ -558,7 +559,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "methodCallOneArg")
 
         val oneArgCall = callInsts.find {
-            it.callExpr.method.method.name == "oneArgHelper"
+            it.callExpr.methodOrNull!!.method.name == "oneArgHelper"
         }
 
         checkNotNull(oneArgCall) { "oneArgHelper() call not found" }
@@ -576,7 +577,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "methodCallTwoArgs")
 
         val twoArgsCall = callInsts.find {
-            it.callExpr.method.method.name == "twoArgsHelper"
+            it.callExpr.methodOrNull!!.method.name == "twoArgsHelper"
         }
 
         checkNotNull(twoArgsCall) { "twoArgsHelper() call not found" }
@@ -594,7 +595,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "methodCallThreeArgs")
 
         val threeArgsCall = callInsts.find {
-            it.callExpr.method.method.name == "threeArgsHelper"
+            it.callExpr.methodOrNull!!.method.name == "threeArgsHelper"
         }
 
         checkNotNull(threeArgsCall) { "threeArgsHelper() call not found" }
@@ -612,7 +613,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val callInsts = getInstructionsOfType<JIRCallInst>(SAMPLE_FQN, "methodCallVarargs")
 
         val varargsCall = callInsts.find {
-            it.callExpr.method.method.name == "varargsHelper"
+            it.callExpr.methodOrNull!!.method.name == "varargsHelper"
         }
 
         checkNotNull(varargsCall) { "varargsHelper() call not found" }
@@ -631,7 +632,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "localVarCallNoArgs")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "length" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "length" }
         checkNotNull(call) { "length() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -646,7 +647,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "localVarCallOneArg")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "charAt" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "charAt" }
         checkNotNull(call) { "charAt() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -661,7 +662,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "localVarCallTwoArgs")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "substring" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "substring" }
         checkNotNull(call) { "substring() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -676,7 +677,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "localVarCallThreeArgs")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "replace" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "replace" }
         checkNotNull(call) { "replace() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -693,7 +694,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "chainedCallNoArgs")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "length" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "length" }
         checkNotNull(call) { "length() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -708,7 +709,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "chainedCallOneArg")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "charAt" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "charAt" }
         checkNotNull(call) { "charAt() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -723,7 +724,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "chainedCallTwoArgs")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "substring" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "substring" }
         checkNotNull(call) { "substring() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -738,7 +739,7 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
         val sourcePath = getSourcePath(SAMPLE_FQN)
         val callInsts = getInstructionsOfType<JIRAssignInst>(SAMPLE_FQN, "chainedCallThreeArgs")
 
-        val call = callInsts.find { it.callExpr?.method?.method?.name == "replace" }
+        val call = callInsts.find { it.callExpr?.methodOrNull?.method?.name == "replace" }
         checkNotNull(call) { "replace() call not found" }
 
         val location = createIntermediateLocation(call)
@@ -749,3 +750,5 @@ class JavaAstSpanResolverTest : BasicTestUtils() {
     }
 }
 
+private val JIRCallExpr.methodOrNull
+    get() = (this as? JIRMethodCallExpr)?.method

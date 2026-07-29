@@ -41,7 +41,7 @@ object JStringConcatTransformer : JIRInstExtFeature {
         val stringConcatCalls = list.mapNotNull { inst ->
             val assignInst = inst as? JIRAssignInst ?: return@mapNotNull null
             val invokeDynamicExpr = assignInst.rhv as? JIRDynamicCallExpr ?: return@mapNotNull null
-            if (!methodIsStringConcat(invokeDynamicExpr.method.method)) return@mapNotNull null
+            if (!methodIsStringConcat(invokeDynamicExpr.bootstrapMethod.method)) return@mapNotNull null
             assignInst to invokeDynamicExpr
         }
 

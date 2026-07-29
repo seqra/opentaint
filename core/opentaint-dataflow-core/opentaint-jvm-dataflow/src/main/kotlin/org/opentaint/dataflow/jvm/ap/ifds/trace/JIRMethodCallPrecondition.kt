@@ -28,15 +28,15 @@ import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluatePassRulePrecondition
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 
 class JIRMethodCallPrecondition(
     override val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,
-    private val callExpr: JIRCallExpr,
+    private val callExpr: JIRMethodCallExpr,
     private val statement: JIRInst,
 ) : MethodCallPrecondition.Default {
     private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
