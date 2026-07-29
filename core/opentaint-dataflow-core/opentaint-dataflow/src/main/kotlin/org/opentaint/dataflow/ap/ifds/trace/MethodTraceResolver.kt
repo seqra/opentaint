@@ -372,7 +372,7 @@ class MethodTraceResolver(
     private class TraceBuilder(
         finalEntry: TraceEntry.Final,
         val cancellation: Cancellation,
-        val collectActionVariants: Boolean,
+        private val collectActionVariants: Boolean,
     ) {
         val entryManager = EntryManager()
         val finalEntryId: Int = entryManager.entryId(finalEntry)
@@ -940,9 +940,13 @@ class MethodTraceResolver(
                     }
                 }
             }
-            val callActions = mergeCallActionsCombinations(callEdges, resolvedMethods)
-            val resolvedCallActions = resolveCallActions(preconditionFunction, statement, callActions)
-            addPredecessorAction(resolvedCallActions, entry, statement)
+
+            val resolvedCallActions = mutableListOf<ActionEdgeCombination>()
+            forEachMergedCallActionsCombination(callEdges, resolvedMethods) { callAction ->
+                resolvedCallActions.resolveCallAction(preconditionFunction, statement, callAction)
+            }
+
+            addPredecessorActions(resolvedCallActions, entry, statement)
         } else {
             val preconditionFunction = analysisManager.getMethodSequentPrecondition(
                 apManager, analysisContext, statement
@@ -1001,7 +1005,7 @@ class MethodTraceResolver(
             }
 
             val actionCombination = mergeSequentEdgeCombinations(sequentActions)
-            addPredecessorAction(actionCombination, entry, statement)
+            addPredecessorActions(actionCombination, entry, statement)
         }
     }
 
@@ -1053,11 +1057,13 @@ class MethodTraceResolver(
         return MethodCallPrecondition.PreconditionFactsForInitialFact(precondition.initialFact, processedPreconditions)
     }
 
-    private fun TraceBuilder.addPredecessorAction(
+    private fun TraceBuilder.addPredecessorActions(
         actionsCombination: List<ActionEdgeCombination>,
         entry: TraceEntry,
-        statement: CommonInst
+        statement: CommonInst,
     ) {
+        val variantsByEdges = hashMapOf<Set<TraceEdge>, MutableSet<ActionVariant>>()
+
         for (sequent in actionsCombination) {
             if (sequent.other.isEmpty()) {
                 if (sequent.primary == null) {
@@ -1072,8 +1078,18 @@ class MethodTraceResolver(
                 }
             }
 
-            val action = TraceEntry.Action(sequent.primary, sequent.other, sequent.unchanged, statement)
-            addPredecessorAction(entry, action)
+            val variant = ActionVariant(sequent.primary, sequent.other, sequent.unchanged)
+            val sourceStart = tryCreateSourceStart(variant, statement)
+            if (sourceStart != null) {
+                addPredecessor(entry, sourceStart)
+            } else {
+                variantsByEdges.getOrPut(variant.edges, ::hashSetOf).add(variant)
+            }
+        }
+
+        for ((edges, variants) in variantsByEdges) {
+            val action = createAction(statement, edges, variants)
+            addPredecessor(entry, action)
         }
     }
 
@@ -1104,21 +1120,19 @@ class MethodTraceResolver(
         return unchanged
     }
 
-    private fun TraceBuilder.addPredecessorAction(entry: TraceEntry, action: TraceEntry.Action) {
-        val startOrAction = tryCreateSourceStart(action) ?: action
-        addPredecessor(entry, startOrAction)
-    }
+    private fun tryCreateSourceStart(
+        variant: ActionVariant,
+        statement: CommonInst,
+    ): TraceEntry.SourceStartEntry? {
+        if (variant.unchanged.isNotEmpty()) return null
 
-    private fun tryCreateSourceStart(action: TraceEntry.Action): TraceEntry.SourceStartEntry? {
-        if (action.unchanged.isNotEmpty()) return null
-
-        val primary = action.primaryAction
+        val primary = variant.primaryAction
         if (primary !is TraceEntryAction.SourcePrimaryAction?) return null
 
-        val sourceOther = action.otherActions.filterIsInstanceTo<SourceOtherAction, _>(hashSetOf())
-        if (sourceOther.size != action.otherActions.size) return null
+        val sourceOther = variant.otherActions.filterIsInstanceTo<SourceOtherAction, _>(hashSetOf())
+        if (sourceOther.size != variant.otherActions.size) return null
 
-        return TraceEntry.SourceStartEntry(primary, sourceOther, action.statement)
+        return TraceEntry.SourceStartEntry(primary, sourceOther, statement)
     }
 
     private data class ActionEdgeCombination(
@@ -1326,48 +1340,42 @@ class MethodTraceResolver(
         }
     }
 
-    private fun resolveCallActions(
+    private fun MutableList<ActionEdgeCombination>.resolveCallAction(
         preconditionFunction: MethodCallPrecondition,
         statement: CommonInst,
-        callActions: List<PartialCallEdgeCombination>,
-    ): List<ActionEdgeCombination> {
-        val result = mutableListOf<ActionEdgeCombination>()
-
-        fun addResolved(unchanged: Set<TraceEdge>, primaryActions: List<PrimaryAction>?, otherActions: Set<OtherAction>) {
+        callAction: PartialCallEdgeCombination,
+    ) {
+        fun addResolved(primaryActions: List<PrimaryAction>?, otherActions: Set<OtherAction>) {
             if (primaryActions == null) {
-                result.add(ActionEdgeCombination(unchanged, primary = null, otherActions))
+                this += ActionEdgeCombination(callAction.unchanged, primary = null, otherActions)
             } else {
-                primaryActions.mapTo(result) {
-                    ActionEdgeCombination(unchanged, it, otherActions)
+                primaryActions.forEach {
+                    this += ActionEdgeCombination(callAction.unchanged, it, otherActions)
                 }
             }
         }
 
-        for (callAction in callActions) {
-            val resolvedPrimaryAction = when (val primaryAction = callAction.primary) {
-                null -> null
-                is MergedPrimaryUnresolvedCallSkip -> listOf(primaryAction.action)
-                is MergedPrimaryCall2StartAction -> {
-                    resolveCallSummary(statement, primaryAction.calleeEntryPoint, primaryAction.call2Start)
-                }
-            }
-
-            val ruleActions = callAction.rule
-            if (ruleActions.isEmpty()) {
-                addResolved(callAction.unchanged, resolvedPrimaryAction, emptySet())
-                continue
-            }
-
-            val resolvedRuleActions = ruleActions.map {
-                resolveCallRule(it.currentEdges, it.rule, preconditionFunction, statement)
-            }
-
-            resolvedRuleActions.cartesianProductMapTo { ruleActionGroup ->
-                val ruleActionSet = ruleActionGroup.toHashSet()
-                addResolved(callAction.unchanged, resolvedPrimaryAction, ruleActionSet)
+        val resolvedPrimaryAction = when (val primaryAction = callAction.primary) {
+            null -> null
+            is MergedPrimaryUnresolvedCallSkip -> listOf(primaryAction.action)
+            is MergedPrimaryCall2StartAction -> {
+                resolveCallSummary(statement, primaryAction.calleeEntryPoint, primaryAction.call2Start)
             }
         }
-        return result
+
+        val ruleActions = callAction.rule
+        if (ruleActions.isEmpty()) {
+            addResolved(resolvedPrimaryAction, emptySet())
+            return
+        }
+
+        val resolvedRuleActions = ruleActions.map {
+            resolveCallRule(it.currentEdges, it.rule, preconditionFunction, statement)
+        }
+
+        resolvedRuleActions.forEachCartesianProduct { ruleActionGroup ->
+            addResolved(resolvedPrimaryAction, ruleActionGroup.toHashSet())
+        }
     }
 
     private fun resolveCallSummary(
