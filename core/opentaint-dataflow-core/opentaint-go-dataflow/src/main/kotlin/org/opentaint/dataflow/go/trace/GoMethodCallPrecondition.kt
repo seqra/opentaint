@@ -150,7 +150,7 @@ class GoMethodCallPrecondition(
         startFactBase: AccessPathBase,
     ): List<TaintRulePrecondition> {
         val signature = callSignature ?: return emptyList()
-        val passRules = analysisContext.taint.passRulesForCallStatement(signature)
+        val passRules = analysisContext.taint.passRulesForCallStatement(signature, statement)
         if (passRules.isEmpty()) return emptyList()
 
         val entryFactReader = InitialFactReader(fact.rebase(startFactBase), apManager)
