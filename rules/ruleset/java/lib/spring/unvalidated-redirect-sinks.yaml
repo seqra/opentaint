@@ -10,31 +10,45 @@ rules:
       provenance: https://github.com/semgrep/semgrep-rules/blob/develop/java/spring/security/audit/spring-unvalidated-redirect.yaml
     languages:
       - java
-    pattern-either:
-      - pattern: new RedirectView($URL);
-      - pattern: new ModelAndView("redirect:" + $URL);
-      - pattern: (HttpServletResponse $RES).sendRedirect($URL);
-      - pattern: (HttpServletResponse $RES).addHeader("Location", $URL);
+    mode: taint
+    pattern-sanitizers:
       - patterns:
-        - pattern: |
-            @$ANNOTATION(...)
-            $RETURNTYPE $METHOD(...) {
-              ...
-              return "$REDIRECT" + $*URL;
-              ...
-            }
+          - pattern: $*URI = (HttpServletRequest $REQ).getRequestURI();
+          - focus-metavariable: $URI
+    pattern-sinks:
+      - patterns:
+          - pattern: new RedirectView($URL);
+          - focus-metavariable: $URL
+      - patterns:
+          - pattern: new ModelAndView("redirect:" + $URL);
+          - focus-metavariable: $URL
+      - patterns:
+          - pattern: (HttpServletResponse $RES).sendRedirect($URL);
+          - focus-metavariable: $URL
+      - patterns:
+          - pattern: (HttpServletResponse $RES).addHeader("Location", $URL);
+          - focus-metavariable: $URL
+      - patterns:
+          - pattern: |
+              @$ANNOTATION(...)
+              $RETURNTYPE $METHOD(...) {
+                ...
+                return "$REDIRECT" + $*URL;
+                ...
+              }
 
-        - metavariable-regex:
-            metavariable: $REDIRECT
-            regex: "redirect:.*"
+          - metavariable-regex:
+              metavariable: $REDIRECT
+              regex: "redirect:.*"
 
-        - metavariable-pattern:
-            metavariable: $ANNOTATION
-            patterns:
-              - pattern-either:
-                - pattern: RequestMapping
-                - pattern: DeleteMapping
-                - pattern: GetMapping
-                - pattern: PatchMapping
-                - pattern: PostMapping
-                - pattern: PutMapping
+          - metavariable-pattern:
+              metavariable: $ANNOTATION
+              patterns:
+                - pattern-either:
+                    - pattern: RequestMapping
+                    - pattern: DeleteMapping
+                    - pattern: GetMapping
+                    - pattern: PatchMapping
+                    - pattern: PostMapping
+                    - pattern: PutMapping
+          - focus-metavariable: $URL
