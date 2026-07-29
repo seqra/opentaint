@@ -18,6 +18,7 @@ import org.opentaint.jvm.sast.sarif.JIRSarifTraits
 import org.opentaint.jvm.sast.sarif.LocationSpan
 import org.opentaint.jvm.sast.sarif.LocationType
 import org.opentaint.common.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNodeEntry
 import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.project.JavaProject
 import org.opentaint.project.ProjectModuleClasses
@@ -139,7 +140,7 @@ abstract class BasicTestUtils {
         val traceNode = TracePathNode(
             statement = inst,
             kind = TracePathNodeKind.OTHER,
-            entry = finalEntry
+            entry = TracePathNodeEntry.NonAction(finalEntry)
         )
         return IntermediateLocation(inst, info, "test", null, LocationType.Simple, null, traceNode)
     }

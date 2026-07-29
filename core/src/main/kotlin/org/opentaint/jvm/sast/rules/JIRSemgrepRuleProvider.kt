@@ -49,9 +49,10 @@ class JIRSemgrepRuleProvider(
 
     override fun entryPointRulesForMethod(
         method: CommonMethod,
+        statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.entryPointRulesForMethod(method, fact, allRelevant).select(allRelevant)
+    ) = base.entryPointRulesForMethod(method, statement, fact, allRelevant).select(allRelevant)
 
     override fun sourceRulesForMethod(
         method: CommonMethod,
@@ -76,9 +77,10 @@ class JIRSemgrepRuleProvider(
 
     override fun sinkRulesForMethodEntry(
         method: CommonMethod,
+        statement: CommonInst,
         fact: FactAp?,
         allRelevant: Boolean
-    ) = base.sinkRulesForMethodEntry(method, fact, allRelevant).select(allRelevant)
+    ) = base.sinkRulesForMethodEntry(method, statement, fact, allRelevant).select(allRelevant)
 
     override fun sinkRulesForMethodExit(
         method: CommonMethod,
