@@ -24,10 +24,10 @@ private class PrintableFullTrace(
     override fun successors(node: Int): List<Pair<Pair<Int, Int>, Int>> =
         trace.successors.get(node)?.toSet().orEmpty().map { (node to it) to it }
 
-    override fun nodeLabel(node: Int): String = nodeLabel(trace.entries[node])
+    override fun nodeLabel(node: Int): String = nodeLabel(trace.entries[node], node)
 
-    fun nodeLabel(node: TraceEntry): String = when (node) {
-        is TraceEntry.Action -> "Action{${node.statement}}(${node.nodeEdgesStr()})[${node.actionStr()}]"
+    fun nodeLabel(node: TraceEntry, nodeId: Int): String = when (node) {
+        is TraceEntry.Action -> "Action{${node.statement}}(${node.nodeEdgesStr()})[${node.actionStr(nodeId)}]"
         is TraceEntry.Final -> "Final{${node.statement}}(${node.nodeEdgesStr()})"
         is TraceEntry.MethodEntry -> "Entry{${node.statement}}(${node.nodeEdgesStr()})"
         is TraceEntry.SourceStartEntry -> "SourceStart{${node.statement}}(${node.nodeEdgesStr()})"
@@ -40,7 +40,6 @@ private class PrintableFullTrace(
         return facts.joinToString("\n")
     }
 
-    private fun TraceEntry.Action.actionStr(): String {
-        return this.toString()
-    }
+    private fun TraceEntry.Action.actionStr(id: Int): String =
+        trace.actionVariants.get(id).toString()
 }

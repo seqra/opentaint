@@ -105,14 +105,12 @@ class PersistentArrayBuilder<T>(val original: Array<T?>) {
     }
 }
 
-inline fun <reified T, R> List<List<T>>.cartesianProductMapTo(body: (Array<T>) -> R): List<R> {
+inline fun <reified T> List<List<T>>.forEachCartesianProduct(body: (Array<T>) -> Unit) {
     val resultSize = fold(1) { acc, lst -> acc * lst.size }
-    if (resultSize == 0) return emptyList()
+    if (resultSize == 0) return
 
-    val result = mutableListOf<R>()
     val chunk = arrayOfNulls<T>(size)
     for (chunkIdx in 0 until resultSize) {
-
         var currentChunkPos = chunkIdx
         for (i in indices) {
             val lst = this[i]
@@ -122,8 +120,12 @@ inline fun <reified T, R> List<List<T>>.cartesianProductMapTo(body: (Array<T>) -
         }
 
         @Suppress("UNCHECKED_CAST")
-        result += body(chunk as Array<T>)
+        body(chunk as Array<T>)
     }
+}
 
+inline fun <reified T, R> List<List<T>>.cartesianProductMapTo(body: (Array<T>) -> R): List<R> {
+    val result = mutableListOf<R>()
+    forEachCartesianProduct { result += body(it) }
     return result
 }
