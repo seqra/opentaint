@@ -424,6 +424,30 @@ object BaseOnlyAccessOps {
         return !final.hasSemanticMark || final.valueAccessorState == initial.valueAccessorState
     }
 
+    /**
+     * The first concrete accessor selected by [candidate] after [pattern]'s abstraction point.
+     * A concrete structural slot in the candidate is residual when the suffix-abstract pattern
+     * has no corresponding structural slot: BaseOnly's implicit Any step crosses that boundary.
+     */
+    fun firstAccessorAfterAbstraction(
+        pattern: BaseOnlyAccess,
+        candidate: BaseOnlyAccess,
+    ): AccessorIdx? = when (pattern.apSlot) {
+        0 -> candidate.staticIdx.takeIf { it >= 0 }
+            ?: candidate.fieldIdx.takeIf { it >= 0 }
+            ?: candidate.suffixIdx.takeIf { it >= 0 }
+
+        1 -> candidate.fieldIdx.takeIf { it >= 0 }
+            ?: candidate.suffixIdx.takeIf { it >= 0 }
+
+        2 -> when {
+            pattern.fieldIdx == NO_ACCESSOR && candidate.fieldIdx >= 0 -> candidate.fieldIdx
+            else -> candidate.suffixIdx.takeIf { it >= 0 }
+        }
+
+        else -> null
+    }
+
     fun equalToInitial(final: BaseOnlyAccess, initial: BaseOnlyAccess): Boolean {
         if (initial.staticIdx != final.staticIdx) return false
         if (initial.fieldIdx != final.fieldIdx) return false

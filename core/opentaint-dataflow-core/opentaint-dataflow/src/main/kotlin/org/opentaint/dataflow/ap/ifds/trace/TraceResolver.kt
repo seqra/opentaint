@@ -3,6 +3,12 @@ package org.opentaint.dataflow.ap.ifds.trace
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyInitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.NO_ACCESSOR
+import org.opentaint.dataflow.ap.ifds.access.baseonly.fieldIdx
+import org.opentaint.dataflow.ap.ifds.access.baseonly.staticIdx
+import org.opentaint.dataflow.ap.ifds.access.baseonly.suffixIdx
+import org.opentaint.dataflow.ap.ifds.access.baseonly.valueAccessorState
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.TaintVulnerability
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.TaintVulnerabilityRuleNode
@@ -14,9 +20,24 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.TraceResolutionResult.
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
+import java.util.PriorityQueue
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+
+internal fun InitialFactAp.baseOnlyTraceFieldGeneralizationCovers(other: InitialFactAp): Boolean {
+    if (this == other) return true
+    val general = this as? BaseOnlyInitialFactAp ?: return false
+    val concrete = other as? BaseOnlyInitialFactAp ?: return false
+    if (general.base != concrete.base || general.exclusions != concrete.exclusions) return false
+    return general.access.staticIdx == concrete.access.staticIdx &&
+        general.access.fieldIdx == NO_ACCESSOR &&
+        concrete.access.fieldIdx != NO_ACCESSOR &&
+        general.access.suffixIdx != NO_ACCESSOR &&
+        general.access.suffixIdx == concrete.access.suffixIdx &&
+        general.access.valueAccessorState == concrete.access.valueAccessorState
+}
 
 class TraceResolver(
     private val entryPointMethods: Set<CommonMethod>,
@@ -24,6 +45,22 @@ class TraceResolver(
     private val params: Params,
     private val cancellation: Cancellation
 ) {
+    private val start2FinalTraceCache =
+        ConcurrentHashMap<MethodTraceResolver.SummaryTrace, List<MethodTraceResolver.Start2FinalTrace>>()
+    private val generalizedStart2FinalTraceCache =
+        ConcurrentHashMap<StartTraceCacheKey, MutableList<CachedStartTrace>>()
+
+    private data class StartTraceCacheKey(
+        val method: MethodEntryPoint,
+        val statement: CommonInst,
+        val traceKind: MethodTraceResolver.TraceKind,
+    )
+
+    private data class CachedStartTrace(
+        val trace: MethodTraceResolver.SummaryTrace,
+        val result: List<MethodTraceResolver.Start2FinalTrace>,
+    )
+
     data class Params(
         val resolveEntryPointToStartTrace: Boolean = true,
         val resolveAllTraces: Boolean = false,
@@ -328,8 +365,12 @@ class TraceResolver(
         val rootNodes = hashSetOf<InterProceduralTraceNode>()
         val successors = hashMapOf<InterProceduralTraceNode, MutableSet<InterProceduralCall>>()
 
-        val unprocessedCall2Source = mutableListOf<BuilderUnprocessedTrace>()
-        val unprocessedCall2Sink = mutableListOf<BuilderUnprocessedTrace>()
+        private val eventComparator = compareBy<BuilderUnprocessedTrace>(
+            { it.trace.fieldSpecificity() },
+            { -it.depth },
+        )
+        private val unprocessedCall2Source = PriorityQueue(eventComparator)
+        private val unprocessedCall2Sink = PriorityQueue(eventComparator)
 
         fun createSinkNode(trace: MethodTraceResolver.SummaryTrace) {
             val nodes = resolveNode(trace, CallKind.CallToSink, depth = 0)
@@ -337,8 +378,8 @@ class TraceResolver(
         }
 
         private fun pollUnprocessedEvent(): BuilderUnprocessedTrace? {
-            unprocessedCall2Sink.removeLastOrNull()?.let { return it }
-            unprocessedCall2Source.removeLastOrNull()?.let { return it }
+            unprocessedCall2Sink.poll()?.let { return it }
+            unprocessedCall2Source.poll()?.let { return it }
             return null
         }
 
@@ -400,10 +441,7 @@ class TraceResolver(
             val currentNode = traceNodes[cacheKey]
             if (currentNode != null) return currentNode
 
-            val fullTraces = manager.withMethodRunner(trace.method) {
-                val traceResolver = methodTraceResolver(trace.method)
-                traceResolver.resolveIntraProceduralStart2FinalTrace(trace, cancellation)
-            }
+            val fullTraces = resolveStart2FinalTrace(trace)
 
             val resultNodes = mutableListOf<InterProceduralTraceNode>()
 
@@ -436,6 +474,91 @@ class TraceResolver(
 
             traceNodes[cacheKey] = resultNodes
             return resultNodes
+        }
+
+        private fun resolveStart2FinalTrace(
+            trace: MethodTraceResolver.SummaryTrace,
+        ): List<MethodTraceResolver.Start2FinalTrace> =
+            start2FinalTraceCache.computeIfAbsent(trace) {
+                val cacheKey = StartTraceCacheKey(trace.method, trace.final.statement, trace.traceKind)
+                val generalized = generalizedStart2FinalTraceCache.computeIfAbsent(cacheKey) { mutableListOf() }
+
+                synchronized(generalized) {
+                    generalized.firstOrNull { it.trace.fieldGeneralizationCovers(trace) }?.let {
+                        return@computeIfAbsent it.result
+                    }
+                }
+
+                val resolved = manager.withMethodRunner(trace.method) {
+                    val traceResolver = methodTraceResolver(trace.method)
+                    traceResolver.resolveIntraProceduralStart2FinalTrace(trace, cancellation)
+                }
+
+                synchronized(generalized) {
+                    generalized.firstOrNull { it.trace.fieldGeneralizationCovers(trace) }?.let {
+                        return@computeIfAbsent it.result
+                    }
+                    if (resolved.isNotEmpty()) {
+                        generalized.removeIf { trace.fieldGeneralizationCovers(it.trace) }
+                        generalized += CachedStartTrace(trace, resolved)
+                    }
+                }
+                resolved
+            }
+
+        private fun MethodTraceResolver.SummaryTrace.fieldGeneralizationCovers(
+            other: MethodTraceResolver.SummaryTrace,
+        ): Boolean {
+            if (method != other.method ||
+                traceKind != other.traceKind ||
+                final.statement != other.final.statement ||
+                final.edges.size != other.final.edges.size
+            ) {
+                return false
+            }
+            val available = final.edges.toMutableList()
+            for (otherEdge in other.final.edges) {
+                val coveringIdx = available.indexOfFirst { it.fieldGeneralizationCovers(otherEdge) }
+                if (coveringIdx < 0) return false
+                available.removeAt(coveringIdx)
+            }
+            return true
+        }
+
+        private fun MethodTraceResolver.SummaryTrace.fieldSpecificity(): Int =
+            final.edges.sumOf { it.fieldSpecificity() }
+
+        private fun MethodTraceResolver.TraceEdge.fieldSpecificity(): Int = when (this) {
+            is MethodTraceResolver.TraceEdge.SourceTraceEdge -> fact.fieldSpecificity()
+            is MethodTraceResolver.TraceEdge.MethodTraceEdge ->
+                initialFact.fieldSpecificity() + fact.fieldSpecificity()
+
+            is MethodTraceResolver.TraceEdge.MethodTraceNDEdge ->
+                initialFacts.sumOf { it.fieldSpecificity() } + fact.fieldSpecificity()
+        }
+
+        private fun InitialFactAp.fieldSpecificity(): Int {
+            val fact = this as? BaseOnlyInitialFactAp ?: return 0
+            return if (fact.access.fieldIdx != NO_ACCESSOR && fact.access.suffixIdx != NO_ACCESSOR) 1 else 0
+        }
+
+        private fun MethodTraceResolver.TraceEdge.fieldGeneralizationCovers(
+            other: MethodTraceResolver.TraceEdge,
+        ): Boolean = when {
+            this is MethodTraceResolver.TraceEdge.SourceTraceEdge &&
+                other is MethodTraceResolver.TraceEdge.SourceTraceEdge ->
+                fact.baseOnlyTraceFieldGeneralizationCovers(other.fact)
+
+            this is MethodTraceResolver.TraceEdge.MethodTraceEdge &&
+                other is MethodTraceResolver.TraceEdge.MethodTraceEdge ->
+                initialFact.baseOnlyTraceFieldGeneralizationCovers(other.initialFact) &&
+                    fact.baseOnlyTraceFieldGeneralizationCovers(other.fact)
+
+            this is MethodTraceResolver.TraceEdge.MethodTraceNDEdge &&
+                other is MethodTraceResolver.TraceEdge.MethodTraceNDEdge ->
+                this == other
+
+            else -> false
         }
 
         private fun resolveNode(trace: MethodTraceResolver.Start2FinalTrace, kind: CallKind, depth: Int): InterProceduralTraceNode {

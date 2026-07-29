@@ -4,6 +4,7 @@ import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.ActionVariant
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.FullStart2FinalTrace
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.SummaryTrace
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEdge
@@ -252,13 +253,23 @@ private class TraceActionCollector(
         seed: Rules,
     ): Evaluation {
         val invalidEntries = hashSetOf<Int>()
-        val summaryRules = hashMapOf<Int, Rules>()
+        val entryRules = hashMapOf<Int, Rules>()
 
         for ((entryId, entry) in trace.entries.withIndex()) {
             if (!isActive()) return Evaluation.Failed
+
+            if (entry is TraceEntry.Action) {
+                when (val result = evaluateActionVariants(trace, entry, entryId, origin)) {
+                    is Evaluation.Valid -> entryRules[entryId] = result.rules
+                    Evaluation.Invalid -> invalidEntries += entryId
+                    Evaluation.Failed -> return Evaluation.Failed
+                }
+                continue
+            }
+
             val summary = entry.relevantSummary(origin) ?: continue
             when (val nestedResult = evaluateSummary(summary)) {
-                is Evaluation.Valid -> summaryRules[entryId] = nestedResult.rules
+                is Evaluation.Valid -> entryRules[entryId] = nestedResult.rules
                 Evaluation.Invalid -> invalidEntries += entryId
                 Evaluation.Failed -> return Evaluation.Failed
             }
@@ -271,20 +282,57 @@ private class TraceActionCollector(
         collected.addAll(seed)
         for (entryId in reachableEntries) {
             if (!isActive()) return Evaluation.Failed
-            summaryRules[entryId]?.let(collected::addAll)
-            collected.addRuleActions(trace.entries[entryId])
+            entryRules[entryId]?.let(collected::addAll)
+            val entry = trace.entries[entryId]
+            if (entry !is TraceEntry.Action) {
+                collected.addRuleActions(entry)
+            }
         }
 
         return Evaluation.Valid(collected.freeze())
     }
 
-    private fun TraceEntry.relevantSummary(origin: TraceOrigin): SummaryTrace? = when (this) {
-        is TraceEntry.Action -> when (val action = primaryAction) {
+    private fun evaluateActionVariants(
+        trace: FullStart2FinalTrace,
+        entry: TraceEntry.Action,
+        entryId: Int,
+        origin: TraceOrigin,
+    ): Evaluation {
+        val variants = trace.actionVariants.get(entryId)
+
+        var hasValidVariant = false
+        val collected = RulesAccumulator()
+        for (variant in variants) {
+            if (!isActive()) return Evaluation.Failed
+
+            val summary = variant.relevantSummary(origin)
+            if (summary != null) {
+                when (val nestedResult = evaluateSummary(summary)) {
+                    is Evaluation.Valid -> collected.addAll(nestedResult.rules)
+                    Evaluation.Invalid -> continue
+                    Evaluation.Failed -> return Evaluation.Failed
+                }
+            }
+
+            hasValidVariant = true
+            collected.addRuleActions(entry.statement, variant.otherActions)
+        }
+
+        return if (hasValidVariant) {
+            Evaluation.Valid(collected.freeze())
+        } else {
+            Evaluation.Invalid
+        }
+    }
+
+    private fun ActionVariant.relevantSummary(origin: TraceOrigin): SummaryTrace? =
+        when (val action = primaryAction) {
             is TraceEntryAction.CallSourceSummary -> action.summaryTrace
             is TraceEntryAction.CallSummary -> action.summaryTrace.takeIf { it.shouldExpand() }
             else -> null
         }
 
+    private fun TraceEntry.relevantSummary(origin: TraceOrigin): SummaryTrace? = when (this) {
         is TraceEntry.SourceStartEntry -> {
             val action = sourcePrimaryAction
             if (origin == TraceOrigin.NestedSummary && action is TraceEntryAction.CallSourceSummary) {
@@ -299,19 +347,24 @@ private class TraceActionCollector(
 
     private fun RulesAccumulator.addRuleActions(entry: TraceEntry) {
         val actions: Iterable<TraceEntryAction> = when (entry) {
-            is TraceEntry.Action -> entry.otherActions
             is TraceEntry.SourceStartEntry -> entry.sourceOtherActions
             else -> emptyList()
         }
+        addRuleActions(entry.statement, actions)
+    }
 
+    private fun RulesAccumulator.addRuleActions(
+        statement: CommonInst,
+        actions: Iterable<TraceEntryAction>,
+    ) {
         actions.forEach { action ->
             when (action) {
                 is TraceEntryAction.CallRuleAction -> {
-                    addAction(entry.statement, action.rule, action.action)
+                    addAction(statement, action.rule, action.action)
                 }
 
                 is TraceEntryAction.SequentialSourceRule -> {
-                    addAction(entry.statement, action.rule, action.action)
+                    addAction(statement, action.rule, action.action)
                 }
 
                 is TraceEntryAction.CallSourceSummary,

@@ -18,6 +18,9 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.ABSTRACT_EMPTY_ACCESS
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyInitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.eraseFieldForSummaryGeneralization
 import org.opentaint.dataflow.ap.ifds.analysis.AnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
@@ -76,7 +79,6 @@ class MethodTraceResolver(
     private val manager: AnalysisUnitRunnerManager get() = runner.manager
     private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
     private val apManager: ApManager get() = runner.apManager
-
     // Enum can give non-determinacy as its entries have new hash code on every JVM run.
     // Override hashcode() and equals() when using enum as a field in classes whose objects
     // can be stored in sets etc.
@@ -927,7 +929,6 @@ class MethodTraceResolver(
 
                 callEdges.add(callActions)
             }
-
             val allUnchanged = callEdges.allUnchanged()
             if (allUnchanged != null) {
                 addPredecessor(entry, TraceEntry.Unchanged(allUnchanged, statement))
@@ -1686,12 +1687,54 @@ class MethodTraceResolver(
             .groupBy { it.summaryTrace.final.statement }
             .values.forEach { entries ->
                 val selectedEntries = LinkedList<CallSummary>()
-                for (summary in entries) {
+                for (summary in entries.dropFieldEntriesCoveredByApplicableWildcard()) {
                     addWeakestEntry(summary, selectedEntries)
                 }
                 result += selectedEntries
             }
         return result
+    }
+
+    private fun List<CallSummary>.dropFieldEntriesCoveredByApplicableWildcard(): List<CallSummary> {
+        val wildcardEntries = filter { it.hasApplicableBaseOnlyWildcardSummary() }
+        if (wildcardEntries.isEmpty()) return this
+        return filterNot { entry ->
+            if (entry.hasApplicableBaseOnlyWildcardSummary()) return@filterNot false
+            wildcardEntries.any { wildcard -> entry.isCoveredByApplicableWildcard(wildcard) }
+        }
+    }
+
+    private fun CallSummary.hasApplicableBaseOnlyWildcardSummary(): Boolean {
+        val summary = summaryEdges.singleOrNull() as? TraceSummaryEdge.MethodSummary ?: return false
+        val initial = summary.delta?.initialFact as? BaseOnlyInitialFactAp ?: return false
+        return initial.access == ABSTRACT_EMPTY_ACCESS
+    }
+
+    private fun CallSummary.isCoveredByApplicableWildcard(wildcard: CallSummary): Boolean {
+        val summary = summaryEdges.singleOrNull() as? TraceSummaryEdge.MethodSummary ?: return false
+        val wildcardSummary = wildcard.summaryEdges.singleOrNull() as? TraceSummaryEdge.MethodSummary ?: return false
+        if (summary.edgeAfter != wildcardSummary.edgeAfter) return false
+
+        val edge = summaryTrace.final.edges.singleOrNull() as? TraceEdge.MethodTraceEdge ?: return false
+        val wildcardEdge = wildcard.summaryTrace.final.edges.singleOrNull() as? TraceEdge.MethodTraceEdge ?: return false
+        if (summaryTrace.method != wildcard.summaryTrace.method) return false
+        if (summaryTrace.traceKind != wildcard.summaryTrace.traceKind) return false
+        if (summaryTrace.final.statement != wildcard.summaryTrace.final.statement) return false
+        if (edge.fact != wildcardEdge.fact) return false
+
+        val initial = summary.delta?.initialFact as? BaseOnlyInitialFactAp ?: return false
+        val wildcardInitial = wildcardSummary.delta?.initialFact as? BaseOnlyInitialFactAp ?: return false
+        if (initial.projectFieldToWildcard() != wildcardInitial) return false
+
+        val callerFact = summary.edge.fact as? BaseOnlyInitialFactAp ?: return false
+        val wildcardCallerFact = wildcardSummary.edge.fact as? BaseOnlyInitialFactAp ?: return false
+        if (callerFact.projectFieldToWildcard() != wildcardCallerFact) return false
+        return summary.edge.replaceFact(wildcardCallerFact) == wildcardSummary.edge
+    }
+
+    private fun BaseOnlyInitialFactAp.projectFieldToWildcard(): BaseOnlyInitialFactAp? {
+        val generalizedAccess = access.eraseFieldForSummaryGeneralization() ?: return null
+        return BaseOnlyInitialFactAp(manager, base, generalizedAccess, exclusions)
     }
 
     private fun addWeakestEntry(entry: CallSummary, selectedEntries: LinkedList<CallSummary>) {

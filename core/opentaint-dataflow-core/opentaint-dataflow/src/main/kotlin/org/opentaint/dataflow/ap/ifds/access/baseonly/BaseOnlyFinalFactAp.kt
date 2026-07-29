@@ -155,7 +155,11 @@ class BaseOnlyFinalFactAp(
     override fun contains(factAp: InitialFactAp): Boolean {
         factAp as BaseOnlyInitialFactAp
         if (base != factAp.base) return false
-        return BaseOnlyAccessOps.containsAccess(access, factAp.access)
+        if (!BaseOnlyAccessOps.containsAccess(access, factAp.access)) return false
+        val residualHead = BaseOnlyAccessOps.firstAccessorAfterAbstraction(access, factAp.access)
+            ?: return true
+        val accessor = manager.interner.accessor(residualHead) ?: return true
+        return accessor !in exclusions
     }
 
     override fun equalTo(factAp: InitialFactAp): Boolean {
