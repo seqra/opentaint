@@ -14,9 +14,11 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.clean
+import org.opentaint.dataflow.ap.ifds.access.forExclusions
 import org.opentaint.dataflow.taint.Cleaner
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.serialization.readEnum
@@ -30,7 +32,7 @@ class AccessCactus(
     override val base: AccessPathBase,
     val access: AccessNode,
     override val exclusions: ExclusionSet,
-    val anyFieldMarkExclusions: CactusAnyFieldMarkExclusions = CactusAnyFieldMarkExclusions.Empty,
+    val anyFieldMarkExclusions: AnyFieldMarkExclusions = AnyFieldMarkExclusions.Empty,
 ): FinalFactAp {
     init {
         assert({ access.isWellFormed() }) {
@@ -57,7 +59,7 @@ class AccessCactus(
             access,
             exclusions,
             anyFieldMarkExclusions.takeUnless { exclusions is ExclusionSet.Universe }
-                ?: CactusAnyFieldMarkExclusions.Empty,
+                ?: AnyFieldMarkExclusions.Empty,
         )
 
     override fun getAllAccessors(): Set<Accessor> {
@@ -114,7 +116,7 @@ class AccessCactus(
         val cleaned = access.filterAccessNode(atBaseFilter)
             ?: return FinalFactAp.CleanResult(emptyList(), removedAlternative = true)
         val cleanedAnyFieldMarkExclusions =
-            anyFieldMarkExclusions.add(mark).forExclusions(exclusions)
+            anyFieldMarkExclusions.add(CactusMarkInterner.index(mark)).forExclusions(exclusions)
         return FinalFactAp.CleanResult(
             survivingFacts = listOf(
                 AccessCactus(
@@ -145,11 +147,11 @@ class AccessCactus(
         access.allEdges.mapTo(hashSetOf()) { it.accessor }
 
     sealed interface Delta : FinalFactAp.Delta {
-        val anyFieldMarkExclusions: CactusAnyFieldMarkExclusions
+        val anyFieldMarkExclusions: AnyFieldMarkExclusions
     }
 
     data class EmptyDelta(
-        override val anyFieldMarkExclusions: CactusAnyFieldMarkExclusions,
+        override val anyFieldMarkExclusions: AnyFieldMarkExclusions,
     ) : Delta {
         override val isEmpty: Boolean get() = true
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
@@ -161,7 +163,7 @@ class AccessCactus(
 
     data class NodeDelta(
         val node: AccessNode,
-        override val anyFieldMarkExclusions: CactusAnyFieldMarkExclusions,
+        override val anyFieldMarkExclusions: AnyFieldMarkExclusions,
     ) : Delta {
         override val isEmpty: Boolean get() = false
         override fun startsWithAccessor(accessor: Accessor): Boolean = node.contains(accessor)
@@ -851,17 +853,20 @@ class AccessCactus(
         }
 
         fun enforceAnyFieldMarkExclusions(
-            exclusions: CactusAnyFieldMarkExclusions,
+            exclusions: AnyFieldMarkExclusions,
             keepInitialLevel: Boolean = true,
         ): AccessNode? {
             if (exclusions.isEmpty) return this
             val effective = if (keepInitialLevel) exclusions else exclusions.collapseToDepth1()
 
             fun exclusionFilter(
-                current: CactusAnyFieldMarkExclusions,
+                current: AnyFieldMarkExclusions,
             ): FactTypeChecker.FactApFilter = object : FactTypeChecker.FactApFilter {
                 override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
-                    if (accessor is TaintMarkAccessor && current.excludesFromDepth1(accessor)) {
+                    if (
+                        accessor is TaintMarkAccessor &&
+                        current.marksFromDepth1.binarySearch(CactusMarkInterner.index(accessor)) >= 0
+                    ) {
                         FactTypeChecker.FilterResult.Reject
                     } else {
                         val below = current.collapseToDepth1()

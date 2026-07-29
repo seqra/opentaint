@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -14,11 +15,13 @@ class CactusAccessTest {
         val access = AccessCactus.AccessNode.create(isAbstract = true)
         val cleanedTwice = CactusFinalAccess(
             access,
-            CactusAnyFieldMarkExclusions.Empty.add(markA).add(markB),
+            AnyFieldMarkExclusions.Empty
+                .add(CactusMarkInterner.index(markA))
+                .add(CactusMarkInterner.index(markB)),
         )
         val cleanedOnce = CactusFinalAccess(
             access,
-            CactusAnyFieldMarkExclusions.Empty.add(markA),
+            AnyFieldMarkExclusions.Empty.add(CactusMarkInterner.index(markA)),
         )
 
         val (merged, delta) = cleanedTwice.mergeAddDelta(cleanedOnce)

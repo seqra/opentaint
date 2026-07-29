@@ -2,12 +2,14 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.FinalApAccess
+import org.opentaint.dataflow.ap.ifds.access.forExclusions
 
 data class CactusFinalAccess(
     val access: AccessCactus.AccessNode,
-    val anyFieldMarkExclusions: CactusAnyFieldMarkExclusions,
+    val anyFieldMarkExclusions: AnyFieldMarkExclusions,
 )
 
 interface CactusFinalApAccess: FinalApAccess<CactusFinalAccess> {

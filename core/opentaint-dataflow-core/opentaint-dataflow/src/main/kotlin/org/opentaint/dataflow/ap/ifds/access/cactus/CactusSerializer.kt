@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.serialization.AccessPathBaseSerializer
@@ -7,7 +8,6 @@ import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldMarkExclusionsSerial
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.ExclusionSetSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
@@ -16,8 +16,8 @@ internal class CactusSerializer(private val context : SummarySerializationContex
     private val exclusionSerializer = ExclusionSetSerializer(context)
     private val anyFieldMarkExclusionsSerializer = AnyFieldMarkExclusionsSerializer(
         context,
-        { CactusAnyFieldMarkExclusions.index(it as TaintMarkAccessor) },
-        CactusAnyFieldMarkExclusions::mark,
+        { CactusMarkInterner.index(it as TaintMarkAccessor) },
+        CactusMarkInterner::mark,
     )
 
     override fun DataOutputStream.writeFinalAp(ap: FinalFactAp) {
@@ -29,7 +29,7 @@ internal class CactusSerializer(private val context : SummarySerializationContex
             writeExclusionSet(ap.exclusions)
         }
         with(anyFieldMarkExclusionsSerializer) {
-            writeAnyFieldMarkExclusions(ap.anyFieldMarkExclusions.exclusions)
+            writeAnyFieldMarkExclusions(ap.anyFieldMarkExclusions)
         }
         with (accessNodeSerializer) {
             writeAccessNode(ap.access)
@@ -67,7 +67,7 @@ internal class CactusSerializer(private val context : SummarySerializationContex
             readExclusionSet()
         }
         val anyFieldMarkExclusions = with(anyFieldMarkExclusionsSerializer) {
-            CactusAnyFieldMarkExclusions.fromShared(readAnyFieldMarkExclusions())
+            readAnyFieldMarkExclusions()
         }
         val access = with (accessNodeSerializer) {
             readAccessNode()
