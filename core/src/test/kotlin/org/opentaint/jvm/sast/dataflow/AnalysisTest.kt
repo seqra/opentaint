@@ -149,6 +149,11 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointClass: String,
         entryPointMethod: String,
         apMode: ApMode = ApMode.Tree,
+        afterTraceAnalysis: ((
+            List<VulnerabilityWithTrace>,
+            TaintAnalyzer<JIRMethod, JIRInst>,
+            JIRSafeApplicationGraph,
+        ) -> Unit)? = null,
         afterAnalysis: ((TaintAnalyzer<JIRMethod, JIRInst>, JIRSafeApplicationGraph) -> Unit)? = null,
     ): List<VulnerabilityWithTrace> {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
@@ -191,6 +196,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         return analyzer.use {
             val result = it.analyzeWithIfds(listOf(ep)).first
+            afterTraceAnalysis?.invoke(result, it, ifdsGraph)
             afterAnalysis?.invoke(it, ifdsGraph)
             result
         }
