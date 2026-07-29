@@ -184,7 +184,7 @@ class GoMethodCallFlowFunction(
         val factReader = FinalFactReader(factAp, apManager)
 
         val signature = callSignature ?: return
-        val passRules = context.taint.passRulesForCallStatement(signature)
+        val passRules = context.taint.passRulesForCallStatement(signature, statement)
 
         factAp.mapCall2Start { callerFact, startFactBase ->
             val passFactReader = FinalFactReader(callerFact.rebase(startFactBase), apManager)

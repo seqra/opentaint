@@ -35,6 +35,7 @@ class GoMethodAnalysisContext(
     val closureCallResolution = int2ObjectMap<ClosureTracker>()
 
     fun resetAnalysisCache() {
+        taint.reset()
         closureCallResolution.values.forEach { it.resetSubscribers() }
     }
 }

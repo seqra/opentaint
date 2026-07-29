@@ -21,10 +21,16 @@ class GoTaintAnalysisContext(
     val relevantRuleIds: MutableSet<String> = mutableSetOf(),
 ) : TaintAnalysisContext {
     private var analysisContext: GoMethodAnalysisContext? = null
-    private val phase: Phase get() = analysisContext?.phase ?: Phase.FullScan
+
+    private val ctx: GoMethodAnalysisContext get() = analysisContext ?: error("Context not initialized")
+    private val phase: Phase get() = ctx.phase
 
     fun bindAnalysisContext(analysisContext: GoMethodAnalysisContext) {
         this.analysisContext = analysisContext
+    }
+
+    fun reset() {
+        taintSinkTracker.reset()
     }
 
     fun allRelevantSourceRulesForCallStatement(
@@ -35,7 +41,7 @@ class GoTaintAnalysisContext(
     ): List<RuleWithCondition<TaintRule.Source>> {
         if (phase is Phase.Prescan) return emptyList()
         return prepareCallStatementRules(
-            taintConfig.sourceRulesForCall(signature, allRelevant = true),
+            taintConfig.sourceRulesForCall(signature, statement, allRelevant = true),
             TaintRule.Source::condition,
             statement, callExpr, returnValue,
         )
@@ -49,7 +55,7 @@ class GoTaintAnalysisContext(
     ): List<RuleWithCondition<TaintRule.Cleaner>> {
         if (phase is Phase.Prescan) return emptyList()
         return prepareCallStatementRules(
-            taintConfig.cleanerRulesForCall(signature, allRelevant = true),
+            taintConfig.cleanerRulesForCall(signature, statement, allRelevant = true),
             TaintRule.Cleaner::condition,
             statement, callExpr, returnValue,
         )
@@ -61,7 +67,7 @@ class GoTaintAnalysisContext(
         callExpr: GoCallExpr,
         returnValue: GoIRValue?,
     ) = prepareCallStatementRules(
-        taintConfig.sourceRulesForCall(signature),
+        taintConfig.sourceRulesForCall(signature, statement),
         TaintRule.Source::condition,
         statement, callExpr, returnValue,
     )
@@ -72,7 +78,7 @@ class GoTaintAnalysisContext(
         callExpr: GoCallExpr,
         returnValue: GoIRValue?,
     ) = prepareCallStatementRules(
-        taintConfig.sinkRulesForCall(signature),
+        taintConfig.sinkRulesForCall(signature, statement),
         TaintRule.Sink::condition,
         statement, callExpr, returnValue,
     )
@@ -92,14 +98,14 @@ class GoTaintAnalysisContext(
         }.handleConditionalPhase()
     }
 
-    fun passRulesForCallStatement(signature: GoFunctionSignature): List<TaintRule.PassThrough> =
-        taintConfig.passThroughRulesForCall(signature).handlePhase()
+    fun passRulesForCallStatement(signature: GoFunctionSignature, statement: GoIRInst): List<TaintRule.PassThrough> =
+        taintConfig.passThroughRulesForCall(signature, statement).handlePhase()
 
-    fun sourceRulesForFieldRead(fieldName: GoFieldSignature): List<TaintRule.FieldReadSource> =
-        taintConfig.sourceRulesForFieldRead(fieldName).handlePhase()
+    fun sourceRulesForFieldRead(fieldName: GoFieldSignature, statement: GoIRInst): List<TaintRule.FieldReadSource> =
+        taintConfig.sourceRulesForFieldRead(fieldName, statement).handlePhase()
 
-    fun sourceRulesForGlobal(globalName: GoGlobalFieldSignature): List<TaintRule.GlobalReadSource> =
-        taintConfig.sourceRulesForGlobal(globalName).handlePhase()
+    fun sourceRulesForGlobal(globalName: GoGlobalFieldSignature, statement: GoIRInst): List<TaintRule.GlobalReadSource> =
+        taintConfig.sourceRulesForGlobal(globalName, statement).handlePhase()
 
     private fun <T : TaintRule> List<T>.handlePhase(): List<T> =
         if (phase !is Phase.Prescan) {

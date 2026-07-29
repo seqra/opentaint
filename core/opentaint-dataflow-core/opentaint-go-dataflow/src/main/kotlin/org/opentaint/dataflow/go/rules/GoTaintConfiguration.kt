@@ -17,6 +17,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModif
 import org.opentaint.dataflow.go.GoFieldSignature
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoGlobalFieldSignature
+import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRType
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -65,24 +66,24 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         cleanerMemo.clear()
     }
 
-    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature): List<TaintRule.GlobalReadSource> =
+    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature, statement: GoIRInst): List<TaintRule.GlobalReadSource> =
         sourceForGlobal(signature)
 
-    override fun sourceRulesForFieldRead(signature: GoFieldSignature): List<TaintRule.FieldReadSource> =
+    override fun sourceRulesForFieldRead(signature: GoFieldSignature, statement: GoIRInst): List<TaintRule.FieldReadSource> =
         sourceForFieldRead(signature)
 
     override fun sourceRulesForCall(
-        signature: GoFunctionSignature, allRelevant: Boolean,
+        signature: GoFunctionSignature, statement: GoIRInst, allRelevant: Boolean,
     ): List<TaintRule.Source> = sourceForFunction(signature, allRelevant)
 
-    override fun sinkRulesForCall(signature: GoFunctionSignature): List<TaintRule.Sink> =
+    override fun sinkRulesForCall(signature: GoFunctionSignature, statement: GoIRInst): List<TaintRule.Sink> =
         sinkForFunction(signature)
 
-    override fun passThroughRulesForCall(signature: GoFunctionSignature): List<TaintRule.PassThrough> =
+    override fun passThroughRulesForCall(signature: GoFunctionSignature, statement: GoIRInst): List<TaintRule.PassThrough> =
         passThroughForFunction(signature)
 
     override fun cleanerRulesForCall(
-        signature: GoFunctionSignature, allRelevant: Boolean,
+        signature: GoFunctionSignature, statement: GoIRInst, allRelevant: Boolean,
     ): List<TaintRule.Cleaner> = cleanerForFunction(signature, allRelevant)
 
     private fun addRule(rule: GoSerializedGlobalSource) {
