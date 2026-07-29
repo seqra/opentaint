@@ -21,6 +21,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.jvm.sast.sarif.IntermediateLocation
 import org.opentaint.jvm.sast.sarif.LocationSpan
 import org.opentaint.jvm.sast.sarif.LocationType
+import org.opentaint.common.sast.sarif.TracePathNodeEntry
 import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.jvm.sast.sarif.isPureEntryPoint
 
@@ -64,14 +65,19 @@ abstract class AbstractAstSpanResolver(protected val traits: JIRSarifTraits) : A
     }
 
     protected fun IntermediateLocation.isMethodEntry(): Boolean {
-        val entry = this.node?.entry
-        return entry is MethodTraceResolver.TraceEntry.MethodEntry || entry.isPureEntryPoint() || type == LocationType.RuleMethodEntry
+        val entry = node?.entry
+        val traceEntry = (entry as? TracePathNodeEntry.NonAction)?.entry
+        return traceEntry is MethodTraceResolver.TraceEntry.MethodEntry ||
+            entry.isPureEntryPoint() ||
+            type == LocationType.RuleMethodEntry
     }
 
     protected fun IntermediateLocation.isMethodExit(): Boolean {
-        if (node == null) return false
-        return node.kind != TracePathNodeKind.SINK && node.entry is MethodTraceResolver.TraceEntry.Final
-                && node.statement is JIRReturnInst
+        val node = node ?: return false
+        val traceEntry = (node.entry as? TracePathNodeEntry.NonAction)?.entry
+        return node.kind != TracePathNodeKind.SINK &&
+            traceEntry is MethodTraceResolver.TraceEntry.Final &&
+            node.statement is JIRReturnInst
     }
 
     protected fun createLocationSpan(start: Token?, stop: Token?): LocationSpan? {
