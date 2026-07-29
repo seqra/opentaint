@@ -1165,16 +1165,15 @@ class MethodTraceResolver(
         val rule: Set<MergedRuleAction>,
     )
 
-    private fun mergeCallActionsCombinations(
+    private inline fun forEachMergedCallActionsCombination(
         callActions: List<List<ActionOrUnchanged<PartiallyResolvedCallAction>>>,
         callees: List<MethodWithContext>,
-    ): List<PartialCallEdgeCombination> {
-        val result = mutableListOf<PartialCallEdgeCombination>()
-        callActions.cartesianProductMapTo { actions ->
+        body: (PartialCallEdgeCombination) -> Unit,
+    ) {
+        callActions.forEachCartesianProduct { actions ->
             val mergedActions = mergeCallActions(actions) { callees }
-            result.addAll(mergedActions)
+            mergedActions.forEach(body)
         }
-        return result
     }
 
     private fun mergeCallActions(
