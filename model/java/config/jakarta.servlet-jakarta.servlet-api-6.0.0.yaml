@@ -27,7 +27,15 @@ passThrough:
   - from:
     - this
     - .jakarta.servlet.ServletRequest#parameters#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.util.Map#MapKey#java.lang.Object
+  - from:
+    - this
+    - .jakarta.servlet.ServletRequest#parameters#java.lang.Object
+    to:
+    - result
+    - .java.util.Map#MapValue#java.lang.Object
 - function: jakarta.servlet.ServletRequest#getParameterNames
   signature: () java.util.Enumeration
   copy:

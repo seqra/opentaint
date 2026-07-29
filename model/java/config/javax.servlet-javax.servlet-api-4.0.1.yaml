@@ -204,7 +204,15 @@ passThrough:
   - from:
     - this
     - .javax.servlet.ServletRequest#parameters#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.util.Map#MapKey#java.lang.Object
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#parameters#java.lang.Object
+    to:
+    - result
+    - .java.util.Map#MapValue#java.lang.Object
 - function: javax.servlet.ServletRequest#getParameterNames
   signature: () java.util.Enumeration
   copy:
