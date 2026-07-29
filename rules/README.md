@@ -87,35 +87,19 @@ Key points:
 
 ---
 
-## Rule Tags
-
-Library rules declare the roles they play with `tags`:
-
-```yaml
-rules:
-  - id: java-ssrf-sink
-    options:
-      lib: true
-    tags:
-      - ssrf-sink
-    ...
-```
-
-Key points:
-
-- A tag is a name a join can reference instead of a file path, e.g. `tag: ssrf-sink`.
-- A tag expands to **every** enabled rule carrying it in the join's own language, so tagging your
-  own rule with a built-in tag extends the corresponding join without editing the built-in rules.
-  Tags of the same name in another language never leak into the join.
-- Built-in tags are per-source and per-sink (`servlet-untrusted-data-source`, `ssrf-sink`,
-  `sqli-sink`, ...), so each one names a single built-in rule: referencing a tag wires exactly the
-  same rule the path-based ref used to, and never a broader union.
-
----
-
 ## Join Mode
 
 Many rules under `ruleset/` combine multiple library rules using **`mode: join`**.
+
+Library rules expose their roles through tags:
+
+```yaml
+- id: java-ssrf-sink
+  options:
+    lib: true
+  tags:
+    - ssrf-sink
+```
 
 Example (from `ruleset/java/security/ssrf.yaml`):
 
@@ -140,14 +124,17 @@ Example (from `ruleset/java/security/ssrf.yaml`):
 Semantics:
 
 - `mode: join` derives a composite rule from other rules referenced in `join.refs`.
-- `refs` defines the referenced rule, either by tag or by path, plus its local alias:
-  - `tag`: name of a tag declared by one or more library rules (see [Rule Tags](#rule-tags))
-  - `rule`: path to the library rule file plus `#<rule-id>` inside that YAML
-  - `as`: local alias for referencing captures/variables from that rule
-- `on` describes how to correlate matches from referenced rules:
-  - `untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED` expresses a **dataflow relationship** between the `$UNTRUSTED` captured in the source rule and the same `$UNTRUSTED` captured in the sink rule.
+- Each `ref` selects a library rule and assigns a local alias:
+  - `tag` selects every enabled rule with that tag in the join's language. Adding the same tag to a
+    custom rule extends the join.
+  - `rule` selects one rule by `<path>#<rule-id>`.
+  - `as` defines the alias used in `on`.
+- `on` correlates captures from the referenced rules. For example,
+  `servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED` requires dataflow from the source capture
+  to the sink capture.
 
-The built-in rulesets wire every join by `tag:`; `rule:` remains supported for referencing a single specific rule.
+Built-in joins use language-scoped, per-source and per-sink tags. Use `rule` when a join must
+reference one specific rule.
 
 This join mode is **based on Semgrep's join mode**, but OpenTaint extends it with custom features (such as the `->` notation in the `on` section) to express taint-style flows across multiple rule components.
 
@@ -259,9 +246,8 @@ When introducing or changing rules, follow these guidelines:
    - Add `options.lib: true` for library fragments in `lib/` (or exceptionally in `ruleset/` if they are not meant to be executed directly).
 
 3. **Avoid duplicates**
-   - Reuse existing library rules from `lib/` and compose them via `mode: join` where applicable.
-   - Reference the sources and sinks of a join by their `tag:` (see [Rule Tags](#rule-tags)), and give
-     every new library source/sink a tag of its own so joins can reference it the same way.
+   - Reuse library rules from `lib/` and compose them with `mode: join` where applicable.
+   - Reference join sources and sinks by `tag`, and tag each new library source or sink.
 
 4. **Update tests**
    - Add at least one `@PositiveRuleSample` (and typically `@NegativeRuleSample`) under `test/src/main/java/security/`.
