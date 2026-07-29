@@ -196,6 +196,38 @@ class StarOperatorRuleGenTest {
     }
 
     @Test
+    fun `starred sanitizer assignment cleans returned value and any-field`() {
+        val cfg = config(
+            """
+            rules:
+              - id: starred-receiver-sanitizer
+                severity: NOTE
+                message: x
+                languages: [java]
+                mode: taint
+                pattern-sources:
+                  - pattern: ${'$'}X = src();
+                pattern-sanitizers:
+                  - patterns:
+                      - pattern: ${'$'}*CLEAN = ${'$'}REQ.clean();
+                      - focus-metavariable: ${'$'}CLEAN
+                pattern-sinks:
+                  - pattern: sink(${'$'}X);
+            """.trimIndent()
+        )
+        val positions = cleanPositions(cfg)
+
+        assertTrue(
+            positions.any {
+                it is PositionBaseWithModifiers.WithModifiers &&
+                    it.base == PositionBase.Result &&
+                    it.modifiers.contains(PositionModifier.AnyField)
+            },
+            "expected an any-field clean on Result; got $positions"
+        )
+    }
+
+    @Test
     fun `starred sink produces ContainsMarkOnAnyField`() {
         val cfg = config(
             """
