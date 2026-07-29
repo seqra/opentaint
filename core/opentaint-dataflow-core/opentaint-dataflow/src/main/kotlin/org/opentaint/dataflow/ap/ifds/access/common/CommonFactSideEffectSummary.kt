@@ -1,11 +1,11 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.SideEffectSummary.FactSideEffectSummary
 import org.opentaint.dataflow.ap.ifds.SummaryFactStorage
 import org.opentaint.dataflow.ap.ifds.access.FactSideEffectSummariesApStorage
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -15,7 +15,7 @@ abstract class CommonFactSideEffectSummary<IAP, FAP: Any>(val methodEntryPoint: 
     FactSideEffectSummariesApStorage, InitialApAccess<IAP>, FinalApAccess<FAP> {
 
     interface Storage<IAP, FAP : Any> {
-        fun add(iap: IAP, se: Map<SideEffectKind, FactDemandState>, added: MutableList<FactSEBuilder<IAP>>)
+        fun add(iap: IAP, se: Map<SideEffectKind, ExclusionSet>, added: MutableList<FactSEBuilder<IAP>>)
         fun collectSummariesTo(dst: MutableList<FactSEBuilder<IAP>>, initialFactPattern: FAP?)
     }
 
@@ -39,13 +39,13 @@ abstract class CommonFactSideEffectSummary<IAP, FAP: Any>(val methodEntryPoint: 
             for ((initialBase, sameBaseEdges) in sameInitialBaseEdges) {
                 val ses = sameBaseEdges.groupBy(
                     { getInitialAccess(it.initialFactAp) },
-                    { Pair(it.kind, it.initialFactAp.demandState) }
+                    { Pair(it.kind, it.initialFactAp.exclusions) }
                 )
 
                 val baseStorage = getOrCreate(initialBase)
                 for ((iap, se) in ses) {
                     val sameKindSe = se.groupBy({ it.first }, { it.second })
-                        .mapValues { (_, states) -> states.reduce(FactDemandState::join) }
+                        .mapValues { (_, exclusions) -> exclusions.reduce(ExclusionSet::union) }
 
                     collectToListWithPostProcess(
                         added,
@@ -83,47 +83,47 @@ abstract class CommonFactSideEffectSummary<IAP, FAP: Any>(val methodEntryPoint: 
     }
 
     abstract class SideEffectExclusionMergingStorage<IAP> {
-        private val sideEffects = ConcurrentHashMap<SideEffectKind, FactDemandState>()
+        private val sideEffects = ConcurrentHashMap<SideEffectKind, ExclusionSet>()
 
         abstract fun createBuilder(): FactSEBuilder<IAP>
 
-        fun add(kind: SideEffectKind, demandState: FactDemandState): FactSEBuilder<IAP>? {
-            val currentState = sideEffects.putIfAbsent(kind, demandState)
-            if (currentState == null) {
-                return toBuilder(kind, demandState)
+        fun add(kind: SideEffectKind, exclusions: ExclusionSet): FactSEBuilder<IAP>? {
+            val currentExclusion = sideEffects.putIfAbsent(kind, exclusions)
+            if (currentExclusion == null) {
+                return toBuilder(kind, exclusions)
             }
 
-            val mergedState = currentState join demandState
-            if (currentState === mergedState) return null
+            val mergedExclusion = currentExclusion.union(exclusions)
+            if (currentExclusion === mergedExclusion) return null
 
-            sideEffects[kind] = mergedState
-            return toBuilder(kind, mergedState)
+            sideEffects[kind] = mergedExclusion
+            return toBuilder(kind, mergedExclusion)
         }
 
         fun summaries(): List<FactSEBuilder<IAP>> =
-            sideEffects.map { (kind, demandState) ->
-                toBuilder(kind, demandState)
+            sideEffects.map { (kind, exclusions) ->
+                toBuilder(kind, exclusions)
             }
 
-        private fun toBuilder(kind: SideEffectKind, demandState: FactDemandState) =
+        private fun toBuilder(kind: SideEffectKind, exclusions: ExclusionSet) =
             createBuilder()
                 .setKind(kind)
-                .setDemandState(demandState)
+                .setExclusion(exclusions)
     }
 
     abstract class FactSEBuilder<IAP>(
         private var initialBase: AccessPathBase? = null,
         private var initialAp: IAP? = null,
-        private var demandState: FactDemandState? = null,
+        private var exclusion: ExclusionSet? = null,
         private var kind: SideEffectKind? = null,
     ): InitialApAccess<IAP> {
         abstract fun nonNullIAP(iap: IAP?): IAP
 
         fun build(): FactSideEffectSummary =
-            FactSideEffectSummary(createInitial(initialBase!!, nonNullIAP(initialAp), demandState!!), kind!!)
+            FactSideEffectSummary(createInitial(initialBase!!, nonNullIAP(initialAp), exclusion!!), kind!!)
 
         fun setInitialFactBase(base: AccessPathBase) = this.also { initialBase = base }
-        fun setDemandState(demandState: FactDemandState) = this.also { this.demandState = demandState }
+        fun setExclusion(exclusion: ExclusionSet) = this.also { this.exclusion = exclusion }
         fun setKind(kind: SideEffectKind) = this.also { this.kind = kind }
         fun setInitialAp(ap: IAP) = this.also { initialAp = ap }
     }

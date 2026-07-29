@@ -19,7 +19,7 @@ class MethodEdgesNDInitialToFinalCactusApSet(
         }
 
     override fun mostAbstractPattern(base: AccessPathBase): CactusInitialAccess =
-        CactusInitialAccess(null, org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects.Empty)
+        null
 
     private class DefaultStorage : DefaultNDF2FSetStorage.Storage<CactusFinalAccess> {
         private var current: CactusFinalAccess? = null

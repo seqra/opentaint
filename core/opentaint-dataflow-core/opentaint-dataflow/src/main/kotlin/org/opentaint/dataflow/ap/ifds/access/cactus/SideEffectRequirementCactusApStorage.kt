@@ -69,16 +69,13 @@ private fun AccessPathWithCycles?.mergeAdd(requirement: AccessPathWithCycles): A
         return requirement
     }
 
-    val currentState = demandState
-    val mergedState = currentState join requirement.demandState
-    val mergedEffects = anyFieldCleanerEffects join requirement.anyFieldCleanerEffects
+    val currentExclusion = exclusions
+    val mergedExclusion = currentExclusion.union(requirement.exclusions)
 
-    if (mergedState === currentState && mergedEffects === anyFieldCleanerEffects) return null
+    if (mergedExclusion === currentExclusion) return null
 
     val mergedAp = with(requirement) {
-        AccessPathWithCycles(
-            base, access, mergedState.exclusions, mergedEffects
-        )
+        AccessPathWithCycles(base, access, mergedExclusion)
     }
 
     return mergedAp

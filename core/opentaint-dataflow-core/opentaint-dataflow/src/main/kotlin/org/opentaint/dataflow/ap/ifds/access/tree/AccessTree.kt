@@ -9,8 +9,9 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
-import org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions.Companion.addMarkFromDepth1
-import org.opentaint.dataflow.ap.ifds.access.tree.AbstractionExclusions.Companion.addMarkFromDepth2
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions.Companion.addMarkFromDepth1
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions.Companion.addMarkFromDepth2
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -30,6 +31,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isS
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
+import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldMarkExclusionsSerializer
 import org.opentaint.dataflow.taint.Cleaner
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.forEachInt
@@ -142,13 +144,11 @@ class AccessTree(
 
     /**
      * The abstract remainder of a caller fact matched against a summary's initial AP. It carries
-     * the caller abstraction's excluded-mark claim from the match point: the summary's exit
-     * abstraction continues the same object, so the claim must ride the summary application onto
-     * it — the flat mechanism preserved the caller's exclusion set by construction, and this is
-     * the structural counterpart.
+     * the caller's excluded marks from the match point: the summary's exit abstraction continues
+     * the same object, so the claim must ride the summary application onto it.
      */
     data class EmptyAccessTreeDelta(
-        val abstraction: AbstractionExclusions?,
+        val anyFieldMarkExclusions: AnyFieldMarkExclusions?,
     ) : AccessTreeDelta {
         override val isEmpty: Boolean get() = true
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
@@ -196,14 +196,14 @@ class AccessTree(
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
                 if (!node.isFinal) return emptyList()
-                return listOf(EmptyAccessTreeDelta(abstraction = null))
+                return listOf(EmptyAccessTreeDelta(anyFieldMarkExclusions = null))
             }
 
             node = node.getChild(accessor) ?: return emptyList()
         }
 
         // Tree facts carry a starred sanitizer's claim on their abstract nodes (see
-        // AbstractionExclusions), not in the exclusion set, so there is no deep sweep here:
+        // AnyFieldMarkExclusions), not in the exclusion set, so there is no deep sweep here:
         // enforcement happens where content attaches, in concatToLeafAbstractNodes.
         val exclusion = other.exclusions
         val filteredNode = when (exclusion) {
@@ -221,14 +221,14 @@ class AccessTree(
             .takeIf { !it.isEmpty }
             ?.let { NodeAccessTreeDelta(apManager, it) }
 
-        return listOfNotNull(nonAbstractDelta, EmptyAccessTreeDelta(filteredNode.abstraction))
+        return listOfNotNull(nonAbstractDelta, EmptyAccessTreeDelta(filteredNode.anyFieldMarkExclusions))
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
         when (val d = delta as AccessTreeDelta) {
             is EmptyAccessTreeDelta -> {
-                val abstraction = d.abstraction ?: return this
-                val annotated = access.annotateAbstractNodes(abstraction, IdentityHashMap())
+                val anyFieldMarkExclusions = d.anyFieldMarkExclusions ?: return this
+                val annotated = access.annotateAbstractNodes(anyFieldMarkExclusions, IdentityHashMap())
                 if (annotated === access) return this
                 return AccessTree(apManager, base, annotated, exclusions)
             }
@@ -279,11 +279,10 @@ class AccessTree(
         @JvmField val isAbstract: Boolean,
         @JvmField val isFinal: Boolean,
         /**
-         * Excluded-mark annotation of the abstraction; null when the node is not abstract or the
-         * abstract node carries no starred-sanitizer claim (the overwhelmingly common case, so
-         * plain nodes pay nothing). See [AbstractionExclusions].
+         * Marks excluded from future AnyField growth; null when the node is not abstract or has no
+         * such exclusions (the overwhelmingly common case, so plain nodes pay nothing).
          */
-        @JvmField val abstraction: AbstractionExclusions?,
+        @JvmField val anyFieldMarkExclusions: AnyFieldMarkExclusions?,
         @JvmField val accessors: IntArray?,
         @JvmField val accessorNodes: Array<AccessNode>?,
     ) {
@@ -293,8 +292,8 @@ class AccessTree(
         @JvmField val containsStatic: Boolean
 
         init {
-            check(abstraction == null || isAbstract) {
-                "AbstractionExclusions on a non-abstract node"
+            check(anyFieldMarkExclusions == null || isAbstract) {
+                "AnyFieldMarkExclusions on a non-abstract node"
             }
         }
 
@@ -304,7 +303,7 @@ class AccessTree(
             var containsStatic = false
 
             if (isAbstract) hash += 1
-            if (abstraction != null) hash += abstraction.hashCode().toLong() shl 3
+            if (anyFieldMarkExclusions != null) hash += anyFieldMarkExclusions.hashCode().toLong() shl 3
 
             if (isFinal) {
                 depth = 1
@@ -349,7 +348,7 @@ class AccessTree(
 
             if (hash != other.hash) return false
             if (isAbstract != other.isAbstract || isFinal != other.isFinal) return false
-            if (abstraction != other.abstraction) return false
+            if (anyFieldMarkExclusions != other.anyFieldMarkExclusions) return false
 
             if (!accessors.contentEquals(other.accessors)) return false
             return accessorNodes.contentEquals(other.accessorNodes)
@@ -372,7 +371,7 @@ class AccessTree(
                 if (isFinal) {
                     appendLine(FinalAccessor.toSuffix())
                 } else {
-                    val annotation = abstraction?.toString().orEmpty()
+                    val annotation = anyFieldMarkExclusions?.toString().orEmpty()
                     appendLine("/*$annotation$suffix")
                 }
             }
@@ -524,11 +523,11 @@ class AccessTree(
         }
 
         fun splitOnMatching(otherAccess: AccessPath.AccessNode?): MatchResult  {
-            // An ANNOTATED abstraction never matches: the id-edge storage represents the matched
+            // An annotated abstraction never matches: the id-edge storage represents the matched
             // part as the initial fact's plain abstraction, which would silently drop the
-            // excluded-mark claim. Such an edge is stored with its real exit tree instead.
+            // excluded marks. Such an edge is stored with its real exit tree instead.
             if (otherAccess == null) {
-                if (!isAbstract || abstraction != null) return MatchResult.NotMatched
+                if (!isAbstract || anyFieldMarkExclusions != null) return MatchResult.NotMatched
 
                 val remainder = removeAbstraction().takeIf { !it.isEmpty }
                 return MatchResult.MatchedWithRemainder(remainder)
@@ -549,7 +548,7 @@ class AccessTree(
                     ?: return MatchResult.NotMatched
             }
 
-            if (!node.isAbstract || node.abstraction != null) return MatchResult.NotMatched
+            if (!node.isAbstract || node.anyFieldMarkExclusions != null) return MatchResult.NotMatched
 
             val remainder = this.reconstructRemainder(accessorsOnPath, idx = 0)
             return MatchResult.MatchedWithRemainder(remainder)
@@ -584,8 +583,8 @@ class AccessTree(
                 ?: error("Impossible accessor")
 
         fun removeAbstraction(): AccessNode =
-            // the annotation is a claim about the abstraction's future growth; it dies with it
-            manager.create(isAbstract = false, isFinal, abstraction = null, accessors, accessorNodes)
+            // The exclusions apply to future AnyField growth and die with the abstraction.
+            manager.create(isAbstract = false, isFinal, anyFieldMarkExclusions = null, accessors, accessorNodes)
 
         /**
          * The enforcement half of [FinalFactAp.clean]: content being attached below an
@@ -594,35 +593,35 @@ class AccessTree(
          *
          * Removing the concrete marks is not the whole job: the attachment can itself contain
          * abstract nodes, and there the continuation is NOT yet known — the fact can still grow
-         * below them after the attach point's own abstraction is consumed. The claim therefore
-         * outlives the attach point on those nodes: the attachment's root sits at the attach
-         * point itself and inherits the annotation verbatim, while every node strictly below it
-         * is at least one accessor down, where each claimed mark applies from relative depth 1.
+         * below them after the attach point's own abstraction is consumed. The exclusions
+         * therefore outlive the attach point on those nodes: the attachment's root sits at the
+         * attach point itself and inherits them verbatim, while every node strictly below it is
+         * at least one accessor down, where each excluded mark applies from relative depth 1.
          * Without this, a purely abstract delta passes the mark-removal untouched and comes out
          * unprotected — the shape of the in-helper clean-then-read false positive.
          */
-        private fun AccessNode.filterByAbstraction(abstraction: AbstractionExclusions?): AccessNode? {
-            if (abstraction == null) return this
+        private fun AccessNode.filterByAnyFieldMarkExclusions(anyFieldMarkExclusions: AnyFieldMarkExclusions?): AccessNode? {
+            if (anyFieldMarkExclusions == null) return this
 
             var filtered: AccessNode? = this
-            if (abstraction.marksFromDepth1.isNotEmpty()) {
-                val marks = IntOpenHashSet(abstraction.marksFromDepth1)
+            if (anyFieldMarkExclusions.marksFromDepth1.isNotEmpty()) {
+                val marks = IntOpenHashSet(anyFieldMarkExclusions.marksFromDepth1)
                 filtered = filtered?.removeAccessors(marks, depth = 1, minPruneDepth = 1)
             }
-            if (abstraction.marksFromDepth2.isNotEmpty()) {
-                val marks = IntOpenHashSet(abstraction.marksFromDepth2)
+            if (anyFieldMarkExclusions.marksFromDepth2.isNotEmpty()) {
+                val marks = IntOpenHashSet(anyFieldMarkExclusions.marksFromDepth2)
                 filtered = filtered?.removeAccessors(marks, depth = 1, minPruneDepth = 2)
             }
             if (filtered == null) return null
 
-            val belowClaim = abstraction.collapseToDepth1()
+            val belowClaim = anyFieldMarkExclusions.collapseToDepth1()
             val cache = IdentityHashMap<AccessNode, AccessNode>()
             var annotated = filtered.transformAccessors { _, node ->
                 node.annotateAbstractNodes(belowClaim, cache)
             }
             if (annotated.isAbstract) {
-                val merged = AbstractionExclusions.then(annotated.abstraction, abstraction)
-                if (merged != annotated.abstraction) {
+                val merged = AnyFieldMarkExclusions.then(annotated.anyFieldMarkExclusions, anyFieldMarkExclusions)
+                if (merged != annotated.anyFieldMarkExclusions) {
                     annotated = manager.create(
                         annotated.isAbstract, annotated.isFinal, merged, annotated.accessors, annotated.accessorNodes
                     )
@@ -684,7 +683,7 @@ class AccessTree(
         }
 
         fun clearChild(accessor: AccessorIdx): AccessNode = when (accessor) {
-            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, abstraction, accessors, accessorNodes)
+            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, anyFieldMarkExclusions, accessors, accessorNodes)
             else -> removeSingleAccessor(accessor)
         }
 
@@ -704,7 +703,7 @@ class AccessTree(
             val accessors = transformedAccessors?.first ?: accessors
             val accessorNodes = transformedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, abstraction, accessors, accessorNodes)
+            return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, accessors, accessorNodes)
         }
 
         fun removeAccessors(toRemove: IntOpenHashSet, depth: Int, minPruneDepth: Int): AccessNode? {
@@ -753,31 +752,31 @@ class AccessTree(
 
         /**
          * The node reduced to its abstraction: no concrete children, but the abstraction and its
-         * excluded-mark annotation kept. See [FinalFactAp.abstractPart].
+         * excluded marks kept. See [FinalFactAp.abstractPart].
          */
         fun abstractOnly(): AccessNode =
-            manager.create(isAbstract = true, isFinal = false, abstraction, accessors = null, accessorNodes = null)
+            manager.create(isAbstract = true, isFinal = false, anyFieldMarkExclusions, accessors = null, accessorNodes = null)
 
         private fun annotate(markIdx: AccessorIdx, fromBase: Boolean): AccessNode {
             if (!isAbstract) return this
 
             val annotated = if (fromBase) {
-                abstraction.addMarkFromDepth2(markIdx)
+                anyFieldMarkExclusions.addMarkFromDepth2(markIdx)
             } else {
-                abstraction.addMarkFromDepth1(markIdx)
+                anyFieldMarkExclusions.addMarkFromDepth1(markIdx)
             }
-            if (annotated == abstraction) return this
+            if (annotated == anyFieldMarkExclusions) return this
 
             return manager.create(isAbstract, isFinal, annotated, accessors, accessorNodes)
         }
 
         /**
-         * Accumulates the caller's abstraction claim (see [EmptyAccessTreeDelta]) onto every
-         * abstract node of a summary's exit fact: for a fact-to-fact edge, every abstract node in
-         * the exit continues the initial fact's abstraction, which is the caller's.
+         * Accumulates the caller's excluded marks (see [EmptyAccessTreeDelta]) onto every abstract
+         * node of a summary's exit fact: each exit abstraction continues the caller's initial
+         * abstraction.
          */
         fun annotateAbstractNodes(
-            incoming: AbstractionExclusions,
+            incoming: AnyFieldMarkExclusions,
             cache: IdentityHashMap<AccessNode, AccessNode>,
         ): AccessNode {
             cache[this]?.let { return it }
@@ -791,8 +790,8 @@ class AccessTree(
             val result = if (!transformed.isAbstract) {
                 transformed
             } else {
-                val merged = AbstractionExclusions.then(transformed.abstraction, incoming)
-                if (merged == transformed.abstraction) {
+                val merged = AnyFieldMarkExclusions.then(transformed.anyFieldMarkExclusions, incoming)
+                if (merged == transformed.anyFieldMarkExclusions) {
                     transformed
                 } else {
                     manager.create(transformed.isAbstract, transformed.isFinal, merged, transformed.accessors, transformed.accessorNodes)
@@ -845,7 +844,7 @@ class AccessTree(
 
             if (mergedAccessors == null) return this
 
-            return manager.create(isAbstract, isFinal, abstraction, mergedAccessors.first, mergedAccessors.second)
+            return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, mergedAccessors.first, mergedAccessors.second)
         }
 
         private data class AccessNodeMergePair(val left: AccessNode, val right: AccessNode) {
@@ -866,15 +865,14 @@ class AccessTree(
             }
 
         /**
-         * The abstraction join of two alternative executions meeting at the same node. "Not
-         * abstract" is the identity — when only one operand can grow, the growth (and its
-         * excluded-mark claim) comes from that operand alone. Two abstract operands intersect
-         * their claims, so a cleaner effect is retained only when both alternatives performed it.
+         * Joins the excluded marks of two alternative executions meeting at the same node. "Not
+         * abstract" is the identity: when only one operand can grow, its exclusions are the only
+         * relevant ones. Two abstract operands intersect their exclusions.
          */
-        private fun joinAbstraction(other: AccessNode): AbstractionExclusions? = when {
-            !this.isAbstract -> other.abstraction
-            !other.isAbstract -> this.abstraction
-            else -> AbstractionExclusions.join(this.abstraction, other.abstraction)
+        private fun joinAnyFieldMarkExclusions(other: AccessNode): AnyFieldMarkExclusions? = when {
+            !this.isAbstract -> other.anyFieldMarkExclusions
+            !other.isAbstract -> this.anyFieldMarkExclusions
+            else -> AnyFieldMarkExclusions.join(this.anyFieldMarkExclusions, other.anyFieldMarkExclusions)
         }
 
         private fun mergeAddStep(
@@ -883,7 +881,7 @@ class AccessTree(
         ): AccessNode {
             val isAbstract = this.isAbstract || other.isAbstract
             val isFinal = this.isFinal || other.isFinal
-            val abstraction = joinAbstraction(other)
+            val anyFieldMarkExclusions = joinAnyFieldMarkExclusions(other)
 
             val mergedAccessors = mergeAccessors(
                 other.accessors, other.accessorNodes, onOtherNode = { _, _ -> }
@@ -893,7 +891,7 @@ class AccessTree(
             if (
                 isAbstract == this.isAbstract
                 && isFinal == this.isFinal
-                && abstraction == this.abstraction
+                && anyFieldMarkExclusions == this.anyFieldMarkExclusions
                 && mergedAccessors == null
             ) {
                 return this
@@ -902,7 +900,7 @@ class AccessTree(
             val accessors = mergedAccessors?.first ?: accessors
             val accessorNodes = mergedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, abstraction, accessors, accessorNodes)
+            return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, accessors, accessorNodes)
         }
 
         fun mergeAddDelta(other: AccessNode, foldToAny: Boolean = true): Pair<AccessNode, AccessNode?> =
@@ -918,15 +916,17 @@ class AccessTree(
             val isFinalDelta = !this.isFinal && other.isFinal
 
             val isAbstract = this.isAbstract || other.isAbstract
-            val abstraction = joinAbstraction(other)
+            val anyFieldMarkExclusions = joinAnyFieldMarkExclusions(other)
 
             // The delta contract: a consumer holding `this` must arrive at the merged result by
-            // merging the delta in. The abstraction join is intersect (idempotent, absorbing), so
-            // when the joined state differs from ours the delta carries the JOINED state, not the
-            // other node's own: consumer.join(joined) == joined.
-            val abstractionChanged = isAbstract != this.isAbstract || abstraction != this.abstraction
-            val isAbstractDelta = abstractionChanged && isAbstract
-            val deltaAbstraction = if (isAbstractDelta) abstraction else null
+            // Merging the delta into `this` must produce the joined result. Because excluded marks
+            // intersect, a changed delta carries the joined exclusions rather than `other`'s.
+            val anyFieldStateChanged =
+                isAbstract != this.isAbstract ||
+                    anyFieldMarkExclusions != this.anyFieldMarkExclusions
+            val isAbstractDelta = anyFieldStateChanged && isAbstract
+            val deltaAnyFieldMarkExclusions =
+                if (isAbstractDelta) anyFieldMarkExclusions else null
 
             val deltaAccessors = IntArrayList()
             val deltaAccessorNodes = arrayListOf<AccessNode>()
@@ -949,7 +949,7 @@ class AccessTree(
             }
 
             if (
-                !abstractionChanged
+                !anyFieldStateChanged
                 && isFinal == this.isFinal
                 && mergedAccessors == null
             ) {
@@ -957,14 +957,14 @@ class AccessTree(
             }
 
             val delta = manager.create(
-                isAbstractDelta, isFinalDelta, deltaAbstraction,
+                isAbstractDelta, isFinalDelta, deltaAnyFieldMarkExclusions,
                 deltaAccessors.toIntArray(), deltaAccessorNodes.toTypedArray(),
             ).takeIf { !it.isEmpty }
 
             val accessors = mergedAccessors?.first ?: accessors
             val accessorNodes = mergedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, abstraction, accessors, accessorNodes) to delta
+            return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, accessors, accessorNodes) to delta
         }
 
         private inline fun <T: Any> mergeNodeLoop(
@@ -1227,7 +1227,7 @@ class AccessTree(
             interned = true,
             isAbstract = isAbstract,
             isFinal = isFinal,
-            abstraction = abstraction,
+            anyFieldMarkExclusions = anyFieldMarkExclusions,
             accessors = accessors,
             accessorNodes = accessorNodes
         )
@@ -1340,7 +1340,7 @@ class AccessTree(
             val concatNode = if (isAbstract && other != null) {
                 other.filterTypes(typeChecker, path)
                     ?.node?.limitElementAccess(limit = subsequentArrayElementLimit)
-                    ?.filterByAbstraction(abstraction)
+                    ?.filterByAnyFieldMarkExclusions(anyFieldMarkExclusions)
             } else null
 
             val nestedAccessors = mutableListOf<IntObjectImmutablePair<AccessNode>>()
@@ -1369,9 +1369,9 @@ class AccessTree(
                 }
             }
 
-            // concat consumes the abstraction at the attach point: the continuation is now known,
-            // so the annotation's job is done and it dies with the abstraction
-            val resultNode = manager.create(isAbstract = false, isFinal, abstraction = null, accessors = null, accessorNodes = null)
+            // Concat consumes the abstraction at the attach point: the continuation is now known,
+            // so the AnyField mark exclusions have done their job.
+            val resultNode = manager.create(isAbstract = false, isFinal, anyFieldMarkExclusions = null, accessors = null, accessorNodes = null)
                 .bulkMergeAddAccessors(nestedAccessors)
 
             val concatenatedNode = concatNode?.let { resultNode.mergeAdd(it) } ?: resultNode
@@ -1515,7 +1515,7 @@ class AccessTree(
             transformer: (AccessorIdx, AccessNode) -> AccessNode?
         ): AccessNode {
             val newAccessors = transformAccessors(accessors, accessorNodes, transformer) ?: return this
-            return manager.create(isAbstract, isFinal, abstraction, newAccessors.first, newAccessors.second)
+            return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, newAccessors.first, newAccessors.second)
         }
 
         private fun limitFieldAccess(
@@ -1596,13 +1596,17 @@ class AccessTree(
 
         private fun removeSingleAccessor(accessor: AccessorIdx): AccessNode {
             val newAccessors = removeSingleAccessor(accessor, accessors, accessorNodes) ?: return this
-            return manager.create(isAbstract, isFinal, abstraction, newAccessors.first, newAccessors.second)
+            return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, newAccessors.first, newAccessors.second)
         }
 
         internal class Serializer(
             val manager: TreeApManager,
             private val context: SummarySerializationContext
         ) {
+            private val anyFieldMarkExclusionsSerializer = with(manager) {
+                AnyFieldMarkExclusionsSerializer(context, { it.idx }, { it.accessor })
+            }
+
             fun DataOutputStream.writeAccessNode(node: AccessNode) {
                 var mask = 0
                 if (node.isFinal) {
@@ -1611,12 +1615,16 @@ class AccessTree(
                 if (node.isAbstract) {
                     mask += 2
                 }
-                if (node.abstraction != null) {
+                if (node.anyFieldMarkExclusions != null) {
                     mask += 4
                 }
                 write(mask)
 
-                node.abstraction?.let { writeAbstractionExclusions(it) }
+                node.anyFieldMarkExclusions?.let {
+                    with(anyFieldMarkExclusionsSerializer) {
+                        writeAnyFieldMarkExclusions(it)
+                    }
+                }
 
                 writeInt(node.accessors?.size ?: 0)
                 if (node.accessors != null) {
@@ -1630,43 +1638,23 @@ class AccessTree(
                 }
             }
 
-            private fun DataOutputStream.writeAbstractionExclusions(abstraction: AbstractionExclusions) {
-                writeMarks(abstraction.marksFromDepth1)
-                writeMarks(abstraction.marksFromDepth2)
-            }
-
-            private fun DataOutputStream.writeMarks(marks: IntArray) {
-                writeInt(marks.size)
-                marks.forEach {
-                    val accessor = with(manager) { it.accessor }
-                    writeLong(context.getIdByAccessor(accessor))
-                }
-            }
-
-            private fun DataInputStream.readAbstractionExclusions(): AbstractionExclusions? =
-                AbstractionExclusions.create(readMarks(), readMarks())
-
-            private fun DataInputStream.readMarks(): IntArray {
-                val size = readInt()
-                val marks = IntArray(size) {
-                    val accessor = context.getAccessorById(readLong())
-                    with(manager) { accessor.idx }
-                }
-                marks.sort()
-                return marks
-            }
-
             fun DataInputStream.readAccessNode(): AccessNode {
                 val mask = read()
                 val isFinal = mask.and(1) > 0
                 val isAbstract = mask.and(2) > 0
 
-                val abstraction = if (mask.and(4) > 0) readAbstractionExclusions() else null
+                val anyFieldMarkExclusions = if (mask.and(4) > 0) {
+                    with(anyFieldMarkExclusionsSerializer) {
+                        readAnyFieldMarkExclusions()
+                    }
+                } else {
+                    null
+                }
 
                 val accessorsSize = readInt()
                 if (accessorsSize == 0) {
-                    if (abstraction == null) return manager.create(isAbstract, isFinal)
-                    return manager.create(isAbstract, isFinal, abstraction, accessors = null, accessorNodes = null)
+                    if (anyFieldMarkExclusions == null) return manager.create(isAbstract, isFinal)
+                    return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, accessors = null, accessorNodes = null)
                 }
 
                 val deserializedAccessors = Array(accessorsSize) {
@@ -1693,7 +1681,7 @@ class AccessTree(
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
                 }
 
-                return AccessNode(manager, interned = false, isAbstract, isFinal, abstraction, accessors, accessNodes)
+                return AccessNode(manager, interned = false, isAbstract, isFinal, anyFieldMarkExclusions, accessors, accessNodes)
             }
         }
 
@@ -1825,7 +1813,7 @@ class AccessTree(
                 manager,
                 interned = true,
                 isAbstract = isAbstract, isFinal = isFinal,
-                abstraction = null,
+                anyFieldMarkExclusions = null,
                 accessors = null, accessorNodes = null
             )
 
@@ -1841,7 +1829,7 @@ class AccessTree(
                     node.manager,
                     interned = false,
                     isAbstract = false, isFinal = false,
-                    abstraction = null,
+                    anyFieldMarkExclusions = null,
                     accessors = intArrayOf(accessor),
                     accessorNodes = arrayOf(node)
                 )
@@ -1850,15 +1838,15 @@ class AccessTree(
             fun TreeApManager.create(
                 isAbstract: Boolean,
                 isFinal: Boolean,
-                abstraction: AbstractionExclusions?,
+                anyFieldMarkExclusions: AnyFieldMarkExclusions?,
                 accessors: IntArray?,
                 accessorNodes: Array<AccessNode>?
             ): AccessNode =
                 if (isAbstract) {
                     if (isFinal) {
-                        createElementAndField(abstractFinalNode, abstraction, accessors, accessorNodes)
+                        createElementAndField(abstractFinalNode, anyFieldMarkExclusions, accessors, accessorNodes)
                     } else {
-                        createElementAndField(abstractNode, abstraction, accessors, accessorNodes)
+                        createElementAndField(abstractNode, anyFieldMarkExclusions, accessors, accessorNodes)
                     }
                 } else {
                     if (isFinal) {
@@ -1871,13 +1859,13 @@ class AccessTree(
             @JvmStatic
             private fun createElementAndField(
                 base: AccessNode,
-                abstraction: AbstractionExclusions?,
+                anyFieldMarkExclusions: AnyFieldMarkExclusions?,
                 accessors: IntArray?,
                 accessorNodes: Array<AccessNode>?,
             ): AccessNode {
                 val nonEmptyAccessors = accessors?.takeIf { it.isNotEmpty() }
                 val nonEmptyAccessorNodes = accessorNodes?.takeIf { nonEmptyAccessors != null }
-                return if (nonEmptyAccessors == null && abstraction == null) {
+                return if (nonEmptyAccessors == null && anyFieldMarkExclusions == null) {
                     base
                 } else {
                     AccessNode(
@@ -1885,7 +1873,7 @@ class AccessTree(
                         interned = false,
                         isAbstract = base.isAbstract,
                         isFinal = base.isFinal,
-                        abstraction = abstraction,
+                        anyFieldMarkExclusions = anyFieldMarkExclusions,
                         accessors = nonEmptyAccessors,
                         accessorNodes = nonEmptyAccessorNodes
                     )

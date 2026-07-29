@@ -12,8 +12,8 @@ import org.opentaint.dataflow.taint.removePrefix
 /**
  * Representation-neutral traversal for concrete cleaner positions.
  *
- * Only the residual effect of `[any].![mark]` is representation-specific, because it must survive
- * future materialization of an abstract fact.
+ * Only the mark exclusion created by `[any].![mark]` is representation-specific, because it must
+ * survive future materialization of an abstract fact.
  */
 internal fun FinalFactAp.clean(
     cleaner: Cleaner,

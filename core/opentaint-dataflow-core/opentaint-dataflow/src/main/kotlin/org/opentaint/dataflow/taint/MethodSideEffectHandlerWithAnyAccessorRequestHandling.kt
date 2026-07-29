@@ -19,16 +19,9 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         kind: SideEffectKind
     ): Set<MethodSequentFlowFunction.Sequent> {
         if (kind is TaintMarkFieldUnfoldRequest) {
-            when (summaryEffect) {
-                is MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryApRefinement -> {
-                    if (!summaryEffect.delta.isEmpty) {
-                        handleMarkAfterAnyFieldRequest(summaryEffect.delta, kind)
-                    }
-                }
-
-                is MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryDemandRefinement -> {
-                    // taint mark requested -> mark not in initial fact, delta is empty -> mark not in fact
-                }
+            val delta = summaryEffect.accessDelta
+            if (delta != null && !delta.isEmpty) {
+                handleMarkAfterAnyFieldRequest(delta, kind)
             }
         }
 

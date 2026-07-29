@@ -2,7 +2,6 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntList
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
@@ -170,16 +169,10 @@ class AccessPath(
         }
     }
 
-    // Tree exclusion sets never carry deep entries: a starred sanitizer's claim lives on the
-    // final fact's abstract nodes (AbstractionExclusions), so only plain exclusions filter here.
     private fun AccessNode.filter(exclusion: ExclusionSet): AccessNode? = when (exclusion) {
         ExclusionSet.Empty -> this
+        is ExclusionSet.Concrete -> this.takeIf { with(manager) { it.accessor.accessor !in exclusion } }
         ExclusionSet.Universe -> null
-        is ExclusionSet.Concrete -> with(apManager) {
-            if (accessor.accessor in exclusion) return@with null
-
-            this@filter
-        }
     }
 
     override fun concat(delta: InitialFactAp.Delta): InitialFactAp {

@@ -2,12 +2,12 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.ir.api.common.cfg.CommonInst
+import kotlin.collections.plusAssign
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
 class MethodInitialToFinalApSummaries(
@@ -162,7 +162,7 @@ private class SummariesIdStorageNode(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(finalAccess)
-            .setDemandState(FactDemandState(d))
+            .setExclusion(d)
             .let { sequenceOf(it) }
     }
 
@@ -171,7 +171,7 @@ private class SummariesIdStorageNode(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(finalAccess)
-            .setDemandState(FactDemandState(exclusion))
+            .setExclusion(exclusion)
     }
 }
 
@@ -195,7 +195,7 @@ private class MethodTaintedSummariesGroupedByFactStorage(
         val modifiedStorages = mutableListOf<ModifiableStorage>()
 
         for (edge in edges) {
-            addNonUniverseEdge(edge.initial, edge.final, edge.demandState.exclusions, modifiedStorages)
+            addNonUniverseEdge(edge.initial, edge.final, edge.exclusion, modifiedStorages)
         }
 
         modifiedStorages.flatMapTo(added) { it.getAndResetDelta() }
@@ -268,7 +268,6 @@ private class MethodTaintedSummariesMergingStorage(
             return true
         }
 
-        // Tree exclusion sets are deep-free (the starred clean is structural); union asserts it.
         val mergedExclusion = currentExclusion.union(addedEx)
         if (mergedExclusion === currentExclusion) {
             return treeStorage.add(exitAccess)
@@ -286,7 +285,7 @@ private class MethodTaintedSummariesMergingStorage(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(delta)
-            .setDemandState(FactDemandState(exclusion!!))
+            .setExclusion(exclusion!!)
             .let { sequenceOf(it) }
     }
 
@@ -296,7 +295,7 @@ private class MethodTaintedSummariesMergingStorage(
         return FactToFactEdgeBuilderBuilder(apManager)
             .setInitialAp(initialAccess)
             .setExitAp(edges)
-            .setDemandState(FactDemandState(exclusion))
+            .setExclusion(exclusion)
     }
 }
 

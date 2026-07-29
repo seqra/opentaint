@@ -1,8 +1,8 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.FactSEBuilder
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.SideEffectExclusionMergingStorage
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -51,12 +51,12 @@ private class TaintedSESummariesGroupedByFactStorage(
 
     override fun add(
         iap: AccessPath.AccessNode?,
-        se: Map<SideEffectKind, FactDemandState>,
+        se: Map<SideEffectKind, ExclusionSet>,
         added: MutableList<FactSEBuilder<AccessPath.AccessNode?>>
     ) {
         val storageNode = storageRoot.getOrCreate(iap)
-        for ((kind, demandState) in se) {
-            storageNode.add(kind, demandState)?.let { added += it }
+        for ((kind, exclusion) in se) {
+            storageNode.add(kind, exclusion)?.let { added += it }
         }
     }
 

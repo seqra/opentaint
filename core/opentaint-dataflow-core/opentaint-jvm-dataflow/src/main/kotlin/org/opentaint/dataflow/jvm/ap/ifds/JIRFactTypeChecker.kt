@@ -124,7 +124,6 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
                 is TypeInfoAccessor -> return FilterResult.Accept
                 TypeInfoGroupAccessor -> return FilterResult.Accept
-
             }
         }
 

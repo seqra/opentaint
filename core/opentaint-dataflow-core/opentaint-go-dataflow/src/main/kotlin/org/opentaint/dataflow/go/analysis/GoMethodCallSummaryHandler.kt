@@ -1,10 +1,10 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.Edge
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.access.ApManager
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
@@ -76,8 +76,8 @@ class GoMethodCallSummaryHandler(
         currentFactAp: FinalFactAp,
         summaryEffect: SummaryEdgeApplication,
         summaryEdge: SummaryEdge,
-        createSideEffectRequirement: (refinement: FactDemandState) -> Sequent?,
-        handleSummaryEdge: (initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp) -> Sequent
+        createSideEffectRequirement: (refinement: ExclusionSet) -> Sequent?,
+        handleSummaryEdge: (initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp) -> Sequent
     ): Set<Sequent> {
         val result = hashSetOf<Sequent>()
 
@@ -86,7 +86,7 @@ class GoMethodCallSummaryHandler(
             summaryEffect,
             summaryEdge,
             createSideEffectRequirement,
-        ) { initialFactRefinement: FactDemandState?, summaryFactAp: FinalFactAp ->
+        ) { initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp ->
             if (initialFactRefinement != null) {
                 createSideEffectRequirement(initialFactRefinement)?.also { result.add(it) }
             }

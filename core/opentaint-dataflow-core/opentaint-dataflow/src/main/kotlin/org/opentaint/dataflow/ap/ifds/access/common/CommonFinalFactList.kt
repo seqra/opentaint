@@ -1,9 +1,9 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactList
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 
 abstract class CommonFinalFactList<FAP> : FinalFactList, FinalApAccess<FAP> {
     abstract val storage: AccessStorage<FAP>
@@ -25,17 +25,17 @@ abstract class CommonFinalFactList<FAP> : FinalFactList, FinalApAccess<FAP> {
     }
 
     private val bases = mutableListOf<AccessPathBase>()
-    private val demandStates = mutableListOf<FactDemandState>()
+    private val exclusions = mutableListOf<ExclusionSet>()
 
     override fun add(fact: FinalFactAp) {
         bases.add(fact.base)
-        demandStates.add(fact.demandState)
+        exclusions.add(fact.exclusions)
         storage.add(getFinalAccess(fact))
     }
 
     override operator fun get(idx: Int): FinalFactAp =
-        createFinal(bases[idx], storage.get(idx), demandStates[idx])
+        createFinal(bases[idx], storage.get(idx), exclusions[idx])
 
     override fun removeLast(): FinalFactAp =
-        createFinal(bases.removeLast(), storage.removeLast(), demandStates.removeLast())
+        createFinal(bases.removeLast(), storage.removeLast(), exclusions.removeLast())
 }

@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.common
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.EdgeStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -13,12 +13,12 @@ abstract class CommonF2FSet<IAP, FAP>(
     private val initialStatement: CommonInst
 ): MethodEdgesInitialToFinalApSet, InitialApAccess<IAP>, FinalApAccess<FAP> {
 
-    data class AccessWithState<FAP>(val access: FAP, val demandState: FactDemandState)
+    data class AccessWithExclusion<FAP>(val access: FAP, val exclusion: ExclusionSet)
 
     interface ApStorage<IAP, FAP> {
-        fun add(statement: CommonInst, initial: IAP, final: AccessWithState<FAP>): AccessWithState<FAP>?
-        fun filter(dst: MutableList<Pair<IAP, AccessWithState<FAP>>>, statement: CommonInst, finalPattern: IAP)
-        fun filter(dst: MutableList<AccessWithState<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
+        fun add(statement: CommonInst, initial: IAP, final: AccessWithExclusion<FAP>): AccessWithExclusion<FAP>?
+        fun filter(dst: MutableList<Pair<IAP, AccessWithExclusion<FAP>>>, statement: CommonInst, finalPattern: IAP)
+        fun filter(dst: MutableList<AccessWithExclusion<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
     }
 
     abstract fun createApStorage(): ApStorage<IAP, FAP>
@@ -30,20 +30,20 @@ abstract class CommonF2FSet<IAP, FAP>(
         initialAp: InitialFactAp,
         finalAp: FinalFactAp,
     ): Pair<InitialFactAp, FinalFactAp>? {
-        check(initialAp.demandState == finalAp.demandState) { "Edge demand-state mismatch" }
+        check(initialAp.exclusions == finalAp.exclusions) { "Edge exclusion mismatch" }
 
         val edgeStorage = storage.getOrCreate(finalAp.base).getOrCreate(initialAp.base)
 
-        val final = AccessWithState(getFinalAccess(finalAp), finalAp.demandState)
-        val addedAccessWithState = edgeStorage.add(statement, getInitialAccess(initialAp), final)
+        val final = AccessWithExclusion(getFinalAccess(finalAp), finalAp.exclusions)
+        val addedAccessWithExclusion = edgeStorage.add(statement, getInitialAccess(initialAp), final)
             ?: return null
 
-        if (addedAccessWithState === final) return initialAp to finalAp
+        if (addedAccessWithExclusion === final) return initialAp to finalAp
 
-        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithState.demandState)
+        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithExclusion.exclusion)
 
         val newExitAp = createFinal(
-            finalAp.base, addedAccessWithState.access, addedAccessWithState.demandState
+            finalAp.base, addedAccessWithExclusion.access, addedAccessWithExclusion.exclusion
         )
 
         return newInitialAp to newExitAp
@@ -85,8 +85,8 @@ abstract class CommonF2FSet<IAP, FAP>(
                 collection,
                 { storage.filter(it, statement, pattern) },
                 {
-                    val initialAp = createInitial(initialBase, it.first, it.second.demandState)
-                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.demandState)
+                    val initialAp = createInitial(initialBase, it.first, it.second.exclusion)
+                    val finalAp = createFinal(finalFactBase, it.second.access, it.second.exclusion)
                     initialAp to finalAp
                 }
             )
@@ -108,7 +108,7 @@ abstract class CommonF2FSet<IAP, FAP>(
         collectToListWithPostProcess(
             collection,
             { factStorage.filter(it, statement, getInitialAccess(initialAp), getInitialAccess(finalFactPattern)) },
-            { createFinal(finalFactBase, it.access, it.demandState) }
+            { createFinal(finalFactBase, it.access, it.exclusion) }
         )
     }
 

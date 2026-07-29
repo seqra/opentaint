@@ -4,7 +4,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.access.common.CommonNDF2FSet
 import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSetStorage
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesNDInitialToFinalAutomataApSet(
@@ -12,21 +11,24 @@ class MethodEdgesNDInitialToFinalAutomataApSet(
     initialStatement: CommonInst,
     languageManager: LanguageManager,
     maxInstIdx: Int,
-) : CommonNDF2FSet<AutomataAccess, AutomataAccess>(initialStatement, languageManager, maxInstIdx),
+) : CommonNDF2FSet<AutomataInitialAccess, AutomataFinalAccess>(
+    initialStatement, languageManager, maxInstIdx
+),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun createApStorage() = object : DefaultNDF2FSetStorage<AutomataAccess, AutomataAccess>() {
-        override fun createStorage(): Storage<AutomataAccess> = DefaultStorage()
+    override fun createApStorage() =
+        object : DefaultNDF2FSetStorage<AutomataInitialAccess, AutomataFinalAccess>() {
+        override fun createStorage(): Storage<AutomataFinalAccess> = DefaultStorage()
     }
 
-    override fun mostAbstractPattern(base: AccessPathBase): AutomataAccess =
-        AutomataAccess(apManager.emptyGraph(), AnyFieldCleanerEffects.Empty)
+    override fun mostAbstractPattern(base: AccessPathBase): AutomataInitialAccess =
+        apManager.emptyGraph()
 
-    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AutomataAccess> {
-        private val storage = hashSetOf<AutomataAccess>()
-        override fun add(element: AutomataAccess): AutomataAccess? =
+    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AutomataFinalAccess> {
+        private val storage = hashSetOf<AutomataFinalAccess>()
+        override fun add(element: AutomataFinalAccess): AutomataFinalAccess? =
             if (storage.add(element)) element else null
 
-        override fun collect(dst: MutableList<AutomataAccess>) {
+        override fun collect(dst: MutableList<AutomataFinalAccess>) {
             dst.addAll(storage)
         }
     }

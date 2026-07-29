@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import kotlinx.collections.immutable.persistentHashMapOf
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -50,11 +50,10 @@ private class MethodTaintedSummariesGroupedByFactStorage
         val modifiedStorages = mutableListOf<MethodTaintedSummariesMergingStorage>()
 
         for (edge in edges) {
-            check(edge.initial.cleanerEffects == edge.final.cleanerEffects)
             addNonUniverseEdge(
-                edge.initial.access,
+                edge.initial,
                 edge.final,
-                edge.demandState,
+                edge.exclusion,
                 modifiedStorages,
             )
         }
@@ -65,11 +64,11 @@ private class MethodTaintedSummariesGroupedByFactStorage
     private fun addNonUniverseEdge(
         initialAccess: AccessPathWithCycles.AccessNode?,
         exitAccess: CactusFinalAccess,
-        demandState: FactDemandState,
+        exclusion: ExclusionSet,
         modifiedStorages: MutableList<MethodTaintedSummariesMergingStorage>
     ) {
         val storage = nonUniverseAccessPath.getOrCreate(initialAccess)
-        val storageModified = storage.add(exitAccess, demandState)
+        val storageModified = storage.add(exitAccess, exclusion)
 
         if (storageModified) {
             modifiedStorages.add(storage)
@@ -85,21 +84,21 @@ private class MethodTaintedSummariesGroupedByFactStorage
 }
 
 private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPathWithCycles.AccessNode?) {
-    private var demandState: FactDemandState? = null
+    private var exclusion: ExclusionSet? = null
     private var edges: CactusFinalAccess? = null
     private var edgesDelta: CactusFinalAccess? = null
 
-    fun add(exitAccess: CactusFinalAccess, addedState: FactDemandState): Boolean {
-        val currentState = demandState
+    fun add(exitAccess: CactusFinalAccess, addedState: ExclusionSet): Boolean {
+        val currentState = exclusion
         if (currentState == null) {
-            demandState = addedState
+            exclusion = addedState
             edges = exitAccess
             edgesDelta = exitAccess
             return true
         }
 
         val currentEdges = edges!!
-        val mergedState = currentState join addedState
+        val mergedState = currentState.union(addedState)
         if (mergedState === currentState) {
             val (modifiedEdges, modificationDelta) = currentEdges.mergeAddDelta(exitAccess)
             if (modificationDelta == null) return false
@@ -110,7 +109,7 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         }
 
         val mergedAp = currentEdges.mergeAdd(exitAccess)
-        demandState = mergedState
+        exclusion = mergedState
         edges = mergedAp
         edgesDelta = mergedAp
 
@@ -122,19 +121,19 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         edgesDelta = null
 
         return FactToFactEdgeBuilderBuilder()
-            .setInitialAp(CactusInitialAccess(initialAccess, delta.cleanerEffects))
+            .setInitialAp(initialAccess)
             .setExitAp(delta)
-            .setDemandState(demandState!!)
+            .setExclusion(exclusion!!)
             .let { sequenceOf(it) }
     }
 
     fun summaries(): F2FBBuilder<CactusInitialAccess, CactusFinalAccess>? {
-        val demandState = this.demandState ?: return null
+        val exclusion = this.exclusion ?: return null
         val edges = this.edges!!
         return FactToFactEdgeBuilderBuilder()
-            .setInitialAp(CactusInitialAccess(initialAccess, edges.cleanerEffects))
+            .setInitialAp(initialAccess)
             .setExitAp(edges)
-            .setDemandState(demandState)
+            .setExclusion(exclusion)
     }
 }
 

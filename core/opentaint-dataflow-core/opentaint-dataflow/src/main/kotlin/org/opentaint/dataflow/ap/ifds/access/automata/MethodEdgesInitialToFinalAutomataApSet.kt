@@ -8,8 +8,8 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionS
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -20,8 +20,8 @@ class MethodEdgesInitialToFinalAutomataApSet(
     languageManager: LanguageManager
 ) : MethodEdgesInitialToFinalApSet {
     private data class StoredState(
-        val demandState: FactDemandState,
-        val cleanerEffects: AnyFieldCleanerEffects,
+        val exclusion: ExclusionSet,
+        val anyFieldMarkExclusions: AnyFieldMarkExclusions,
     )
 
     private val storage = InitialFactBaseStorage(methodInitialStatement, maxInstIdx, languageManager)
@@ -58,14 +58,7 @@ class MethodEdgesInitialToFinalAutomataApSet(
                 collectToListWithPostProcess(
                     collection,
                     { storage.collectTo(it, statement, finalFactPattern) },
-                    {
-                        AccessGraphInitialFactAp(
-                            initialBase,
-                            initialAg,
-                            it.exclusions,
-                            (it as AccessGraphFinalFactAp).anyFieldCleanerEffects,
-                        ) to it
-                    }
+                    { AccessGraphInitialFactAp(initialBase, initialAg, it.exclusions) to it }
                 )
             }
         }
@@ -87,14 +80,13 @@ class MethodEdgesInitialToFinalAutomataApSet(
         initialAp: AccessGraphInitialFactAp,
         finalAp: AccessGraphFinalFactAp
     ): Pair<InitialFactAp, FinalFactAp>? {
-        check(initialAp.demandState == finalAp.demandState)
+        check(initialAp.exclusions == finalAp.exclusions)
 
         val storage = this.storage
             .getOrCreate(initialAp.base)
             .getOrCreate(initialAp.access)
 
-        check(initialAp.anyFieldCleanerEffects == finalAp.anyFieldCleanerEffects)
-        val state = StoredState(initialAp.demandState, initialAp.anyFieldCleanerEffects)
+        val state = StoredState(initialAp.exclusions, finalAp.anyFieldMarkExclusions)
         val addedState = storage.add(statement, finalAp.base, finalAp.access, state)
 
         if (addedState === state) return initialAp to finalAp
@@ -103,14 +95,13 @@ class MethodEdgesInitialToFinalAutomataApSet(
         val newInitial = AccessGraphInitialFactAp(
             initialAp.base,
             initialAp.access,
-            addedState.demandState.exclusions,
-            addedState.cleanerEffects,
+            addedState.exclusion,
         )
         val newFinal = AccessGraphFinalFactAp(
             finalAp.base,
             finalAp.access,
-            addedState.demandState.exclusions,
-            addedState.cleanerEffects,
+            addedState.exclusion,
+            addedState.anyFieldMarkExclusions,
         )
         return newInitial to newFinal
     }
@@ -188,8 +179,8 @@ class MethodEdgesInitialToFinalAutomataApSet(
                     AccessGraphFinalFactAp(
                         base,
                         it,
-                        state.demandState.exclusions,
-                        state.cleanerEffects,
+                        state.exclusion,
+                        state.anyFieldMarkExclusions,
                     )
                 }
             )
@@ -244,15 +235,16 @@ class MethodEdgesInitialToFinalAutomataApSet(
                 return state
             }
 
-            val mergedDemandState = currentState.demandState join state.demandState
-            val mergedEffects = currentState.cleanerEffects join state.cleanerEffects
-            if (mergedDemandState === currentState.demandState &&
-                mergedEffects === currentState.cleanerEffects
+            val mergedExclusion = currentState.exclusion.union(state.exclusion)
+            val mergedAnyFieldMarkExclusions =
+                currentState.anyFieldMarkExclusions join state.anyFieldMarkExclusions
+            if (mergedExclusion === currentState.exclusion &&
+                mergedAnyFieldMarkExclusions === currentState.anyFieldMarkExclusions
             ) {
                 return if (returnNullIfNotUpdated) null else currentState
             }
 
-            val merged = StoredState(mergedDemandState, mergedEffects)
+            val merged = StoredState(mergedExclusion, mergedAnyFieldMarkExclusions)
             states[stateIdx] = merged
             return merged
         }

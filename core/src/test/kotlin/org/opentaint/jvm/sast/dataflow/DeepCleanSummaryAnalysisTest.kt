@@ -21,11 +21,11 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
  * wrapper ALSO has an unsanitized flow from the same initial fact.
  *
  * `wrap` copies its whole argument twice — once before the starred clean (`p.raw`) and once after
- * it (`p.val`). Both summary edges share the initial fact `b`; the cleaner state must stay attached
- * to the sanitized branch while the unsanitized branch remains reported.
+ * it (`p.val`). Both summary edges share the initial fact `b`; its AnyField mark exclusion must stay
+ * attached to the sanitized branch while the unsanitized branch remains reported.
  *
- * The Tree subclass exercises structural cleaner state. The Automata subclass exercises the same
- * contract with edge-level cleaner effects, including transport through an identity summary.
+ * Both Tree and Automata exercise the same AnyField mark-exclusion contract, including transport
+ * through an identity summary.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
@@ -248,7 +248,7 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
 /**
  * The sibling cases pass precisely: `wrap` stores its argument into `p.raw` before the starred
  * clean and into `p.val` after it, and the clean's residual claim rides the exit tree's `.val`
- * abstraction (AbstractionExclusions) without ever meeting `.raw`. The unsanitized sibling stays
+ * abstraction (AnyFieldMarkExclusions) without ever meeting `.raw`. The unsanitized sibling stays
  * reported, the sanitized one stays silent.
  */
 class TreeDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest()

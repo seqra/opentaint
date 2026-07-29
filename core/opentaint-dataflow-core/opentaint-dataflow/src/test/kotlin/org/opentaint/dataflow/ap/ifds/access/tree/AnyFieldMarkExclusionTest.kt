@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.taint.Cleaner
@@ -22,7 +23,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The combination laws of the abstraction's excluded-mark annotation ([AbstractionExclusions]).
+ * The combination laws of the abstraction's excluded-mark annotation ([AnyFieldMarkExclusions]).
  *
  * A starred sanitizer cleans a fact structurally ([FinalFactAp.clean]): concrete `![m]` nodes
  * below the base are deleted outright, and each abstract node picks up the residual claim that the
@@ -30,7 +31,7 @@ import kotlin.test.assertTrue
  * it travels with a prepend, is confined to its branch, is enforced when a summary delta is
  * concatenated at the node, and joins by intersection when two alternatives meet at the same node.
  */
-class AbstractNodeExclusionTest {
+class AnyFieldMarkExclusionTest {
 
     private companion object {
         val FIELD_RAW = FieldAccessor("Pair", "raw", "Box")
@@ -128,7 +129,7 @@ class AbstractNodeExclusionTest {
         val cleaned = abstractFact().anyFieldCleaned()
 
         assertTrue(cleaned.isAbstract(), "the abstraction itself survives the clean")
-        assertNotNull(cleaned.access.abstraction, "the abstract node must carry the claim")
+        assertNotNull(cleaned.access.anyFieldMarkExclusions, "the abstract node must carry the claim")
     }
 
     /* ---------- enforcement at concat ---------- */
@@ -212,8 +213,8 @@ class AbstractNodeExclusionTest {
 
         assertNotNull(transited)
         assertEquals(
-            cleanedCallerFact.access.abstraction,
-            transited.access.abstraction,
+            cleanedCallerFact.access.anyFieldMarkExclusions,
+            transited.access.anyFieldMarkExclusions,
             "the caller's claim must ride the empty delta onto the exit abstraction"
         )
     }
@@ -229,7 +230,7 @@ class AbstractNodeExclusionTest {
         val transited = calleeExit.concat(FactTypeChecker.Dummy, emptyDelta) as AccessTree?
 
         assertNotNull(transited)
-        val claim = assertNotNull(transited.access.abstraction)
+        val claim = assertNotNull(transited.access.anyFieldMarkExclusions)
         assertTrue(with(manager) { MARK.idx } in claim, "the caller's mark is still claimed")
         assertTrue(with(manager) { MARK_2.idx } in claim, "the callee's mark is claimed too")
     }
@@ -242,7 +243,7 @@ class AbstractNodeExclusionTest {
         val uncleaned = abstractFact()
         val joined = merged(cleaned, uncleaned)
 
-        assertNull(joined.access.abstraction, "the join of cleaned and uncleaned is uncleaned")
+        assertNull(joined.access.anyFieldMarkExclusions, "the join of cleaned and uncleaned is uncleaned")
 
         val delta = deltaOf(concreteFact(FIELD_F, MARK))
         val applied = joined.concat(FactTypeChecker.Dummy, delta)
@@ -273,8 +274,8 @@ class AbstractNodeExclusionTest {
         val b = abstractFact().anyFieldCleaned(MARK)
 
         assertEquals(
-            merged(a, b).access.abstraction,
-            merged(b, a).access.abstraction,
+            merged(a, b).access.anyFieldMarkExclusions,
+            merged(b, a).access.anyFieldMarkExclusions,
             "the stored claim must not depend on merge order"
         )
     }
@@ -284,7 +285,7 @@ class AbstractNodeExclusionTest {
         val a = abstractFact().anyFieldCleaned()
         val b = abstractFact().anyFieldCleaned()
 
-        assertEquals(a.access.abstraction, merged(a, b).access.abstraction)
+        assertEquals(a.access.anyFieldMarkExclusions, merged(a, b).access.anyFieldMarkExclusions)
     }
 
     /* ---------- persistence ---------- */
@@ -321,7 +322,7 @@ class AbstractNodeExclusionTest {
         }
 
         assertEquals(fact.access, read, "the annotated and the plain branch must both round-trip")
-        assertNotNull(read.getChild(with(manager) { FIELD_VAL.idx })?.abstraction)
-        assertNull(read.getChild(with(manager) { FIELD_RAW.idx })?.abstraction)
+        assertNotNull(read.getChild(with(manager) { FIELD_VAL.idx })?.anyFieldMarkExclusions)
+        assertNull(read.getChild(with(manager) { FIELD_RAW.idx })?.anyFieldMarkExclusions)
     }
 }

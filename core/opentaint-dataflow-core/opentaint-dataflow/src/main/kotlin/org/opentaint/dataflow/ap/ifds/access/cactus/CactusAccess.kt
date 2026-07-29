@@ -1,38 +1,39 @@
 package org.opentaint.dataflow.ap.ifds.access.cactus
 
 /**
- * Joins alternative Cactus facts. Shape and residual any-field cleaners are one semantic value:
- * the shape grows, while a cleaner survives only when every alternative performed it.
+ * Joins alternative Cactus facts. Shape and AnyField mark exclusions are one semantic value:
+ * shape grows, while a mark exclusion survives only when every alternative establishes it.
  */
 internal fun CactusFinalAccess.mergeAdd(other: CactusFinalAccess): CactusFinalAccess {
     val mergedAccess = access.mergeAdd(other.access)
-    val mergedCleaners = cleanerEffects join other.cleanerEffects
-    return if (mergedAccess === access && mergedCleaners === cleanerEffects) {
+    val mergedMarkExclusions = anyFieldMarkExclusions join other.anyFieldMarkExclusions
+    return if (mergedAccess === access && mergedMarkExclusions == anyFieldMarkExclusions) {
         this
     } else {
-        CactusFinalAccess(mergedAccess, mergedCleaners)
+        CactusFinalAccess(mergedAccess, mergedMarkExclusions)
     }
 }
 
 /**
  * The joined value and the part consumers must process again.
  *
- * A cleaner-state change affects the whole access value, so its delta is the complete join.
+ * An AnyField mark-exclusion change affects the whole access value, so its delta is the complete
+ * join.
  */
 internal fun CactusFinalAccess.mergeAddDelta(
     other: CactusFinalAccess,
 ): Pair<CactusFinalAccess, CactusFinalAccess?> {
     val (mergedAccess, accessDelta) = access.mergeAddDelta(other.access)
-    val mergedCleaners = cleanerEffects join other.cleanerEffects
-    val cleanersChanged = mergedCleaners !== cleanerEffects
+    val mergedMarkExclusions = anyFieldMarkExclusions join other.anyFieldMarkExclusions
+    val exclusionsChanged = mergedMarkExclusions != anyFieldMarkExclusions
 
-    if (accessDelta == null && !cleanersChanged) return this to null
+    if (accessDelta == null && !exclusionsChanged) return this to null
 
-    val merged = CactusFinalAccess(mergedAccess, mergedCleaners)
-    val delta = if (cleanersChanged) {
+    val merged = CactusFinalAccess(mergedAccess, mergedMarkExclusions)
+    val delta = if (exclusionsChanged) {
         merged
     } else {
-        CactusFinalAccess(accessDelta!!, mergedCleaners)
+        CactusFinalAccess(accessDelta!!, mergedMarkExclusions)
     }
     return merged to delta
 }
@@ -40,4 +41,4 @@ internal fun CactusFinalAccess.mergeAddDelta(
 internal fun CactusFinalAccess.filterStartsWith(
     initial: CactusInitialAccess,
 ): CactusFinalAccess? =
-    access.filterStartsWith(initial.access)?.let { CactusFinalAccess(it, cleanerEffects) }
+    access.filterStartsWith(initial)?.let { CactusFinalAccess(it, anyFieldMarkExclusions) }

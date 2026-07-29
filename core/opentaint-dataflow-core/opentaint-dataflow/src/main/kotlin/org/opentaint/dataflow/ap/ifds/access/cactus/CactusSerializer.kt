@@ -3,28 +3,33 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.serialization.AccessPathBaseSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldMarkExclusionsSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
-import org.opentaint.dataflow.ap.ifds.serialization.FactDemandStateSerializer
-import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldCleanerEffectsSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.ExclusionSetSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
 internal class CactusSerializer(private val context : SummarySerializationContext) : ApSerializer {
     private val accessNodeSerializer = AccessCactus.AccessNode.Serializer(context)
-    private val demandStateSerializer = FactDemandStateSerializer(context)
-    private val cleanerEffectsSerializer = AnyFieldCleanerEffectsSerializer(context)
+    private val exclusionSerializer = ExclusionSetSerializer(context)
+    private val anyFieldMarkExclusionsSerializer = AnyFieldMarkExclusionsSerializer(
+        context,
+        { CactusAnyFieldMarkExclusions.index(it as TaintMarkAccessor) },
+        CactusAnyFieldMarkExclusions::mark,
+    )
 
     override fun DataOutputStream.writeFinalAp(ap: FinalFactAp) {
         (ap as AccessCactus)
         with (AccessPathBaseSerializer) {
             writeAccessPathBase(ap.base)
         }
-        with (demandStateSerializer) {
-            writeFactDemandState(ap.demandState)
+        with (exclusionSerializer) {
+            writeExclusionSet(ap.exclusions)
         }
-        with(cleanerEffectsSerializer) {
-            writeAnyFieldCleanerEffects(ap.anyFieldCleanerEffects)
+        with(anyFieldMarkExclusionsSerializer) {
+            writeAnyFieldMarkExclusions(ap.anyFieldMarkExclusions.exclusions)
         }
         with (accessNodeSerializer) {
             writeAccessNode(ap.access)
@@ -36,11 +41,8 @@ internal class CactusSerializer(private val context : SummarySerializationContex
         with (AccessPathBaseSerializer) {
             writeAccessPathBase(ap.base)
         }
-        with (demandStateSerializer) {
-            writeFactDemandState(ap.demandState)
-        }
-        with(cleanerEffectsSerializer) {
-            writeAnyFieldCleanerEffects(ap.anyFieldCleanerEffects)
+        with (exclusionSerializer) {
+            writeExclusionSet(ap.exclusions)
         }
         val nodes = ap.access?.toList() ?: emptyList()
 
@@ -61,27 +63,24 @@ internal class CactusSerializer(private val context : SummarySerializationContex
         val base = with (AccessPathBaseSerializer) {
             readAccessPathBase()
         }
-        val demandState = with (demandStateSerializer) {
-            readFactDemandState()
+        val exclusion = with (exclusionSerializer) {
+            readExclusionSet()
         }
-        val cleanerEffects = with(cleanerEffectsSerializer) {
-            readAnyFieldCleanerEffects()
+        val anyFieldMarkExclusions = with(anyFieldMarkExclusionsSerializer) {
+            CactusAnyFieldMarkExclusions.fromShared(readAnyFieldMarkExclusions())
         }
         val access = with (accessNodeSerializer) {
             readAccessNode()
         }
-        return AccessCactus(base, access, demandState.exclusions, cleanerEffects)
+        return AccessCactus(base, access, exclusion, anyFieldMarkExclusions)
     }
 
     override fun DataInputStream.readInitialAp(): InitialFactAp {
         val base = with(AccessPathBaseSerializer) {
             readAccessPathBase()
         }
-        val demandState = with (demandStateSerializer) {
-            readFactDemandState()
-        }
-        val cleanerEffects = with(cleanerEffectsSerializer) {
-            readAnyFieldCleanerEffects()
+        val exclusion = with (exclusionSerializer) {
+            readExclusionSet()
         }
         val nodesSize = readInt()
         val nodeBuilder = AccessPathWithCycles.AccessNode.Builder()
@@ -98,8 +97,6 @@ internal class CactusSerializer(private val context : SummarySerializationContex
         }
 
         val access = nodeBuilder.build()
-        return AccessPathWithCycles(
-            base, access, demandState.exclusions, cleanerEffects
-        )
+        return AccessPathWithCycles(base, access, exclusion)
     }
 }

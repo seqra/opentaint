@@ -1,10 +1,10 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSet
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -27,15 +27,15 @@ class MethodEdgesInitialToFinalTreeApSet(
         override fun add(
             statement: CommonInst,
             initial: AccessPath.AccessNode?,
-            final: AccessWithState<AccessTree.AccessNode>,
-        ): AccessWithState<AccessTree.AccessNode>? {
+            final: AccessWithExclusion<AccessTree.AccessNode>,
+        ): AccessWithExclusion<AccessTree.AccessNode>? {
             val storage = sameInitialAccessEdges.getOrCreateNode(initial).current
 
             return storage.add(statement, final)
         }
 
         override fun filter(
-            dst: MutableList<Pair<AccessPath.AccessNode?, AccessWithState<AccessTree.AccessNode>>>,
+            dst: MutableList<Pair<AccessPath.AccessNode?, AccessWithExclusion<AccessTree.AccessNode>>>,
             statement: CommonInst,
             finalPattern: AccessPath.AccessNode?,
         ) {
@@ -49,7 +49,7 @@ class MethodEdgesInitialToFinalTreeApSet(
         }
 
         override fun filter(
-            dst: MutableList<AccessWithState<AccessTree.AccessNode>>,
+            dst: MutableList<AccessWithExclusion<AccessTree.AccessNode>>,
             statement: CommonInst,
             initial: AccessPath.AccessNode?,
             finalPattern: AccessPath.AccessNode?,
@@ -77,43 +77,43 @@ class MethodEdgesInitialToFinalTreeApSet(
         private val languageManager: LanguageManager,
         manager: TreeApManager,
     ): TreeSetWithCompression(maxInstIdx, manager) {
-        private val demandStates = arrayOfNulls<FactDemandState>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
+        private val exclusions = arrayOfNulls<ExclusionSet>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
 
         fun add(
             statement: CommonInst,
-            accessWithState: AccessWithState<AccessTree.AccessNode>
-        ): AccessWithState<AccessTree.AccessNode>? {
+            accessWithExclusion: AccessWithExclusion<AccessTree.AccessNode>
+        ): AccessWithExclusion<AccessTree.AccessNode>? {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentState = demandStates[edgeSetIdx]
+            val currentExclusion = exclusions[edgeSetIdx]
 
-            if (currentState == null) {
-                demandStates[edgeSetIdx] = accessWithState.demandState
-                edges[edgeSetIdx] = internIfRequired(accessWithState.access)
-                return accessWithState
+            if (currentExclusion == null) {
+                exclusions[edgeSetIdx] = accessWithExclusion.exclusion
+                edges[edgeSetIdx] = internIfRequired(accessWithExclusion.access)
+                return accessWithExclusion
             }
 
-            val mergedState = currentState join accessWithState.demandState
-            demandStates[edgeSetIdx] = mergedState
+            val mergedExclusion = currentExclusion.union(accessWithExclusion.exclusion)
+            exclusions[edgeSetIdx] = mergedExclusion
 
             val currentAccess = edges[edgeSetIdx]!!
-            val mergedAccess = currentAccess.mergeAdd(accessWithState.access)
+            val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
             if (mergedAccess === currentAccess) {
-                if (mergedState === currentState) return null
+                if (mergedExclusion === currentExclusion) return null
 
-                return AccessWithState(mergedAccess, mergedState)
+                return AccessWithExclusion(mergedAccess, mergedExclusion)
             }
 
             edges[edgeSetIdx] = internIfRequired(mergedAccess)
             intern(edgeSetIdx)
 
-            return AccessWithState(mergedAccess, mergedState)
+            return AccessWithExclusion(mergedAccess, mergedExclusion)
         }
 
-        fun allApAtStatement(dst: MutableList<AccessWithState<AccessTree.AccessNode>>, statement: CommonInst) {
+        fun allApAtStatement(dst: MutableList<AccessWithExclusion<AccessTree.AccessNode>>, statement: CommonInst) {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val demandState = demandStates[edgeSetIdx] ?: return
+            val currentExclusion = exclusions[edgeSetIdx] ?: return
             val access = edges[edgeSetIdx] ?: return
-            dst += AccessWithState(access, demandState)
+            dst += AccessWithExclusion(access, currentExclusion)
         }
     }
 }

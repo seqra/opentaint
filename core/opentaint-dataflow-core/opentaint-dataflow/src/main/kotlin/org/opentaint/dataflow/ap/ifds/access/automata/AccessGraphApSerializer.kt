@@ -2,13 +2,13 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.serialization.AccessPathBaseSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
-import org.opentaint.dataflow.ap.ifds.serialization.FactDemandStateSerializer
-import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldCleanerEffectsSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.ExclusionSetSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldMarkExclusionsSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -18,66 +18,76 @@ internal class AccessGraphApSerializer(
     context: SummarySerializationContext
 ) : ApSerializer {
     private val accessGraphSerializer = AccessGraph.Serializer(manager, context)
-    private val demandStateSerializer = FactDemandStateSerializer(context)
-    private val cleanerEffectsSerializer = AnyFieldCleanerEffectsSerializer(context)
+    private val exclusionSerializer = ExclusionSetSerializer(context)
+    private val anyFieldMarkExclusionsSerializer = with(manager) {
+        AnyFieldMarkExclusionsSerializer(context, { it.idx }, { it.accessor })
+    }
 
-    private fun DataOutputStream.writeAp(
+    private fun DataOutputStream.writeInitialApFields(
         base: AccessPathBase,
         access: AccessGraph,
-        demandState: FactDemandState,
-        cleanerEffects: AnyFieldCleanerEffects,
+        exclusion: ExclusionSet,
     ) {
         with (AccessPathBaseSerializer) {
             writeAccessPathBase(base)
         }
-        with (demandStateSerializer) {
-            writeFactDemandState(demandState)
-        }
-        with(cleanerEffectsSerializer) {
-            writeAnyFieldCleanerEffects(cleanerEffects)
+        with (exclusionSerializer) {
+            writeExclusionSet(exclusion)
         }
         with (accessGraphSerializer) {
             writeGraph(access)
         }
     }
 
-    private fun <T> DataInputStream.readAp(
-        builder: (AccessPathBase, AccessGraph, FactDemandState, AnyFieldCleanerEffects) -> T,
+    private fun <T> DataInputStream.readInitialApFields(
+        builder: (AccessPathBase, AccessGraph, ExclusionSet) -> T,
     ): T {
         val base = with (AccessPathBaseSerializer) {
             readAccessPathBase()
         }
-        val demandState = with (demandStateSerializer) {
-            readFactDemandState()
-        }
-        val cleanerEffects = with(cleanerEffectsSerializer) {
-            readAnyFieldCleanerEffects()
+        val exclusion = with (exclusionSerializer) {
+            readExclusionSet()
         }
         val access = with (accessGraphSerializer) {
             readGraph()
         }
-        return builder(base, access, demandState, cleanerEffects)
+        return builder(base, access, exclusion)
     }
 
     override fun DataOutputStream.writeFinalAp(ap: FinalFactAp) {
         (ap as AccessGraphFinalFactAp)
-        writeAp(ap.base, ap.access, ap.demandState, ap.anyFieldCleanerEffects)
+        with (AccessPathBaseSerializer) {
+            writeAccessPathBase(ap.base)
+        }
+        with (exclusionSerializer) {
+            writeExclusionSet(ap.exclusions)
+        }
+        with(anyFieldMarkExclusionsSerializer) {
+            writeAnyFieldMarkExclusions(ap.anyFieldMarkExclusions)
+        }
+        with (accessGraphSerializer) {
+            writeGraph(ap.access)
+        }
     }
 
     override fun DataOutputStream.writeInitialAp(ap: InitialFactAp) {
         (ap as AccessGraphInitialFactAp)
-        writeAp(ap.base, ap.access, ap.demandState, ap.anyFieldCleanerEffects)
+        writeInitialApFields(ap.base, ap.access, ap.exclusions)
     }
 
     override fun DataInputStream.readFinalAp(): FinalFactAp {
-        return readAp { base, access, state, cleanerEffects ->
-            AccessGraphFinalFactAp(base, access, state.exclusions, cleanerEffects)
+        val base = with(AccessPathBaseSerializer) { readAccessPathBase() }
+        val exclusions = with(exclusionSerializer) { readExclusionSet() }
+        val anyFieldMarkExclusions = with(anyFieldMarkExclusionsSerializer) {
+            readAnyFieldMarkExclusions()
         }
+        val access = with(accessGraphSerializer) { readGraph() }
+        return AccessGraphFinalFactAp(base, access, exclusions, anyFieldMarkExclusions)
     }
 
     override fun DataInputStream.readInitialAp(): InitialFactAp {
-        return readAp { base, access, state, cleanerEffects ->
-            AccessGraphInitialFactAp(base, access, state.exclusions, cleanerEffects)
+        return readInitialApFields { base, access, exclusions ->
+            AccessGraphInitialFactAp(base, access, exclusions)
         }
     }
 }

@@ -5,8 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSet
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -20,7 +19,7 @@ class MethodEdgesInitialToFinalCactusApSet(
         TaintedFactAccessEdgeStorage()
 
     override fun mostAbstractPattern(base: AccessPathBase): CactusInitialAccess =
-        CactusInitialAccess(null, AnyFieldCleanerEffects.Empty)
+        null
 
     private inner class TaintedFactAccessEdgeStorage :
         ApStorage<CactusInitialAccess, CactusFinalAccess> {
@@ -30,10 +29,9 @@ class MethodEdgesInitialToFinalCactusApSet(
         override fun add(
             statement: CommonInst,
             initial: CactusInitialAccess,
-            final: AccessWithState<CactusFinalAccess>
-        ): AccessWithState<CactusFinalAccess>? {
-            check(initial.cleanerEffects == final.access.cleanerEffects)
-            val storage = sameInitialAccessEdges.getOrPut(initial.access) {
+            final: AccessWithExclusion<CactusFinalAccess>
+        ): AccessWithExclusion<CactusFinalAccess>? {
+            val storage = sameInitialAccessEdges.getOrPut(initial) {
                 EdgeNonUniverseExclusionMergingStorage(maxInstIdx, languageManager)
             }
 
@@ -41,7 +39,7 @@ class MethodEdgesInitialToFinalCactusApSet(
         }
 
         override fun filter(
-            dst: MutableList<Pair<CactusInitialAccess, AccessWithState<CactusFinalAccess>>>,
+            dst: MutableList<Pair<CactusInitialAccess, AccessWithExclusion<CactusFinalAccess>>>,
             statement: CommonInst,
             finalPattern: CactusInitialAccess,
         ) {
@@ -49,23 +47,18 @@ class MethodEdgesInitialToFinalCactusApSet(
                 collectToListWithPostProcess(
                     dst,
                     { storage.allApAtStatement(it, statement) },
-                    {
-                        CactusInitialAccess(
-                            initialNode,
-                            it.access.cleanerEffects,
-                        ) to it
-                    }
+                    { initialNode to it }
                 )
             }
         }
 
         override fun filter(
-            dst: MutableList<AccessWithState<CactusFinalAccess>>,
+            dst: MutableList<AccessWithExclusion<CactusFinalAccess>>,
             statement: CommonInst,
             initial: CactusInitialAccess,
             finalPattern: CactusInitialAccess,
         ) {
-            val storage = sameInitialAccessEdges[initial.access] ?: return
+            val storage = sameInitialAccessEdges[initial] ?: return
             storage.allApAtStatement(dst, statement)
         }
     }
@@ -73,42 +66,42 @@ class MethodEdgesInitialToFinalCactusApSet(
     private class EdgeNonUniverseExclusionMergingStorage(
         maxInstIdx: Int, private val languageManager: LanguageManager
     ) {
-        private val demandStates = arrayOfNulls<FactDemandState>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
+        private val exclusions = arrayOfNulls<ExclusionSet>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
         private val edges = arrayOfNulls<CactusFinalAccess>(MethodAnalyzerEdges.instructionStorageSize(maxInstIdx))
 
         fun add(
             statement: CommonInst,
-            accessWithState: AccessWithState<CactusFinalAccess>,
-        ): AccessWithState<CactusFinalAccess>? {
+            accessWithState: AccessWithExclusion<CactusFinalAccess>,
+        ): AccessWithExclusion<CactusFinalAccess>? {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val currentState = demandStates[edgeSetIdx]
+            val currentState = exclusions[edgeSetIdx]
 
             if (currentState == null) {
-                demandStates[edgeSetIdx] = accessWithState.demandState
+                exclusions[edgeSetIdx] = accessWithState.exclusion
                 edges[edgeSetIdx] = accessWithState.access
                 return accessWithState
             }
 
             val currentAccess = edges[edgeSetIdx]!!
-            val mergedState = currentState join accessWithState.demandState
-            demandStates[edgeSetIdx] = mergedState
+            val mergedState = currentState.union(accessWithState.exclusion)
+            exclusions[edgeSetIdx] = mergedState
 
             val mergedAccess = currentAccess.mergeAdd(accessWithState.access)
             if (mergedAccess === currentAccess) {
                 if (mergedState === currentState) return null
 
-                return AccessWithState(mergedAccess, mergedState)
+                return AccessWithExclusion(mergedAccess, mergedState)
             }
 
             edges[edgeSetIdx] = mergedAccess
-            return AccessWithState(mergedAccess, mergedState)
+            return AccessWithExclusion(mergedAccess, mergedState)
         }
 
-        fun allApAtStatement(dst: MutableList<AccessWithState<CactusFinalAccess>>, statement: CommonInst) {
+        fun allApAtStatement(dst: MutableList<AccessWithExclusion<CactusFinalAccess>>, statement: CommonInst) {
             val edgeSetIdx = MethodAnalyzerEdges.instructionStorageIdx(statement, languageManager)
-            val demandState = demandStates[edgeSetIdx] ?: return
+            val exclusion = exclusions[edgeSetIdx] ?: return
             val access = edges[edgeSetIdx] ?: return
-            dst += AccessWithState(access, demandState)
+            dst += AccessWithExclusion(access, exclusion)
         }
     }
 }

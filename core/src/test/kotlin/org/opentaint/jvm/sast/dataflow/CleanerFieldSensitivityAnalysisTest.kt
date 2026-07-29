@@ -37,7 +37,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
  *  - a STARRED position (`arg0.*`) names unboundedly many paths, so there is no single node to
  *    delete. In tree mode the clean is still structural ([FinalFactAp.deepClean]): concrete
  *    `![m]` nodes below the base are deleted outright, and each abstract node is annotated with
- *    the residual claim (AbstractionExclusions) that the mark stays excluded from whatever
+ *    the residual claim (AnyFieldMarkExclusions) that the mark stays excluded from whatever
  *    materializes below it. The claim is part of the node, so it travels with `.val` and never
  *    meets `.raw` -- the same branch discrimination the concrete clean gets from the tree.
  *

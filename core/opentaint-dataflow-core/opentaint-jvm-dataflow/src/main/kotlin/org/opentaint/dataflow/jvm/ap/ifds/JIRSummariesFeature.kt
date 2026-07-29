@@ -409,8 +409,8 @@ class JIRSummariesFeature(
         private const val METHOD_SUMMARIES_TYPE = "MethodSummaries"
 
         /**
-         * Bump when the serialized summary format changes incompatibly. 3 separates analysis
-         * exclusions from representation-specific any-field cleaner effects.
+         * Bump when the serialized summary format changes incompatibly. Version 3 stores
+         * demand exclusions and AnyField mark exclusions independently.
          */
         private const val SUMMARIES_FORMAT_VERSION = 3
 

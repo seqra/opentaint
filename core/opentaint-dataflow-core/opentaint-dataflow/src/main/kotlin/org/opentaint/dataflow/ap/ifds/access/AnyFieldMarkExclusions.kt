@@ -1,34 +1,24 @@
-package org.opentaint.dataflow.ap.ifds.access.tree
+package org.opentaint.dataflow.ap.ifds.access
 
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 
 /**
- * Excluded-mark annotation of an ABSTRACT [AccessTree.AccessNode]: a starred sanitizer's residual
- * claim that a taint mark is removed from everything that later materializes below this node — by a
- * summary delta concatenated onto it, or by demand-driven refinement growing through it.
+ * Marks excluded from future materialization of an AnyField abstraction.
  *
- * The claim lives on the abstract node and nowhere else. The concrete part of a fact is closed
- * (every path enumerated), so a starred clean deletes concrete mark nodes outright and needs no
- * residue there; an abstract node is the one place the fact can still grow, so it is the one place
- * the claim is needed. Because the annotation is part of the node, a `prependAccessor` carries it
- * down with the path and a sibling branch simply never meets it — discrimination that a flat
- * edge-level cleaner flag cannot express.
+ * An AnyField cleaner removes every currently materialized matching mark and records here what
+ * must remain excluded if the fact later grows. Tree stores the value on abstract nodes; Automata
+ * and Cactus store it beside their final access values. Initial facts never carry it.
  *
- * Each mark carries the minimal RELATIVE depth below the annotated node at which it is excluded:
+ * Each mark carries the minimum relative depth below the AnyField at which it is excluded:
  *
- *  - [marksFromDepth1] — excluded everywhere strictly below the node, including a mark that
- *    materializes as its direct child. Used for abstract nodes that already sit at least one
- *    accessor below the cleaned base: everything below them is "under a field of the base", which
- *    is exactly what `base.*` covers.
- *  - [marksFromDepth2] — excluded only below at least one further accessor. Used for the abstract
- *    node at the cleaned base itself: `base.*` does not cover the mark carried by the base
- *    directly (that is the rule's `base` clean action's job), so a direct mark-child of this node
-     *    survives.
+ *  - [marksFromDepth1] applies to a direct mark child and everything deeper.
+ *  - [marksFromDepth2] preserves a direct mark child and applies after one intervening accessor.
  *
- * Instances are canonical: arrays are sorted, disjoint, and never both empty ([create] returns
- * null instead — "abstract with no exclusions" is represented by the absence of the annotation).
+ * Arrays are sorted and disjoint. [create] returns `null` for an empty tree annotation; root-only
+ * representations use [Empty] as their explicit neutral value.
  */
-class AbstractionExclusions private constructor(
+class AnyFieldMarkExclusions private constructor(
     @JvmField val marksFromDepth1: IntArray,
     @JvmField val marksFromDepth2: IntArray,
 ) {
@@ -38,7 +28,7 @@ class AbstractionExclusions private constructor(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is AbstractionExclusions) return false
+        if (other !is AnyFieldMarkExclusions) return false
         if (hash != other.hash) return false
         return marksFromDepth1.contentEquals(other.marksFromDepth1)
             && marksFromDepth2.contentEquals(other.marksFromDepth2)
@@ -47,6 +37,18 @@ class AbstractionExclusions private constructor(
     operator fun contains(mark: AccessorIdx): Boolean =
         marksFromDepth1.binarySearch(mark) >= 0 || marksFromDepth2.binarySearch(mark) >= 0
 
+    val isEmpty: Boolean
+        get() = marksFromDepth1.isEmpty() && marksFromDepth2.isEmpty()
+
+    /** A base-level any-field clean starts applying below one concrete accessor. */
+    fun add(mark: AccessorIdx): AnyFieldMarkExclusions = addMarkFromDepth2(mark)
+
+    internal infix fun then(other: AnyFieldMarkExclusions): AnyFieldMarkExclusions =
+        then(this, other) ?: Empty
+
+    internal infix fun join(other: AnyFieldMarkExclusions): AnyFieldMarkExclusions =
+        join(this, other) ?: Empty
+
     private fun allMarks(): IntArray = (marksFromDepth1 + marksFromDepth2).also { it.sort() }
 
     /**
@@ -54,8 +56,8 @@ class AbstractionExclusions private constructor(
      * everything below such a position is at depth >= 2 relative to the annotated node, so every
      * claimed mark — depth-1 and depth-2 alike — applies from relative depth 1 there.
      */
-    fun collapseToDepth1(): AbstractionExclusions =
-        if (marksFromDepth2.isEmpty()) this else AbstractionExclusions(allMarks(), EMPTY)
+    fun collapseToDepth1(): AnyFieldMarkExclusions =
+        if (marksFromDepth2.isEmpty()) this else AnyFieldMarkExclusions(allMarks(), EMPTY)
 
     override fun toString(): String = buildString {
         append("!*{d1=")
@@ -67,13 +69,14 @@ class AbstractionExclusions private constructor(
 
     companion object {
         private val EMPTY = IntArray(0)
+        val Empty = AnyFieldMarkExclusions(EMPTY, EMPTY)
 
         /**
          * [marksFromDepth1] and [marksFromDepth2] must each be sorted; a mark present in both is
          * kept at depth 1. Alternative executions must instead combine through [join], which
          * resolves the conflict in the weaker direction.
          */
-        fun create(marksFromDepth1: IntArray, marksFromDepth2: IntArray): AbstractionExclusions? {
+        fun create(marksFromDepth1: IntArray, marksFromDepth2: IntArray): AnyFieldMarkExclusions? {
             val d2 = if (marksFromDepth2.any { marksFromDepth1.binarySearch(it) >= 0 }) {
                 marksFromDepth2.filter { marksFromDepth1.binarySearch(it) < 0 }.toIntArray()
             } else {
@@ -81,14 +84,14 @@ class AbstractionExclusions private constructor(
             }
 
             if (marksFromDepth1.isEmpty() && d2.isEmpty()) return null
-            return AbstractionExclusions(marksFromDepth1, d2)
+            return AnyFieldMarkExclusions(marksFromDepth1, d2)
         }
 
-        private fun fromDepth1(mark: AccessorIdx): AbstractionExclusions = AbstractionExclusions(intArrayOf(mark), EMPTY)
+        private fun fromDepth1(mark: AccessorIdx): AnyFieldMarkExclusions = AnyFieldMarkExclusions(intArrayOf(mark), EMPTY)
 
-        private fun fromDepth2(mark: AccessorIdx): AbstractionExclusions = AbstractionExclusions(EMPTY, intArrayOf(mark))
+        private fun fromDepth2(mark: AccessorIdx): AnyFieldMarkExclusions = AnyFieldMarkExclusions(EMPTY, intArrayOf(mark))
 
-        fun AbstractionExclusions?.addMarkFromDepth1(mark: AccessorIdx): AbstractionExclusions {
+        fun AnyFieldMarkExclusions?.addMarkFromDepth1(mark: AccessorIdx): AnyFieldMarkExclusions {
             if (this == null) return fromDepth1(mark)
             if (marksFromDepth1.binarySearch(mark) >= 0) return this
             // depth 1 is the stronger claim: it absorbs a depth-2 entry for the same mark
@@ -98,14 +101,14 @@ class AbstractionExclusions private constructor(
             } else {
                 marksFromDepth2
             }
-            return AbstractionExclusions(d1, d2)
+            return AnyFieldMarkExclusions(d1, d2)
         }
 
-        fun AbstractionExclusions?.addMarkFromDepth2(mark: AccessorIdx): AbstractionExclusions {
+        fun AnyFieldMarkExclusions?.addMarkFromDepth2(mark: AccessorIdx): AnyFieldMarkExclusions {
             if (this == null) return fromDepth2(mark)
             if (contains(mark)) return this
             val d2 = (marksFromDepth2 + mark).also { it.sort() }
-            return AbstractionExclusions(marksFromDepth1, d2)
+            return AnyFieldMarkExclusions(marksFromDepth1, d2)
         }
 
         /**
@@ -118,7 +121,7 @@ class AbstractionExclusions private constructor(
          * operand is abstract, all abstraction (and its annotation) comes from that operand —
          * callers handle that case and reach here only with two abstract operands.
          */
-        fun join(a: AbstractionExclusions?, b: AbstractionExclusions?): AbstractionExclusions? {
+        fun join(a: AnyFieldMarkExclusions?, b: AnyFieldMarkExclusions?): AnyFieldMarkExclusions? {
             if (a == null || b == null) return null
             if (a == b) return a
 
@@ -137,7 +140,7 @@ class AbstractionExclusions private constructor(
          * cleaned another. Marks union; a mark claimed at both depths keeps the stronger (min —
          * depth 1 covers everything depth 2 does).
          */
-        fun then(a: AbstractionExclusions?, b: AbstractionExclusions?): AbstractionExclusions? {
+        fun then(a: AnyFieldMarkExclusions?, b: AnyFieldMarkExclusions?): AnyFieldMarkExclusions? {
             if (a == null) return b
             if (b == null) return a
             if (a == b) return a
@@ -150,3 +153,8 @@ class AbstractionExclusions private constructor(
         }
     }
 }
+
+internal fun AnyFieldMarkExclusions.forExclusions(
+    exclusions: ExclusionSet,
+): AnyFieldMarkExclusions =
+    if (exclusions is ExclusionSet.Universe) AnyFieldMarkExclusions.Empty else this

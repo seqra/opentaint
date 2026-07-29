@@ -12,7 +12,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.tryAnyAccessorOrNull
 import org.opentaint.dataflow.util.PersistentArrayBuilder
@@ -322,12 +322,19 @@ class AccessGraph(
         }
     }
 
-    fun enforceAnyFieldCleaners(effects: AnyFieldCleanerEffects, keepInitialLevel: Boolean): AccessGraph? = with(manager) {
-        if (effects.isEmpty) return this@AccessGraph
+    fun enforceAnyFieldMarkExclusions(
+        exclusions: AnyFieldMarkExclusions,
+        keepInitialLevel: Boolean,
+    ): AccessGraph? {
+        if (exclusions.isEmpty) return this
 
-        val deepAccessors = BitSet()
-        effects.forEach { deepAccessors.set(it.idx) }
-        removeDeepAccessors(deepAccessors, keepInitialLevel)
+        val depth1 = BitSet()
+        exclusions.marksFromDepth1.forEach(depth1::set)
+        val withoutDepth1 = removeDeepAccessors(depth1, keepInitialLevel = false) ?: return null
+
+        val depth2 = BitSet()
+        exclusions.marksFromDepth2.forEach(depth2::set)
+        return withoutDepth1.removeDeepAccessors(depth2, keepInitialLevel)
     }
 
     fun cleanAnyField(mark: AccessorIdx): AccessGraph? =

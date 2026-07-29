@@ -72,7 +72,6 @@ private inline fun <T> AutomataApManager.createFilter(
             is FieldAccessor,
             is ClassStaticAccessor -> filters += accessorListFilter(listOf(accessor))
 
-
             is ElementAccessor -> {
                 val edge = access.getEdge(accessorIdx) ?: error("No edge for: $accessor")
                 val predecessorNode = access.getEdgeFrom(edge)

@@ -23,7 +23,6 @@ interface ReadableAccessorList<T : Any> : AccessorList {
 interface FactAp: AccessorList {
     val base: AccessPathBase
     val exclusions: ExclusionSet
-    val demandState: FactDemandState get() = FactDemandState(exclusions)
 
     val size: Int
     val depth: Int
@@ -33,8 +32,6 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
     fun rebase(newBase: AccessPathBase): InitialFactAp
     fun exclude(accessor: Accessor): InitialFactAp
     fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp
-    fun replaceDemandState(demandState: FactDemandState): InitialFactAp =
-        replaceExclusions(demandState.exclusions)
 
     fun prependAccessor(accessor: Accessor): InitialFactAp
     fun clearAccessor(accessor: Accessor): InitialFactAp?
@@ -57,8 +54,6 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     fun rebase(newBase: AccessPathBase): FinalFactAp
     fun exclude(accessor: Accessor): FinalFactAp
     fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp
-    fun replaceDemandState(demandState: FactDemandState): FinalFactAp =
-        replaceExclusions(demandState.exclusions)
 
     fun prependAccessor(accessor: Accessor): FinalFactAp
     fun clearAccessor(accessor: Accessor): FinalFactAp?
@@ -92,15 +87,15 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     /**
      * Applies one cleaner position to this fact.
      *
-     * A concrete position is removed directly. If the position crosses an abstract any-field,
-     * the representation also retains whatever residual effect is needed to clean content that
-     * materializes later. Callers do not distinguish those cases.
+     * A concrete position is removed directly. If the position crosses an AnyField, the
+     * representation also records the matching mark exclusion for content materialized later.
+     * Callers do not distinguish those cases.
      */
     fun clean(cleaner: Cleaner): CleanResult
 
     /**
-     * Removes a mark from both the exact position and its currently represented any-field
-     * alternative, without creating a persistent any-field cleaner effect.
+     * Removes a mark from both the exact position and its currently represented AnyField
+     * alternative, without excluding the mark from future AnyField growth.
      */
     fun cleanExactAndAnyField(mark: TaintMarkAccessor): CleanResult {
         val afterAny = readAccessor(AnyAccessor)

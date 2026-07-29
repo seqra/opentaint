@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.dataflow.util.collectToListWithPostProcess
@@ -14,12 +14,14 @@ import java.util.BitSet
 
 class MethodInitialToFinalAutomataApSummariesStorage(
     methodInitialStatement: CommonInst,
-) : CommonF2FSummary<AutomataAccess, AutomataAccess>(methodInitialStatement),
+) : CommonF2FSummary<AutomataInitialAccess, AutomataFinalAccess>(methodInitialStatement),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun createStorage(): Storage<AutomataAccess, AutomataAccess> = InitialToFinalApStorage()
+    override fun createStorage(): Storage<AutomataInitialAccess, AutomataFinalAccess> =
+        InitialToFinalApStorage()
 }
 
-private class InitialToFinalApStorage : CommonF2FSummary.Storage<AutomataAccess, AutomataAccess> {
+private class InitialToFinalApStorage :
+    CommonF2FSummary.Storage<AutomataInitialAccess, AutomataFinalAccess> {
     private val initialFactGraphIndex = object2IntMap<AccessGraph>()
     private val initialFactGraphs = arrayListOf<AccessGraph>()
     private val finalFactGraphStorages = arrayListOf<FinalApStorage>()
@@ -27,44 +29,43 @@ private class InitialToFinalApStorage : CommonF2FSummary.Storage<AutomataAccess,
     private val initialGraphIndex = GraphIndex()
 
     override fun add(
-        edges: List<CommonF2FSummary.StorageEdge<AutomataAccess, AutomataAccess>>,
-        added: MutableList<F2FBBuilder<AutomataAccess, AutomataAccess>>,
+        edges: List<CommonF2FSummary.StorageEdge<AutomataInitialAccess, AutomataFinalAccess>>,
+        added: MutableList<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>,
     ) {
         val modifiedStorages = BitSet()
 
         for (edge in edges) {
-            check(edge.initial.cleanerEffects == edge.final.cleanerEffects)
             val storageIdx = getOrCreateStorageIdx(edge.initial)
             val storage = finalFactGraphStorages[storageIdx]
 
-            if (storage.add(edge.demandState, edge.final)) {
+            if (storage.add(edge.exclusion, edge.final)) {
                 modifiedStorages.set(storageIdx)
             }
         }
 
         modifiedStorages.forEach { storageIdx ->
             val storage = finalFactGraphStorages[storageIdx]
-            val storageEdges = mutableListOf<F2FBBuilder<AutomataAccess, AutomataAccess>>()
+            val storageEdges =
+                mutableListOf<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>()
             storage.addAndResetDelta(storageEdges)
 
             val initialAg = initialFactGraphs[storageIdx]
-            val initial = AutomataAccess(initialAg, storage.cleanerEffects())
-            storageEdges.mapTo(added) { it.setInitialAp(initial) }
+            storageEdges.mapTo(added) { it.setInitialAp(initialAg) }
         }
     }
 
-    private fun getOrCreateStorageIdx(initial: AutomataAccess): Int {
-        return initialFactGraphIndex.getOrCreateIndex(initial.access) { newIdx ->
-            initialFactGraphs.add(initial.access)
+    private fun getOrCreateStorageIdx(initial: AutomataInitialAccess): Int {
+        return initialFactGraphIndex.getOrCreateIndex(initial) { newIdx ->
+            initialFactGraphs.add(initial)
             finalFactGraphStorages.add(FinalApStorage())
-            initialGraphIndex.add(initial.access, newIdx)
+            initialGraphIndex.add(initial, newIdx)
             return newIdx
         }
     }
 
     override fun collectSummariesTo(
-        dst: MutableList<F2FBBuilder<AutomataAccess, AutomataAccess>>,
-        initialFactPatter: AutomataAccess?,
+        dst: MutableList<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>,
+        initialFactPatter: AutomataFinalAccess?,
     ) {
         if (initialFactPatter != null) {
             filterEdgesTo(dst, initialFactPatter)
@@ -73,21 +74,22 @@ private class InitialToFinalApStorage : CommonF2FSummary.Storage<AutomataAccess,
         }
     }
 
-    private fun allEdgesTo(dst: MutableList<F2FBBuilder<AutomataAccess, AutomataAccess>>) {
+    private fun allEdgesTo(
+        dst: MutableList<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>,
+    ) {
         finalFactGraphStorages.concurrentReadSafeForEach { idx, finalStorage ->
             val initialAg = initialFactGraphs[idx]
-            val initial = AutomataAccess(initialAg, finalStorage.cleanerEffects())
             collectToListWithPostProcess(dst, {
                 finalStorage.allEdgesTo(it)
             }, {
-                it.setInitialAp(initial)
+                it.setInitialAp(initialAg)
             })
         }
     }
 
     private fun filterEdgesTo(
-        dst: MutableList<F2FBBuilder<AutomataAccess, AutomataAccess>>,
-        accessPattern: AutomataAccess,
+        dst: MutableList<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>,
+        accessPattern: AutomataFinalAccess,
     ) {
         initialGraphIndex.localizeGraphHasDeltaWithIndexedGraph(accessPattern.access).forEach { storageIdx ->
             val initialAg = initialFactGraphs[storageIdx]
@@ -100,7 +102,7 @@ private class InitialToFinalApStorage : CommonF2FSummary.Storage<AutomataAccess,
             collectToListWithPostProcess(dst, {
                 finalStorage.allEdgesTo(it)
             }, {
-                it.setInitialAp(AutomataAccess(initialAg, finalStorage.cleanerEffects()))
+                it.setInitialAp(initialAg)
             })
         }
     }
@@ -116,65 +118,71 @@ private class InitialToFinalApStorage : CommonF2FSummary.Storage<AutomataAccess,
 }
 
 private class FinalApStorage {
-    private var demandStateStorage: FactDemandState? = null
-    private var cleanerEffects: AnyFieldCleanerEffects? = null
+    private var exclusionStorage: ExclusionSet? = null
+    private var anyFieldMarkExclusions: AnyFieldMarkExclusions? = null
     private val agStorage = AccessGraphStorageWithCompression()
     private var stateModified: Boolean = false
 
-    fun cleanerEffects(): AnyFieldCleanerEffects = cleanerEffects
-        ?: error("Cleaner effects are not initialized")
-
-    fun addAndResetDelta(modified: MutableList<F2FBBuilder<AutomataAccess, AutomataAccess>>) {
-        val demandState = demandStateStorage ?: return
-        val effects = cleanerEffects ?: return
+    fun addAndResetDelta(
+        modified: MutableList<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>,
+    ) {
+        val exclusion = exclusionStorage ?: return
+        val rootExclusions = anyFieldMarkExclusions ?: return
         if (stateModified) {
             agStorage.allGraphs().forEach { ag ->
                 modified += FactToFactEdgeBuilderBuilder()
-                    .setDemandState(demandState)
-                    .setExitAp(AutomataAccess(ag, effects))
+                    .setExclusion(exclusion)
+                    .setExitAp(AutomataFinalAccess(ag, rootExclusions))
             }
         } else {
             agStorage.mapAndResetDelta { ag ->
                 modified += FactToFactEdgeBuilderBuilder()
-                    .setDemandState(demandState)
-                    .setExitAp(AutomataAccess(ag, effects))
+                    .setExclusion(exclusion)
+                    .setExitAp(AutomataFinalAccess(ag, rootExclusions))
             }
         }
 
         stateModified = false
     }
 
-    fun add(demandState: FactDemandState, finalAp: AutomataAccess): Boolean {
-        val mergedState = demandStateStorage?.join(demandState) ?: demandState
-        val mergedEffects = cleanerEffects?.join(finalAp.cleanerEffects) ?: finalAp.cleanerEffects
-        if (mergedState === demandStateStorage && mergedEffects === cleanerEffects) {
+    fun add(exclusion: ExclusionSet, finalAp: AutomataFinalAccess): Boolean {
+        val mergedState = exclusionStorage?.union(exclusion) ?: exclusion
+        val mergedAnyFieldMarkExclusions =
+            anyFieldMarkExclusions?.join(finalAp.anyFieldMarkExclusions)
+                ?: finalAp.anyFieldMarkExclusions
+        if (mergedState === exclusionStorage &&
+            mergedAnyFieldMarkExclusions === anyFieldMarkExclusions
+        ) {
             return agStorage.add(finalAp.access)
         }
 
-        demandStateStorage = mergedState
-        cleanerEffects = mergedEffects
+        exclusionStorage = mergedState
+        anyFieldMarkExclusions = mergedAnyFieldMarkExclusions
         agStorage.add(finalAp.access)
         stateModified = true
 
         return true
     }
 
-    fun allEdgesTo(dst: MutableList<F2FBBuilder<AutomataAccess, AutomataAccess>>) {
-        val demandState = demandStateStorage ?: return
-        val effects = cleanerEffects ?: return
+    fun allEdgesTo(
+        dst: MutableList<F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>>,
+    ) {
+        val exclusion = exclusionStorage ?: return
+        val rootExclusions = anyFieldMarkExclusions ?: return
         collectToListWithPostProcess(dst, {
             agStorage.allGraphsTo(it)
         }, { ag ->
             FactToFactEdgeBuilderBuilder()
-                .setDemandState(demandState)
-                .setExitAp(AutomataAccess(ag, effects))
+                .setExclusion(exclusion)
+                .setExitAp(AutomataFinalAccess(ag, rootExclusions))
         })
     }
 
-    override fun toString(): String = "($demandStateStorage -> $agStorage)"
+    override fun toString(): String = "($exclusionStorage -> $agStorage)"
 }
 
-class FactToFactEdgeBuilderBuilder : F2FBBuilder<AutomataAccess, AutomataAccess>(),
+class FactToFactEdgeBuilderBuilder :
+    F2FBBuilder<AutomataInitialAccess, AutomataFinalAccess>(),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun nonNullIAP(iap: AutomataAccess?): AutomataAccess = iap!!
+    override fun nonNullIAP(iap: AutomataInitialAccess?): AutomataInitialAccess = iap!!
 }

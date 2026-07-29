@@ -1,80 +1,50 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldCleanerEffects
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.FactSEBuilder
+import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.SideEffectExclusionMergingStorage
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.Storage
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.concurrent.ConcurrentHashMap
 
 class FactSESummariesAutomataStorage(methodEntryPoint: CommonInst) :
-    CommonFactSideEffectSummary<AutomataAccess, AutomataAccess>(methodEntryPoint),
+    CommonFactSideEffectSummary<AutomataInitialAccess, AutomataFinalAccess>(methodEntryPoint),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun createStorage(): Storage<AutomataAccess, AutomataAccess> = SEStorage()
+    override fun createStorage(): Storage<AutomataInitialAccess, AutomataFinalAccess> = SEStorage()
 }
 
-private class SEStorage : Storage<AutomataAccess, AutomataAccess> {
-    private val storage = ConcurrentHashMap<AccessGraph, SEExclusionStorage>()
+private class SEStorage : Storage<AutomataInitialAccess, AutomataFinalAccess> {
+    private val storage = ConcurrentHashMap<AutomataInitialAccess, SEExclusionStorage>()
 
     override fun add(
-        iap: AutomataAccess,
-        se: Map<SideEffectKind, FactDemandState>,
-        added: MutableList<FactSEBuilder<AutomataAccess>>
+        iap: AutomataInitialAccess,
+        se: Map<SideEffectKind, ExclusionSet>,
+        added: MutableList<FactSEBuilder<AutomataInitialAccess>>,
     ) {
-        val storageNode = storage.computeIfAbsent(iap.access) { SEExclusionStorage(iap.access) }
-        for ((kind, demandState) in se) {
-            storageNode.add(kind, demandState, iap.cleanerEffects)?.let { added += it }
+        val storageNode = storage.computeIfAbsent(iap) { SEExclusionStorage(iap) }
+        for ((kind, exclusion) in se) {
+            storageNode.add(kind, exclusion)?.let { added += it }
         }
     }
 
     override fun collectSummariesTo(
-        dst: MutableList<FactSEBuilder<AutomataAccess>>,
-        initialFactPattern: AutomataAccess?
+        dst: MutableList<FactSEBuilder<AutomataInitialAccess>>,
+        initialFactPattern: AutomataFinalAccess?,
     ) {
-        storage.values.forEach {
-            dst += it.summaries()
-        }
+        storage.values.forEach { dst += it.summaries() }
     }
 }
 
 private class SEExclusionStorage(
-    private val iap: AccessGraph,
-) {
-    private data class State(
-        val demandState: FactDemandState,
-        val cleanerEffects: AnyFieldCleanerEffects,
-    )
-
-    private val sideEffects = ConcurrentHashMap<SideEffectKind, State>()
-
-    fun add(
-        kind: SideEffectKind,
-        demandState: FactDemandState,
-        cleanerEffects: AnyFieldCleanerEffects,
-    ): FactSEBuilder<AutomataAccess>? {
-        val current = sideEffects[kind]
-        val merged = current?.let {
-            State(it.demandState join demandState, it.cleanerEffects join cleanerEffects)
-        } ?: State(demandState, cleanerEffects)
-        if (merged == current) return null
-
-        sideEffects[kind] = merged
-        return builder(kind, merged)
-    }
-
-    fun summaries(): List<FactSEBuilder<AutomataAccess>> =
-        sideEffects.map { (kind, state) -> builder(kind, state) }
-
-    private fun builder(kind: SideEffectKind, state: State): FactSEBuilder<AutomataAccess> =
-        Builder()
-            .setInitialAp(AutomataAccess(iap, state.cleanerEffects))
-            .setDemandState(state.demandState)
-            .setKind(kind)
+    private val iap: AutomataInitialAccess,
+) : SideEffectExclusionMergingStorage<AutomataInitialAccess>() {
+    override fun createBuilder(): FactSEBuilder<AutomataInitialAccess> =
+        Builder().setInitialAp(iap)
 }
 
-private class Builder : FactSEBuilder<AutomataAccess>(), AutomataInitialApAccess {
-    override fun nonNullIAP(iap: AutomataAccess?): AutomataAccess = iap
-        ?: error("iap not initialized")
+private class Builder : FactSEBuilder<AutomataInitialAccess>(), AutomataInitialApAccess {
+    override fun nonNullIAP(iap: AutomataInitialAccess?): AutomataInitialAccess =
+        iap ?: error("iap not initialized")
 }

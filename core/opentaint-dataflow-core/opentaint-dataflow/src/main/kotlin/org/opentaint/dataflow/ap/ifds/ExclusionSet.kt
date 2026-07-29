@@ -3,15 +3,9 @@ package org.opentaint.dataflow.ap.ifds
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.persistentHashSetOf
 
-/**
- * Access-path alternatives excluded from demand-driven fact analysis.
- *
- * Cleaner effects are a different domain and live in the selected access-path representation.
- */
 sealed interface ExclusionSet {
     operator fun contains(accessor: Accessor): Boolean
     fun add(accessor: Accessor): ExclusionSet
-
     fun union(other: ExclusionSet): ExclusionSet
     fun intersect(other: ExclusionSet): ExclusionSet
     fun subtract(accessor: Accessor): ExclusionSet
@@ -27,7 +21,6 @@ sealed interface ExclusionSet {
         override fun contains(other: ExclusionSet): Boolean = other is Empty
 
         override fun toString(): String = "{}"
-
     }
 
     data object Universe : ExclusionSet {
@@ -39,7 +32,6 @@ sealed interface ExclusionSet {
         override fun contains(other: ExclusionSet): Boolean = true
 
         override fun toString(): String = "*"
-
     }
 
     data class Concrete(

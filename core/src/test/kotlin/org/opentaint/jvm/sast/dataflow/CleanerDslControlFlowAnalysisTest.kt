@@ -207,7 +207,7 @@ class CleanerDslControlFlowAnalysisTest : AnalysisTest() {
     }
 
     @Test
-    fun `cleaner state follows one alias without leaking to sibling facts`() {
+    fun `AnyField mark exclusions follow one alias without leaking to sibling facts`() {
         assertScenario(
             "aliasesAndReassignment",
             taintedArguments = listOf(0),

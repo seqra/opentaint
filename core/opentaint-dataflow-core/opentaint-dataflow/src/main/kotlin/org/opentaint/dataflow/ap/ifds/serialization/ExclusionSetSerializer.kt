@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.serialization
 
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import kotlinx.collections.immutable.toPersistentHashSet
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
@@ -28,8 +27,7 @@ class ExclusionSetSerializer(private val context: SummarySerializationContext) {
             ExclusionSetType.CONCRETE -> {
                 val size = readInt()
                 val accessors = List(size) { context.getAccessorById(readLong()) }
-                val set = accessors.toPersistentHashSet()
-                return ExclusionSet.Concrete(set, set.hashCode())
+                accessors.map(ExclusionSet::Concrete).reduce(ExclusionSet::union)
             }
         }
     }

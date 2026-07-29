@@ -10,10 +10,8 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.FactToFactSub
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.MethodCallHandler
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.MethodCallResolutionFailureHandler
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryDemandRefinement
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.FactDemandState
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
@@ -827,7 +825,7 @@ class NormalMethodAnalyzer(
     ) {
         val methodInitialFact = currentEdge.factAp.rebase(methodInitialFactBase)
         val exclusionRefinements = methodSideEffectRequirements.mapNotNull { methodSinkRequirement ->
-            MethodSummaryEdgeApplicationUtils.emptyDeltaDemandExclusionsOrNull(
+            MethodSummaryEdgeApplicationUtils.emptyDeltaExclusionRefinementOrNull(
                 methodInitialFact, methodSinkRequirement
             )
         }
@@ -1243,9 +1241,9 @@ class NormalMethodAnalyzer(
                         ndSummaryInitial.isEmpty() -> {
                             summaryHandler.handleZeroToFact(
                                 currentEdgeFactAp,
-                                SummaryDemandRefinement(
-                                    FactDemandState.Universe,
-                                    representationDelta = null,
+                                SummaryEdgeApplication(
+                                    accessDelta = null,
+                                    initialFactExclusions = ExclusionSet.Universe,
                                 ),
                                 summaryEdge.summaryEdge()
                             )
@@ -1256,9 +1254,9 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleFactToFact(
                                 initialFact,
                                 currentEdgeFactAp,
-                                SummaryDemandRefinement(
-                                    initialFact.demandState,
-                                    representationDelta = null,
+                                SummaryEdgeApplication(
+                                    accessDelta = null,
+                                    initialFactExclusions = initialFact.exclusions,
                                 ),
                                 summaryEdge.summaryEdge()
                             )
@@ -1268,9 +1266,9 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleNDFactToFact(
                                 ndSummaryInitial,
                                 currentEdgeFactAp,
-                                SummaryDemandRefinement(
-                                    FactDemandState.Universe,
-                                    representationDelta = null,
+                                SummaryEdgeApplication(
+                                    accessDelta = null,
+                                    initialFactExclusions = ExclusionSet.Universe,
                                 ),
                                 summaryEdge.summaryEdge()
                             )
@@ -1285,9 +1283,9 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleFactToFact(
                                     currentEdge.initialFactAp,
                                     currentEdgeFactAp,
-                                    SummaryDemandRefinement(
-                                        currentEdge.initialFactAp.demandState,
-                                        representationDelta = null,
+                                    SummaryEdgeApplication(
+                                        accessDelta = null,
+                                        initialFactExclusions = currentEdge.initialFactAp.exclusions,
                                     ),
                                     summaryEdge.summaryEdge()
                                 )
@@ -1297,9 +1295,9 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleNDFactToFact(
                                     ndSummaryInitial,
                                     currentEdgeFactAp,
-                                    SummaryDemandRefinement(
-                                        FactDemandState.Universe,
-                                        representationDelta = null,
+                                    SummaryEdgeApplication(
+                                        accessDelta = null,
+                                        initialFactExclusions = ExclusionSet.Universe,
                                     ),
                                     summaryEdge.summaryEdge()
                                 )
@@ -1311,9 +1309,9 @@ class NormalMethodAnalyzer(
                         summaryHandler.handleNDFactToFact(
                             ndSummaryInitial + currentEdge.initialFacts,
                             currentEdgeFactAp,
-                            SummaryDemandRefinement(
-                                FactDemandState.Universe,
-                                representationDelta = null,
+                            SummaryEdgeApplication(
+                                accessDelta = null,
+                                initialFactExclusions = ExclusionSet.Universe,
                             ),
                             summaryEdge.summaryEdge()
                         )
@@ -1327,7 +1325,7 @@ class NormalMethodAnalyzer(
     }
 
     private fun FinalFactAp.matchNDInitial(initialFactAp: InitialFactAp): Boolean {
-        val exclusion = MethodSummaryEdgeApplicationUtils.emptyDeltaDemandExclusionsOrNull(this, initialFactAp)
+        val exclusion = MethodSummaryEdgeApplicationUtils.emptyDeltaExclusionRefinementOrNull(this, initialFactAp)
             ?: return false
 
         check(exclusion is ExclusionSet.Universe) {

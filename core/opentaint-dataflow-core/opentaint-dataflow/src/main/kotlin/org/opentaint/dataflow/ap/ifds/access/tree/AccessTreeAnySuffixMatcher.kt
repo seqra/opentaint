@@ -148,6 +148,12 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         if (!areChildrenChanged && thisFinal == node.isFinal)
             return node
 
-        return manager.create(node.isAbstract, thisFinal, node.abstraction, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
+        return manager.create(
+            node.isAbstract,
+            thisFinal,
+            node.anyFieldMarkExclusions,
+            accessorIdx.toIntArray(),
+            accessorNodes.toTypedArray(),
+        )
     }
 }
