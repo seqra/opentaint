@@ -52,6 +52,8 @@ import org.opentaint.dataflow.util.cartesianProductMapTo
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.dataflow.util.contains
 import org.opentaint.dataflow.util.forEach
+import org.opentaint.dataflow.util.forEachCartesianProduct
+import org.opentaint.dataflow.util.forEachIntEntry
 import org.opentaint.dataflow.util.getOrCreateIndex
 import org.opentaint.dataflow.util.object2IntMap
 import org.opentaint.dataflow.util.toBitSet
@@ -87,6 +89,7 @@ class MethodTraceResolver(
     data class FullStart2FinalTrace(
         val method: MethodEntryPoint,
         val entries: Array<TraceEntry>,
+        val actionVariants: Int2ObjectOpenHashMap<List<ActionVariant>>,
         val startEntryId: Int,
         val finalId: Int,
         val successors: Int2ObjectOpenHashMap<CompactIntSet>,
@@ -252,36 +255,61 @@ class MethodTraceResolver(
         ) : CallAction, PrimaryAction, PassAction
     }
 
+    data class ActionVariant(
+        val primaryAction: PrimaryAction?,
+        val otherActions: Set<OtherAction>,
+        val unchanged: Set<TraceEdge>,
+    ) {
+        init {
+            check(primaryAction != null || otherActions.isNotEmpty()) {
+                "Entry is unchanged"
+            }
+        }
+
+        val edges: Set<TraceEdge> = buildSet {
+            addAll(unchanged)
+
+            if (primaryAction is TraceEntryAction.PassAction) {
+                addAll(primaryAction.edges)
+            }
+
+            for (otherAction in otherActions) {
+                if (otherAction is TraceEntryAction.PassAction) {
+                    addAll(otherAction.edges)
+                }
+            }
+        }
+
+        private val cachedHashCode: Int = run {
+            var result = primaryAction?.hashCode() ?: 0
+            result = 31 * result + otherActions.hashCode()
+            result = 31 * result + unchanged.hashCode()
+            result
+        }
+
+        override fun hashCode(): Int = cachedHashCode
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ActionVariant) return false
+
+            if (cachedHashCode != other.cachedHashCode) return false
+            if (primaryAction != other.primaryAction) return false
+            if (otherActions != other.otherActions) return false
+            if (unchanged != other.unchanged) return false
+
+            return true
+        }
+    }
+
     sealed interface TraceEntry {
         val edges: Set<TraceEdge>
         val statement: CommonInst
 
         data class Action(
-            val primaryAction: PrimaryAction?,
-            val otherActions: Set<OtherAction>,
-            val unchanged: Set<TraceEdge>,
+            override val edges: Set<TraceEdge>,
             override val statement: CommonInst,
-        ) : TraceEntry {
-            init {
-                check(primaryAction != null || otherActions.isNotEmpty()) {
-                    "Entry is unchanged"
-                }
-            }
-
-            override val edges: Set<TraceEdge> get() = buildSet {
-                addAll(unchanged)
-
-                if (primaryAction is TraceEntryAction.PassAction) {
-                    addAll(primaryAction.edges)
-                }
-
-                for (otherAction in otherActions) {
-                    if (otherAction is TraceEntryAction.PassAction) {
-                        addAll(otherAction.edges)
-                    }
-                }
-            }
-        }
+        ) : TraceEntry
 
         data class Unchanged(
             override val edges: Set<TraceEdge>,
@@ -322,7 +350,6 @@ class MethodTraceResolver(
     private class EntryManager {
         val entries = arrayListOf<TraceEntry>()
         private val entryId = Object2IntOpenHashMap<TraceEntry>().apply { defaultReturnValue(NO_ENTRY) }
-        private var actionEntries = 0
 
         fun entryId(entry: TraceEntry): Int {
             val currentId = entryId.getInt(entry)
@@ -332,14 +359,8 @@ class MethodTraceResolver(
             entries.add(entry)
             entryId.put(entry, id)
 
-            if (entry is TraceEntry.Action) {
-                actionEntries++
-            }
-
             return id
         }
-
-        fun actions(): Int = actionEntries
 
         fun entryById(id: Int): TraceEntry = entries[id]
 
@@ -348,9 +369,13 @@ class MethodTraceResolver(
         }
     }
 
-    private val entryManager = EntryManager()
-
-    private inner class TraceBuilder(val finalEntryId: Int, val cancellation: Cancellation) {
+    private class TraceBuilder(
+        finalEntry: TraceEntry.Final,
+        val cancellation: Cancellation,
+        val collectActionVariants: Boolean,
+    ) {
+        val entryManager = EntryManager()
+        val finalEntryId: Int = entryManager.entryId(finalEntry)
         val startEntryIds = BitSet()
         var processedEntryIds = CompactIntSet().also { it.add(finalEntryId) }
         val unprocessedEntryIds = IntArrayList().also { it.add(finalEntryId) }
@@ -386,6 +411,29 @@ class MethodTraceResolver(
         fun addStartEntry(entry: TraceEntry) {
             startEntryIds.add(entryManager.entryId(entry))
         }
+
+        private val actionVariants = Int2ObjectOpenHashMap<MutableSet<ActionVariant>>()
+
+        fun unsafeActionVariants() = actionVariants
+
+        fun createAction(
+            statement: CommonInst,
+            edges: Set<TraceEdge>,
+            variants: Set<ActionVariant>,
+        ): TraceEntry {
+            val action = TraceEntry.Action(edges, statement)
+
+            if (!collectActionVariants) {
+                return action
+            }
+
+            val actionId = entryManager.entryId(action)
+            actionVariants.computeIfAbsent(actionId) { hashSetOf() }.addAll(variants)
+
+            return action
+        }
+
+        fun actions(): Int = actionVariants.size
     }
 
     fun resolveIntraProceduralTrace(
@@ -496,13 +544,13 @@ class MethodTraceResolver(
         val st = summaryTrace.universeTrace()
         check(st.method == methodEntryPoint) { "Incorrect summary trace" }
 
-        val builder = TraceBuilder(entryManager.entryId(st.final), cancellation)
+        val builder = TraceBuilder(st.final, cancellation, collectActionVariants = false)
         builder.resolveTrace(st.traceKind)
         stats.traceResolverSteps += builder.steps
 
         val traces = mutableListOf<Start2FinalTrace>()
         builder.startEntryIds.forEach { startEntryId ->
-            val startEntry = entryManager.entryById(startEntryId) as TraceEntry.StartTraceEntry
+            val startEntry = builder.entryManager.entryById(startEntryId) as TraceEntry.StartTraceEntry
             traces += Start2FinalTrace(methodEntryPoint, startEntry, st.final, st.traceKind)
         }
         return traces
@@ -516,7 +564,7 @@ class MethodTraceResolver(
         val st = summaryTrace.universeTrace()
         check(st.method == methodEntryPoint) { "Incorrect summary trace" }
 
-        val builder = TraceBuilder(entryManager.entryId(st.final), cancellation)
+        val builder = TraceBuilder(st.final, cancellation, collectActionVariants = true)
         builder.resolveTrace(st.traceKind)
         stats.traceResolverSteps += builder.steps
 
@@ -535,11 +583,11 @@ class MethodTraceResolver(
     ): List<FullStart2FinalTrace> {
         check(start2FinalTrace.method == methodEntryPoint) { "Incorrect summary trace" }
 
-        val builder = TraceBuilder(entryManager.entryId(start2FinalTrace.final), cancellation)
+        val builder = TraceBuilder(start2FinalTrace.final, cancellation, collectActionVariants = true)
         builder.resolveTrace(start2FinalTrace.traceKind)
         stats.traceResolverSteps += builder.steps
 
-        val requiredStartId = entryManager.entryId(start2FinalTrace.startEntry)
+        val requiredStartId = builder.entryManager.entryId(start2FinalTrace.startEntry)
         if (!builder.startEntryIds.contains(requiredStartId)) {
             logger.warn("Trace start entry to found for: $methodEntryPoint")
             return emptyList()
@@ -648,6 +696,8 @@ class MethodTraceResolver(
         private val mapping = Int2IntOpenHashMap()
         val entries = mutableListOf<TraceEntry>()
 
+        fun isTranslated(id: Int): Boolean = mapping.containsKey(id)
+
         fun translate(id: Int): Int = mapping.computeIfAbsent(id) {
             val entry = manager.entryById(id)
             val idx = entries.size
@@ -666,7 +716,18 @@ class MethodTraceResolver(
             val startEntry = mapper.translate(entryId)
             val successors = mapper.translateSuccessors(entryId, allSuccessors)
             val entries = mapper.entries.toTypedArray()
-            result += FullStart2FinalTrace(methodEntryPoint, entries, startEntry, finalEntry, successors, traceKind)
+
+            val actionVariants = Int2ObjectOpenHashMap<List<ActionVariant>>()
+            unsafeActionVariants().forEachIntEntry { key, value ->
+                if (!mapper.isTranslated(key)) return@forEachIntEntry
+
+                val translatedId = mapper.translate(key)
+                actionVariants.put(translatedId, value.toList())
+            }
+
+            result += FullStart2FinalTrace(
+                methodEntryPoint, entries, actionVariants, startEntry, finalEntry, successors, traceKind
+            )
         }
 
         return result
@@ -710,7 +771,7 @@ class MethodTraceResolver(
 
     private fun TraceBuilder.resolveTrace(traceKind: TraceKind) {
         while (unprocessedEntryIds.isNotEmpty() && cancellation.isActive()) {
-            if (entryManager.actions() > TRACE_RESOLUTION_ACTION_HARD_LIMIT && !startEntryIds.isEmpty) {
+            if (actions() > TRACE_RESOLUTION_ACTION_HARD_LIMIT && !startEntryIds.isEmpty) {
                 logger.warn { "Trace resolution stopped for $methodEntryPoint: hard limit" }
                 return
             }
@@ -1331,8 +1392,8 @@ class MethodTraceResolver(
         }
 
         val resultActions = mutableListOf<PrimaryAction>()
-        resultSummaries.cartesianProductMapTo { summaryGroup ->
-            resultActions += mergeCallSummary(summaryGroup) ?: return@cartesianProductMapTo
+        resultSummaries.forEachCartesianProduct { summaryGroup ->
+            resultActions += mergeCallSummary(summaryGroup) ?: return@forEachCartesianProduct
         }
         return resultActions
     }
@@ -1724,9 +1785,15 @@ class MethodTraceResolver(
 
         successors.putAll(additionalSuccessors)
 
+        val actionVariants = Int2ObjectOpenHashMap<List<ActionVariant>>()
+        unsafeActionVariants().forEachIntEntry { key, value ->
+            actionVariants.put(key, value.toList())
+        }
+
         return FullStart2FinalTrace(
             methodEntryPoint,
             entryManager.entries.toTypedArray(),
+            actionVariants,
             fakeStartId, finalEntryId, successors, TraceKind.TraceToFact
         )
     }
