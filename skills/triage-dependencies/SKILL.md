@@ -21,7 +21,7 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 
 ### 1. List the dependencies
 
-Read `.opentaint/project/project.yaml` — the `dependencies` list under each per-language projects entry is every third-party dependency the model resolved. Resolve each to the library it is. Most of a large project's dependencies are transitive infrastructure
+Read `.opentaint/project/project.yaml` — the `dependencies:` list under each per-language projects entry (e.g. `javaProjects:`) is every third-party dependency the model resolved. Resolve each to the library it is. Most of a large project's dependencies are transitive infrastructure
 
 A `goProjects:` entry carries no such list — read the module's own `go.mod` (`require` blocks) and `go.sum` for its dependency modules instead, and identify each by module path rather than by a coordinate
 

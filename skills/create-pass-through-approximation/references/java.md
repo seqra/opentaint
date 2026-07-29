@@ -179,6 +179,7 @@ passThrough:
 
 ### 3. Common mistakes to check
 
+- *every* method in a file still dropped, with no load error — the whole file was silently skipped: check it starts with the `language: java` header (a headerless or mis-headered file loads to nothing)
 - the `function` matcher doesn't match the real method — check the package, class, name, and `overrides`
 - a `from`/`to` points at the wrong position — it must land where the data actually is
 - a broken slot channel — the writer and reader name different `Class#slot#java.lang.Object` triples, or the slot isn't typed `java.lang.Object`, so the taint drops between them
