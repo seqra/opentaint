@@ -56,6 +56,9 @@ data class AccessGraphFinalFactAp(
         return null
     }
 
+    override fun abstractOnly(): FinalFactAp =
+        AccessGraphFinalFactAp(base, access.manager.emptyGraph(), exclusions)
+
     data class Delta(override val access: AccessGraph) : FinalFactAp.Delta, AccessGraphAccessorList {
         override val isEmpty: Boolean get() = access.isEmpty()
 

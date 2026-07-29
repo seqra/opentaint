@@ -112,9 +112,6 @@ class TreeApManager(
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
         AccessTree(this,base, finalNode, exclusions)
 
-    override fun createAbstractAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        AccessTree(this,base, abstractNode, exclusions)
-
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         AccessPath(this, base, access = null, exclusions).prependAccessor(FinalAccessor)
 

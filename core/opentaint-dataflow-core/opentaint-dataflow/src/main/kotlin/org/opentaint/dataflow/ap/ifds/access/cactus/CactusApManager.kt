@@ -83,9 +83,6 @@ class CactusApManager(
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
         AccessCactus(base, AccessNode.create(isFinal = true), exclusions)
 
-    override fun createAbstractAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
-
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         AccessPathWithCycles(base, access = null, exclusions).prependAccessor(FinalAccessor)
 
