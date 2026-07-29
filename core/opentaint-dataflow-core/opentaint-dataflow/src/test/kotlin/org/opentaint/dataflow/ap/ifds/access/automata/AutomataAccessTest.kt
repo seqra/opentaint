@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
+import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,5 +29,20 @@ class AutomataAccessTest {
         val access = empty.prepend(1)
 
         assertSame(access, access.merge(access))
+    }
+
+    @Test
+    fun `the abstract empty graph survives an always-compatible filter`() {
+        assertSame(empty, empty.filter(FactTypeChecker.AlwaysCompatibleFilter))
+    }
+
+    @Test
+    fun `the abstract empty graph has no trailing accessor for a compatibility filter to reject`() {
+        val rejectAccessors = object : FactTypeChecker.FactCompatibilityFilter {
+            override fun check(accessor: Accessor) =
+                FactTypeChecker.CompatibilityFilterResult.NotCompatible
+        }
+
+        assertSame(empty, empty.filter(rejectAccessors))
     }
 }

@@ -565,6 +565,8 @@ class AccessGraph(
     }
 
     fun filter(filter: FactTypeChecker.FactCompatibilityFilter): AccessGraph? {
+        if (isEmpty() || filter === FactTypeChecker.AlwaysCompatibleFilter) return this
+
         val rejectedPredecessors = BitSet()
         val finalPredecessors = nodePredecessors(final)
         finalPredecessors.forEach { accessor ->

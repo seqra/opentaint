@@ -1,6 +1,5 @@
 package org.opentaint.jvm.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -318,72 +317,11 @@ abstract class CleanerFieldSensitivityAnalysisTest : AnalysisTest() {
 }
 
 /**
- * The mode where these cases are measurable: all four non-vacuity controls are green, so the
- * `is silent` assertions are evidence rather than an artefact. All twelve cases pass, including
- * the deep starred reads -- the structural deep clean at work.
+ * Pins the tree representation separately: all four non-vacuity controls and the corresponding
+ * deep-clean cases must remain measurable here, including the deep starred reads.
  */
 class TreeCleanerFieldSensitivityAnalysisTest : CleanerFieldSensitivityAnalysisTest()
 
-/**
- * Automata drops the taint entirely across the intervening `clean`/`cleanNode` call, so every
- * `*CleanedFlow` entry point reports nothing in this mode REGARDLESS of the cleaner. All four
- * non-vacuity controls are red here, which is exactly what they exist to expose: the six `is
- * silent` cases would pass against an engine with no sanitizer at all, so their green is not
- * evidence and they are disabled rather than counted.
- *
- * The `*UncleanedFlow` cases are unaffected and stay enabled -- they assert a PRESENT finding and
- * cannot pass vacuously.
- */
 class AutomataCleanerFieldSensitivityAnalysisTest : CleanerFieldSensitivityAnalysisTest() {
     override val apMode: ApMode = ApMode.Automata
-
-    @Test
-    @Disabled // todo: fix automata -- taint dropped across the intervening call
-    override fun `non-vacuity - base source reaches the sanitized field with no cleaner`() =
-        super.`non-vacuity - base source reaches the sanitized field with no cleaner`()
-
-    @Test
-    @Disabled // todo: fix automata -- taint dropped across the intervening call
-    override fun `non-vacuity - whole-object source reaches the sanitized field with no cleaner`() =
-        super.`non-vacuity - whole-object source reaches the sanitized field with no cleaner`()
-
-    @Test
-    @Disabled // todo: fix automata -- taint dropped across the intervening call
-    override fun `non-vacuity - field source reaches the sanitized field with no cleaner`() =
-        super.`non-vacuity - field source reaches the sanitized field with no cleaner`()
-
-    @Test
-    @Disabled // todo: fix automata -- taint dropped across the intervening call
-    override fun `non-vacuity - any-field source reaches the sanitized field with no cleaner`() =
-        super.`non-vacuity - any-field source reaches the sanitized field with no cleaner`()
-
-    @Test
-    @Disabled // todo: fix automata -- passes vacuously, its non-vacuity control is red
-    override fun `concrete base clean - the sanitized field is silent`() =
-        super.`concrete base clean - the sanitized field is silent`()
-
-    @Test
-    @Disabled // todo: fix automata -- passes vacuously, its non-vacuity control is red
-    override fun `starred clean at depth 1 - the sanitized field is silent`() =
-        super.`starred clean at depth 1 - the sanitized field is silent`()
-
-    @Test
-    @Disabled // todo: fix automata -- passes vacuously, its non-vacuity control is red
-    override fun `concrete field clean - the sanitized field is silent`() =
-        super.`concrete field clean - the sanitized field is silent`()
-
-    @Test
-    @Disabled // todo: fix automata -- passes vacuously, its non-vacuity control is red
-    override fun `starred clean at depth 2 - the sanitized field is silent`() =
-        super.`starred clean at depth 2 - the sanitized field is silent`()
-
-    @Test
-    @Disabled // todo: fix automata -- passes vacuously, its non-vacuity control is red
-    override fun `concrete two-level clean over an abstract source - the sanitized field is silent`() =
-        super.`concrete two-level clean over an abstract source - the sanitized field is silent`()
-
-    @Test
-    @Disabled // todo: fix automata -- passes vacuously, its non-vacuity control is red
-    override fun `starred clean at depth 3 - the sanitized field is silent`() =
-        super.`starred clean at depth 3 - the sanitized field is silent`()
 }

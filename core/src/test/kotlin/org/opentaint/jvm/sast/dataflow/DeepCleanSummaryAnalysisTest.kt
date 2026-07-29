@@ -1,6 +1,5 @@
 package org.opentaint.jvm.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -149,7 +148,6 @@ abstract class DeepCleanSummaryAnalysisTest : AnalysisTest() {
     }
 
     @Test
-    @Disabled // todo: fix automata
     fun `base-only clean keeps the whole-object field taint through the wrapper`() {
         // The clean removes only the base-value mark; the any-field mark survives the call
         // and the sanitized-side read stays tainted. This pins cleaner-state transport:
@@ -255,22 +253,4 @@ class TreeDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest()
 
 class AutomataDeepCleanSummaryAnalysisTest : DeepCleanSummaryAnalysisTest() {
     override val apMode: ApMode = ApMode.Automata
-
-    // The in-helper control is red in this mode for the documented reason (taint dropped across
-    // the intervening call), so the two silent cases it guards would pass vacuously — all three
-    // stay disabled together until the Automata intervening-call fix.
-    @Test
-    @Disabled // todo: fix automata -- taint dropped across the intervening call
-    override fun `in-helper read without a clean stays reported`() =
-        super.`in-helper read without a clean stays reported`()
-
-    @Test
-    @Disabled // todo: fix automata -- control above is red, a pass here is vacuous
-    override fun `in-helper starred clean silences the read in the same summary`() =
-        super.`in-helper starred clean silences the read in the same summary`()
-
-    @Test
-    @Disabled // todo: fix automata -- control above is red, a pass here is vacuous
-    override fun `in-helper nested starred clean silences the read`() =
-        super.`in-helper nested starred clean silences the read`()
 }
