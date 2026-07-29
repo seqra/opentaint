@@ -381,6 +381,8 @@ class MethodTraceResolver(
         val unprocessedEntryIds = IntArrayList().also { it.add(finalEntryId) }
         val predecessors = Int2ObjectOpenHashMap<CompactIntSet>()
         val successors = Int2ObjectOpenHashMap<CompactIntSet>()
+
+        private var actionEntries = 0
         var steps = 0
 
         fun addPredecessor(current: TraceEntry, predecessor: TraceEntry, enqueue: Boolean = true) {
@@ -693,7 +695,7 @@ class MethodTraceResolver(
     }
 
     private class EntryMapper(val manager: EntryManager) {
-        private val mapping = Int2IntOpenHashMap()
+        val mapping = Int2IntOpenHashMap()
         val entries = mutableListOf<TraceEntry>()
 
         fun isTranslated(id: Int): Boolean = mapping.containsKey(id)
