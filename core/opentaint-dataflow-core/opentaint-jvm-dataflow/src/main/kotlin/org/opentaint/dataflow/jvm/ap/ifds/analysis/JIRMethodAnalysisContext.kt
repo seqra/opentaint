@@ -61,6 +61,7 @@ class JIRMethodAnalysisContext(
     }
 
     fun resetAnalysisCache() {
+        taint.reset()
         lambdaCallResolution.values.forEach { it.resetSubscribers() }
         taintMarksAssignedOnMethodEnter.clear()
         callFFCache?.clear()

@@ -50,6 +50,7 @@ class AliasSampleTest : BasicTestUtils() {
     private val noRules = object : TaintRulesProvider {
         override fun entryPointRulesForMethod(
             method: CommonMethod,
+            statement: CommonInst,
             fact: FactAp?,
             allRelevant: Boolean
         ): Iterable<TaintEntryPointSource> = emptyList()
@@ -77,6 +78,7 @@ class AliasSampleTest : BasicTestUtils() {
 
         override fun sinkRulesForMethodEntry(
             method: CommonMethod,
+            statement: CommonInst,
             fact: FactAp?,
             allRelevant: Boolean
         ): Iterable<TaintMethodEntrySink> = emptyList()

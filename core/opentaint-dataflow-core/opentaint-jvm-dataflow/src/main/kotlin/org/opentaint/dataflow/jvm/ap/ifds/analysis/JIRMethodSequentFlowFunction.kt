@@ -591,7 +591,7 @@ class JIRMethodSequentFlowFunction(
         accessor: Accessor,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
-        val abstractAp = apManager.createAbstractAp(factAp.base, factAp.exclusions)
+        val abstractAp = factAp.abstractOnly()
         propagateFactWithAccessorExclude(abstractAp, accessor)
 
         analysisContext.aliasAnalysis?.forEachAliasAtStatement(currentInst, abstractAp) { aliased ->

@@ -42,6 +42,10 @@ class JIRTaintAnalysisContext(
         this.analysisContext = analysisContext
     }
 
+    fun reset() {
+        taintSinkTracker.reset()
+    }
+
     private fun JIRInst.callExpr(): JIRCallExpr = callExpr ?: error("Non-call statement")
     private fun JIRCallExpr.calleeMethod(): JIRMethod = method.method
     private fun JIRInst.calleeMethod(): JIRMethod = callExpr().calleeMethod()
@@ -149,7 +153,7 @@ class JIRTaintAnalysisContext(
     )
 
     fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?) = prepareMethodRules(
-        taintConfig.sinkRulesForMethodEntry(statement.location.method, fact, allRelevant = false),
+        taintConfig.sinkRulesForMethodEntry(statement.location.method, statement, fact),
         TaintMethodEntrySink::condition,
         statement
     )
@@ -158,7 +162,7 @@ class JIRTaintAnalysisContext(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(
-        taintConfig.entryPointRulesForMethod(statement.location.method, fact, allRelevant = false),
+        taintConfig.entryPointRulesForMethod(statement.location.method, statement, fact),
         TaintEntryPointSource::condition,
         statement
     )
