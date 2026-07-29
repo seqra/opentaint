@@ -853,7 +853,8 @@ class MethodTraceResolver(
             )
         } else {
             val preStartEntry = if (sources.isNotEmpty()) {
-                TraceEntry.Action(primaryAction = null, sources, entryEdges, methodEntryPoint.statement)
+                val actionVariant = ActionVariant(primaryAction = null, sources, entryEdges)
+                createAction(methodEntryPoint.statement, entryEdges, setOf(actionVariant))
                     .also { addPredecessor(entry, it, enqueue = false) }
             } else {
                 entry
