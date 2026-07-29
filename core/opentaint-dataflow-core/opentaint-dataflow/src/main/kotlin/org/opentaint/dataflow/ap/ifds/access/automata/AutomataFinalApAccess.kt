@@ -2,31 +2,21 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.FinalApAccess
-import org.opentaint.dataflow.ap.ifds.access.forExclusions
 
-data class AutomataFinalAccess(
-    val access: AccessGraph,
-    val anyFieldMarkExclusions: AnyFieldMarkExclusions,
-)
-
-interface AutomataFinalApAccess : FinalApAccess<AutomataFinalAccess> {
-    override fun getFinalAccess(factAp: FinalFactAp): AutomataFinalAccess =
-        (factAp as AccessGraphFinalFactAp).let {
-            AutomataFinalAccess(it.access, it.anyFieldMarkExclusions)
-        }
+interface AutomataFinalApAccess : FinalApAccess<AccessGraph> {
+    override fun getFinalAccess(factAp: FinalFactAp): AccessGraph =
+        (factAp as AccessGraphFinalFactAp).access
 
     override fun createFinal(
         base: AccessPathBase,
-        ap: AutomataFinalAccess,
+        ap: AccessGraph,
         ex: ExclusionSet,
     ): FinalFactAp =
         AccessGraphFinalFactAp(
             base,
-            ap.access,
+            ap.forExclusions(ex),
             ex,
-            ap.anyFieldMarkExclusions.forExclusions(ex),
         )
 }

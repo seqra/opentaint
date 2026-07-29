@@ -82,7 +82,11 @@ internal class AccessGraphApSerializer(
             readAnyFieldMarkExclusions()
         }
         val access = with(accessGraphSerializer) { readGraph() }
-        return AccessGraphFinalFactAp(base, access, exclusions, anyFieldMarkExclusions)
+        return AccessGraphFinalFactAp(
+            base,
+            access.withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+            exclusions,
+        )
     }
 
     override fun DataInputStream.readInitialAp(): InitialFactAp {

@@ -8,7 +8,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
  *
  * An AnyField cleaner removes every currently materialized matching mark and records here what
  * must remain excluded if the fact later grows. Tree stores the value on abstract nodes; Automata
- * and Cactus store it beside their final access values. Initial facts never carry it.
+ * and Cactus store it on their final access values. Initial facts never carry it.
  *
  * Each mark carries the minimum relative depth below the AnyField at which it is excluded:
  *

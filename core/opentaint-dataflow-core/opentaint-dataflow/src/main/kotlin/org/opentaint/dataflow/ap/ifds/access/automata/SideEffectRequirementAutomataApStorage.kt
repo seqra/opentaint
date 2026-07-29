@@ -1,10 +1,10 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.util.forEach
 import org.opentaint.dataflow.util.getOrCreateIndex
 import org.opentaint.dataflow.util.object2IntMap
@@ -53,10 +53,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
         private val graphIndex = GraphIndex()
         private val delta = BitSet()
 
-        fun mergeAdd(
-            requirementGraph: AccessGraph,
-            requirementExclusion: ExclusionSet,
-        ): Unit? {
+        fun mergeAdd(requirementGraph: AccessGraph, requirementExclusion: ExclusionSet): Unit? {
             val currentValueIndex = requirementGraphIndex.getOrCreateIndex(requirementGraph) { newIndex ->
                 return addCompressed(requirementGraph, requirementExclusion, newIndex)
             }
@@ -64,11 +61,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
             return updateExclusionAtIdx(currentValueIndex, requirementExclusion)
         }
 
-        private fun addCompressed(
-            graph: AccessGraph,
-            exclusion: ExclusionSet,
-            idx: Int,
-        ): Unit? {
+        private fun addCompressed(graph: AccessGraph, exclusion: ExclusionSet, idx: Int): Unit? {
             requirementGraphs.add(graph)
             requirementExclusions.add(exclusion)
             overrides.add(BitSet())
@@ -113,16 +106,16 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
             return Unit
         }
 
-        private fun updateExclusionAtIdx(
-            idx: Int,
-            exclusion: ExclusionSet,
-        ): Unit? {
+        private fun updateExclusionAtIdx(idx: Int, exclusion: ExclusionSet): Unit? {
             val oldExclusion = requirementExclusions[idx]
-            val newExclusion = oldExclusion.union(exclusion)
 
-            if (oldExclusion === newExclusion) return null
+            val newValue = oldExclusion.union(exclusion)
 
-            requirementExclusions[idx] = newExclusion
+            if (oldExclusion === newValue) {
+                return null
+            }
+
+            requirementExclusions[idx] = newValue
             delta.set(idx)
 
             return Unit
@@ -165,7 +158,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
             relevantGraphs.forEach { graphIdx ->
                 val graph = requirementGraphs[graphIdx]
 
-                if (!factAccess.containsAll(graph)) {
+                if (!factAccess.containsAllAccessPaths(graph)) {
                     return@forEach
                 }
 

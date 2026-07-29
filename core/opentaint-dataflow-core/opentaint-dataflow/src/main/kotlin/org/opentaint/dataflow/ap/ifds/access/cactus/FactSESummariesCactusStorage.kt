@@ -9,18 +9,18 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class FactSESummariesCactusStorage(
-    methodInitialInst: CommonInst,
-) : CommonFactSideEffectSummary<CactusInitialAccess, CactusFinalAccess>(methodInitialInst),
+    methodInitialInst: CommonInst
+) : CommonFactSideEffectSummary<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(methodInitialInst),
     CactusInitialApAccess, CactusFinalApAccess {
-    override fun createStorage(): Storage<CactusInitialAccess, CactusFinalAccess> =
+    override fun createStorage(): Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
         CactusSEStorage()
 }
 
-private class CactusSEStorage : Storage<CactusInitialAccess, CactusFinalAccess> {
+private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
     private var initialAccessToStorage =
-        persistentHashMapOf<CactusInitialAccess, CactusSEMergeStorage>()
+        persistentHashMapOf<AccessPathWithCycles.AccessNode?, CactusSEMergeStorage>()
 
-    private fun getOrCreate(initialAccess: CactusInitialAccess): CactusSEMergeStorage =
+    private fun getOrCreate(initialAccess: AccessPathWithCycles.AccessNode?): CactusSEMergeStorage =
         initialAccessToStorage.getOrElse(initialAccess) {
             CactusSEMergeStorage(initialAccess).also {
                 initialAccessToStorage = initialAccessToStorage.put(initialAccess, it)
@@ -28,9 +28,9 @@ private class CactusSEStorage : Storage<CactusInitialAccess, CactusFinalAccess> 
         }
 
     override fun add(
-        iap: CactusInitialAccess,
+        iap: AccessPathWithCycles.AccessNode?,
         se: Map<SideEffectKind, ExclusionSet>,
-        added: MutableList<FactSEBuilder<CactusInitialAccess>>,
+        added: MutableList<FactSEBuilder<AccessPathWithCycles.AccessNode?>>
     ) {
         val storageNode = getOrCreate(iap)
         for ((kind, exclusion) in se) {
@@ -39,8 +39,8 @@ private class CactusSEStorage : Storage<CactusInitialAccess, CactusFinalAccess> 
     }
 
     override fun collectSummariesTo(
-        dst: MutableList<FactSEBuilder<CactusInitialAccess>>,
-        initialFactPattern: CactusFinalAccess?,
+        dst: MutableList<FactSEBuilder<AccessPathWithCycles.AccessNode?>>,
+        initialFactPattern: AccessCactus.AccessNode?
     ) {
         initialAccessToStorage.values.forEach { storage ->
             dst += storage.summaries()
@@ -48,14 +48,13 @@ private class CactusSEStorage : Storage<CactusInitialAccess, CactusFinalAccess> 
     }
 }
 
-private class CactusSEMergeStorage(
-    private val initialAccess: CactusInitialAccess,
-) : CommonFactSideEffectSummary.SideEffectExclusionMergingStorage<CactusInitialAccess>() {
-    override fun createBuilder(): FactSEBuilder<CactusInitialAccess> =
+private class CactusSEMergeStorage(val initialAccess: AccessPathWithCycles.AccessNode?) :
+    CommonFactSideEffectSummary.SideEffectExclusionMergingStorage<AccessPathWithCycles.AccessNode?>() {
+    override fun createBuilder(): FactSEBuilder<AccessPathWithCycles.AccessNode?> =
         FactSECactusApBuilder().setInitialAp(initialAccess)
 }
 
-private class FactSECactusApBuilder : FactSEBuilder<CactusInitialAccess>(),
-    CactusInitialApAccess {
-    override fun nonNullIAP(iap: CactusInitialAccess): CactusInitialAccess = iap
+private class FactSECactusApBuilder: FactSEBuilder<AccessPathWithCycles.AccessNode?>(),
+    CactusInitialApAccess, CactusFinalApAccess {
+    override fun nonNullIAP(iap: AccessPathWithCycles.AccessNode?): AccessPathWithCycles.AccessNode? = iap
 }

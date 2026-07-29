@@ -10,18 +10,18 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.concurrent.ConcurrentHashMap
 
 class FactSESummariesAutomataStorage(methodEntryPoint: CommonInst) :
-    CommonFactSideEffectSummary<AutomataInitialAccess, AutomataFinalAccess>(methodEntryPoint),
+    CommonFactSideEffectSummary<AccessGraph, AccessGraph>(methodEntryPoint),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun createStorage(): Storage<AutomataInitialAccess, AutomataFinalAccess> = SEStorage()
+    override fun createStorage(): Storage<AccessGraph, AccessGraph> = SEStorage()
 }
 
-private class SEStorage : Storage<AutomataInitialAccess, AutomataFinalAccess> {
-    private val storage = ConcurrentHashMap<AutomataInitialAccess, SEExclusionStorage>()
+private class SEStorage : Storage<AccessGraph, AccessGraph> {
+    private val storage = ConcurrentHashMap<AccessGraph, SEExclusionStorage>()
 
     override fun add(
-        iap: AutomataInitialAccess,
+        iap: AccessGraph,
         se: Map<SideEffectKind, ExclusionSet>,
-        added: MutableList<FactSEBuilder<AutomataInitialAccess>>,
+        added: MutableList<FactSEBuilder<AccessGraph>>
     ) {
         val storageNode = storage.computeIfAbsent(iap) { SEExclusionStorage(iap) }
         for ((kind, exclusion) in se) {
@@ -30,21 +30,23 @@ private class SEStorage : Storage<AutomataInitialAccess, AutomataFinalAccess> {
     }
 
     override fun collectSummariesTo(
-        dst: MutableList<FactSEBuilder<AutomataInitialAccess>>,
-        initialFactPattern: AutomataFinalAccess?,
+        dst: MutableList<FactSEBuilder<AccessGraph>>,
+        initialFactPattern: AccessGraph?
     ) {
-        storage.values.forEach { dst += it.summaries() }
+        storage.values.forEach {
+            dst += it.summaries()
+        }
     }
 }
 
 private class SEExclusionStorage(
-    private val iap: AutomataInitialAccess,
-) : SideEffectExclusionMergingStorage<AutomataInitialAccess>() {
-    override fun createBuilder(): FactSEBuilder<AutomataInitialAccess> =
+    val iap: AccessGraph
+) : SideEffectExclusionMergingStorage<AccessGraph>() {
+    override fun createBuilder(): FactSEBuilder<AccessGraph> =
         Builder().setInitialAp(iap)
 }
 
-private class Builder : FactSEBuilder<AutomataInitialAccess>(), AutomataInitialApAccess {
-    override fun nonNullIAP(iap: AutomataInitialAccess?): AutomataInitialAccess =
-        iap ?: error("iap not initialized")
+private class Builder : FactSEBuilder<AccessGraph>(), AutomataInitialApAccess {
+    override fun nonNullIAP(iap: AccessGraph?): AccessGraph = iap
+        ?: error("iap not initialized")
 }

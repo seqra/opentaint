@@ -1,29 +1,23 @@
 package org.opentaint.dataflow.ap.ifds.access.automata
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageIdx
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.access.MethodEdgesInitialToFinalApSet
 import org.opentaint.dataflow.util.collectToListWithPostProcess
-import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesInitialToFinalAutomataApSet(
     methodInitialStatement: CommonInst,
     maxInstIdx: Int,
     languageManager: LanguageManager
 ) : MethodEdgesInitialToFinalApSet {
-    private data class StoredState(
-        val exclusion: ExclusionSet,
-        val anyFieldMarkExclusions: AnyFieldMarkExclusions,
-    )
-
     private val storage = InitialFactBaseStorage(methodInitialStatement, maxInstIdx, languageManager)
 
     override fun add(
@@ -86,23 +80,14 @@ class MethodEdgesInitialToFinalAutomataApSet(
             .getOrCreate(initialAp.base)
             .getOrCreate(initialAp.access)
 
-        val state = StoredState(initialAp.exclusions, finalAp.anyFieldMarkExclusions)
-        val addedState = storage.add(statement, finalAp.base, finalAp.access, state)
+        val exclusion = initialAp.exclusions
+        val addedExclusion = storage.add(statement, finalAp.base, finalAp.access, exclusion)
 
-        if (addedState === state) return initialAp to finalAp
-        if (addedState == null) return null
+        if (addedExclusion === exclusion) return initialAp to finalAp
+        if (addedExclusion == null) return null
 
-        val newInitial = AccessGraphInitialFactAp(
-            initialAp.base,
-            initialAp.access,
-            addedState.exclusion,
-        )
-        val newFinal = AccessGraphFinalFactAp(
-            finalAp.base,
-            finalAp.access,
-            addedState.exclusion,
-            addedState.anyFieldMarkExclusions,
-        )
+        val newInitial = initialAp.replaceExclusions(addedExclusion)
+        val newFinal = finalAp.replaceExclusions(addedExclusion)
         return newInitial to newFinal
     }
 
@@ -139,17 +124,12 @@ class MethodEdgesInitialToFinalAutomataApSet(
     ) {
         private val factStorage = FinalFactBaseStorage(initialStatement, maxInstIdx, languageManager)
 
-        fun add(
-            statement: CommonInst,
-            finalBase: AccessPathBase,
-            finalAg: AccessGraph,
-            state: StoredState,
-        ): StoredState? {
+        fun add(statement: CommonInst, finalBase: AccessPathBase, finalAg: AccessGraph, exclusion: ExclusionSet): ExclusionSet? {
             val finalFactStorage = factStorage.getOrCreate(finalBase)
             val factUpdated = finalFactStorage.addFact(statement, finalAg)
 
-            return finalFactStorage.addState(
-                statement, state, returnNullIfNotUpdated = !factUpdated
+            return finalFactStorage.addExclusion(
+                statement, exclusion, returnNullIfNotUpdated = !factUpdated
             )
         }
 
@@ -170,19 +150,12 @@ class MethodEdgesInitialToFinalAutomataApSet(
             statement: CommonInst,
             base: AccessPathBase,
         ) {
-            val state = state(statement) ?: return
+            val exclusion = exclusion(statement) ?: return
 
             collectToListWithPostProcess(
                 collection,
                 { collectTo(it, statement) },
-                {
-                    AccessGraphFinalFactAp(
-                        base,
-                        it,
-                        state.exclusion,
-                        state.anyFieldMarkExclusions,
-                    )
-                }
+                { AccessGraphFinalFactAp(base, it.forExclusions(exclusion), exclusion) }
             )
         }
     }
@@ -220,38 +193,33 @@ class MethodEdgesInitialToFinalAutomataApSet(
             finalFacts[edgeSetIdx]?.toList(collection)
         }
 
-        private val states = arrayOfNulls<StoredState>(instructionStorageSize(maxInstIdx))
+        private val exclusions = arrayOfNulls<ExclusionSet>(instructionStorageSize(maxInstIdx))
 
-        fun addState(
+        fun addExclusion(
             statement: CommonInst,
-            state: StoredState,
+            exclusion: ExclusionSet,
             returnNullIfNotUpdated: Boolean
-        ): StoredState? {
-            val stateIdx = instructionStorageIdx(statement, languageManager)
-            val currentState = states[stateIdx]
+        ): ExclusionSet? {
+            val exclusionIdx = instructionStorageIdx(statement, languageManager)
+            val currentExclusion = exclusions[exclusionIdx]
 
-            if (currentState == null) {
-                states[stateIdx] = state
-                return state
+            if (currentExclusion == null) {
+                exclusions[exclusionIdx] = exclusion
+                return exclusion
             }
 
-            val mergedExclusion = currentState.exclusion.union(state.exclusion)
-            val mergedAnyFieldMarkExclusions =
-                currentState.anyFieldMarkExclusions join state.anyFieldMarkExclusions
-            if (mergedExclusion === currentState.exclusion &&
-                mergedAnyFieldMarkExclusions === currentState.anyFieldMarkExclusions
-            ) {
-                return if (returnNullIfNotUpdated) null else currentState
+            val merged = currentExclusion.union(exclusion)
+            if (merged === currentExclusion) {
+                return if (returnNullIfNotUpdated) null else merged
             }
 
-            val merged = StoredState(mergedExclusion, mergedAnyFieldMarkExclusions)
-            states[stateIdx] = merged
+            exclusions[exclusionIdx] = merged
             return merged
         }
 
-        fun state(statement: CommonInst): StoredState? {
-            val stateIdx = instructionStorageIdx(statement, languageManager)
-            return states[stateIdx]
+        fun exclusion(statement: CommonInst): ExclusionSet? {
+            val exclusionIdx = instructionStorageIdx(statement, languageManager)
+            return exclusions[exclusionIdx]
         }
 
         override fun toString(): String = "${finalFacts.indices.sumOf { finalFacts[it]?.graphSize ?: 0 }}"

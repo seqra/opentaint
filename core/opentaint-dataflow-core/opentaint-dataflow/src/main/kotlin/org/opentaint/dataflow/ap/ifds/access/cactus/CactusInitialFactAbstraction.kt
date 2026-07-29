@@ -22,7 +22,8 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
 
         // note: we can ignore fact exclusions here
         val facts = initialFacts.getOrPut(factAp.base)
-        val addedFact = facts.addInitialFact(factAp.access) ?: return emptyList()
+        val access = factAp.access.withoutAnyFieldMarkExclusions()
+        val addedFact = facts.addInitialFact(access) ?: return emptyList()
 
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
         addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts)

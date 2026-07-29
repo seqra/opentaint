@@ -18,8 +18,10 @@ data class AccessGraphFinalFactAp(
     override val base: AccessPathBase,
     override val access: AccessGraph,
     override val exclusions: ExclusionSet,
-    val anyFieldMarkExclusions: AnyFieldMarkExclusions = AnyFieldMarkExclusions.Empty,
 ) : FinalFactAp, AccessGraphAccessorList {
+    val anyFieldMarkExclusions: AnyFieldMarkExclusions
+        get() = access.anyFieldMarkExclusions
+
     init {
         check(exclusions !is ExclusionSet.Universe || anyFieldMarkExclusions.isEmpty) {
             "Universe facts cannot carry AnyField mark exclusions"
@@ -30,25 +32,23 @@ data class AccessGraphFinalFactAp(
     override val depth: Int get() = size
 
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
-        AccessGraphFinalFactAp(newBase, access, exclusions, anyFieldMarkExclusions)
+        AccessGraphFinalFactAp(newBase, access, exclusions)
 
     override fun exclude(accessor: Accessor): FinalFactAp {
         check(accessor !is AnyAccessor)
-        return AccessGraphFinalFactAp(base, access, exclusions.add(accessor), anyFieldMarkExclusions)
+        return AccessGraphFinalFactAp(base, access, exclusions.add(accessor))
     }
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
+        AccessGraphFinalFactAp(base, access.forExclusions(exclusions), exclusions)
+
+    // Cleaner state belongs to the graph value even when its access-path shape is empty.
+    override fun abstractPart(): FinalFactAp =
         AccessGraphFinalFactAp(
             base,
-            access,
+            access.manager.emptyGraph().withAnyFieldMarkExclusions(anyFieldMarkExclusions),
             exclusions,
-            anyFieldMarkExclusions.takeUnless { exclusions is ExclusionSet.Universe }
-                ?: AnyFieldMarkExclusions.Empty,
         )
-
-    // Automata transports root AnyField mark exclusions beside its graph.
-    override fun abstractPart(): FinalFactAp =
-        AccessGraphFinalFactAp(base, access.manager.emptyGraph(), exclusions, anyFieldMarkExclusions)
 
     override fun isAbstract(): Boolean =
         exclusions !is ExclusionSet.Universe && access.initialNodeIsFinal()
@@ -57,15 +57,15 @@ data class AccessGraphFinalFactAp(
         val graph = access.read(accessor.idx)
             ?: tryAnyAccessorOrNull(accessor) { access.read(anyAccessorIdx) }
 
-        return graph?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldMarkExclusions) }
+        return graph?.let { AccessGraphFinalFactAp(base, it, exclusions) }
     }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp = with(access.manager) {
-        AccessGraphFinalFactAp(base, access.prepend(accessor.idx), exclusions, anyFieldMarkExclusions)
+        AccessGraphFinalFactAp(base, access.prepend(accessor.idx), exclusions)
     }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? = with(access.manager) {
-        return access.clear(accessor.idx)?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldMarkExclusions) }
+        return access.clear(accessor.idx)?.let { AccessGraphFinalFactAp(base, it, exclusions) }
     }
 
     override fun clean(cleaner: Cleaner): FinalFactAp.CleanResult =
@@ -80,7 +80,7 @@ data class AccessGraphFinalFactAp(
             return FinalFactAp.CleanResult(listOf(this), removedAlternative = false)
         }
         return FinalFactAp.CleanResult(
-            listOf(AccessGraphFinalFactAp(base, cleaned, exclusions, anyFieldMarkExclusions)),
+            listOf(AccessGraphFinalFactAp(base, cleaned, exclusions)),
             removedAlternative = true,
         )
     }
@@ -97,9 +97,8 @@ data class AccessGraphFinalFactAp(
             survivingFacts = listOf(
                 AccessGraphFinalFactAp(
                     base,
-                    cleaned,
+                    cleaned.withAnyFieldMarkExclusions(cleanedAnyFieldMarkExclusions),
                     exclusions,
-                    cleanedAnyFieldMarkExclusions,
                 )
             ),
             removedAlternative = false,
@@ -121,15 +120,17 @@ data class AccessGraphFinalFactAp(
 
     data class Delta(
         override val access: AccessGraph,
-        val anyFieldMarkExclusions: AnyFieldMarkExclusions,
     ) : FinalFactAp.Delta, AccessGraphAccessorList {
+        val anyFieldMarkExclusions: AnyFieldMarkExclusions
+            get() = access.anyFieldMarkExclusions
+
         override val isEmpty: Boolean get() = access.isEmpty()
 
         override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? = with(access.manager) {
             val newGraph = access.read(accessor.idx)
                 ?: tryAnyAccessorOrNull(accessor) { access.read(anyAccessorIdx) }
 
-            return newGraph?.let { Delta(it, anyFieldMarkExclusions) }
+            return newGraph?.let(::Delta)
         }
 
         override fun isAbstract(): Boolean = access.initialNodeIsFinal()
@@ -147,7 +148,7 @@ data class AccessGraphFinalFactAp(
                     keepInitialLevel = other.access.isEmpty(),
                 )
                 ?: return@mapNotNull null
-            Delta(filteredDelta, anyFieldMarkExclusions)
+            Delta(filteredDelta.withAnyFieldMarkExclusions(anyFieldMarkExclusions))
         }
     }
 
@@ -155,7 +156,7 @@ data class AccessGraphFinalFactAp(
         other as AccessGraphInitialFactAp
         if (base != other.base) return false
 
-        return access.containsAll(other.access)
+        return access.containsAllAccessPaths(other.access)
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
@@ -163,7 +164,11 @@ data class AccessGraphFinalFactAp(
         val composedAnyFieldMarkExclusions = (anyFieldMarkExclusions then delta.anyFieldMarkExclusions)
             .forExclusions(exclusions)
         if (delta.isEmpty) {
-            return AccessGraphFinalFactAp(base, access, exclusions, composedAnyFieldMarkExclusions)
+            return AccessGraphFinalFactAp(
+                base,
+                access.withAnyFieldMarkExclusions(composedAnyFieldMarkExclusions),
+                exclusions,
+            )
         }
 
         val filter = access.manager.createFilter(access, typeChecker)
@@ -171,27 +176,31 @@ data class AccessGraphFinalFactAp(
 
         if (access.isEmpty()) {
             return AccessGraphFinalFactAp(
-                base, filteredDelta, exclusions, composedAnyFieldMarkExclusions
+                base,
+                filteredDelta.withAnyFieldMarkExclusions(composedAnyFieldMarkExclusions),
+                exclusions,
             )
         }
 
         val concatenatedGraph = access.concat(filteredDelta)
         return AccessGraphFinalFactAp(
-            base, concatenatedGraph, exclusions, composedAnyFieldMarkExclusions
+            base,
+            concatenatedGraph.withAnyFieldMarkExclusions(composedAnyFieldMarkExclusions),
+            exclusions,
         )
     }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? =
-        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldMarkExclusions) }
+        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions) }
 
     override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp? =
-        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions, anyFieldMarkExclusions) }
+        access.filter(filter)?.let { AccessGraphFinalFactAp(base, it, exclusions) }
 
     override fun contains(factAp: InitialFactAp): Boolean {
         factAp as AccessGraphInitialFactAp
 
         if (base != factAp.base) return false
-        return access.containsAll(factAp.access)
+        return access.containsAllAccessPaths(factAp.access)
     }
 
     override fun equalTo(factAp: InitialFactAp): Boolean {

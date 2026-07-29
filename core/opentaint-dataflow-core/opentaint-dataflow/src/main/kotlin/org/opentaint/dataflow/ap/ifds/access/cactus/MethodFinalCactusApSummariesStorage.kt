@@ -5,21 +5,21 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodFinalTreeApSummariesStorage(
     methodInitialStatement: CommonInst,
-) : CommonZ2FSummary<CactusFinalAccess>(methodInitialStatement),
+) : CommonZ2FSummary<AccessCactus.AccessNode>(methodInitialStatement),
     CactusFinalApAccess {
-    override fun createStorage(): Storage<CactusFinalAccess> = MethodZeroToFactSummaryEdgeStorage()
+    override fun createStorage(): Storage<AccessCactus.AccessNode> = MethodZeroToFactSummaryEdgeStorage()
 
-    private class MethodZeroToFactSummaryEdgeStorage : Storage<CactusFinalAccess> {
-        private var summaryEdgeAccess: CactusFinalAccess? = null
+    private class MethodZeroToFactSummaryEdgeStorage : Storage<AccessCactus.AccessNode> {
+        private var summaryEdgeAccess: AccessCactus.AccessNode? = null
 
         override fun add(
-            edges: List<CactusFinalAccess>,
-            added: MutableList<Z2FBBuilder<CactusFinalAccess>>,
+            edges: List<AccessCactus.AccessNode>,
+            added: MutableList<Z2FBBuilder<AccessCactus.AccessNode>>,
         ) {
             edges.mapNotNullTo(added) { add(it) }
         }
 
-        private fun add(edgeAccess: CactusFinalAccess): Z2FBBuilder<CactusFinalAccess>? {
+        private fun add(edgeAccess: AccessCactus.AccessNode): Z2FBBuilder<AccessCactus.AccessNode>? {
             val summaryAccess = summaryEdgeAccess
             if (summaryAccess == null) {
                 summaryEdgeAccess = edgeAccess
@@ -28,14 +28,15 @@ class MethodFinalTreeApSummariesStorage(
 
             val mergedAccess = summaryAccess.mergeAdd(edgeAccess)
             if (summaryAccess === mergedAccess) return null
+
             summaryEdgeAccess = mergedAccess
             return ZeroEdgeBuilderBuilder().setNode(mergedAccess)
         }
 
-        override fun collectEdges(dst: MutableList<Z2FBBuilder<CactusFinalAccess>>) {
+        override fun collectEdges(dst: MutableList<Z2FBBuilder<AccessCactus.AccessNode>>) {
             summaryEdgeAccess?.let { dst += ZeroEdgeBuilderBuilder().setNode(it) }
         }
     }
 
-    private class ZeroEdgeBuilderBuilder : Z2FBBuilder<CactusFinalAccess>(), CactusFinalApAccess
+    private class ZeroEdgeBuilderBuilder : Z2FBBuilder<AccessCactus.AccessNode>(), CactusFinalApAccess
 }

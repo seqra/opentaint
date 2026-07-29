@@ -10,33 +10,33 @@ class MethodEdgesNDInitialToFinalCactusApSet(
     initialStatement: CommonInst,
     languageManager: LanguageManager,
     maxInstIdx: Int,
-) : CommonNDF2FSet<CactusInitialAccess, CactusFinalAccess>(
+) : CommonNDF2FSet<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(
     initialStatement, languageManager, maxInstIdx
 ), CactusFinalApAccess, CactusInitialApAccess {
     override fun createApStorage() =
-        object : DefaultNDF2FSetStorage<CactusInitialAccess, CactusFinalAccess>() {
-            override fun createStorage(): Storage<CactusFinalAccess> = DefaultStorage()
+        object : DefaultNDF2FSetStorage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>() {
+            override fun createStorage(): Storage<AccessCactus.AccessNode> = DefaultStorage()
         }
 
-    override fun mostAbstractPattern(base: AccessPathBase): CactusInitialAccess =
-        null
+    override fun mostAbstractPattern(base: AccessPathBase): AccessPathWithCycles.AccessNode? = null
 
-    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<CactusFinalAccess> {
-        private var current: CactusFinalAccess? = null
+    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AccessCactus.AccessNode> {
+        private var current: AccessCactus.AccessNode? = null
 
-        override fun add(element: CactusFinalAccess): CactusFinalAccess? {
+        override fun add(element: AccessCactus.AccessNode): AccessCactus.AccessNode? {
             val cur = current
             if (cur == null) {
                 current = element
                 return element
             }
 
-            val merged = cur.mergeAdd(element)
-            if (merged === cur) return null
-            return merged.also { current = it }
+            val mergedAccess = cur.mergeAdd(element)
+            if (mergedAccess === cur) return null
+            current = mergedAccess
+            return mergedAccess
         }
 
-        override fun collect(dst: MutableList<CactusFinalAccess>) {
+        override fun collect(dst: MutableList<AccessCactus.AccessNode>) {
             current?.let { dst.add(it) }
         }
     }

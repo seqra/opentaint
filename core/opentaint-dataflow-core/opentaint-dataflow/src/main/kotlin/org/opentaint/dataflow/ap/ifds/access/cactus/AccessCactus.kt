@@ -32,8 +32,13 @@ class AccessCactus(
     override val base: AccessPathBase,
     val access: AccessNode,
     override val exclusions: ExclusionSet,
-    val anyFieldMarkExclusions: AnyFieldMarkExclusions = AnyFieldMarkExclusions.Empty,
 ): FinalFactAp {
+    val anyFieldMarkExclusions: AnyFieldMarkExclusions
+        get() = access.anyFieldMarkExclusions
+
+    private val accessPaths: AccessNode
+        get() = access.withoutAnyFieldMarkExclusions()
+
     init {
         assert({ access.isWellFormed() }) {
             "Ill-formed AccessTree"
@@ -44,23 +49,22 @@ class AccessCactus(
     }
 
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
-        AccessCactus(newBase, access, exclusions, anyFieldMarkExclusions)
+        AccessCactus(newBase, access, exclusions)
 
     override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessCactus(base, access, exclusions.add(accessor), anyFieldMarkExclusions)
+        AccessCactus(base, access, exclusions.add(accessor))
 
-    // Cactus transports root AnyField mark exclusions beside its access structure.
+    // Cleaner state belongs to the root access value, not to its recursive children.
     override fun abstractPart(): FinalFactAp =
-        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions, anyFieldMarkExclusions)
-
-    override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessCactus(
             base,
-            access,
+            AccessNode.create(isAbstract = true)
+                .withAnyFieldMarkExclusions(anyFieldMarkExclusions),
             exclusions,
-            anyFieldMarkExclusions.takeUnless { exclusions is ExclusionSet.Universe }
-                ?: AnyFieldMarkExclusions.Empty,
         )
+
+    override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
+        AccessCactus(base, access.forExclusions(exclusions), exclusions)
 
     override fun getAllAccessors(): Set<Accessor> {
         val result = hashSetOf<Accessor>()
@@ -73,28 +77,49 @@ class AccessCactus(
     override fun isAbstract(): Boolean = access.isAbstract
 
     override fun readAccessor(accessor: Accessor): FinalFactAp? =
-        access.getChild(accessor)?.let { AccessCactus(base, it, exclusions, anyFieldMarkExclusions) }
+        accessPaths.getChild(accessor)?.let {
+            AccessCactus(
+                base,
+                it.withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+                exclusions,
+            )
+        }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp {
-        return AccessCactus(base, access.addParent(accessor), exclusions, anyFieldMarkExclusions)
+        val prepended = accessPaths
+            .addParent(accessor)
+            .withAnyFieldMarkExclusions(anyFieldMarkExclusions)
+        return AccessCactus(base, prepended, exclusions)
     }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? {
-        val newAccess = access.clearChild(accessor).takeIf { !it.isEmpty } ?: return null
-        return AccessCactus(base, newAccess, exclusions, anyFieldMarkExclusions)
+        val newAccess = accessPaths.clearChild(accessor).takeIf { !it.isEmpty } ?: return null
+        return AccessCactus(
+            base,
+            newAccess.withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+            exclusions,
+        )
     }
 
     override fun removeAbstraction(): FinalFactAp? =
-        access.removeAbstraction().takeIf { !it.isEmpty }?.let {
-            AccessCactus(base, it, exclusions, anyFieldMarkExclusions)
+        accessPaths.removeAbstraction().takeIf { !it.isEmpty }?.let {
+            AccessCactus(
+                base,
+                it.withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+                exclusions,
+            )
         }
 
     override fun abstractOnly(): FinalFactAp =
         AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
-        val filteredAccess = access.filterAccessNode(filter) ?: return null
-        return AccessCactus(base, filteredAccess, exclusions, anyFieldMarkExclusions)
+        val filteredAccess = accessPaths.filterAccessNode(filter) ?: return null
+        return AccessCactus(
+            base,
+            filteredAccess.withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+            exclusions,
+        )
     }
 
     override fun clean(cleaner: Cleaner): FinalFactAp.CleanResult =
@@ -113,7 +138,7 @@ class AccessCactus(
             override fun check(accessor: Accessor): FactTypeChecker.FilterResult =
                 FactTypeChecker.FilterResult.FilterNext(belowBaseFilter)
         }
-        val cleaned = access.filterAccessNode(atBaseFilter)
+        val cleaned = accessPaths.filterAccessNode(atBaseFilter)
             ?: return FinalFactAp.CleanResult(emptyList(), removedAlternative = true)
         val cleanedAnyFieldMarkExclusions =
             anyFieldMarkExclusions.add(CactusMarkInterner.index(mark)).forExclusions(exclusions)
@@ -121,9 +146,8 @@ class AccessCactus(
             survivingFacts = listOf(
                 AccessCactus(
                     base,
-                    cleaned,
+                    cleaned.withAnyFieldMarkExclusions(cleanedAnyFieldMarkExclusions),
                     exclusions,
-                    cleanedAnyFieldMarkExclusions,
                 )
             ),
             removedAlternative = false,
@@ -185,7 +209,7 @@ class AccessCactus(
         val apRefinements = mutableListOf<AccessNode>()
         var emptyDeltaNeeded = false
 
-        CactusUtils.matchAccessPathWithCactus(access, other.access, onFinalMatch = { _ ->
+        CactusUtils.matchAccessPathWithCactus(accessPaths, other.access, onFinalMatch = { _ ->
             emptyDeltaNeeded = true
         }) { treeNode ->
             val filteredNode = when (val exclusion = other.exclusions) {
@@ -225,26 +249,34 @@ class AccessCactus(
                 val composedAnyFieldMarkExclusions =
                     (anyFieldMarkExclusions then d.anyFieldMarkExclusions)
                     .forExclusions(exclusions)
-                return AccessCactus(base, access, exclusions, composedAnyFieldMarkExclusions)
+                return AccessCactus(
+                    base,
+                    access.withAnyFieldMarkExclusions(composedAnyFieldMarkExclusions),
+                    exclusions,
+                )
             }
             is NodeDelta -> {
                 val filteredDelta = d.node.enforceAnyFieldMarkExclusions(d.anyFieldMarkExclusions)
                     ?: return AccessCactus(
                         base,
-                        access,
+                        access.withAnyFieldMarkExclusions(
+                            (anyFieldMarkExclusions then d.anyFieldMarkExclusions)
+                                .forExclusions(exclusions)
+                        ),
                         exclusions,
-                        (anyFieldMarkExclusions then d.anyFieldMarkExclusions)
-                            .forExclusions(exclusions),
                     )
-                val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, filteredDelta) ?: return null
+                val concatenatedAccess = accessPaths
+                    .concatToLeafAbstractNodes(typeChecker, filteredDelta)
+                    ?: return null
                 val composedAnyFieldMarkExclusions =
                     (anyFieldMarkExclusions then d.anyFieldMarkExclusions)
                         .forExclusions(exclusions)
                 return AccessCactus(
                     base,
-                    concatenatedAccess,
+                    concatenatedAccess.withAnyFieldMarkExclusions(
+                        composedAnyFieldMarkExclusions
+                    ),
                     exclusions,
-                    composedAnyFieldMarkExclusions,
                 )
             }
         }
@@ -272,8 +304,6 @@ class AccessCactus(
         if (base != other.base) return false
         if (access != other.access) return false
         if (exclusions != other.exclusions) return false
-        if (anyFieldMarkExclusions != other.anyFieldMarkExclusions) return false
-
         return true
     }
 
@@ -281,15 +311,28 @@ class AccessCactus(
         var result = base.hashCode()
         result = 31 * result + access.hashCode()
         result = 31 * result + exclusions.hashCode()
-        result = 31 * result + anyFieldMarkExclusions.hashCode()
         return result
     }
 
     class AccessNode private constructor(
         val isAbstract: Boolean,
         val isFinal: Boolean,
-        val allEdges: Array<Edge>
+        val allEdges: Array<Edge>,
+        val anyFieldMarkExclusions: AnyFieldMarkExclusions = AnyFieldMarkExclusions.Empty,
     ) {
+        fun withAnyFieldMarkExclusions(exclusions: AnyFieldMarkExclusions): AccessNode =
+            if (exclusions === anyFieldMarkExclusions) {
+                this
+            } else {
+                AccessNode(isAbstract, isFinal, allEdges, exclusions)
+            }
+
+        fun withoutAnyFieldMarkExclusions(): AccessNode =
+            withAnyFieldMarkExclusions(AnyFieldMarkExclusions.Empty)
+
+        fun forExclusions(exclusions: ExclusionSet): AccessNode =
+            withAnyFieldMarkExclusions(anyFieldMarkExclusions.forExclusions(exclusions))
+
         sealed interface Edge {
             val accessor: Accessor
 
@@ -405,6 +448,7 @@ class AccessCactus(
                 val fieldHash = allEdges.sumOf { it.hashCode() }
                 hash += fieldHash shl 5
             }
+            hash = 31 * hash + anyFieldMarkExclusions.hashCode()
             this.hash = hash
         }
 
@@ -437,6 +481,7 @@ class AccessCactus(
 
             if (hash != other.hash) return false
             if (isAbstract != other.isAbstract || isFinal != other.isFinal) return false
+            if (anyFieldMarkExclusions != other.anyFieldMarkExclusions) return false
 
             return allEdges.contentEquals(other.allEdges)
         }
@@ -817,11 +862,18 @@ class AccessCactus(
         fun mergeAdd(other: AccessNode, rootAccessors: List<Accessor> = emptyList()): AccessNode {
             if (this == other) return this
 
-            return mergeNodes(
+            val merged = mergeNodes(
                 other, rootAccessors, onOtherEdge = { _ -> }
             ) { _, newRootAccessors, thisNode, otherNode ->
                 thisNode.mergeAdd(otherNode, newRootAccessors)
-            }.also { if (it == this) return this else if (it == other) return other }
+            }
+            val result = merged.withAnyFieldMarkExclusions(
+                anyFieldMarkExclusions join other.anyFieldMarkExclusions
+            )
+            return result.also {
+                if (it == this) return this
+                if (it == other) return other
+            }
         }
 
         fun mergeAddDelta(other: AccessNode): Pair<AccessNode, AccessNode?> {
@@ -949,13 +1001,15 @@ class AccessCactus(
             val base = createAbstractNodeFromAp(accessPath)
 
             if (finalAccessorReached) {
-                return base
+                return base.withAnyFieldMarkExclusions(anyFieldMarkExclusions)
             }
             if (matchedNodes.isEmpty()) {
                 return null
             }
 
-            return base.concatToLeafAbstractNodes(null, matchedNodes.reduce(AccessNode::mergeAdd))
+            return base
+                .concatToLeafAbstractNodes(null, matchedNodes.reduce(AccessNode::mergeAdd))
+                ?.withAnyFieldMarkExclusions(anyFieldMarkExclusions)
         }
 
         private fun squashAndMerge(

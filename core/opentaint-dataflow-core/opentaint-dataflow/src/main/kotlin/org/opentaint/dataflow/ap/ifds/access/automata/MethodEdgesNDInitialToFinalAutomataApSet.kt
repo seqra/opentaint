@@ -11,24 +11,20 @@ class MethodEdgesNDInitialToFinalAutomataApSet(
     initialStatement: CommonInst,
     languageManager: LanguageManager,
     maxInstIdx: Int,
-) : CommonNDF2FSet<AutomataInitialAccess, AutomataFinalAccess>(
-    initialStatement, languageManager, maxInstIdx
-),
+) : CommonNDF2FSet<AccessGraph, AccessGraph>(initialStatement, languageManager, maxInstIdx),
     AutomataInitialApAccess, AutomataFinalApAccess {
-    override fun createApStorage() =
-        object : DefaultNDF2FSetStorage<AutomataInitialAccess, AutomataFinalAccess>() {
-        override fun createStorage(): Storage<AutomataFinalAccess> = DefaultStorage()
+    override fun createApStorage() = object : DefaultNDF2FSetStorage<AccessGraph, AccessGraph>() {
+        override fun createStorage(): Storage<AccessGraph> = DefaultStorage()
     }
 
-    override fun mostAbstractPattern(base: AccessPathBase): AutomataInitialAccess =
-        apManager.emptyGraph()
+    override fun mostAbstractPattern(base: AccessPathBase): AccessGraph = apManager.emptyGraph()
 
-    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AutomataFinalAccess> {
-        private val storage = hashSetOf<AutomataFinalAccess>()
-        override fun add(element: AutomataFinalAccess): AutomataFinalAccess? =
+    private class DefaultStorage : DefaultNDF2FSetStorage.Storage<AccessGraph> {
+        private val storage = hashSetOf<AccessGraph>()
+        override fun add(element: AccessGraph): AccessGraph? =
             if (storage.add(element)) element else null
 
-        override fun collect(dst: MutableList<AutomataFinalAccess>) {
+        override fun collect(dst: MutableList<AccessGraph>) {
             dst.addAll(storage)
         }
     }

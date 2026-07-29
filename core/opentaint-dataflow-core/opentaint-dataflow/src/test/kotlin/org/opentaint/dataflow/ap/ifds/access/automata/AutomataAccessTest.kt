@@ -11,20 +11,21 @@ class AutomataAccessTest {
 
     @Test
     fun `merging alternatives treats shape and AnyField mark exclusions as one value`() {
-        val cleaned = AutomataFinalAccess(empty.prepend(1), AnyFieldMarkExclusions.Empty.add(7))
-        val uncleaned = AutomataFinalAccess(empty.prepend(2), AnyFieldMarkExclusions.Empty)
+        val cleaned = empty.prepend(1)
+            .withAnyFieldMarkExclusions(AnyFieldMarkExclusions.Empty.add(7))
+        val uncleaned = empty.prepend(2)
 
-        val merged = cleaned.mergeAdd(uncleaned)
+        val merged = cleaned.merge(uncleaned)
 
         assertEquals(AnyFieldMarkExclusions.Empty, merged.anyFieldMarkExclusions)
-        assertEquals(true, merged.access.containsAll(cleaned.access))
-        assertEquals(true, merged.access.containsAll(uncleaned.access))
+        assertEquals(true, merged.containsAll(cleaned))
+        assertEquals(true, merged.containsAll(uncleaned))
     }
 
     @Test
     fun `merging a contained value is identity`() {
-        val access = AutomataFinalAccess(empty.prepend(1), AnyFieldMarkExclusions.Empty)
+        val access = empty.prepend(1)
 
-        assertSame(access, access.mergeAdd(access))
+        assertSame(access, access.merge(access))
     }
 }

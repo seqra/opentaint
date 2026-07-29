@@ -14,6 +14,12 @@ data class AccessGraphInitialFactAp(
     override val access: AccessGraph,
     override val exclusions: ExclusionSet,
 ) : InitialFactAp, AccessGraphAccessorList {
+    init {
+        check(access.anyFieldMarkExclusions.isEmpty) {
+            "Initial facts cannot carry AnyField mark exclusions"
+        }
+    }
+
     override val size: Int get() = access.size
     override val depth: Int get() = size
 
@@ -52,19 +58,21 @@ data class AccessGraphInitialFactAp(
 
     data class Delta(
         override val access: AccessGraph,
-        val anyFieldMarkExclusions: AnyFieldMarkExclusions,
     ) : InitialFactAp.Delta, AccessGraphAccessorList {
+        val anyFieldMarkExclusions: AnyFieldMarkExclusions
+            get() = access.anyFieldMarkExclusions
+
         override val isEmpty: Boolean get() = access.isEmpty()
 
         override fun concat(other: InitialFactAp.Delta): InitialFactAp.Delta {
             other as Delta
 
-            return Delta(access.concat(other.access), anyFieldMarkExclusions then other.anyFieldMarkExclusions)
+            return Delta(access.concat(other.access))
         }
 
         override fun readAccessor(accessor: Accessor): InitialFactAp.Delta? = with(access.manager) {
             val newGraph = access.read(accessor.idx) ?: return@with null
-            return Delta(newGraph, anyFieldMarkExclusions)
+            return Delta(newGraph)
         }
 
         override fun isAbstract(): Boolean = access.initialNodeIsFinal()
@@ -81,7 +89,11 @@ data class AccessGraphInitialFactAp(
                 ?: return emptyList()
 
             val emptyFact = AccessGraphInitialFactAp(base, access.manager.emptyGraph(), exclusions)
-            return listOf(emptyFact to Delta(filteredDelta, other.anyFieldMarkExclusions))
+            return listOf(
+                emptyFact to Delta(
+                    filteredDelta.withAnyFieldMarkExclusions(other.anyFieldMarkExclusions)
+                )
+            )
         }
 
         return access.splitDelta(other.access).mapNotNull { (matchedAccess, delta) ->
@@ -94,7 +106,9 @@ data class AccessGraphInitialFactAp(
                 ?: return@mapNotNull null
 
             val matchedFact = AccessGraphInitialFactAp(base, matchedAccess, exclusions)
-            matchedFact to Delta(filteredDelta, other.anyFieldMarkExclusions)
+            matchedFact to Delta(
+                filteredDelta.withAnyFieldMarkExclusions(other.anyFieldMarkExclusions)
+            )
         }
     }
 
@@ -106,14 +120,18 @@ data class AccessGraphInitialFactAp(
             delta.anyFieldMarkExclusions,
             keepInitialLevel = access.isEmpty(),
         ) ?: return this
-        return AccessGraphInitialFactAp(base, access.concat(filteredDelta), exclusions)
+        return AccessGraphInitialFactAp(
+            base,
+            access.concat(filteredDelta).withoutAnyFieldMarkExclusions(),
+            exclusions,
+        )
     }
 
     override fun contains(factAp: InitialFactAp): Boolean {
         factAp as AccessGraphInitialFactAp
 
         if (base != factAp.base) return false
-        return access.containsAll(factAp.access)
+        return access.containsAllAccessPaths(factAp.access)
     }
 
     override fun compatibilityFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactCompatibilityFilter =

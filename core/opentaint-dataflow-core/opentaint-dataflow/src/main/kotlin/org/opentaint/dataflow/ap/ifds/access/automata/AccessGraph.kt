@@ -10,9 +10,10 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
+import org.opentaint.dataflow.ap.ifds.access.forExclusions
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
-import org.opentaint.dataflow.ap.ifds.access.AnyFieldMarkExclusions
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.tryAnyAccessorOrNull
 import org.opentaint.dataflow.util.PersistentArrayBuilder
@@ -80,12 +81,28 @@ class AccessGraph(
     private val edges: PersistentInt2LongMap,
     private val nodeSucc: Array<PersistentBitSet?>,
     private val nodePred: Array<PersistentBitSet?>,
+    val anyFieldMarkExclusions: AnyFieldMarkExclusions = AnyFieldMarkExclusions.Empty,
 ) {
     private val numNodes: Int get() = nodeSucc.size
 
     val size: Int get() = edges.size
 
-    private val hash: Int by lazy(LazyThreadSafetyMode.PUBLICATION) { dfsHash() }
+    private val hash: Int by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        31 * dfsHash() + anyFieldMarkExclusions.hashCode()
+    }
+
+    fun withAnyFieldMarkExclusions(exclusions: AnyFieldMarkExclusions): AccessGraph =
+        if (exclusions === anyFieldMarkExclusions) {
+            this
+        } else {
+            AccessGraph(manager, initial, final, edges, nodeSucc, nodePred, exclusions)
+        }
+
+    fun withoutAnyFieldMarkExclusions(): AccessGraph =
+        withAnyFieldMarkExclusions(AnyFieldMarkExclusions.Empty)
+
+    fun forExclusions(exclusions: ExclusionSet): AccessGraph =
+        withAnyFieldMarkExclusions(anyFieldMarkExclusions.forExclusions(exclusions))
 
     fun getAllOwnAccessors() =
         edges.keys.mapNotNullTo(hashSetOf()) {
@@ -131,6 +148,7 @@ class AccessGraph(
         if (this === other) return true
         if (other !is AccessGraph) return false
 
+        if (anyFieldMarkExclusions != other.anyFieldMarkExclusions) return false
         if (edges.size != other.edges.size) return false
         if (edges.keys != other.edges.keys) return false
 
@@ -278,7 +296,15 @@ class AccessGraph(
     }
 
     private fun create(initial: NodeMarker, final: NodeMarker): AccessGraph =
-        AccessGraph(manager, initial, final, edges, nodeSucc, nodePred)
+        AccessGraph(
+            manager,
+            initial,
+            final,
+            edges,
+            nodeSucc,
+            nodePred,
+            anyFieldMarkExclusions,
+        )
 
     fun startsWith(accessor: AccessorIdx): Boolean =
         getStateSuccessorUnsafe(initial, accessor) != NO_NODE
@@ -375,10 +401,13 @@ class AccessGraph(
     fun concat(other: AccessGraph): AccessGraph {
         val mutableCopy = mutable()
         val mutableResult = mutableCopy.concat(other)
+        val composedExclusions = anyFieldMarkExclusions then other.anyFieldMarkExclusions
 
-        if (mutableResult === mutableCopy) return this
+        if (mutableResult === mutableCopy) {
+            return withAnyFieldMarkExclusions(composedExclusions)
+        }
 
-        return mutableResult.persist()
+        return mutableResult.persist().withAnyFieldMarkExclusions(composedExclusions)
     }
 
     fun delta(other: AccessGraph): List<AccessGraph> {
@@ -397,13 +426,25 @@ class AccessGraph(
 
     private fun splitOutEmptyDelta(delta: AccessGraph): List<AccessGraph> {
         if (delta.initialNodeIsFinal() && !delta.isEmpty()) {
-            return listOf(delta, manager.emptyGraph())
+            return listOf(
+                delta,
+                manager.emptyGraph().withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+            )
         }
 
         return listOf(delta)
     }
 
     fun containsAll(other: AccessGraph): Boolean {
+        if ((anyFieldMarkExclusions join other.anyFieldMarkExclusions) !=
+            anyFieldMarkExclusions
+        ) {
+            return false
+        }
+        return containsAllAccessPaths(other)
+    }
+
+    fun containsAllAccessPaths(other: AccessGraph): Boolean {
         if (other.isEmpty()) return this.initial == this.final
         if (this.isEmpty()) return false
 
@@ -469,7 +510,7 @@ class AccessGraph(
                 .removeUnreachableNodes()
                 ?: return@forEach
 
-            if (!other.containsAll(matchedPrefix)) return@forEach
+            if (!other.containsAllAccessPaths(matchedPrefix)) return@forEach
 
             val deltaSuffix = AccessGraph(manager, splitNode, final, edges, nodeSucc, nodePred)
                 .removeUnreachableNodes()
@@ -513,10 +554,13 @@ class AccessGraph(
 
     fun merge(other: AccessGraph): AccessGraph {
         check(manager === other.manager)
+        if (this == other) return this
 
         val mutableCopy = mutable()
         val mergedMutable = mutableCopy.merge(other)
-        val mergeResult = mergedMutable.persist()
+        val mergeResult = mergedMutable.persist().withAnyFieldMarkExclusions(
+            anyFieldMarkExclusions join other.anyFieldMarkExclusions
+        )
         return mergeResult
     }
 
@@ -653,6 +697,7 @@ class AccessGraph(
         edges, edges.mutable(),
         PersistentArrayBuilder(nodeSucc),
         PersistentArrayBuilder(nodePred),
+        anyFieldMarkExclusions,
     )
 
     internal class Serializer(
@@ -760,6 +805,7 @@ class MutableAccessGraph(
     private val mutableEdges: PersistentInt2LongMap,
     private val nodeSucc: PersistentArrayBuilder<PersistentBitSet?>,
     private val nodePred: PersistentArrayBuilder<PersistentBitSet?>,
+    private val anyFieldMarkExclusions: AnyFieldMarkExclusions,
 ) {
     private val numNodes: Int get() = nodeSucc.size
 
@@ -770,7 +816,8 @@ class MutableAccessGraph(
             manager,
             initial, final,
             originalPersistentEdges, mutableEdges,
-            nodeSucc, nodePred
+            nodeSucc, nodePred,
+            anyFieldMarkExclusions,
         )
 
     fun persist(): AccessGraph = AccessGraph(
@@ -778,7 +825,8 @@ class MutableAccessGraph(
         initial, final,
         mutableEdges.persist(originalPersistentEdges),
         nodeSucc.persist(),
-        nodePred.persist()
+        nodePred.persist(),
+        anyFieldMarkExclusions,
     )
 
     fun prepend(accessor: AccessorIdx): MutableAccessGraph {

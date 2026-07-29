@@ -72,7 +72,11 @@ internal class CactusSerializer(private val context : SummarySerializationContex
         val access = with (accessNodeSerializer) {
             readAccessNode()
         }
-        return AccessCactus(base, access, exclusion, anyFieldMarkExclusions)
+        return AccessCactus(
+            base,
+            access.withAnyFieldMarkExclusions(anyFieldMarkExclusions),
+            exclusion,
+        )
     }
 
     override fun DataInputStream.readInitialAp(): InitialFactAp {

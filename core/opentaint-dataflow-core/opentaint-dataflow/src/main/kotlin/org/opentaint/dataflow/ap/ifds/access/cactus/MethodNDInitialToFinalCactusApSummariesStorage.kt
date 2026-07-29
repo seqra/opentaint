@@ -6,23 +6,23 @@ import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSummarySto
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodNDInitialToFinalCactusApSummariesStorage(methodEntryPoint: CommonInst) :
-    CommonNDF2FSummary<CactusFinalAccess>(methodEntryPoint), CactusFinalApAccess {
-    private class Builder : NDF2FBBuilder<CactusFinalAccess>(), CactusFinalApAccess
+    CommonNDF2FSummary<AccessNode>(methodEntryPoint), CactusFinalApAccess {
+    private class Builder : NDF2FBBuilder<AccessNode>(), CactusFinalApAccess
 
-    override fun createStorage(): Storage<CactusFinalAccess> = object :
-        DefaultNDF2FSummaryStorageWithAp<CactusInitialAccess, CactusFinalAccess>(methodEntryPoint),
+    override fun createStorage(): Storage<AccessNode> = object :
+        DefaultNDF2FSummaryStorageWithAp<AccessPathWithCycles.AccessNode?, AccessNode>(methodEntryPoint),
         CactusInitialApAccess {
-        override fun createBuilder(): NDF2FBBuilder<CactusFinalAccess> = Builder()
+        override fun createBuilder(): NDF2FBBuilder<AccessNode> = Builder()
 
-        override fun createStorage(idx: Int): Storage<CactusInitialAccess, CactusFinalAccess> = FactStorage(idx)
+        override fun createStorage(idx: Int): Storage<AccessPathWithCycles.AccessNode?, AccessNode> = FactStorage(idx)
 
         private inner class FactStorage(
             override val storageIdx: Int,
-        ) : Storage<CactusInitialAccess, CactusFinalAccess> {
-            private var edges: CactusFinalAccess? = null
-            private var edgesDelta: CactusFinalAccess? = null
+        ) : Storage<AccessPathWithCycles.AccessNode?, AccessNode> {
+            private var edges: AccessNode? = null
+            private var edgesDelta: AccessNode? = null
 
-            override fun add(element: CactusFinalAccess): Storage<CactusInitialAccess, CactusFinalAccess>? {
+            override fun add(element: AccessNode): Storage<AccessPathWithCycles.AccessNode?, AccessNode>? {
                 val currentEdges = edges
                 if (currentEdges == null) {
                     edges = element
@@ -38,12 +38,12 @@ class MethodNDInitialToFinalCactusApSummariesStorage(methodEntryPoint: CommonIns
                 return this
             }
 
-            override fun getAndResetDelta(delta: MutableList<CactusFinalAccess>) {
+            override fun getAndResetDelta(delta: MutableList<AccessNode>) {
                 delta += edgesDelta ?: return
                 edgesDelta = null
             }
 
-            override fun collectTo(dst: MutableList<CactusFinalAccess>) {
+            override fun collectTo(dst: MutableList<AccessNode>) {
                 edges?.let { dst += it }
             }
         }

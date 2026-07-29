@@ -5,42 +5,31 @@ import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSummarySto
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodNDInitialToFinalAutomataApSummariesStorage(methodEntryPoint: CommonInst) :
-    CommonNDF2FSummary<AutomataFinalAccess>(methodEntryPoint), AutomataFinalApAccess {
-    private class Builder : NDF2FBBuilder<AutomataFinalAccess>(), AutomataFinalApAccess
+    CommonNDF2FSummary<AccessGraph>(methodEntryPoint), AutomataFinalApAccess {
+    private class Builder : NDF2FBBuilder<AccessGraph>(), AutomataFinalApAccess
 
-    override fun createStorage(): Storage<AutomataFinalAccess> =
-        object : DefaultNDF2FSummaryStorageWithAp<AutomataInitialAccess, AutomataFinalAccess>(
-            methodEntryPoint
-        ), AutomataInitialApAccess {
-            override fun createBuilder(): NDF2FBBuilder<AutomataFinalAccess> = Builder()
+    override fun createStorage(): Storage<AccessGraph> =
+        object : DefaultNDF2FSummaryStorageWithAp<AccessGraph, AccessGraph>(methodEntryPoint), AutomataInitialApAccess {
+            override fun createBuilder(): NDF2FBBuilder<AccessGraph> = Builder()
 
-            override fun createStorage(
-                idx: Int,
-            ): Storage<AutomataInitialAccess, AutomataFinalAccess> = FactStorage(idx)
+            override fun createStorage(idx: Int): Storage<AccessGraph, AccessGraph> = FactStorage(idx)
 
             private inner class FactStorage(
                 override val storageIdx: Int,
-            ) : Storage<AutomataInitialAccess, AutomataFinalAccess> {
-                private val accessStorage = hashSetOf<AutomataFinalAccess>()
-                private val delta = arrayListOf<AutomataFinalAccess>()
+            ) : Storage<AccessGraph, AccessGraph> {
+                private val agStorage = AccessGraphStorageWithCompression()
 
-                override fun add(
-                    element: AutomataFinalAccess,
-                ): Storage<AutomataInitialAccess, AutomataFinalAccess>? {
-                    if (accessStorage.add(element)) {
-                        delta += element
-                        return this
-                    }
+                override fun add(element: AccessGraph): Storage<AccessGraph, AccessGraph>? {
+                    if (agStorage.add(element)) return this
                     return null
                 }
 
-                override fun getAndResetDelta(dst: MutableList<AutomataFinalAccess>) {
-                    dst += delta
-                    delta.clear()
+                override fun getAndResetDelta(delta: MutableList<AccessGraph>) {
+                    agStorage.mapAndResetDelta { delta.add(it) }
                 }
 
-                override fun collectTo(dst: MutableList<AutomataFinalAccess>) {
-                    dst += accessStorage
+                override fun collectTo(dst: MutableList<AccessGraph>) {
+                    agStorage.allGraphsTo(dst)
                 }
             }
         }

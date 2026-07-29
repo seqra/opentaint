@@ -10,35 +10,33 @@ class MethodEdgesFinalAutomataApSet(
     methodInitialStatement: CommonInst,
     private val maxInstIdx: Int,
     private val languageManager: LanguageManager
-) : CommonZ2FSet<AutomataFinalAccess>(methodInitialStatement), AutomataFinalApAccess {
-    override fun createApStorage(): ApStorage<AutomataFinalAccess> = InstructionFactSet(maxInstIdx, languageManager)
+) : CommonZ2FSet<AccessGraph>(methodInitialStatement), AutomataFinalApAccess {
+    override fun createApStorage(): ApStorage<AccessGraph> = InstructionFactSet(maxInstIdx, languageManager)
 
     private class InstructionFactSet(
         maxInstIdx: Int,
         private val languageManager: LanguageManager,
-    ): ApStorage<AutomataFinalAccess> {
-        private val finalFacts =
-            arrayOfNulls<AutomataFinalAccess>(instructionStorageSize(maxInstIdx))
+    ): ApStorage<AccessGraph> {
+        private val finalFacts = AccessGraphSetArray.create(instructionStorageSize(maxInstIdx))
 
-        override fun addEdge(statement: CommonInst, accessPath: AutomataFinalAccess): AutomataFinalAccess? {
+        override fun addEdge(statement: CommonInst, accessPath: AccessGraph): AccessGraph? {
             val factSetIdx = instructionStorageIdx(statement, languageManager)
-            val current = finalFacts[factSetIdx]
-            if (current == null) {
-                finalFacts[factSetIdx] = accessPath
-                return accessPath
+            var factSet = finalFacts[factSetIdx]
+
+            if (factSet == null) {
+                factSet = AccessGraphSet.create()
             }
 
-            val merged = current.mergeAdd(accessPath)
-            if (merged === current) return null
-            finalFacts[factSetIdx] = merged
-            return merged
+            val modifiedSet = factSet.add(accessPath) ?: return null
+            finalFacts[factSetIdx] = modifiedSet
+            return accessPath
         }
 
-        override fun collectApAtStatement(statement: CommonInst, dst: MutableList<AutomataFinalAccess>) {
-            finalFacts[instructionStorageIdx(statement, languageManager)]?.let(dst::add)
+        override fun collectApAtStatement(statement: CommonInst, dst: MutableList<AccessGraph>) {
+            val agSet = finalFacts[instructionStorageIdx(statement, languageManager)] ?: return
+            agSet.toList(dst)
         }
 
-        override fun toString(): String =
-            "${finalFacts.indices.sumOf { finalFacts[it]?.access?.size ?: 0 }}"
+        override fun toString(): String = "${finalFacts.indices.sumOf { finalFacts[it]?.graphSize ?: 0 }}"
     }
 }
