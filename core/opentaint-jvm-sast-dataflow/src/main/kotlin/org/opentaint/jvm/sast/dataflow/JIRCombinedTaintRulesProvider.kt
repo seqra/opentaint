@@ -26,8 +26,8 @@ class JIRCombinedTaintRulesProvider(
         val cleaner: CombinationMode = CombinationMode.EXTEND,
     )
 
-    override fun entryPointRulesForMethod(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.entryPoint, { condition }) { entryPointRulesForMethod(method, fact, allRelevant) }
+    override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+        combine(combinationOptions.entryPoint, { condition }) { entryPointRulesForMethod(method, statement, fact, allRelevant) }
 
     override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
         combine(combinationOptions.source, { condition }) { sourceRulesForMethod(method, statement, fact, allRelevant) }
@@ -51,8 +51,8 @@ class JIRCombinedTaintRulesProvider(
     ): Iterable<TaintMethodExitSink> =
         combine(combinationOptions.sink, { condition }) { sinkRulesForMethodExit(method, statement, fact, initialFacts, allRelevant) }
 
-    override fun sinkRulesForMethodEntry(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) =
-        combine(combinationOptions.sink, { condition }) { sinkRulesForMethodEntry(method, fact, allRelevant) }
+    override fun sinkRulesForMethodEntry(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+        combine(combinationOptions.sink, { condition }) { sinkRulesForMethodEntry(method, statement, fact, allRelevant) }
 
     override fun passTroughRulesForMethod(
         method: CommonMethod,
