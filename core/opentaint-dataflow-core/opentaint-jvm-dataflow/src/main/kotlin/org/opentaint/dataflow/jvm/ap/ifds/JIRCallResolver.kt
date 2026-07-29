@@ -27,6 +27,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRLambdaExpr
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRNewExpr
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.cfg.JIRVirtualCallExpr
@@ -88,16 +89,20 @@ class JIRCallResolver(
     }
 
     fun resolve(call: JIRCallExpr, location: JIRInst, context: JIRMethodAnalysisContext): List<MethodResolutionResult> {
-        val method = call.method.method
+        if (call is JIRLambdaExpr) {
+            // lambda expr is an allocation site. lambda calls resolved as virtual calls
+            return emptyList()
+        }
+
+        // A bootstrap method links an invokedynamic call site; it is not the
+        // method executed when the surrounding program reaches that instruction.
+        val methodCall = call as? JIRMethodCallExpr
+            ?: return listOf(MethodResolutionResult.MethodResolutionFailed)
+        val method = methodCall.method.method
         val methodIgnored = unitResolver.resolve(method) == UnknownUnit
 
         if (methodIgnored && alwaysIgnoreMethod(method)) {
             return listOf(MethodResolutionResult.MethodResolutionFailed)
-        }
-
-        if (call is JIRLambdaExpr) {
-            // lambda expr is an allocation site. lambda calls resolved as virtual calls
-            return emptyList()
         }
 
         if (call !is JIRVirtualCallExpr) {

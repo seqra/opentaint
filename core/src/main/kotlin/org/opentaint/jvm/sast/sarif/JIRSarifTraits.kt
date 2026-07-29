@@ -16,6 +16,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRThis
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.cfg.values
@@ -85,7 +86,7 @@ class JIRSarifTraits(
         printThis(statement) { getReadableInstance(it) }
 
     private inline fun printThis(statement: JIRInst, parseStatement: (JIRInst) -> String?): String =
-        if (statement.callExpr?.callee?.isConstructor == true) {
+        if ((statement.callExpr as? JIRMethodCallExpr)?.callee?.isConstructor == true) {
             "the created object"
         } else {
             parseStatement(statement) ?: "the calling object"
@@ -108,12 +109,12 @@ class JIRSarifTraits(
     }
 
     override fun getCallee(callExpr: CommonCallExpr): JIRMethod {
-        check(callExpr is JIRCallExpr)
+        check(callExpr is JIRMethodCallExpr) { "Dynamic call sites do not have a callee method" }
         return callExpr.callee
     }
 
     override fun getCalleeClassName(callExpr: CommonCallExpr): String {
-        check(callExpr is JIRCallExpr)
+        check(callExpr is JIRMethodCallExpr) { "Dynamic call sites do not have a callee method" }
         return callExpr.callee.enclosingClass.simpleName
     }
 

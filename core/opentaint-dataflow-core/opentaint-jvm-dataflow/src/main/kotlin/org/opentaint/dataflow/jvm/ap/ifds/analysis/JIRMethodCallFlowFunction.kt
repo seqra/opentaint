@@ -17,7 +17,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevantToMethodCall
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
+import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleaner
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRMethodCallTaintUtil
@@ -29,16 +29,16 @@ import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
 import org.opentaint.ir.api.jvm.JIRMethod
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.util.onSome
 
 class JIRMethodCallFlowFunction(
     private val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,
-    private val callExpr: JIRCallExpr,
+    private val callExpr: JIRMethodCallExpr,
     private val statement: JIRInst,
     private val generateTrace: Boolean,
 ): MethodCallFlowFunction.Default {
@@ -49,7 +49,7 @@ class JIRMethodCallFlowFunction(
     }
 
     val typeResolver by lazy {
-        JIRMethodPositionBaseTypeResolver(callExpr.method.method)
+        JIRMethodCallPositionBaseTypeResolver(callExpr)
     }
 
     override fun propagateZeroToZero() = buildSet {
@@ -223,7 +223,6 @@ class JIRMethodCallFlowFunction(
     ): List<Pair<FinalFactAp, TraceInfo>> {
         val sinkRules = taintCtx.sinkRulesForCallStatement(statement, callExpr, returnValue, factReader?.factAp)
         if (sinkRules.isEmpty()) return emptyList()
-
         val taintUtil = JIRMethodCallTaintUtil(apManager, statement, callExpr, analysisContext, generateTrace)
         taintUtil.applySinkRules(
             sinkRules, factReader, markAfterAnyFieldResolver
@@ -241,7 +240,6 @@ class JIRMethodCallFlowFunction(
     ) {
         val sourceRules = taintCtx.sourceRulesForCallStatement(statement, callExpr, returnValue, factReader?.factAp)
         if (sourceRules.isEmpty()) return
-
         val taintUtil = JIRMethodCallTaintUtil(apManager, statement, callExpr, analysisContext, generateTrace)
         taintUtil.applySourceRules(
             sourceRules, initialFacts, factReader, exclusion,

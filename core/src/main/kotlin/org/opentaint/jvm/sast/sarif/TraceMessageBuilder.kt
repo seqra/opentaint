@@ -30,6 +30,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRGraph
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThis
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
@@ -116,7 +117,7 @@ class TraceMessageBuilder(
     private val markedVararg = hashMapOf<CommonValue, HashSet<TraceEdge>>()
 
     private fun JIRInst.getCallVararg(): CommonValue? {
-        val call = (traits.getCallExpr(this) as JIRCallExpr?) ?: return null
+        val call = traits.getCallExpr(this) as? JIRMethodCallExpr ?: return null
         if (!call.isVararg() || call.args.isEmpty()) return null
         return call.args.last()
     }
@@ -133,7 +134,8 @@ class TraceMessageBuilder(
             return
         }
 
-        val expr = call.callExpr
+        val expr = call.callExpr as? JIRMethodCallExpr
+            ?: return
         // skip `this` as the first argument as it is not used in lambda's call
         val captureStart = if (expr.args.isNotEmpty() && expr.args[0] is JIRThis) 1 else 0
         val lambdaCapture = expr.args.drop(captureStart).map { param ->
@@ -192,7 +194,8 @@ class TraceMessageBuilder(
     }
 
     private fun CommonInst.isLambdaCreation() =
-        this is JIRCallInst && this.callExpr.method.method is JIRLambdaMethod
+        this is JIRCallInst &&
+            (this.callExpr as? JIRMethodCallExpr)?.method?.method is JIRLambdaMethod
 
     private fun TracePathNode.isLambdaCreation() =
         this.statement.isLambdaCreation()

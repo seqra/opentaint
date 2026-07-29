@@ -8,6 +8,7 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
@@ -48,7 +49,8 @@ open class JIRLanguageManager(val cp: JIRClasspath) : LanguageManager {
 
     override fun getCalleeMethod(callExpr: CommonCallExpr): JIRMethod {
         jIRDowncast<JIRCallExpr>(callExpr)
-        return callExpr.method.method
+        return (callExpr as? JIRMethodCallExpr)?.method?.method
+            ?: error("Dynamic call sites do not have a callee method")
     }
 
     override val methodContextSerializer = JIRMethodContextSerializer(cp)

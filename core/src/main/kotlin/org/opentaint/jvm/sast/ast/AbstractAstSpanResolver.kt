@@ -15,6 +15,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRNewExpr
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
@@ -51,7 +52,7 @@ abstract class AbstractAstSpanResolver(protected val traits: JIRSarifTraits) : A
     }
 
     protected fun isConstructorCall(call: JIRCallExpr): Boolean =
-        call.method.method.isConstructor
+        (call as? JIRMethodCallExpr)?.method?.method?.isConstructor == true
 
     protected fun inferAssignKind(assign: JIRAssignInst): InstructionKind {
         val l = assign.lhv
@@ -170,7 +171,7 @@ abstract class AbstractAstSpanResolver(protected val traits: JIRSarifTraits) : A
 
     protected fun JIRInst?.getAssignee(): String? {
         // fix for initializer calls that are assignments in source
-        if (this is JIRCallInst && callExpr.method.method.isConstructor && callExpr is JIRInstanceCallExpr) {
+        if (this is JIRCallInst && isConstructorCall(callExpr) && callExpr is JIRInstanceCallExpr) {
             return getRawValue((callExpr as JIRInstanceCallExpr).instance)
         }
         if (this !is JIRAssignInst) return null

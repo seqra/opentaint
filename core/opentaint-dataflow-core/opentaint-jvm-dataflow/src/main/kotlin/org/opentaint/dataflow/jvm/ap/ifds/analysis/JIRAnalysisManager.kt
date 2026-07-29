@@ -36,6 +36,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
+import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRNonMethodCallPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodStartPrecondition
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
@@ -48,6 +49,7 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
@@ -211,13 +213,11 @@ class JIRAnalysisManager(
         jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
 
         return analysisContext.cachedCallFF(statement.location.index) {
+            val methodCall = callExpr as? JIRMethodCallExpr
+                ?: return@cachedCallFF JIRNonMethodCallFlowFunction(returnValue, callExpr)
+
             JIRMethodCallFlowFunction(
-                apManager,
-                analysisContext,
-                returnValue,
-                callExpr,
-                statement,
-                generateTrace
+                apManager, analysisContext, returnValue, methodCall, statement, generateTrace
             )
         }
     }
@@ -259,13 +259,8 @@ class JIRAnalysisManager(
         jIRDowncast<JIRInst>(statement)
         jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
 
-        return JIRMethodCallPrecondition(
-            apManager,
-            analysisContext,
-            returnValue,
-            callExpr,
-            statement
-        )
+        val methodCall = callExpr as? JIRMethodCallExpr ?: return JIRNonMethodCallPrecondition
+        return JIRMethodCallPrecondition(apManager, analysisContext, returnValue, methodCall, statement)
     }
 
     override fun getEdgePostProcessor(

@@ -37,12 +37,16 @@ import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
+import org.opentaint.ir.api.jvm.cfg.JIRDynamicCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.impl.features.usagesExt
+import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -579,21 +583,28 @@ class AliasSampleTest : BasicTestUtils() {
     }
 
     @Test
-    fun `record invokedynamic bootstrap does not overflow alias arg mapping`() {
+    fun `record invokedynamic is not analyzed as a call to its bootstrap method`() {
         val method = findMethod(RECORD_SAMPLE, "recordHashCodeInlined")
+        val recordHashCode = cp.findClassOrNull("$RECORD_SAMPLE\$Payload")
+            ?.declaredMethods
+            ?.single { it.name == "hashCode" }
+            ?: error("Record hashCode method not found")
+        val dynamicInst = recordHashCode.instList.single { it.callExpr is JIRDynamicCallExpr }
+        val dynamicCall = dynamicInst.callExpr as JIRDynamicCallExpr
 
-        // depth 2: recordHashCodeInlined (level 0) -> Payload.hashCode() (level 1)
-        // -> ObjectMethods.bootstrap (level 2). The record method lowers to an
-        // invokedynamic whose bootstrap declares 6 parameters, while the dynamic
-        // call site supplies 1. Querying an alias runs the full computation, which
-        // inlines that chain. Without the arity guard in resolveCallNoCache the
-        // nested-call arg mapping indexes past call.args and throws
-        // IllegalStateException("Incorrect argument idx"); with it the bootstrap
-        // call is skipped as opaque and the analysis completes.
+        assertEquals("bootstrap", dynamicCall.bootstrapMethod.name)
+        assertEquals(dynamicCall.callSiteReturnType, dynamicCall.type)
+        assertFalse { dynamicCall.type == dynamicCall.bootstrapMethod.returnType }
+
+        val usages = runBlocking { cp.usagesExt() }
+        val graph = JApplicationGraphImpl(cp, usages)
+        assertTrue { graph.callees(dynamicInst).none() }
+
         assertDoesNotThrow {
             val aa = aaForMethodKnowingObjectMethods(method, depth = 2)
             val sink = method.findSinkCall("sinkOneValue")
-            aa.sinkArgApAliases(sink)
+            val aliases = aa.sinkArgApAliases(sink)
+            assertTrue { aliases.any { it.base == Argument(0) } }
         }
     }
 
@@ -617,10 +628,8 @@ class AliasSampleTest : BasicTestUtils() {
         val usages = runBlocking { cp.usagesExt() }
         val graph = JApplicationGraphImpl(cp, usages)
 
-        // Treat both the sample location and java.lang.runtime.ObjectMethods as
-        // known so the record method AND its invokedynamic bootstrap resolve to
-        // inlinable graphs -- reproducing the condition under which the crash
-        // occurred (a production model where the bootstrap method was resolvable).
+        // Make the bootstrap implementation available. The test must still not
+        // enter it: invokedynamic executes its linked call site, not the bootstrap.
         val sampleLoc = method.enclosingClass.declaration.location
         val objectMethodsLoc =
             cp.findClassOrNull("java.lang.runtime.ObjectMethods")?.declaration?.location
@@ -639,7 +648,9 @@ class AliasSampleTest : BasicTestUtils() {
         JIRLocalAliasAnalysis.Params(useAliasAnalysis = true, aliasAnalysisInterProcCallDepth = depth)
 
     private fun JIRMethod.findSinkCall(sinkName: String): JIRCallInst =
-        instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == sinkName }
+        instList.filterIsInstance<JIRCallInst>().first {
+            (it.callExpr as? JIRMethodCallExpr)?.method?.name == sinkName
+        }
 
     private fun JIRLocalAliasAnalysis.valueApAliases(value: JIRValue, stmt: JIRInst): List<AliasApInfo> =
         valueAliases(value, stmt).filterIsInstance<AliasApInfo>()
