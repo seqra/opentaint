@@ -1,15 +1,16 @@
 package org.opentaint.dataflow.python.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
+import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.python.PIRCallAnyArgumentResolver
 import org.opentaint.dataflow.python.PIRCallAtomEvaluator
 import org.opentaint.dataflow.python.PIRCallResolver
@@ -51,33 +52,35 @@ class PIRMethodCallPrecondition(
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
-        val result = mutableListOf<CallPrecondition>()
-
-        result += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: CallPrecondition.Unchanged
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> = buildList {
+        this += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
+            ?: mkUnchanged()
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasBeforeStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let {
-                result += PreconditionFactsForInitialFact(aliasedFact, it)
+                this += PreconditionFactsForInitialFact(aliasedFact, it)
             }
         }
-
-        return result
     }
 
     override fun factPreconditionResolutionFailure(
         fact: InitialFactAp,
         startFactBase: AccessPathBase,
-    ): List<CallFailurePreconditionFact> = buildList {
+    ): List<MethodCallPrecondition.CallFailurePreconditionFact> = buildList {
         if (startFactBase != AccessPathBase.Return) {
-            this += CallPreconditionFact.UnresolvedCallSkip
+            this += MethodCallPrecondition.UnresolvedCallSkip
         }
 
         factPassRulePrecondition(fact, startFactBase).mapTo(this) {
-            CallPreconditionFact.CallToReturnTaintRule(it)
+            MethodCallPrecondition.CallToReturnTaintRule(it)
         }
     }
+
+    override fun factPreconditionResolutionSuccess(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+        ep: MethodEntryPoint
+    ) = listOf(MethodCallPrecondition.CallToStartResolved(fact, startFactBase, ep))
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
         if (!methodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) return null
@@ -103,10 +106,10 @@ class PIRMethodCallPrecondition(
         startBase: AccessPathBase,
     ) {
         factSourceRulePrecondition(fact, startBase).mapTo(this) {
-            CallPreconditionFact.CallToReturnTaintRule(it)
+            MethodCallPrecondition.CallToReturnTaintRule(it)
         }
 
-        this += CallPreconditionFact.CallToStart(fact, startBase)
+        this += MethodCallPrecondition.CallToStart(fact, startBase)
     }
 
     private fun factSourceRulePrecondition(

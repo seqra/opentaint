@@ -1,15 +1,18 @@
 package org.opentaint.dataflow.go.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePreconditionFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
+import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
@@ -53,11 +56,11 @@ class GoMethodCallPrecondition(
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
-        val result = mutableListOf<CallPrecondition>()
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> {
+        val result = mutableListOf<CallPrecondition<CallPreconditionFact>>()
 
         result += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: CallPrecondition.Unchanged
+            ?: mkUnchanged()
 
         analysisContext.aliasAnalysis.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let {
@@ -82,15 +85,23 @@ class GoMethodCallPrecondition(
         val result = mutableListOf<CallFailurePreconditionFact>()
 
         if (startFactBase != AccessPathBase.Return) {
-            result += CallPreconditionFact.UnresolvedCallSkip
+            result += MethodCallPrecondition.UnresolvedCallSkip
         }
 
         factPassRulePrecondition(fact, startFactBase).mapTo(result) {
-            CallPreconditionFact.CallToReturnTaintRule(it)
+            MethodCallPrecondition.CallToReturnTaintRule(it)
         }
 
         return result
     }
+
+    override fun factPreconditionResolutionSuccess(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+        ep: MethodEntryPoint
+    ): List<CallSuccessPreconditionFact> = listOf(
+        MethodCallPrecondition.CallToStartResolved(fact, startFactBase, ep)
+    )
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
         if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) return null
@@ -119,10 +130,10 @@ class GoMethodCallPrecondition(
         startBase: AccessPathBase,
     ) {
         factSourceRulePrecondition(fact, startBase).mapTo(this) {
-            CallPreconditionFact.CallToReturnTaintRule(it)
+            MethodCallPrecondition.CallToReturnTaintRule(it)
         }
 
-        this += CallPreconditionFact.CallToStart(fact, startBase)
+        this += MethodCallPrecondition.CallToStart(fact, startBase)
     }
 
     private fun factSourceRulePrecondition(

@@ -2,6 +2,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -12,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToRetu
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
@@ -53,7 +55,7 @@ class JIRMethodCallFlowFunction(
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
-    override fun propagateZeroToZero() = buildSet {
+    override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
         val conditionRewriter = JIRMarkAwareConditionRewriter(
             CallPositionToJIRValueResolver(callExpr, returnValue),
             analysisContext, statement
@@ -352,6 +354,16 @@ class JIRMethodCallFlowFunction(
             addSideEffectRequirement(factReader)
         }
     }
+
+    override fun propagateSuccessCallFact(
+        factAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+        ep: MethodEntryPoint,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
+        addCallToStart: (callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+    ) = addCallToStart(factAp, startFactBase, null)
 
     private fun unresolvedCallDefaultFactPropagation(
         factAp: FinalFactAp,

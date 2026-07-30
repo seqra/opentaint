@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -31,6 +32,7 @@ import org.opentaint.dataflow.python.pIRDowncast
 import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext
 import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
 import org.opentaint.dataflow.python.trace.PIRMethodCallPrecondition
+import org.opentaint.dataflow.python.trace.PIRMethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.python.trace.PIRMethodSequentPrecondition
 import org.opentaint.dataflow.python.trace.PIRMethodStartPrecondition
 import org.opentaint.ir.api.common.CommonMethod
@@ -145,7 +147,7 @@ class PIRAnalysisManager(
         val ctx = analysisContext as PIRMethodAnalysisContext
         val pirCall = statement as PIRCall
         return PIRMethodCallFlowFunction(
-            pirCall, ctx.method, ctx, apManager, returnValue, pirCallResolver
+            pirCall, ctx.method, ctx, apManager, pirCallResolver
         )
     }
 
@@ -172,6 +174,12 @@ class PIRAnalysisManager(
             statement as PIRCall, ctx, pirCallResolver, apManager, factTypeChecker
         )
     }
+
+    override fun getMethodCallSummaryPreconditionHandler(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        statement: CommonInst
+    ): MethodCallSummaryPreconditionHandler = PIRMethodCallSummaryPreconditionHandler
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,
