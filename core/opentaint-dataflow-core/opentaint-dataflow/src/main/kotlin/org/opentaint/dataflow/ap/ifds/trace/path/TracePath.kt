@@ -270,6 +270,12 @@ private fun TaintAnalysisUnitRunnerManager.resolveEntry(
     params: TracePathResolveParams,
     depth: Int,
 ): ResolvedInterProceduralTraceEntry? {
+    if (params.sourceToSinkInnerTraceResolutionLimit != null) {
+        if (depth > params.sourceToSinkInnerTraceResolutionLimit) {
+            return ResolvedInterProceduralTraceEntry.Simple(entry)
+        }
+    }
+
     if (entry !is TraceEntry.Action) {
         return ResolvedInterProceduralTraceEntry.Simple(entry)
     }
