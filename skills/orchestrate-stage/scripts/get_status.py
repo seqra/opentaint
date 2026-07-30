@@ -22,19 +22,21 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import (APPROX, DATAFLOW, FINDINGS_TR, JOINS_TR, MODEL,
-                     PASS_THROUGH, ROOT, RULES, RULES_TR, SARIF, SINKS_TR,
-                     SOURCES_TR, TRACKING, build_done_keys, classified_keys,
-                     dropped_entries, git_head, load_yaml, member_key,
-                     modeled_entries, skipped_keys)
+from _common import (APPROX, BOUNDARIES_TR, DATAFLOW, FINDINGS_TR, JOINS_TR, MODEL,
+                     PASS_THROUGH, REFERENCE_TR, ROOT, RULES, RULES_TR, SARIF, SINKS_TR,
+                     SOURCES_TR, TRACKING, build_done_keys, classified_keys, dropped_entries,
+                     git_head, load_yaml, member_key, modeled_entries, skipped_keys,
+                     strip_quotes)
 
 STATE = load_yaml(TRACKING / "state.yaml", {}) or {}
+MODE = STATE.get("mode") or "discovery"
 SCAN_LEVEL = STATE.get("scan_level")
 TRIAGE_LEVEL = STATE.get("triage_level")
 
 DISCOVER_PLANS = RULES_TR / "plans"
 APPROX_PLANS = APPROX / "plans"
 VULN = ROOT / "vulnerabilities.md"
+ENACTMENT = ROOT / "enactment.md"
 GLOBAL_CAP = 10
 
 
@@ -46,6 +48,12 @@ def short(c):
 
 def load_units(d):
     return [(p.stem, load_yaml(p, {}) or {}) for p in sorted(Path(d).glob("*.yaml"))] \
+        if Path(d).is_dir() else []
+
+
+def load_docs(d):
+    """(path, doc) for every tracking file in a directory — reference, boundary, control."""
+    return [(p, load_yaml(p, {}) or {}) for p in sorted(Path(d).glob("*.yaml"))] \
         if Path(d).is_dir() else []
 
 
@@ -280,7 +288,76 @@ def ph_poc():
     return True, [], None
 
 
-PHASES = [
+# ---- enactment-mode phases ----
+
+def ph_reference_set():
+    docs = load_docs(REFERENCE_TR)
+    if not docs:
+        src = STATE.get("findings") or "state.yaml findings unset"
+        return False, [f"normalize the supplied findings ({src}) into "
+                       ".opentaint/tracking/reference/<finding-id>.yaml"], None
+    missing = sorted(p.stem for p, d in docs if not strip_quotes(d.get("family", "")))
+    if missing:
+        return False, ["reference findings not assigned to a boundary family:"] \
+            + [f"  {m}" for m in missing], None
+    return True, [], None
+
+
+def families():
+    return sorted({strip_quotes(d.get("family", "")) for _, d in load_docs(REFERENCE_TR)
+                   if strip_quotes(d.get("family", ""))})
+
+
+def ph_boundaries():
+    specs = {p.stem: d for p, d in load_docs(BOUNDARIES_TR)}
+    fams = families()
+    missing = [f for f in fams if f not in specs]
+    if missing:
+        return False, ["dispatch discover-universal-boundaries, one per family:"] \
+            + [f"  {f}" for f in missing], None
+    # a split renames the family on its reference findings, so every spec here owns its findings
+    unsaturated = [f for f in fams
+                   if str((specs[f].get("saturation") or {}).get("status", "")).strip()
+                   != "saturated"]
+    if unsaturated:
+        return False, ["boundary specs not saturated:"] + [f"  {f}" for f in unsaturated], None
+    unfactored = sorted(p.stem for p, d in load_docs(REFERENCE_TR)
+                        if p.stem not in (specs.get(strip_quotes(d.get("family", "")), {})
+                                          .get("factorization") or {}))
+    if unfactored:
+        return False, ["reference findings with no factorization in their spec:"] \
+            + [f"  {r}" for r in unfactored], None
+    unseeded = [f for f in fams if (specs[f].get("stages") or {}).get("units_seeded") != "done"]
+    if unseeded:
+        return False, ["seed the source and sink units from these specs' candidate_patterns:"] \
+            + [f"  {f}" for f in unseeded], None
+    return True, [], None
+
+
+def ph_crossref():
+    if not SARIF.is_file():
+        return False, ["dispatch run-scan"], None
+    docs = load_docs(REFERENCE_TR)
+    scanned = SARIF.stat().st_mtime
+    pend = [p for p, d in docs
+            if str(d.get("crossref", "pending")).strip() != "done" or p.stat().st_mtime < scanned]
+    if pend:
+        return False, [f"cross-reference the scan against {len(pend)} reference finding(s):"] \
+            + [f"  {p}" for p in pend], None
+    blocked = sorted({str(m) for _, d in docs for m in (d.get("blocked_at") or [])})
+    if blocked:
+        return False, ["expected traces stop at unmodeled carriers:"] + [f"  {m}" for m in blocked] \
+            + ["model them in an approximation round, rescan, then cross-reference again"], None
+    rep = sum(1 for _, d in docs if str(d.get("status", "")).strip() == "reproduced")
+    stale = newest_mtime([p for p, _ in docs]) > (ENACTMENT.stat().st_mtime
+                                                  if ENACTMENT.is_file() else 0)
+    if not ENACTMENT.is_file() or stale:
+        return False, [f"rewrite .opentaint/enactment.md coverage manifest "
+                       f"({rep}/{len(docs)} reproduced)"], None
+    return True, [], None
+
+
+DISCOVERY_PHASES = [
     ("build", ph_build, lambda: True),
     ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
     ("source_rules", ph_source_rules, lambda: SCAN_LEVEL == "deep"),
@@ -290,6 +367,25 @@ PHASES = [
     ("triage", ph_triage, lambda: True),
     ("poc", ph_poc, lambda: TRIAGE_LEVEL == "dynamic"),
 ]
+
+# enactment reproduces a supplied finding set: the reference set and its saturated boundaries
+# replace dependency discovery, and both rule sides are authored before the first scan so that
+# scan is rule-first. The cross-reference closes the run — it judges what the finished rule set,
+# its approximations, its verdicts and its controls actually reproduced.
+ENACTMENT_PHASES = [
+    ("build", ph_build, lambda: True),
+    ("reference_set", ph_reference_set, lambda: True),
+    ("boundaries", ph_boundaries, lambda: True),
+    ("source_rules", ph_source_rules, lambda: True),
+    ("sink_rules", ph_sink_rules, lambda: True),
+    ("scan", ph_scan, lambda: True),
+    ("approximations", ph_approximations, lambda: True),
+    ("triage", ph_triage, lambda: True),
+    ("poc", ph_poc, lambda: TRIAGE_LEVEL == "dynamic"),
+    ("crossref", ph_crossref, lambda: True),
+]
+
+PHASES = ENACTMENT_PHASES if MODE == "enactment" else DISCOVERY_PHASES
 
 
 # ---- caps ----
@@ -329,8 +425,11 @@ def evaluate():
 
 def cmd_full():
     commit = short(STATE.get("model_commit")) or "none"
-    print(f"scan={SCAN_LEVEL}  triage={TRIAGE_LEVEL}  language={STATE.get('language')}  "
-          f"commit={commit}  cap={GLOBAL_CAP} (heavy {heavy_cap()})")
+    print(f"mode={MODE}  scan={SCAN_LEVEL}  triage={TRIAGE_LEVEL}  "
+          f"language={STATE.get('language')}  commit={commit}  "
+          f"cap={GLOBAL_CAP} (heavy {heavy_cap()})")
+    if MODE == "enactment":
+        print(f"findings={STATE.get('findings')}")
     rows, current = evaluate()
     # a phase downstream of the current stage that vacuously satisfies its own check is not
     # actually done — its producing stage hasn't run — so it reads PENDING, never DONE.

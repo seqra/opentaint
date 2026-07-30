@@ -34,7 +34,7 @@ Read the project's build files to fix the target language — Maven/Gradle → j
 
 ### 4. Choose the workflow
 
-Ask the user for both levels together:
+Ask the user for both knobs together:
 
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan (expected, when there are already existing artifacts)
@@ -53,7 +53,7 @@ Seed the run state and the working tree with the chosen levels and language:
 uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree. If the user wants a supplied finding set reproduced rather than the project searched for vulnerabilities, that is the enactment pipeline — stop here and load `enactment-agent` instead.
 
 ## Workflow
 
@@ -132,6 +132,7 @@ The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` deriv
 `state.yaml` shape:
 
 ```yaml
+mode: discovery
 scan_level: deep
 triage_level: dynamic
 language: java

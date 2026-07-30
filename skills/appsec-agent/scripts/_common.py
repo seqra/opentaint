@@ -6,6 +6,7 @@ which carry the pyyaml dependency. Every path resolves under the fixed
 scripts from the project root.
 """
 import glob
+import re
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,8 @@ SOURCES_TR = RULES_TR / "sources"
 SINKS_TR = RULES_TR / "sinks"
 JOINS_TR = RULES_TR / "joins"
 FINDINGS_TR = TRACKING / "findings"
+REFERENCE_TR = TRACKING / "reference"      # enactment mode: the supplied findings, normalized
+BOUNDARIES_TR = TRACKING / "boundaries"    # enactment mode: per-family boundary specs
 RESULTS = ROOT / "results"
 DROPPED = RESULTS / "dropped-external-methods.yaml"
 SARIF = RESULTS / "report.sarif"
@@ -174,6 +177,12 @@ def build_done_keys():
             if str(item).strip():
                 keys.add(member_key(item))
     return keys
+
+
+# ---- finding files ----
+
+RULE_RE = re.compile(r'^rule_id:\s*(.+?)\s*$', re.M)
+VERDICT_RE = re.compile(r'^verdict:\s*(.+?)\s*$', re.M)
 
 
 def ledger_verdicted_keys():
