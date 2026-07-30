@@ -117,8 +117,9 @@ def root_of(fqn, depth=ROOT_DEPTH):
 
 
 def in_packages(cls, prefixes):
-    # dotted-boundary match: `a.b.collect` never matches a sibling `a.b.collectX`
-    return any(cls == p or cls.startswith(p + ".") for p in prefixes)
+    # dotted-boundary match: `a.b.collect` never matches a sibling `a.b.collectX`. `/` is a
+    # boundary too, so a Go module prefix also covers its subpackages (`mod/sub.Member`)
+    return any(cls == p or cls.startswith(p + ".") or cls.startswith(p + "/") for p in prefixes)
 
 
 def atomize(fqns, cap):
@@ -282,6 +283,86 @@ CALL_RE = re.compile(r"//\s*(?:Interface)?Method\s+(\S+?)\.(<?\w+>?):(\S+)")
 
 
 def extract_usages():
+    # (fqn, signature) pairs for the members the project's own code calls; the model decides
+    # which extractor applies — a Go model has no bytecode to disassemble
+    doc = load_yaml(MODEL / "project.yaml", {}) or {}
+    if doc.get("goProjects") and not doc.get("javaProjects"):
+        return extract_usages_go(doc)
+    return extract_usages_java()
+
+
+GO_IMPORT_RE = re.compile(r'^\s*(?:import\s+)?([\w.]+)?\s*"([^"]+)"')
+
+
+def go_module_dirs(doc):
+    dirs = []
+    for entry in doc.get("goProjects") or []:
+        d = Path(str((entry or {}).get("projectDir") or ""))
+        if not str(d):
+            continue
+        dirs.append(d if d.is_absolute() and d.is_dir() else MODEL / d)
+    return [d for d in dirs if d.is_dir()] or [MODEL]
+
+
+def go_package_name(mod_dir, import_path, cache):
+    # the local identifier an import binds when the file does not alias it: the package's own
+    # name, which need not be the last path segment (and is never a `vN` version suffix)
+    if import_path in cache:
+        return cache[import_path]
+    name = ""
+    try:
+        out = subprocess.run(["go", "list", "-f", "{{.Name}}", import_path], cwd=str(mod_dir),
+                             capture_output=True, text=True)
+        name = out.stdout.strip()
+    except OSError:
+        pass
+    if not name:
+        segs = import_path.split("/")
+        name = segs[-2] if len(segs) > 1 and re.fullmatch(r"v\d+", segs[-1]) else segs[-1]
+    cache[import_path] = name
+    return name
+
+
+def extract_usages_go(doc):
+    # scan the project's own .go files for package-qualified selectors on a pending module and
+    # return them as `<import-path>.<Member>`; Go has no descriptor, so the signature is empty.
+    # Structurally blind to method calls on receiver values, interface dispatch, and reflection —
+    # the discover agent adds those from the source (per its language reference).
+    packages = pending_packages()
+    fqns, cache = set(), {}
+    for mod_dir in go_module_dirs(doc):
+        for f in mod_dir.rglob("*.go"):
+            try:
+                text = f.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            imports, block = [], False
+            for line in text.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("import ("):
+                    block = True
+                    continue
+                if block and stripped.startswith(")"):
+                    block = False
+                    continue
+                if not block and not stripped.startswith("import"):
+                    continue
+                m = GO_IMPORT_RE.match(line)
+                if not m:
+                    continue
+                alias, path = m.group(1), m.group(2)
+                if not in_packages(path, packages):
+                    continue
+                if alias in (".", "_"):
+                    continue
+                imports.append((path, alias or go_package_name(mod_dir, path, cache)))
+            for path, ident in imports:
+                for member in re.findall(rf"\b{re.escape(ident)}\.([A-Z]\w*)", text):
+                    fqns.add((f"{path}.{member}", ""))
+    return fqns
+
+
+def extract_usages_java():
     # disassemble project classes, collect // Method / // InterfaceMethod call sites with their
     # JVM descriptor; returns (fqn, signature) pairs so an overloaded member stays disambiguated
     fqns = set()
