@@ -13,30 +13,29 @@ After installing, run `opentaint health` to confirm everything's resolved.
 
 This workflow requires two subagent levels: MAIN → stage orchestrator → leaf. Confirm the harness permits depth 2 before starting; otherwise ask the user to enable it.
 
-### 3. Locate the findings
-
-The supplied findings are this run's input and the only thing it is measured against. Ask the user for their path when it isn't already given — a manifest, SARIF, scanner report, or a directory of finding documents. If the user has only described the findings in conversation, write them to a file first and use that; the pipeline resumes from disk, not from this thread.
-
-### 4. Determine the language
+### 3. Determine the language
 
 Read the project's build files to fix the target language — Maven/Gradle → java, `go.mod` → go, and so on. Record it at bootstrap; stage orchestrators pass it to language-coupled leaves.
 
-### 5. Choose the workflow
+### 4. Choose the workflow
 
-Ask the user for the triage level:
+Ask the user for both knobs together:
 
-1. Triage level — `static` · `dynamic`
+1. Scan level — `lite` · `normal` · `deep`
+   - lite — build + scan (expected, when there are already existing artifacts)
+   - normal — build + scan + custom approximations
+   - deep — build + scan + custom approximations + custom rules
+   - recommend by what's on disk: a cold start (no `.opentaint` artifacts) → deep; a prior run's artifacts already present → lite
+2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
    - dynamic — static + PoC per confirmed TP. This launches a few test services on the user's machine (local instances and ports), torn down at the end of the run. Make that clear in the option
 
-There is no scan-level question here: reproducing a finding set always needs the full rule and approximation toolbox, so enactment is always deep.
+### 5. Bootstrap
 
-### 6. Bootstrap
-
-Seed the run state and the working tree:
+Seed the run state and the working tree with the chosen levels and language:
 
 ```bash
-uv run <skill-dir>/scripts/generate.py init --mode enactment --triage-level <static|dynamic> --language <lang> --findings <path>
+uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`. It refuses to convert an existing assessment run — that tracking has no reference set behind it, so enactment starts in its own project tree.
+It writes `state.yaml` with `mode: assessment`, seeds `history.yaml`, and creates the `.opentaint/` tree.

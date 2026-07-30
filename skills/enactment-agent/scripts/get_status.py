@@ -29,7 +29,7 @@ from _common import (APPROX, BOUNDARIES_TR, DATAFLOW, FINDINGS_TR, JOINS_TR, MOD
                      strip_quotes)
 
 STATE = load_yaml(TRACKING / "state.yaml", {}) or {}
-MODE = STATE.get("mode") or "discovery"
+MODE = STATE.get("mode") or "assessment"
 SCAN_LEVEL = STATE.get("scan_level")
 TRIAGE_LEVEL = STATE.get("triage_level")
 
@@ -357,7 +357,7 @@ def ph_crossref():
     return True, [], None
 
 
-DISCOVERY_PHASES = [
+ASSESSMENT_PHASES = [
     ("build", ph_build, lambda: True),
     ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
     ("source_rules", ph_source_rules, lambda: SCAN_LEVEL == "deep"),
@@ -385,7 +385,7 @@ ENACTMENT_PHASES = [
     ("crossref", ph_crossref, lambda: True),
 ]
 
-PHASES = ENACTMENT_PHASES if MODE == "enactment" else DISCOVERY_PHASES
+PHASES = ENACTMENT_PHASES if MODE == "enactment" else ASSESSMENT_PHASES
 
 
 # ---- caps ----

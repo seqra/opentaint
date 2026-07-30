@@ -56,7 +56,7 @@ def cmd_init(args):
     if enactment and not args.findings:
         raise SystemExit("init --mode enactment requires --findings <path to the supplied findings>")
     if not enactment and not args.scan_level:
-        raise SystemExit("init --mode discovery requires --scan-level")
+        raise SystemExit("init --mode assessment requires --scan-level")
     # enactment reproduces a supplied finding set, which always needs the full rule + approximation
     # toolbox — there is no lite/normal variant of it, so the level is fixed rather than asked for.
     scan_level = "deep" if enactment else args.scan_level
@@ -66,8 +66,8 @@ def cmd_init(args):
     state_path = TRACKING / "state.yaml"
     prior = load_yaml(state_path, {}) or {}
     resume = bool(prior)
-    if resume and prior.get("mode", "discovery") != args.mode:
-        raise SystemExit(f"{state_path} is a {prior.get('mode', 'discovery')} run — a mode switch "
+    if resume and prior.get("mode", "assessment") != args.mode:
+        raise SystemExit(f"{state_path} is a {prior.get('mode', 'assessment')} run — a mode switch "
                          "would strand its tracking; start the other mode in a fresh project tree")
     state = {"mode": args.mode, "scan_level": scan_level, "triage_level": args.triage_level,
              "language": args.language or prior.get("language")}
@@ -578,10 +578,10 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     i = sub.add_parser("init", help="bootstrap the .opentaint tree + state.yaml from workflow flags")
-    i.add_argument("--mode", default="discovery", choices=["discovery", "enactment"],
-                   help="discovery: find vulnerabilities. enactment: reproduce supplied findings")
+    i.add_argument("--mode", default="assessment", choices=["assessment", "enactment"],
+                   help="assessment: find vulnerabilities. enactment: reproduce supplied findings")
     i.add_argument("--scan-level", choices=["lite", "normal", "deep"],
-                   help="discovery mode only; enactment is always deep")
+                   help="assessment mode only; enactment is always deep")
     i.add_argument("--triage-level", required=True, choices=["static", "dynamic"])
     i.add_argument("--language", default=None, help="target language, determined by the orchestrator")
     i.add_argument("--findings", default=None,

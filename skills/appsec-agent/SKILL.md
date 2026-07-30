@@ -1,6 +1,6 @@
 ---
 name: appsec-agent
-description: Run an end-to-end OpenTaint application-security analysis while owning the long project build and scans and delegating each other pipeline stage. Use when the user asks to find vulnerabilities, or scan an application for security issues
+description: Entry point for OpenTaint application-security work — confirms the toolchain, picks the pipeline the request needs, and hands off to it. Use when the user asks to find vulnerabilities, scan an application for security issues, reproduce or validate a supplied finding set, or continue an OpenTaint run
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,9 +9,14 @@ metadata:
 
 # AppSec Agent
 
-Orchestrate an end-to-end OpenTaint security analysis. Keep the long project build and every full-project scan in this main session; delegate each bounded source, approximation, sink, triage, and PoC stage to an `orchestrate-stage` subagent, which owns its leaf fan-out and joins.
+The entry point for OpenTaint application-security work. Confirm the environment, decide which of the two pipelines the request needs, and hand off to it in this same session.
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. The run produces confirmed vulnerabilities plus reusable project-specific rules and approximations under one self-contained `.opentaint/` directory at the project root.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. Both pipelines run the same machine — MAIN owns the long build and every full-project scan, `orchestrate-stage` subagents own the bounded stages, and all durable state lives under one self-contained `.opentaint/` directory at the project root. They differ only in where the source and sink rules come from:
+
+- **assessment** (`assessment-agent`) — find vulnerabilities the project was not known to have. Source and sink rules come from discovering the project's dependency attack surface
+- **enactment** (`enactment-agent`) — reproduce a finding set the user supplies, as verified rules. Source and sink rules come from generalizing those findings into reusable boundaries
+
+This skill does no analysis of its own and writes nothing except by handing off. Don't bootstrap the tree here — each pipeline's own setup does that, and it is what commits the tree to a mode.
 
 ## Setup
 
@@ -26,123 +31,44 @@ After installing, run `opentaint health` to confirm everything's resolved.
 
 ### 2. Confirm agent nesting
 
-This workflow requires two subagent levels: MAIN → stage orchestrator → leaf. Confirm the harness permits depth 2 before starting; otherwise ask the user to enable it.
+Both pipelines require two subagent levels: MAIN → stage orchestrator → leaf. Confirm the harness permits depth 2 before starting; otherwise ask the user to enable it.
 
-### 3. Determine the language
+These two checks are the only setup steps the pipeline you hand off to may skip.
 
-Read the project's build files to fix the target language — Maven/Gradle → java, `go.mod` → go, and so on. Record it at bootstrap; stage orchestrators pass it to language-coupled leaves.
+## Choose the pipeline
 
-### 4. Choose the workflow
+### An in-flight run decides for you
 
-Ask the user for both knobs together:
-
-1. Scan level — `lite` · `normal` · `deep`
-   - lite — build + scan (expected, when there are already existing artifacts)
-   - normal — build + scan + custom approximations
-   - deep — build + scan + custom approximations + custom rules
-   - recommend by what's on disk: a cold start (no `.opentaint` artifacts) → deep; a prior run's artifacts already present → lite
-2. Triage level — `static` · `dynamic`
-   - static — classify findings from the model, no running app
-   - dynamic — static + PoC per confirmed TP. This launches a few test services on the user's machine (local instances and ports), torn down at the end of the run. Make that clear in the option
-
-### 5. Bootstrap
-
-Seed the run state and the working tree with the chosen levels and language:
+If `.opentaint/tracking/state.yaml` already exists, the tree is already committed to a mode and the choice is made — resume that pipeline. Read the mode from status rather than by hand:
 
 ```bash
-uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
+uv run <skill-dir>/scripts/get_status.py --full
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree. If the user wants a supplied finding set reproduced rather than the project searched for vulnerabilities, that is the enactment pipeline — stop here and load `enactment-agent` instead.
+Its header prints `mode=`, the run's levels, and the current phase. `mode=assessment` → `assessment-agent`; `mode=enactment` → `enactment-agent`. Tell the user what's in flight and where it stands before continuing.
 
-## Workflow
+A mode is not switchable: the bootstrap refuses it, because each pipeline's tracking is meaningless to the other — an assessment tree has no reference set behind it, and an enactment tree's rules were never derived from a dependency sweep. If the user genuinely wants the other pipeline over the same project, that is a fresh `.opentaint/` tree, and say so plainly rather than starting one silently.
 
-The run is one fixed pipeline; the selected levels determine which phases are in scope. Use `uv run <skill-dir>/scripts/get_status.py` to choose the next action:
+### A fresh run
 
-```
-build                       → MAIN: build
-discover / source_rules     → stage subagent: sources
-scan                        → MAIN: scan
-approximations              → stage subagent: approx-round, then MAIN: rescan; repeat
-sink_rules                  → stage subagent: sinks, then MAIN: rescan
-triage                      → stage subagent: triage
-poc                         → stage subagent: poc
-```
+Decide from what the user brought, then confirm it with them before handing off:
 
-### Build in MAIN
+- **enactment** — they supplied findings, a scanner report, penetration-test results, or source-to-sink traces, and want them reproduced, validated, converted into reusable rules, or cross-checked against OpenTaint. "Does OpenTaint catch these?", "reproduce this report", "turn these findings into rules"
+- **assessment** — everything else: no finding set, the goal is what the project is vulnerable to. "Find vulnerabilities", "scan this app", "is this endpoint exploitable?"
 
-When status reports `build`, load and follow the `build-project` skill in this main session. Run its long build command through the harness's main-session background-command facility and wait for its completion event.
+The signal is whether a finding set exists to be measured against, not the vocabulary. A user who says "audit this against last year's pentest" and has the pentest is enactment; a user who says "reproduce the bug I think is in here" and has only a hunch is assessment.
 
-Record the returned `build_jdk` in `.opentaint/tracking/state.yaml`. Record `model_commit` as the full HEAD only when no source file is uncommitted, otherwise set it to null. Build non-convergence blocks the run because no later phase can proceed without the model.
+When it's genuinely ambiguous — a report exists but the user wants new findings too — ask. Don't fold both into one run: pick the pipeline they care about now, and note that the other is a separate run over its own tree.
 
-### Scan in MAIN
+## Hand off
 
-When status reports `scan`, or a stage returns with a rescan pending, load and follow the `run-scan` skill in this main session. Start the scan with the harness's main-session background-command facility, keep the engine's self-timeout, add a 1200-second outer backstop, and wait for the process completion event.
-
-A valid `.opentaint/results/report.sarif` means the scan completed, including exit 254 after an engine timeout. Record `max_memory: 16G` when the scan had to bump memory and reuse it on later scans. If no SARIF exists after the allowed retry/backstop, follow the repair path below for a malformed rule/approximation; otherwise dispatch `orchestrate-stage` with `stage: escalation` and the scan `setup` to write the scan-wide resource issue, then stop.
-
-When a scan or later stage reports a malformed approximation, unloadable created rule, ineffective join, or a created rule's false positive/negative, route the exact diagnosis and artifact path/id to the responsible stage agent per Dispatching, then scan again in MAIN.
-
-After every build, scan, or stage return, run `uv run <skill-dir>/scripts/get_status.py` once to choose the next action. Use `--full` at run start, on resume, or when the brief output does not settle the question.
-
-## Dispatching
-
-Dispatch exactly one stage-orchestrator subagent for each stage invocation:
+Load the chosen skill in this same session and follow it from its setup:
 
 ```
-Invoke the Skill orchestrate-stage first, then follow its instructions precisely
-Inputs:
-  stage: <sources|approx-round|sinks|triage|poc|escalation>
+assessment → assessment-agent
+enactment  → enactment-agent
 ```
 
-For a `deep` approximation round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
+Not a subagent. MAIN must own the long build and every full-project scan, so the pipeline continues as this session, with the choice above already settled and the toolchain and nesting checks already done. It runs the rest of its own setup — language, levels, bootstrap — and everything after that is its document, not this one.
 
-Stage context:
-
-- `sources` — discover dependency sources, author their rules, and wire the joins
-- `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
-- `sinks` — author classified sink rules and wire the joins
-- `triage` — classify the latest findings and refresh the vulnerability report
-- `poc` — reproduce confirmed findings and add the outcomes to the report
-- `escalation` — repair or settle a stage artifact, or report a scan-wide no-SARIF failure
-
-Keep each agent id until the next scan validates its artifacts. On a stage-owned error, resume that agent with `stage: escalation`, the exact error, and the artifact path/id. If its thread is unavailable, start a re-entrant `orchestrate-stage` agent with that diagnosis.
-
-Dispatch each subagent fresh, don't fork context into it. Then wait for it natively, don't monitor or poll every minute. If the harness forces a wait timeout, set it to ~1h and re-wait when it returns.
-
-## State and resumption
-
-Use this ownership map to route work and scan errors:
-
-```
-.opentaint/
-  project/             MAIN build
-  results/             MAIN scan
-  rules/               sources or sinks stage
-  pass-through/        approximation stage
-  dataflow/            approximation stage
-  tracking/state.yaml  MAIN run knobs
-  tracking/            stage agents, leaves, and join scripts otherwise
-  vulnerabilities.md   triage / PoC stage
-  issues/               escalation stage
-```
-
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
-
-`state.yaml` shape:
-
-```yaml
-mode: discovery
-scan_level: deep
-triage_level: dynamic
-language: java
-model_commit: 0123456789abcdef0123456789abcdef01234567
-build_jdk: null
-max_memory: null
-```
-
-## Key constraints
-
-- read pipeline state through `<skill-dir>/scripts/get_status.py`, not by hand — don't re-derive it with glob/grep/`python3 -c`/yaml scans over `.opentaint/tracking`, `results`, or the `*.yaml`, nor open finding/unit/SARIF files just to review progress. If its output doesn't settle the question, re-run it with `--full` before opening any file
-- don't author or edit stage-owned artifacts or tracking; MAIN writes only `model_commit`, `build_jdk`, and `max_memory` in `state.yaml`
-- keep one generated project model for the run; never hand-edit or replace it mid-analysis — fix the build and rebuild before starting a new run
+Tell the user which pipeline you picked and why, in one line, before you hand off.

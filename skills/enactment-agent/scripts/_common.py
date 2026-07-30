@@ -1,4 +1,4 @@
-"""Shared helpers for the appsec-agent orchestrator scripts.
+"""Shared helpers for the OpenTaint pipeline orchestrator scripts.
 
 Not a runnable script — imported by the PEP723 entry points (get_status.py, generate.py),
 which carry the pyyaml dependency. Every path resolves under the fixed
