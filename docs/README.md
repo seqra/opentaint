@@ -16,6 +16,7 @@
 
 - [Installation Guide](installation.md) - Full installation instructions
 - [Usage Guide](usage.md) - Comprehensive usage reference
+- [Baselines & Suppressions](baselines-and-suppressions.md) - Baseline comparison, triage, and CI gating
 - [Configuration Guide](configuration.md) - All configuration options
 - [Docker](docker.md) - Run OpenTaint in containers and CI/CD pipelines
 - [Precompiled Classes and JARs Analysis](classes-and-jars-analysis.md) - Analyze pre-built artifacts when source compilation isn't available
@@ -168,6 +169,7 @@ For detailed configuration, see [Configuration Guide](configuration.md).
 
 - **GitHub Actions:** [seqra/opentaint/github](https://github.com/seqra/opentaint/tree/main/github)
 - **GitLab CI:** [seqra/opentaint/gitlab](https://github.com/seqra/opentaint/tree/main/gitlab)
+- **Baseline gating** (fail only on *new* findings), triage, and copy-paste PR workflows: [Baselines & Suppressions](baselines-and-suppressions.md)
 
 ---
 

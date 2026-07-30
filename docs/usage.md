@@ -278,47 +278,31 @@ Exit codes:
 
 ## Baselines and suppressions
 
-A baseline is just a SARIF report you kept. Two independent things are built on
-it, both expressed in SARIF 2.1.0's own vocabulary.
-
-**Baseline comparison** answers "is this new?". `--baseline old.sarif`
-classifies every finding as new, unchanged, updated (same source and sink, a
-different path through the code), or fixed. By default this only affects what is
-printed; `--write-baseline-state` also persists `result.baselineState` and
-`run.baselineGuid` into the report. (Not to be confused with `summary
---baseline-state <state>`, which *filters* the listing by state.) Findings are matched by fingerprint, not by
-line number, so moving code around does not invent new findings.
-
-**Suppression** answers "did a human accept this?". Presence in a baseline is
-not acceptance — a baseline entry that carries no suppression only makes a
-finding `unchanged`. A finding is suppressed only when someone decided so with
-`opentaint triage`, which writes a SARIF suppression:
-
-| Decision | `suppression.status` | Meaning |
-|----------|----------------------|---------|
-| `--accept` | `accepted` | The team will not fix this |
-| `--defer` | `underReview` | The team is not fixing this for now |
-
-Both hide the finding from the listing and from the failure gate, and both
-require a justification. A deferral does not expire on its own; the summary's
-`Deferred` count is what keeps it visible.
-
-Decisions travel forward through the baseline. A finding matching a baseline
-entry that carries a suppression inherits it verbatim — same status, same
-justification, same guid — so a decision is authored once and re-attached by
-every later scan for as long as the fingerprint matches. When the code is fixed
-and the finding disappears, the decision retires with it.
-
-A typical CI setup keeps the last accepted report and fails only on new work:
+A baseline is just a SARIF report you kept. Two independent axes are built on it:
+`--baseline` answers *"is this new?"* (baseline state), and `opentaint triage`
+answers *"did a human accept this?"* (suppression). Presence in a baseline is
+**not** acceptance — an un-triaged baseline entry only makes a finding
+`unchanged`, it does not hide it.
 
 ```bash
-opentaint scan --baseline baselines/main.sarif -o scan.sarif \
-    --error-on-findings --error-on-severity error,warning .
+# 1. Scan once; keep the report as the baseline.
+opentaint scan -o baselines/main.sarif .
+
+# 2. Record decisions you've reviewed (writes SARIF suppressions).
+opentaint triage baselines/main.sarif --accept q3Vf9k --justification "input is admin-only"
+
+# 3. In CI, gate on new, non-suppressed findings only.
+opentaint scan --baseline baselines/main.sarif --error-on-findings --error-on-severity error,warning .
 ```
 
-Suppressions read from a baseline are interpreted conservatively: an entry whose
-status is `rejected`, or anything unrecognised, never hides a finding, and the
-summary counts it under `Not honored` so nothing disappears quietly.
+Decisions travel forward: a finding that matches a suppressed baseline entry
+inherits the decision verbatim, so it's authored once and re-applied by every
+later scan until the code is fixed and the finding retires. The gate exits `2`
+when it trips — distinct from `1` (tool error) and `252`–`255` (analyzer).
+
+For the full model, the baseline-state and suppression-status reference, finding
+identity, rule selection, and copy-paste GitHub Actions / GitLab recipes, see the
+dedicated guide: **[Baselines, suppressions, and CI gating](baselines-and-suppressions.md)**.
 
 ### opentaint project
 
