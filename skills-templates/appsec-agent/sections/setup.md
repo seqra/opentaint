@@ -9,35 +9,6 @@ After installing, run `opentaint health` to confirm everything's resolved.
 
 ### 2. Confirm agent nesting
 
-This workflow requires two subagent levels: MAIN → stage orchestrator → leaf. Confirm the harness permits depth 2 before starting; otherwise ask the user to enable it.
+Both pipelines require two subagent levels: MAIN → stage orchestrator → leaf. Confirm the harness permits depth 2 before starting; otherwise ask the user to enable it.
 
-### 3. Determine the language
-
-Read the project's build files to fix the target language — Maven/Gradle → java, `go.mod` → go, and so on. Record it at bootstrap; stage orchestrators pass it to language-coupled leaves.
-
-### 4. Choose the workflow
-
-Ask the user for all three knobs together:
-
-1. Scan level — `lite` · `normal` · `deep`
-   - lite — build + scan (expected, when there are already existing artifacts)
-   - normal — build + scan + custom approximations
-   - deep — build + scan + custom approximations + custom rules
-   - recommend by what's on disk: a cold start (no `.opentaint` artifacts) → deep; a prior run's artifacts already present → lite
-2. Triage level — `static` · `dynamic`
-   - static — classify findings from the model, no running app
-   - dynamic — static + PoC per confirmed TP. This launches a few test services on the user's machine (local instances and ports), torn down at the end of the run. Make that clear in the option
-3. Controls — `on` · `off`, the precision pass that lands sanitizers, negative patterns, and context restrictions on the created rules after triage
-   - on (recommended) — false positives triage found get restricted, and the created rules stay reusable for later runs
-   - off — the report keeps every candidate result as triaged, and the created rules stay as first authored. Offer this when the user wants maximum recall or is done after the report
-   - only asked for a `deep` run; lite and normal author no rules to restrict
-
-### 5. Bootstrap
-
-Seed the run state and the working tree with the chosen levels and language:
-
-```bash
-uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --controls <on|off> --language <lang>
-```
-
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree. If the user wants a supplied finding set reproduced rather than the project searched for vulnerabilities, that is the enactment pipeline — stop here and load `enactment-agent` instead.
+These two checks are the only setup steps the pipeline you hand off to may skip.

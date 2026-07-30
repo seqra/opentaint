@@ -1,6 +1,6 @@
 # Controls — sanitizers, negative patterns, restrictions
 
-Land the precision work the run has evidence for, then saturate it: keep landing and re-verifying until a full round changes nothing that matters. Runs after triage and PoC in both modes — those are what turn a suspicion into evidence, so a control never lands on a guess. In enactment mode the cross-reference that follows can hand back a new false-negative target, which brings the run through this stage again.
+Land the precision work the run has evidence for, then saturate it: keep landing and re-verifying until a full round changes nothing that matters. Runs after triage and PoC in either pipeline — those are what turn a suspicion into evidence, so a control never lands on a guess. In enactment mode the cross-reference that follows can hand back a new false-negative target, which brings the run through this stage again.
 
 ## Seed the control units
 

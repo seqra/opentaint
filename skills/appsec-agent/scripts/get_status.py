@@ -30,7 +30,7 @@ from _common import (APPROX, BOUNDARIES_TR, CONTROLS_TR, DATAFLOW, FINDINGS_TR,
                      control_gap, skipped_keys, strip_quotes)
 
 STATE = load_yaml(TRACKING / "state.yaml", {}) or {}
-MODE = STATE.get("mode") or "discovery"
+MODE = STATE.get("mode") or "assessment"
 SCAN_LEVEL = STATE.get("scan_level")
 TRIAGE_LEVEL = STATE.get("triage_level")
 CONTROLS = str(STATE.get("controls") or "on").strip()
@@ -291,7 +291,7 @@ def ph_poc():
 
 
 def ph_controls():
-    # both modes: land the sanitizers / negative patterns / restrictions the run has evidence for,
+    # either pipeline: land the sanitizers / negative patterns / restrictions the run has evidence for,
     # then hold the phase until a rescan proves the round changed nothing that mattered
     gap = control_gap()
     docs = load_docs(CONTROLS_TR)
@@ -396,7 +396,7 @@ def controls_in_scope():
     return SCAN_LEVEL == "deep" and CONTROLS != "off"
 
 
-DISCOVERY_PHASES = [
+ASSESSMENT_PHASES = [
     ("build", ph_build, lambda: True),
     ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
     ("source_rules", ph_source_rules, lambda: SCAN_LEVEL == "deep"),
@@ -426,7 +426,7 @@ ENACTMENT_PHASES = [
     ("crossref", ph_crossref, lambda: True),
 ]
 
-PHASES = ENACTMENT_PHASES if MODE == "enactment" else DISCOVERY_PHASES
+PHASES = ENACTMENT_PHASES if MODE == "enactment" else ASSESSMENT_PHASES
 
 
 # ---- caps ----

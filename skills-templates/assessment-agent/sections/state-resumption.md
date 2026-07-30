@@ -19,7 +19,7 @@ The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` deriv
 `state.yaml` shape:
 
 ```yaml
-mode: discovery
+mode: assessment
 scan_level: deep
 triage_level: dynamic
 controls: on

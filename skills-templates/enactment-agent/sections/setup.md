@@ -1,3 +1,5 @@
+Skip only what `appsec-agent` already did when it handed off — the toolchain and nesting checks. Everything from step 3 on is this pipeline's own, including the bootstrap.
+
 ### 1. Confirm the toolchain
 
 Confirm `opentaint` is on PATH with `opentaint -v`. If it's missing, don't proceed silently — tell the user and offer the install command for their platform, run an install only on explicit confirmation:
@@ -40,4 +42,4 @@ Seed the run state and the working tree:
 uv run <skill-dir>/scripts/generate.py init --mode enactment --triage-level <static|dynamic> --controls <on|off> --language <lang> --findings <path>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`. It refuses to convert an existing discovery run — that tracking has no reference set behind it, so enactment starts in its own project tree.
+It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`. It refuses to convert an existing assessment run — that tracking has no reference set behind it, so enactment starts in its own project tree.

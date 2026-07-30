@@ -1,4 +1,4 @@
-"""Shared helpers for the appsec-agent orchestrator scripts.
+"""Shared helpers for the OpenTaint pipeline orchestrator scripts.
 
 Not a runnable script — imported by the PEP723 entry points (get_status.py, generate.py),
 which carry the pyyaml dependency. Every path resolves under the fixed
@@ -23,7 +23,7 @@ JOINS_TR = RULES_TR / "joins"
 FINDINGS_TR = TRACKING / "findings"
 REFERENCE_TR = TRACKING / "reference"      # enactment mode: the supplied findings, normalized
 BOUNDARIES_TR = TRACKING / "boundaries"    # enactment mode: per-family boundary specs
-CONTROLS_TR = TRACKING / "controls"        # both modes: sanitizer / negative-pattern units
+CONTROLS_TR = TRACKING / "controls"        # either pipeline: sanitizer / negative-pattern units
 RESULTS = ROOT / "results"
 DROPPED = RESULTS / "dropped-external-methods.yaml"
 SARIF = RESULTS / "report.sarif"
