@@ -114,11 +114,16 @@ class SemgrepRuleLoader(
         val disabledRules: Set<String>,
     )
 
-    fun loadRules(severity: List<Severity> = emptyList(), ruleIdFilter: List<String> = emptyList()): RuleLoadResult {
+    fun loadRules(
+        severity: List<Severity> = emptyList(),
+        ruleIdFilter: List<String> = emptyList(),
+        ruleIdExclude: List<String> = emptyList(),
+    ): RuleLoadResult {
         fun Rule<*>.skip(): Boolean =
             info.isDisabled || info.isLibraryRule
                 || !ruleSeverityAllow(this, severity)
                 || !ruleIdAllow(this, ruleIdFilter)
+                || ruleIdExcluded(this, ruleIdExclude)
 
         registeredRules.values.toList()
             .forEach { parseRule(it, forceLibraryMode = false) }
@@ -580,6 +585,9 @@ class SemgrepRuleLoader(
 
     private fun ruleIdAllow(rule: Rule<*>, ruleIdFilter: List<String>): Boolean =
         ruleIdFilter.isEmpty() || rule.info.ruleId in ruleIdFilter
+
+    private fun ruleIdExcluded(rule: Rule<*>, ruleIdExclude: List<String>): Boolean =
+        rule.info.ruleId in ruleIdExclude
 
     private fun Rule<*>.modeModifier(): String? {
         if (!info.primitiveTracking) return null
