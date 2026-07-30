@@ -52,9 +52,9 @@ Move backward from the finding-specific expressions until you reach the earliest
 - environment or runtime configuration entering a security decision; or
 - an explicit structural pseudo-source standing for attacker-selected identity or control state.
 
-Reject a candidate that is merely `$MAP.get(...)` after untrusted data has already entered, a `$METAVAR.method(...)` with no boundary type/signature/annotation/enclosing entrypoint, a ubiquitous getter that would taint trusted objects just as readily, or an internal carrier that ordinary propagation or a later approximation should handle.
+Reject a candidate that is merely a map or collection read after untrusted data has already entered (`$MAP.get(...)`, `$M[$K]`), a `$METAVAR.method(...)` with no boundary type, signature, declarative marker, or enclosing entrypoint, a ubiquitous getter that would taint trusted objects just as readily, or an internal carrier that ordinary propagation or a later approximation should handle.
 
-Express narrow usage conditions separately, as typed patterns, annotations, `pattern-inside`, and `...`. Never bake incidental access syntax into the source.
+Express narrow usage conditions separately, as typed patterns, the language's declarative markers, `pattern-inside`, and `...`. Never bake incidental access syntax into the source. On Go there is no annotation to lean on: a boundary is identified by its receiver type and the package it comes from, so the `import` guard that scopes it is part of the condition rather than a marker on the declaration.
 
 ### 3. Propose the sink
 
@@ -106,11 +106,11 @@ List these separately from the positive boundaries — they are what the control
 - `pattern-inside` contexts that constrain a universal boundary to the intended entrypoint, type, tenant, or vulnerability family; and
 - validators that are *not* security-relevant, recorded explicitly so nothing later mistakes them for sanitizers.
 
-Real sanitization looks like resolved-IP private-range rejection for SSRF, canonical-path containment for traversal, strict identifier ownership checks for IDOR, signature verification for callbacks, and CR/LF neutralization for log injection. Presence, length, parsing, or `@Valid` alone normally sanitizes none of these.
+Real sanitization looks like resolved-IP private-range rejection for SSRF, canonical-path containment for traversal, strict identifier ownership checks for IDOR, signature verification for callbacks, and CR/LF neutralization for log injection. Presence, length, parsing, or a declarative validation marker such as `@Valid` alone normally sanitizes none of these.
 
 ### 6. Write the specification
 
-Write one spec per family or subfamily. `candidate_patterns` must be concrete enough for `create-rule` to test — a fully-qualified method with its signature, or the annotation and type that identify the boundary. Record opaque carriers under `approximation_candidates`, and stop there: no approximation is created or recommended until a rule-first scan proves a trace stops at one.
+Write one spec per family or subfamily. `candidate_patterns` must be concrete enough for `create-rule` to test, in the member shape that language's rule units use — on `java` a fully-qualified method with its JVM descriptor, or the annotation and type that identify the boundary; on `go` `<import-path>.<Member>` or `(*pkg.Type).Method` with `signature` empty, since Go has neither descriptors nor overloads. The pattern shapes those units become live in `create-rule`'s `references/<language>.md`, plus `references/go-semgrep-examples.md` on Go. Record opaque carriers under `approximation_candidates`, and stop there: no approximation is created or recommended until a rule-first scan proves a trace stops at one.
 
 ## Output
 
