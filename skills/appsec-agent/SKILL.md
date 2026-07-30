@@ -34,7 +34,7 @@ Read the project's build files to fix the target language — Maven/Gradle → j
 
 ### 4. Choose the workflow
 
-Ask the user for both levels together:
+Ask the user for all three knobs together:
 
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan (expected, when there are already existing artifacts)
@@ -44,16 +44,20 @@ Ask the user for both levels together:
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
    - dynamic — static + PoC per confirmed TP. This launches a few test services on the user's machine (local instances and ports), torn down at the end of the run. Make that clear in the option
+3. Controls — `on` · `off`, the precision pass that lands sanitizers, negative patterns, and context restrictions on the created rules after triage
+   - on (recommended) — false positives triage found get restricted, and the created rules stay reusable for later runs
+   - off — the report keeps every candidate result as triaged, and the created rules stay as first authored. Offer this when the user wants maximum recall or is done after the report
+   - only asked for a `deep` run; lite and normal author no rules to restrict
 
 ### 5. Bootstrap
 
 Seed the run state and the working tree with the chosen levels and language:
 
 ```bash
-uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
+uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --controls <on|off> --language <lang>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree. If the user wants a supplied finding set reproduced rather than the project searched for vulnerabilities, that is the enactment pipeline — stop here and load `enactment-agent` instead.
 
 ## Workflow
 
@@ -67,6 +71,7 @@ approximations              → stage subagent: approx-round, then MAIN: rescan;
 sink_rules                  → stage subagent: sinks, then MAIN: rescan
 triage                      → stage subagent: triage
 poc                         → stage subagent: poc
+controls                    → stage subagent: controls, then MAIN: rescan; repeat
 ```
 
 ### Build in MAIN
@@ -92,7 +97,7 @@ Dispatch exactly one stage-orchestrator subagent for each stage invocation:
 ```
 Invoke the Skill orchestrate-stage first, then follow its instructions precisely
 Inputs:
-  stage: <sources|approx-round|sinks|triage|poc|escalation>
+  stage: <sources|approx-round|sinks|triage|controls|poc|escalation>
 ```
 
 For a `deep` approximation round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
@@ -103,6 +108,7 @@ Stage context:
 - `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
 - `sinks` — author classified sink rules and wire the joins
 - `triage` — classify the latest findings and refresh the vulnerability report
+- `controls` — land and saturate the sanitizers, negative patterns, and restrictions triage gave evidence for
 - `poc` — reproduce confirmed findings and add the outcomes to the report
 - `escalation` — repair or settle a stage artifact, or report a scan-wide no-SARIF failure
 
@@ -122,6 +128,7 @@ Use this ownership map to route work and scan errors:
   pass-through/        approximation stage
   dataflow/            approximation stage
   tracking/state.yaml  MAIN run knobs
+  tracking/controls/   controls stage (seeded by a script, never by hand)
   tracking/            stage agents, leaves, and join scripts otherwise
   vulnerabilities.md   triage / PoC stage
   issues/               escalation stage
@@ -132,8 +139,10 @@ The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` deriv
 `state.yaml` shape:
 
 ```yaml
+mode: discovery
 scan_level: deep
 triage_level: dynamic
+controls: on
 language: java
 model_commit: 0123456789abcdef0123456789abcdef01234567
 build_jdk: null

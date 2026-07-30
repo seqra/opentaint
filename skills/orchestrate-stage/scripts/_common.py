@@ -6,6 +6,7 @@ which carry the pyyaml dependency. Every path resolves under the fixed
 scripts from the project root.
 """
 import glob
+import re
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,9 @@ SOURCES_TR = RULES_TR / "sources"
 SINKS_TR = RULES_TR / "sinks"
 JOINS_TR = RULES_TR / "joins"
 FINDINGS_TR = TRACKING / "findings"
+REFERENCE_TR = TRACKING / "reference"      # enactment mode: the supplied findings, normalized
+BOUNDARIES_TR = TRACKING / "boundaries"    # enactment mode: per-family boundary specs
+CONTROLS_TR = TRACKING / "controls"        # both modes: sanitizer / negative-pattern units
 RESULTS = ROOT / "results"
 DROPPED = RESULTS / "dropped-external-methods.yaml"
 SARIF = RESULTS / "report.sarif"
@@ -174,6 +178,115 @@ def build_done_keys():
             if str(item).strip():
                 keys.add(member_key(item))
     return keys
+
+
+# ---- created rules / rule units ----
+
+def rule_path(rule_id):
+    """The artifact path a `<path>.yaml:<id>` / `<path>.yaml#<id>` ref points at."""
+    return re.split(r"[:#]", strip_quotes(rule_id), 1)[0]
+
+
+def is_created_rule(rule_id):
+    """True when the ref resolves to a rule this run authored under `.opentaint/rules`.
+    A built-in ref is indistinguishable by shape but never sits on disk there."""
+    return bool(strip_quotes(rule_id)) and (RULES / rule_path(rule_id)).is_file()
+
+
+def unit_rules():
+    """unit stem -> the created rule_ids its source/sink entries carry. In enactment mode the
+    unit stem is the boundary family, which is what ties a control unit to its boundary spec."""
+    out = {}
+    for side, field in ((SOURCES_TR, "sources"), (SINKS_TR, "sinks")):
+        if not side.is_dir():
+            continue
+        for p in sorted(side.glob("*.yaml")):
+            for e in (load_yaml(p, {}) or {}).get(field) or []:
+                rid = strip_quotes(e.get("rule_id", "")) if isinstance(e, dict) else ""
+                if rid and rid != "None":
+                    out.setdefault(p.stem, set()).add(rid)
+    return out
+
+
+# ---- controls ----
+
+RULE_RE = re.compile(r'^rule_id:\s*(.+?)\s*$', re.M)
+VERDICT_RE = re.compile(r'^verdict:\s*(.+?)\s*$', re.M)
+
+
+def control_seeds():
+    """Every control target the current tracking implies, as (unit, family, target).
+
+    Three producers, one shape: a triaged false positive on a rule this run authored, and — in
+    enactment mode — a boundary spec's own controls plus any reference finding whose cross-check
+    blamed the rule rather than a missing carrier. `unit` is the boundary family when the rule
+    belongs to one (so a family's controls stay in one file) and the rule file stem otherwise.
+    """
+    fam_of = {rid: fam for fam, rids in unit_rules().items() for rid in rids}
+    for stem, rids in join_rules().items():        # a join belongs to the family it was wired for
+        if (BOUNDARIES_TR / f"{stem}.yaml").is_file():
+            fam_of.update({rid: stem for rid in rids})
+    seeds = []
+    if FINDINGS_TR.is_dir():
+        for p in sorted(FINDINGS_TR.glob("*.yaml")):
+            text = p.read_text(encoding="utf-8")
+            verdict, rid = VERDICT_RE.search(text), RULE_RE.search(text)
+            if not rid or not verdict or verdict.group(1).strip() != "FP":
+                continue
+            rid = strip_quotes(rid.group(1))
+            if not is_created_rule(rid):          # a built-in FP is not this run's to restrict
+                continue
+            fam = fam_of.get(rid)
+            seeds.append((fam or Path(rule_path(rid)).stem, fam,
+                          {"rule_id": rid, "kind": "false-positive", "evidence": str(p),
+                           "status": "pending"}))
+    if BOUNDARIES_TR.is_dir():
+        for p in sorted(BOUNDARIES_TR.glob("*.yaml")):
+            spec = load_yaml(p, {}) or {}
+            if not (spec.get("sanitizers") or spec.get("negative_patterns")):
+                continue
+            for rid in sorted(unit_rules().get(p.stem, ())):
+                seeds.append((p.stem, p.stem,
+                              {"rule_id": rid, "kind": "precision", "evidence": str(p),
+                               "status": "pending"}))
+    if REFERENCE_TR.is_dir():
+        for p in sorted(REFERENCE_TR.glob("*.yaml")):
+            doc = load_yaml(p, {}) or {}
+            fam = strip_quotes(doc.get("family", ""))
+            if not fam or str(doc.get("status", "")).strip() == "reproduced" \
+                    or str(doc.get("cause", "")).strip() != "rule":
+                continue
+            for rid in sorted(unit_rules().get(fam, ())):
+                seeds.append((fam, fam,
+                              {"rule_id": rid, "kind": "false-negative", "evidence": str(p),
+                               "status": "pending"}))
+    return seeds
+
+
+def control_gap():
+    """The seeds no control unit carries yet — exactly what `generate.py controls` would add."""
+    have = set()
+    if CONTROLS_TR.is_dir():
+        for p in sorted(CONTROLS_TR.glob("*.yaml")):
+            for t in (load_yaml(p, {}) or {}).get("targets") or []:
+                if isinstance(t, dict):
+                    have.add((p.stem, strip_quotes(t.get("rule_id", "")),
+                              str(t.get("kind", "")).strip()))
+    return [s for s in control_seeds() if (s[0], s[2]["rule_id"], s[2]["kind"]) not in have]
+
+
+def join_rules():
+    """join file stem -> the join rule_ids it wired. The stem is the vuln class, which in
+    enactment mode is also the boundary family — that is what pulls a join's false positive
+    into its family's control unit instead of a file of its own."""
+    out = {}
+    if JOINS_TR.is_dir():
+        for p in sorted(JOINS_TR.glob("*.yaml")):
+            for j in (load_yaml(p, {}) or {}).get("joins") or []:
+                rid = strip_quotes(j.get("rule_id", "")) if isinstance(j, dict) else ""
+                if rid:
+                    out.setdefault(p.stem, set()).add(rid)
+    return out
 
 
 def ledger_verdicted_keys():

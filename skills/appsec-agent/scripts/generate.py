@@ -13,6 +13,7 @@ from the project root: `uv run scripts/generate.py <cmd>`.
   mark-safe           discover plans' verdicts -> classification.yaml ledger (+prune plans)
   merge-skipped       batch skipped/engine_issues -> approximations/skipped.yaml (+prune plans)
   findings            results/report.sarif -> per-rule finding tracking files (idempotent)
+  controls            FP verdicts + boundary specs -> control units (idempotent)
 """
 import argparse
 import glob
@@ -26,12 +27,13 @@ from pathlib import Path
 
 import yaml
 
-from _common import (APPROX, DATAFLOW, DROPPED, FINDINGS_TR, JOINS_TR, MODEL,
-                     PASS_THROUGH, RESULTS, RULES, RULES_TR, SARIF, SINKS_TR,
-                     SOURCES_TR, TRACKING, class_of, classified_keys,
-                     dropped_entries, dump_yaml, fqn_base, git_head,
-                     ledger_verdicted_keys, load_yaml, member_key, package_of,
-                     strip_quotes)
+from _common import (APPROX, BOUNDARIES_TR, CONTROLS_TR, DATAFLOW, DROPPED,
+                     FINDINGS_TR, JOINS_TR, MODEL, PASS_THROUGH, REFERENCE_TR,
+                     RESULTS, RULES, RULES_TR, SARIF, SINKS_TR, SOURCES_TR,
+                     RULE_RE, TRACKING, VERDICT_RE, class_of, classified_keys,
+                     control_seeds, dropped_entries, dump_yaml, fqn_base,
+                     git_head, ledger_verdicted_keys, load_yaml, member_key,
+                     package_of, strip_quotes)
 
 ANALYZE_BUDGET = 20                       # methods per approximation batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
@@ -47,18 +49,33 @@ APPROX_PLANS = APPROX / "plans"
 # the durable directories a run writes into; the leaves/scripts mkdir on write, but seeding
 # them up front gives every stage a place to land and makes the empty tree self-describing.
 INIT_DIRS = [TRACKING, APPROX, SOURCES_TR, SINKS_TR, JOINS_TR, FINDINGS_TR,
-             RESULTS, RULES, PASS_THROUGH, DATAFLOW]
+             CONTROLS_TR, RESULTS, RULES, PASS_THROUGH, DATAFLOW]
+ENACTMENT_DIRS = [REFERENCE_TR, BOUNDARIES_TR]                # enactment mode only
 STATE_DERIVED = ("model_commit", "build_jdk", "max_memory")   # build/scan fill these, init preserves
 
 
 def cmd_init(args):
-    for d in INIT_DIRS:
+    enactment = args.mode == "enactment"
+    if enactment and not args.findings:
+        raise SystemExit("init --mode enactment requires --findings <path to the supplied findings>")
+    if not enactment and not args.scan_level:
+        raise SystemExit("init --mode discovery requires --scan-level")
+    # enactment reproduces a supplied finding set, which always needs the full rule + approximation
+    # toolbox — there is no lite/normal variant of it, so the level is fixed rather than asked for.
+    scan_level = "deep" if enactment else args.scan_level
+
+    for d in INIT_DIRS + (ENACTMENT_DIRS if enactment else []):
         d.mkdir(parents=True, exist_ok=True)
     state_path = TRACKING / "state.yaml"
     prior = load_yaml(state_path, {}) or {}
     resume = bool(prior)
-    state = {"scan_level": args.scan_level, "triage_level": args.triage_level,
-             "language": args.language or prior.get("language")}
+    if resume and prior.get("mode", "discovery") != args.mode:
+        raise SystemExit(f"{state_path} is a {prior.get('mode', 'discovery')} run — a mode switch "
+                         "would strand its tracking; start the other mode in a fresh project tree")
+    state = {"mode": args.mode, "scan_level": scan_level, "triage_level": args.triage_level,
+             "controls": args.controls, "language": args.language or prior.get("language")}
+    if enactment:
+        state["findings"] = args.findings or prior.get("findings")
     for k in STATE_DERIVED:                       # never clobber what build/scan already learned
         state[k] = prior.get(k)
     state_path.write_text(dump_yaml(state), encoding="utf-8")
@@ -67,13 +84,19 @@ def cmd_init(args):
     hist_path = TRACKING / "history.yaml"
     runs = (load_yaml(hist_path, {}) or {}).get("runs") or []
     if not resume:
-        runs.append({"commit": git_head(), "type": f"{args.scan_level}/{args.triage_level}"})
+        runs.append({"commit": git_head(),
+                     "type": f"{args.mode}/{scan_level}/{args.triage_level}"
+                             + ("" if args.controls == "on" else "/no-controls")})
         hist_path.write_text(dump_yaml({"runs": runs}), encoding="utf-8")
 
-    mode = "resumed (derived knobs preserved)" if resume else "fresh"
-    print(f"init {mode}: scan_level={state['scan_level']} triage_level={state['triage_level']} "
+    how = "resumed (derived knobs preserved)" if resume else "fresh"
+    print(f"init {how}: mode={args.mode} scan_level={scan_level} "
+          f"triage_level={state['triage_level']} controls={state['controls']} "
           f"language={state['language']}")
-    print(f"seeded {len(INIT_DIRS)} directories under .opentaint/")
+    if enactment:
+        print(f"findings={state['findings']}")
+    print(f"seeded {len(INIT_DIRS) + (len(ENACTMENT_DIRS) if enactment else 0)} "
+          "directories under .opentaint/")
     print("next: uv run scripts/get_status.py --full")
     return 0
 
@@ -420,10 +443,8 @@ NOUN = ["hopper", "eagle", "otter", "falcon", "maple", "comet", "harbor",
 
 _FP_PREFERENCE = ("vulnerabilitySourceSinkHash", "vulnerabilityWithTraceHash")
 
-RULE_RE = re.compile(r'^rule_id:\s*(.+?)\s*$', re.M)
 HASHES_RE = re.compile(r'^sarif_hashes:\s*\[(.*)\]\s*$', re.M)
 HASHES_BLOCK_RE = re.compile(r'^sarif_hashes:\s*\n((?:[ \t]+-[^\n]*\n?)+)', re.M)
-VERDICT_RE = re.compile(r'^verdict:\s*(.+?)\s*$', re.M)
 
 
 def docker_name(seed, taken):
@@ -555,15 +576,67 @@ def cmd_findings(args):
     return 0
 
 
+# ---- controls: seed the sanitizer / negative-pattern units ----
+
+def cmd_controls(args):
+    CONTROLS_TR.mkdir(parents=True, exist_ok=True)
+    units = {p.stem: load_yaml(p, {}) or {} for p in sorted(CONTROLS_TR.glob("*.yaml"))}
+    dirty, created, added = set(), 0, 0
+
+    for unit, family, target in control_seeds():
+        doc = units.get(unit)
+        if doc is None:
+            doc = units[unit] = {"family": family, "targets": [], "sanitizers": [],
+                                 "negative_patterns": [],
+                                 "saturation": {"rounds": 0, "status": "pending"},
+                                 "stages": {"landed": "pending", "verified": "pending"}}
+            dirty.add(unit)
+            created += 1
+        if not any(isinstance(t, dict) and strip_quotes(t.get("rule_id", "")) == target["rule_id"]
+                   and str(t.get("kind", "")).strip() == target["kind"]
+                   for t in doc.setdefault("targets", [])):
+            doc["targets"].append(target)
+            # a control unit that already verified now owns unverified work again
+            doc.setdefault("stages", {})["verified"] = "pending"
+            doc.setdefault("saturation", {})["status"] = "pending"
+            dirty.add(unit)
+            added += 1
+
+    # the boundary spec stays the source of truth for a family's controls; copy the current text in
+    if BOUNDARIES_TR.is_dir():
+        for p in sorted(BOUNDARIES_TR.glob("*.yaml")):
+            spec, doc = load_yaml(p, {}) or {}, units.get(p.stem)
+            if doc is None:
+                continue
+            for field in ("sanitizers", "negative_patterns"):
+                if (spec.get(field) or []) != (doc.get(field) or []):
+                    doc[field] = spec.get(field) or []
+                    dirty.add(p.stem)
+
+    for unit in sorted(dirty):
+        (CONTROLS_TR / f"{unit}.yaml").write_text(dump_yaml(units[unit]), encoding="utf-8")
+    print(f"controls: {created} unit(s) created, {added} target(s) added, "
+          f"{len(dirty)} file(s) written ({len(units)} unit(s) total)")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     i = sub.add_parser("init", help="bootstrap the .opentaint tree + state.yaml from workflow flags")
-    i.add_argument("--scan-level", required=True, choices=["lite", "normal", "deep"])
+    i.add_argument("--mode", default="discovery", choices=["discovery", "enactment"],
+                   help="discovery: find vulnerabilities. enactment: reproduce supplied findings")
+    i.add_argument("--scan-level", choices=["lite", "normal", "deep"],
+                   help="discovery mode only; enactment is always deep")
     i.add_argument("--triage-level", required=True, choices=["static", "dynamic"])
+    i.add_argument("--controls", default="on", choices=["on", "off"],
+                   help="run the precision pass (sanitizers, negative patterns, restrictions) "
+                        "after triage; deep runs only")
     i.add_argument("--language", default=None, help="target language, determined by the orchestrator")
+    i.add_argument("--findings", default=None,
+                   help="enactment mode: path to the supplied finding manifest/report/directory")
     i.set_defaults(func=cmd_init)
 
     p = sub.add_parser("partition", help="split classification work into per-agent plans")
@@ -580,6 +653,9 @@ def main():
 
     f = sub.add_parser("findings", help="seed per-rule finding files from results/report.sarif")
     f.set_defaults(func=cmd_findings)
+
+    c = sub.add_parser("controls", help="seed control units from FP verdicts and boundary specs")
+    c.set_defaults(func=cmd_controls)
 
     args = ap.parse_args()
     return args.func(args)

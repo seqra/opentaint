@@ -8,6 +8,7 @@ approximations              → stage subagent: approx-round, then MAIN: rescan;
 sink_rules                  → stage subagent: sinks, then MAIN: rescan
 triage                      → stage subagent: triage
 poc                         → stage subagent: poc
+controls                    → stage subagent: controls, then MAIN: rescan; repeat
 ```
 
 ### Build in MAIN

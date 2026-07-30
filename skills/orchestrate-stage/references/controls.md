@@ -1,0 +1,66 @@
+# Controls — sanitizers, negative patterns, restrictions
+
+Land the precision work the run has evidence for, then saturate it: keep landing and re-verifying until a full round changes nothing that matters. Runs after triage and PoC in both modes — those are what turn a suspicion into evidence, so a control never lands on a guess. In enactment mode the cross-reference that follows can hand back a new false-negative target, which brings the run through this stage again.
+
+## Seed the control units
+
+When status names seeding, run:
+
+```bash
+uv run <skill-dir>/scripts/generate.py controls
+```
+
+It reads the triaged findings and — in enactment mode — the boundary specs and reference findings, and writes one `.opentaint/tracking/controls/<unit>.yaml` per group of rules that need the same work. It is idempotent: a later round folds new evidence into the existing units without clobbering what landed.
+
+`.opentaint/tracking/controls/<unit>.yaml` — one unit of precision work: the sanitizers, negative patterns, and context restrictions to land on a set of rules, plus what proved they were needed. `generate.py controls` seeds and refreshes it, so never create one by hand. The unit is named for its boundary `family` when the rules belong to one and for the rule file stem otherwise (`family: null` then). Each `targets` entry is one piece of evidence — `false-positive` from a triaged finding, `false-negative` from a reference finding the cross-reference blamed on the rule, `precision` from a boundary spec's own controls — and its `status` goes `landed` once the change is in the rule, `dropped` when the evidence turns out not to warrant one. `saturation` only reads `saturated` after a rescan round that fixed its targets without losing a trace or adding a new false positive. A `blocker` string settles a unit that cannot be made to converge. Keep it clear from comments
+
+```yaml
+family: ssrf
+targets:
+  - { rule_id: java/security/ssrf-webhook-ext.yaml:ssrf-webhook-ext, kind: false-positive, evidence: .opentaint/tracking/findings/fuzzy-hopper.yaml, status: landed }
+  - { rule_id: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink, kind: precision, evidence: .opentaint/tracking/boundaries/ssrf.yaml, status: pending }
+sanitizers:
+  - resolved-IP private-range rejection before the request is issued
+negative_patterns:
+  - URL built from a compile-time constant host
+saturation:
+  rounds: 2
+  status: saturated
+stages:
+  landed: done
+  verified: done
+```
+
+Never write a control unit by hand and never add a target the script did not seed — a target with no evidence behind it is exactly the change that silently suppresses a real vulnerability.
+
+## Land each unit
+
+For each unit `get_status.py` lists, dispatch create-rule once per target, fanning out across units.
+
+Inputs:
+- `language`
+- `side` — the side of the unit that owns the flagged rule
+- `unit` — the source or sink unit whose entry carries that `rule_id`. When the flagged rule is a join, use the sink unit for its vulnerability class, unless the evidence points at the source side
+- `fix-target` — the target's `rule_id` as `<path>#<id>`, plus the false positive or false negative to correct, quoted from the target's `evidence`
+
+Pass the unit's `sanitizers` and `negative_patterns` text along with the fix so the leaf lands the control the evidence calls for rather than narrowing the boundary. A boundary is a semantic claim; keep it, and recover precision with a sanitizer, a `pattern-not`, a `pattern-not-inside`, or a context restriction.
+
+The control-testing discipline is create-rule's: a paired negative safe-flow sample and positive bypass sample per control, each control tested independently before composing them, and the side's full test run green again afterwards. Hold every dispatch to it — a sanitizer that was never proven bypassable is a suppression, not a control.
+
+Set each target's `status` to `landed` as its leaf returns, or `dropped` with a one-line reason when the evidence turns out not to warrant a control. Set `stages.landed: done` once no target on the unit is pending, and report the pending rescan.
+
+## Saturate
+
+A landed control is unverified until a scan proves it. After MAIN rescans, verify each unit against the new results and count one round:
+
+1. every `landed` target's evidence is gone — the false positive no longer fires, the false negative now does
+2. nothing was lost — every finding triage confirmed TP still fires and, in enactment mode, every reference finding already `reproduced` still reproduces
+3. nothing new broke — no new false positive appeared under the touched rules
+
+If 2 or 3 broke, the control is too broad or landed on the wrong side: re-dispatch create-rule with the narrower evidence and go another round. If 1 alone is unmet, the control is too weak — same loop.
+
+Set `stages.verified: done` when 1–3 hold. Set `saturation.status: saturated` when a full round produced no new change and left every check holding; increment `saturation.rounds` each round. After three rounds without saturation, stop looping: settle the unit per `<skill-dir>/references/escalation.md` and write the one-line `blocker`.
+
+## Stage gate
+
+`get_status.py` names new targets to fold in, unlanded units, the pending rescan, unverified units, then unsaturated ones. Finish when `controls` is `DONE`, or when the next step it reports is the rescan. Report landed, dropped, and blocked counts.

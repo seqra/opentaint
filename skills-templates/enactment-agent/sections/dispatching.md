@@ -3,18 +3,20 @@ Dispatch exactly one stage-orchestrator subagent for each stage invocation:
 ```
 Invoke the Skill orchestrate-stage first, then follow its instructions precisely
 Inputs:
-  stage: <sources|approx-round|sinks|triage|controls|poc|escalation>
+  stage: <boundaries|sources|sinks|approx-round|crossref|triage|controls|poc|escalation>
 ```
 
-For a `deep` approximation round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
+A subagent inherits the project-root working directory, so omit `project-root`.
 
 Stage context:
 
-- `sources` — discover dependency sources, author their rules, and wire the joins
+- `boundaries` — normalize the supplied findings into the reference set, generalize each family into a saturated source and sink boundary, and seed the rule units from it
+- `sources` — author the seeded source units' rules and wire the joins
+- `sinks` — author the seeded sink units' rules and wire the joins
 - `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
-- `sinks` — author classified sink rules and wire the joins
+- `crossref` — judge each supplied finding against the latest scan and refresh the coverage manifest
 - `triage` — classify the latest findings and refresh the vulnerability report
-- `controls` — land and saturate the sanitizers, negative patterns, and restrictions triage gave evidence for
+- `controls` — land and saturate the sanitizers, negative patterns, and restrictions the run has evidence for
 - `poc` — reproduce confirmed findings and add the outcomes to the report
 - `escalation` — repair or settle a stage artifact, or report a scan-wide no-SARIF failure
 

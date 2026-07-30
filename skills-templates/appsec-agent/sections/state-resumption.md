@@ -8,6 +8,7 @@ Use this ownership map to route work and scan errors:
   pass-through/        approximation stage
   dataflow/            approximation stage
   tracking/state.yaml  MAIN run knobs
+  tracking/controls/   controls stage (seeded by a script, never by hand)
   tracking/            stage agents, leaves, and join scripts otherwise
   vulnerabilities.md   triage / PoC stage
   issues/               escalation stage
@@ -18,8 +19,10 @@ The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` deriv
 `state.yaml` shape:
 
 ```yaml
+mode: discovery
 scan_level: deep
 triage_level: dynamic
+controls: on
 language: java
 model_commit: 0123456789abcdef0123456789abcdef01234567
 build_jdk: null

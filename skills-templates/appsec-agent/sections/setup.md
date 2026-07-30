@@ -17,7 +17,7 @@ Read the project's build files to fix the target language — Maven/Gradle → j
 
 ### 4. Choose the workflow
 
-Ask the user for both levels together:
+Ask the user for all three knobs together:
 
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan (expected, when there are already existing artifacts)
@@ -27,13 +27,17 @@ Ask the user for both levels together:
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
    - dynamic — static + PoC per confirmed TP. This launches a few test services on the user's machine (local instances and ports), torn down at the end of the run. Make that clear in the option
+3. Controls — `on` · `off`, the precision pass that lands sanitizers, negative patterns, and context restrictions on the created rules after triage
+   - on (recommended) — false positives triage found get restricted, and the created rules stay reusable for later runs
+   - off — the report keeps every candidate result as triaged, and the created rules stay as first authored. Offer this when the user wants maximum recall or is done after the report
+   - only asked for a `deep` run; lite and normal author no rules to restrict
 
 ### 5. Bootstrap
 
 Seed the run state and the working tree with the chosen levels and language:
 
 ```bash
-uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
+uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --controls <on|off> --language <lang>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree. If the user wants a supplied finding set reproduced rather than the project searched for vulnerabilities, that is the enactment pipeline — stop here and load `enactment-agent` instead.

@@ -1,0 +1,45 @@
+# Reference set + universal boundaries
+
+Turn the supplied findings into a normalized reference set, generalize each finding family into one saturated source and sink boundary, and seed the source and sink units those boundaries imply. Enactment mode only — it replaces dependency discovery, and everything it writes feeds the ordinary rule-authoring stages.
+
+## Normalize the reference set
+
+`state.yaml` names the supplied findings under `findings` — a manifest, SARIF, report, or directory of finding documents. Write one `.opentaint/tracking/reference/<finding-id>.yaml` per supplied finding.
+
+{% include "shared/tracking/reference-finding.md" %}
+
+Give each finding a stable id of its own — the supplied one when it has one. Preserve separately triggerable attack paths as separate findings even when they share a sink. Never drop a finding for being a poor fit for taint analysis: an authorization, integrity, configuration, hard-coded-secret, or structural-control finding gets a reference file like any other, and becomes an explicit pseudo-boundary later.
+
+Then group the findings into families and set `family` on each. Partition by vulnerability class or by a cohesive finding family — never by file batches or arbitrary count. A family is the set of findings you expect to share one source and one sink.
+
+Fan out this normalization when the supplied set is large: one leaf per slice of the supplied report, each writing its own reference files. Assign the families yourself once every file exists, since that decision needs the whole set.
+
+## Discover the boundaries
+
+Fan out discover-universal-boundaries, one leaf per family.
+
+Inputs each:
+- `language`
+- `findings` — the path `state.yaml` names
+- `finding-ids` — the ids assigned to this family
+- `family`
+
+Expect back — `.opentaint/tracking/boundaries/<family>.yaml` with `saturation.status: saturated`, one `factorization` entry per assigned finding, and the controls listed separately from the positive boundaries. A leaf that splits its family writes one spec per subfamily and rewrites `family` on each reference finding it moved, so every finding still points at the spec that owns it.
+
+{% include "shared/tracking/boundary-spec.md" %}
+
+A spec returning with an `unfactored` finding is not a failure to retry blindly — read its `open_questions`, and either re-dispatch the leaf with the finding split out as its own family or accept the pseudo-boundary it proposes.
+
+## Seed the rule units
+
+For each saturated spec, write its `candidate_patterns` into the family's source and sink units, then set `stages.units_seeded: done` on the spec. The unit file name is the family, so the two sides and the spec stay tied together.
+
+{% include "shared/tracking/source-unit.md" %}
+
+{% include "shared/tracking/sink-unit.md" %}
+
+Copy `method`, `signature`, and `note` from the spec's `candidate_patterns` (plus `vuln_class` on the sink side), leave `rule_id: null` and the `stages` pending, and fill `dependencies` with the dependency each pattern's package comes from — empty when the boundary is a project member, as a structural pseudo-boundary usually is. Do not carry `context_restrictions`, `sanitizers`, or `negative_patterns` into the units: the boundary is the positive pattern, and the controls land later through the controls stage.
+
+## Stage gate
+
+`get_status.py` drives `reference_set` then `boundaries`, naming findings without a family, families without a spec, unsaturated specs, unfactored findings, and unseeded specs. Finish when both are `DONE`, or when the next step it reports is source rules.

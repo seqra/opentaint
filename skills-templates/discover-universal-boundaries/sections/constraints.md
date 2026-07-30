@@ -1,0 +1,7 @@
+- Work only the assigned finding ids, your family's spec, and the reference `family` field on a split
+- Universal does not mean untyped or unconstrained — generalize the boundary, then recover precision with context restrictions and sanitizers, never by re-narrowing the boundary to the findings
+- Never propose all methods, all map values, or all getters as a source, and never a `pattern-either` with one branch per finding
+- Never mark the spec saturated on a round that widened, broke, or split anything
+- Never propose a sanitizer that would suppress a trace the reference set says is real, and never record a validator as a sanitizer without the invariant it enforces
+- Record a poor taint fit as an explicit pseudo-boundary; never drop the finding
+- Don't create or recommend approximations here — note the opaque carriers and stop

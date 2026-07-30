@@ -5,8 +5,11 @@ sources      → <skill-dir>/references/sources.md
 approx-round → <skill-dir>/references/approx-round.md
 sinks        → <skill-dir>/references/sinks.md
 triage       → <skill-dir>/references/triage.md
+controls     → <skill-dir>/references/controls.md
 poc          → <skill-dir>/references/poc.md
 escalation   → <skill-dir>/references/escalation.md
+boundaries   → <skill-dir>/references/boundaries.md   (enactment mode)
+crossref     → <skill-dir>/references/crossref.md     (enactment mode)
 ```
 
 Run the bundled script to get the setup overview before proceeding to the reference's instructions:
