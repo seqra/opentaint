@@ -53,6 +53,7 @@ import org.opentaint.ir.impl.features.classpaths.virtual.JIRVirtualParameter
 import org.opentaint.ir.impl.types.JIRClassTypeImpl
 import org.opentaint.ir.impl.types.JIRTypedFieldImpl
 import org.opentaint.ir.impl.types.substition.JIRSubstitutorImpl
+import org.opentaint.jvm.util.name
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
 
@@ -108,7 +109,10 @@ class LambdaAnonymousClassFeature : JIRClasspathExtFeature {
         }
 
         val fields = lambda.callSiteArgTypes.mapIndexed { fieldIdx, fieldType ->
-            val typeName = fieldType.typeName.typeName()
+            val typeName = when (fieldType) {
+                is JIRClassType -> fieldType.name
+                else -> fieldType.typeName
+            }.typeName()
             val field = JIRLambdaField(name = "lambdaCSArg$${fieldIdx}", type = typeName)
                 .also { it.bind(lambdaClass) }
 

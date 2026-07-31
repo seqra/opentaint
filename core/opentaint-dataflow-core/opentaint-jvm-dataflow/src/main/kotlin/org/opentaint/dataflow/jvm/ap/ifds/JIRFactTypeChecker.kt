@@ -127,12 +127,7 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
                 is TypeInfoAccessor -> {
                     val lambdaType = cp.typeOf(cp.findClass(accessor.typeName))
-                    val res = runBlocking {
-                        with(cp.hierarchyExt()) {
-                            actualType.isAssignable(lambdaType)
-                        }
-                    }
-                    return if (res) {
+                    return if (lambdaType.isAssignable(actualType)) {
                         FilterResult.Accept
                     } else {
                         FilterResult.Reject
