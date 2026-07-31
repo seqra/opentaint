@@ -24,10 +24,10 @@ interface MethodCallPrecondition {
     ): CallPrecondition<T>
 
     sealed interface CallPreconditionFact
-    sealed interface CallPreconditionAfterResolve
+    sealed interface CallResolutionPreconditionFact
 
-    sealed interface CallFailurePreconditionFact : CallPreconditionAfterResolve
-    sealed interface CallSuccessPreconditionFact : CallPreconditionAfterResolve
+    sealed interface CallFailurePreconditionFact : CallResolutionPreconditionFact
+    sealed interface CallSuccessPreconditionFact : CallResolutionPreconditionFact
 
     object UnresolvedCallSkip : CallPreconditionFact, CallFailurePreconditionFact
     data class CallToReturnTaintRule(val precondition: TaintRulePrecondition) : CallPreconditionFact, CallFailurePreconditionFact, CallSuccessPreconditionFact

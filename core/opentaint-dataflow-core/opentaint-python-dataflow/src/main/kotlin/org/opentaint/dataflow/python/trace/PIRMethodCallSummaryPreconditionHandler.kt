@@ -1,0 +1,5 @@
+package org.opentaint.dataflow.python.trace
+
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
+
+object PIRMethodCallSummaryPreconditionHandler : MethodCallSummaryPreconditionHandler
