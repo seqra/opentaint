@@ -7,6 +7,7 @@ import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.DummySerializationContext
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
@@ -32,8 +33,8 @@ import org.opentaint.ir.go.type.GoIRUnsafePointerType
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.semgrep.pattern.conversion.GoLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.loadGoTaintConfiguration
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.go.pattern.conversion.loadGoTaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -118,11 +119,15 @@ class GoSemgrepReachabilityTest {
 
         val refManager = RefManager()
         val cancellation = Cancellation()
+        val analysisManager = GoAnalysisManager(cp, config).apply {
+            // No prescan stage here: rules are only visible in the full-scan phase.
+            selectPhase(TaintAnalysisManager.Phase.FullScan)
+        }
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
             refManager, cancellation,
-            GoAnalysisManager(cp, config),
+            analysisManager,
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = UtilUnitResolver as UnitResolver<CommonMethod>,
             summarySerializationContext = DummySerializationContext,

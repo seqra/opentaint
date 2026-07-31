@@ -14,7 +14,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPr
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
-import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFunctionSignature
