@@ -1,0 +1,3 @@
+- If you think a test project is wrong — hand it back upstream
+- A positive that won't pass because a library method drops taint is not a rule bug — surface it for approximation (per step 5), don't broaden the rule to force it
+- Keep produced rule files comment-free

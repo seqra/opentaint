@@ -49,7 +49,7 @@ class GoMethodSequentFlowFunction(
         val zeroSequents = mutableSetOf<Sequent>(Sequent.ZeroToZero)
         applyGlobalOrFieldReadSourceRules(zeroSequents)
 
-        ClosureCreationFlowFunction.handle(currentInst) { base, accessors ->
+        ClosureCreationFlowFunction.handle(context, currentInst) { base, accessors ->
             val startFact = apManager.createFinalAp(base, ExclusionSet.Universe)
             val fact = accessors.foldRight(startFact) { a, f -> f.prependAccessor(a) }
             zeroSequents += Sequent.ZeroToFact(fact, traceInfoOrNull())

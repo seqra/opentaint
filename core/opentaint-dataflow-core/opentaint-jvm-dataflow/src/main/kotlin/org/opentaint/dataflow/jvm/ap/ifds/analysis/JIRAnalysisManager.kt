@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -40,6 +41,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallSummaryPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodStartPrecondition
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -50,18 +52,38 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class JIRAnalysisManager(
     cp: JIRClasspath,
+    refManager: RefManager,
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     private val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
+    private val refManager = refManager.softRefManager("JIRAnalysisManager")
+
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),
     )
+
+    private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
+    private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
+
+    private var currentPhase: Phase = Phase.Prescan
+    val phase: Phase get() = currentPhase
+
+    override fun selectPhase(phase: Phase) {
+        currentPhase = phase
+        contexts.forEach { it.resetAnalysisCache() }
+        when (phase) {
+            Phase.Prescan -> {}
+            Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
+        }
+    }
 
     override fun getMethodCallResolver(
         graph: ApplicationGraph<CommonMethod, CommonInst>,
@@ -109,16 +131,20 @@ class JIRAnalysisManager(
         }
 
         val taintContext = JIRTaintAnalysisContext(
-            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker
+            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker, relevantRuleIds
         )
 
         return JIRMethodAnalysisContext(
+            this,
+            refManager,
             methodEntryPoint,
             factTypeChecker,
             localVariableReachability,
             aliasAnalysis,
             taintContext,
-        )
+        ).also {
+            contexts.add(it)
+        }
     }
 
     override fun getMethodInstGraph(
@@ -186,14 +212,16 @@ class JIRAnalysisManager(
         jIRDowncast<JIRInst>(statement)
         jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
 
-        return JIRMethodCallFlowFunction(
-            apManager,
-            analysisContext,
-            returnValue,
-            callExpr,
-            statement,
-            generateTrace
-        )
+        return analysisContext.cachedCallFF(statement.location.index) {
+            JIRMethodCallFlowFunction(
+                apManager,
+                analysisContext,
+                returnValue,
+                callExpr,
+                statement,
+                generateTrace
+            )
+        }
     }
 
     override fun getMethodCallSummaryHandler(
@@ -204,7 +232,9 @@ class JIRAnalysisManager(
         jIRDowncast<JIRInst>(statement)
         jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
 
-        return JIRMethodCallSummaryHandler(statement, analysisContext, apManager)
+        return analysisContext.cachedCallSH(statement.location.index) {
+            JIRMethodCallSummaryHandler(statement, analysisContext, apManager)
+        }
     }
 
     override fun getMethodCallSummaryPreconditionHandler(

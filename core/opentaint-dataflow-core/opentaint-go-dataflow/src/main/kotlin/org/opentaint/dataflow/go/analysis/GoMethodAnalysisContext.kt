@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.go.GoClosureTracker.ClosureTracker
@@ -14,10 +15,17 @@ import org.opentaint.ir.go.api.GoIRFunction
  * Per-method analysis context for Go. Significantly simpler than JVM's.
  */
 class GoMethodAnalysisContext(
+    val analysisManager: GoAnalysisManager,
     override val methodEntryPoint: MethodEntryPoint,
     val taint: GoTaintAnalysisContext,
     val aliasAnalysis: GoLocalAliasAnalysis,
 ) : MethodAnalysisContext {
+    init {
+        taint.bindAnalysisContext(this)
+    }
+
+    val phase: TaintAnalysisManager.Phase get() = analysisManager.phase
+
     override val methodCallFactMapper: MethodCallFactMapper
         get() = GoMethodCallFactMapper
 
@@ -25,4 +33,9 @@ class GoMethodAnalysisContext(
         get() = methodEntryPoint.method as GoIRFunction
 
     val closureCallResolution = int2ObjectMap<ClosureTracker>()
+
+    fun resetAnalysisCache() {
+        taint.reset()
+        closureCallResolution.values.forEach { it.resetSubscribers() }
+    }
 }

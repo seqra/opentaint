@@ -284,6 +284,7 @@ type AutobuilderBuilder struct {
 	buildType      string
 	buildMode      string
 	classpaths     []string
+	dependencies   []string
 	packages       []string
 	maxMemory      string
 	jarPath        string
@@ -316,6 +317,15 @@ func (a *AutobuilderBuilder) SetBuildMode(buildMode string) *AutobuilderBuilder 
 
 func (a *AutobuilderBuilder) AddClasspath(classpath string) *AutobuilderBuilder {
 	a.classpaths = append(a.classpaths, classpath)
+	return a
+}
+
+// AddDependency registers a dependency JAR. Dependencies are emitted via the
+// autobuilder's --dependency option so they land in the generated project.yaml's
+// dependencies field: resolvable library bytecode on the analysis classpath, but
+// never treated as project code (unlike --cp module classes).
+func (a *AutobuilderBuilder) AddDependency(dependency string) *AutobuilderBuilder {
+	a.dependencies = append(a.dependencies, dependency)
 	return a
 }
 
@@ -355,6 +365,9 @@ func (a *AutobuilderBuilder) BuildNativeCommand() []string {
 		flags = append(flags, "--build-type", a.buildType)
 		for _, cp := range a.classpaths {
 			flags = append(flags, "--cp", cp)
+		}
+		for _, dep := range a.dependencies {
+			flags = append(flags, "--dependency", dep)
 		}
 		for _, pkg := range a.packages {
 			flags = append(flags, "--pkg", pkg)

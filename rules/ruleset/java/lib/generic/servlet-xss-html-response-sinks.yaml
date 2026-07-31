@@ -2,6 +2,8 @@ rules:
   - id: java-servlet-xss-html-response-sink
     options:
       lib: true
+    tags:
+      - servlet-xss-sink
     severity: NOTE
     message: Direct write of unvalidated user input into a response without safe content type
     metadata:

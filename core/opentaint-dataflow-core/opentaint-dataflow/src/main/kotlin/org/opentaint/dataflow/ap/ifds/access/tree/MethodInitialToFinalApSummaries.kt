@@ -268,7 +268,7 @@ private class MethodTaintedSummariesMergingStorage(
             return true
         }
 
-        val mergedExclusion = currentExclusion.intersect(addedEx)
+        val mergedExclusion = currentExclusion.union(addedEx)
         if (mergedExclusion === currentExclusion) {
             return treeStorage.add(exitAccess)
         }

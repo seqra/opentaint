@@ -25,6 +25,7 @@ import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.PIRSimpleFactAwareConditionEvaluator
+import org.opentaint.dataflow.python.rulesWithConditions
 import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.python.alias.forEachAliasBeforeCallStatement
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
@@ -286,9 +287,8 @@ class PIRMethodCallFlowFunction(
         val taintUtil = PIRMethodCallTaintUtil(callExpr, ctx, callInst, apManager)
 
         taintUtil.applySourceRules(
-            sourceRules = sourceRules,
+            sourceRules = conditionRewriter.rulesWithConditions(sourceRules),
             initialFacts = initialFacts,
-            conditionRewriter = conditionRewriter,
             factReader = factReader,
             exclusion = exclusionSet,
             createFinalFact = { srcF, trace ->
@@ -327,7 +327,9 @@ class PIRMethodCallFlowFunction(
             addUnchecked(MethodCallFlowFunction.FactSideEffect(i, k))
         }
 
-        taintUtil.applySinkRules(sinkRules, conditionRewriter, factReader, markAfterAnyAccessorResolver)
+        taintUtil.applySinkRules(
+            conditionRewriter.rulesWithConditions(sinkRules), factReader, markAfterAnyAccessorResolver
+        )
     }
 
     private fun applyPassRules(

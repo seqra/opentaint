@@ -8,9 +8,9 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
-import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
@@ -19,33 +19,31 @@ import org.opentaint.dataflow.util.cartesianProductMapTo
 import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
 
-fun <R : CommonTaintConfigurationSource, A : CommonTaintAssignAction, C> evaluateSourceRulePrecondition(
-    rule: R,
+fun <R : CommonTaintConfigurationSource, A : CommonTaintAssignAction> evaluateSourceRulePrecondition(
+    ruleWithCond: RuleWithCondition<R>,
     ruleActions: List<A>,
-    ruleCondition: R.() -> CommonCondition<C>,
     sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
     evalAction: TaintSourceActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>>,
-    conditionRewriter: RuleConditionRewriter<C>,
 ): List<TaintRulePrecondition> {
     val result = mutableListOf<TaintRulePrecondition>()
     evaluateSourceRulePrecondition(
-        rule, ruleActions, ruleCondition, sourcePreconditionEvaluator, evalAction, conditionRewriter,
+        ruleWithCond, ruleActions, sourcePreconditionEvaluator, evalAction,
         mkSource = { r, a -> result += TaintRulePrecondition.Source(r, a) },
         mkPass = { r, a, e -> result += TaintRulePrecondition.Pass(r, a, PassRuleCondition.Expr(e)) }
     )
     return result
 }
 
-fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction, C> evaluateSourceRulePrecondition(
-    rule: R,
+fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction> evaluateSourceRulePrecondition(
+    ruleWithCond: RuleWithCondition<R>,
     ruleActions: List<A>,
-    ruleCondition: R.() -> CommonCondition<C> ,
     sourcePreconditionEvaluator: TaintSourceActionPreconditionEvaluator,
     evalAction: TaintSourceActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>>,
-    conditionRewriter: RuleConditionRewriter<C>,
     mkSource: (R, Set<CommonTaintAssignAction>) -> Unit,
     mkPass: (R, Set<CommonTaintAssignAction>, TaintMarkAwareConditionExpr) -> Unit,
 ) {
+    val rule = ruleWithCond.rule
+
     val assignedMarks = ruleActions.maybeFlatMap {
         sourcePreconditionEvaluator.evalAction(rule, it)
     }
@@ -53,8 +51,7 @@ fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction, C> evaluateS
 
     val sourceActions = assignedMarks.getOrThrow().mapTo(hashSetOf()) { it.second }
 
-    val simplifiedCondition = conditionRewriter.rewrite(rule.ruleCondition())
-
+    val simplifiedCondition = ruleWithCond.condition
     val simplifiedExpr = when {
         simplifiedCondition.isFalse -> return
         simplifiedCondition.isTrue -> null
@@ -71,15 +68,14 @@ fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction, C> evaluateS
     mkPass(rule, sourceActions, exprWithoutNegations)
 }
 
-fun  <R: CommonTaintConfigurationItem, A: CommonTaintAction, C> evaluatePassRulePrecondition(
-    rule: R,
+fun  <R: CommonTaintConfigurationItem, A: CommonTaintAction> evaluatePassRulePrecondition(
+    ruleWithCond: RuleWithCondition<R>,
     ruleActions: List<A>,
-    ruleCondition: R.() -> CommonCondition<C>,
     preconditionEvaluator: TaintPassActionPreconditionEvaluator,
     evalAction: TaintPassActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintAction, InitialFactAp>>>,
-    conditionRewriter: RuleConditionRewriter<C>,
     mapExit2Return: (InitialFactAp) -> List<InitialFactAp>,
 ): List<TaintRulePrecondition> {
+    val rule = ruleWithCond.rule
     val actions = ruleActions.maybeFlatMap {
         preconditionEvaluator.evalAction(rule, it)
     }
@@ -87,7 +83,7 @@ fun  <R: CommonTaintConfigurationItem, A: CommonTaintAction, C> evaluatePassRule
 
     val passActions = actions.getOrThrow()
 
-    val simplifiedCondition = conditionRewriter.rewrite(rule.ruleCondition())
+    val simplifiedCondition = ruleWithCond.condition
 
     val simplifiedExpr = when {
         simplifiedCondition.isFalse -> return emptyList()

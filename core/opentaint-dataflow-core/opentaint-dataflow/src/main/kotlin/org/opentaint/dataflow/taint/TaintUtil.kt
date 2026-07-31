@@ -4,14 +4,11 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.FactWithPreconditions
-import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.util.cartesianProductMapTo
 
 abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
-    abstract fun Src.srcCondition(): CommonCondition<C>
-    abstract fun Sink.sinkCondition(): CommonCondition<C>
-
     abstract fun sourceAssumptionsManager(): RuleAssumptionsManager<Src>
     abstract fun sinkAssumptionsManager(): RuleAssumptionsManager<Sink>
 
@@ -29,8 +26,7 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
     abstract fun handleReachedSink(rule: Sink, factReader: FinalFactReader?, evaluatedFacts: List<InitialFactAp>)
 
     fun applySinkRules(
-        sinkRules: List<Sink>,
-        conditionRewriter: RuleConditionRewriter<C>,
+        sinkRules: List<RuleWithCondition<Sink>>,
         factReader: FinalFactReader?,
         markAfterAnyFieldResolver: FactWithMarkAfterAnyAccessorResolver?,
     ) {
@@ -41,8 +37,6 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
 
         sinkRules.applyRuleWithAssumptions(
             apManager,
-            condition = { sinkCondition() },
-            conditionRewriter = conditionRewriter,
             conditionFactReaders = conditionFactReaders,
             markAfterAnyFieldResolver = markAfterAnyFieldResolver,
             mkAssumptionsManager = sinkAssumptionsManager(),
@@ -62,9 +56,8 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
     )
 
     fun applySourceRules(
-        sourceRules: List<Src>,
+        sourceRules: List<RuleWithCondition<Src>>,
         initialFacts: Set<InitialFactAp>,
-        conditionRewriter: RuleConditionRewriter<C>,
         factReader: FinalFactReader?,
         exclusion: ExclusionSet,
         createFinalFact: (FinalFactAp, Trace) -> Unit,
@@ -81,8 +74,6 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
 
         sourceRules.applyRuleWithAssumptions(
             apManager,
-            condition = { srcCondition() },
-            conditionRewriter,
             initialFacts,
             conditionFactReaders,
             markAfterAnyFieldResolver = null, // we don't expect such marks in source rules
@@ -153,10 +144,8 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
         factReader?.updateRefinement(conditionFactReaders)
     }
 
-    inline fun <T> List<T>.applyRuleWithAssumptions(
+    inline fun <T> List<RuleWithCondition<T>>.applyRuleWithAssumptions(
         apManager: ApManager,
-        condition: T.() -> CommonCondition<C>,
-        conditionRewriter: RuleConditionRewriter<C>,
         conditionFactReaders: List<FactReader>,
         markAfterAnyFieldResolver: FactWithMarkAfterAnyAccessorResolver?,
         mkAssumptionsManager: RuleAssumptionsManager<T>,
@@ -164,8 +153,6 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
     ) {
         applyRuleWithAssumptions(
             apManager = apManager,
-            condition = condition,
-            conditionRewriter = conditionRewriter,
             initialFacts = emptySet(),
             conditionFactReaders = conditionFactReaders,
             markAfterAnyFieldResolver = markAfterAnyFieldResolver,
@@ -177,10 +164,8 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
         )
     }
 
-    inline fun <T> List<T>.applyRuleWithAssumptions(
+    inline fun <T> List<RuleWithCondition<T>>.applyRuleWithAssumptions(
         apManager: ApManager,
-        condition: T.() -> CommonCondition<C>,
-        conditionRewriter: RuleConditionRewriter<C>,
         initialFacts: Set<InitialFactAp>,
         conditionFactReaders: List<FactReader>,
         assumptionsManager: RuleAssumptionsManager<T>,
@@ -190,14 +175,14 @@ abstract class TaintUtil<C, Src, Sink, Trace>(val apManager: ApManager) {
     ) {
         val conditionEvaluator = TaintFactAwareConditionEvaluator(conditionFactReaders, markAfterAnyFieldResolver)
 
-        for (rule in this) {
-            val ruleCondition = rule.condition()
+        for (ruleWithCond in this) {
+            val simplifiedCondition = ruleWithCond.condition
+            val rule = ruleWithCond.rule
 
-            val simplifiedCondition = conditionRewriter.rewrite(ruleCondition)
             val conditionExpr = when {
                 simplifiedCondition.isFalse -> continue
                 simplifiedCondition.isTrue -> {
-                    applyRule(rule, emptyList())
+                    applyRule(ruleWithCond.rule, emptyList())
                     continue
                 }
 

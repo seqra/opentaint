@@ -7,7 +7,7 @@ abstract class TrackerWithSubscriber<K, V, S: Subscriber<K, V>>(val key: K) {
         fun handle(key: K, value: V)
     }
 
-    private val subscribers = hashSetOf<S>()
+    private var subscribers = hashSetOf<S>()
     private val registeredValues = hashSetOf<V>()
 
     fun addValue(value: V) = synchronized(this) {
@@ -22,5 +22,9 @@ abstract class TrackerWithSubscriber<K, V, S: Subscriber<K, V>>(val key: K) {
 
     fun forEachRegisteredValue(subscriber: S) = synchronized(this) {
         registeredValues.forEach { subscriber.handle(key, it) }
+    }
+
+    fun resetSubscribers() = synchronized(this) {
+        subscribers = hashSetOf()
     }
 }

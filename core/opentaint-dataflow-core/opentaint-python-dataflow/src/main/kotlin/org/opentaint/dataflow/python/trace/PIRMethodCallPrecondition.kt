@@ -16,6 +16,7 @@ import org.opentaint.dataflow.python.PIRCallAtomEvaluator
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
+import org.opentaint.dataflow.python.rulesWithConditions
 import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.python.alias.forEachPossibleAliasBeforeStatement
 import org.opentaint.dataflow.python.analysis.PIRMethodAnalysisContext
@@ -124,17 +125,15 @@ class PIRMethodCallPrecondition(
         val conditionRewriter = callConditionRewriter()
 
         val result = mutableListOf<TaintRulePrecondition>()
-        for (rule in sourceRules) {
+        for (rule in conditionRewriter.rulesWithConditions(sourceRules)) {
             result += evaluateSourceRulePrecondition(
                 rule,
-                rule.taint,
-                ruleCondition = { condition },
+                rule.rule.taint,
                 sourcePreconditionEvaluator = evaluator,
                 evalAction = { r, a ->
                     val pos = a.pos.resolveAp(statement)
                     if (pos == null) Maybe.none() else evaluate(r, a, pos, TaintMarkAccessor(a.mark.name))
                 },
-                conditionRewriter = conditionRewriter,
             )
         }
         return result
@@ -151,14 +150,12 @@ class PIRMethodCallPrecondition(
         val rulePreconditionEvaluator = TaintPassActionPreconditionEvaluator(entryFactReader)
         val conditionRewriter = callConditionRewriter()
 
-        for (rule in passRules) {
+        for (rule in conditionRewriter.rulesWithConditions(passRules)) {
             this += evaluatePassRulePrecondition(
                 rule,
-                rule.copy,
-                ruleCondition = { condition },
+                rule.rule.copy,
                 preconditionEvaluator = rulePreconditionEvaluator,
                 evalAction = { r, a -> acceptPass(r, a) },
-                conditionRewriter = conditionRewriter,
                 mapExit2Return = { mapExit2Return(it) },
             )
         }

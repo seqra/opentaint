@@ -29,7 +29,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class AutomataApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
-    override val cancellation: Cancellation = Cancellation()
+    override val cancellation: Cancellation
 ) : ApManager {
     private val interner = AccessorInterner()
 
@@ -101,9 +101,6 @@ class AutomataApManager(
 
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
         AccessGraphFinalFactAp(base, finalAp, exclusions)
-
-    override fun createAbstractAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        AccessGraphFinalFactAp(base, emptyGraph, exclusions)
 
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         AccessGraphInitialFactAp(base, finalAp, exclusions)

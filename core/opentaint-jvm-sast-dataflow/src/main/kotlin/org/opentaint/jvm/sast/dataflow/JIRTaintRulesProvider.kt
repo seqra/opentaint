@@ -14,7 +14,7 @@ import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 class JIRTaintRulesProvider(
     private val taintConfiguration: TaintConfiguration
 ) : TaintRulesProvider {
-    override fun entryPointRulesForMethod(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) = getRules(method) {
+    override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = getRules(method) {
         taintConfiguration.entryPointForMethod(it, allRelevant)
     }
 
@@ -58,7 +58,7 @@ class JIRTaintRulesProvider(
         taintConfiguration.methodExitSinkForMethod(it, allRelevant)
     }
 
-    override fun sinkRulesForMethodEntry(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) = getRules(method) {
+    override fun sinkRulesForMethodEntry(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = getRules(method) {
         taintConfiguration.methodEntrySinkForMethod(it, allRelevant)
     }
 
@@ -71,5 +71,9 @@ class JIRTaintRulesProvider(
     ): Iterable<T> {
         check(method is JIRMethod) { "Expected method to be JIRMethod" }
         return body(method)
+    }
+
+    override fun selectRules(ruleIds: Set<String>) {
+        // do nothing
     }
 }

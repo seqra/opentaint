@@ -1,54 +1,44 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
-import org.opentaint.dataflow.ap.ifds.access.FactAp
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.Action
 import org.opentaint.dataflow.configuration.jvm.AssignMark
-import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
 import org.opentaint.dataflow.configuration.jvm.CopyMark
 import org.opentaint.dataflow.configuration.jvm.RemoveAllMarks
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
+import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
-import org.opentaint.dataflow.jvm.ap.ifds.taint.ConditionEvaluator
+import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PassActionEvaluator
 import org.opentaint.dataflow.taint.SourceActionEvaluator
+import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.applyCleanerActions
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
 
 object TaintConfigUtils {
-    fun sinkRules(config: TaintRulesProvider, method: CommonMethod, statement: CommonInst, fact: FactAp?) =
-        config.sinkRulesForMethod(method, statement, fact)
-
     fun <T> applyEntryPointConfig(
-        config: TaintRulesProvider,
-        method: CommonMethod,
-        fact: FactAp?,
-        conditionEvaluator: ConditionEvaluator<Boolean>,
+        rules: List<RuleWithCondition<TaintEntryPointSource>>,
         taintActionEvaluator: SourceActionEvaluator<T>
     ) = applyAssignMark<TaintEntryPointSource, T>(
-        config.entryPointRulesForMethod(method, fact), conditionEvaluator, taintActionEvaluator,
-        TaintEntryPointSource::condition, TaintEntryPointSource::actionsAfter
+        rules, taintActionEvaluator,
+        TaintEntryPointSource::actionsAfter
     )
 
     private inline fun <reified T : TaintConfigurationItem, R> applyAssignMark(
-        rules: Iterable<T>,
-        conditionEvaluator: ConditionEvaluator<Boolean>,
+        rules: List<RuleWithCondition<T>>,
         taintActionEvaluator: SourceActionEvaluator<R>,
-        condition: (T) -> Condition,
         actionsAfter: (T) -> List<Action>
     ): Maybe<List<R>> = rules
-        .filter { conditionEvaluator.eval(condition(it)) }
+        .applicableRules(conditionEvaluator = null)
         .maybeFlatMap { item ->
             actionsAfter(item)
                 .filterIsInstance<AssignMark>()
@@ -56,38 +46,64 @@ object TaintConfigUtils {
         }
 
     fun <T> applyPassThrough(
-        config: TaintRulesProvider,
-        method: CommonMethod,
-        statement: CommonInst,
-        fact: FactAp?,
-        conditionEvaluator: ConditionEvaluator<Boolean>,
+        rules: List<RuleWithCondition<TaintPassThrough>>,
+        conditionEvaluator: TaintFactAwareConditionEvaluator,
         taintActionEvaluator: PassActionEvaluator<T>
-    ): Maybe<List<T>> =
-        config.passTroughRulesForMethod(method, statement, fact)
-            .filter { conditionEvaluator.eval(it.condition) }
+    ): Maybe<List<T>> {
+        val rules = rules.applicableRules(conditionEvaluator)
+        return rules
             .maybeFlatMap { item ->
                 item.actionsAfter.maybeFlatMap {
                     taintActionEvaluator.accept(item, it)
                 }
             }
+    }
 
     fun applyCleaner(
-        config: TaintRulesProvider,
-        method: CommonMethod,
-        statement: CommonInst,
+        rules: List<RuleWithCondition<TaintCleaner>>,
         initialFact: FinalFactReader,
-        conditionEvaluator: ConditionEvaluator<Boolean>,
+        conditionEvaluator: TaintFactAwareConditionEvaluator,
         taintActionEvaluator: JIRTaintCleanActionEvaluator
     ): List<EvaluatedCleanAction> {
-        val rules = config.cleanerRulesForMethod(method, statement, initialFact.factAp)
-            .filter { conditionEvaluator.eval(it.condition) }
-
+        val rules = rules.applicableRules(conditionEvaluator)
         return rules.applyCleanerActions(
             evaluator = taintActionEvaluator,
             itemRule = { it },
             itemActions = { it.actionsAfter },
             initial = EvaluatedCleanAction.initial(initialFact)
         )
+    }
+
+    private fun <T> List<RuleWithCondition<T>>.applicableRules(
+        conditionEvaluator: TaintFactAwareConditionEvaluator?
+    ): List<T> {
+        val applicableRules = filter {
+            val simplifiedCondition = it.condition
+            val conditionExpr = when {
+                simplifiedCondition.isFalse -> return@filter false
+                simplifiedCondition.isTrue -> return@filter true
+                else -> simplifiedCondition.expr
+            }
+
+            conditionEvaluator?.evalWithAssumptionsCheck(conditionExpr) ?: false
+        }
+
+        return applicableRules.map { it.rule }
+    }
+
+    inline fun <T> Iterable<T>.applyCleanerActions(
+        initial: EvaluatedCleanAction,
+        body: (T, EvaluatedCleanAction) -> List<EvaluatedCleanAction>
+    ): List<EvaluatedCleanAction> {
+        var unprocessedFacts = listOf(initial)
+        for (action in this) {
+            val next = mutableListOf<EvaluatedCleanAction>()
+            for (f in unprocessedFacts) {
+                next += body(action, f)
+            }
+            unprocessedFacts = next
+        }
+        return unprocessedFacts
     }
 
     inline fun <T> List<T>.applyCleanerActions(

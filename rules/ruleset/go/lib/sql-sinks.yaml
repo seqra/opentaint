@@ -2,6 +2,8 @@ rules:
   - id: sql-sinks
     options:
       lib: true
+    tags:
+      - sqli-sink
     severity: NOTE
     message: Untrusted data reaches a SQL execution API
     metadata:
@@ -16,24 +18,24 @@ rules:
               import "database/sql"
               ...
           - pattern-either:
-              - pattern: "($DB : *sql.DB).Query($SQL, ...)"
-              - pattern: "($DB : *sql.DB).QueryContext($CTX, $SQL, ...)"
-              - pattern: "($DB : *sql.DB).QueryRow($SQL, ...)"
-              - pattern: "($DB : *sql.DB).QueryRowContext($CTX, $SQL, ...)"
-              - pattern: "($DB : *sql.DB).Exec($SQL, ...)"
-              - pattern: "($DB : *sql.DB).ExecContext($CTX, $SQL, ...)"
-              - pattern: "($DB : *sql.DB).Prepare($SQL)"
-              - pattern: "($DB : *sql.DB).PrepareContext($CTX, $SQL)"
-              - pattern: "($TX : *sql.Tx).Query($SQL, ...)"
-              - pattern: "($TX : *sql.Tx).QueryContext($CTX, $SQL, ...)"
-              - pattern: "($TX : *sql.Tx).QueryRow($SQL, ...)"
-              - pattern: "($TX : *sql.Tx).QueryRowContext($CTX, $SQL, ...)"
-              - pattern: "($TX : *sql.Tx).Exec($SQL, ...)"
-              - pattern: "($TX : *sql.Tx).ExecContext($CTX, $SQL, ...)"
-              - pattern: "($TX : *sql.Tx).Prepare($SQL)"
-              - pattern: "($TX : *sql.Tx).PrepareContext($CTX, $SQL)"
-              - pattern: "($CN : *sql.Conn).QueryContext($CTX, $SQL, ...)"
-              - pattern: "($CN : *sql.Conn).QueryRowContext($CTX, $SQL, ...)"
-              - pattern: "($CN : *sql.Conn).ExecContext($CTX, $SQL, ...)"
-              - pattern: "($CN : *sql.Conn).PrepareContext($CTX, $SQL)"
-          - focus-metavariable: $SQL
+              - pattern: "($DB : *sql.DB).Query($UNTRUSTED, ...)"
+              - pattern: "($DB : *sql.DB).QueryContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($DB : *sql.DB).QueryRow($UNTRUSTED, ...)"
+              - pattern: "($DB : *sql.DB).QueryRowContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($DB : *sql.DB).Exec($UNTRUSTED, ...)"
+              - pattern: "($DB : *sql.DB).ExecContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($DB : *sql.DB).Prepare($UNTRUSTED)"
+              - pattern: "($DB : *sql.DB).PrepareContext($CTX, $UNTRUSTED)"
+              - pattern: "($TX : *sql.Tx).Query($UNTRUSTED, ...)"
+              - pattern: "($TX : *sql.Tx).QueryContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($TX : *sql.Tx).QueryRow($UNTRUSTED, ...)"
+              - pattern: "($TX : *sql.Tx).QueryRowContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($TX : *sql.Tx).Exec($UNTRUSTED, ...)"
+              - pattern: "($TX : *sql.Tx).ExecContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($TX : *sql.Tx).Prepare($UNTRUSTED)"
+              - pattern: "($TX : *sql.Tx).PrepareContext($CTX, $UNTRUSTED)"
+              - pattern: "($CN : *sql.Conn).QueryContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($CN : *sql.Conn).QueryRowContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($CN : *sql.Conn).ExecContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "($CN : *sql.Conn).PrepareContext($CTX, $UNTRUSTED)"
+          - focus-metavariable: $UNTRUSTED

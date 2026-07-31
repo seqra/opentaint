@@ -54,11 +54,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/ldap-injection-sinks.yaml#java-ldap-injection-sinks
+        - tag: ldap-injection-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$QUERY'

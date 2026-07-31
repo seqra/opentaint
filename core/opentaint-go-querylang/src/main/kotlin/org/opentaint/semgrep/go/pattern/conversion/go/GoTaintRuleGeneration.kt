@@ -59,7 +59,7 @@ private sealed interface GoMethodNamePattern {
 }
 
 fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSerializedItem> {
-    val rules = mutableListOf<GoSerializedItem>()
+    val rules = mutableListOf<Pair<TaintRuleEdge, GoSerializedItem>>()
 
     fun evaluateWithStateCheck(edge: TaintRuleEdge, kind: GoTaintEdgeKind, stateOfEdge: State): List<GoEvaluatedEdgeCondition> =
         this.evaluateGoMethodConditionAndEffect(kind, stateOfEdge, edge.edgeCondition, edge.edgeEffect, ctx.trace)
@@ -84,7 +84,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                     val fn = condition.ruleCondition.function
                     fn.handleMethodCall(
                         call = {
-                            rules += GoSerializedRule.Source(
+                            rules += ruleEdge to GoSerializedRule.Source(
                                 pkg = fn.pkgMatcher,
                                 function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
@@ -93,7 +93,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                             )
                         },
                         global = { globalField ->
-                            rules += GoSerializedGlobalSource(
+                            rules += ruleEdge to GoSerializedGlobalSource(
                                 pkg = fn.pkgMatcher,
                                 global = globalField,
                                 condition = condition.ruleCondition.condition,
@@ -102,7 +102,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                             )
                         },
                         field = { fieldName ->
-                            rules += GoSerializedFieldSource(
+                            rules += ruleEdge to GoSerializedFieldSource(
                                 field = fieldName,
                                 condition = condition.ruleCondition.condition,
                                 taint = actions,
@@ -132,7 +132,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                     fn.handleMethodCall(
                         call = {
                             val afterSinkActions = buildGoStateAssignActions(ruleEdge.stateTo, condition)
-                            rules += GoSerializedRule.Sink(
+                            rules += ruleEdge to GoSerializedRule.Sink(
                                 pkg = fn.pkgMatcher,
                                 function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
@@ -172,7 +172,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                     val fn = condition.ruleCondition.function
                     fn.handleMethodCall(
                         call = {
-                            rules += GoSerializedRule.Cleaner(
+                            rules += ruleEdge to GoSerializedRule.Cleaner(
                                 pkg = fn.pkgMatcher,
                                 function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
@@ -192,7 +192,29 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
         }
     }
 
-    return rules
+    return rules.map { (edge, item) ->
+        val itemWithId = item.withId(ctx.nextSerializedItemId(item.typeLabel()))
+        registerSerializedItem(edge, requireNotNull(itemWithId.serializedId))
+        itemWithId
+    }
+}
+
+private fun GoSerializedItem.typeLabel(): String = when (this) {
+    is GoSerializedGlobalSource -> "global-source"
+    is GoSerializedFieldSource -> "field-source"
+    is GoSerializedRule.Source -> "source"
+    is GoSerializedRule.Sink -> "sink"
+    is GoSerializedRule.PassThrough -> "pass-through"
+    is GoSerializedRule.Cleaner -> "cleaner"
+}
+
+private fun GoSerializedItem.withId(id: String): GoSerializedItem = when (this) {
+    is GoSerializedGlobalSource -> copy(serializedId = id)
+    is GoSerializedFieldSource -> copy(serializedId = id)
+    is GoSerializedRule.Source -> copy(serializedId = id)
+    is GoSerializedRule.Sink -> copy(serializedId = id)
+    is GoSerializedRule.PassThrough -> copy(serializedId = id)
+    is GoSerializedRule.Cleaner -> copy(serializedId = id)
 }
 
 private inline fun GoFunctionNameMatcher.handleMethodCall(

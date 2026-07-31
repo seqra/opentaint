@@ -14,6 +14,9 @@ class JoinRightCompositionStrategy<Item, Cond, Assign, Clean>(
     private val leftFinalMarks: Set<Mark.GeneratedMark>,
     val strategy: TaintRuleStrategy<Item, Cond, Assign, Clean>,
 ) : TaintRuleGenerationCtx.CompositionStrategy<Item, Cond, Assign, Clean> {
+    private var joinVarUsed: Boolean = false
+    val joinVarReferenced: Boolean get() = joinVarUsed
+
     private val initialStateId = r.automata.stateId(r.automata.initial)
 
     override fun stateContains(
@@ -24,6 +27,7 @@ class JoinRightCompositionStrategy<Item, Cond, Assign, Clean>(
         val value = state.register.assignedVars[varName]
         if (value != initialStateId) return null
 
+        joinVarUsed = true
         return strategy.posContainsAnyMark(pos, leftFinalMarks)
     }
 

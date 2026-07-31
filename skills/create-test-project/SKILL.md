@@ -1,96 +1,130 @@
 ---
 name: create-test-project
-description: Create an OpenTaint test project with annotated positive/negative samples for verifying a rule or approximation. Use when a rule or approximation needs a test project to check against
+description: Create an OpenTaint test project with positive/negative samples for verifying a rule or approximation. Use when a rule or approximation needs a test project to check against
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.0"
 ---
 
 # Skill: Create Test Project
 
-Build a minimal compiled test project whose annotated samples reproduce the flow a rule or approximation is checked against. The compiled model is the deliverable; its sources sit alongside it
+Build a minimal compiled test project whose samples reproduce the flow a rule or approximation is verified against. A sample routes data between a real library method and the generic taint marker the scaffold provides, with the one verdict it must produce — a positive that must flag, a negative that must not. The compiled model is the deliverable; its sample sources sit alongside it.
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- What to test `<spec>` — a rule's requirements, or the package's methods to exercise
-- Project root `<project-root>` — the real sources the requirements point into. Default: current directory
-- Tracking file `<tracking-file>` — the rule or approximation file this test serves. Default: `.opentaint/tracking/rules/lib/<name>.yaml` or `.opentaint/tracking/approximations/<name>.yaml`
-- Test project `<test-project>` — sources. Default: `.opentaint/test-projects/<name>` (a rule project holds a `sinks/` and/or `sources/` sub-project under it)
-- Compiled output `<test-compiled>` — the model. Default: `.opentaint/test-compiled/<name>` (one model per sub-project: `<name>/sinks`, `<name>/sources`)
-- Dependencies — exact Maven coordinates the samples need; default: the `dependencies` list in `<tracking-file>`; with no tracking file, derive them from the project's `build.gradle`/`pom.xml`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `language` (required) — target language for this project and language-specific instructions
+- `type` (required) — what this project verifies, selecting the sample style and the identifying inputs below: `rule-source`, `rule-sink`, or `dataflow`
+- for `rule-source` / `rule-sink` — `unit`: the `<package-kebab>` of the source or sink unit; its methods to exercise and their `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
+- for `dataflow` — `batch`: the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
 
-`<name>` is the package (`<package-kebab>`) for a rule, or the dataflow approximation unit (`<package-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`) for an approximation; the two never share a folder
+The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow approximation.
 
 ## Workflow
 
-### 1. Init the project
+### 1. Scaffold the project
 
-Pick the scaffold by shape, then pass each coordinate from the tracking file's `dependencies` as a `--dependency`:
+The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-approximation.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and the fixed test rule the samples run against, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and recompile rather than scaffolding fresh. The init command is in that reference.
 
-- a rule → `test rule init` — scaffolds a `sinks/` and a `sources/` sub-project under `<test-project>`, each with `Taint.java` (the generic `source()`/`sink()`) and the generic marker lib rules in its `test-rules/`. Pass `--sinks-only` / `--sources-only` for a package with only one side, so you get a single sub-project
-- a dataflow approximation → `test approximation init` (Gradle build, plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies)
+### 2. Write the samples
 
-```bash
-# rule test projects — both sides (this package has new sinks and new sources)
-opentaint test rule init <test-project> \
-  --dependency "org.springframework:spring-webflux:6.1.0"
-# sink-only package
-opentaint test rule init <test-project> --sinks-only \
-  --dependency "org.mybatis:mybatis:3.5.13"
+For each method to exercise, the unit or batch entry already records its `signature`; shape a faithful sample from how the method is really called in the project, then write minimal samples. The app's real path is irrelevant, only that data flows between the method and the marker:
 
-# dataflow approximation test project
-opentaint test approximation init <test-project> \
-  --dependency "io.projectreactor:reactor-core:3.8.5"
-```
+- the counterpart is always the generic marker, never a real source/sink, so the sample exercises only the unit under test
+- register each sample under the single verdict it must produce — a positive that must flag, and, where the type calls for it, a negative that must not — in the test's `rule-test.yaml`
 
-### 2. Read the real signatures, then write samples
+The sample code, the `rule-test.yaml` form, and which verdicts a type needs are in that reference.
 
-The requirements name sources and sinks. For each new source and new sink, read its real method signature from the package jar in `.opentaint/project/dependencies` (with `javap`) — the pattern matches on that, so a sample built on the wrong signature compiles but verifies nothing. The flow is minimal, not the app's real path, and the counterpart is always the generic `Taint` marker (so types always fit — never a real source/sink):
+### 3. Compile to the model
 
-- a **sink** sample (in the `sinks/` sub-project): assign `test.Taint.source()` to a local of the sink argument's type, then pass it in — `String t = test.Taint.source(); pkg.theSink(t);` (the generic `source()` infers the type, no cast)
-- a **source** sample (in the `sources/` sub-project): call the new source, then pass its value into `test.Taint.sink(...)` — `var v = pkg.theSource(); test.Taint.sink(v);` (`sink` takes `Object`, so any type fits)
-
-Write Java samples under `<test-project>/<sinks|sources>/src/main/java/test/` as plain methods (no annotations), then record their expected verdicts in a `rule-test.yaml` at that sub-project's source root (`<test-project>/<sinks|sources>/rule-test.yaml`). Each `tests:` entry carries a `rule-id` — `<rule-file-path>#<rule-id>`, the sub-project's test join that create-rule writes: `java/security/<name>-sinks.yaml#<name>-sinks` for sink samples, `<name>-sources` for source samples (`<name>` = the package-kebab) — and lists its samples under `positive` (must flag) and `negative` (must not) as JVM binary class names (nested classes use `$`), each optionally `#<methodName>` to target one method (a bare class name targets all its declared methods), e.g. `test.SqlSinkTest#vulnerable`. A sample entry may instead be an object `{ entrypoint: <id>, mode: spring-app }` to analyze it through the Spring dispatcher instead of calling the method directly (see `references/spring-multimodule.md`); a bare string is equivalent to `mode: default`. The `<rule-file-path>` is relative to the test-rules root and `<rule-id>` the short id — not the full `--rule-id` used by `opentaint scan`. One expected verdict per sample
-
-Load and follow `references/rule.md` (for a rule) or `references/approximation.md` (for a dataflow approximation)
-
-### 3. Compile
-
-Compile each project to its own model — a rule's `sinks/` and `sources/` sub-projects separately; an approximation's single project once:
+Compile the project you built to `.opentaint/test-compiled/<name>` — a rule side compiles the one sub-project you scaffolded (`sources/` or `sinks/`) to the matching sub-model, a dataflow project compiles once:
 
 ```bash
-# rule
-opentaint compile <test-project>/sinks   -o <test-compiled>/sinks
-opentaint compile <test-project>/sources -o <test-compiled>/sources
-# approximation
-opentaint compile <test-project> -o <test-compiled>
+# rule side — the one you built
+opentaint compile .opentaint/test-projects/<name>/sources -o .opentaint/test-compiled/<name>/sources
+# dataflow
+opentaint compile .opentaint/test-projects/<name> -o .opentaint/test-compiled/<name>
 ```
 
-A clean compile is the deliverable. If one won't build, fix that project's samples or dependencies before handing off
+A clean compile is the deliverable. Feedback loop: a build failure is a fixable samples-or-dependencies problem — surface the real error, fix it, and recompile. On a clean compile set the test-project stage done (per Tracking).
+
+### 4. Escalate
+
+When a project won't compile after ~3 fixes with no clear cause → report the failure and leave the test-project stage pending, for the orchestrator to intervene.
 
 ## Output
 
-- The compiled model(s) (`<test-compiled>`, per sub-project for a rule) plus their sources (`<test-project>`); report the paths and the exact `compile` command(s) used
-- The tracking file's `test_project` stage marked done (see Tracking)
+Short and concise report of what was done
+
+### Artifacts
+
+- `.opentaint/test-compiled/<name>` — the compiled test model a later stage runs against; report each path and the exact `compile` command used
+- `.opentaint/test-projects/<name>` — the sample sources and the `rule-test.yaml` that records their verdicts, alongside the model
+
+### Summary
+
+- the number of samples written per case
+- any method excluded because no sample could be written (marked `failed`), with a brief reason
+- failed projects (if any)
 
 ## Tracking
 
-In `<tracking-file>`, set only the test-project stage (`in_progress` while building, `done` once it compiles):
+This skill writes only the test-project stage back:
+
+- a rule side → `stages.test_project: done` in the source or sink unit
+- a dataflow approximation → one `build.test_project` entry per method in the batch file, `status: done` for a method whose sample made it into the project, `status: failed` for one no sample could be written for (excluded)
+
+`.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sources` each an entry point `{ method, signature, note, rule_id }` (`signature` the member's JVM descriptor, always quoted so array types `[…` stay valid YAML in a flow mapping), `stages` tracks the unit through rule authoring, and a `blocker` string is added under it when the unit can't be made to pass. Keep it clear from comments
 
 ```yaml
+dependencies:
+  - org.springframework:spring-websocket:6.1.0
+sources:
+  - { method: org.springframework.web.socket.TextMessage#getPayload, signature: "()Ljava/lang/String;", note: untrusted WebSocket frame data, rule_id: null }
 stages:
-  test_project: done
+  test_project: pending
+  tests_passing: pending
 ```
 
-Do not touch other stages or fields
+`.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — one sink unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sinks` each a dangerous operation reached by the taint frontier `{ method, signature, vuln_class, note, rule_id }` — `signature` the member's JVM descriptor so overloads stay distinct, always quoted (array types contain `[`, which is invalid unquoted in a flow mapping), `vuln_class` per entry since one package can host several, `note` a few words on the danger, the tainted argument left unpinned. `stages` tracks the unit through rule authoring. Keep it clear from comments
 
-## Gotchas
+```yaml
+dependencies:
+  - cn.hutool:hutool-core:5.8.20
+sinks:
+  - { method: cn.hutool.core.io.FileUtil#writeBytes, signature: "([BLjava/lang/String;)Ljava/io/File;", vuln_class: path-traversal, note: writes data to an untrusted path, rule_id: null }
+stages:
+  test_project: pending
+  tests_passing: pending
+```
 
-- One expected verdict per sample
-- One unit per `<name>` folder — never write into another unit's project, so concurrent agents don't race
-- The scaffold (`test rule init` / `test approximation init`) defaults to Java 8 — bump `source/targetCompatibility` when the samples use a library needing Java 17/21 (Spring 7, spring-data 4, Lucene 10, Jackson 3). Set `release` on the running JDK; a Gradle `toolchain{}` block fails here (only JDK 21 is locatable, with no download repo)
-- A positive must route the marker `source()` into the sink — a sink whose only untrusted input is a bare method parameter with no in-sample source (e.g. `getValue(Expression e)`) can't be satisfied by any taint-flow join; feed the parameter from `test.Taint.source()` or the sample is unprovable
-- For library-method behavior the requirements don't pin down (does it sanitize? propagate taint?), read the dependency or its docs rather than guessing
+`.opentaint/tracking/approximations/<batch>.yaml` — one batch's method classification, `<batch>` the plan's filename stem. Every method sits in exactly one verdict bucket, keyed with its `signature` (the JVM descriptor, always quoted so array types `[…` stay valid YAML) so overloads stay distinct:
+- `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
+- `skipped` — terminal non-carriers; each `{ method, signature, reason }`
+- `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
+
+`dependencies` lists the dependency identifiers a dataflow test project needs. The `build` block tracks the build — `test_project` records each dataflow method's test-project status (`done` if a sample was written into the batch's test project, `failed` if none could be written so the method was excluded from it), and `done` holds the finished `{ method, signature }`. Keep it clear from comments
+
+```yaml
+passthrough:
+  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;" }
+dataflow:
+  - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
+skipped:
+  - { method: "org.slf4j.Logger#info", signature: "(Ljava/lang/String;)V", reason: "void side-effect" }
+engine_issues: []
+dependencies: []
+build:
+  test_project:
+    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;", status: done }
+  done: []
+```
+
+## Constraints
+
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+
+- One `<name>` folder per unit — never write into another unit's test project, so concurrent agents don't race

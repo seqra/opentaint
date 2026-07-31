@@ -22,6 +22,9 @@ sealed interface SerializedPythonRule {
     val target: PythonTarget
 
     val info: ItemInfo?
+
+    /** Assigned by the semgrep converter; identifies the rule within its generated group. */
+    val serializedId: String?
 }
 
 /** Rules that emit taint (entry-point parameters or arbitrary calls/attributes). */
@@ -43,6 +46,7 @@ data class SerializedPythonEntryPointSource(
     override val condition: SerializedPythonCondition? = null,
     override val taint: List<SerializedPythonTaintAssignAction>,
     override val info: ItemInfo? = null,
+    override val serializedId: String? = null,
 ) : SerializedPythonSourceRule
 
 /** Regular source — taints the result of a call or attribute access. */
@@ -52,6 +56,7 @@ data class SerializedPythonSource(
     override val condition: SerializedPythonCondition? = null,
     override val taint: List<SerializedPythonTaintAssignAction>,
     override val info: ItemInfo? = null,
+    override val serializedId: String? = null,
 ) : SerializedPythonSourceRule
 
 @Serializable(with = SerializedPythonSinkSerializer::class)
@@ -60,6 +65,7 @@ data class SerializedPythonSink(
     val condition: SerializedPythonCondition? = null,
     val meta: PythonSinkMetaData? = null,
     override val info: ItemInfo? = null,
+    override val serializedId: String? = null,
 ) : SerializedPythonRule
 
 /** Return (method-exit) sink — fires at the analyzed method's own `return`; mirrors JVM `MethodExitSink`. */
@@ -69,6 +75,7 @@ data class SerializedPythonExitSink(
     val condition: SerializedPythonCondition? = null,
     val meta: PythonSinkMetaData? = null,
     override val info: ItemInfo? = null,
+    override val serializedId: String? = null,
 ) : SerializedPythonRule
 
 @Serializable(with = SerializedPythonPassThroughSerializer::class)
@@ -77,6 +84,7 @@ data class SerializedPythonPassThrough(
     val condition: SerializedPythonCondition? = null,
     val copy: List<SerializedPythonTaintPassAction>,
     override val info: ItemInfo? = null,
+    override val serializedId: String? = null,
 ) : SerializedPythonRule
 
 /**
@@ -90,6 +98,7 @@ data class SerializedPythonCleaner(
     val cleans: List<SerializedPythonTaintCleanAction>,
     val `for`: String? = null,
     override val info: ItemInfo? = null,
+    override val serializedId: String? = null,
 ) : SerializedPythonRule
 
 // region Surrogates

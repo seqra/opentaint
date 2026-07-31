@@ -1,0 +1,5 @@
+# generated output tree (rebuild with `uv run build.py`)
+dist/
+# uv / python
+.venv/
+__pycache__/

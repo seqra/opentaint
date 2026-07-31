@@ -6,6 +6,7 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfi
 import org.opentaint.dataflow.go.rules.GoCombinedTaintRulesProvider
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
+import org.opentaint.go.sast.rules.GoSemgrepRuleProvider
 import org.opentaint.semgrep.go.pattern.conversion.toGoSerializedTaintConfig
 
 fun PreloadedRules<GoSerializedItem, GoSerializedTaintConfig>.loadRules(): GoTaintRulesProvider {
@@ -16,9 +17,10 @@ fun PreloadedRules<GoSerializedItem, GoSerializedTaintConfig>.loadRules(): GoTai
         userConfig.loadConfig(it.toGoSerializedTaintConfig())
     }
 
-    if (customApproximationConfig.isEmpty()) return userConfig
+    val semgrepConfig = GoSemgrepRuleProvider(rules, userConfig)
+    if (customApproximationConfig.isEmpty()) return semgrepConfig
 
     val approxConfig = GoTaintConfiguration()
     customApproximationConfig.forEach { approxConfig.loadConfig(it) }
-    return GoCombinedTaintRulesProvider(userConfig, approxConfig)
+    return GoCombinedTaintRulesProvider(semgrepConfig, approxConfig)
 }

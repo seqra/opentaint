@@ -15,6 +15,7 @@ import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
+import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMark
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
@@ -129,8 +130,8 @@ private fun createTestConfig(
     mainConfig: TaintRulesProvider,
     visitedAtSourceMarks: MutableSet<TaintMark>
 ): TaintRulesProvider = object : TaintRulesProvider {
-    override fun entryPointRulesForMethod(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) =
-        mainConfig.entryPointRulesForMethod(method, fact, allRelevant)
+    override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintEntryPointSource> =
+        mainConfig.entryPointRulesForMethod(method, statement, fact, allRelevant)
 
     override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = getRules(method) {
         testData.testDataBySourceInst[statement].orEmpty().map { trace ->
@@ -176,7 +177,7 @@ private fun createTestConfig(
         emptyList<TaintMethodExitSink>()
     }
 
-    override fun sinkRulesForMethodEntry(method: CommonMethod, fact: FactAp?, allRelevant: Boolean) = getRules(method) {
+    override fun sinkRulesForMethodEntry(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintMethodEntrySink> = getRules(method) {
         emptyList<TaintMethodEntrySink>()
     }
 
@@ -219,6 +220,10 @@ private fun createTestConfig(
     ): Iterable<T> {
         check(method is JIRMethod) { "Expected method to be JIRMethod" }
         return body(method)
+    }
+
+    override fun selectRules(ruleIds: Set<String>) {
+        // do nothing
     }
 }
 

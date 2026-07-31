@@ -68,6 +68,9 @@ class AccessCactus(
     override fun removeAbstraction(): FinalFactAp? =
         access.removeAbstraction().takeIf { !it.isEmpty }?.let { AccessCactus(base, it, exclusions) }
 
+    override fun abstractOnly(): FinalFactAp =
+        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
+
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
         return AccessCactus(base, filteredAccess, exclusions)

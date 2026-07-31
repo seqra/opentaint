@@ -50,11 +50,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/http-response-splitting-sinks.yaml#java-http-response-splitting-sink
+        - tag: http-response-splitting-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -114,11 +114,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/smtp-injection-sinks.yaml#java-smtp-crlf-injection-sinks
+        - tag: smtp-injection-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

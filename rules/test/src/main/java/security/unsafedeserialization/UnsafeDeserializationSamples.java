@@ -29,8 +29,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.yaml.snakeyaml.Yaml;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 
 /**
  * Samples for unsafe-deserialization rules from java/security/unsafe-deserialization.yaml.
@@ -146,12 +149,11 @@ public class UnsafeDeserializationSamples {
     @WebServlet("/deserialize/jackson/unsafe")
     public static class UnsafeJacksonServlet extends HttpServlet {
 
-        // VULNERABLE: default typing enabled globally -> potential RCE gadget exploitation
-        private final ObjectMapper mapper = new ObjectMapper().enableDefaultTyping();
-
         @Override
         protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-            // VULNERABLE: no type restriction or configuration hardening
+            ObjectMapper mapper = new ObjectMapper();
+            // VULNERABLE: permissive default typing is applied to request-controlled JSON
+            mapper.enableDefaultTyping();
             Object obj = mapper.readValue(req.getInputStream(), Object.class);
             resp.getWriter().println("Deserialized: " + obj);
         }
@@ -185,14 +187,36 @@ public class UnsafeDeserializationSamples {
     @RequestMapping("/api/deserialize/jackson")
     public static class JacksonSpringController {
 
-        // VULNERABLE: default typing enabled globally -> potential RCE gadget exploitation
-        private final ObjectMapper mapper = new ObjectMapper().enableDefaultTyping();
+        @PostMapping(path = "/unsafe/class", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<Object> unsafeClassResolver(@RequestBody String json) throws IOException {
+            ObjectMapper.DefaultTypeResolverBuilder resolver =
+                    new ObjectMapper.DefaultTypeResolverBuilder(ObjectMapper.DefaultTyping.EVERYTHING);
+            // VULNERABLE: CLASS type ids are attached to the mapper consuming untrusted JSON
+            resolver.init(JsonTypeInfo.Id.CLASS, null);
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.setDefaultTyping(resolver);
+            return ResponseEntity.ok(mapper.readValue(json, Object.class));
+        }
 
-        @PostMapping(path = "/unsafe", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-        public ResponseEntity<Object> unsafeJackson(@RequestBody String json) throws IOException {
-            // VULNERABLE: deserialize untrusted JSON into arbitrary Object
-            Object obj = mapper.readValue(json, Object.class);
-            return ResponseEntity.ok(obj);
+        @PostMapping(path = "/unsafe/minimal-class", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<Object> unsafeMinimalClassResolver(@RequestBody String json) throws IOException {
+            ObjectMapper.DefaultTypeResolverBuilder resolver =
+                    new ObjectMapper.DefaultTypeResolverBuilder(ObjectMapper.DefaultTyping.EVERYTHING);
+            // VULNERABLE: MINIMAL_CLASS type ids are attached to the mapper consuming untrusted JSON
+            resolver.init(JsonTypeInfo.Id.MINIMAL_CLASS, null);
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.setDefaultTyping(resolver);
+            return ResponseEntity.ok(mapper.readValue(json, Object.class));
+        }
+
+        @PostMapping(path = "/unsafe/laissez-faire", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<JsonNode> unsafeLaissezFaire(@RequestBody String json) throws IOException {
+            ObjectMapper mapper = new ObjectMapper();
+            // VULNERABLE: unrestricted subtype validation is applied to untrusted JSON
+            mapper.activateDefaultTyping(
+                    LaissezFaireSubTypeValidator.instance,
+                    ObjectMapper.DefaultTyping.EVERYTHING);
+            return ResponseEntity.ok(mapper.readTree(json));
         }
 
         @PostMapping(path = "/safe", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)

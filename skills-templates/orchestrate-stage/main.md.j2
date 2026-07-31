@@ -1,0 +1,22 @@
+---
+name: orchestrate-stage
+description: Run one stage of the OpenTaint pipeline by coordinating leaf subagents and deterministic joins. Use when a separate OpenTaint pipeline stage needs to be executed
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "{{ version }}"
+---
+
+{% include "sections/preamble.md" %}
+
+## Workflow
+
+{% include "sections/workflow.md" %}
+
+## Dispatching
+
+{% include "sections/dispatching.md" %}
+
+## Key constraints
+
+{% include "sections/key-constraints.md" %}

@@ -62,16 +62,17 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintRuleToTaintRules(
     val taintRules = taintCtx.flatMap {
         safeConvertToTaintRules {
             val generatedRules = strategy.generateTaintRules(it, this, SinkDiscardMode.TRIVIAL_CONDITION)
-            listOf(TaintRuleFromSemgrep.TaintRuleGroup(generatedRules))
+            listOf(it.createRuleGroup(generatedRules))
         }.orEmpty()
     }
 
-    val ruleGroups = mutableListOf<TaintRuleFromSemgrep.TaintRuleGroup<Item>>()
-    taintRules.source.mapTo(ruleGroups) { it.rule }
-    taintRules.sink.mapTo(ruleGroups) { it.rule }
-    taintRules.pass.mapTo(ruleGroups) { it.rule }
-    taintRules.clean.mapTo(ruleGroups) { it.rule }
-    return TaintRuleFromSemgrep(ruleId, ruleGroups)
+    val structure = TaintRuleFromSemgrep.Structure.Taint(
+        sources = taintRules.source.map { it.rule },
+        sinks = taintRules.sink.map { it.rule },
+        propagators = taintRules.pass.map { it.rule },
+        sanitizers = taintRules.clean.map { it.rule },
+    )
+    return TaintRuleFromSemgrep(ruleId, structure)
 }
 
 data class ProcessedTaintSourceRule<R>(

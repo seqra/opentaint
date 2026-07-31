@@ -2,6 +2,8 @@ rules:
   - id: xss-sinks
     options:
       lib: true
+    tags:
+      - xss-sink
     severity: NOTE
     message: Untrusted data reaches an HTTP response write API
     metadata:
@@ -21,17 +23,19 @@ rules:
               import context "github.com/beego/beego/v2/server/web/context"
               ...
           - pattern-either:
-              - pattern: "($W : http.ResponseWriter).Write($BUF)"
-              - pattern: "($W : *context.Response).Write($BUF)"
-              - pattern: "($W : *context.Context).WriteString($S)"
-              - pattern: "($O : *context.BeegoOutput).Body($BODY)"
-              - pattern: "($O : *context.BeegoOutput).JSON($DATA, ...)"
-              - pattern: "($C : *web.Controller).ServeJSON()"
-              - pattern: "fmt.Fprint($W, ...)"
-              - pattern: "fmt.Fprintf($W, ...)"
-              - pattern: "fmt.Fprintln($W, ...)"
-              - pattern: "io.WriteString($W, $S)"
-              - pattern: "json.NewEncoder($W).Encode($DATA)"
+              - pattern: "($W : http.ResponseWriter).Write($UNTRUSTED)"
+              - pattern: "($W : *context.Response).Write($UNTRUSTED)"
+              - pattern: "($W : *context.Context).WriteString($UNTRUSTED)"
+              - pattern: "($O : *context.BeegoOutput).Body($UNTRUSTED)"
+              - pattern: "($O : *context.BeegoOutput).JSON($UNTRUSTED, ...)"
+              - pattern: "($UNTRUSTED : *web.Controller).ServeJSON()"
+              - pattern: "fmt.Fprint($W, $UNTRUSTED)"
+              - pattern: "fmt.Fprintf($W, $UNTRUSTED, ...)"
+              - pattern: "fmt.Fprintf($W, $FORMAT, ..., $UNTRUSTED, ...)"
+              - pattern: "fmt.Fprintln($W, $UNTRUSTED)"
+              - pattern: "io.WriteString($W, $UNTRUSTED)"
+              - pattern: "json.NewEncoder($W).Encode($UNTRUSTED)"
+          - focus-metavariable: $UNTRUSTED
     pattern-sanitizers:
       # template escapers live in both html/template and text/template
       - patterns:

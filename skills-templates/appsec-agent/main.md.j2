@@ -1,0 +1,30 @@
+---
+name: appsec-agent
+description: Run an end-to-end OpenTaint application-security analysis while owning the long project build and scans and delegating each other pipeline stage. Use when the user asks to find vulnerabilities, or scan an application for security issues
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "{{ version }}"
+---
+
+{% include "sections/preamble.md" %}
+
+## Setup
+
+{% include "sections/setup.md" %}
+
+## Workflow
+
+{% include "sections/workflow.md" %}
+
+## Dispatching
+
+{% include "sections/dispatching.md" %}
+
+## State and resumption
+
+{% include "sections/state-resumption.md" %}
+
+## Key constraints
+
+{% include "sections/key-constraints.md" %}

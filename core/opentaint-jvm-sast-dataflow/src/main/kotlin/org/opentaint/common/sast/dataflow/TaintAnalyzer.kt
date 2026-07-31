@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
@@ -35,6 +36,8 @@ import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.dataflow.util.percentToString
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -61,7 +64,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     val ifdsEngine by lazy { createIfdsEngine() }
 
     fun analyzeWithIfds(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
-        return analyzeTaintWithIfdsEngine(entryPoints)
+        return analyzeStaged(entryPoints)
     }
 
     open val unrollStrategy: AnyAccessorUnrollStrategy = object : AnyAccessorUnrollStrategy {
@@ -79,11 +82,14 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
     }
 
+    val refManager = RefManager()
+    val cancellation = Cancellation()
+
     private val apManager by lazy {
         when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(unrollStrategy)
-            ApMode.Cactus -> CactusApManager(unrollStrategy)
-            ApMode.Automata -> AutomataApManager(unrollStrategy)
+            ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation)
+            ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation)
+            ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation)
         }
     }
 
@@ -97,33 +103,61 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     abstract fun unitResolver(): UnitResolver<Method>
 
+    private val analysisManager by lazy { analysisManager() }
+
     @Suppress("UNCHECKED_CAST")
     private fun createIfdsEngine() = TaintAnalysisUnitRunnerManager(
-        analysisManager(),
+        refManager, cancellation,
+        analysisManager,
         ifdsAnalysisGraph as ApplicationGraph<CommonMethod, CommonInst>,
         unitResolver() as UnitResolver<CommonMethod>,
         summarySerializationContext,
-        apManager,
         options.debugOptions?.taintRulesStatsSamplingPeriod,
     )
 
-    private fun analyzeTaintWithIfdsEngine(
-        entryPoints: List<Method>,
-    ): Pair<List<VulnerabilityWithTrace>, Status> {
+    private fun analyzeStaged(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
         val analysisStart = TimeSource.Monotonic.markNow()
 
-        val analysisTimeout = options.ifdsTimeout * 0.80 // Reserve 20% of time for trace generation and report creation
         val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
-        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = analysisTimeout, cancellationTimeout = 30.seconds) }
-            .onFailure { logger.error(it) { "Ifds engine failed" } }
 
-        val analysisStatus = ifdsEngine.status.get()
+        logger.info { "Start prescan phase" }
+        prescan(startMethods)
+        logger.info { "Finish prescan phase" }
+
+        logger.info { "Start full scan phase" }
+        val fullScanResult = fullScan(analysisStart, entryPoints, startMethods)
+        logger.info { "Finish full scan phase" }
+        return fullScanResult
+    }
+
+    private fun prescan(startMethods: List<MethodWithContext>) {
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
+        ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
+
+        val prescanTimeout = options.ifdsTimeout * 0.3
+        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Prescan failed" } }
 
         if (options.debugOptions?.enableIfdsCoverage == true) {
             logger.debug {
                 ifdsEngine.reportCoverage()
             }
         }
+    }
+
+    private fun fullScan(
+        analysisStart: TimeSource.Monotonic.ValueTimeMark,
+        entryPoints: List<Method>,
+        startMethods: List<MethodWithContext>,
+    ): Pair<List<VulnerabilityWithTrace>, Status> {
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
+        ifdsEngine.resetApManager(apManager)
+
+        val analysisTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.80
+        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = analysisTimeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Full analysis failed" } }
+
+        val analysisStatus = ifdsEngine.status.get()
 
         if (options.storeSummaries) {
             logger.info { "Storing summaries" }
@@ -168,10 +202,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val traceResolutionTimeout = leftTime * 0.90 // Reserve 10% of time for report creation
         if (!traceResolutionTimeout.isPositive()) {
             logger.warn { "No time remaining for trace resolution" }
-            val status = Status(
-                analysisStatus,
-                TaintAnalysisUnitRunnerManager.Status.TIMEOUT
-            )
+            val status = Status(analysisStatus, TaintAnalysisUnitRunnerManager.Status.TIMEOUT)
             return emptyList<VulnerabilityWithTrace>() to status
         }
 

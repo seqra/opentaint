@@ -13,6 +13,7 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonCo
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonExitSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
+import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonPassThrough
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
@@ -52,7 +53,7 @@ import org.opentaint.semgrep.pattern.conversion.taint.isGeneratedAnyValueGenerat
 import org.opentaint.semgrep.pattern.conversion.taint.isGeneratedStringConcat
 
 fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): List<SerializedPythonRule> {
-    val rules = mutableListOf<SerializedPythonRule>()
+    val rules = mutableListOf<Pair<TaintRuleEdge, SerializedPythonRule>>()
 
     fun evaluateWithStateCheck(edge: TaintRuleEdge, stateOfEdge: State): List<PythonEvaluatedEdgeCondition> =
         evaluatePythonMethodConditionAndEffect(stateOfEdge, edge.edgeCondition, edge.edgeEffect, ctx.trace)
@@ -67,8 +68,8 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
             val cond = condition.ruleCondition.condition.nullIfTrue()
             val info = edgeRuleInfo(ruleEdge).toPython()
             when (ruleEdge.edgeKind) {
-                TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonSource(target, cond, actions, info)
-                TaintRuleEdge.Kind.MethodEnter -> rules += SerializedPythonEntryPointSource(target, cond, actions, info)
+                TaintRuleEdge.Kind.MethodCall -> rules += ruleEdge to SerializedPythonSource(target, cond, actions, info)
+                TaintRuleEdge.Kind.MethodEnter -> rules += ruleEdge to SerializedPythonEntryPointSource(target, cond, actions, info)
                 TaintRuleEdge.Kind.MethodExit ->
                     ctx.trace.error(FailedToCreateTaintRules("Method-exit sources are not supported yet"))
             }
@@ -78,13 +79,13 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
     for (ruleEdge in edgesToFinalAccept) {
         for (condition in evaluateWithStateCheck(ruleEdge, ruleEdge.stateFrom)) {
             when (ruleEdge.edgeKind) {
-                TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonSink(
+                TaintRuleEdge.Kind.MethodCall -> rules += ruleEdge to SerializedPythonSink(
                     target = pythonTargetFor(condition.ruleCondition.function),
                     condition = condition.ruleCondition.condition.nullIfTrue(),
                     meta = ctx.meta.toPythonSinkMeta(),
                 )
 
-                TaintRuleEdge.Kind.MethodExit -> rules += SerializedPythonExitSink(
+                TaintRuleEdge.Kind.MethodExit -> rules += ruleEdge to SerializedPythonExitSink(
                     target = PythonTarget.Function(ANY_PYTHON_FUNCTION),
                     condition = condition.ruleCondition.condition.rewriteAsEndCondition().nullIfTrue(),
                     meta = ctx.meta.toPythonSinkMeta(),
@@ -105,7 +106,7 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
                 TaintRuleEdge.Kind.MethodEnter,
                 TaintRuleEdge.Kind.MethodExit -> ctx.trace.error(NonMethodCallCleaner())
 
-                TaintRuleEdge.Kind.MethodCall -> rules += SerializedPythonCleaner(
+                TaintRuleEdge.Kind.MethodCall -> rules += ruleEdge to SerializedPythonCleaner(
                     target = pythonTargetFor(condition.ruleCondition.function),
                     condition = condition.ruleCondition.condition.nullIfTrue(),
                     cleans = actions,
@@ -115,7 +116,29 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
         }
     }
 
-    return rules
+    return rules.map { (edge, item) ->
+        val itemWithId = item.withId(ctx.nextSerializedItemId(item.typeLabel()))
+        registerSerializedItem(edge, requireNotNull(itemWithId.serializedId))
+        itemWithId
+    }
+}
+
+private fun SerializedPythonRule.typeLabel(): String = when (this) {
+    is SerializedPythonEntryPointSource -> "entry-point"
+    is SerializedPythonSource -> "source"
+    is SerializedPythonSink -> "sink"
+    is SerializedPythonExitSink -> "method-exit-sink"
+    is SerializedPythonPassThrough -> "pass-through"
+    is SerializedPythonCleaner -> "cleaner"
+}
+
+private fun SerializedPythonRule.withId(id: String): SerializedPythonRule = when (this) {
+    is SerializedPythonEntryPointSource -> copy(serializedId = id)
+    is SerializedPythonSource -> copy(serializedId = id)
+    is SerializedPythonSink -> copy(serializedId = id)
+    is SerializedPythonExitSink -> copy(serializedId = id)
+    is SerializedPythonPassThrough -> copy(serializedId = id)
+    is SerializedPythonCleaner -> copy(serializedId = id)
 }
 
 // The converter encodes an attribute read as a synthetic method name carrying

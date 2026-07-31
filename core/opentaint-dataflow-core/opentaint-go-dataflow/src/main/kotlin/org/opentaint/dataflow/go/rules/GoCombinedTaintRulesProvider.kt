@@ -3,6 +3,7 @@ package org.opentaint.dataflow.go.rules
 import org.opentaint.dataflow.go.GoFieldSignature
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoGlobalFieldSignature
+import org.opentaint.ir.go.inst.GoIRInst
 
 class GoCombinedTaintRulesProvider(
     private val base: GoTaintRulesProvider,
@@ -19,38 +20,43 @@ class GoCombinedTaintRulesProvider(
         val globalSource: CombinationMode = CombinationMode.OVERRIDE,
     )
 
-    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature) =
+    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature, statement: GoIRInst) =
         combine(options.globalSource,
-            base.sourceRulesForGlobal(signature),
-            combined.sourceRulesForGlobal(signature)
+            base.sourceRulesForGlobal(signature, statement),
+            combined.sourceRulesForGlobal(signature, statement)
         )
 
-    override fun sourceRulesForFieldRead(signature: GoFieldSignature) =
+    override fun sourceRulesForFieldRead(signature: GoFieldSignature, statement: GoIRInst) =
         combine(
             options.source,
-            base.sourceRulesForFieldRead(signature),
-            combined.sourceRulesForFieldRead(signature)
+            base.sourceRulesForFieldRead(signature, statement),
+            combined.sourceRulesForFieldRead(signature, statement)
         )
 
-    override fun sourceRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =
+    override fun sourceRulesForCall(signature: GoFunctionSignature, statement: GoIRInst, allRelevant: Boolean) =
         combine(options.source,
-            base.sourceRulesForCall(signature, allRelevant),
-            combined.sourceRulesForCall(signature, allRelevant))
+            base.sourceRulesForCall(signature, statement, allRelevant),
+            combined.sourceRulesForCall(signature, statement, allRelevant))
 
-    override fun sinkRulesForCall(signature: GoFunctionSignature) =
+    override fun sinkRulesForCall(signature: GoFunctionSignature, statement: GoIRInst) =
         combine(options.sink,
-            base.sinkRulesForCall(signature),
-            combined.sinkRulesForCall(signature))
+            base.sinkRulesForCall(signature, statement),
+            combined.sinkRulesForCall(signature, statement))
 
-    override fun passThroughRulesForCall(signature: GoFunctionSignature) =
+    override fun passThroughRulesForCall(signature: GoFunctionSignature, statement: GoIRInst) =
         combine(options.passThrough,
-            base.passThroughRulesForCall(signature),
-            combined.passThroughRulesForCall(signature))
+            base.passThroughRulesForCall(signature, statement),
+            combined.passThroughRulesForCall(signature, statement))
 
-    override fun cleanerRulesForCall(signature: GoFunctionSignature, allRelevant: Boolean) =
+    override fun cleanerRulesForCall(signature: GoFunctionSignature, statement: GoIRInst, allRelevant: Boolean) =
         combine(options.cleaner,
-            base.cleanerRulesForCall(signature, allRelevant),
-            combined.cleanerRulesForCall(signature, allRelevant))
+            base.cleanerRulesForCall(signature, statement, allRelevant),
+            combined.cleanerRulesForCall(signature, statement, allRelevant))
+
+    override fun selectRules(ruleIds: Set<String>) {
+        base.selectRules(ruleIds)
+        combined.selectRules(ruleIds)
+    }
 
     private fun <T> combine(mode: CombinationMode, base: List<T>, extra: List<T>): List<T> = when (mode) {
         CombinationMode.EXTEND -> base + extra

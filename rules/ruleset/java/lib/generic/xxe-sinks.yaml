@@ -2,6 +2,8 @@ rules:
   - id: java-xxe-sinks
     options:
       lib: true
+    tags:
+      - xxe-sink
     severity: NOTE
     message: Parsing untrusted XML data with insufficient safety control
     metadata:

@@ -24,7 +24,10 @@ class GoTaintRuleEmitterTest {
     private fun baseOnly(pos: PositionBase) = PositionBaseWithModifiers.BaseOnly(pos)
 
     private fun rule(vararg items: GoSerializedItem): TaintRuleFromSemgrep<GoSerializedItem> =
-        TaintRuleFromSemgrep("r", listOf(TaintRuleFromSemgrep.TaintRuleGroup(items.toList())))
+        TaintRuleFromSemgrep(
+            "r",
+            TaintRuleFromSemgrep.Structure.Matching(listOf(TaintRuleFromSemgrep.TaintRuleGroup(items.toList())))
+        )
 
     @Test
     fun `source taints the result of a named function`() {
@@ -63,7 +66,7 @@ class GoTaintRuleEmitterTest {
     }
 
     @Test
-    fun `sink with explicit id is preserved`() {
+    fun `sink with explicit id is preserved independently from serialized id`() {
         val rule = rule(
             GoSerializedRule.Sink(
                 pkg = GoNameMatcher.Simple("util"),
@@ -71,6 +74,7 @@ class GoTaintRuleEmitterTest {
                 condition = GoSerializedCondition.ContainsMark("taint", baseOnly(PositionBase.Argument(0))),
                 id = "explicit-id",
                 info = null,
+                serializedId = "explicit-serialized-id",
             ),
         )
 
@@ -78,6 +82,7 @@ class GoTaintRuleEmitterTest {
         val sink = cfg.sinkForFunction("util.Sink".signature(1)).single()
         assertEquals("util.Sink", sink.function)
         assertEquals("explicit-id", sink.id)
+        assertEquals("explicit-serialized-id", sink.serializedId)
     }
 
     @Test

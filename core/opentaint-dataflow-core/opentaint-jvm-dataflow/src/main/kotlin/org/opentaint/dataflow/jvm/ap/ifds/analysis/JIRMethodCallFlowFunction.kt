@@ -15,20 +15,15 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStar
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
-import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
+import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
+import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRSimpleFactAwareConditionEvaluator
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleaner
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyPassThrough
-import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.sinkRules
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRMethodCallTaintUtil
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
-import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FactWithMarkAfterAnyAccessorResolver
@@ -49,27 +44,26 @@ class JIRMethodCallFlowFunction(
     private val statement: JIRInst,
     private val generateTrace: Boolean,
 ): MethodCallFlowFunction.Default {
-    private val config get() = analysisContext.taint.taintConfig as TaintRulesProvider
+    private val taintCtx get() = analysisContext.taint
 
     private val summaryRewriter by lazy {
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
-    override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            CallPositionToJIRValueResolver(callExpr, returnValue),
-            analysisContext, statement
-        )
+    val typeResolver by lazy {
+        JIRMethodPositionBaseTypeResolver(callExpr.method.method)
+    }
 
+    override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
         applySinkRules(
-            conditionRewriter, factReader = null,
+            factReader = null,
             markAfterAnyFieldResolver = null
         ).forEach { (fact, trace) ->
             fact.forEachSourceFactWithAliases { this += CallToReturnZFact(factAp = it, trace) }
         }
 
         applySourceRules(
-            initialFacts = emptySet(), conditionRewriter, factReader = null, exclusion = ExclusionSet.Universe,
+            initialFacts = emptySet(), factReader = null, exclusion = ExclusionSet.Universe,
             createFinalFact = { fact, trace ->
                 fact.forEachSourceFactWithAliases { this += CallToReturnZFact(factAp = it, trace) }
             },
@@ -100,11 +94,6 @@ class JIRMethodCallFlowFunction(
             return
         }
 
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            CallPositionToJIRValueResolver(callExpr, returnValue),
-            analysisContext, statement
-        )
-
         val factReader = FinalFactReader(factAp, apManager)
 
         val markAfterAnyFieldResolver = createMarkAfterAccessorResolver(
@@ -113,14 +102,14 @@ class JIRMethodCallFlowFunction(
             addUnchecked(MethodCallFlowFunction.FactSideEffect(i, k))
         }
 
-        applySinkRules(conditionRewriter, factReader, markAfterAnyFieldResolver).forEach { (fact, trace) ->
+        applySinkRules(factReader, markAfterAnyFieldResolver).forEach { (fact, trace) ->
             fact.forEachSourceFactWithAliases {
                 addUnchecked(CallToReturnZFact(it, trace))
             }
         }
 
         applySourceRules(
-            initialFacts, conditionRewriter, factReader, exclusion,
+            initialFacts, factReader, exclusion,
             createFinalFact = { fact, trace ->
                 fact.forEachSourceFactWithAliases { addCallToReturn(factReader, it, trace) }
             },
@@ -145,7 +134,6 @@ class JIRMethodCallFlowFunction(
             checker = analysisContext.factTypeChecker,
         ) { callerFact, startFactBase ->
             applyCleanersOrCallToStart(
-                conditionRewriter,
                 factReader, callerFact, startFactBase,
                 addCallToReturn, addCallToStart, addUnchecked
             )
@@ -157,7 +145,6 @@ class JIRMethodCallFlowFunction(
     }
 
     private fun applyCleanersOrCallToStart(
-        conditionRewriter: JIRMarkAwareConditionRewriter,
         originalFactReader: FinalFactReader,
         unmappedCallerFactAp: FinalFactAp,
         startFactBase: AccessPathBase,
@@ -175,18 +162,14 @@ class JIRMethodCallFlowFunction(
             markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
         )
 
-        val simpleConditionEvaluator = JIRSimpleFactAwareConditionEvaluator(conditionRewriter, conditionEvaluator)
-
-        val typeResolver = JIRMethodPositionBaseTypeResolver(method)
         val cleaner = JIRTaintCleanActionEvaluator(typeResolver)
 
         val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
+        val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, callerFact)
         val cleanerResults = applyCleaner(
-            config,
-            method,
-            statement,
+            cleanRules,
             factReaderBeforeCleaner,
-            simpleConditionEvaluator,
+            conditionEvaluator,
             cleaner
         )
 
@@ -237,37 +220,33 @@ class JIRMethodCallFlowFunction(
     }
 
     private fun applySinkRules(
-        conditionRewriter: JIRMarkAwareConditionRewriter,
         factReader: FinalFactReader?,
         markAfterAnyFieldResolver: FactWithMarkAfterAnyAccessorResolver?,
     ): List<Pair<FinalFactAp, TraceInfo>> {
-        val sinkRules = sinkRules(config, callExpr.callee, statement, factReader?.factAp).toList()
+        val sinkRules = taintCtx.sinkRulesForCallStatement(statement, callExpr, returnValue, factReader?.factAp)
         if (sinkRules.isEmpty()) return emptyList()
 
         val taintUtil = JIRMethodCallTaintUtil(apManager, statement, callExpr, analysisContext, generateTrace)
         taintUtil.applySinkRules(
-            sinkRules, conditionRewriter, factReader, markAfterAnyFieldResolver
+            sinkRules, factReader, markAfterAnyFieldResolver
         )
         return taintUtil.factsAfterSink
     }
 
     private fun applySourceRules(
         initialFacts: Set<InitialFactAp>,
-        conditionRewriter: JIRMarkAwareConditionRewriter,
         factReader: FinalFactReader?,
         exclusion: ExclusionSet,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit,
         createEdge: (InitialFactAp, FinalFactAp, TraceInfo) -> Unit,
         createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
     ) {
-        val method = callExpr.method.method
-        val sourceRules = config.sourceRulesForMethod(method, statement, factReader?.factAp).toList()
-
+        val sourceRules = taintCtx.sourceRulesForCallStatement(statement, callExpr, returnValue, factReader?.factAp)
         if (sourceRules.isEmpty()) return
 
         val taintUtil = JIRMethodCallTaintUtil(apManager, statement, callExpr, analysisContext, generateTrace)
         taintUtil.applySourceRules(
-            sourceRules, initialFacts, conditionRewriter, factReader, exclusion,
+            sourceRules, initialFacts, factReader, exclusion,
             createFinalFact, createEdge, createNDEdge
         )
     }
@@ -283,11 +262,6 @@ class JIRMethodCallFlowFunction(
         unresolvedCallDefaultFactPropagation(factAp, addCallToReturn)
 
         val method = callExpr.callee
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            CallPositionToJIRValueResolver(callExpr, returnValue),
-            analysisContext, statement
-        )
-
         JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
             statement,
             callee = method,
@@ -302,18 +276,15 @@ class JIRMethodCallFlowFunction(
                 listOf(passFactReader),
                 markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
             )
-            val simpleConditionEvaluator = JIRSimpleFactAwareConditionEvaluator(conditionRewriter, conditionEvaluator)
-            val typeResolver = JIRMethodPositionBaseTypeResolver(method)
+
             val passEvaluator = TaintPassActionEvaluator(
                 apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
             )
 
+            val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
             val passThroughFacts = applyPassThrough(
-                config,
-                method,
-                statement,
-                fact = passFactReader.factAp,
-                simpleConditionEvaluator,
+                passRules,
+                conditionEvaluator,
                 passEvaluator
             )
 

@@ -2,6 +2,8 @@ rules:
   - id: spring-response-injection-sink
     options:
       lib: true
+    tags:
+      - spring-response-injection-sink
     severity: NOTE
     message: Direct write of unvalidated user input into response
     metadata:

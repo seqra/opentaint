@@ -2,6 +2,8 @@ rules:
   - id: java-servlet-response-injection-sink
     options:
       lib: true
+    tags:
+      - servlet-response-injection-sink
     severity: NOTE
     message: Direct write of unvalidated user input into response
     metadata:

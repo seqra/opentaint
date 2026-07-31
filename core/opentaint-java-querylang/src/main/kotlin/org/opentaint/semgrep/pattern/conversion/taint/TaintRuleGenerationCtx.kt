@@ -5,15 +5,17 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModif
 import org.opentaint.dataflow.util.forEach
 import org.opentaint.semgrep.pattern.Mark
 import org.opentaint.semgrep.pattern.Mark.RuleUniqueMarkPrefix
+import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.UserRuleFromSemgrepInfo
 import org.opentaint.semgrep.pattern.conversion.MetavarAtom
 import org.opentaint.semgrep.pattern.conversion.TaintRuleStrategy
 import java.util.BitSet
+import java.util.IdentityHashMap
 
 data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
     val prefix: RuleUniqueMarkPrefix,
     private val automataEdges: TaintAutomataEdges,
-    private val compositionStrategy: CompositionStrategy<Item, Cond, Assign, Clean>?,
+    val compositionStrategy: CompositionStrategy<Item, Cond, Assign, Clean>?,
     val taintRuleStrategy: TaintRuleStrategy<Item, Cond, Assign, Clean>
 ) {
     interface CompositionStrategy<Item, Cond, Assign, Clean> {
@@ -48,6 +50,47 @@ data class TaintRuleGenerationCtx<Item, Cond, Assign, Clean>(
     val edges: List<TaintRuleEdge> get() = automataEdges.edges
     val edgesToFinalAccept: List<TaintRuleEdge> get() = automataEdges.edgesToFinalAccept
     val edgesToFinalDead: List<TaintRuleEdge> get() = automataEdges.edgesToFinalDead
+
+    private val serializedItemIdsByEdge = IdentityHashMap<TaintRuleEdge, MutableSet<String>>()
+
+    fun registerSerializedItem(edge: TaintRuleEdge, itemId: String) {
+        serializedItemIdsByEdge.getOrPut(edge) { hashSetOf() }.add(itemId)
+    }
+
+    fun createRuleGroup(rules: List<Item>): TaintRuleFromSemgrep.TaintRuleGroup<Item> {
+        val ruleIds = rules.mapNotNull(taintRuleStrategy::serializedItemId)
+        require(ruleIds.size == rules.size) { "Every generated taint rule must have an serializedId" }
+        require(ruleIds.toSet().size == ruleIds.size) { "Generated taint rule ids must be unique within a group" }
+
+        val survivingIds = ruleIds.toSet()
+        val dependencies: MutableMap<String, Set<String>> = ruleIds.associateWithTo(hashMapOf()) { emptySet() }
+        val allEdges = edges + edgesToFinalAccept + edgesToFinalDead
+        val predecessorEdgesByState = allEdges.groupBy { it.stateTo }
+
+        for (edge in allEdges) {
+            val itemIds = serializedItemIdsByEdge[edge].orEmpty().filter { it in survivingIds }
+            if (itemIds.isEmpty()) continue
+
+            val prerequisiteIds = predecessorEdgesByState[edge.stateFrom].orEmpty()
+                .asSequence()
+                .filter { it !== edge }
+                .flatMap { serializedItemIdsByEdge[it].orEmpty().asSequence() }
+                .filter { it in survivingIds }
+                .toSet()
+
+            for (itemId in itemIds) {
+                dependencies[itemId] = dependencies.getValue(itemId) + prerequisiteIds
+            }
+        }
+
+        val finalStates = automata.finalAcceptStates + automata.finalDeadStates
+        val finalRuleIds = finalStates
+            .flatMap { predecessorEdgesByState[it].orEmpty() }
+            .flatMap { serializedItemIdsByEdge[it].orEmpty() }
+            .filterTo(hashSetOf()) { it in survivingIds }
+
+        return TaintRuleFromSemgrep.TaintRuleGroup(rules, dependencies, finalRuleIds)
+    }
 
     fun globalStateMarkName(state: TaintRegisterStateAutomata.State): Mark.GeneratedMark {
         val stateId = automata.stateId(state)

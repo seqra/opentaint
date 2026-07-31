@@ -74,9 +74,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/servlet-xss-html-response-sinks.yaml#java-servlet-xss-html-response-sink
+        - tag: servlet-xss-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -216,9 +216,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/servlet-response-injection-sinks.yaml#java-servlet-response-injection-sink
+        - tag: servlet-response-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -310,9 +310,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/spring/spring-xss-html-response-sinks.yaml#spring-xss-html-response-sink
+        - tag: spring-xss-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -439,9 +439,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/spring/spring-response-injection-sinks.yaml#spring-response-injection-sink
+        - tag: spring-response-injection-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

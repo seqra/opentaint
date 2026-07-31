@@ -1,0 +1,26 @@
+---
+name: run-scan
+description: Run an OpenTaint scan on project and produces the SARIF report. Use whenever the user asks to scan or re-scan a project
+license: Apache-2.0
+metadata:
+  author: opentaint
+  version: "{{ version }}"
+---
+
+{% include "sections/preamble.md" %}
+
+## Inputs
+
+{% include "sections/input.md" %}
+
+## Workflow
+
+{% include "sections/workflow.md" %}
+
+## Output
+
+{% include "sections/output.md" %}
+
+## Constraints
+
+{% include "sections/constraints.md" %}

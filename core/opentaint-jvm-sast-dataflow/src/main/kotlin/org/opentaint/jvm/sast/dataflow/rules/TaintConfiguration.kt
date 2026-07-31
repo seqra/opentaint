@@ -211,7 +211,7 @@ class TaintConfiguration(private val cp: JIRClasspath) {
                     }
                     actions += AssignMark(taintMarkManager.taintMark(action.kind), Result)
                 }
-                return listOf(TaintStaticFieldSource(field, mkTrue(), actions, info))
+                return listOf(TaintStaticFieldSource(field, mkTrue(), actions, info, serializedId))
             }
         }
     }

@@ -10,4 +10,9 @@ class RuleConversionCtx(
     val meta: SinkMetaData,
     val trace: SemgrepRuleLoadStepTrace,
     val typeOps: LanguageTypeOps,
-)
+) {
+    private var nextSerializedItemIndex: Int = 0
+
+    fun nextSerializedItemId(type: String): String =
+        "$ruleId:$type:${nextSerializedItemIndex++}"
+}

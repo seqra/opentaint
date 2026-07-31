@@ -64,6 +64,8 @@ data object PythonTaintStrategy :
         override fun mkFalse(): SerializedPythonCondition = PYTHON_FALSE
     }
 
+    override fun serializedItemId(item: SerializedPythonRule): String? = item.serializedId
+
     override val conditionBuilder = PythonMarkConditionBuilder
 
     override fun posContainsAnyMark(

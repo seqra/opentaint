@@ -48,9 +48,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#http-sources
+        - tag: http-untrusted-data-source
           as: src
-        - rule: go/lib/xss-sinks.yaml#xss-sinks
+        - tag: xss-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

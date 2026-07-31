@@ -90,11 +90,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/security/strings.yaml#java-string-format-sinks
+        - tag: format-string-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$FORMAT_STR'
@@ -103,6 +103,8 @@ rules:
   - id: java-string-format-sinks
     options:
       lib: true
+    tags:
+      - format-string-sink
     severity: NOTE
     message: String formatter is obtained from untrusted data source
     metadata:

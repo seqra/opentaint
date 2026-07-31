@@ -11,15 +11,11 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.configuration.isTrue
-import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.taint.InitialFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
@@ -287,20 +283,17 @@ class JIRMethodSequentPrecondition(
         val lhv = accessPathBase(currentInst.lhv) ?: return
         if (fact.base != lhv) return
 
-        val config = analysisContext.taint.taintConfig as TaintRulesProvider
+        val config = analysisContext.taint
         val sourceRules = config.sourceRulesForStaticField(field, currentInst, fact = null).toList()
         if (sourceRules.isEmpty()) return
 
         val entryFactReader = InitialFactReader(fact.rebase(AccessPathBase.Return), apManager)
-        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(
-            entryFactReader
-        )
+        val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(entryFactReader)
 
-        for (sourceRule in sourceRules) {
-            if (!sourceRule.condition.isTrue()) {
-                TODO("Field source with complex condition")
-            }
+        for (sourceRuleWithCond in sourceRules) {
+            if (!sourceRuleWithCond.condition.isTrue) continue
 
+            val sourceRule = sourceRuleWithCond.rule
             val assignedMarks = sourceRule.actionsAfter.maybeFlatMap {
                 sourcePreconditionEvaluator.accept(sourceRule, it)
             }
@@ -315,23 +308,17 @@ class JIRMethodSequentPrecondition(
     }
 
     private fun MutableSet<SequentPrecondition>.methodExitSourcePrecondition(fact: InitialFactAp) {
-        val config = analysisContext.taint.taintConfig as TaintRulesProvider
-        val sourceRules = config.exitSourceRulesForMethod(currentInst.location.method, currentInst, fact = null).toList()
+        val config = analysisContext.taint
+        val sourceRules = config.sourceRulesForMethodExit(currentInst, fact = null).toList()
         if (sourceRules.isEmpty()) return
 
         val entryFactReader = InitialFactReader(fact, apManager)
         val sourcePreconditionEvaluator = TaintSourceActionPreconditionEvaluator(entryFactReader)
 
-        val valueResolver = CalleePositionToJIRValueResolver(currentInst.location.method)
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            valueResolver, analysisContext, currentInst
-        )
-
-        for (rule in sourceRules) {
+        for (ruleWithCond in sourceRules) {
             evaluateSourceRulePrecondition(
-                rule, rule.actionsAfter, { condition }, sourcePreconditionEvaluator,
+                ruleWithCond, ruleWithCond.rule.actionsAfter, sourcePreconditionEvaluator,
                 evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
-                conditionRewriter = conditionRewriter,
                 mkSource = { r, a ->
                     val src = TaintRulePrecondition.Source(r, a)
                     this += MethodSequentPrecondition.SequentSource(fact, src)

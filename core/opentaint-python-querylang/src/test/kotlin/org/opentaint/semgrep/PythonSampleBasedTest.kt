@@ -13,6 +13,8 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
 import org.opentaint.dataflow.ifds.SingletonUnit
+import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.rules.PIRConfigTaintRulesProvider
@@ -262,14 +264,20 @@ class PythonSampleBasedTest {
     ): List<TaintSinkTracker.TaintVulnerability> {
         val ifdsGraph = PIRApplicationGraph(cp)
 
+        val refManager = RefManager()
+        val cancellation = Cancellation()
+
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
+            refManager, cancellation,
             PIRAnalysisManager(cp, config),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
+        )
+        engine.resetApManager(
+            TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, refManager, cancellation)
         )
 
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)

@@ -16,6 +16,8 @@ import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
 import org.opentaint.dataflow.ifds.SingletonUnit
+import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
@@ -114,14 +116,20 @@ class GoSemgrepReachabilityTest {
 
         val ifdsGraph = GoApplicationGraph(cp, UtilUnitResolver)
 
+        val refManager = RefManager()
+        val cancellation = Cancellation()
+
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
+            refManager, cancellation,
             GoAnalysisManager(cp, config),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = UtilUnitResolver as UnitResolver<CommonMethod>,
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
+        )
+        engine.resetApManager(
+            TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, refManager, cancellation)
         )
 
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)

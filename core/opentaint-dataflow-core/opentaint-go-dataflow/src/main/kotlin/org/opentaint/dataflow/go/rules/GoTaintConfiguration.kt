@@ -17,6 +17,7 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModif
 import org.opentaint.dataflow.go.GoFieldSignature
 import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoGlobalFieldSignature
+import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.go.type.GoIRType
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -65,24 +66,24 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         cleanerMemo.clear()
     }
 
-    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature): List<TaintRule.GlobalReadSource> =
+    override fun sourceRulesForGlobal(signature: GoGlobalFieldSignature, statement: GoIRInst): List<TaintRule.GlobalReadSource> =
         sourceForGlobal(signature)
 
-    override fun sourceRulesForFieldRead(signature: GoFieldSignature): List<TaintRule.FieldReadSource> =
+    override fun sourceRulesForFieldRead(signature: GoFieldSignature, statement: GoIRInst): List<TaintRule.FieldReadSource> =
         sourceForFieldRead(signature)
 
     override fun sourceRulesForCall(
-        signature: GoFunctionSignature, allRelevant: Boolean,
+        signature: GoFunctionSignature, statement: GoIRInst, allRelevant: Boolean,
     ): List<TaintRule.Source> = sourceForFunction(signature, allRelevant)
 
-    override fun sinkRulesForCall(signature: GoFunctionSignature): List<TaintRule.Sink> =
+    override fun sinkRulesForCall(signature: GoFunctionSignature, statement: GoIRInst): List<TaintRule.Sink> =
         sinkForFunction(signature)
 
-    override fun passThroughRulesForCall(signature: GoFunctionSignature): List<TaintRule.PassThrough> =
+    override fun passThroughRulesForCall(signature: GoFunctionSignature, statement: GoIRInst): List<TaintRule.PassThrough> =
         passThroughForFunction(signature)
 
     override fun cleanerRulesForCall(
-        signature: GoFunctionSignature, allRelevant: Boolean,
+        signature: GoFunctionSignature, statement: GoIRInst, allRelevant: Boolean,
     ): List<TaintRule.Cleaner> = cleanerForFunction(signature, allRelevant)
 
     private fun addRule(rule: GoSerializedGlobalSource) {
@@ -186,12 +187,12 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     private fun specialize(rule: GoSerializedGlobalSource, name: String, fieldType: GoIRType) =
         specializeFieldSourceRule(name, fieldType, null, rule.condition, rule.taint) { name, condition, actions ->
-            TaintRule.GlobalReadSource(name, condition, actions, rule.info)
+            TaintRule.GlobalReadSource(name, condition, actions, rule.info, rule.serializedId)
         }
 
     private fun specialize(rule: GoSerializedFieldSource, name: String, fieldType: GoIRType, receiverType: GoIRType?)  =
         specializeFieldSourceRule(name, fieldType, receiverType, rule.condition, rule.taint) { name, condition, actions ->
-            TaintRule.FieldReadSource(name, condition, actions, rule.info)
+            TaintRule.FieldReadSource(name, condition, actions, rule.info, rule.serializedId)
         }
 
     private inline fun <T> specializeFieldSourceRule(
@@ -220,7 +221,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         if (condition.isFalse()) return null
 
         val actions = rule.taint.specialize(signature)
-        return TaintRule.Source(signature.name, condition, actions, rule.info)
+        return TaintRule.Source(signature.name, condition, actions, rule.info, rule.serializedId)
     }
 
     private fun specialize(rule: GoSerializedRule.Sink, signature: GoFunctionSignature): TaintRule.Sink? {
@@ -234,7 +235,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         val id = rule.id ?: generateRuleId(rule)
         val meta = rule.meta ?: defaultMeta(signature.name)
 
-        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta, rule.info)
+        return TaintRule.Sink(signature.name, condition, trackFacts, id, meta, rule.info, rule.serializedId)
     }
 
     private fun List<GoSerializedAssignAction>.specialize(signature: GoFunctionSignature) = flatMap { t ->
@@ -254,7 +255,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
 
     private fun specialize(rule: GoSerializedRule.PassThrough, signature: GoFunctionSignature): TaintRule.PassThrough? {
         val actions = rule.copy.flatMap { it.toTaintAction(signature) }
-        return TaintRule.PassThrough(signature.name, actions, rule.info)
+        return TaintRule.PassThrough(signature.name, actions, rule.info, rule.serializedId)
     }
 
     private fun specialize(rule: GoSerializedRule.Cleaner, signature: GoFunctionSignature): TaintRule.Cleaner? {
@@ -262,7 +263,7 @@ class GoTaintConfiguration : GoTaintRulesProvider {
         if (condition.isFalse()) return null
 
         val actions = rule.cleans.flatMap { it.toTaintAction(signature) }
-        return TaintRule.Cleaner(signature.name, condition, actions, rule.info)
+        return TaintRule.Cleaner(signature.name, condition, actions, rule.info, rule.serializedId)
     }
 
     private fun GoSerializedPassAction.toTaintAction(signature: GoFunctionSignature): List<GoTaintAction> =

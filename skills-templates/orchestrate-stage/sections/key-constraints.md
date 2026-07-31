@@ -1,0 +1,2 @@
+- don't author or edit tracking state owned by a script or leaf; write directly only where the selected reference explicitly assigns it
+- read pipeline state through `get_status.py`, not by hand — don't re-derive it with glob/grep/`python3 -c`/YAML scans over `.opentaint/tracking`, `results`, or the `*.yaml`. If its output doesn't settle the question, re-run `get_status.py --full` before opening any file; hand-scanning the tree balloons the run's context

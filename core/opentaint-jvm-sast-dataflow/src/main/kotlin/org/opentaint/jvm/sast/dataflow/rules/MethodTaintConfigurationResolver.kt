@@ -185,22 +185,22 @@ class MethodTaintConfigurationResolver(
         ctx: AnyArgSpecializationCtx,
     ): TaintConfigurationItem = when (this) {
         is SerializedRule.EntryPoint -> {
-            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
         }
 
         is SerializedRule.Source -> {
-            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
         }
 
         is SerializedRule.MethodExitSource -> {
-            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info)
+            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
         }
 
         is SerializedRule.Sink -> {
             TaintMethodSink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
-                ruleId(), meta(), info
+                ruleId(), meta(), info, serializedId
             )
         }
 
@@ -208,7 +208,7 @@ class MethodTaintConfigurationResolver(
             TaintMethodExitSink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
-                ruleId(), meta(), info
+                ruleId(), meta(), info, serializedId
             )
         }
 
@@ -216,16 +216,16 @@ class MethodTaintConfigurationResolver(
             TaintMethodEntrySink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
-                ruleId(), meta(), info
+                ruleId(), meta(), info, serializedId
             )
         }
 
         is SerializedRule.PassThrough -> {
-            TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info)
+            TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info, serializedId)
         }
 
         is SerializedRule.Cleaner -> {
-            TaintCleaner(method, condition, cleans.flatMap { it.resolve(ctx) }, info)
+            TaintCleaner(method, condition, cleans.flatMap { it.resolve(ctx) }, info, serializedId)
         }
     }
 

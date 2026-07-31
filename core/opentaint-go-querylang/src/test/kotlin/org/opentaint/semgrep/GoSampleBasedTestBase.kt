@@ -14,11 +14,13 @@ import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.go.analysis.GoAnalysisManager
 import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintConfiguration
+import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.go.config.GoDefaultConfigLoader
+import org.opentaint.go.sast.rules.GoSemgrepRuleProvider
 import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
@@ -75,12 +77,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         val yamlFile = sampleDir.toFile().listFiles { f -> f.extension == "yaml" }
             ?.singleOrNull()
             ?: fail("Expected exactly one *.yaml rule under $sampleDir")
-        val config = loadConfig(yamlFile)
-        if (useDefaultConfig) {
-            val defaultConfig = defaultApproximationsConfig
-                ?: fail("Bundled go-config not found on classpath")
-            config.loadConfig(defaultConfig)
-        }
+        val rulesProvider = { loadRulesProvider(yamlFile, useDefaultConfig) }
 
         val samplePkgImportPath = "$MODULE_NAME/$ruleName"
         val pkg = program.findPackage(samplePkgImportPath)
@@ -101,7 +98,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         }
 
         for (entry in entries) {
-            val result = runAnalysis(config, entry, resolver)
+            val result = runAnalysis(rulesProvider(), entry, resolver)
             val isPositive = entry.name.startsWith("Positive_")
             if (isPositive) {
                 assertTrue(
@@ -117,7 +114,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         }
     }
 
-    private fun loadConfig(yamlFile: File): GoTaintConfiguration {
+    private fun loadRulesProvider(yamlFile: File, useDefaultConfig: Boolean): GoTaintRulesProvider {
         val yaml = yamlFile.readText()
         val loader = SemgrepRuleLoader(listOf(GoLanguageStrategy()))
         loader.registerRuleSet(yaml, Path(yamlFile.name), Path("."), SemgrepLoadTrace())
@@ -127,7 +124,13 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
 
         @Suppress("UNCHECKED_CAST")
         val typed = rule.first as TaintRuleFromSemgrep<GoSerializedItem>
-        return GoTaintConfiguration().loadGoTaintConfiguration(typed)
+        val config = GoTaintConfiguration().loadGoTaintConfiguration(typed)
+        if (useDefaultConfig) {
+            val defaultConfig = defaultApproximationsConfig
+                ?: fail("Bundled go-config not found on classpath")
+            config.loadConfig(defaultConfig)
+        }
+        return GoSemgrepRuleProvider(listOf(typed), config)
     }
 
     data class AnalysisResult(
@@ -136,7 +139,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
     )
 
     private fun runAnalysis(
-        config: GoTaintConfiguration,
+        rulesProvider: GoTaintRulesProvider,
         entryPoint: GoIRFunction,
         resolver: UnitResolver<GoIRFunction>,
     ): AnalysisResult {
@@ -150,7 +153,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         val analyzer = object : TaintAnalyzer<GoIRFunction, GoIRInst>(options) {
             override val unrollStrategy: AnyAccessorUnrollStrategy get() = AnyUnrollStrategy
             override fun analysisGraph() = ifdsGraph
-            override fun analysisManager() = GoAnalysisManager(program, config, tracker)
+            override fun analysisManager() = GoAnalysisManager(program, rulesProvider, tracker)
             override fun unitResolver() = resolver
         }
 

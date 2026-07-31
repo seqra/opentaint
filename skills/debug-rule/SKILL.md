@@ -4,81 +4,62 @@ description: Debug a rule or approximation that behaves unexpectedly by tracing 
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.0"
 ---
 
 # Skill: Debug Rule
 
-Diagnose why a rule or approximation behaves unexpectedly on a model — samples that won't pass after repeated attempts, a missed flow, or a spurious finding on a real scan — by tracing where taint is dropped, and decide who owns the fix: the rule, a missing library model, or the engine
+Diagnose why a rule or approximation behaves unexpectedly on a model by tracing where taint is dropped, and decide who owns the fix: the rule, a missing library model, or the engine.
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Rules `<full-ids>` — the security rule to trace AND every library rule it `refs` (source/sink), each as `<ruleSetRelativePath>.yaml:<shortId>`; fact-reachability runs only the rules you list and silently disconnects the join if a ref is missing. For an approximation, trace the rule whose sample routes taint through the approximated method
-- Project model `<model-dir>` — the model where the behavior shows up. Default: `.opentaint/test-compiled/<name>` for a test project, or `.opentaint/project` for a main scan
-- Ruleset `<rules-dir>` — Default: `builtin` plus `.opentaint/rules`
-- Output directory `<results-dir>` — where the debug SARIF lands. Default: `.opentaint/test-results/<name>` for a test model, or `.opentaint/results` for a main scan
-- Dropped external methods `<dropped-file>` — the list from the run that showed the problem. Default: `dropped-external-methods.yaml` next to that run's SARIF
-- Approximation directories `<config-dir>` / `<approx-dir>` (optional) — apply when the behavior depends on them, so the debug run matches the run that showed the problem. Default: `.opentaint/pass-through`, `.opentaint/dataflow`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `rule` (required) — the one rule whose sample or flow routes taint through the code under test, as `<ruleSetRelativePath>.yaml:<shortId>`. For an approximation, the rule whose sample routes taint through the approximated method
+- `model` (required) — the project model where the behavior shows up
 
 ## Workflow
 
-### 1. Precondition — library model complete
+### 1. Reproduce and localize the kill
 
-Open `<dropped-file>` from the run that showed the problem. If any method on the source→sink path is listed, STOP and model it (passThrough or dataflow), re-run, then debug — that missing model is the cause, not the engine. A method you already approximated that is still listed means the approximation isn't matching the real signature; fix it there. Debug only once no method on the path remains; if no `<dropped-file>` exists, produce one with a `--track-external-methods` run
-
-### 2. Localize the kill — fact-reachability SARIF
-
-Pass the single rule to debug as the positional `<rule-id>` — its library `refs` (source/sink) are collected and analyzed automatically, so you don't list them:
+Reproduce the exact run that showed the problem — same `model`, rulesets, and applied approximation dirs — and trace where taint dies with a fact-reachability run. Run it directly as a foreground, blocking command and wait for exit — never background it or use Monitor:
 
 ```bash
-opentaint test rule reachability <full-id> \
-  --project-model <model-dir> \
+opentaint test rule reachability <rule> \
+  --project-model <model> \
   -o <results-dir>/report.sarif \
-  --ruleset builtin --ruleset <rules-dir>
+  --ruleset builtin --ruleset .opentaint/rules \
+  --passthrough-approximations .opentaint/pass-through \
+  --dataflow-approximations .opentaint/dataflow
 ```
 
-The debug output is the sibling file `<results-dir>/debug-ifds-fact-reachability.sarif`, NOT the `-o` SARIF. The `-o` file is the regular rule run (findings only); the per-instruction fact-reachability data — what shows where taint dies — lives only in the sibling. Read the sibling; the `-o` SARIF only tells you whether the rule fired, not why
+`<results-dir>` is `.opentaint/test-results/<name>` for a test model, `.opentaint/results` for the main scan. The per-instruction facts are in the sibling `<results-dir>/debug-ifds-fact-reachability.sarif`, not the `-o` file — the `-o` SARIF only shows whether the rule fired. Read that sibling to find the kill:
 
-When the thing under debug is an approximation (or the flow depends on one), append `--passthrough-approximations <config-dir>` / `--dataflow-approximations <approx-dir>` so the trace runs with it applied — taint dying at the approximated call then means the approximation isn't propagating: wrong signature (still in `<dropped-file>`), empty body, or wrong from→to. For a missed detection (a positive sample that won't pass, or a flow absent from a scan): confirm a fact exists at the source — if not, the gap is in `pattern-sources` — then walk the facts to the last instruction still carrying the fact and the first where it's gone; that gap is where taint dies. For a spurious detection, do the reverse: find where a fact appears with no tainted input reaching it
+- a missed detection (a positive that won't pass, or a flow absent from a scan) — confirm a fact exists at the source; if none, the gap is in `pattern-sources`, not the flow. Otherwise walk the facts to the last instruction still carrying it and the first where it's gone — that gap is the kill
+- a spurious detection (a negative that fires) — the reverse: find where a fact appears with no tainted input reaching it
 
-### 3. Isolate an entry point (optional)
+Trace the exact run that misbehaved — a different `model` or ruleset traces something else; taint dying at an approximated call means that approximation isn't propagating. When the flow is missed and the entry method may never be analyzed, rerun with `--entry-points "<method-fqn>"`: a finding that appears only then is an entry-point-discovery problem, not dataflow. On Spring the flag is additive — auto-discovered endpoints stay and your method is added, so use it to force-include an endpoint the analyzer never starts from, not to narrow to one method.
 
-When the run misses the flow and you suspect the entry method is never reached, force analysis onto it with the same `reachability` command plus `--entry-points` set to a method FQN:
+### 2. Classify the cause
 
-```bash
-opentaint test rule reachability <full-id> \
-  --entry-points "com.example.Controller#handle" \
-  --project-model <model-dir> \
-  -o <results-dir>/report.sarif \
-  --ruleset builtin --ruleset <rules-dir>
-```
+The killing instruction decides who owns the fix. An engine bug is by far the least likely — assume it last, only once the other two are ruled out; nearly every kill is a missing or wrong library model or a rule defect, both tedious to exclude but far more probable, and the tedium is no reason to jump to "engine". Three outcomes:
 
-A finding that appears here but not in the full run points to entry-point discovery / reachability, not the dataflow; if it still doesn't appear, localize the kill with step 2. On Spring projects the flag is **additive, not restrictive**: auto-discovered endpoints stay and your method is added if absent — use it only to force-include a method the analyzer never starts from (an endpoint Spring didn't recognize); you can't narrow to a single method
+- the kill is at an external library method → a model issue. Cross-check `dropped-external-methods.yaml` from that run (a `--track-external-methods` scan regenerates it if absent): listed there means the method is unmodeled — the missing model is the cause, for the approximation stage to model. Not listed but a built-in claims to model it, yet taint dies here → that model is wrong for this case: a passThrough override applies at the rule level, so prefer one for the method; a dataflow override conflicts with built-ins at load, so fall back to a passThrough, or call it an engine issue when only a dataflow shape can express the propagation
+- the kill is where the rule should have matched — a sanitizer misfires, a sink or source variant went unmatched → a rule defect, for rule authoring to fix
+- the kill is a plain instruction the engine must propagate through (assignment, cast, field read, an already-modeled call), with the rule correct and the model complete → an engine issue
 
-### 4. Classify the cause
+### 3. Report the diagnosis
 
-An engine bug is the least likely outcome by far — assume it last. Nearly every taint kill is a missing or wrong library model (an un-approximated method, or an approximation whose signature/from→to is off) or a rule defect; both are tedious to rule out, but that's not a reason to jump to "engine". Exhaust the first two before you even consider the third.
-
-The killing instruction decides who owns the fix:
-
-- external library method → missing or broken model. If the method is NOT in `approximated-external-methods.yaml`, step 1 should have caught it (route to analyze-external-methods + create-*-approximation). If it IS listed (a built-in claims to model it) yet taint dies here, the built-in is wrong for this case — write your own override: passthrough overrides at the rule level, so prefer a passthrough config for the specific method; a dataflow override conflicts with built-ins at load, so fall back to passthrough on that method, or if only a dataflow shape can express the propagation, treat it as an engine issue
-- something the rule should handle — a mistaken sanitizer, an unmatched sink or source variant → fix the rule
-- a plain instruction the engine should propagate through (assignment, cast, field read, an already-modeled call), with the rule correct and model complete → engine issue; route to report-analyzer-issue with the trace
+This skill diagnoses and routes the fix — it doesn't author the rule or approximation, or re-run the pipeline. Report the diagnosis per Output.
 
 ## Output
 
-- The diagnosis: `file:line` and instruction where taint is killed (or spuriously introduced), and which of the three causes it is
-- For an engine issue, the fact-reachability trace from `debug-ifds-fact-reachability.sarif` up to the last reachable fact — report-analyzer-issue's input
-- The exact debug command(s) used and the model they ran against
+### Artifacts
 
-## Tracking
+- `debug-ifds-fact-reachability.sarif` — the per-instruction fact-reachability trace the CLI emits next to the `-o` SARIF
 
-None — diagnostic, writes no tracking file
+### Summary
 
-## Gotchas
-
-- Don't reach for an "engine" verdict because ruling out a model or rule cause is tedious — a missing/wrong approximation or a rule gap is overwhelmingly more likely. Classify engine only when the killing instruction is a plain propagation (assignment, cast, field read, an already-modeled call) with the model proven complete and the rule proven correct
-- One rule per fact-reachability run; across many rules the report is unusably huge
-- Debug the exact run that showed the problem — same model, rulesets, approximation dirs — or you debug something else; never swap the model mid-analysis
+- the diagnosis: `file:line` and the instruction where taint is killed (or spuriously introduced), and which of the three causes owns the fix
+- for an engine cause: the fact-reachability trace up to the last reachable fact (consumed by the engine-issue report), plus the exact debug command(s) and the model they ran against

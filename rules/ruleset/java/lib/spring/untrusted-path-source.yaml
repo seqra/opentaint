@@ -2,6 +2,8 @@ rules:
   - id: spring-untrusted-path-source
     options:
       lib: true
+    tags:
+      - spring-untrusted-path-source
     severity: NOTE
     message: Untrusted data flows from here
     metadata:

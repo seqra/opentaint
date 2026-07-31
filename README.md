@@ -14,7 +14,6 @@
 
 <p align="center">
   <a href="https://github.com/seqra/opentaint/releases"><img src="https://img.shields.io/github/release/seqra/opentaint.svg" alt="GitHub release"></a>
-  <a href="https://goreportcard.com/report/github.com/seqra/opentaint/cli"><img src="https://goreportcard.com/badge/github.com/seqra/opentaint/cli" alt="Go Report Card"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go" alt="Go Version"></a>
   <a href="https://discord.gg/6BXDfbP4p9"><img src="https://img.shields.io/discord/1403357427176575036?logo=discord&label=Discord" alt="Discord"></a>
@@ -190,11 +189,11 @@ Full guides — installation, usage, configuration, CI/CD integration: **[Docume
 ## Star History
 
 <a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
-  </picture>
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=kuZCSnPuAdCYuZo35qynmQqR8c5iB0JYdXY8H4jyNAk77bS64sP5uqPvGrqMaRb1kdkch7iZdgmkMm3V3-CBV6uv9b2Sv_-SDSKLY6VDZFOWXFYPUvB9LhQEgTAySetIEvj7nmEOgte2N6DZujvhXCuwo-i7vH8Ji0eNpvc37trG1PAEfP-0u0BMnft-" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=kuZCSnPuAdCYuZo35qynmQqR8c5iB0JYdXY8H4jyNAk77bS64sP5uqPvGrqMaRb1kdkch7iZdgmkMm3V3-CBV6uv9b2Sv_-SDSKLY6VDZFOWXFYPUvB9LhQEgTAySetIEvj7nmEOgte2N6DZujvhXCuwo-i7vH8Ji0eNpvc37trG1PAEfP-0u0BMnft-" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=kuZCSnPuAdCYuZo35qynmQqR8c5iB0JYdXY8H4jyNAk77bS64sP5uqPvGrqMaRb1kdkch7iZdgmkMm3V3-CBV6uv9b2Sv_-SDSKLY6VDZFOWXFYPUvB9LhQEgTAySetIEvj7nmEOgte2N6DZujvhXCuwo-i7vH8Ji0eNpvc37trG1PAEfP-0u0BMnft-" />
+ </picture>
 </a>
 
 ## License

@@ -21,7 +21,6 @@ import org.opentaint.dataflow.go.GoFunctionSignature
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodCallToStartFlowAnyFact
 import org.opentaint.dataflow.go.GoMethodCallFactMapper.mapMethodExitToReturnFlowFact
-import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.accept
 import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
@@ -43,8 +42,6 @@ class GoMethodCallFlowFunction(
     private val statement: GoIRInst,
     private val generateTrace: Boolean,
 ) : MethodCallFlowFunction.Default {
-    private val rulesProvider get() = context.taint.taintConfig
-
     private val returnValue: GoIRValue?
         get() = GoFlowFunctionUtils.extractResultRegister(statement)
 
@@ -134,13 +131,12 @@ class GoMethodCallFlowFunction(
         createNDEdge: (Set<InitialFactAp>, FinalFactAp, TraceInfo) -> Unit,
     ) {
         val signature = callSignature ?: return
-        val sourceRules = rulesProvider.sourceRulesForCall(signature)
+        val sourceRules = context.taint.sourceRulesForCallStatement(signature, statement, callExpr, returnValue)
         if (sourceRules.isEmpty()) return
 
         val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
         taintUtils.applySourceRules(
             sourceRules, initialFacts,
-            conditionRewriter = GoRuleConditionRewriter(callExpr, statement, returnValue),
             factReader, exclusion,
             createFinalFact = { srcF, trace ->
                 srcF.forEachSourceFactWithAliases {
@@ -166,7 +162,7 @@ class GoMethodCallFlowFunction(
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
         val signature = callSignature ?: return
-        val sinkRules = rulesProvider.sinkRulesForCall(signature)
+        val sinkRules = context.taint.sinkRulesForCallStatement(signature, statement, callExpr, returnValue)
         if (sinkRules.isEmpty()) return
 
         val markAfterAnyAccessorResolver = createMarkAfterAccessorResolver(
@@ -176,7 +172,7 @@ class GoMethodCallFlowFunction(
         }
 
         val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
-        taintUtils.applySinkRules(sinkRules, GoRuleConditionRewriter(callExpr, statement, returnValue), factReader, markAfterAnyAccessorResolver)
+        taintUtils.applySinkRules(sinkRules, factReader, markAfterAnyAccessorResolver)
     }
 
     override fun propagateUnresolvedCallFact(
@@ -190,7 +186,7 @@ class GoMethodCallFlowFunction(
         val factReader = FinalFactReader(factAp, apManager)
 
         val signature = callSignature ?: return
-        val passRules = rulesProvider.passThroughRulesForCall(signature)
+        val passRules = context.taint.passRulesForCallStatement(signature, statement)
 
         factAp.mapCall2Start { callerFact, startFactBase ->
             val passFactReader = FinalFactReader(callerFact.rebase(startFactBase), apManager)

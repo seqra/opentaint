@@ -1,6 +1,8 @@
 package org.opentaint.common.sast.sarif
 
+import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
+import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.ActionVariant
 import org.opentaint.dataflow.ap.ifds.trace.path.ResolvedInterProceduralTrace
 import org.opentaint.dataflow.ap.ifds.trace.path.ResolvedInterProceduralTraceEntry
 import org.opentaint.dataflow.ap.ifds.trace.path.ResolvedNodeTrace
@@ -15,7 +17,26 @@ enum class TracePathNodeKind {
     SOURCE, SINK, CALL, RETURN, OTHER
 }
 
-data class TracePathNode(val statement: CommonInst, val kind: TracePathNodeKind, val entry: TraceEntry?)
+sealed interface TracePathNodeEntry {
+    val statement: CommonInst
+    val edges: Set<MethodTraceResolver.TraceEdge>
+
+    data class NonAction(val entry: TraceEntry) : TracePathNodeEntry {
+        override val statement: CommonInst get() = entry.statement
+        override val edges: Set<MethodTraceResolver.TraceEdge> get() = entry.edges
+    }
+
+    data class Action(val entry: TraceEntry.Action, val variant: ActionVariant) : TracePathNodeEntry {
+        override val statement: CommonInst get() = entry.statement
+        override val edges: Set<MethodTraceResolver.TraceEdge> get() = entry.edges
+    }
+}
+
+data class TracePathNode(
+    val statement: CommonInst,
+    val kind: TracePathNodeKind,
+    val entry: TracePathNodeEntry?,
+)
 
 private fun generateSourceToSinkPath(
     trace: ResolvedNodeTrace,
@@ -48,7 +69,7 @@ private fun generateSourceToSinkPath(
             }
 
             sourceNodeGenerated = true
-            path += TracePathNode(sourceNode.entry.statement, TracePathNodeKind.SOURCE, sourceNode.entry)
+            path += sourceNode.toTracePathNode(TracePathNodeKind.SOURCE)
             callPath = callPath.drop(1)
         }
 
@@ -63,7 +84,7 @@ private fun generateSourceToSinkPath(
             val sourceNode = callPath.first()
 
             sourceNodeGenerated = true
-            path += TracePathNode(sourceNode.entry.statement, TracePathNodeKind.SOURCE, sourceNode.entry)
+            path += sourceNode.toTracePathNode(TracePathNodeKind.SOURCE)
             callPath = callPath.drop(1)
         }
 
@@ -72,7 +93,7 @@ private fun generateSourceToSinkPath(
         if (idx == callToSinkTrace.lastIndex) {
             val sinkNode = callPath.last()
             path.removeLast()
-            path += TracePathNode(sinkNode.entry.statement, TracePathNodeKind.SINK, sinkNode.entry)
+            path += sinkNode.toTracePathNode(TracePathNodeKind.SINK)
         }
     }
 
@@ -84,19 +105,25 @@ private fun resolveCallPath(
 ): List<TracePathNode> {
     val path = mutableListOf<TracePathNode>()
     for (node in callPath) {
-        val entry = node.entry
         when (node) {
             is ResolvedInterProceduralTraceEntry.InnerCall -> {
-                path += TracePathNode(entry.statement, TracePathNodeKind.CALL, entry)
+                path += node.toTracePathNode(TracePathNodeKind.CALL)
                 path += resolveCallPath(node.innerTrace.entries)
-                path += TracePathNode(entry.statement, TracePathNodeKind.RETURN, entry)
+                path += node.toTracePathNode(TracePathNodeKind.RETURN)
             }
+            is ResolvedInterProceduralTraceEntry.Action,
             is ResolvedInterProceduralTraceEntry.Simple -> {
-                path += TracePathNode(entry.statement, TracePathNodeKind.OTHER, entry)
+                path += node.toTracePathNode(TracePathNodeKind.OTHER)
             }
         }
     }
     return path
+}
+
+private fun ResolvedInterProceduralTraceEntry.toTracePathNode(kind: TracePathNodeKind): TracePathNode = when (this) {
+    is ResolvedInterProceduralTraceEntry.Simple -> TracePathNode(entry.statement, kind, TracePathNodeEntry.NonAction(entry))
+    is ResolvedInterProceduralTraceEntry.Action -> TracePathNode(entry.statement, kind, TracePathNodeEntry.Action(entry, actionVariant))
+    is ResolvedInterProceduralTraceEntry.InnerCall -> TracePathNode(entry.statement, kind, TracePathNodeEntry.Action(entry, actionVariant))
 }
 
 data class CallTrace(

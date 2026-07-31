@@ -31,4 +31,5 @@ interface AnalysisRunner {
     fun triggerSideEffectRequirement(methodEntryPoint: MethodEntryPoint, initialFactAp: InitialFactAp)
 
     fun cleanup()
+    fun resetApManager(apManager: ApManager)
 }

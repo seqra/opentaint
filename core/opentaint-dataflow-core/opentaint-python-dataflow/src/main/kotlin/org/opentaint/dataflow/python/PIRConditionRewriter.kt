@@ -1,7 +1,9 @@
 package org.opentaint.dataflow.python
 
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.configuration.CommonCondition
+import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.AnyArgument
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.ContainsMark
@@ -86,6 +88,14 @@ class PIRConditionRewriter(
         is PositionWithAccess -> PositionWithAccess(base.replaceRoot(newRoot), access)
         else -> newRoot
     }
+}
+
+fun <T : TaintConfigurationItem> PIRConditionRewriter.rulesWithConditions(
+    rules: List<T>
+): List<RuleWithCondition<T>> = rules.mapNotNull { rule ->
+    val condition = rewrite(rule.condition)
+    if (condition.isFalse) return@mapNotNull null
+    RuleWithCondition(rule, condition)
 }
 
 interface AnyArgumentResolver {

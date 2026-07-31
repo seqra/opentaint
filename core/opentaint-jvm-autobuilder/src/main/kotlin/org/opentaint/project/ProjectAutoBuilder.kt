@@ -31,25 +31,26 @@ class ProjectAutoBuilder : CliWithLogger() {
     ).defaultByName("simple")
 
     override fun main() {
-        logger.info { "Run auto build resolver at $projectRootDir" }
+        val projectRoot = projectRootDir.toAbsolutePath()
+        logger.info { "Run auto build resolver at $projectRoot" }
 
-        val resolverWorkDir = buildDir ?: createTempDirectory("resolver")
+        val resolverWorkDir = buildDir?.toAbsolutePath() ?: createTempDirectory("resolver")
 
         val resolvedProject = when (val b = buildType) {
             is BuildProject -> {
-                ProjectResolver.resolveProject(projectRootDir, resolverWorkDir)
+                ProjectResolver.resolveProject(projectRoot, resolverWorkDir)
             }
 
             is ProjectFromCP -> {
-                ProjectFromCPResolver().resolveProject(projectRootDir, resolverWorkDir, b)
+                ProjectFromCPResolver().resolveProject(projectRoot, resolverWorkDir, b)
             }
         }
 
         val javaProjects = resolvedProject?.let { Project.flattenJavaProject(it) }.orEmpty()
-        val goProjects = GoProjectResolver.resolveProject(projectRootDir, resolverWorkDir)
+        val goProjects = GoProjectResolver.resolveProject(projectRoot, resolverWorkDir)
 
         if (javaProjects.isEmpty() && goProjects.isEmpty()) {
-            logger.error { "No projects resolved at $projectRootDir" }
+            logger.error { "No projects resolved at $projectRoot" }
             return
         }
 
@@ -74,7 +75,7 @@ class ProjectAutoBuilder : CliWithLogger() {
         }
 
         val topLevelProject = Project(
-            projectRoot = projectRootDir,
+            projectRoot = projectRoot,
             goProjects = goProjects,
             javaProjects = javaProjects,
         )

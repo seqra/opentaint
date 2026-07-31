@@ -14,9 +14,6 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
-import org.opentaint.dataflow.configuration.isTrue
-import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.clearField
@@ -27,7 +24,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.readAccessorTo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
@@ -57,7 +53,7 @@ class JIRMethodSequentFlowFunction(
         add(Sequent.ZeroToZero)
 
         if (currentInst is JIRAssignInst) {
-            JIRMethodCallResolver.TypeInfoSequentFlowFunction.handle(currentInst) { accessors ->
+            JIRMethodCallResolver.TypeInfoSequentFlowFunction.handle(analysisContext, currentInst) { accessors ->
                 val lhv = accessPathBase(currentInst.lhv) ?: return@handle
                 val startFact = apManager.createFinalAp(lhv, ExclusionSet.Universe)
                 val fact = accessors.foldRight(startFact) { a, f -> f.prependAccessor(a) }
@@ -66,6 +62,7 @@ class JIRMethodSequentFlowFunction(
         }
 
         applyUnconditionalSources()
+        applyUnconditionalSinks()
     }
 
     override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {
@@ -594,7 +591,7 @@ class JIRMethodSequentFlowFunction(
         accessor: Accessor,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
-        val abstractAp = apManager.createAbstractAp(factAp.base, factAp.exclusions)
+        val abstractAp = factAp.abstractOnly()
         propagateFactWithAccessorExclude(abstractAp, accessor)
 
         analysisContext.aliasAnalysis?.forEachAliasAtStatement(currentInst, abstractAp) { aliased ->
@@ -608,15 +605,8 @@ class JIRMethodSequentFlowFunction(
         sideEffect: (Sequent.SideEffect) -> Unit,
         refiner: FactRefiner
     ): Pair<List<InitialFactAp>, List<Pair<FinalFactAp, TraceInfo>>> = with(analysisContext.taint) {
-        val config = taintConfig as TaintRulesProvider
-        val sinkRules = config.sinkRulesForMethodExit(currentInst.location.method, currentInst, fact, initialFacts).toList()
+        val sinkRules = sinkRulesForMethodExit(currentInst, fact, initialFacts).toList()
         if (sinkRules.isEmpty()) return emptyList<InitialFactAp>() to emptyList()
-
-        val valueResolver = CalleePositionToJIRValueResolver(currentInst.location.method)
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            valueResolver,
-            analysisContext, currentInst
-        )
 
         val markAfterAnyFieldResolver = initialFacts?.let {
             createMarkAfterAccessorResolver(analysisContext.methodEntryPoint, it) { i, k ->
@@ -625,7 +615,7 @@ class JIRMethodSequentFlowFunction(
         }
 
         val taintUtil = JIRSequentTaintUtil(apManager, currentInst, analysisContext, generateTrace, methodResult)
-        taintUtil.applySinkRules(sinkRules, conditionRewriter, FinalFactReader(fact, apManager), markAfterAnyFieldResolver)
+        taintUtil.applySinkRules(sinkRules, FinalFactReader(fact, apManager), markAfterAnyFieldResolver)
 
         taintUtil.conditionReaders.forEach { refiner.add(it) }
 
@@ -634,18 +624,22 @@ class JIRMethodSequentFlowFunction(
         factsToDrop to taintUtil.factsAfterSink
     }
 
+    private fun applyUnconditionalSinks() = with(analysisContext.taint) {
+        if (currentInst !is JIRReturnInst) return
+
+        val sinkRules = sinkRulesForMethodExit(currentInst, fact = null, initialFacts = null).toList()
+        sinkRules.forEach {
+            if (it.condition.isTrue) {
+                // todo: unconditional exit sink
+            }
+        }
+    }
+
     private fun applyMethodExitSourceRules(
         methodResult: AccessPathBase, fact: FinalFactAp?, refiner: FactRefiner?,
-    ): List<Pair<FinalFactAp, TraceInfo>> {
-        val config = analysisContext.taint.taintConfig as TaintRulesProvider
-        val sourceRules = config.exitSourceRulesForMethod(currentInst.location.method, currentInst, fact).toList()
+    ): List<Pair<FinalFactAp, TraceInfo>> = with(analysisContext.taint) {
+        val sourceRules = sourceRulesForMethodExit(currentInst, fact).toList()
         if (sourceRules.isEmpty()) return emptyList()
-
-        val valueResolver = CalleePositionToJIRValueResolver(currentInst.location.method)
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            valueResolver,
-            analysisContext, currentInst
-        )
 
         val result = mutableListOf<Pair<FinalFactAp, TraceInfo>>()
 
@@ -653,7 +647,6 @@ class JIRMethodSequentFlowFunction(
         taintUtil.applySourceRules(
             sourceRules,
             initialFacts = emptySet(),
-            conditionRewriter,
             factReader = fact?.let { FinalFactReader(it, apManager) },
             exclusion = fact?.exclusions ?: ExclusionSet.Universe,
             createFinalFact = { f, trace -> result.add(f to trace) },
@@ -681,7 +674,7 @@ class JIRMethodSequentFlowFunction(
         val field = rhvFieldRef.field.field
         if (!field.isStatic) return
 
-        val config = analysisContext.taint.taintConfig as TaintRulesProvider
+        val config = analysisContext.taint
         val sourceRules = config.sourceRulesForStaticField(field, currentInst, fact = null).toList()
         if (sourceRules.isEmpty()) return
 
@@ -691,11 +684,10 @@ class JIRMethodSequentFlowFunction(
             apManager, ExclusionSet.Universe
         )
 
-        for (sourceRule in sourceRules) {
-            if (!sourceRule.condition.isTrue()) {
-                TODO("Field source with complex condition")
-            }
+        for (sourceRuleWithCondition in sourceRules) {
+            if (!sourceRuleWithCondition.condition.isTrue) continue
 
+            val sourceRule = sourceRuleWithCondition.rule
             for (action in sourceRule.actionsAfter) {
                 sourceEvaluator.accept(sourceRule, action).onSome { evaluatedFacts ->
                     val trace = TraceInfo.Rule(sourceRule, action)
@@ -755,11 +747,6 @@ class JIRMethodSequentFlowFunction(
             if (accessor !is TaintMarkAccessor || accessor !in marksToRemove) return FilterResult.Accept
             return FilterResult.Reject
         }
-    }
-
-    private inline fun storeInfo(body: () -> Unit) {
-        if (generateTrace) return
-        body()
     }
 
     private class FactRefiner {

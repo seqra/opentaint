@@ -88,6 +88,9 @@ class AccessTree(
         access.removeAbstraction().takeIf { !it.isEmpty }
             ?.let { AccessTree(apManager, base, it, exclusions) }
 
+    override fun abstractOnly(): FinalFactAp =
+        AccessTree(apManager, base, apManager.abstractNode, exclusions)
+
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
         return AccessTree(apManager, base, filteredAccess, exclusions)

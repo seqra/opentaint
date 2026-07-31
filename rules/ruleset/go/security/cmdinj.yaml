@@ -53,11 +53,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: go/lib/http-sources.yaml#http-sources
+        - tag: http-untrusted-data-source
           as: src
-        - rule: go/lib/http-sources-header-index.yaml#http-sources-header-index
+        - tag: beego-header-untrusted-data-source
           as: extra_header
-        - rule: go/lib/cmdi-sinks.yaml#cmdi-sinks
+        - tag: command-injection-sink
           as: sink
       on:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'

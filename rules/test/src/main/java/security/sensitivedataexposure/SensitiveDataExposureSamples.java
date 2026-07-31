@@ -164,6 +164,12 @@ public class SensitiveDataExposureSamples {
             // SAFE: use redirect with a controlled, server-side selected path
             response.sendRedirect(safePath);
         }
+
+        protected void doGetFixedDispatcher(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            // SAFE: the dispatcher path is constant even though request and response are passed to include
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/views/home.jsp");
+            dispatcher.include(request, response);
+        }
     }
 
     // jsp-file-disclosure (taint join rule via ModelAndView / view name)

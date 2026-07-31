@@ -1,139 +1,84 @@
 ---
 name: create-dataflow-approximation
-description: Model a library method's taint propagation as code-based dataflow approximation and refine it against a test project until the sample passes. Use for a dropped external method whose propagation a passThrough copy cannot express
+description: Model a method's taint propagation as code-based dataflow approximation and refine it against a test project until the sample passes. Use for a dropped method that requires code-based approximation
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.0"
 ---
 
 # Skill: Create Dataflow Approximation
 
-Write a code-based approximation for a library method whose taint propagation depends on lambdas, callbacks, or async chains, then test it against the prepared test project and fix until the approximation sample passes
+A dataflow approximation is code that expresses how data moves through a method the analyzer can't trace through — an opaque call where the engine loses taint because it can't see the body. You write a small stand-in that reproduces the method's real propagation from its inputs to its outputs, so the analyzer can follow taint through it. Run it against the prepared test project and refine until the sample passes.
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Methods to model `<methods>` — the target method(s) and how taint flows through them, from the tracking file's `methods` (all `type: dataflow`)
-- Tracking file `<tracking-file>` — the dataflow approximation unit (`<package-kebab>-dataflow`, e.g. `reactor-core-publisher-dataflow`). Default: `.opentaint/tracking/approximations/<name>.yaml`
-- Approximation sources `<approx-src>` — this package's own directory for the `.java` approximation files. Default: `.opentaint/dataflow/<name>`
-- Compiled test project `<test-compiled>` — the per-package compiled model to test against. Default: `.opentaint/test-compiled/<name>`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `language` (required) — target language for this project and language-specific instructions
+- `batch` (required) — the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the `dataflow` methods to model and holds tracking state
+- `methods` (optional) — a specific subset of the batch's dataflow methods to (re)model; default all not yet in `build.done`
 
 ## Workflow
 
-### 1. Write the approximation source
+### 1. Understand the propagation
 
-Create Java files in `<approx-src>`. Target the EXACT class named in `dropped-external-methods.yaml` — `@Approximate` matches only that class (unlike passThrough's `overrides: true`), and the dropped FQN reflects how the analyzer resolved the call: an interface-typed receiver (`Map m = ...; m.computeIfAbsent(...)`) drops `java.util.Map#computeIfAbsent`; a concrete one (`new HashMap<>()`) drops `java.util.HashMap#computeIfAbsent`. Don't substitute a supertype or subtype. Model the real propagation — never leave the body empty (it silently drops taint); when unsure how taint flows through the method, read the library source rather than guessing:
+Find and read each dataflow method's real source: take methods not yet in `build.done`, or the specific `methods` handed for repair even when already built. Leave built methods outside that explicit subset and their approximation source unchanged. An app-internal method sits in the project's own sources, a library method's source comes from its dependency (the language reference has how to get it). Read it to see how data moves from the method's inputs (receiver, arguments) to its outputs (return value, arguments it writes into, state it stores), gathering the full context needed to understand the function's behavior.
 
-```java
-package com.example.approximations;
+### 2. Write the approximation
 
-import org.opentaint.ir.approximation.annotation.Approximate;
-import org.opentaint.jvm.dataflow.approximations.ArgumentTypeContext;
-import org.opentaint.jvm.dataflow.approximations.OpentaintNdUtil;
+Reproduce that propagation as code under `.opentaint/dataflow/<batch>`, one `@Approximate` class per target class. Cover every assigned dataflow method and overload; repair an explicitly handed method in the existing source, and add new methods there rather than rewriting the file. The engine is field-sensitive — taint is tracked per field — so route data field-to-field exactly as the source does rather than tainting the whole object. The test project's negative samples (if present) verify this by storing taint in one field and reading another, so an over-broad model makes them fire. The code form, annotations, and patterns are in the language reference.
 
-import java.util.function.Function;
+### 3. Test against the test project
 
-@Approximate(com.example.lib.ReactiveProcessor.class)
-public class ReactiveProcessor {
+Run the approximation test directly as a foreground, blocking command and wait for exit — never background it or use Monitor. Apply this batch's sources and iterate until the samples pass. Feedback loop: a failing sample might be caused by: the model's target class or signature doesn't match what the analyzer sees, or the body doesn't route taint from the real source to the modeled output — diagnose the mismatch, fix, and re-run, don't rationalize a non-result. When the cause isn't obvious, localize where taint dies with a fact-reachability trace before guessing further per `references/debugging.md`. On a pass, append the method only if it is not already present in `build.done` (per Tracking); a repaired method remains recorded there.
 
-    // Model: taint on this flows through the function to the result
-    public Object transform(@ArgumentTypeContext Function fn) throws Throwable {
-        com.example.lib.ReactiveProcessor self =
-            (com.example.lib.ReactiveProcessor) (Object) this;
-        if (OpentaintNdUtil.nextBool()) return null;
-        Object input = self.getValue();
-        return fn.apply(input);
-    }
+### 4. Escalate
 
-    // Model: taint on this flows to the consumer argument
-    public void subscribe(@ArgumentTypeContext java.util.function.Consumer consumer) {
-        com.example.lib.ReactiveProcessor self =
-            (com.example.lib.ReactiveProcessor) (Object) this;
-        if (OpentaintNdUtil.nextBool()) {
-            consumer.accept(self.getValue());
-        }
-    }
-}
-```
-
-Wrapper-returning operators (a `Mono`/`Flux`, `Optional`, `Stream`, a builder — anything where the taint stays inside a container): declare the real concrete return type, not `Object`; in the `nextBool()` branch `return self`, not `null`; and extract → apply → re-wrap so a downstream extractor (`block`, `get`, …) can pull the tainted value back out:
-
-```java
-@Approximate(reactor.core.publisher.Mono.class)
-public class Mono {
-    public reactor.core.publisher.Mono map(@ArgumentTypeContext Function fn) throws Throwable {
-        reactor.core.publisher.Mono self = (reactor.core.publisher.Mono) (Object) this;
-        if (OpentaintNdUtil.nextBool()) return self;
-        Object up = self.block();                                  // extract upstream element
-        return reactor.core.publisher.Mono.justOrEmpty(fn.apply(up)); // apply mapper, re-wrap
-    }
-}
-```
-
-### 2. Test against the test project
-
-Run `test approximation run` over `<test-compiled>` applying only this package's sources (`<approx-src>`); iterate the source until the sample passes:
-
-```bash
-opentaint test approximation run <test-compiled> \
-  -o .opentaint/test-results/<name> \
-  --dataflow-approximations <approx-src>
-```
-
-`test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. The sample that routes taint through the method is a `falseNegative` until the model propagates it. Read `.opentaint/test-results/<name>/test-result.json`:
-
-- still `falseNegative` → the `@Approximate(...)` target class or a method signature doesn't match what the analyzer sees, or the body doesn't route taint from the real source to the modeled result/argument; diagnose the mismatch, don't rationalize a non-result. Most common: target-class mismatch with the dropped FQN — re-target the exact dropped class and match the cast (`(java.util.HashMap) (Object) this`)
-- `falsePositive` (a negative sample fired) → the model is over-broad: it taints a read it shouldn't, e.g. data fetched under a different key/field than it was stored under. Narrow the propagation until the negative stays non-firing while the positive passes
-
-### 3. When the sample won't pass after a couple of fixes
-
-After ~2 fix attempts without a clearer cause — `@Approximate` target matches the dropped FQN, the body propagates from the modeled source slot to the result/argument, but the sample is still `falseNegative` — don't keep guessing. Leave `tests_passing: pending` and report non-convergence to the caller; the orchestrator escalates to debug-rule for a fact-reachability trace through the approximation point
-
-## Key patterns
-
-| Pattern | Usage |
-|---|---|
-| `@Approximate(TargetClass.class)` | Link the approximation to its target class. Must be on the compile classpath (a project dependency or a JDK type) |
-| `(TargetClass) (Object) this` | Cast to reach the real object's methods |
-| `@ArgumentTypeContext` | On lambda / functional-interface parameters |
-| `OpentaintNdUtil.nextBool()` | Non-deterministic branch — the analyzer considers both paths |
+When the sample won't converge after ~3 fixes — whether the trace shows a faithful model still can't propagate (taint dying at a plain instruction the engine should carry through, an engine limitation) or the cause stays unclear — don't add a new method to `build.done` or alter an existing repaired method's tracking entry. Report it with the brief cause you found (per Output), for the orchestrator to escalate. Don't retry further.
 
 ## Output
 
-- The approximation source(s) under `<approx-src>`
-- Tracking updated: `artifact` and `stages.tests_passing` (per Tracking)
-- Report the source path, a one-line test summary, and the exact `test approximation run` command used
+### Artifacts
+
+- `.opentaint/dataflow/<batch>` — the code approximation source(s), one `@Approximate` class per target class, that the scan consumes; report the path and the exact test command used
+- the passing methods present in the batch file's `build.done` (new methods appended; repaired methods already recorded, per Tracking)
+
+### Summary
+
+- the methods modeled and the test status (passing / non-converging)
 
 ## Tracking
 
-In `<tracking-file>`, once the source exists and its sample passes:
+`.opentaint/tracking/approximations/<batch>.yaml` — one batch's method classification, `<batch>` the plan's filename stem. Every method sits in exactly one verdict bucket, keyed with its `signature` (the JVM descriptor, always quoted so array types `[…` stay valid YAML) so overloads stay distinct:
+- `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
+- `skipped` — terminal non-carriers; each `{ method, signature, reason }`
+- `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
+
+`dependencies` lists the dependency identifiers a dataflow test project needs. The `build` block tracks the build — `test_project` records each dataflow method's test-project status (`done` if a sample was written into the batch's test project, `failed` if none could be written so the method was excluded from it), and `done` holds the finished `{ method, signature }`. Keep it clear from comments
 
 ```yaml
-artifact: .opentaint/dataflow/<name>/com/example/approximations/ReactiveProcessor.java
-stages:
-  tests_passing: done
+passthrough:
+  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;" }
+dataflow:
+  - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
+skipped:
+  - { method: "org.slf4j.Logger#info", signature: "(Ljava/lang/String;)V", reason: "void side-effect" }
+engine_issues: []
+dependencies: []
+build:
+  test_project:
+    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;", status: done }
+  done: []
 ```
 
-Do not touch other stages or fields
+This skill appends each method whose sample passes to `build.done` as `{ method, signature }` when absent. A newly assigned method that still fails, or one the engine provably can't propagate, stays out and is reported (per Output); an explicitly repaired method leaves its existing entry unchanged. Don't touch the classification buckets (`passthrough`/`dataflow`/`skipped`/`engine_issues`) or edit an entry already in `build.done`.
 
 ## Constraints
 
-- Also the passThrough fallback — when a passThrough for a method won't converge, the orchestrator re-plans it here; target the same dropped class and the dataflow approximation overrides the passThrough (the orchestrator removes the stale passThrough config before this one is tested)
-- Java 8 source compatibility
-- Put the `@Approximate` classes in a neutral package (e.g. `com.example.approximations`) — never the target library's own package. Inside the library's package every bare FQN resolves to your approximation's non-generic class instead of the real type, breaking compilation wholesale
-- Model every method and overload the unit lists, not only the shapes you happen to have a sample for — an under-covered unit silently drops taint through the overloads you skipped
-- One approximation class per target class — a strict bijection enforced at load (duplicates throw `IllegalArgumentException`). Built-in dataflow approximations are first-priority and presumed correct; you cannot override them — see Troubleshooting if debug-rule traces a kill to one
-- Method signatures must match the target class methods exactly
-- Don't unpack or grep the analyzer JAR for built-in models or signatures — its internals aren't a stable API; go through the CLI
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
-## Troubleshooting
-
-When debug-rule traces a taint kill to an external method, walk this in order:
-
-1. Confirm the method has a built-in — `approximated-external-methods.yaml` lists it (if you didn't pass an approximation to the scan, the listing is the bundled set)
-2. Confirm from the debug-rule trace that taint dies at exactly that method
-3. Classify the gap:
-   - fits a from→to copy → write a passthrough override (built-in passthroughs are overrideable by design)
-   - truly needs dataflow shape (lambdas/callbacks/async) → engine issue; built-in dataflows aren't locally overrideable — report it upstream
+- Verify only with the approximation test on the test project
+- The test project's sample sources are a fixed input — never edit or recompile them to force a pass; if a faithful model can't pass, leave the method out and report it (per Output)
+- Model every dataflow method and overload the batch lists, not only the ones you have a sample for

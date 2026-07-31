@@ -14,19 +14,16 @@ import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.ProjectAnalysisContext
 import org.opentaint.jvm.sast.project.spring.SpringRuleProvider
+import org.opentaint.jvm.sast.rules.JIRSemgrepRuleProvider
 import org.opentaint.jvm.sast.util.locationChecker
-import org.opentaint.semgrep.pattern.createTaintConfig
 
 fun loadTaintConfig(
     cp: JIRClasspath,
     rules: PreloadedRules<SerializedItem, SerializedTaintConfig>
 ): TaintRulesProvider {
     val config = TaintConfiguration(cp)
-    rules.rules.forEach { config.loadConfig(it.createTaintConfig()) }
-
     config.loadConfig(rules.defaultConfig)
-
-    return JIRTaintRulesProvider(config).withApproximationConfigs(cp, rules.customApproximationConfig)
+    return JIRSemgrepRuleProvider(rules.rules, config).withApproximationConfigs(cp, rules.customApproximationConfig)
 }
 
 val approximationConfigCombinationOptions = CombinationOptions(
@@ -37,7 +34,7 @@ val approximationConfigCombinationOptions = CombinationOptions(
     passThrough = CombinationMode.OVERRIDE,
 )
 
-fun JIRTaintRulesProvider.withApproximationConfigs(
+fun TaintRulesProvider.withApproximationConfigs(
     cp: JIRClasspath,
     approximationConfigs: List<SerializedTaintConfig>,
 ): TaintRulesProvider {

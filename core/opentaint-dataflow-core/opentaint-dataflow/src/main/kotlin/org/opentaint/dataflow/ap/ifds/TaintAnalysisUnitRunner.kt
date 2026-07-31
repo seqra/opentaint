@@ -74,18 +74,38 @@ class TaintAnalysisUnitRunner(
     private val loadedSummaries = hashMapOf<MethodEntryPoint, Pair<List<Edge>, List<InitialFactAp>>>()
     private var delayedMethodAnalyzers = mutableListOf<MethodAnalyzer>()
 
-    private val internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
-    private val externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
+    private var internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
+    private var externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
 
     override fun cleanup() {
+        resetQueue()
+
         internalMethodSummarySubscriptions.cleanup()
         externalMethodSummarySubscriptions.cleanup()
-        delayedMethodAnalyzers = mutableListOf()
-        eventPriorityQueue = PriorityQueue(EventComparator)
-        workList = Channel(Channel.UNLIMITED)
+
         analyzers.forEach { storage ->
             storage.forEachAnalyzer { it.cleanup() }
         }
+    }
+
+    override fun resetApManager(apManager: ApManager) {
+        resetQueue()
+
+        internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
+        externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
+
+        analyzers.forEach { storage ->
+            storage.forEachAnalyzer { it.resetApManager(apManager) }
+        }
+    }
+
+    private fun resetQueue() {
+        eventsProcessed.reset()
+        eventsEnqueued.reset()
+
+        eventPriorityQueue = PriorityQueue(EventComparator)
+        workList = Channel(Channel.UNLIMITED)
+        delayedMethodAnalyzers = mutableListOf()
     }
 
     private val eventsProcessed = LongAdder()

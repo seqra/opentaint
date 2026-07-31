@@ -386,6 +386,7 @@ tests:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGet
     negative:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGetSafe
+      - security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet#doGetFixedDispatcher
   - rule-id: java/security/sensitive-data-exposure.yaml#jsp-file-disclosure
     positive:
       - security.sensitivedataexposure.SensitiveDataExposureSamples$JspFileDisclosureController#mvcVulnerable
@@ -465,11 +466,13 @@ tests:
       - security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById
   - rule-id: java/security/unsafe-deserialization.yaml#unsafe-jackson-deserialization
     positive:
-      - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController
-      - security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeJacksonServlet
+      - security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeJacksonServlet#doPost
+      - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController#unsafeClassResolver
+      - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController#unsafeMinimalClassResolver
+      - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController#unsafeLaissezFaire
     negative:
       - security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController#safeJackson
-      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeJacksonServlet
+      - security.unsafedeserialization.UnsafeDeserializationSamples$SafeJacksonServlet#doPost
   - rule-id: java/security/unsafe-deserialization.yaml#unsafe-object-mapper
     positive:
       - security.unsafedeserialization.UnsafeDeserializationSamples$ObjectInputStreamSpringController#unsafeDeserialize

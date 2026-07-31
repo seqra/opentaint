@@ -27,6 +27,8 @@ import org.opentaint.dataflow.configuration.python.TaintSinkMeta
 import org.opentaint.dataflow.configuration.python.TaintSource
 import org.opentaint.dataflow.configuration.python.Target
 import org.opentaint.dataflow.ifds.SingletonUnit
+import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
@@ -162,14 +164,20 @@ abstract class AnalysisTest {
 
         val ifdsGraph = PIRApplicationGraph(cp)
 
+        val refManager = RefManager()
+        val cancellation = Cancellation()
+
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
+            refManager, cancellation,
             PIRAnalysisManager(cp, taintConfig, externalMethodTracker = externalMethods),
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
-            apManager = TreeApManager(anyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled),
             summarySerializationContext = DummySerializationContext,
             taintRulesStatsSamplingPeriod = null,
+        )
+        engine.resetApManager(
+            TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, refManager, cancellation)
         )
 
         val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)

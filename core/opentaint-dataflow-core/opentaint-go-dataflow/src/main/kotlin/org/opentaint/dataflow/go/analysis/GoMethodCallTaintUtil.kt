@@ -36,9 +36,6 @@ class GoMethodCallTaintUtil(
 ) : TaintUtil<GoRuleCondition, TaintRule.Source, TaintRule.Sink, TraceInfo>(apManager) {
     private val sinkTracker get() = context.taint.taintSinkTracker
 
-    override fun TaintRule.Source.srcCondition(): CommonCondition<GoRuleCondition> = condition
-    override fun TaintRule.Sink.sinkCondition(): CommonCondition<GoRuleCondition> = condition
-
     override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintRule.Source> =
         object : RuleAssumptionsManager<TaintRule.Source> {
             override fun storeAssumptions(

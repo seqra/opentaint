@@ -137,6 +137,9 @@ func (c *JavaAutobuilderConfig) runAutobuilder() error {
 	for _, cp := range c.classpaths {
 		builder.AddClasspath(cp)
 	}
+	for _, dep := range c.dependencies {
+		builder.AddDependency(dep)
+	}
 	for _, pkg := range c.packages {
 		builder.AddPackage(pkg)
 	}

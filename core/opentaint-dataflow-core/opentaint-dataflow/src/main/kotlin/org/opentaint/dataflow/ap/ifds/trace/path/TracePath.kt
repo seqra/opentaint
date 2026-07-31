@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.InnerCallTraceResolveStrategy
 import org.opentaint.dataflow.ap.ifds.trace.InnerCallTraceResolveStrategy.Default
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.ActionVariant
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
@@ -67,9 +68,20 @@ private class NodeTrace(val sink2Root: IntArray, val root2Source: IntArray)
 sealed interface ResolvedInterProceduralTraceEntry {
     val entry: TraceEntry
 
-    data class Simple(override val entry: TraceEntry) : ResolvedInterProceduralTraceEntry
-    data class InnerCall(override val entry: TraceEntry, val innerTrace: ResolvedInterProceduralTrace) :
-        ResolvedInterProceduralTraceEntry
+    data class Simple(
+        override val entry: TraceEntry,
+    ) : ResolvedInterProceduralTraceEntry
+
+    data class Action(
+        override val entry: TraceEntry.Action,
+        val actionVariant: ActionVariant,
+    ): ResolvedInterProceduralTraceEntry
+
+    data class InnerCall(
+        override val entry: TraceEntry.Action,
+        val actionVariant: ActionVariant,
+        val innerTrace: ResolvedInterProceduralTrace,
+    ) : ResolvedInterProceduralTraceEntry
 }
 
 class ResolvedInterProceduralTrace(
@@ -224,7 +236,7 @@ private fun TaintAnalysisUnitRunnerManager.resolveInterProceduralTracePath(
         val path = state.right()
 
         if (entry == trace.finalId) {
-            val resolved = resolveEntries(path.map { trace.entries[it] }, params, depth)
+            val resolved = resolveEntries(trace, path, params, depth)
             if (resolved != null) {
                 return ResolvedInterProceduralTrace(trace.method, resolved)
             }
@@ -242,14 +254,19 @@ private fun TaintAnalysisUnitRunnerManager.resolveInterProceduralTracePath(
 }
 
 private fun TaintAnalysisUnitRunnerManager.resolveEntries(
-    entries: List<TraceEntry>,
+    trace: MethodTraceResolver.FullStart2FinalTrace,
+    entryIds: IntArray,
     params: TracePathResolveParams,
     depth: Int,
 ): List<ResolvedInterProceduralTraceEntry>? =
-    entries.map { resolveEntry(it, params, depth) ?: return null }
+    entryIds.map { entryId ->
+        resolveEntry(trace, trace.entries[entryId], entryId, params, depth) ?: return null
+    }
 
 private fun TaintAnalysisUnitRunnerManager.resolveEntry(
+    trace: MethodTraceResolver.FullStart2FinalTrace,
     entry: TraceEntry,
+    entryId: Int,
     params: TracePathResolveParams,
     depth: Int,
 ): ResolvedInterProceduralTraceEntry? {
@@ -263,12 +280,25 @@ private fun TaintAnalysisUnitRunnerManager.resolveEntry(
         return ResolvedInterProceduralTraceEntry.Simple(entry)
     }
 
-    val action = entry.primaryAction
+    val variants = trace.actionVariants.get(entryId)
+    for (variant in variants) {
+        resolveActionVariant(entry, variant, params, depth)?.let { return it }
+    }
+    return null
+}
+
+private fun TaintAnalysisUnitRunnerManager.resolveActionVariant(
+    entry: TraceEntry.Action,
+    variant: ActionVariant,
+    params: TracePathResolveParams,
+    depth: Int,
+): ResolvedInterProceduralTraceEntry? {
+    val action = variant.primaryAction
     if (action !is TraceEntryAction.CallSummary) {
-        return ResolvedInterProceduralTraceEntry.Simple(entry)
+        return ResolvedInterProceduralTraceEntry.Action(entry, variant)
     }
     if (!params.innerCallTraceResolveStrategy.innerCallTraceIsRelevant(action)) {
-        return ResolvedInterProceduralTraceEntry.Simple(entry)
+        return ResolvedInterProceduralTraceEntry.Action(entry, variant)
     }
 
     val summary = action.summaryTrace
@@ -281,7 +311,7 @@ private fun TaintAnalysisUnitRunnerManager.resolveEntry(
 
     for (trace in innerTraces) {
         resolveInterProceduralTracePath(trace, params, depth + 1)?.let {
-            return ResolvedInterProceduralTraceEntry.InnerCall(entry, it)
+            return ResolvedInterProceduralTraceEntry.InnerCall(entry, variant, it)
         }
     }
 

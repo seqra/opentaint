@@ -1,48 +1,52 @@
 ---
 name: assemble-lib-rules
-description: Write the per-vuln-class security join rules that merge the created source/sink lib rules with the built-ins. Use after the per-package lib rules are created and tested, to wire them into project-level joins
+description: Write the per-vuln-class security join rules that merge the created source/sink lib rules with the built-ins. Use to wire lib rules into project-level joins
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.0"
 ---
 
 # Skill: Assemble Lib Rules
 
-The per-package passes author source and sink lib rules but never pair them across packages. With every created lib rule and the whole built-in set in front of you, write the security joins — one per vuln class, each merging the created rules with the built-ins, mirroring the built-in security rules. These are verified by the main scan, not a test project
+Source and sink library rules are authored per package but never paired across them. Write the security joins that pair them — one per vuln class, each merging the created source/sink rules with the built-ins, mirroring the built-in security rules. The joins carry no test project, the main scan verifies them.
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Lib units `<lib-units>` — the per-package lib tracking files (`rules/lib/<package-kebab>.yaml`) with the created source/sink `rule_id`s and their vuln classes. Default: `.opentaint/tracking/rules/lib/`
-- Rules directory `<rules-dir>` — where the security joins are written. Default: `.opentaint/rules`
-- Tracking directory `<tracking-dir>` — where the join records are written. Default: `.opentaint/tracking`
-
-Built-in rules are available at `opentaint health --rules`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `language` (required) — target language for this project and language-specific instructions
 
 ## Workflow
 
 ### 1. Read the created lib rules and the built-ins
 
-Read every per-package lib unit in `<lib-units>` (the source/sink `rule_id`s create-rule wrote, sinks carrying their `vuln_class`) and the built-in source/sink lib rules (`opentaint health --rules`). Collect every source rule (built-in + created) and every sink rule grouped by vuln class
+Read every source unit under `.opentaint/tracking/rules/sources/` and sink unit under `.opentaint/tracking/rules/sinks/` — the `rule_id`s already recorded, the sinks carrying their `vuln_class` — and the built-in source/sink lib rules:
+
+```bash
+opentaint health --rules
+```
+
+Collect every source rule (built-in + created) and every sink rule grouped by vuln class. A rule is built-in when its ref resolves in the loaded built-in ruleset, created otherwise — that membership, not a stored tag, tells the two apart.
+
+When join files already exist from a prior run, reuse them as the baseline: re-assemble to fold in any new lib rule — a new source widens the `on` of every join for its vuln class, a new sink adds a join — and leave a join whose wiring no new rule touches as-is. Don't rewrite joins that already hold.
 
 ### 2. Write one security join per (vuln class, sink rule)
 
-A join references exactly ONE right-hand (sink) rule — you cannot merge several sinks into one join. So a vuln class with more than one relevant sink becomes several joins: one per sink rule, each refing all the relevant sources on the left. Sources are many; the sink is always one.
+A join references exactly ONE sink rule — several sinks can't merge into one join. So a vuln class with more than one relevant sink becomes several joins: one per sink rule, each refing all the relevant sources on the left. Sources are many, the sink is always one.
 
-For each vuln class, and within it each sink rule that needs new wiring, write `<rules-dir>/java/security/<class>-<sink>-lib-ext.yaml` with `mode: join`, refing the relevant sources + that one sink, wiring only new-end combinations in `on:`:
+For each vuln class, and within it each sink rule that needs new wiring, write a join under `.opentaint/rules/<lang>/security/<class>-<sink>-lib-ext.yaml` with `mode: join`, refing the relevant sources + that one sink, wiring only the new-end combinations in `on`:
 
-- a created (new) sink ← from every relevant source (built-in + created)
-- a built-in sink ← from created sources only (built-in source → built-in sink is already covered by the built-in join — repeating it double-reports)
+- a created sink ← from every relevant source (built-in + created)
+- a built-in sink ← from created sources only (a built-in source → built-in sink pair is already covered by the built-in join)
 
-Two rules that bite here:
+Two rules here:
 
 - Unique id — use `id: <class>-<sink>-lib-ext`, never the bare class name; a custom join named `ssrf`/`xxe`/`path-traversal` collides silently with the built-in join of that id and is dropped with no error (only the scan's rule statistics reveal it)
-- Same metavariable both sides — every `on:` clause connects the metavariable both lib rules bind (`$UNTRUSTED` by convention) as `source.$UNTRUSTED -> sink.$UNTRUSTED`; don't invent a new name on either end, or the join won't connect
+- Right metavariable each side — the source side is always `$UNTRUSTED`. The sink side is `$UNTRUSTED` for a custom rules, but a built-in sink may bind another name — read it from how that sink is wired in the built-in security rules and use it: `source.$UNTRUSTED -> sink.$<its-metavar>`
 
 ```yaml
-# java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml
 rules:
   - id: ssrf-webclient-ssrf-sink-lib-ext
     severity: ERROR
@@ -65,42 +69,46 @@ rules:
         - 'webflux-source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-The same class's built-in sink is a second file (`ssrf-java-ssrf-sink-lib-ext.yaml`), refing only the created sources → that built-in sink. The `#` comments in these examples are for you — don't copy them into the rules you write
+The same class's built-in sink is a second file (e.g. `ssrf-java-ssrf-sink-lib-ext.yaml`), refing only the created sources → that built-in sink.
 
-### 3. Stop — the main scan verifies
+### 3. Verify every rule is wired, then stop
 
-These joins carry no test project — the main scan applies them. Write them and stop; if the scan shows a join didn't load or fire, the orchestrator re-dispatches create-rule to fix it
+With the joins written, confirm no orphan before returning — a source or sink not merged into a join. Cross-check the `rule_id`s in the source and sink units against the joins: every created source rule must appear as a source end in the `on` of at least one join, and every created sink rule must be the sink of a join, and each created sink's join must ref all its relevant sources (built-in + created) on the left. Add a join (per step 2) for anything still unwired.
+
+Set `stages.written: done` (per Tracking) and return per Output.
 
 ## Output
 
-- One `<rules-dir>/java/security/<class>-<sink>-lib-ext.yaml` per (vuln class, sink rule), each refing all relevant sources + its one sink
-- One `<tracking-dir>/rules/join/<class>.yaml` per vuln class, listing every join it produced, with `stages.written: done`
-- A brief summary to the caller: one line per join (class, sink, source count, which ends are new)
+### Artifacts
+
+- one join file per (vuln class, sink rule) under `.opentaint/rules/<lang>/security/<class>-<sink>-lib-ext.yaml`, each refing all relevant sources + its one sink
+- `.opentaint/tracking/rules/joins/<class>.yaml` — one per vuln class, recording every join produced (per Tracking)
+
+### Summary
+
+- one line per join: class, sink, source count, and which ends are new
 
 ## Tracking
 
-`<tracking-dir>/rules/join/<class>.yaml` — one file per vuln class, listing each join (one per sink rule), verified by the main scan:
+This skill writes the joins tracking, one file per vuln class, setting each file's `stages.written: done`. The main scan verifies the joins, don't touch `verified`.
+
+`.opentaint/tracking/rules/joins/<class>.yaml` — one file per vuln class (class = filename), each listing the joins written for it (one per sink rule), verified later by the main scan. `sink` is a plain ref; built-in-vs-created is derived by ruleset membership, so no tag is stored, and each join's artifact path is derivable from its `rule_id`. Keep it clear from comments
 
 ```yaml
-name: ssrf
 sources:
-  - ref: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-  - ref: java/lib/spring/webflux-request-source.yaml#webflux-request-source
+  - java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+  - java/lib/spring/webflux-request-source.yaml#webflux-request-source
 joins:
   - rule_id: java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml:ssrf-webclient-ssrf-sink-lib-ext
-    artifact: .opentaint/rules/java/security/ssrf-webclient-ssrf-sink-lib-ext.yaml
-    sink: { new: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink }
+    sink: java/lib/spring/webclient-ssrf-sink.yaml#webclient-ssrf-sink
   - rule_id: java/security/ssrf-java-ssrf-sink-lib-ext.yaml:ssrf-java-ssrf-sink-lib-ext
-    artifact: .opentaint/rules/java/security/ssrf-java-ssrf-sink-lib-ext.yaml
-    sink: { builtin: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink }
+    sink: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
 stages:
   written: done
   verified: pending
-notes: >
-  free-form
 ```
 
 ## Gotchas
 
-- One join references exactly one sink — a class with N relevant sinks yields N joins, each aggregating every relevant source; never pack two sinks into one join
-- Ref the existing lib rules (built-in + created); never re-declare a source or sink
+- Ref the existing lib rules (built-in + created), never re-declare a source or sink
+- Keep produced joins comment-free

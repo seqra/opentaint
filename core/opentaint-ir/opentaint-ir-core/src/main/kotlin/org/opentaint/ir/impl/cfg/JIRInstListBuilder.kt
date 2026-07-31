@@ -292,7 +292,15 @@ class JIRInstListBuilder(val method: JIRMethod,val instList: JIRInstList<JIRRawI
 
         // Check implementation signature match (starts with) call site arguments
         for ((index, argType) in expr.callSiteArgTypes.withIndex()) {
-            if (argType != argTypes.getOrNull(index)) return null
+            val declaredArgType = argTypes.getOrNull(index)
+                ?: return null
+
+            if (argType == declaredArgType) continue
+
+            val resolvedArgType = argType.asType()
+            if (!resolvedArgType.isAssignable(declaredArgType.asType())) {
+                return null
+            }
         }
 
         val klass = implementation.declaringClass.asType() as JIRClassType

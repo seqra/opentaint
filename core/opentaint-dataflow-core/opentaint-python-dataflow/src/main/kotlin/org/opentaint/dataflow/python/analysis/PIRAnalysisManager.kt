@@ -55,6 +55,9 @@ class PIRAnalysisManager(
     private val pirApplicationGraph = PIRApplicationGraph(cp)
     private val pirCallResolver = PIRCallResolver(cp, pirApplicationGraph)
 
+    // Python analysis has no prescan phase: every rule is always relevant.
+    override fun selectPhase(phase: TaintAnalysisManager.Phase) = Unit
+
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,

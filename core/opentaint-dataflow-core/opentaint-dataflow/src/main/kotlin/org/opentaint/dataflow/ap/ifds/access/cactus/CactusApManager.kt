@@ -28,7 +28,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 class CactusApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
-    override val cancellation: Cancellation = Cancellation(),
+    override val cancellation: Cancellation,
 ) : ApManager {
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
         CactusInitialFactAbstraction()
@@ -82,9 +82,6 @@ class CactusApManager(
 
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
         AccessCactus(base, AccessNode.create(isFinal = true), exclusions)
-
-    override fun createAbstractAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        AccessCactus(base, AccessNode.create(isAbstract = true), exclusions)
 
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         AccessPathWithCycles(base, access = null, exclusions).prependAccessor(FinalAccessor)

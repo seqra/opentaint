@@ -1,68 +1,76 @@
 ---
 name: build-project
-description: Build a Java/Kotlin project for opentaint analysis and produce a project.yaml model. Use whenever an opentaint scan needs a project model and `opentaint compile` may need help
+description: Build a target project into an opentaint project model. Use whenever a fresh opentaint project model needed
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.0"
 ---
 
 # Skill: Build Project
 
-Build a target project into an opentaint project model. The model is this skill's only output
+Turn a target project into an opentaint project model: run the project's build, resolve its dependencies if needed. The build tool, toolchain, and scope flags are language-specific — detect the target language from the project's build files, then read the matching `references/<language>.md` and follow its numbered steps, which key to the ones below.
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Project root `<project-root>` — the project to build. Default: current directory
-- Model output directory `<model-out>` — where to write the model. Default: `.opentaint/project`
-- Build constraints (optional) — required Java version, submodules to initialize, `--package` filters for `opentaint project`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
+- `build-hints` (optional) — anything known about how this project builds: required toolchain version, modules/profiles to enable, project-specific build approach and so on
 
 ## Workflow
 
-### 1. Determine project type
+### 1. Reset the output
 
-- `build.gradle` / `build.gradle.kts` → Gradle
-- `pom.xml` → Maven
-- pre-compiled JAR/WAR → classpath mode
-- existing `project.yaml` → already built, reuse it
+Delete any existing `.opentaint/project` first, so files from an old model can't bleed into the new one
 
-### 2a. Gradle/Maven — autobuilder
+### 2. Identify the build
 
-```bash
-opentaint compile <project-root> -o <model-out>
-```
+Determine how the project builds — its build tool, or whether it ships pre-compiled artifacts
 
-### 2b. Autobuilder fails — manual build + `opentaint project`
+### 3. Enable all modules
 
-Build manually, then create the model from the artifacts. Always pass `--package` to restrict analysis to project code — without it the analyzer walks third-party libraries and hangs
+Re-enable every module the project disables so their code lands in the model, then build with them included. Enabling a disabled module is a config edit, not a source change, so the model still represents the current commit. If a specific module cannot be made to compile after reasonable effort, exclude only that one. Report which modules were enabled and which (if any) were excluded.
+
+### 4. Autobuilder — the primary path
 
 ```bash
-./gradlew build -x test     # Gradle
-mvn package -DskipTests     # Maven
-
-opentaint project \
-  --output <model-out> \
-  --source-root <project-root> \
-  --classpath <app.jar> \
-  --package <com.example.app>
+opentaint compile <project-root> -o .opentaint/project
 ```
 
-Multi-module: repeat `--classpath` and `--package` per module
+`opentaint compile` runs the project's real build, so it resolves the full dependency graph and the actual module reactor automatically — no hand-listing of dependencies or scope. Set the build toolchain the project needs first. Use this path almost always.
 
-### 3. Verify
+Feedback loop: a failure here is almost always a fixable build problem, not grounds to leave this path — and the autobuilder's wrapper message is terse, so don't judge fixability from it. Reproduce the project's own build directly to surface the real error, fix it, then re-run `opentaint compile`.
 
-`<model-out>/project.yaml` exists and is non-empty
+### 5. Manual build + `opentaint project` — last resort
+
+Only when the project's own build cannot be made to pass at all, build the artifacts by hand, then create the model from them with `opentaint project`, restricting analysis to project code. It's required to show the analyzer which code belongs to the project and which to third-party packages. Take the scope roots from what the code actually declares, not the build config or the folder layout. Verify final list of methods carefully, it's very important to list ALL third-party packages.
+
+### 6. Verify
+
+`.opentaint/project/project.yaml` exists, non-empty, and its module/scope entries cover every root the project's own code declares. For a multi-module project, confirm the expected module count is present. Make sure, that dependencies at `.opentaint/project/dependencies` resolved and downloaded correctly.
+
+### 7. Escalate
+
+When the build won't converge after ~3 fixes → report non-convergence and leave the build stage pending, for the orchestrator to intervene.
 
 ## Output
 
-The project model directory containing `project.yaml` (default `.opentaint/project`, or the caller's path). Report that path back
+Short and concise report of what was done
 
-## Gotchas
+### Artifacts:
 
-- Analysis hangs → `--package` was omitted in `opentaint project`; the analyzer is processing third-party libraries. Re-run with `--package`
-- Build tool not found → use the wrapper (`./gradlew`, `./mvnw`) or install the tool
-- Compilation errors → check the autobuilder log, fix the build, retry; if it can't be fixed, fall back to 2b
-- Java version mismatch → set `JAVA_HOME` to the version the project needs (opentaint itself needs Java 21+)
-- Missing dependencies → initialize submodules (`git submodule update --init`)
+- `.opentaint/project/` — the opentaint project model
+
+### Summary:
+
+- model path and (for a multi-module project) the module count it covers
+- build toolchain the build required, if it differed from what was supplied (per the language reference for its exact form) — the orchestrator reuses it for other compiling subagents and records it
+- how the model was built (autobuilder or manual), and any build config the skill changed to make it build (e.g. re-enabled modules)
+- exact build command and arguments if `opentaint project` was used
+- if the build did not converge: that it is left pending, with the blocking error and your fix attempts
+
+## Constraints
+
+- Write only the project model under `.opentaint/project`, don't produce any other files. This skill does not write any tracking state, only return info per Output
+- The model is generated by `opentaint`, never hand-edit `project.yaml` or anything under the model dir. To change what's analyzed, fix the command and rebuild

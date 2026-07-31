@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzer
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.MethodCallHandler
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner.LambdaResolvedEvent
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
@@ -105,16 +106,19 @@ class JIRMethodCallResolver(
                 val subscription = LambdaSubscription(runner, callerContext.methodEntryPoint, handler)
                 lambdaResolver.addSubscriber(subscription)
 
-                tryExtractLambdaType(lambdaResolver, handler, analyzer)
+                tryExtractLambdaType(callerContext, lambdaResolver, handler, analyzer)
             }
         }
     }
 
     private fun tryExtractLambdaType(
+        context: JIRMethodAnalysisContext,
         lambdaResolver: JIRLambdaTracker.LambdaTracker,
         handler: MethodCallHandler,
         analyzer: MethodAnalyzer,
     ) {
+        if (context.phase !is Phase.Prescan) return
+
         tryExtractCallTypeInfo(handler, analyzer, { it == AccessPathBase.This }) { typeInfo ->
             val cls = callResolver.cp.findClassOrNull(typeInfo.typeName)
             check(cls is LambdaAnonymousClassFeature.JIRLambdaClass) {
@@ -139,7 +143,9 @@ class JIRMethodCallResolver(
     }
 
     data object TypeInfoSequentFlowFunction {
-        fun handle(inst: JIRInst, body: (List<Accessor>) -> Unit) {
+        fun handle(analysisContext: JIRMethodAnalysisContext, inst: JIRInst, body: (List<Accessor>) -> Unit) {
+            if (analysisContext.phase !is Phase.Prescan) return
+
             if (inst !is JIRAssignInst) return
             val allocation = inst.rhv as? JIRNewExpr ?: return
             val allocatedType = allocation.type as? JIRClassType ?: return

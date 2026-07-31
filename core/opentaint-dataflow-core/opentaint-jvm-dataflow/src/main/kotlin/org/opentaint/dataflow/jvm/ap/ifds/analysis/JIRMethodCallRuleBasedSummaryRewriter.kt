@@ -1,18 +1,19 @@
 package org.opentaint.dataflow.jvm.ap.ifds.analysis
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.jvm.Position
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintMark
+import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleanerActions
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
-import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
+import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
@@ -25,7 +26,7 @@ class JIRMethodCallRuleBasedSummaryRewriter(
     private val analysisContext: JIRMethodAnalysisContext,
     private val apManager: ApManager
 ) {
-    private val config get() = analysisContext.taint.taintConfig as TaintRulesProvider
+    private val taintCtx get() = analysisContext.taint
 
     private val callExpr by lazy {
         statement.callExpr ?: error("Call summary handler at statement without method call")
@@ -40,34 +41,46 @@ class JIRMethodCallRuleBasedSummaryRewriter(
         )
     }
 
+    private val typeResolver by lazy {
+        JIRMethodPositionBaseTypeResolver(callExpr.method.method)
+    }
+
     private data class UserRuleDefinedAction(
         val rule: TaintConfigurationItem,
         val positions: Set<Position>,
-        val controlledMarks: Set<String>
     )
 
-    private val userRuleDefinedActions: List<UserRuleDefinedAction> by lazy {
-        val method = callExpr.method.method
+    private val userRuleDefinedActions: Map<AccessPathBase, Map<String, List<UserRuleDefinedAction>>> by lazy {
+        val result = hashMapOf<AccessPathBase, MutableMap<String, MutableList<UserRuleDefinedAction>>>()
 
-        val result = mutableListOf<UserRuleDefinedAction>()
-        for (sourceRule in config.sourceRulesForMethod(method, statement, fact = null, allRelevant = true)) {
+        fun indexRule(rule: TaintConfigurationItem, positions: Set<Position>, marks: Set<String>) {
+            positions.groupBy { it.resolveBaseAp() }.forEach { (base, basePositions) ->
+                val actionsByMark = result.computeIfAbsent(base) { hashMapOf() }
+                val action = UserRuleDefinedAction(rule, basePositions.toSet())
+                marks.forEach { mark ->
+                    actionsByMark.computeIfAbsent(mark) { mutableListOf() }.add(action)
+                }
+            }
+        }
+
+        for (sourceRule in taintCtx.allRelevantSourceRulesForCallStatement(statement)) {
             val ruleInfo = sourceRule.info as? UserDefinedRuleInfo ?: continue
 
             val simplifiedCondition = conditionRewriter.rewrite(sourceRule.condition)
             if (simplifiedCondition.isFalse) continue
 
             val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.position }
-            result += UserRuleDefinedAction(sourceRule, positions, ruleInfo.relevantTaintMarks)
+            indexRule(sourceRule, positions, ruleInfo.relevantTaintMarks)
         }
 
-        for (cleanRule in config.cleanerRulesForMethod(method, statement, fact = null, allRelevant = true)) {
+        for (cleanRule in taintCtx.allRelevantCleanRulesForCallStatement(statement)) {
             val ruleInfo = cleanRule.info as? UserDefinedRuleInfo ?: continue
 
             val simplifiedCondition = conditionRewriter.rewrite(cleanRule.condition)
             if (simplifiedCondition.isFalse) continue
 
             cleanRule.actionsAfter.filterIsInstance<RemoveMark>().forEach { action ->
-                result += UserRuleDefinedAction(cleanRule, setOf(action.position), ruleInfo.relevantTaintMarks + action.mark.name)
+                indexRule(cleanRule, setOf(action.position), ruleInfo.relevantTaintMarks + action.mark.name)
             }
         }
 
@@ -76,21 +89,23 @@ class JIRMethodCallRuleBasedSummaryRewriter(
 
     fun rewriteSummaryFact(fact: FinalFactAp): List<Pair<FinalFactAp, FinalFactReader>> {
         val startFactReader = FinalFactReader(fact, apManager)
+        val actionsForBase = userRuleDefinedActions[fact.base].orEmpty()
+        if (actionsForBase.isEmpty()) return listOf(fact to startFactReader)
 
-        val typeResolver = JIRMethodPositionBaseTypeResolver(callExpr.method.method)
         val cleanEvaluator = JIRTaintCleanActionEvaluator(typeResolver)
-
-        val cleanedFact = userRuleDefinedActions.applyCleanerActions(
-            evaluator = cleanEvaluator,
-            itemRule = { it.rule },
-            itemActions = { ruleDefinedAction ->
-                val markToExclude = ruleDefinedAction.controlledMarks.map { TaintMark(it) }
-                markToExclude.flatMap { mark ->
-                    ruleDefinedAction.positions.map { RemoveMark(mark, it) }
-                }
-            },
+        val cleanedFact = actionsForBase.entries.applyCleanerActions(
             initial = EvaluatedCleanAction.initial(startFactReader)
-        )
+        ) { (mark, actions), current ->
+            actions.applyCleanerActions(
+                evaluator = cleanEvaluator,
+                itemRule = { it.rule },
+                itemActions = { ruleDefinedAction ->
+                    val taintMark = TaintMark(mark)
+                    ruleDefinedAction.positions.map { RemoveMark(taintMark, it) }
+                },
+                initial = current
+            )
+        }
 
         return cleanedFact.mapNotNull {
             val resultFact = it.fact ?: return@mapNotNull null

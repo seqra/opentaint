@@ -20,6 +20,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.PIRSequentAtomEvaluator
+import org.opentaint.dataflow.python.rulesWithConditions
 import org.opentaint.dataflow.python.alias.forEachPossibleAliasBeforeStatement
 import org.opentaint.dataflow.python.analysis.PIRMethodAnalysisContext
 import org.opentaint.dataflow.python.analysis.PIRMethodCallFactMapper
@@ -110,17 +111,15 @@ class PIRMethodSequentPrecondition(
         val evaluator = TaintSourceActionPreconditionEvaluator(InitialFactReader(calleeFact, apManager))
         val conditionRewriter = attributeConditionRewriter()
 
-        for (rule in sourceRules) {
+        for (rule in conditionRewriter.rulesWithConditions(sourceRules)) {
             evaluateSourceRulePrecondition(
                 rule,
-                rule.taint,
-                ruleCondition = { condition },
+                rule.rule.taint,
                 sourcePreconditionEvaluator = evaluator,
                 evalAction = { r, a ->
                     val pos = a.pos.resolveAp()
                     if (pos == null) Maybe.none() else evaluate(r, a, pos, TaintMarkAccessor(a.mark.name))
                 },
-                conditionRewriter = conditionRewriter,
                 mkSource = { r, actions ->
                     this += MethodSequentPrecondition.SequentSource(fact, TaintRulePrecondition.Source(r, actions))
                 },
@@ -145,14 +144,12 @@ class PIRMethodSequentPrecondition(
         val conditionRewriter = attributeConditionRewriter()
 
         val preconditions = mutableListOf<TaintRulePrecondition>()
-        for (rule in passRules) {
+        for (rule in conditionRewriter.rulesWithConditions(passRules)) {
             preconditions += evaluatePassRulePrecondition(
                 rule,
-                rule.copy,
-                ruleCondition = { condition },
+                rule.rule.copy,
                 preconditionEvaluator = evaluator,
                 evalAction = { r, a -> acceptAttributePass(r, a) },
-                conditionRewriter = conditionRewriter,
                 mapExit2Return = { listOfNotNull(PIRMethodCallFactMapper.mapLoadAttributeFactToReturn(inst, it)) },
             )
         }

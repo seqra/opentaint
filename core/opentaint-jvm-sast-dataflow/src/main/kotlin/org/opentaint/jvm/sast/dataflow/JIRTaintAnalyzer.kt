@@ -10,6 +10,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSummarySerializationContext
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
+import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaMethod
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
@@ -50,7 +51,8 @@ class JIRTaintAnalyzer(
         StringConcatRuleProvider(taintConfiguration)
     }
 
-    override fun analysisManager() = JIRAnalysisManager(cp, taintConfig, externalMethodTracker, analysisParams)
+    override fun analysisManager() =
+        JIRAnalysisManager(cp, refManager, taintConfig, externalMethodTracker, analysisParams)
 
     override fun unitResolver() = analysisUnit
 
@@ -72,7 +74,7 @@ class JIRTaintAnalyzer(
     companion object {
         class PackageUnitResolver(private val projectLocations: ClassLocationChecker) : JIRUnitResolver {
             override fun resolve(method: JIRMethod): UnitType {
-                if (!projectLocations.isProjectClass(method.enclosingClass) && !isApproximation(method)) {
+                if (!projectLocations.isProjectClass(method.enclosingClass) && !isApproximation(method) && method !is JIRLambdaMethod) {
                     return UnknownUnit
                 }
 

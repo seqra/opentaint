@@ -43,7 +43,6 @@ interface ApManager {
     fun mostAbstractFinalAp(base: AccessPathBase): FinalFactAp
 
     fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp
-    fun createAbstractAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp
 
     fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp
 

@@ -10,7 +10,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
-import org.opentaint.dataflow.configuration.python.PIRCondition
 import org.opentaint.dataflow.configuration.python.PythonRuleCondition
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSource
@@ -32,10 +31,6 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
     apManager: ApManager
 ) : TaintUtil<PythonRuleCondition, TaintConfigurationSource, TaintConfigurationSink, TraceInfo>(apManager) {
     private val sinkTracker get() = context.taint.taintSinkTracker
-
-    override fun TaintConfigurationSource.srcCondition(): PIRCondition = condition
-
-    override fun TaintConfigurationSink.sinkCondition() = condition
 
     override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintConfigurationSource> =
         object : RuleAssumptionsManager<TaintConfigurationSource> {

@@ -70,11 +70,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+        - tag: ssrf-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -161,9 +161,9 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: untrusted-data
-        - rule: java/lib/generic/ssrf-sinks.yaml#java-http-parameter-pollution-sinks
+        - tag: http-parameter-pollution-sink
           as: sink
       on:
         - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'

@@ -1,6 +1,7 @@
 import OpentaintIrDependency.opentaint_ir_api_go
 import OpentaintIrDependency.opentaint_ir_core_go
 import OpentaintUtilDependency.opentaintUtilJvm
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
@@ -33,6 +34,7 @@ dependencies {
     testImplementation(opentaint_ir_core_go)
     testImplementation(opentaintUtilJvm)
     testImplementation("org.opentaint.sast:dataflow")
+    testImplementation(rootProject)
     testImplementation("org.opentaint.config:go-config")
     testRuntimeOnly(Libs.logback)
 }
@@ -139,7 +141,20 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
+    }
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+}
+
+tasks.named<KotlinCompile>("compileTestKotlin") {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
 }
 
 tasks.compileKotlin {

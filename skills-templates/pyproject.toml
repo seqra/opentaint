@@ -1,0 +1,8 @@
+[project]
+name = "opentaint-skills-build"
+version = "0.1.0"
+description = "Templated source + build pipeline for the OpenTaint skills tree"
+requires-python = ">=3.9"
+dependencies = [
+    "jinja2>=3.1.4",
+]

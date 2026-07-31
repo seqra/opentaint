@@ -1,70 +1,60 @@
 ---
 name: triage-dependencies
-description: Mark which of a project's dependency libraries could introduce taint sources or sinks. Use to start attack-surface discovery
+description: Mark which of a project's dependency libraries could introduce taint sources. Use to start source discovery
 license: Apache-2.0
 metadata:
   author: opentaint
-  version: "0.2"
+  version: "0.3.0"
 ---
 
 # Skill: Triage Dependencies
 
-Read the project's dependency libraries and mark which ones touch a trust boundary — a place untrusted data can enter (source) or a dangerous operation it can reach (sink) — so depth analysis runs only on the libraries that can matter
+Read the project's dependency libraries and flag the ones that can introduce a taint source — a place untrusted data enters
 
 ## Inputs
 
-From the caller; if omitted, fall back to the default. Ask only when a required input is missing and has no sensible default
+Provided by the caller, fall back to the default value when omitted. Ask back only when a required input is missing and has no sensible default
 
-- Project root `<project-root>` — the project sources and build files. Default: current directory
-- Project model `<model-dir>` — the built model; its `project.yaml` lists every dependency. Default: `.opentaint/project`
-- Tracking directory `<tracking-dir>` — where the coverage record is written. Default: `.opentaint/tracking`
+- `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
 
 ## Workflow
 
 ### 1. List the dependencies
 
-Read `<model-dir>/project.yaml` — the `dependencies:` list under each `javaProjects:` entry is every jar on the classpath. Resolve each to the library it is. Most of a large project's jars are transitive infrastructure
+Read `.opentaint/project/project.yaml` — the `dependencies` list under each per-language projects entry is every third-party dependency the model resolved. Resolve each to the library it is. Most of a large project's dependencies are transitive infrastructure
 
 ### 2. Mark each library
 
-For each library decide: could it introduce an attacker-controlled source (e.g. HTTP/RPC request data, message-broker payloads and so on) or a dangerous sink (e.g. query construction, command/file/path ops, deserialization, template/EL, LDAP/JNDI, reflection and so on)?
+For each library decide: could it introduce an attacker-controlled source — a method returning untrusted data (HTTP/RPC request data, message-broker payloads, deserialized untrusted input and so on)? Judge by the library's identity itself, read sources to get overviews, docs
 
-- clearly irrelevant — build/Gradle plugins, logging, annotations, bytecode tooling (ASM, byte-buddy), test libraries, pure data structures: dismiss
-- clearly relevant — web frameworks, query/ORM libraries, HTTP clients, deserializers, template engines, LDAP/JNDI, scripting: flag
-- unsure — do a brief peek: grep `<project-root>` sources for the library's package imports or call sites. If the app never references it and nothing transitive exposes it to untrusted data, dismiss; otherwise flag
+### 3. Write the flag list
 
-A library the app references only for safe, constant, or framework-internal use is not a flag — flag where untrusted data plausibly enters or a dangerous call is plausibly reachable
+Write in `.opentaint/tracking/coverage.yaml` (per Tracking) a flat list of the flagged libraries' packages
 
-### 3. Record coverage
+When `coverage.yaml` already exists from a prior run, reconcile rather than overwrite: keep every listed package and add any dependency newly added to the model that could introduce a source. A flagged package whose usage shifted (new call sites, a version bump) needs no re-open — source discovery automatically plans any used member not yet verdicted. When unsure whether a package belongs, list it: an over-flag only costs one discovery pass, a missed library loses its sources on every later stage
 
-Write `<tracking-dir>/coverage.yaml` (schema below). One `pending` entry per flagged library — these are the depth work-list. Record dismissals as a single bulk entry summarising the categories ruled out, not one row per jar; add an individual `done` row only for a library a reader might expect to be flagged but isn't, with a one-line reason
+### 4. Verify before returning
+
+Re-check the full dependency list against your flags: confirm every dependency was judged, then re-read the ones you did NOT flag and make sure none of them can actually introduce a source. A library left out here loses its sources on every later stage and the run can't recover it. Add any package you missed to the list. This is a re-read of what you already wrote — simple grep or re-read is fine, no need to use some scripts.
 
 ## Output
 
-- `<tracking-dir>/coverage.yaml` — flagged libraries `status: pending`, dismissals summarised
-- A brief summary to the caller: one line per flagged library (package, why) and the dismissed count. The file holds the detail — don't paste it back
+Short and concise report of what was done
+
+### Artifacts:
+
+- `.opentaint/tracking/coverage.yaml` — the flagged packages list
+
+### Summary:
+
+- one line per flagged package: the package and why it was flagged
 
 ## Tracking
 
-`<tracking-dir>/coverage.yaml` — one entry per weighed library:
+`.opentaint/tracking/coverage.yaml` — a flat list of the dependency packages flagged to drill for taint sources. Keep it clear from comments
 
 ```yaml
 packages:
-  - package: org.springframework.web.reactive.function   # flagged → depth work-list
-    status: pending                                       # pending | done
-    notes: WebFlux functional routing — ServerRequest request data (source); WebClient (SSRF sink)
-  - package: org.springframework.data.r2dbc
-    status: pending
-    notes: reactive DB access — check for string-built query sinks
-  - package: <infrastructure>
-    status: done                                          # bulk dismissal
-    notes: >
-      logging (logback/slf4j), build plugins, annotations, ASM/byte-buddy, test libs,
-      data structures — no source/sink surface
+  - org.springframework.web.socket
+  - org.springframework.kafka
 ```
-
-## Gotchas
-
-- Don't grep dependency jars to decide — judge from the library's identity and the app's own usage in `<project-root>` sources
-- Flag on plausibility, not certainty — depth analysis confirms or drops it; a missed library is a missed vulnerability on all other stages, an over-flag only costs one depth pass
-

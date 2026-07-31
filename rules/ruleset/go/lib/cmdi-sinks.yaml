@@ -2,6 +2,8 @@ rules:
   - id: cmdi-sinks
     options:
       lib: true
+    tags:
+      - command-injection-sink
     severity: NOTE
     message: Untrusted data reaches an OS command execution API
     metadata:
@@ -19,14 +21,14 @@ rules:
               import "syscall"
               ...
           - pattern-either:
-              - pattern: "exec.Command($NAME, ...)"
-              - pattern: "exec.CommandContext($CTX, $NAME, ...)"
-              - pattern: "exec.LookPath($NAME)"
-              - pattern: "os.StartProcess($NAME, ...)"
-              - pattern: "syscall.Exec($NAME, ...)"
-              - pattern: "syscall.ForkExec($NAME, ...)"
-              - pattern: "syscall.StartProcess($NAME, ...)"
-          - focus-metavariable: $NAME
+              - pattern: "exec.Command($UNTRUSTED, ...)"
+              - pattern: "exec.CommandContext($CTX, $UNTRUSTED, ...)"
+              - pattern: "exec.LookPath($UNTRUSTED)"
+              - pattern: "os.StartProcess($UNTRUSTED, ...)"
+              - pattern: "syscall.Exec($UNTRUSTED, ...)"
+              - pattern: "syscall.ForkExec($UNTRUSTED, ...)"
+              - pattern: "syscall.StartProcess($UNTRUSTED, ...)"
+          - focus-metavariable: $UNTRUSTED
       # Shell interpreter invoked with a literal command name; a tainted argument is the injection point.
       - patterns:
           - pattern-inside: |
@@ -45,7 +47,8 @@ rules:
               import "os/exec"
               ...
           - pattern-either:
-              - pattern: "($C : *exec.Cmd).CombinedOutput()"
-              - pattern: "($C : *exec.Cmd).Run()"
-              - pattern: "($C : *exec.Cmd).Output()"
-              - pattern: "($C : *exec.Cmd).Start()"
+              - pattern: "($UNTRUSTED : *exec.Cmd).CombinedOutput()"
+              - pattern: "($UNTRUSTED : *exec.Cmd).Run()"
+              - pattern: "($UNTRUSTED : *exec.Cmd).Output()"
+              - pattern: "($UNTRUSTED : *exec.Cmd).Start()"
+          - focus-metavariable: $UNTRUSTED

@@ -52,6 +52,8 @@ data object JavaTaintRuleStrategy :
         }
     }
 
+    override fun serializedItemId(item: SerializedItem): String? = item.serializedId
+
     override val conditionBuilder get() = JavaMarkConditionBuilder
 
     override fun posContainsAnyMark(

@@ -7,11 +7,10 @@ import org.opentaint.dataflow.configuration.go.serialized.GoUserDefinedRuleInfo
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
 import org.opentaint.dataflow.go.GoFunctionSignature
-import org.opentaint.dataflow.go.signature
-import org.opentaint.dataflow.go.rules.GoRuleConditionRewriter
 import org.opentaint.dataflow.go.rules.Position
 import org.opentaint.dataflow.go.rules.RemoveMark
 import org.opentaint.dataflow.go.rules.TaintRule
+import org.opentaint.dataflow.go.signature
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintCleanActionEvaluator
@@ -26,7 +25,7 @@ class GoCallRuleBasedSummaryRewriter(
     private val analysisContext: GoMethodAnalysisContext,
     private val apManager: ApManager,
 ) {
-    private val config get() = analysisContext.taint.taintConfig
+    private val config get() = analysisContext.taint
 
     private val callSignature: GoFunctionSignature?
         get() = callExpr.signature()
@@ -40,24 +39,22 @@ class GoCallRuleBasedSummaryRewriter(
     private val userRuleDefinedActions: List<UserRuleDefinedAction> by lazy {
         val signature = callSignature ?: return@lazy emptyList()
 
-        val conditionRewriter = GoRuleConditionRewriter(callExpr, statement, returnValue)
-
         val result = mutableListOf<UserRuleDefinedAction>()
-        for (sourceRule in config.sourceRulesForCall(signature, allRelevant = true)) {
+        for (sourceRuleWithCond in config.allRelevantSourceRulesForCallStatement(signature, statement, callExpr, returnValue)) {
+            val sourceRule = sourceRuleWithCond.rule
             val ruleInfo = sourceRule.info as? GoUserDefinedRuleInfo ?: continue
 
-            val simplifiedCondition = conditionRewriter.rewrite(sourceRule.condition)
-            if (simplifiedCondition.isFalse) continue
+            if (sourceRuleWithCond.condition.isFalse) continue
 
             val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.rawPosition() }
             result += UserRuleDefinedAction(sourceRule, positions, ruleInfo.relevantTaintMarks)
         }
 
-        for (cleanRule in config.cleanerRulesForCall(signature, allRelevant = true)) {
+        for (cleanRuleWithCond in config.allRelevantCleanRulesForCallStatement(signature, statement, callExpr, returnValue)) {
+            val cleanRule = cleanRuleWithCond.rule
             val ruleInfo = cleanRule.info as? GoUserDefinedRuleInfo ?: continue
 
-            val simplifiedCondition = conditionRewriter.rewrite(cleanRule.condition)
-            if (simplifiedCondition.isFalse) continue
+            if (cleanRuleWithCond.condition.isFalse) continue
 
             val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>().mapTo(hashSetOf()) { it.pos }
             result += UserRuleDefinedAction(cleanRule, positions, ruleInfo.relevantTaintMarks)

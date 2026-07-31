@@ -55,6 +55,7 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     fun prependAccessor(accessor: Accessor): FinalFactAp
     fun clearAccessor(accessor: Accessor): FinalFactAp?
     fun removeAbstraction(): FinalFactAp?
+    fun abstractOnly(): FinalFactAp
 
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean

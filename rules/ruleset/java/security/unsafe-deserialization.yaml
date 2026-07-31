@@ -23,11 +23,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java-unsafe-object-mapper-sink
+        - tag: unsafe-object-mapper-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
@@ -36,6 +36,8 @@ rules:
   - id: java-unsafe-object-mapper-sink
     options:
       lib: true
+    tags:
+      - unsafe-object-mapper-sink
     severity: NOTE
     message: Deserialization of untrusted data with ObjectMapper
     metadata:
@@ -102,11 +104,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/unsafe-deserialization-sinks.yaml#jackson-unsafe-deserialization
+        - tag: jackson-deserialization-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$JSON'
@@ -164,11 +166,11 @@ rules:
     mode: join
     join:
       refs:
-        - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
+        - tag: servlet-untrusted-data-source
           as: servlet-untrusted-data
-        - rule: java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+        - tag: spring-untrusted-data-source
           as: spring-untrusted-data
-        - rule: java/lib/generic/unsafe-deserialization-sinks.yaml#yaml-unsafe-deserialization-sink
+        - tag: snakeyaml-deserialization-sink
           as: sink
       on:
         - 'servlet-untrusted-data.$UNTRUSTED -> sink.$YAML'

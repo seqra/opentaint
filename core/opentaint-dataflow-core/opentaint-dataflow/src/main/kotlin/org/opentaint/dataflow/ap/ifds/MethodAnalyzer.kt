@@ -137,6 +137,8 @@ interface MethodAnalyzer {
 
     fun cleanup()
 
+    fun resetApManager(apManager: ApManager)
+
     sealed interface MethodCallHandler {
         val currentEdge: Edge
 
@@ -169,7 +171,7 @@ class NormalMethodAnalyzer(
 
     private var zeroInitialFactProcessed: Boolean = false
     private var initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
-    private val edges = MethodAnalyzerEdges(apManager, methodEntryPoint, analysisManager)
+    private var edges = MethodAnalyzerEdges(apManager, methodEntryPoint, analysisManager)
     private var pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
     private var pendingSideEffectRequirements = arrayListOf<InitialFactAp>()
     private var pendingSideEffectSummaries = arrayListOf<SideEffectSummary>()
@@ -1447,6 +1449,18 @@ class NormalMethodAnalyzer(
     override fun cleanup() {
         methodEntryPointsCache = hashMapOf()
 
+        resetEdgeProcessingStorage(apManager)
+    }
+
+    override fun resetApManager(apManager: ApManager) {
+        zeroInitialFactProcessed = false
+        factDepthLimit = INITIAL_ALLOWED_FACT_DEPTH
+        edges = MethodAnalyzerEdges(apManager, methodEntryPoint, analysisManager)
+
+        resetEdgeProcessingStorage(apManager)
+    }
+
+    private fun resetEdgeProcessingStorage(apManager: ApManager) {
         unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
         enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
 
@@ -1505,6 +1519,10 @@ class EmptyMethodAnalyzer(
 
     override fun cleanup() {
         taintedInitialFacts = hashSetOf()
+    }
+
+    override fun resetApManager(apManager: ApManager) {
+        cleanup()
     }
 
     override val analyzerSteps: Long = 0
@@ -1928,6 +1946,10 @@ class TimedMethodAnalyzer(
 
     override fun cleanup() {
         base.cleanup()
+    }
+
+    override fun resetApManager(apManager: ApManager) {
+        base.resetApManager(apManager)
     }
 }
 

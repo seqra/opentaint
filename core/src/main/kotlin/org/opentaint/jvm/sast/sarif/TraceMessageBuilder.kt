@@ -2,6 +2,7 @@ package org.opentaint.jvm.sast.sarif
 
 import mu.KLogging
 import org.opentaint.common.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNodeEntry
 import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -46,18 +47,20 @@ data class TracePathNodeWithMsg(
     val isMultiple: Boolean,
 )
 
-fun TraceEntry?.isPureEntryPoint() =
-    when (this) {
-        is TraceEntry.SourceStartEntry -> {
-            (sourcePrimaryAction == null && sourceOtherActions.all { it is TraceEntryAction.EntryPointSourceRule })
+fun TracePathNodeEntry?.isPureEntryPoint(): Boolean {
+    return when (this) {
+        is TracePathNodeEntry.NonAction -> {
+            if (entry !is TraceEntry.SourceStartEntry) return false
+            entry.sourcePrimaryAction == null && entry.sourceOtherActions.all { it is TraceEntryAction.EntryPointSourceRule }
         }
 
-        is TraceEntry.Action -> {
-            (primaryAction == null && otherActions.all { it is TraceEntryAction.EntryPointSourceRule })
+        is TracePathNodeEntry.Action -> {
+            variant.primaryAction == null && variant.otherActions.all { it is TraceEntryAction.EntryPointSourceRule }
         }
 
-        else -> false
+        null -> false
     }
+}
 
 fun TracePathNode.getMethod() =
     this.statement.location.method
@@ -195,7 +198,9 @@ class TraceMessageBuilder(
         this.statement.isLambdaCreation()
 
     private fun TracePathNode.isLambdaEntry() =
-        this.entry is TraceEntry.MethodEntry && this.entry.entryPoint.method.name.startsWith(JIRSarifTraits.lambdaMark)
+        entry is TracePathNodeEntry.NonAction
+                && entry.entry is TraceEntry.MethodEntry
+                && entry.entry.entryPoint.method.name.startsWith(JIRSarifTraits.lambdaMark)
 
     fun TracePathNode.isInsideLambda() =
         lambdaToArtificialClass.containsKey(this.getMethod())
@@ -272,9 +277,8 @@ class TraceMessageBuilder(
                 return false
         }
 
-        val entry = node.entry as? TraceEntry.Action ?: return true
-
-        val primaryAction = entry.primaryAction
+        val entry = node.entry as? TracePathNodeEntry.Action ?: return true
+        val primaryAction = entry.variant.primaryAction
 
         // filtering generated assigns
         val stmt = node.statement
@@ -292,7 +296,7 @@ class TraceMessageBuilder(
         }
 
         // filtering CallSummary traces where tainted data ends up where it started
-        if (primaryAction is TraceEntryAction.CallSummary && entry.otherActions.isEmpty()) {
+        if (primaryAction is TraceEntryAction.CallSummary && entry.variant.otherActions.isEmpty()) {
             val summaryTraceFacts = primaryAction.summaryTrace.final.edges
             if (summaryTraceFacts.all { it is TraceEdge.MethodTraceEdge && it.initialFact.base == it.fact.base }) {
                 logger.trace {
@@ -305,7 +309,7 @@ class TraceMessageBuilder(
 
         // filtering Call trace entries that contain unexpected Remove actions
         if (primaryAction == null) {
-            if (node.entry.otherActions.all {
+            if (entry.variant.otherActions.all {
                     when (it) {
                         is TraceEntryAction.CallRuleAction -> {
                             it.action.all { mark -> (mark is RemoveMark || mark is RemoveAllMarks) }
@@ -346,11 +350,9 @@ class TraceMessageBuilder(
         }
     }
 
-    private fun TraceEntry.relevantEdges(): List<TraceEdge> {
-        return when (this) {
-            is TraceEntry.Action -> (edges - unchanged).toList()
-            else -> edges.toList()
-        }
+    private fun TracePathNodeEntry.relevantEdges(): List<TraceEdge> = when (this) {
+        is TracePathNodeEntry.Action -> (edges - variant.unchanged).toList()
+        else -> edges.toList()
     }
 
     private fun TaintInfo.print(node: TracePathNode, relation: String = "at"): String {
@@ -391,13 +393,13 @@ class TraceMessageBuilder(
     private fun mapToTaintInfos(input: Collection<TraceEdge>) =
         input.mapNotNull { factToTaintInfo(it.fact) }
 
-    private fun TraceEntry?.collectDataflow(): EdgesInfo {
+    private fun TracePathNodeEntry?.collectDataflow(): EdgesInfo {
         if (this == null) {
             return EdgesInfo(emptyList(), emptyList())
         }
 
-        val starts = this.collectStarts()
-        val follows = this.collectFollows() - starts.toSet()
+        val starts = collectStarts()
+        val follows = collectFollows() - starts.toSet()
 
         return EdgesInfo(starts, follows)
     }
@@ -411,12 +413,20 @@ class TraceMessageBuilder(
             else -> emptyList()
         }
 
-    private fun TraceEntry?.collectStarts(): List<TaintInfo> {
+    private fun TracePathNodeEntry?.collectStarts(): List<TaintInfo> {
         if (this == null) return emptyList()
         val inst = statement as JIRInst
         val taints = inst.getVarargMarks().toMutableList()
-        if (this !is TraceEntry.SourceStartEntry) {
-            taints += relevantEdges()
+        when (this) {
+            is TracePathNodeEntry.Action -> {
+                taints += relevantEdges()
+            }
+
+            is TracePathNodeEntry.NonAction -> {
+                if (entry !is TraceEntry.SourceStartEntry) {
+                    taints += relevantEdges()
+                }
+            }
         }
         val varargVarIndex = (inst.getCallVararg() as? JIRLocalVar)?.index ?: -1
         val filterVarargVar = mapToTaintInfos(taints).filterNot {
@@ -425,33 +435,76 @@ class TraceMessageBuilder(
         return filterVarargVar.distinct()
     }
 
-    private fun TraceEntry?.collectFollows() =
+    private fun TracePathNodeEntry?.collectFollows() =
         when (this) {
-            is TraceEntry.Action -> otherActions.flatMap { getActionEdges(it) } + getActionEdges(primaryAction)
+            is TracePathNodeEntry.Action -> variant.otherActions.flatMap { getActionEdges(it) } + getActionEdges(variant.primaryAction)
 
-            is TraceEntry.SourceStartEntry ->
-                sourceOtherActions.flatMap { getActionEdges(it) } + getActionEdges(sourcePrimaryAction)
-
+            is TracePathNodeEntry.NonAction -> {
+                if (entry is TraceEntry.SourceStartEntry) {
+                    entry.sourceOtherActions.flatMap { getActionEdges(it) } + getActionEdges(entry.sourcePrimaryAction)
+                } else {
+                    emptyList()
+                }
+            }
             else -> emptyList()
         }.distinct()
 
     private fun createTraceEntryMessage(node: TracePathNode): String {
         if (node.isLambdaCreation())
             return createLambdaCreationMessage(node)
-        return when (val entry = node.entry) {
-            is TraceEntry.Final -> entry.createMessage(node)
 
-            is TraceEntry.MethodEntry -> {
-                val className = traits.getMethodClassName(entry.entryPoint.method)
-                val methodName = getMethodCalleeNameInPrint(entry.entryPoint.method.name, className)
-                val taints = printTaints(node, entry.collectStarts())
-                val withTaints = if (taints.isEmpty()) "" else " with $taints"
-                "Entering $methodName$withTaints"
+       return when (val pe = node.entry) {
+            is TracePathNodeEntry.NonAction -> when (val entry = pe.entry) {
+                is TraceEntry.Final -> entry.createMessage(node)
+
+                is TraceEntry.MethodEntry -> {
+                    val className = traits.getMethodClassName(entry.entryPoint.method)
+                    val methodName = getMethodCalleeNameInPrint(entry.entryPoint.method.name, className)
+                    val taints = printTaints(node, node.entry.collectStarts())
+                    val withTaints = if (taints.isEmpty()) "" else " with $taints"
+                    "Entering $methodName$withTaints"
+                }
+
+                is TraceEntry.Action -> {
+                    badOutput("Unexpected action entry")
+                }
+
+                is TraceEntry.SourceStartEntry -> {
+                    val primaryAction = entry.sourcePrimaryAction
+                    val total = entry.sourceOtherActions.size + if (primaryAction != null) 1 else 0
+                    if (total == 1) {
+                        if (primaryAction != null) {
+                            return when (primaryAction) {
+                                is TraceEntryAction.CallSourceSummary -> primaryAction.createMessage(node)
+                            }
+                        }
+                        else {
+                            when (val otherAction = entry.sourceOtherActions.first()) {
+                                is TraceEntryAction.CallSourceRule -> otherAction.createMessage(node)
+                                is TraceEntryAction.EntryPointSourceRule -> otherAction.createMessage(node)
+                                is TraceEntryAction.SequentialSourceRule -> otherAction.createMessage(node)
+                            }
+                        }
+                    }
+                    else {
+                        if (pe.isPureEntryPoint()) {
+                            createEntryPointMessage(node, node.entry.collectDataflow().follows)
+                        }
+                        else {
+                            createMethodCallTaintPropagationMessageWithTaints(node)
+                        }
+                    }
+                }
+
+                is TraceEntry.Unchanged -> {
+                    badOutput("unchanged entry")
+                }
             }
 
-            is TraceEntry.Action -> {
-                val primaryAction = entry.primaryAction
-                val total = entry.otherActions.size + if (primaryAction != null) 1 else 0
+            is TracePathNodeEntry.Action -> {
+                val variant = pe.variant
+                val primaryAction = variant.primaryAction
+                val total = variant.otherActions.size + if (primaryAction != null) 1 else 0
                 if (total == 1) {
                     if (primaryAction != null) {
                         return when (primaryAction) {
@@ -462,7 +515,7 @@ class TraceMessageBuilder(
                         }
                     }
                     else {
-                        when (val otherAction = entry.otherActions.first()) {
+                        when (val otherAction = variant.otherActions.first()) {
                             is TraceEntryAction.CallRule -> otherAction.createMessage(node)
                             is TraceEntryAction.CallSourceRule -> otherAction.createMessage(node)
                             is TraceEntryAction.EntryPointSourceRule -> otherAction.createMessage(node)
@@ -473,37 +526,6 @@ class TraceMessageBuilder(
                 else {
                     createMethodCallTaintPropagationMessageWithTaints(node)
                 }
-            }
-
-            is TraceEntry.SourceStartEntry -> {
-                val primaryAction = entry.sourcePrimaryAction
-                val total = entry.sourceOtherActions.size + if (primaryAction != null) 1 else 0
-                if (total == 1) {
-                    if (primaryAction != null) {
-                        return when (primaryAction) {
-                            is TraceEntryAction.CallSourceSummary -> primaryAction.createMessage(node)
-                        }
-                    }
-                    else {
-                        when (val otherAction = entry.sourceOtherActions.first()) {
-                            is TraceEntryAction.CallSourceRule -> otherAction.createMessage(node)
-                            is TraceEntryAction.EntryPointSourceRule -> otherAction.createMessage(node)
-                            is TraceEntryAction.SequentialSourceRule -> otherAction.createMessage(node)
-                        }
-                    }
-                }
-                else {
-                    if (entry.isPureEntryPoint()) {
-                        createEntryPointMessage(node, entry.collectDataflow().follows)
-                    }
-                    else {
-                        createMethodCallTaintPropagationMessageWithTaints(node)
-                    }
-                }
-            }
-
-            is TraceEntry.Unchanged -> {
-                badOutput("unchanged entry")
             }
 
             null -> when (node.kind) {
@@ -600,18 +622,24 @@ class TraceMessageBuilder(
                 addAsSingle(trace)
                 continue
             }
-            when (val entry = trace.entry) {
-                is TraceEntry.SourceStartEntry -> {
-                    if (entry.isPureEntryPoint()) {
-                        addAsSingle(trace)
+            when (val pathEntry = trace.entry) {
+                is TracePathNodeEntry.NonAction -> {
+                    if (pathEntry.entry is TraceEntry.SourceStartEntry) {
+                        if (pathEntry.isPureEntryPoint()) {
+                            addAsSingle(trace)
+                        }
+                        else {
+                            curList.add(trace)
+                        }
                     }
                     else {
-                        curList.add(trace)
+                        addAsSingle(trace)
                     }
                 }
 
-                is TraceEntry.Action -> {
-                    val primary = entry.primaryAction
+                is TracePathNodeEntry.Action -> {
+                    val variant = pathEntry.variant
+                    val primary = variant.primaryAction
                     if (primary is TraceEntryAction.Sequential) {
                         val inst = trace.statement as JIRInst
                         if (inst.isArrayAssign()) {
@@ -630,13 +658,16 @@ class TraceMessageBuilder(
                         }
 
                         curList.add(trace)
-                        if (entry.otherActions.isEmpty() && primary.isAssignReturn()) {
+                        if (variant.otherActions.isEmpty() && primary.isAssignReturn()) {
                             addToPrevList()
                         }
                         else {
                             addCurListAndClean()
                         }
-                    } else if (entry.primaryAction is TraceEntryAction.CallAction || entry.otherActions.any { it is TraceEntryAction.CallAction }) {
+                    } else if (
+                        variant.primaryAction is TraceEntryAction.CallAction ||
+                        variant.otherActions.any { it is TraceEntryAction.CallAction }
+                    ) {
                         curList.add(trace)
                     }
                     else {
@@ -644,7 +675,9 @@ class TraceMessageBuilder(
                     }
                 }
 
-                else -> addAsSingle(trace)
+                else -> {
+                    addAsSingle(trace)
+                }
             }
             prevArray = null
         }
@@ -652,7 +685,7 @@ class TraceMessageBuilder(
         return result
     }
 
-    private fun getAssignTaintOut(entry: TraceEntry?) = when (entry?.statement) {
+    private fun getAssignTaintOut(entry: TracePathNodeEntry?) = when (entry?.statement) {
         is CommonReturnInst -> "the returning value"
         null -> badOutput("unresolved null assignee")
         else -> entry.let {
@@ -684,11 +717,11 @@ class TraceMessageBuilder(
 
     private fun isReassignReturn(group: List<TracePathNode>): Boolean {
         if (group.size != 2) return false
-        val entry = group[1].entry
-        if (entry !is TraceEntry.Action) return false
-        val primary = entry.primaryAction
+        val entry = group[1].entry as? TracePathNodeEntry.Action ?: return false
+        val variant = entry.variant
+        val primary = variant.primaryAction
         if (primary !is TraceEntryAction.Sequential ||
-            entry.otherActions.isNotEmpty() || !primary.isAssignReturn())
+            variant.otherActions.isNotEmpty() || !primary.isAssignReturn())
             return false
         val fst = group[0].statement
         val snd = group[1].statement
@@ -989,7 +1022,7 @@ class TraceMessageBuilder(
     }
 
     private fun TracePathNode.collectTaintPropagationInfo(): List<TaintPropagationInfo> {
-        val dataflow = this.entry.collectDataflow()
+        val dataflow = entry.collectDataflow()
         val markFollows = hashMapOf<Mark, HashSet<String>>()
         val markStarts = hashMapOf<Mark, HashSet<String>>()
         dataflow.follows.filter { it.mark !is Mark.StateMark }.forEach {

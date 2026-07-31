@@ -176,8 +176,13 @@ class TaintSinkTracker(
         val facts: MutableMap<InitialFactAp, MutableSet<Set<InitialFactAp>>>
     )
 
-    private val sourceRuleAssumptions = ConcurrentHashMap<CommonTaintConfigurationSource, ConcurrentHashMap<CommonInst, TaintRuleAssumptions<CommonTaintConfigurationSource>>>()
-    private val sinkRuleAssumptions = ConcurrentHashMap<CommonTaintConfigurationSink, ConcurrentHashMap<CommonInst, TaintRuleAssumptions<CommonTaintConfigurationSink>>>()
+    private var sourceRuleAssumptions = ConcurrentHashMap<CommonTaintConfigurationSource, ConcurrentHashMap<CommonInst, TaintRuleAssumptions<CommonTaintConfigurationSource>>>()
+    private var sinkRuleAssumptions = ConcurrentHashMap<CommonTaintConfigurationSink, ConcurrentHashMap<CommonInst, TaintRuleAssumptions<CommonTaintConfigurationSink>>>()
+
+    fun reset() {
+        sourceRuleAssumptions = ConcurrentHashMap()
+        sinkRuleAssumptions = ConcurrentHashMap()
+    }
 
     fun addSourceRuleAssumptions(rule: CommonTaintConfigurationSource, statement: CommonInst, assumptions: Map<InitialFactAp, Set<InitialFactAp>>) =
         addRuleAssumptions(sourceRuleAssumptions, rule, statement, assumptions)

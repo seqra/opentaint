@@ -2,6 +2,8 @@ rules:
   - id: java-servlet-unvalidated-redirect-sinks
     options:
       lib: true
+    tags:
+      - servlet-unvalidated-redirect-sink
     severity: NOTE
     message: Potential redirect to an untrusted URL
     metadata:
@@ -10,8 +12,12 @@ rules:
       - java
     mode: taint
     pattern-sinks:
-      - pattern: (HttpServletResponse $RES).sendRedirect($URL);
-      - pattern: (HttpServletResponse $RES).addHeader("Location", $URL);
+      - patterns:
+          - pattern: (HttpServletResponse $RES).sendRedirect($URL);
+          - focus-metavariable: $URL
+      - patterns:
+          - pattern: (HttpServletResponse $RES).addHeader("Location", $URL);
+          - focus-metavariable: $URL
     pattern-sanitizers:
       - patterns:
         - pattern: $URL = (HttpServletRequest $REQ).getContextPath();

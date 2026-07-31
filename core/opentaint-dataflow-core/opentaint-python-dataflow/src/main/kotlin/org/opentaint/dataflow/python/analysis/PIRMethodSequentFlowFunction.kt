@@ -21,6 +21,7 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.SELF_ACCESSOR
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mayReadAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
+import org.opentaint.dataflow.python.rulesWithConditions
 import org.opentaint.dataflow.python.alias.forEachAliasBeforeStatement
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
@@ -340,9 +341,8 @@ class PIRMethodSequentFlowFunction(
 
         val taintUtil = PIRSequentTaintUtil(ctx, inst, apManager)
         taintUtil.applySourceRules(
-            sourceRules = sourceRules,
+            sourceRules = conditionRewriter.rulesWithConditions(sourceRules),
             initialFacts = initialFacts,
-            conditionRewriter = conditionRewriter,
             factReader = factReader,
             exclusion = exclusionSet,
             createFinalFact = { srcF, trace ->
@@ -618,7 +618,9 @@ class PIRMethodSequentFlowFunction(
         val conditionRewriter = PIRConditionRewriter(PIRAttrLoadAnyArgumentResolver, atomEvaluator, call = null)
         val taintUtil = PIRSequentTaintUtil(ctx, ret, apManager)
 
-        taintUtil.applySinkRules(exitSinks, conditionRewriter, fact, markAfterAnyAccessorResolver)
+        taintUtil.applySinkRules(
+            conditionRewriter.rulesWithConditions(exitSinks), fact, markAfterAnyAccessorResolver
+        )
     }
 
     // ==========================================================================

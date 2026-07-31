@@ -2,6 +2,8 @@ rules:
   - id: jackson-unsafe-deserialization
     options:
       lib: true
+    tags:
+      - jackson-deserialization-sink
     severity: NOTE
     message: Jackson deserialization of JSON to Java objects with default typing, this can lead to RCE
     metadata:
@@ -22,17 +24,35 @@ rules:
         #   - metavariable-regex:
         #       metavariable: $TYPE
         #       regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
-        - pattern: |
+        - pattern-inside: |
             (com.fasterxml.jackson.databind.ObjectMapper $OM).enableDefaultTyping(...);
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS, ...);
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS, ...);
+            ...
+        - patterns:
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS, ...);
+                ...
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).setDefaultTyping($RB);
+                ...
+        - patterns:
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper.DefaultTypeResolverBuilder $RB).init(com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS, ...);
+                ...
+            - pattern-inside: |
+                (com.fasterxml.jackson.databind.ObjectMapper $OM).setDefaultTyping($RB);
+                ...
         # TODO: support $TYPE.class
         # - patterns:
         #     - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping($B.builder(...). ... .allowIfBaseType($TYPE.class). ... );
         #     - metavariable-regex:
         #         metavariable: $TYPE
         #         regex: (Object|Serializable|Comparable|Cloneable|Closeable|AutoCloseable|Handler|Referenceable|DataSource)
-        - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping((com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator $LFSTV), ObjectMapper.DefaultTyping.EVERYTHING);
+        - pattern-inside: |
+            (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping(com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator.instance, com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.EVERYTHING);
+            ...
+      - pattern-either:
+          - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
+          - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readTree($JSON);
       - pattern-not-inside: |
           (com.fasterxml.jackson.databind.ObjectMapper $OM).enable(MapperFeature.BLOCK_UNSAFE_POLYMORPHIC_BASE_TYPES); ...
       - pattern-not-inside: |
@@ -41,6 +61,8 @@ rules:
   - id: yaml-unsafe-deserialization-sink
     options:
       lib: true
+    tags:
+      - snakeyaml-deserialization-sink
     severity: NOTE
     message: Parsing of untrusted data with org.yaml.snakeyaml.Yaml() constructed with no arguments
     metadata:

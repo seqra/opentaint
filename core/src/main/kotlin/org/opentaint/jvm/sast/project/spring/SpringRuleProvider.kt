@@ -42,10 +42,10 @@ class SpringRuleProvider(
     private val base: TaintRulesProvider,
     private val springCtx: SpringWebProjectContext,
 ) : TaintRulesProvider by base {
-    override fun entryPointRulesForMethod(method: CommonMethod, fact: FactAp?, allRelevant: Boolean): Iterable<TaintEntryPointSource> {
+    override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintEntryPointSource> {
         if (method is SpringGeneratedMethod) return emptyList()
 
-        val baseRules =  base.entryPointRulesForMethod(method, fact, allRelevant)
+        val baseRules =  base.entryPointRulesForMethod(method, statement, fact, allRelevant)
         if (method !is JIRMethod || method.isStatic || method.isPrivate || !method.isSpringControllerMethod()) {
             return baseRules
         }
@@ -96,9 +96,9 @@ class SpringRuleProvider(
         return base.sinkRulesForMethod(method, statement, fact, allRelevant)
     }
 
-    override fun sinkRulesForMethodEntry(method: CommonMethod, fact: FactAp?, allRelevant: Boolean): Iterable<TaintMethodEntrySink> {
+    override fun sinkRulesForMethodEntry(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintMethodEntrySink> {
         if (method is SpringGeneratedMethod) return emptyList()
-        return base.sinkRulesForMethodEntry(method, fact, allRelevant)
+        return base.sinkRulesForMethodEntry(method, statement, fact, allRelevant)
     }
 
     override fun cleanerRulesForMethod(

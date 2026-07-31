@@ -1,7 +1,6 @@
 package org.opentaint.semgrep.util
 
 import base.RuleSample
-import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -12,7 +11,6 @@ import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
-import org.opentaint.semgrep.pattern.createTaintConfig
 import kotlin.io.path.Path
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -43,9 +41,8 @@ abstract class SampleBasedTest(
 
         @Suppress("UNCHECKED_CAST")
         val javaRule = rule as TaintRuleFromSemgrep<SerializedItem>
-        val taintConfig = javaRule.createTaintConfig()
 
-        val stateVarExists = doesCreateStateVar(taintConfig)
+        val stateVarExists = javaRule.taintRules.flatMap { it.rules }.doesCreateStateVar()
         if (!expectStateVar && stateVarExists) {
             fail("Taint config has AssignAction that creates a state var, but `expectStateVar` was set to `false`!")
         }
@@ -58,9 +55,9 @@ abstract class SampleBasedTest(
         data.positiveClasses.mapTo(allSamples) { it.className }
         data.negativeClasses.mapTo(allSamples) { it.className }
 
-        val configWithExtraRules = provideAdditionalRules(taintConfig)
+        val configWithExtraRules = provideAdditionalRules(SerializedTaintConfig())
 
-        val results = runner.run(configWithExtraRules, configurationRequired, allSamples)
+        val results = runner.run(javaRule, configWithExtraRules, configurationRequired, allSamples)
 
         val missedPositive = hashSetOf<PositiveCase>()
         for (sample in data.positiveClasses) {
@@ -106,15 +103,8 @@ abstract class SampleBasedTest(
         }?.flatten()
             ?: emptyList()
 
-    private fun doesCreateStateVar(taintConfig: SerializedTaintConfig): Boolean {
-        val allAssignActions = taintConfig.source.getAssigns() +
-                taintConfig.entryPoint.getAssigns() +
-                taintConfig.staticFieldSource.getAssigns() +
-                taintConfig.methodEntrySink.getAssigns() +
-                taintConfig.methodExitSink.getAssigns() +
-                taintConfig.sink.getAssigns()
-        return allAssignActions.any { Mark.getMarkFromString(it.kind) is Mark.StateMark }
-    }
+    private fun List<SerializedItem>.doesCreateStateVar(): Boolean =
+        getAssigns().any { Mark.getMarkFromString(it.kind) is Mark.StateMark }
 
     private val samplesDb by lazy { samplesDb() }
 

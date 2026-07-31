@@ -14,7 +14,12 @@ class TaintAnalysisUnitStorage(apManager: ApManager, languageManager: LanguageMa
         val statement: CommonInst,
     )
 
-    private val vulnerabilityBuckets = ConcurrentHashMap<VulnerabilityIdentity, TaintSinkTracker.TaintVulnerability>()
+    private var vulnerabilityBuckets = ConcurrentHashMap<VulnerabilityIdentity, TaintSinkTracker.TaintVulnerability>()
+
+    override fun resetApManager(apManager: ApManager) {
+        super.resetApManager(apManager)
+        vulnerabilityBuckets = ConcurrentHashMap<VulnerabilityIdentity, TaintSinkTracker.TaintVulnerability>()
+    }
 
     fun addVulnerability(vulnerability: TaintSinkTracker.TaintVulnerability) {
         val identity = VulnerabilityIdentity(vulnerability.ruleId, vulnerability.statement)

@@ -5,9 +5,9 @@ import mu.KLogging
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.common.sast.sarif.SarifGenerator
 import org.opentaint.common.sast.sarif.TracePathNode
+import org.opentaint.common.sast.sarif.TracePathNodeEntry
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
-import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.ir.api.common.CommonMethod
@@ -93,17 +93,18 @@ class JirSarifGenerator(
         return result
     }
 
-    private fun MethodTraceResolver.TraceEntry?.isSimpleAssign(): Boolean =
-        this is MethodTraceResolver.TraceEntry.Action
-                && primaryAction is MethodTraceResolver.TraceEntryAction.Sequential
-                && otherActions.isEmpty()
+    private fun TracePathNode.isSimpleAssign(): Boolean {
+        val actionEntry = entry as? TracePathNodeEntry.Action ?: return false
+        return actionEntry.variant.primaryAction is MethodTraceResolver.TraceEntryAction.Sequential &&
+            actionEntry.variant.otherActions.isEmpty()
+    }
 
     private fun isRepetitionOfAssign(a: List<TracePathNode>, b: List<TracePathNode>): Boolean {
         if (a.size != 1 || b.size != 1) return false
         val aNode = a[0]
         val bNode = b[0]
 
-        if (!aNode.entry.isSimpleAssign() || !bNode.entry.isSimpleAssign())
+        if (!aNode.isSimpleAssign() || !bNode.isSimpleAssign())
             return false
 
         val aAssignee = traits.getReadableAssignee(aNode.statement) ?: return false
@@ -112,7 +113,7 @@ class JirSarifGenerator(
     }
 
     private fun isFieldReassign(fst: TracePathNode, snd: TracePathNode): Boolean {
-        if (!fst.entry.isSimpleAssign() || !snd.entry.isSimpleAssign())
+        if (!fst.isSimpleAssign() || !snd.isSimpleAssign())
             return false
         if (fst.statement !is CommonAssignInst || snd.statement !is CommonAssignInst)
             return false
@@ -161,8 +162,12 @@ class JirSarifGenerator(
         return result.reversed()
     }
 
-    private fun TracePathNode.isRewriteAllowed(builder: TraceMessageBuilder) = with (builder) {
-        !isInsideLambda() && (entry is MethodTraceResolver.TraceEntry.MethodEntry || entry.isPureEntryPoint())
+    private fun TracePathNode.isRewriteAllowed(builder: TraceMessageBuilder): Boolean {
+        val nonActionEntry = entry as? TracePathNodeEntry.NonAction
+        return with(builder) {
+            !isInsideLambda() &&
+                (nonActionEntry?.entry is MethodTraceResolver.TraceEntry.MethodEntry || entry.isPureEntryPoint())
+        }
     }
 
     override fun generateThreadFlow(path: List<TracePathNode>, sinkMessage: String): List<IntermediateLocation> {

@@ -91,31 +91,50 @@ Key points:
 
 Many rules under `ruleset/` combine multiple library rules using **`mode: join`**.
 
+Library rules expose their roles through tags:
+
+```yaml
+- id: java-ssrf-sink
+  options:
+    lib: true
+  tags:
+    - ssrf-sink
+```
+
 Example (from `ruleset/java/security/ssrf.yaml`):
 
 ```yaml
-- id: ssrf-in-servlet-app
+- id: ssrf
   languages:
     - java
   mode: join
   join:
     refs:
-      - rule: java/lib/generic/servlet-untrusted-data-source.yaml#java-servlet-untrusted-data-source
-        as: untrusted-data
-      - rule: java/lib/generic/ssrf-sinks.yaml#java-ssrf-sink
+      - tag: servlet-untrusted-data-source
+        as: servlet-untrusted-data
+      - tag: spring-untrusted-data-source
+        as: spring-untrusted-data
+      - tag: ssrf-sink
         as: sink
     on:
-      - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+      - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+      - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
 Semantics:
 
 - `mode: join` derives a composite rule from other rules referenced in `join.refs`.
-- `refs` defines:
-  - `rule`: path to the library rule file plus `#<rule-id>` inside that YAML
-  - `as`: local alias for referencing captures/variables from that rule
-- `on` describes how to correlate matches from referenced rules:
-  - `untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED` expresses a **dataflow relationship** between the `$UNTRUSTED` captured in the source rule and the same `$UNTRUSTED` captured in the sink rule.
+- Each `ref` selects a library rule and assigns a local alias:
+  - `tag` selects every enabled rule with that tag in the join's language. Adding the same tag to a
+    custom rule extends the join.
+  - `rule` selects one rule by `<path>#<rule-id>`.
+  - `as` defines the alias used in `on`.
+- `on` correlates captures from the referenced rules. For example,
+  `servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED` requires dataflow from the source capture
+  to the sink capture.
+
+Built-in joins use language-scoped, per-source and per-sink tags. Use `rule` when a join must
+reference one specific rule.
 
 This join mode is **based on Semgrep's join mode**, but OpenTaint extends it with custom features (such as the `->` notation in the `on` section) to express taint-style flows across multiple rule components.
 
@@ -227,7 +246,8 @@ When introducing or changing rules, follow these guidelines:
    - Add `options.lib: true` for library fragments in `lib/` (or exceptionally in `ruleset/` if they are not meant to be executed directly).
 
 3. **Avoid duplicates**
-   - Reuse existing library rules from `lib/` and compose them via `mode: join` where applicable.
+   - Reuse library rules from `lib/` and compose them with `mode: join` where applicable.
+   - Reference join sources and sinks by `tag`, and tag each new library source or sink.
 
 4. **Update tests**
    - Add at least one `@PositiveRuleSample` (and typically `@NegativeRuleSample`) under `test/src/main/java/security/`.
