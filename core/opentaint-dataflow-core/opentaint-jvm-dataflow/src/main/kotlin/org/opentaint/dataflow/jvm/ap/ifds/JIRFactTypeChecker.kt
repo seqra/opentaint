@@ -2,6 +2,7 @@ package org.opentaint.dataflow.jvm.ap.ifds
 
 import it.unimi.dsi.fastutil.longs.LongLongImmutablePair
 import it.unimi.dsi.fastutil.longs.LongLongPair
+import kotlinx.coroutines.runBlocking
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
@@ -33,12 +34,14 @@ import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.JIRTypeVariable
 import org.opentaint.ir.api.jvm.JIRUnboundWildcard
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
+import org.opentaint.ir.api.jvm.ext.findClass
 import org.opentaint.ir.api.jvm.ext.ifArrayGetElementType
 import org.opentaint.ir.api.jvm.ext.isAssignable
 import org.opentaint.ir.api.jvm.ext.isSubClassOf
 import org.opentaint.ir.api.jvm.ext.objectType
 import org.opentaint.ir.api.jvm.ext.unboxIfNeeded
 import org.opentaint.ir.impl.features.classpaths.JIRUnknownType
+import org.opentaint.ir.impl.features.hierarchyExt
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.LongAdder
 
@@ -122,8 +125,23 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
                     }
                 }
 
-                is TypeInfoAccessor -> return FilterResult.Accept
-                TypeInfoGroupAccessor -> return FilterResult.Accept
+                is TypeInfoAccessor -> {
+                    val lambdaType = cp.typeOf(cp.findClass(accessor.typeName))
+                    val res = runBlocking {
+                        with(cp.hierarchyExt()) {
+                            actualType.isAssignable(lambdaType)
+                        }
+                    }
+                    return if (res) {
+                        FilterResult.Accept
+                    } else {
+                        FilterResult.Reject
+                    }
+                }
+
+                TypeInfoGroupAccessor -> return FilterResult.FilterNext(
+                    AccessorFilter(actualType, isLocalCheck)
+                )
             }
         }
 
