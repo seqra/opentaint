@@ -11,7 +11,9 @@ metadata:
 
 Assess a project for vulnerabilities it was not already known to have. Keep the long project build and every full-project scan in this main session; delegate each bounded source, approximation, sink, triage, and PoC stage to an `orchestrate-stage` subagent, which owns its leaf fan-out and joins.
 
-This is the assessment pipeline — one of the two that share the OpenTaint machine and the `.opentaint/` tree. The other is `enactment-agent`'s, which reproduces a finding set the user supplies; use that one when there is such a set. They differ in where the source and sink rules come from: discovered from the project's dependency attack surface here, generalized from the supplied findings there. Everything downstream is shared, and `appsec-agent` is the entry point that picks between them.
+This is the assessment pipeline — one of the two that share the OpenTaint machine and the `.opentaint/` tree. The other is `enactment-agent`'s, which reproduces a finding set the user supplies. They differ in where the source and sink rules come from: discovered from the project's dependency attack surface here, generalized from the supplied findings there. Everything downstream is shared, and `appsec-agent` is the entry point that picks between them.
+
+This run is one *pass* over a tree that outlives it. The pass may follow an enactment pass, in which case its boundaries are already on disk as rules and this pass hunts with them; it may be followed by one; and it may run again on a later commit as a regression check. So leave the tree richer than you found it, and don't treat an artifact you didn't create as debris. If the tree carries a reference set from an enactment pass, your rescans change what it reproduces, and `get_status.py` keeps the cross-reference in scope so its coverage manifest stays true.
 
 OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. The run produces confirmed vulnerabilities plus reusable project-specific rules and approximations under one self-contained `.opentaint/` directory at the project root.
 
@@ -57,7 +59,9 @@ Seed the run state and the working tree with the chosen levels and language:
 uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-It writes `state.yaml` with `mode: assessment`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml` with `mode: assessment`, appends this pass to `history.yaml`, and creates the `.opentaint/` tree.
+
+Over a tree an earlier pass already built, it prints what carried over and keeps all of it — an enactment pass's boundary-derived rules, its approximations, and its verdicts are this pass's starting corpus, and `get_status.py` will report their phases `DONE` rather than redoing them.
 
 ## Workflow
 
@@ -71,7 +75,10 @@ approximations              → stage subagent: approx-round, then MAIN: rescan;
 sink_rules                  → stage subagent: sinks, then MAIN: rescan
 triage                      → stage subagent: triage
 poc                         → stage subagent: poc
+crossref                    → stage subagent: crossref   (only if an enactment pass left a reference set)
 ```
+
+`crossref` appears only when a previous enactment pass over this tree left a reference set. This pass's rescans changed what those supplied findings reproduce, so re-judging them and refreshing `.opentaint/enactment.md` is part of finishing — not optional cleanup.
 
 ### Build in MAIN
 
@@ -96,7 +103,7 @@ Dispatch exactly one stage-orchestrator subagent for each stage invocation:
 ```
 Invoke the Skill orchestrate-stage first, then follow its instructions precisely
 Inputs:
-  stage: <sources|approx-round|sinks|triage|poc|escalation>
+  stage: <sources|approx-round|sinks|triage|poc|crossref|escalation>
 ```
 
 For a `deep` approximation round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
@@ -107,6 +114,7 @@ Stage context:
 - `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
 - `sinks` — author classified sink rules and wire the joins
 - `triage` — classify the latest findings and refresh the vulnerability report
+- `crossref` — re-judge a reference set an earlier enactment pass left, and refresh its coverage manifest
 - `poc` — reproduce confirmed findings and add the outcomes to the report
 - `escalation` — repair or settle a stage artifact, or report a scan-wide no-SARIF failure
 
@@ -131,9 +139,9 @@ Use this ownership map to route work and scan errors:
   issues/               escalation stage
 ```
 
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
+The tree is long-lived and outlives this pass. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan, whichever pass created them. Never delete or rewrite an artifact because this pass didn't produce it — an enactment pass's boundary rules, reference set, and coverage manifest are as durable as your own.
 
-`state.yaml` shape:
+`state.yaml` shape — `mode` is this pass's pipeline, not a property of the tree, so a later enactment pass simply rewrites it and keeps everything else:
 
 ```yaml
 mode: assessment

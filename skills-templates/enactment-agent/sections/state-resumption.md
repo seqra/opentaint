@@ -16,9 +16,9 @@ Use this ownership map to route work and scan errors:
   issues/                escalation stage
 ```
 
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
+The tree is long-lived and outlives this pass. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan, whichever pass created them. Never delete or rewrite an artifact because this pass didn't produce it — an assessment pass's discovered source units, approximations, and verdicts are as durable as your own.
 
-`state.yaml` shape:
+`state.yaml` shape — `mode` is this pass's pipeline, not a property of the tree, so a later assessment pass simply rewrites it and keeps everything else:
 
 ```yaml
 mode: enactment
@@ -31,4 +31,4 @@ build_jdk: null
 max_memory: null
 ```
 
-`mode` is what selects this pipeline; `findings` is the supplied set the whole run is measured against. Both are written at bootstrap and never edited afterwards — pointing an in-flight run at a different finding file strands its reference set.
+`mode` is what selects this pipeline for this pass; `findings` is the supplied set the pass is measured against, and it stays in `state.yaml` across an assessment pass so a later enactment pass resumes the same set. Neither is edited by hand mid-pass — pointing an in-flight pass at a different finding file strands its reference set. A genuinely different finding set is a new pass, bootstrapped with a new `--findings`.

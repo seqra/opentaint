@@ -29,8 +29,8 @@ import yaml
 from _common import (APPROX, BOUNDARIES_TR, DATAFLOW, DROPPED, FINDINGS_TR, JOINS_TR, MODEL,
                      PASS_THROUGH, REFERENCE_TR, RESULTS, RULES, RULES_TR, SARIF, SINKS_TR,
                      SOURCES_TR, RULE_RE, TRACKING, VERDICT_RE, class_of, classified_keys,
-                     dropped_entries, dump_yaml, fqn_base, git_head, ledger_verdicted_keys,
-                     load_yaml, member_key, package_of, strip_quotes)
+                     batch_files, dropped_entries, dump_yaml, fqn_base, git_head,
+                     ledger_verdicted_keys, load_yaml, member_key, package_of, strip_quotes)
 
 ANALYZE_BUDGET = 20                       # methods per approximation batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
@@ -51,9 +51,27 @@ ENACTMENT_DIRS = [REFERENCE_TR, BOUNDARIES_TR]                # enactment mode o
 STATE_DERIVED = ("model_commit", "build_jdk", "max_memory")   # build/scan fill these, init preserves
 
 
+def carried_over():
+    """What a pass inherits from the passes before it, as (label, count) — everything durable
+    the tree already holds. Both pipelines write into one tree, so a pass never starts empty
+    unless the tree is."""
+    def n(paths):
+        return sum(1 for _ in paths)
+    return [("rule unit", n(SOURCES_TR.glob("*.yaml")) + n(SINKS_TR.glob("*.yaml"))),
+            ("created rule", n(p for p in RULES.rglob("*.yaml") if p.is_file())),
+            ("approximation batch", len(batch_files())),
+            ("reference finding", n(REFERENCE_TR.glob("*.yaml")) if REFERENCE_TR.is_dir() else 0),
+            ("triaged finding", n(FINDINGS_TR.glob("*.yaml")))]
+
+
 def cmd_init(args):
+    state_path = TRACKING / "state.yaml"
+    prior = load_yaml(state_path, {}) or {}
     enactment = args.mode == "enactment"
-    if enactment and not args.findings:
+    # the finding set is a property of the tree, not of one pass — an enactment pass that follows
+    # an earlier one inherits it, so --findings is required only the first time
+    findings = args.findings or prior.get("findings")
+    if enactment and not findings:
         raise SystemExit("init --mode enactment requires --findings <path to the supplied findings>")
     if not enactment and not args.scan_level:
         raise SystemExit("init --mode assessment requires --scan-level")
@@ -63,34 +81,43 @@ def cmd_init(args):
 
     for d in INIT_DIRS + (ENACTMENT_DIRS if enactment else []):
         d.mkdir(parents=True, exist_ok=True)
-    state_path = TRACKING / "state.yaml"
-    prior = load_yaml(state_path, {}) or {}
-    resume = bool(prior)
-    if resume and prior.get("mode", "assessment") != args.mode:
-        raise SystemExit(f"{state_path} is a {prior.get('mode', 'assessment')} run — a mode switch "
-                         "would strand its tracking; start the other mode in a fresh project tree")
+    # `mode` is this pass's pipeline, not a permanent property of the tree: the two compose, in
+    # either order and repeatedly across commits, and every artifact below is shared between them.
     state = {"mode": args.mode, "scan_level": scan_level, "triage_level": args.triage_level,
              "language": args.language or prior.get("language")}
-    if enactment:
-        state["findings"] = args.findings or prior.get("findings")
+    if findings:                    # kept even on an assessment pass, so a later one resumes it
+        state["findings"] = findings
     for k in STATE_DERIVED:                       # never clobber what build/scan already learned
         state[k] = prior.get(k)
     state_path.write_text(dump_yaml(state), encoding="utf-8")
 
-    # history: append one run entry on a fresh init, never on resume (the derived knobs survived)
+    # history: one entry per pass. Re-running init with the same knobs on the same commit is a
+    # resume of the current pass, not a new one — a different mode, level, or commit starts one.
     hist_path = TRACKING / "history.yaml"
     runs = (load_yaml(hist_path, {}) or {}).get("runs") or []
-    if not resume:
-        runs.append({"commit": git_head(),
-                     "type": f"{args.mode}/{scan_level}/{args.triage_level}"
-                             + ("" if args.controls == "on" else "/no-controls")})
+    entry = {"commit": git_head(),
+             "type": f"{args.mode}/{scan_level}/{args.triage_level}"}
+    new_pass = not runs or runs[-1] != entry
+    if new_pass:
+        runs.append(entry)
         hist_path.write_text(dump_yaml({"runs": runs}), encoding="utf-8")
 
-    how = "resumed (derived knobs preserved)" if resume else "fresh"
+    prior_mode = prior.get("mode")
+    if not prior:
+        how = "fresh tree"
+    elif prior_mode and prior_mode != args.mode:
+        how = f"new {args.mode} pass over the existing {prior_mode} tree"
+    elif new_pass:
+        how = f"new {args.mode} pass (pass {len(runs)})"
+    else:
+        how = "resumed (derived knobs preserved)"
     print(f"init {how}: mode={args.mode} scan_level={scan_level} "
           f"triage_level={state['triage_level']} language={state['language']}")
-    if enactment:
-        print(f"findings={state['findings']}")
+    if findings:
+        print(f"findings={findings}")
+    if prior:
+        kept = ", ".join(f"{c} {label}{'' if c == 1 else 's'}" for label, c in carried_over() if c)
+        print(f"carried over: {kept or 'nothing yet'}")
     print(f"seeded {len(INIT_DIRS) + (len(ENACTMENT_DIRS) if enactment else 0)} "
           "directories under .opentaint/")
     print("next: uv run scripts/get_status.py --full")

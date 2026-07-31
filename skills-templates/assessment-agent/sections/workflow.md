@@ -8,7 +8,10 @@ approximations              → stage subagent: approx-round, then MAIN: rescan;
 sink_rules                  → stage subagent: sinks, then MAIN: rescan
 triage                      → stage subagent: triage
 poc                         → stage subagent: poc
+crossref                    → stage subagent: crossref   (only if an enactment pass left a reference set)
 ```
+
+`crossref` appears only when a previous enactment pass over this tree left a reference set. This pass's rescans changed what those supplied findings reproduce, so re-judging them and refreshing `.opentaint/enactment.md` is part of finishing — not optional cleanup.
 
 ### Build in MAIN
 

@@ -38,4 +38,6 @@ Seed the run state and the working tree with the chosen levels and language:
 uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-It writes `state.yaml` with `mode: assessment`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml` with `mode: assessment`, appends this pass to `history.yaml`, and creates the `.opentaint/` tree.
+
+Over a tree an earlier pass already built, it prints what carried over and keeps all of it — an enactment pass's boundary-derived rules, its approximations, and its verdicts are this pass's starting corpus, and `get_status.py` will report their phases `DONE` rather than redoing them.

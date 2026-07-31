@@ -7,4 +7,6 @@ OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SA
 - **assessment** (`assessment-agent`) — find vulnerabilities the project was not known to have. Source and sink rules come from discovering the project's dependency attack surface
 - **enactment** (`enactment-agent`) — reproduce a finding set the user supplies, as verified rules. Source and sink rules come from generalizing those findings into reusable boundaries
 
-This skill does no analysis of its own and writes nothing except by handing off. Don't bootstrap the tree here — each pipeline's own setup does that, and it is what commits the tree to a mode.
+The two compose rather than compete: a project can run one after the other, in either order, and again on later commits, all over one accumulating `.opentaint/` tree. Each such run is a *pass*, and choosing a pipeline chooses this pass, not the project's fate.
+
+This skill does no analysis of its own and writes nothing except by handing off. Don't bootstrap the tree here — each pipeline's own setup does that.

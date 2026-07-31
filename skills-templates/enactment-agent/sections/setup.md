@@ -39,4 +39,6 @@ Seed the run state and the working tree:
 uv run <skill-dir>/scripts/generate.py init --mode enactment --triage-level <static|dynamic> --language <lang> --findings <path>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`. It refuses to convert an existing assessment run — that tracking has no reference set behind it, so enactment starts in its own project tree.
+It writes `state.yaml` with `mode: enactment`, appends this pass to `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`.
+
+Over a tree an earlier pass already built, it prints what carried over and keeps all of it — an assessment pass's rules, approximations, and verdicts are this pass's starting corpus, and `get_status.py` will report their phases `DONE` rather than redoing them. `--findings` is required only the first time; a later enactment pass inherits the tracked set unless you pass a new one.

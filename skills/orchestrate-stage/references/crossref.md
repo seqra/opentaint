@@ -1,6 +1,8 @@
 # Cross-reference — scan results against the reference set
 
-Judge, per supplied finding, whether the latest scan reproduced it, and assemble the coverage manifest. Enactment mode only, and the stage that closes the run: every rule, approximation, and verdict is already in place, so what the scan shows now is what the run delivered. Nothing else may set a reference finding's `status`.
+Judge, per supplied finding, whether the latest scan reproduced it, and assemble the coverage manifest. This is the stage that closes an enactment pass: every rule, approximation, and verdict is already in place, so what the scan shows now is what the pass delivered. Nothing else may set a reference finding's `status`.
+
+It also runs at the end of an assessment pass over a tree that already carries a reference set. That pass's new rules and rescans changed what those findings reproduce — usually for the better, occasionally by losing one — so re-judge them all and refresh the manifest. The work is identical; only the pass that triggered it differs.
 
 It is also the stage that decides what the run still owes. A judgement here can send the pipeline back — an unmodeled carrier to an approximation round, a rule-caused miss to the stage that authored the rule — and status will report that earlier phase as current again. That is the loop working; re-enter this stage after the rescan rather than closing on stale results.
 

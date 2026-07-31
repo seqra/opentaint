@@ -11,9 +11,11 @@ metadata:
 
 Reproduce a supplied set of findings with OpenTaint. Every finding ends the run either matched by a verified OpenTaint result whose trace carries the finding's own identity, or recorded with the exact rule, modeling, or engine limitation that stopped it. Keep the long project build and every full-project scan in this main session; delegate each bounded stage to an `orchestrate-stage` subagent, which owns its leaf fan-out and joins.
 
-This is the enactment pipeline — one of the two that share the OpenTaint machine and the `.opentaint/` tree. The other is `assessment-agent`'s, which searches the project for vulnerabilities it was not known to have; use that one when nothing was supplied to reproduce. They differ in where the source and sink rules come from: discovered from the project's dependency attack surface there, generalized from the supplied findings here, so both sides exist before the first scan and that scan is rule-first. Everything downstream is shared, and `appsec-agent` is the entry point that picks between them.
+This is the enactment pipeline — one of the two that share the OpenTaint machine and the `.opentaint/` tree. The other is `assessment-agent`'s, which searches the project for vulnerabilities it was not known to have. They differ in where the source and sink rules come from: discovered from the project's dependency attack surface there, generalized from the supplied findings here, so both sides exist before the first scan and that scan is rule-first. Everything downstream is shared, and `appsec-agent` is the entry point that picks between them.
 
-You may be loaded directly, or handed off by `appsec-agent` once it identified the request as enactment. Either way the setup below is this pipeline's, and running it is what commits the tree to `mode: enactment`.
+This run is one *pass* over a tree that outlives it. The pass may follow an assessment pass, inheriting its rules, approximations, and verdicts, and an assessment pass may follow this one to hunt with the boundaries it derived. Either can run again on a later commit. So reproduce this pass's findings and leave the tree richer than you found it; don't treat an artifact you didn't create as debris.
+
+You may be loaded directly, or handed off by `appsec-agent` once it identified the request as enactment.
 
 No finding is dropped for being a poor fit for taint analysis. Authorization, integrity, configuration, hard-coded-secret, and structural-control findings are modeled as explicit pseudo-taint boundaries.
 
@@ -60,7 +62,9 @@ Seed the run state and the working tree:
 uv run <skill-dir>/scripts/generate.py init --mode enactment --triage-level <static|dynamic> --language <lang> --findings <path>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`. It refuses to convert an existing assessment run — that tracking has no reference set behind it, so enactment starts in its own project tree.
+It writes `state.yaml` with `mode: enactment`, appends this pass to `history.yaml`, and creates the `.opentaint/` tree including `tracking/reference/` and `tracking/boundaries/`.
+
+Over a tree an earlier pass already built, it prints what carried over and keeps all of it — an assessment pass's rules, approximations, and verdicts are this pass's starting corpus, and `get_status.py` will report their phases `DONE` rather than redoing them. `--findings` is required only the first time; a later enactment pass inherits the tracked set unless you pass a new one.
 
 ## Workflow
 
@@ -151,9 +155,9 @@ Use this ownership map to route work and scan errors:
   issues/                escalation stage
 ```
 
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
+The tree is long-lived and outlives this pass. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan, whichever pass created them. Never delete or rewrite an artifact because this pass didn't produce it — an assessment pass's discovered source units, approximations, and verdicts are as durable as your own.
 
-`state.yaml` shape:
+`state.yaml` shape — `mode` is this pass's pipeline, not a property of the tree, so a later assessment pass simply rewrites it and keeps everything else:
 
 ```yaml
 mode: enactment
@@ -166,7 +170,7 @@ build_jdk: null
 max_memory: null
 ```
 
-`mode` is what selects this pipeline; `findings` is the supplied set the whole run is measured against. Both are written at bootstrap and never edited afterwards — pointing an in-flight run at a different finding file strands its reference set.
+`mode` is what selects this pipeline for this pass; `findings` is the supplied set the pass is measured against, and it stays in `state.yaml` across an assessment pass so a later enactment pass resumes the same set. Neither is edited by hand mid-pass — pointing an in-flight pass at a different finding file strands its reference set. A genuinely different finding set is a new pass, bootstrapped with a new `--findings`.
 
 ## Key constraints
 

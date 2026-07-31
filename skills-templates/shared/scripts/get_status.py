@@ -357,6 +357,13 @@ def ph_crossref():
     return True, [], None
 
 
+def has_reference_set():
+    """A reference set outlives the pass that created it. Any later pass that rescans changes what
+    it reproduces, so the cross-reference stays in scope — otherwise an assessment pass would leave
+    a coverage manifest that silently describes an older scan."""
+    return REFERENCE_TR.is_dir() and any(REFERENCE_TR.glob("*.yaml"))
+
+
 ASSESSMENT_PHASES = [
     ("build", ph_build, lambda: True),
     ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
@@ -366,6 +373,7 @@ ASSESSMENT_PHASES = [
     ("sink_rules", ph_sink_rules, lambda: SCAN_LEVEL == "deep"),
     ("triage", ph_triage, lambda: True),
     ("poc", ph_poc, lambda: TRIAGE_LEVEL == "dynamic"),
+    ("crossref", ph_crossref, has_reference_set),
 ]
 
 # enactment reproduces a supplied finding set: the reference set and its saturated boundaries
@@ -428,8 +436,11 @@ def cmd_full():
     print(f"mode={MODE}  scan={SCAN_LEVEL}  triage={TRIAGE_LEVEL}  "
           f"language={STATE.get('language')}  commit={commit}  "
           f"cap={GLOBAL_CAP} (heavy {heavy_cap()})")
-    if MODE == "enactment":
+    if STATE.get("findings"):        # printed on an assessment pass too — the set is still tracked
         print(f"findings={STATE.get('findings')}")
+    runs = (load_yaml(TRACKING / "history.yaml", {}) or {}).get("runs") or []
+    if len(runs) > 1:
+        print("passes: " + " -> ".join(str(r.get("type", "?")) for r in runs))
     rows, current = evaluate()
     # a phase downstream of the current stage that vacuously satisfies its own check is not
     # actually done — its producing stage hasn't run — so it reads PENDING, never DONE.

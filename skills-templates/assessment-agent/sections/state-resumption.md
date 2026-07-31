@@ -13,9 +13,9 @@ Use this ownership map to route work and scan errors:
   issues/               escalation stage
 ```
 
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
+The tree is long-lived and outlives this pass. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan, whichever pass created them. Never delete or rewrite an artifact because this pass didn't produce it — an enactment pass's boundary rules, reference set, and coverage manifest are as durable as your own.
 
-`state.yaml` shape:
+`state.yaml` shape — `mode` is this pass's pipeline, not a property of the tree, so a later enactment pass simply rewrites it and keeps everything else:
 
 ```yaml
 mode: assessment
