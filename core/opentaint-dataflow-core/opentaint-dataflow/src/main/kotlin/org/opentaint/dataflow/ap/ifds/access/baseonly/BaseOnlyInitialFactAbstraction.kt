@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
@@ -16,6 +18,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.TYP
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.VALUE_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isFieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
 
 class BaseOnlyInitialFactAbstraction(
     private val manager: BaseOnlyApManager,
@@ -26,8 +29,37 @@ class BaseOnlyInitialFactAbstraction(
         val added = LongOpenHashSet()
         val excluded = IntOpenHashSet()
         val emitted = LongOpenHashSet()
+        val factsByExclusion = Int2ObjectOpenHashMap<LongOpenHashSet>()
+        val concreteTypeBlockerByFact = Long2IntOpenHashMap().apply { defaultReturnValue(NO_ACCESSOR) }
 
         fun excludes(accessor: AccessorIdx): Boolean = excluded.excludesIdx(accessor)
+
+        fun registerBlockedFact(access: BaseOnlyAccess, accessor: AccessorIdx) {
+            check(factsByExclusion.computeIfAbsent(accessor) { LongOpenHashSet() }.add(access))
+            if (accessor.isTypeInfoAccessor() && accessor != TYPE_INFO_GROUP_ACCESSOR_IDX) {
+                check(concreteTypeBlockerByFact.put(access, accessor) == NO_ACCESSOR)
+                check(
+                    factsByExclusion
+                        .computeIfAbsent(TYPE_INFO_GROUP_ACCESSOR_IDX) { LongOpenHashSet() }
+                        .add(access)
+                )
+            }
+        }
+
+        fun takeFactsUnblockedBy(accessor: AccessorIdx): LongOpenHashSet? {
+            val candidates = factsByExclusion.remove(accessor) ?: return null
+            val candidateIterator = candidates.iterator()
+            while (candidateIterator.hasNext()) {
+                val access = candidateIterator.nextLong()
+                val concreteTypeBlocker = concreteTypeBlockerByFact.remove(access)
+                if (accessor == TYPE_INFO_GROUP_ACCESSOR_IDX && concreteTypeBlocker != NO_ACCESSOR) {
+                    factsByExclusion[concreteTypeBlocker]?.remove(access)
+                } else if (concreteTypeBlocker != NO_ACCESSOR) {
+                    factsByExclusion[TYPE_INFO_GROUP_ACCESSOR_IDX]?.remove(access)
+                }
+            }
+            return candidates
+        }
     }
 
     override fun addAbstractedInitialFact(
@@ -39,7 +71,7 @@ class BaseOnlyInitialFactAbstraction(
         if (!state.added.add(factAp.access)) return emptyList()
 
         val out = ArrayList<Pair<InitialFactAp, FinalFactAp>>()
-        abstractOne(factAp.base, factAp.access, state, out)
+        abstractAndIndex(factAp.base, factAp.access, state, out)
         return out
     }
 
@@ -50,29 +82,38 @@ class BaseOnlyInitialFactAbstraction(
         factAp as BaseOnlyInitialFactAp
         val state = perBase.getOrPut(factAp.base) { BaseState() }
 
-        var modified = false
+        val newlyExcluded = IntOpenHashSet()
         when (val ex = factAp.exclusions) {
             is ExclusionSet.Concrete -> ex.set.forEach {
                 val idx = manager.interner.index(it)
-                if (state.excluded.add(idx)) modified = true
+                if (state.excluded.add(idx)) newlyExcluded.add(idx)
             }
             ExclusionSet.Empty -> {}
             ExclusionSet.Universe -> error("Unexpected universe exclusion")
         }
-        if (!modified) return emptyList()
+        if (newlyExcluded.isEmpty()) return emptyList()
 
         val out = ArrayList<Pair<InitialFactAp, FinalFactAp>>()
-        for (added in state.added) abstractOne(factAp.base, added, state, out)
+        val exclusionIterator = newlyExcluded.iterator()
+        while (exclusionIterator.hasNext()) {
+            val accessor = exclusionIterator.nextInt()
+            val unblocked = state.takeFactsUnblockedBy(accessor) ?: continue
+            val unblockedIterator = unblocked.iterator()
+            while (unblockedIterator.hasNext()) {
+                abstractAndIndex(factAp.base, unblockedIterator.nextLong(), state, out)
+            }
+        }
         return out
     }
 
-    private fun abstractOne(
+    private fun abstractAndIndex(
         base: AccessPathBase,
         added: BaseOnlyAccess,
         state: BaseState,
         out: MutableList<Pair<InitialFactAp, FinalFactAp>>,
     ) {
-        abstractOneBranch(base, added, state, out)
+        val blocker = abstractOneBranch(base, added, state, out)
+        if (blocker != null) state.registerBlockedFact(added, blocker)
     }
 
     private fun abstractOneBranch(
@@ -80,7 +121,7 @@ class BaseOnlyInitialFactAbstraction(
         added: BaseOnlyAccess,
         state: BaseState,
         out: MutableList<Pair<InitialFactAp, FinalFactAp>>,
-    ) {
+    ): AccessorIdx? {
         val prefix = ArrayList<Int>(3)
         var stopped = false
         val core = buildList {
@@ -91,6 +132,7 @@ class BaseOnlyInitialFactAbstraction(
             }
             if (added.suffixIdx >= 0 && added.suffixIdx != FINAL_ACCESSOR_IDX) add(added.suffixIdx)
         }
+        var blocker: AccessorIdx? = null
         core.forEach { accessor ->
             if (!stopped) {
                 emit(
@@ -101,6 +143,7 @@ class BaseOnlyInitialFactAbstraction(
                     prefix.add(accessor)
                 } else {
                     stopped = true
+                    blocker = accessor
                 }
             }
         }
@@ -117,6 +160,7 @@ class BaseOnlyInitialFactAbstraction(
                 )
             }
         }
+        return blocker
     }
 
     private fun emit(

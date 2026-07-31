@@ -195,6 +195,55 @@ class BaseOnlyInitialFactAbstractionCasesTest {
     }
 
     @Test
+    fun `excluding a later accessor waits until the current blocker is excluded`() {
+        val m = mgr(fieldSensitive = true)
+        val abstraction = BaseOnlyInitialFactAbstraction(m)
+        abstraction.addAbstractedInitialFact(m.finalOf(field, mark), FactTypeChecker.Dummy)
+
+        val laterOnly = abstraction.registerNewInitialFact(
+            m.analyzedExcluding(mark),
+            FactTypeChecker.Dummy,
+        )
+        assertTrue(laterOnly.isEmpty(), "the mark is unreachable while the field still blocks abstraction")
+
+        val unblocked = abstraction.registerNewInitialFact(
+            m.analyzedExcluding(field),
+            FactTypeChecker.Dummy,
+        )
+        assertTrue(contains(unblocked, m.acc(field, abstract = true), m.acc(field, abstract = true)))
+        assertTrue(
+            contains(
+                unblocked,
+                m.acc(field, mark, FinalAccessor, abstract = false),
+                m.acc(field, mark, abstract = false),
+            ),
+            "excluding the field must advance across the mark that was excluded earlier",
+        )
+    }
+
+    @Test
+    fun `one exclusion update advances across every newly excluded blocker`() {
+        val m = mgr(fieldSensitive = true)
+        val stat = ClassStaticAccessor("S")
+        val abstraction = BaseOnlyInitialFactAbstraction(m)
+        abstraction.addAbstractedInitialFact(m.finalOf(stat, field, mark), FactTypeChecker.Dummy)
+
+        val produced = abstraction.registerNewInitialFact(
+            m.analyzedExcluding(stat, field, mark),
+            FactTypeChecker.Dummy,
+        )
+
+        assertTrue(
+            contains(
+                produced,
+                m.acc(stat, field, mark, FinalAccessor, abstract = false),
+                m.acc(stat, field, mark, abstract = false),
+            ),
+            "all exclusions must be installed before an indexed fact advances",
+        )
+    }
+
+    @Test
     fun `refinement on type group retains the separate direct-type fact and still abstracts`() {
         val m = mgr(false)
         val typeInfo = TypeInfoAccessor("pkg.fn")
