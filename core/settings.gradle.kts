@@ -105,12 +105,6 @@ includeBuild("opentaint-config") {
     }
 }
 
-includeBuild("opentaint-sast-test-util") {
-    dependencySubstitution {
-        substitute(module("org.opentaint.sast-test-util:opentaint-sast-test-util")).using(project(":"))
-    }
-}
-
 includeBuild("opentaint-jvm-sast-se-api") {
     dependencySubstitution {
         substitute(module("org.opentaint.sast.se:api")).using(project(":"))
