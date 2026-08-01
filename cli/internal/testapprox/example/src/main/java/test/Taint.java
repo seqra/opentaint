@@ -5,10 +5,10 @@ public final class Taint {
     private Taint() {
     }
 
-    public static String source() {
-        return "";
+    public static <T> T source() {
+        return null;
     }
 
-    public static void sink(String value) {
+    public static void sink(Object value) {
     }
 }

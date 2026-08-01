@@ -1,15 +1,60 @@
 rules:
-  - id: approximation-rule
+  - id: approximation-rule-plain-source-plain-sink
     severity: ERROR
-    message: Tainted value from Taint.source() reached Taint.sink() through an approximated method
+    message: Plain taint reached a plain sink through an approximated method
     metadata:
-      short-description: Approximation test source-to-sink flow
+      short-description: Approximation test with base-only input and output scope
     languages:
       - java
     mode: taint
     pattern-sources:
-      - pattern: test.Taint.source()
+      - pattern: $UNTRUSTED = test.Taint.source();
     pattern-sinks:
       - patterns:
           - pattern: test.Taint.sink($VALUE)
+          - focus-metavariable: $VALUE
+
+  - id: approximation-rule-plain-source-starred-sink
+    severity: ERROR
+    message: Plain taint reached a whole-object sink through an approximated method
+    metadata:
+      short-description: Approximation test with base-only input and whole-object output scope
+    languages:
+      - java
+    mode: taint
+    pattern-sources:
+      - pattern: $UNTRUSTED = test.Taint.source();
+    pattern-sinks:
+      - patterns:
+          - pattern: test.Taint.sink($*VALUE)
+          - focus-metavariable: $VALUE
+
+  - id: approximation-rule-starred-source-plain-sink
+    severity: ERROR
+    message: Whole-object taint reached a plain sink through an approximated method
+    metadata:
+      short-description: Approximation test with whole-object input and base-only output scope
+    languages:
+      - java
+    mode: taint
+    pattern-sources:
+      - pattern: $*UNTRUSTED = test.Taint.source();
+    pattern-sinks:
+      - patterns:
+          - pattern: test.Taint.sink($VALUE)
+          - focus-metavariable: $VALUE
+
+  - id: approximation-rule-starred-source-starred-sink
+    severity: ERROR
+    message: Whole-object taint reached a whole-object sink through an approximated method
+    metadata:
+      short-description: Approximation test with whole-object input and output scope
+    languages:
+      - java
+    mode: taint
+    pattern-sources:
+      - pattern: $*UNTRUSTED = test.Taint.source();
+    pattern-sinks:
+      - patterns:
+          - pattern: test.Taint.sink($*VALUE)
           - focus-metavariable: $VALUE
