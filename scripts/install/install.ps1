@@ -1,9 +1,9 @@
 # OpenTaint installer for Windows (PowerShell)
 # Usage:
 #   irm https://raw.githubusercontent.com/seqra/opentaint/main/scripts/install/install.ps1 | iex
-#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v1.2.3  # exact version ('v' optional)
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v0.4.5  # exact version ('v' optional)
 #   & ([scriptblock]::Create((irm .../install.ps1))) -Version v0       # newest v0.x.y
-#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v0.2     # newest v0.2.x
+#   & ([scriptblock]::Create((irm .../install.ps1))) -Version v0.4     # newest v0.4.x
 
 param(
     [string]$Version = "latest"
@@ -25,12 +25,20 @@ function Resolve-FloatingSelector {
     $token = if ($env:OPENTAINT_GITHUB_TOKEN) { $env:OPENTAINT_GITHUB_TOKEN } elseif ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } else { $null }
     if ($token) { $headers["Authorization"] = "Bearer $token" }
 
-    $apiUrl = "https://api.github.com/repos/$Repo/releases?per_page=100"
-    try {
-        $releases = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing
-    } catch {
-        [Console]::Error.WriteLine("Error: failed to query the GitHub releases API to resolve '$Selector'.")
-        exit 2
+    $releases = @()
+    $page = 1
+    while ($true) {
+        $apiUrl = "https://api.github.com/repos/$Repo/releases?per_page=100&page=$page"
+        try {
+            $pageReleases = @(Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing)
+        } catch {
+            [Console]::Error.WriteLine("Error: failed to query the GitHub releases API to resolve '$Selector'.")
+            exit 2
+        }
+
+        $releases += $pageReleases
+        if ($pageReleases.Count -lt 100) { break }
+        $page++
     }
 
     # v0 must match v0.*, not v0.* only after a dot boundary; the trailing dot

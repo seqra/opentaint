@@ -2,9 +2,9 @@
 REM OpenTaint installer for Windows (CMD wrapper)
 REM This script invokes the PowerShell installer.
 REM Usage: install.cmd            installs latest
-REM        install.cmd v1.2.3     installs exact version ('v' optional)
+REM        install.cmd v0.4.5     installs exact version ('v' optional)
 REM        install.cmd v0          installs newest v0.x.y
-REM        install.cmd v0.2        installs newest v0.2.x
+REM        install.cmd v0.4        installs newest v0.4.x
 
 where powershell >nul 2>nul
 if %ERRORLEVEL% equ 0 (

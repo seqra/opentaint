@@ -98,16 +98,16 @@ There are two independent version selectors:
 
 ### CI template version
 
-Controlled by the tag in the `include:` URL. Using a major-version tag ensures you always get the latest compatible template without manual updates.
+Controlled by the tag in the `include:` URL. Major and minor tags move to the newest compatible template release; exact tags remain pinned.
 
-* `gitlab/v0` — latest stable template in major version 0 (recommended)
-* `gitlab/v0.1` — pin to a specific minor version
-* `gitlab/v0.1.0` — pin to an exact version
-* `gitlab/latest` — always use the latest template
+* `gitlab/v0` — latest template in major version 0
+* `gitlab/v0.4` — latest template in minor version 0.4
+* `gitlab/v0.4.5` — exact template version 0.4.5
+* `gitlab/latest` — latest template release
 
 ```yaml
 include:
-  - remote: https://raw.githubusercontent.com/seqra/opentaint/gitlab/v0.1/gitlab/opentaint.gitlab-ci.yml
+  - remote: https://raw.githubusercontent.com/seqra/opentaint/gitlab/v0.4/gitlab/opentaint.gitlab-ci.yml
 ```
 
 ### OpenTaint CLI version
@@ -116,17 +116,14 @@ Controlled by the `OPENTAINT_VERSION` variable. This determines which release of
 
 * `latest` — always use the latest stable release
 * `v0` — use the latest stable release in major version 0 (default)
-* `v0.1` — use the latest stable patch in minor version 0.1
-* `v0.1.0` — pin an exact release
+* `v0.4` — use the latest stable patch in minor version 0.4
+* `v0.4.5` — pin an exact release
 
 ```yaml
 variables:
-  OPENTAINT_VERSION: "latest"
-```
-
-```yaml
-variables:
-  OPENTAINT_VERSION: "v0.1"
+  OPENTAINT_VERSION: "v0"      # latest v0.x.y
+  # OPENTAINT_VERSION: "v0.4"  # latest v0.4.x
+  # OPENTAINT_VERSION: "v0.4.5"
 ```
 
 

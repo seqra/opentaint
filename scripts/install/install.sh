@@ -4,9 +4,9 @@ set -euo pipefail
 # OpenTaint installer for Linux and macOS
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/seqra/opentaint/main/scripts/install/install.sh | bash
-#   curl -fsSL .../install.sh | bash -s -- v1.2.3  # exact version ('v' optional)
+#   curl -fsSL .../install.sh | bash -s -- v0.4.5  # exact version ('v' optional)
 #   curl -fsSL .../install.sh | bash -s -- v0       # newest v0.x.y
-#   curl -fsSL .../install.sh | bash -s -- v0.2     # newest v0.2.x
+#   curl -fsSL .../install.sh | bash -s -- v0.4     # newest v0.4.x
 
 REPO="${OPENTAINT_REPOSITORY:-seqra/opentaint}"
 INSTALL_DIR="${OPENTAINT_INSTALL_DIR:-}"
@@ -99,13 +99,24 @@ fetch_stdout() {
 # mirroring scripts/resolve_opentaint_version.py. Prints the resolved tag.
 resolve_floating_selector() {
     local selector="$1"
-    local api_url="https://api.github.com/repos/${REPO}/releases?per_page=100"
+    local page=1
+    local bodies=""
 
-    local body
-    if ! body="$(fetch_stdout "$api_url")"; then
-        echo "Error: failed to query the GitHub releases API to resolve '$selector'." >&2
-        exit 2
-    fi
+    while true; do
+        local api_url="https://api.github.com/repos/${REPO}/releases?per_page=100&page=${page}"
+        local body
+        if ! body="$(fetch_stdout "$api_url")"; then
+            echo "Error: failed to query the GitHub releases API to resolve '$selector'." >&2
+            exit 2
+        fi
+
+        if [[ "$body" =~ ^[[:space:]]*\[[[:space:]]*\][[:space:]]*$ ]]; then
+            break
+        fi
+
+        bodies+=$'\n'"$body"
+        page=$((page + 1))
+    done
 
     # Match e.g. ^v0\.  (major) or ^v0\.1\.  (minor) against vX.Y.Z tags.
     local pattern
@@ -116,13 +127,13 @@ resolve_floating_selector() {
     fi
 
     local best
-    best="$(printf '%s' "$body" \
+    best="$(printf '%s' "$bodies" \
         | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"v[0-9]+\.[0-9]+\.[0-9]+"' \
         | sed -E 's/.*"(v[0-9]+\.[0-9]+\.[0-9]+)"$/\1/' \
         | grep -E "$pattern" \
         | sed 's/^v//' \
         | sort -t. -k1,1n -k2,2n -k3,3n \
-        | tail -1)"
+        | tail -1 || true)"
 
     if [ -z "$best" ]; then
         echo "Error: no release found matching selector '$selector'." >&2
