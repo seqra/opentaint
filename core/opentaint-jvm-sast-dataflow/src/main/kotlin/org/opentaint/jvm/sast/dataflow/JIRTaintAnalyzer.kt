@@ -25,6 +25,7 @@ import org.opentaint.ir.api.jvm.ext.packageName
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
+import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximationLocation
 import org.opentaint.util.analysis.ApplicationGraph
 
 class JIRTaintAnalyzer(
@@ -33,7 +34,7 @@ class JIRTaintAnalyzer(
     val projectClasses: ClassLocationChecker,
     options: TaintAnalyzerOptions,
     val jirOptions: JIRAnalysisOptions = JIRAnalysisOptions(),
-    val analysisUnit: JIRUnitResolver = PackageUnitResolver(projectClasses),
+    val analysisUnit: JIRUnitResolver = PackageUnitResolver(cp, projectClasses),
     externalMethodTracker: ExternalMethodTracker? = null,
 ): TaintAnalyzer<JIRMethod, JIRInst>(options, externalMethodTracker) {
     override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> {
@@ -90,7 +91,13 @@ class JIRTaintAnalyzer(
     }
 
     companion object {
-        class PackageUnitResolver(private val projectLocations: ClassLocationChecker) : JIRUnitResolver {
+        class PackageUnitResolver(
+            private val cp: JIRClasspath,
+            private val projectLocations: ClassLocationChecker,
+        ) : JIRUnitResolver {
+            override fun isApproximation(method: JIRMethod): Boolean =
+                DataFlowApproximationLoader.isApproximation(method)
+
             override fun resolve(method: JIRMethod): UnitType {
                 if (!projectLocations.isProjectClass(method.enclosingClass) && !isApproximation(method) && method !is JIRLambdaMethod) {
                     return UnknownUnit
@@ -100,7 +107,7 @@ class JIRTaintAnalyzer(
             }
 
             override fun locationIsUnknown(loc: RegisteredLocation): Boolean =
-                !projectLocations.isProjectLocation(loc)
+                !projectLocations.isProjectLocation(loc) && !isApproximationLocation(cp, loc)
         }
     }
 }

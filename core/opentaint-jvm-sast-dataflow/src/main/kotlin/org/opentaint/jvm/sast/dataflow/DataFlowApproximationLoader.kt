@@ -7,6 +7,7 @@ import org.opentaint.ir.api.jvm.JIRDatabase
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRSettings
 import org.opentaint.ir.api.jvm.LocationType
+import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.approximation.Approximations
 import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
 import org.opentaint.jvm.util.ApproximationPaths
@@ -18,6 +19,10 @@ import kotlin.io.path.copyToRecursively
 import kotlin.io.path.createTempDirectory
 
 object DataFlowApproximationLoader {
+    class ApproximationLocations(
+        internal val paths: Set<String>,
+    ) : JIRClasspathFeature
+
     data class Options(
         val useDataflowApproximation: Boolean = true,
         val useOpentaintApproximations: Boolean = false,
@@ -66,7 +71,21 @@ object DataFlowApproximationLoader {
         return result
     }
 
-    fun isApproximation(method: JIRMethod): Boolean = method is JIREnrichedVirtualMethod
+    fun isApproximation(method: JIRMethod): Boolean {
+        if (method is JIREnrichedVirtualMethod) return true
+
+        return isApproximationLocation(
+            method.enclosingClass.classpath,
+            method.enclosingClass.declaration.location,
+        )
+    }
+
+    fun isApproximationLocation(classpath: JIRClasspath, location: RegisteredLocation): Boolean {
+        val locationPath = location.path.normalizedPath()
+        return classpath.features.orEmpty()
+            .filterIsInstance<ApproximationLocations>()
+            .any { locationPath in it.paths }
+    }
 
     fun installApproximations(settings: JIRSettings, options: Options) {
         val approxFiles = approximationFiles(options)
@@ -86,8 +105,14 @@ object DataFlowApproximationLoader {
         val approximationsFeature = db.features.filterIsInstance<Approximations>().singleOrNull()
             ?: error("Approximations feature not found in database features")
 
-        val featuresWithApproximations = features + listOf(approximationsFeature)
+        val approximationLocations = ApproximationLocations(
+            approxFiles.mapTo(hashSetOf()) { it.canonicalPath }
+        )
+        val featuresWithApproximations = features + listOf(approximationsFeature, approximationLocations)
 
         return db.classpath(cpWithApproximations, featuresWithApproximations)
     }
+
+    private fun String.normalizedPath(): String = runCatching { File(this).canonicalPath }
+        .getOrDefault(this)
 }
