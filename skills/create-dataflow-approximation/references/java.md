@@ -68,7 +68,7 @@ opentaint test approximation run .opentaint/test-compiled/<batch> \
   --dataflow-approximations .opentaint/dataflow/<batch>
 ```
 
-`test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. A positive sample is a `falseNegative` until the model propagates taint. Read the result with the bundled script — it prints the pass/fail counts and names each failing sample, so you don't parse the JSON by hand:
+`test approximation run` applies its four bundled plain/starred source/sink scope rules automatically — you don't author or pass them. Every sample must be classified under all four rule ids in `rule-test.yaml`; a missing combination means the test project is incomplete. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. Read the result with the bundled script — it prints the pass/fail counts and names each failing sample, so you don't parse the JSON by hand:
 
 ```bash
 uv run <skill-dir>/scripts/check-test-result.py <batch>
@@ -76,8 +76,8 @@ uv run <skill-dir>/scripts/check-test-result.py <batch>
 
 Fix by the verdict it reports:
 
-- still `falseNegative` → the `@Approximate(...)` target class or a method signature doesn't match what the analyzer sees, or the body doesn't route taint from the real source to the modeled result/argument; diagnose the mismatch, don't rationalize a non-result. Most common: target-class mismatch with the dropped FQN — re-target the exact dropped class and match the cast (`(java.util.HashMap) (Object) this`)
-- `falsePositive` (a negative sample fired) → the model is over-broad: it taints a read it shouldn't, e.g. a field it wasn't stored under. Narrow the propagation until the negative stays non-firing while the positive passes
+- `falseNegative` → first use the failing rule id to identify whether base or nested input/output scope was lost; then check whether `@Approximate(...)` or the method signature mismatches what the analyzer sees. Diagnose the mismatch, don't rationalize a non-result. Most common: target-class mismatch with the dropped FQN — re-target the exact dropped class and match the cast (`(java.util.HashMap) (Object) this`)
+- `falsePositive` → the model is over-broad for that rule's scope: it may have promoted a nested fact to the base, copied a base fact into unrelated fields, or tainted a field it never stores. Narrow the propagation; never flip or remove the negative merely to pass
 
 ## Key patterns
 
