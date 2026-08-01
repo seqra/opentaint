@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
@@ -57,6 +59,7 @@ type testProjectOptions struct {
 	dataflowApprox      []string
 	passthroughApprox   []string
 	includeBuiltinRules bool
+	requiredRuleIDs     []string
 }
 
 func runTestProject(projectModelArg string, opts testProjectOptions) {
@@ -157,6 +160,10 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	if err != nil {
 		out.Fatalf("%s produced no readable test-result.json: %s", opts.label, err)
 	}
+	if err := validateRequiredRuleMatrix(tr, opts.requiredRuleIDs); err != nil {
+		out.Error(err.Error())
+		os.Exit(2)
+	}
 	fmt.Printf("Passed: %d, failed: %d (false negatives: %d, false positives: %d, skipped: %d), disabled: %d\n",
 		len(tr.Success), tr.Failed(), len(tr.FalseNegative), len(tr.FalsePositive), len(tr.Skipped), len(tr.Disabled))
 	if tr.Failed() > 0 {
@@ -165,6 +172,58 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 
 	fmt.Printf("%s completed successfully\n", opts.label)
+}
+
+func validateRequiredRuleMatrix(tr *analyzer.TestResult, requiredRuleIDs []string) error {
+	if len(requiredRuleIDs) == 0 {
+		return nil
+	}
+
+	required := make(map[string]struct{}, len(requiredRuleIDs))
+	for _, id := range requiredRuleIDs {
+		required[id] = struct{}{}
+	}
+
+	counts := make(map[string]map[string]int)
+	allSamples := [][]analyzer.TestSampleInfo{
+		tr.Success,
+		tr.FalseNegative,
+		tr.FalsePositive,
+		tr.Skipped,
+		tr.Disabled,
+	}
+	for _, samples := range allSamples {
+		for _, sample := range samples {
+			key := sample.ClassName + "#" + sample.MethodName
+			if _, ok := counts[key]; !ok {
+				counts[key] = make(map[string]int)
+			}
+			if _, ok := required[sample.Rule.RuleID]; ok {
+				counts[key][sample.Rule.RuleID]++
+			}
+		}
+	}
+	if len(counts) == 0 {
+		return fmt.Errorf("approximation test matrix is empty; register every sample under all four plain/starred scope rules")
+	}
+
+	var problems []string
+	for sample, ruleCounts := range counts {
+		for _, id := range requiredRuleIDs {
+			switch ruleCounts[id] {
+			case 0:
+				problems = append(problems, fmt.Sprintf("%s missing %s", sample, id))
+			case 1:
+			default:
+				problems = append(problems, fmt.Sprintf("%s has %d entries for %s", sample, ruleCounts[id], id))
+			}
+		}
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	sort.Strings(problems)
+	return fmt.Errorf("incomplete approximation test matrix:\n  %s", strings.Join(problems, "\n  "))
 }
 
 func init() {

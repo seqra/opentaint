@@ -20,8 +20,8 @@ var testApproximationRunCmd = &cobra.Command{
 	Short: "Run dataflow approximation tests on a compiled project model",
 	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow approximations applied.
 
-A built-in source-to-sink harness rule is applied automatically; positive samples reference the
-approximation-rule.yaml rule with id "approximation-rule".
+Four built-in source-to-sink harness rules are applied automatically. Each sample must be
+classified under every plain/starred source and sink scope combination from approximation-rule.yaml.
 
 ` + testExitCodesHelp("All approximation tests passed"),
 	Args: cobra.ExactArgs(1),
@@ -35,13 +35,14 @@ approximation-rule.yaml rule with id "approximation-rule".
 		}
 
 		runTestProject(args[0], testProjectOptions{
-			label:          "Approximation tests",
-			tempDir:        "opentaint-test-approximations-*",
-			rulesets:       []string{ruleDir},
-			outputDir:      testApproxOutputDir,
-			timeout:        testApproxTimeout,
-			maxMemory:      testApproxMaxMemory,
-			dataflowApprox: testApproxDataflow,
+			label:           "Approximation tests",
+			tempDir:         "opentaint-test-approximations-*",
+			rulesets:        []string{ruleDir},
+			outputDir:       testApproxOutputDir,
+			timeout:         testApproxTimeout,
+			maxMemory:       testApproxMaxMemory,
+			dataflowApprox:  testApproxDataflow,
+			requiredRuleIDs: testapprox.ScopeRuleIDs(),
 		})
 	},
 }

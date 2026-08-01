@@ -63,10 +63,10 @@ var testApproximationInitCmd = &cobra.Command{
 The project includes:
   - build.gradle.kts with compile-only dependencies
   - settings.gradle.kts
-  - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
-  - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
+  - approximation-rule.yaml, the four fixed plain/starred source-to-sink scope combinations
+  - src/main/java/test/ with generic Taint.source() and Taint.sink(Object) test markers
 
-Positive and negative samples are specified via rule-test.yaml.
+Register every sample as positive or negative under all four rules in rule-test.yaml.
 
 The approximation under test is supplied separately at test time with
 --dataflow-approximations.

@@ -9,6 +9,9 @@ import (
 type TestSampleInfo struct {
 	ClassName  string `json:"className"`
 	MethodName string `json:"methodName"`
+	Rule       struct {
+		RuleID string `json:"ruleId"`
+	} `json:"rule"`
 }
 
 type TestResult struct {

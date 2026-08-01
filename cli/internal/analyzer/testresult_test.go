@@ -27,6 +27,9 @@ func TestLoadTestResult(t *testing.T) {
 	if len(tr.Success) != 1 || tr.Success[0].ClassName != "test.Ok" {
 		t.Errorf("Success = %+v, want one test.Ok entry", tr.Success)
 	}
+	if got := tr.Success[0].Rule.RuleID; got != "r1" {
+		t.Errorf("Success rule id = %q, want r1", got)
+	}
 	if got := tr.Failed(); got != 2 {
 		t.Errorf("Failed() = %d, want 2 (1 falseNegative + 1 skipped)", got)
 	}
