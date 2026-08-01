@@ -15,10 +15,13 @@ BUCKETS = ["success", "falseNegative", "falsePositive", "skipped", "disabled"]
 
 
 def one(x):
-    # a sample entry is usually {className, methodName, rule:{ruleId}, ...}; the method name alone
-    # identifies it — the class and rule are already clear from the batch/unit being tested
     if isinstance(x, dict):
-        return x.get("methodName") or x.get("className") or str(x)
+        class_name = x.get("className")
+        method_name = x.get("methodName")
+        sample = "#".join(v for v in (class_name, method_name) if v) or str(x)
+        rule = x.get("rule")
+        rule_id = rule.get("ruleId") if isinstance(rule, dict) else None
+        return f"{sample} [{rule_id}]" if rule_id else sample
     return str(x)
 
 

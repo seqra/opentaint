@@ -1,6 +1,6 @@
 ### 1. Scaffold the project
 
-The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-approximation.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and the fixed test rule the samples run against, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and recompile rather than scaffolding fresh. The init command is in that reference.
+The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-approximation.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and fixed test rules, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and recompile rather than scaffolding fresh. The init command is in that reference.
 
 ### 2. Write the samples
 
@@ -9,7 +9,8 @@ For a unit or batch, each entry records its `signature`; shape a faithful sample
 For a sink unit, the methods are nested under `groups[].sinks`, exercise every method while preserving the group boundaries for the later rule author.
 
 - the counterpart is always the generic marker, never a real source/sink, so the sample exercises only the unit under test
-- register each sample under the single verdict it must produce — a positive that must flag, and, where the type calls for it, a negative that must not — in the test's `rule-test.yaml`
+- for a rule side, register each sample under the single verdict it must produce
+- for dataflow, register every sample under all four plain/starred source/sink rules, with exactly one deliberate positive or negative verdict per rule; never omit a scope combination
 
 The sample code, the `rule-test.yaml` form, and which verdicts a type needs are in that reference.
 
