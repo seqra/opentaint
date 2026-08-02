@@ -153,7 +153,7 @@ There are two independent version selectors.
 
 ### GitHub Action version
 
-The tag after `@` selects the integration code. Major and minor tags move to the newest compatible release; exact tags remain pinned:
+The tag after `@` selects the integration code. Major and minor tags move to the newest compatible release. Exact tags remain pinned:
 
 * `github/v0` — latest action in major version 0
 * `github/v0.4` — latest action in minor version 0.4
