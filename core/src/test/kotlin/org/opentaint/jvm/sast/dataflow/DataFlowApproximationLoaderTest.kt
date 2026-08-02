@@ -10,6 +10,9 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRDeclaration
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
+import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRInstLocation
+import org.opentaint.jvm.sast.sarif.TraceMessageBuilder
 
 class DataFlowApproximationLoaderTest {
     @Test
@@ -43,5 +46,37 @@ class DataFlowApproximationLoaderTest {
         }
         val resolver = JIRTaintAnalyzer.Companion.PackageUnitResolver(classpath, projectClasses)
         assertFalse(resolver.locationIsUnknown(location))
+    }
+
+    @Test
+    fun `support classes loaded with approximations are hidden from report traces`() {
+        val approximationLocation = mockk<RegisteredLocation> {
+            every { path } returns "/tmp/compiled-approximations"
+        }
+        val declaration = mockk<JIRDeclaration> {
+            every { location } returns approximationLocation
+        }
+        val classpath = mockk<JIRClasspath> {
+            every { features } returns listOf(
+                DataFlowApproximationLoader.ApproximationLocations(
+                    setOf("/tmp/compiled-approximations")
+                )
+            )
+        }
+        val supportClass = mockk<JIRClassOrInterface> {
+            every { this@mockk.declaration } returns declaration
+            every { this@mockk.classpath } returns classpath
+        }
+        val supportMethod = mockk<JIRMethod> {
+            every { enclosingClass } returns supportClass
+        }
+        val instructionLocation = mockk<JIRInstLocation> {
+            every { method } returns supportMethod
+        }
+        val instruction = mockk<JIRInst> {
+            every { location } returns instructionLocation
+        }
+
+        assertTrue(TraceMessageBuilder.isGeneratedLocation(instruction))
     }
 }
