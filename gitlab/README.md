@@ -98,7 +98,7 @@ There are two independent version selectors:
 
 ### CI template version
 
-Controlled by the tag in the `include:` URL. Major and minor tags move to the newest compatible template release; exact tags remain pinned.
+Controlled by the tag in the `include:` URL. Major and minor tags move to the newest compatible template release. Exact tags remain pinned.
 
 * `gitlab/v0` — latest template in major version 0
 * `gitlab/v0.4` — latest template in minor version 0.4
