@@ -89,7 +89,7 @@ object DataFlowApproximationLoader {
 
     fun installApproximations(settings: JIRSettings, options: Options) {
         val approxFiles = approximationFiles(options)
-        settings.installFeatures(Approximations(emptyList()))
+        settings.installFeatures(Approximations(emptyList(), approxFiles.map { it.canonicalPath }))
         settings.loadByteCode(approxFiles, LocationType.LIB)
     }
 
