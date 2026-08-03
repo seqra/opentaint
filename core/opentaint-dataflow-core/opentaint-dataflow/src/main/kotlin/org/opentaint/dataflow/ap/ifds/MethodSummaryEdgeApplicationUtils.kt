@@ -4,9 +4,14 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 
 object MethodSummaryEdgeApplicationUtils {
-    sealed interface SummaryEdgeApplication {
+    sealed interface EdgeRefinement {
+        data object UniverseRefinement : EdgeRefinement
+        data object IdRefinement : EdgeRefinement
+    }
+
+    sealed interface SummaryEdgeApplication: EdgeRefinement {
         data class SummaryApRefinement(val delta: FinalFactAp.Delta) : SummaryEdgeApplication
-        data class SummaryExclusionRefinement(val exclusion: ExclusionSet) : SummaryEdgeApplication
+        data class SummaryExclusionRefinement(val delta: FinalFactAp.Delta, val exclusion: ExclusionSet) : SummaryEdgeApplication
     }
 
     fun tryApplySummaryEdge(
@@ -16,6 +21,7 @@ object MethodSummaryEdgeApplicationUtils {
         methodInitialFactAp.delta(methodSummaryInitialFactAp).map { delta ->
             if (delta.isEmpty) {
                 SummaryEdgeApplication.SummaryExclusionRefinement(
+                    delta,
                     methodInitialFactAp.exclusions.union(methodSummaryInitialFactAp.exclusions)
                 )
             } else {

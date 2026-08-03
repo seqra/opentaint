@@ -9,8 +9,8 @@ import org.opentaint.dataflow.ap.ifds.Edge.ZeroToZero
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.FactToFactSub
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.MethodCallHandler
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.MethodCallResolutionFailureHandler
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.EdgeRefinement
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -1242,7 +1242,7 @@ class NormalMethodAnalyzer(
                         ndSummaryInitial.isEmpty() -> {
                             summaryHandler.handleZeroToFact(
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(ExclusionSet.Universe),
+                                EdgeRefinement.UniverseRefinement,
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1252,7 +1252,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleFactToFact(
                                 initialFact,
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(initialFact.exclusions),
+                                EdgeRefinement.UniverseRefinement,
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1261,7 +1261,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleNDFactToFact(
                                 ndSummaryInitial,
                                 currentEdgeFactAp,
-                                SummaryExclusionRefinement(ExclusionSet.Universe),
+                                EdgeRefinement.UniverseRefinement,
                                 summaryEdge.summaryEdge()
                             )
                         }
@@ -1275,7 +1275,7 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleFactToFact(
                                     currentEdge.initialFactAp,
                                     currentEdgeFactAp,
-                                    SummaryExclusionRefinement(currentEdge.initialFactAp.exclusions),
+                                    EdgeRefinement.IdRefinement,
                                     summaryEdge.summaryEdge()
                                 )
                             }
@@ -1284,7 +1284,7 @@ class NormalMethodAnalyzer(
                                 summaryHandler.handleNDFactToFact(
                                     ndSummaryInitial,
                                     currentEdgeFactAp,
-                                    SummaryExclusionRefinement(ExclusionSet.Universe),
+                                    EdgeRefinement.UniverseRefinement,
                                     summaryEdge.summaryEdge()
                                 )
                             }
@@ -1295,7 +1295,7 @@ class NormalMethodAnalyzer(
                         summaryHandler.handleNDFactToFact(
                             ndSummaryInitial + currentEdge.initialFacts,
                             currentEdgeFactAp,
-                            SummaryExclusionRefinement(ExclusionSet.Universe),
+                            EdgeRefinement.UniverseRefinement,
                             summaryEdge.summaryEdge()
                         )
                     }
