@@ -56,8 +56,9 @@ class GoCallRuleBasedSummaryRewriter(
 
             if (cleanRuleWithCond.condition.isFalse) continue
 
-            val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>().mapTo(hashSetOf()) { it.pos }
-            result += UserRuleDefinedAction(cleanRule, positions, ruleInfo.relevantTaintMarks)
+            cleanRule.actionsAfter.filterIsInstance<RemoveMark>().forEach { action ->
+                result += UserRuleDefinedAction(cleanRule, setOf(action.pos), ruleInfo.relevantTaintMarks + action.mark)
+            }
         }
 
         result
