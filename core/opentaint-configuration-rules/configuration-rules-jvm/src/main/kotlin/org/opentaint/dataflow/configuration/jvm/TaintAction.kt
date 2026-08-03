@@ -2,6 +2,7 @@ package org.opentaint.dataflow.configuration.jvm
 
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintAssignAction
+import org.opentaint.dataflow.configuration.TaintCleanReach
 
 sealed interface Action: CommonTaintAction
 
@@ -28,4 +29,5 @@ data class RemoveAllMarks(
 data class RemoveMark(
     val mark: TaintMark,
     val position: Position,
+    val reach: TaintCleanReach = TaintCleanReach.Exact,
 ) : Action
