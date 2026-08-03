@@ -72,4 +72,6 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
 
     fun hasEmptyDelta(other: InitialFactAp): Boolean =
         delta(other).any { it.isEmpty }
+
+    fun clearAllAccessorOccurrences(accessor: Accessor, keepStartAccessor: Boolean): FinalFactAp?
 }
