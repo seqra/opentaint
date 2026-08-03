@@ -18,6 +18,7 @@ import org.opentaint.dataflow.ap.ifds.trace.withMethodRunner
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 private val logger = object : KLogging() {}.logger
@@ -115,6 +116,18 @@ private fun TraceEdge.boundaryFacts(): Set<InitialFactAp> = when (this) {
     is TraceEdge.MethodTraceEdge -> setOf(initialFact, fact)
     is TraceEdge.MethodTraceNDEdge -> initialFacts + fact
 }
+
+internal fun Set<TraceEntryAction.TraceSummaryEdge>.introducesOrChangesTaintMarks(): Boolean =
+    any { summaryEdge ->
+        when (summaryEdge) {
+            is TraceEntryAction.TraceSummaryEdge.SourceSummary -> true
+            is TraceEntryAction.TraceSummaryEdge.MethodSummary ->
+                summaryEdge.edge.fact.taintMarks() != summaryEdge.edgeAfter.fact.taintMarks()
+        }
+    }
+
+private fun InitialFactAp.taintMarks(): Set<TaintMarkAccessor> =
+    getAllAccessors().filterIsInstanceTo(linkedSetOf())
 
 private class TraceActionCollector(
     private val trace: TraceResolver.Trace,
@@ -328,7 +341,9 @@ private class TraceActionCollector(
     private fun ActionVariant.relevantSummary(origin: TraceOrigin): SummaryTrace? =
         when (val action = primaryAction) {
             is TraceEntryAction.CallSourceSummary -> action.summaryTrace
-            is TraceEntryAction.CallSummary -> action.summaryTrace.takeIf { it.shouldExpand() }
+            is TraceEntryAction.CallSummary -> action.summaryTrace.takeIf {
+                action.summaryEdges.introducesOrChangesTaintMarks() && it.shouldExpand()
+            }
             else -> null
         }
 
@@ -360,7 +375,9 @@ private class TraceActionCollector(
         actions.forEach { action ->
             when (action) {
                 is TraceEntryAction.CallRuleAction -> {
-                    addAction(statement, action.rule, action.action)
+                    if (action.rule is CommonTaintConfigurationSource) {
+                        addAction(statement, action.rule, action.action)
+                    }
                 }
 
                 is TraceEntryAction.SequentialSourceRule -> {

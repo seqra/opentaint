@@ -16,11 +16,11 @@ trace branch that can participate in a complete source-to-sink path, the
 searcher must collect:
 
 1. the sink rule represented by the vulnerability, with an empty action set;
-2. every rule and its actions carried by an `otherAction` in the relevant
-   trace;
+2. every source rule and its actions carried by an `otherAction` in the
+   relevant trace; pass-through rules are not collected;
 3. source rules and actions hoisted into a `SourceStartEntry`;
-4. rules and actions inside every expanded `CallSummary`; marked summaries
-   must expand, while all-abstract/unmarked summaries must be skipped.
+4. source rules and actions inside every `CallSummary` that introduces or
+   changes a taint mark.
 
 Change `Collected.rules` to expose a
 `Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>`. An empty action
@@ -42,6 +42,7 @@ summaries, and projects all relevant entries to the rule/action map.
 - Do not collect rules from entry-point-to-start traces. The selected rules
   describe taint creation and propagation from source to sink, not ordinary
   reachability from an application entry point.
+- Do not expand a method summary whose before/after taint-mark sets are equal.
 - Do not expand structural summaries whose boundary facts are all abstract
   and unmarked.
 - Do not infer markedness from AP implementation classes, `isAbstract()`, or
@@ -82,7 +83,7 @@ unchanged edges. The rule-bearing other-action variants are:
 | `SequentialSourceRule` | `CommonTaintConfigurationSource` | `Set<CommonTaintAssignAction>` |
 | `CallSourceRule` | `CommonTaintConfigurationSource` | `Set<CommonTaintAssignAction>` |
 | `EntryPointSourceRule` | `CommonTaintConfigurationSource` | `Set<CommonTaintAssignAction>` |
-| `CallRule` | `CommonTaintConfigurationItem` | `Set<CommonTaintAction>` |
+| `CallRule` | pass-through rule | ignored; pass-through rules remain globally enabled |
 
 `MethodTraceResolver.tryCreateSourceStart` converts a source-only
 `TraceEntry.Action` to `TraceEntry.SourceStartEntry`. Therefore collection
@@ -132,13 +133,13 @@ per rule:
 sinkRule -> emptySet()
 ```
 
-An empty set is reserved for sink rules. A trace-derived rule must have a
-non-empty action set.
+An empty set is reserved for sink rules. A trace-derived source rule must have
+a non-empty action set.
 
 ### Other actions
 
-For every rule-bearing other action in the relevant trace, union its action
-set into the map value for its rule:
+For every source-rule-bearing other action in the relevant trace, union its
+action set into the map value for its rule. Ignore pass-through actions:
 
 ```text
 RuleAction(rule = R, actions = {A1, A2})
@@ -156,7 +157,7 @@ R -> {A1, A2}
 ```
 
 The representation assumes that a configuration item cannot be both a sink
-rule and an action-owning source/pass rule. Enforce this invariant while
+rule and an action-owning source rule. Enforce this invariant while
 building and consuming the map; otherwise `emptySet()` would be ambiguous.
 
 ### `CallSourceSummary`
@@ -205,16 +206,28 @@ and resolve it recursively.
 
 ### `CallSummary`
 
-`CallSummary` also carries no direct map contribution. Its `summaryTrace` is expanded when
-the callee summary boundary contains a taint mark, skipped when every boundary
-fact is abstract and unmarked, and expanded conservatively for the remaining
-concrete-unmarked case.
+`CallSummary` also carries no direct map contribution. Pass-through rules stay
+globally enabled, so an inner method trace is relevant only if it can
+contribute a source rule needed to establish a different taint mark.
 
-The classification is based on `callSummary.summaryTrace.final.edges`, not on
-the caller-side `callSummary.summaryEdges`. A caller-side
-`TraceSummaryDelta` may carry a mark while the callee summary itself operates
-only on an abstract structural fact. Expanding such a summary would collect
-unrelated rules.
+For every caller-side `summaryEdge`, compare the taint marks on
+`edge.fact` before the call with the marks on `edgeAfter.fact` after the call:
+
+```text
+SourceSummary -> expand
+MethodSummary with beforeMarks != afterMarks -> expand
+MethodSummary with beforeMarks == afterMarks -> skip
+```
+
+If a `CallSummary` combines several edges, expand when any edge requires
+expansion. A `SourceSummary` is always relevant even when its concrete fact
+happens to carry the same mark, because it explicitly represents zero-to-fact
+source creation.
+
+The callee-side `summaryTrace.final.edges` predicate remains a secondary
+guard: an all-abstract, unmarked callee summary is skipped. Concrete-unmarked
+callee summaries are expanded only when the caller-side mark transition above
+requires it.
 
 For a `TraceEdge`, its complete boundary fact set is:
 
@@ -237,21 +250,17 @@ or remove a mark.
 `FactAp.isAbstract()` is not the markedness predicate. A fact may be abstract
 and still carry a mark in the general Tree or Automata domain.
 
-| summary boundary | decision |
+| caller transition and summary boundary | decision |
 |---|---|
-| concrete or abstract fact with a taint mark | resolve inner full trace |
-| every boundary fact is abstract and no fact has a mark | skip inner trace |
-| any concrete boundary fact and no fact has a mark | resolve conservatively |
-
-The user explicitly permits skipping abstract facts without marks. A
-concrete-unmarked summary is not covered by that permission. Resolving it is
-the sound default until the trace model proves that this state is impossible
-or gives it separate semantics.
+| contains `SourceSummary` | resolve inner full trace |
+| any method edge changes the taint-mark set and callee is relevant | resolve inner full trace |
+| every method edge preserves its taint-mark set | skip inner trace |
+| callee boundary is entirely abstract and unmarked | skip inner trace |
 
 ```text
-EXPAND if any boundary fact has TaintMarkAccessor
-SKIP   if all boundary facts are abstract and none has a mark
-EXPAND otherwise
+EXPAND if any caller summary edge introduces or changes TaintMarkAccessor
+       and the callee summary boundary is relevant
+SKIP   otherwise
 ```
 
 ## Proposed pipeline
@@ -384,11 +393,13 @@ ResolvedTraceModel:
 
 An entry has a dependency when its primary action is:
 
-- a marked `CallSummary`;
-- a concrete-unmarked `CallSummary`, resolved conservatively;
+- a `CallSummary` with a source edge;
+- a `CallSummary` whose method edge changes the taint-mark set and whose
+  callee boundary is relevant;
 - an internal `CallSourceSummary`.
 
-An abstract-unmarked `CallSummary` has no dependency.
+A mark-preserving `CallSummary` and an abstract-unmarked callee summary have
+no dependency.
 
 Dependency extraction is context-sensitive for
 `SourceStartEntry.sourcePrimaryAction`:
@@ -635,18 +646,16 @@ sink rule -> emptySet()       -> enable that sink rule
 rule      -> {A1, A2, ...}    -> enable exactly those actions for that rule
 ```
 
-An empty action set is not a wildcard. Source and pass rules require non-empty
-sets. Assert that no merge combines an empty sink value with a non-empty
-action value for the same rule.
+An empty action set is not a wildcard. Source rules require non-empty sets.
+Assert that no merge combines an empty sink value with a non-empty action
+value for the same rule.
 
-There is one temporary full-scan compatibility exception. The JVM and Go
-selected providers narrow source rules to the selected actions and enable only
-selected sink rules, but keep all pass-through rules and cleaners available.
-BaseOnly traces can omit a pass action that Tree still needs to reproduce the
-same flow, so narrowing pass-through rules from the shallow trace would be
-unsound. The collected map still records and validates pass actions; they are
-not yet used to narrow the provider. Prescan-derived `relevantRuleIds`
-selection remains in effect before this action-level filtering.
+The JVM and Go selected providers narrow source rules to the selected actions
+and enable only selected sink rules, but keep all pass-through rules and
+cleaners available. Narrowing pass-through rules from a shallow trace would be
+unsound, so the collector does not record pass actions. Prescan-derived
+`relevantRuleIds` selection remains in effect before this action-level
+filtering.
 
 ## Concurrency and lifetime
 
@@ -693,7 +702,7 @@ Useful counters are:
 - outer graph nodes retained and pruned;
 - full traces materialized;
 - action entries visited;
-- marked inner summaries resolved;
+- mark-changing inner summaries resolved;
 - abstract-unmarked inner summaries skipped;
 - summary dependency cycles discovered;
 - distinct rules and actions emitted;
@@ -715,11 +724,12 @@ Forward reachability alone includes dead source or sink branches. Intersecting
 forward and backward reachability retains only nodes that can reach the
 corresponding terminal.
 
-### Classify a call using `summaryEdges`
+### Classify a call using only the callee boundary
 
-Those are caller-side facts and deltas. They can contain a mark even when the
-callee `SummaryTrace` operates only on unmarked structural facts. The callee
-final boundary is authoritative.
+The callee boundary says whether a trace operates on relevant facts, but does
+not say whether resolving it can add an actionable source rule. Caller-side
+`summaryEdges` determine whether the call introduces or changes a taint mark;
+the callee boundary is retained as a secondary relevance guard.
 
 ### Classify a call using only `FactAp.isAbstract()`
 
@@ -748,12 +758,13 @@ Test the mark predicate independently for Tree and BaseOnly facts:
 - mark only on the ND output fact;
 - abstract fact with a mark is relevant;
 - abstract fact without a mark is irrelevant;
-- concrete fact without a mark is expanded conservatively;
-- caller-side delta has a mark but the callee final boundary is entirely
-  abstract and unmarked: irrelevant.
+- method summary with equal non-empty before/after mark sets is irrelevant;
+- method summary with different before/after mark sets is relevant;
+- source summary is relevant regardless of equality;
+- caller-side mark change with a callee final boundary that is entirely
+  abstract and unmarked is irrelevant.
 
-The last case pins the distinction between `summaryEdges` and
-`summaryTrace.final.edges`.
+The last case pins the two-stage caller-transition and callee-boundary check.
 
 ### Entry projection
 
@@ -775,17 +786,18 @@ Test:
 Add small dataflow samples for:
 
 1. a simple unconditional vulnerability: sink rule only;
-2. sequential source -> pass rule -> sink;
+2. sequential source -> pass rule -> sink, where the pass rule is not present
+   in the collected result;
 3. source in a callee represented by `CallSourceSummary`: callee source rule is
    obtained from the interprocedural source path;
-4. marked `CallSummary`: its inner rule and action are collected;
+4. mark-changing `CallSummary`: its inner source rule and action are collected;
 5. unmarked abstract `CallSummary`: inner trace is not resolved and its rules
    are not collected;
-6. marked inner summary with an unresolvable first route and a valid second
+6. mark-changing inner summary with an unresolvable first route and a valid second
    route: rules and actions from the valid resolved route are retained;
-7. recursive marked summary: collection terminates and returns each rule with
+7. recursive mark-changing summary: collection terminates and returns each source rule with
    its complete deduplicated action set;
-8. missing trace and fully unresolvable marked summary: `Failed`;
+8. missing trace and fully unresolvable mark-changing summary: `Failed`;
 9. merged vulnerability sink rules: all sink keys are retained;
 10. alternate source and sink branches: collect the union from every branch
     in the complete-path corridor, but not from dead branches;
@@ -794,7 +806,7 @@ Add small dataflow samples for:
     rule;
 12. pure recursive inner-summary SCC: it is invalid without a finite base
     path and becomes valid when a base alternative is added;
-13. marked `CallSummary` -> inner `SourceStartEntry.CallSourceSummary` ->
+13. mark-changing `CallSummary` -> inner `SourceStartEntry.CallSourceSummary` ->
     deeper source: collect the deeper source rule and invalidate the route if
     the deeper summary has no finite trace;
 14. cancellation and action-hard-limit exits after partial graph construction:
@@ -843,9 +855,9 @@ The feature is complete when:
 
 1. every `Collected` result comes from a resolved source-to-sink graph with at
    least one complete source-to-sink path;
-2. it contains every vulnerability sink rule and every action grouped under
-   its rule from every relevant graph branch, including marked inner
-   summaries;
+2. it contains every vulnerability sink rule and every source action grouped
+   under its rule from every relevant graph branch, including mark-changing
+   inner summaries;
 3. it contains no rule or action solely from an abstract-unmarked inner
    summary;
 4. recursive summaries terminate without a semantic depth cutoff;
