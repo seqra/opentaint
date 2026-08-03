@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Runs standalone. Agents teach it your application. Every security review becomes coverage for every future commit.
+  AI agents learn your application on demand. OpenTaint scans it on every change.
 </p>
 
 <p align="center">
@@ -108,11 +108,11 @@
 
 > The open source taint analysis engine for the AI era. A formal dataflow analysis tool you can customize and self-host, built so AI agents drive your application security analysis without burning tokens on every scan. AI-ready open source alternative to *Semgrep Pro* and *CodeQL*.
 
-OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, the agent enacts what it learns as durable, reviewable analysis artifacts. The engine then searches for the resulting dataflow patterns across the whole codebase.
+OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, the agent turns what it learns into durable, reviewable analysis artifacts. The engine then searches for the resulting dataflow patterns across the whole codebase. This creates a repeatable loop:
 
-- **Learn on demand. Search on every scan.** The agent learns the attack surface, trust boundaries, vulnerability patterns, and opaque code behavior when that context is needed. OpenTaint reuses the resulting rules and summaries on every scan without spending model tokens again.
-- **Make every security review executable.** The agent enacts what it learns. Vulnerability patterns become AST-pattern taint rules, while opaque code behavior becomes dataflow summaries the engine can search deterministically.
-- **Fast scans. Fewer false alarms. Fewer missed findings.** Formal inter-procedural dataflow analysis tracks tainted values across procedures, fields, aliases, async code, and persistence layers at scale. It finds what AST-pattern matchers miss without giving up deterministic scan time.
+- **Learn on demand. Search on every scan.** The agent learns the attack surface, trust boundaries, vulnerability patterns, and opaque code behavior when new context is needed. The engine reuses that knowledge on every scan without spending model tokens again.
+- **Make every security review executable.** The agent turns vulnerability patterns into AST-pattern taint rules and opaque code behavior into dataflow summaries. Both become versioned, reviewable analysis artifacts.
+- **Fast scans. Fewer false alarms. Fewer missed findings.** The engine applies those artifacts with formal inter-procedural dataflow analysis, tracking tainted values across procedures, fields, aliases, async code, and persistence layers at scale.
 - **Open source, batteries included.** Engine, AST-pattern rules, agent skills, and CI integrations ship as one stack under Apache 2.0 and MIT.
 
 ## Quick Start
@@ -158,12 +158,14 @@ For more options, see [Installation](docs/README.md#installation) and [Usage](do
 
 ## Application security is the new tech debt
 
-AI makes code cheaper to produce, but moves security work downstream into review queues, remediation backlogs, and incident response. Attackers automate discovery too. Security debt is tech debt an attacker can force you to repay. OpenTaint turns each review into versioned checks that protect future commits.
+AI makes code cheaper to produce and harder to fully review. Security work moves downstream into review queues, remediation backlogs, and incident response, while attackers automate discovery too. Application security becomes tech debt an attacker can force you to repay. You start paying for that debt long before an incident.
 
-- **For AppSec: make expert judgment outlive the review.** You are accountable for what reaches production, not for how many alerts a scanner found. Capture project-specific attack surfaces, trust boundaries, and vulnerability patterns as coverage the whole team can inspect and rerun. **Stop reviewing the same risk twice. Make expertise compound, not the review queue.**
-- **For DevSecOps: keep the security gate on.** A slow or noisy gate gets suppressed or moved out of the blocking path. OpenTaint runs deterministically on CPU with explainable traces and self-hosted control, without waiting for a model to reread the repository. **Keep security fast enough to stay in CI and dependable enough to enforce.**
-- **For developers: fix security while you still remember the code.** A late finding steals time from the work in front of you. OpenTaint shows which untrusted input reaches which dangerous operation and the full path through the program, so you can fix the flow in the pull request. **Pay down security debt while the code is still fresh.**
-- **For vibe coders: the agent can write the vulnerability before you notice the code path.** The output can look finished and pass its tests while an unsafe flow crosses helpers, fields, or libraries you never read. OpenTaint traces that dataflow deterministically before the change becomes invisible security debt. **Generate fast. Verify before merge.**
+- **Did the agent write a vulnerability into code you never reviewed?** The output can look finished and pass its tests while an unsafe flow crosses helpers, fields, or libraries you never read. OpenTaint traces that dataflow before the change becomes invisible security debt. **Generate fast. Verify before merge.**
+- **Is the feature done if a vulnerability ships with it?** A feature that passes its tests can still carry security debt into production, where the fix competes with roadmap work and incident response. OpenTaint traces risky dataflow in the pull request, before that debt becomes an emergency. **Make secure part of done.**
+- **Will your security agent find tomorrow what it found today?** An agent can discover a vulnerability pattern once, then miss it on the next nondeterministic review. OpenTaint turns what the agent learns into versioned AST-pattern taint rules and dataflow summaries the engine searches on every scan. **Turn every discovery into deterministic coverage.**
+- **How many times will you pay an agent to review the same risk?** Your last security review already paid to uncover the application’s trust boundaries and dangerous flows. Every scan that starts from zero spends tokens rebuilding security context you already owned. OpenTaint preserves that knowledge as reusable rules and summaries, then searches them deterministically on CPU. **Spend tokens only when new context must be learned. Keep every scan fast enough to enforce.**
+
+OpenTaint breaks that cycle by separating learning from searching. The agent learns the application when new context is needed. The engine searches what the agent learned on every scan, turning each review into coverage for every future commit.
 
 ### Proof, not promises
 
