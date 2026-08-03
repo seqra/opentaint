@@ -8,7 +8,6 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.alias.applyAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachAliasAtStatementAmongBases
-import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasAfterStatement
 import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasBeforeStatement
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.mkFieldAccessor
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
@@ -46,17 +45,6 @@ fun PIRLocalAliasAnalysis.forEachAliasAfterStatement(
     val aliases = findAliasAfterStatement(base, statement) ?: return
     aliases.mapNotNull { it.relevantApInfo() }
         .forEach { applyAlias(fact, it, AliasAccessor::apAccessor, body) }
-}
-
-fun PIRLocalAliasAnalysis.forEachAliasAfterCallStatement(
-    statement: PIRInstruction,
-    fact: FinalFactAp,
-    body: (FinalFactAp) -> Unit,
-) {
-    forEachAliasAfterStatement(statement, fact, body)
-    forEachHeapAliasAfterStatement(
-        statement, fact, Accessor::aliasAccessor, AliasApInfo::relevantApInfo, AliasAccessor::apAccessor, body
-    )
 }
 
 fun PIRLocalAliasAnalysis.forEachPossibleAliasBeforeStatement(
