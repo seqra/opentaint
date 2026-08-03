@@ -57,10 +57,6 @@ var supportedLanguages = []LanguageMarkers{
 			"gradlew.bat",
 		},
 	},
-	{
-		Name:    "Go",
-		Markers: []string{"go.mod"},
-	},
 }
 
 // markerToLanguage builds a lookup from marker name to language name.

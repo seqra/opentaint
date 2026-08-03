@@ -33,10 +33,6 @@ dependencies {
     implementation(Libs.zt_exec)
     implementation(Libs.slf4j_api)
     implementation(Libs.logback)
-
-    testImplementation(platform("org.junit:junit-bom:5.9.3"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly(Libs.logback)
 }
 
 val projectAutoBuilderJar = tasks.register<ShadowJar>("projectAutoBuilderJar") {

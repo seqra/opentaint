@@ -1,9 +1,0 @@
-passThrough:
-- function:
-    package: gopkg.in/macaron
-    type: RequestBody
-    name: String
-    receiver: true
-  copy:
-  - from: this
-    to: result(0)

@@ -1,5 +1,5 @@
-import OpentaintConfigDependency.opentaintGoConfig
 import OpentaintConfigDependency.opentaintJavaConfig
+import OpentaintConfigDependency.opentaintGoConfig
 import OpentaintConfigDependency.opentaintPythonConfig
 import OpentaintIrDependency.opentaint_ir_api_go
 import OpentaintIrDependency.opentaint_ir_api_jvm
@@ -119,8 +119,10 @@ tasks.withType<JavaCompile> {
     targetCompatibility = JavaVersion.VERSION_17.toString()
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "17"
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
 }
 
 val projectAnalyzerJar = tasks.register<ShadowJar>("projectAnalyzerJar") {
@@ -224,33 +226,6 @@ fun findOpentaintSeEnvInitializer(): Task? {
 fun findOpentaintPirEnvInitializer(): Task? {
     val pirProject = gradle.includedBuilds.find { it.name == "opentaint-ir" } ?: return null
     return pirProject.resolveIncludedProjectTask(":python:setupPirEnvironment")
-}
-
-// ─── Go environment ─────────────────────────────────────────────────
-
-val opentaintGoEnvKey = "opentaint.go.env"
-
-fun goEnvironment(): Map<String, Any> {
-    val goEnv = mutableMapOf<String, Any>()
-    setupOpentaintGoEnvironment(goEnv)
-    return goEnv
-}
-
-@Suppress("UNCHECKED_CAST")
-fun setupOpentaintGoEnvironment(goEnv: MutableMap<String, Any>) {
-    val initializer = findOpentaintGoEnvInitializer() ?: return
-    val env = initializer.extra.get(opentaintGoEnvKey) as Map<String, Any>
-    goEnv += env
-}
-
-fun Task.ensureGoEnvInitialized() {
-    val initializer = findOpentaintGoEnvInitializer() ?: return
-    dependsOn(initializer)
-}
-
-fun findOpentaintGoEnvInitializer(): Task? {
-    val irProject = gradle.includedBuilds.find { it.name == "opentaint-ir" } ?: return null
-    return irProject.resolveIncludedProjectTask(":go:setupGoEnvironment")
 }
 
 tasks.withType<Test> {
