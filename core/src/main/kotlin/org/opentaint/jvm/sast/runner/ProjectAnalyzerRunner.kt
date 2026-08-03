@@ -48,6 +48,9 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val semgrepRuleId: List<String> by option(help = "Filter active rules by ID")
         .multiple()
 
+    private val semgrepRuleIdExclude: List<String> by option(help = "Exclude rules by ID (applied after any --semgrep-rule-id filter)")
+        .multiple()
+
     private val trackExternalMethods: Boolean by option(help = "Track external methods, produce external methods YAML lists")
         .flag()
 
@@ -95,6 +98,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         semgrepRuleLoadTrace = semgrepRuleLoadTrace,
         semgrepSeverity = semgrepRuleSeverity,
         semgrepRuleId = semgrepRuleId,
+        semgrepRuleIdExclude = semgrepRuleIdExclude,
         trackExternalMethods = trackExternalMethods,
         ifdsAnalysisTimeout = ifdsAnalysisTimeout.seconds,
         ifdsApMode = ifdsApMode,
