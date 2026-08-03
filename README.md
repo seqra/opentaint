@@ -110,7 +110,7 @@
 
 OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, the agent records vulnerability patterns as AST-pattern taint rules and the behavior of opaque code as dataflow summaries. On every scan, the engine applies those rules and consults those summaries while formal inter-procedural dataflow analysis tracks tainted values across the codebase. This creates a repeatable loop:
 
-- **Learn on demand. Search on every scan.** The agent learns the attack surface, trust boundaries, vulnerability patterns, and opaque code behavior when new context is needed. The engine applies the resulting taint rules and consults the resulting dataflow summaries on every scan without spending model tokens again.
+- **Learn on demand, search on every scan.** The agent learns the attack surface, trust boundaries, vulnerability patterns, and opaque code behavior when new context is needed. The engine applies the resulting taint rules and consults the resulting dataflow summaries on every scan without spending model tokens again.
 - **Make every security review executable.** The agent turns vulnerability patterns into AST-pattern taint rules and opaque code behavior into dataflow summaries. Both become versioned, reviewable analysis artifacts.
 - **Fast scans. Fewer false alarms. Fewer missed findings.** The engine runs formal inter-procedural dataflow analysis, applying taint rules and consulting dataflow summaries as it tracks tainted values across procedures, fields, aliases, async code, and persistence layers at scale.
 - **Open source, batteries included.** Engine, AST-pattern rules, agent skills, and CI integrations ship as one stack under Apache 2.0 and MIT.
