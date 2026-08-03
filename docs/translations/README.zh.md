@@ -189,11 +189,11 @@ npx skills add https://github.com/seqra/opentaint
 
 ## Star 历史
 
-<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+<a href="https://github.com/seqra/opentaint/stargazers">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=cNibcudvsLJKQVlqN0qt2kK3b3-5zBDkzDzTamAWPRP6ny8KmCeZIooBYT7NBhjkd-T6OiiW7Iu9b1FSgL6n9IHMTPuoqKahF1NtidSTKkDXcbw8bY6k57DDstncYkKHJieEn9sJQ8oKJIYyBtYuQfk19qu5Kb1kvzCMT_dqOXXv3LM7EKZlljFcXAUh" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/seqra/opentaint/releases/download/star-history/latest/star-history-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/seqra/opentaint/releases/download/star-history/latest/star-history-light.png" />
+    <img alt="Star History Chart" src="https://github.com/seqra/opentaint/releases/download/star-history/latest/star-history-light.png" />
   </picture>
 </a>
 

@@ -188,11 +188,11 @@ Full guides — installation, usage, configuration, CI/CD integration: **[Docume
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=seqra%2Fopentaint&type=date&legend=top-left">
+<a href="https://github.com/seqra/opentaint/stargazers">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&theme=dark&legend=top-left&sealed_token=kuZCSnPuAdCYuZo35qynmQqR8c5iB0JYdXY8H4jyNAk77bS64sP5uqPvGrqMaRb1kdkch7iZdgmkMm3V3-CBV6uv9b2Sv_-SDSKLY6VDZFOWXFYPUvB9LhQEgTAySetIEvj7nmEOgte2N6DZujvhXCuwo-i7vH8Ji0eNpvc37trG1PAEfP-0u0BMnft-" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=kuZCSnPuAdCYuZo35qynmQqR8c5iB0JYdXY8H4jyNAk77bS64sP5uqPvGrqMaRb1kdkch7iZdgmkMm3V3-CBV6uv9b2Sv_-SDSKLY6VDZFOWXFYPUvB9LhQEgTAySetIEvj7nmEOgte2N6DZujvhXCuwo-i7vH8Ji0eNpvc37trG1PAEfP-0u0BMnft-" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=seqra/opentaint&type=date&legend=top-left&sealed_token=kuZCSnPuAdCYuZo35qynmQqR8c5iB0JYdXY8H4jyNAk77bS64sP5uqPvGrqMaRb1kdkch7iZdgmkMm3V3-CBV6uv9b2Sv_-SDSKLY6VDZFOWXFYPUvB9LhQEgTAySetIEvj7nmEOgte2N6DZujvhXCuwo-i7vH8Ji0eNpvc37trG1PAEfP-0u0BMnft-" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/seqra/opentaint/releases/download/star-history/latest/star-history-dark.png" />
+   <source media="(prefers-color-scheme: light)" srcset="https://github.com/seqra/opentaint/releases/download/star-history/latest/star-history-light.png" />
+   <img alt="Star History Chart" src="https://github.com/seqra/opentaint/releases/download/star-history/latest/star-history-light.png" width="900" />
  </picture>
 </a>
 
