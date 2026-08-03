@@ -1,0 +1,120 @@
+name: Star History
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/star-history.yaml
+      - scripts/star_history.py
+      - scripts/star_history_lib/**
+
+  schedule:
+    - cron: '23 4 * * *'
+
+  watch:
+    types: [started]
+
+  workflow_dispatch:
+
+concurrency:
+  group: star-history
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: star-history/latest
+  OUTPUT_DIR: dist/star-history
+  SCALE: '2'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Mirror upstream charts
+        env:
+          STAR_HISTORY_TOKEN: ${{ secrets.STAR_HISTORY_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          python3 scripts/star_history.py mirror \
+            --repository "$GITHUB_REPOSITORY" \
+            --output-dir "$OUTPUT_DIR" \
+            > manifest.json
+
+          python3 -m json.tool manifest.json
+
+      - name: Resolve a Chrome binary
+        id: chrome
+        run: |
+          set -euo pipefail
+
+          for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$candidate" >/dev/null 2>&1; then
+              echo "bin=$candidate" >> "$GITHUB_OUTPUT"
+              "$candidate" --version
+              exit 0
+            fi
+          done
+
+          echo "::error::No Chrome or Chromium binary found on the runner"
+          exit 1
+
+      - name: Rasterize PNG variants
+        env:
+          CHROME: ${{ steps.chrome.outputs.bin }}
+        run: |
+          set -euo pipefail
+
+          python3 scripts/star_history.py rasterize \
+            --manifest manifest.json \
+            --chrome "$CHROME" \
+            --scale "$SCALE"
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          UPDATED_AT=$(date -u +'%Y-%m-%d %H:%M UTC')
+          ASSET_LIST=$(python3 scripts/star_history.py assets --manifest manifest.json)
+          mapfile -t ASSETS <<< "$ASSET_LIST"
+
+          printf '%s\n' \
+            "Star history charts for \`$GITHUB_REPOSITORY\`, sanitized and mirrored from star-history.com." \
+            "" \
+            "- **Updated:** $UPDATED_AT" \
+            "" \
+            "The \`.png\` assets are the ones embedded in the README. GitHub serves" \
+            "release assets as \`application/octet-stream\`, which its image proxy" \
+            "renders for raster images but blocks for SVG. The \`.svg\` assets are the" \
+            "same charts at any resolution, for slides and docs." \
+            > release-notes.md
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --notes-file release-notes.md
+          else
+            gh release create "$RELEASE_TAG" \
+              --title "Star History" \
+              --notes-file release-notes.md \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --latest=false
+          fi
+
+          gh release upload "$RELEASE_TAG" "${ASSETS[@]}" --clobber
+
+          printf '%s\n' \
+            "### Star history updated" \
+            "" \
+            "- **Updated:** $UPDATED_AT" \
+            "- **Release:** [\`$RELEASE_TAG\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/star-history%2Flatest)" \
+            >> "$GITHUB_STEP_SUMMARY"
