@@ -10,8 +10,10 @@ object MethodSummaryEdgeApplicationUtils {
     }
 
     sealed interface SummaryEdgeApplication: EdgeRefinement {
-        data class SummaryApRefinement(val delta: FinalFactAp.Delta) : SummaryEdgeApplication
-        data class SummaryExclusionRefinement(val delta: FinalFactAp.Delta, val exclusion: ExclusionSet) : SummaryEdgeApplication
+        val delta: FinalFactAp.Delta
+
+        data class SummaryApRefinement(override val delta: FinalFactAp.Delta) : SummaryEdgeApplication
+        data class SummaryExclusionRefinement(override val delta: FinalFactAp.Delta, val exclusion: ExclusionSet) : SummaryEdgeApplication
     }
 
     fun tryApplySummaryEdge(
