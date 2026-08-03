@@ -107,6 +107,10 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val useDefaultConfig = false
 
+    open val apMode: ApMode = ApMode.Tree
+
+    open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
+
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -149,12 +153,12 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = ApMode.Tree
+            ifdsApMode = apMode
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
             override val unrollStrategy: AnyAccessorUnrollStrategy
-                get() = AnyAccessorUnrollStrategy.AnyAccessorDisabled
+                get() = analysisUnrollStrategy
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
             override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
