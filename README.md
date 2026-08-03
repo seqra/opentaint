@@ -9,7 +9,11 @@
 <h3 align="center">The open source taint analysis engine for the AI era</h3>
 
 <p align="center">
-  Formal taint analysis for application security — finds what AST-pattern matchers miss, lets LLM agents enact rules from vulnerabilities, scales where neither can alone.
+  <b>Formal program analysis for security agents.</b>
+</p>
+
+<p align="center">
+  A customizable, self-hosted dataflow analysis tool built so AI agents can drive application security without burning tokens on every scan.
 </p>
 
 <p align="center">
@@ -102,18 +106,15 @@
 
 ## Why OpenTaint?
 
-> OpenTaint is an open-source alternative to *Semgrep Pro* and *CodeQL* — a formal inter-procedural taint engine you can customize and self-host, built so AI agents drive your security analysis without burning tokens on every scan.
+> The open source taint analysis engine for the AI era. A formal dataflow analysis tool you can customize and self-host, built so AI agents drive your application security analysis without burning tokens on every scan. AI-ready open source alternative to *Semgrep Pro* and *CodeQL*.
 
-AI generates production code faster than security teams can keep up with, and the two kinds of tooling built to catch what it gets wrong each force a bad trade-off:
+OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, the agent enacts what it learns as durable, reviewable analysis artifacts. The engine then searches for the resulting dataflow patterns across the whole codebase.
 
-- **AST-pattern matchers** (Semgrep OSS, ast-grep, linters) are free and fast, but they match syntax, not data flow — untrusted input that crosses a function boundary or a persistence layer slips right past. The deeper, inter-procedural analysis that *does* catch it has long been locked inside proprietary tools.
-- **LLM security agents** find what pattern matchers miss, but they re-read your code on every run. The tokens add up with every file, every commit, every CI build — and a probabilistic model still can't promise it caught everything.
-
-OpenTaint gives you the depth of an LLM agent at the cost of a static analyzer:
-
-- **Find what AST-pattern matchers miss.** A formal inter-procedural dataflow engine tracks untrusted data across function boundaries, persistence layers, aliases, and async code.
-- **Pay the model once, not on every scan.** Let an agent distill a single finding into a taint rule. The deterministic engine then replays that rule across the entire codebase — and every commit after it — in minutes of CPU, at zero token cost.
-- **Open source, batteries included.** Engine, rules, and CI integrations come as one stack under Apache 2.0 and MIT.
+- **Learn on demand. Search on every scan.** Learning is expensive and unpredictable, searching cheap and deterministic — so the agent learns the code on demand, the engine searches it on every scan, and the security review becomes lean and continuous.
+- **Enact what the agent learns.** Vulnerability patterns become readable AST-pattern taint rules that define forbidden dataflow traces. Code behavior becomes dataflow summaries that let the engine trace through code it never analyzed.
+- **Fast scans. Fewer false alarms. Fewer missed findings.** OpenTaint is built to hold all three corners of the classic static-analysis trilemma. Its formal inter-procedural dataflow analysis tracks tainted values across procedures, fields, aliases, async code, and persistence layers at scale.
+- **Find what AST-pattern matchers miss.** Whole-program dataflow analysis follows tainted values across function boundaries and through deep object graphs rather than stopping at syntactic matches.
+- **Open source, batteries included.** Engine, AST-pattern rules, agent skills, and CI integrations ship as one stack under Apache 2.0 and MIT.
 
 ## Quick Start
 
