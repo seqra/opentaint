@@ -347,7 +347,8 @@ class AccessTree(
                 if (isFinal) {
                     appendLine(FinalAccessor.toSuffix())
                 } else {
-                    appendLine("/*$suffix")
+                    val annotation = deepAccessorExclusion?.toString().orEmpty()
+                    appendLine("/*$annotation$suffix")
                 }
             }
 
