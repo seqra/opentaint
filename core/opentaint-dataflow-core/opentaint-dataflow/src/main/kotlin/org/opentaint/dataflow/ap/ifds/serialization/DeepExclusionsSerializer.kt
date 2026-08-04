@@ -11,24 +11,28 @@ class DeepExclusionsSerializer(
     private val index: (Accessor) -> AccessorIdx,
     private val accessor: (AccessorIdx) -> Accessor,
 ) {
-    fun DataOutputStream.writeAnyFieldMarkExclusions(exclusions: DeepAccessorExclusion) {
-        writeMarks(exclusions.marksFromDepth1)
-        writeMarks(exclusions.marksFromDepth2)
+    fun DataOutputStream.writeAnyFieldAccessorExclusions(exclusions: DeepAccessorExclusion?) {
+        writeAccessors(exclusions?.accessorsFromDepth0 ?: EMPTY)
+        writeAccessors(exclusions?.accessorsFromDepth1 ?: EMPTY)
     }
 
-    private fun DataOutputStream.writeMarks(marks: IntArray) {
-        writeInt(marks.size)
-        marks.forEach { writeLong(context.getIdByAccessor(accessor(it))) }
+    private fun DataOutputStream.writeAccessors(accessors: IntArray) {
+        writeInt(accessors.size)
+        accessors.forEach { writeLong(context.getIdByAccessor(accessor(it))) }
     }
 
-    fun DataInputStream.readAnyFieldMarkExclusions(): DeepAccessorExclusion {
-        val depth1 = readMarks()
-        val depth2 = readMarks()
-        return DeepAccessorExclusion.create(depth1, depth2) ?: DeepAccessorExclusion.Empty
+    fun DataInputStream.readAnyFieldAccessorExclusions(): DeepAccessorExclusion? {
+        val accessorsFromDepth0 = readAccessors()
+        val accessorsFromDepth1 = readAccessors()
+        return DeepAccessorExclusion.create(accessorsFromDepth0, accessorsFromDepth1)
     }
 
-    private fun DataInputStream.readMarks(): IntArray =
+    private fun DataInputStream.readAccessors(): IntArray =
         IntArray(readInt()) {
             index(context.getAccessorById(readLong()))
         }.also(IntArray::sort)
+
+    companion object {
+        private val EMPTY = IntArray(0)
+    }
 }
