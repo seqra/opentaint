@@ -25,6 +25,11 @@ private val logger = object : KLogging() {}.logger
 
 private typealias Rules = Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>
 
+private enum class RuleResolutionSkipReason {
+    UnchangedTaintMarks,
+    ZeroStartCoveredByPredecessor,
+}
+
 sealed interface ActionableRulesCollectionResult {
     data object Failed : ActionableRulesCollectionResult
 
@@ -151,6 +156,8 @@ private class TraceActionCollector(
     private val sinkRules = sinkRules.toSet()
     private val summaryResults = hashMapOf<SummaryTrace, Evaluation>()
     private val summariesInProgress = hashSetOf<SummaryTrace>()
+    private var unchangedTaintMarkNodes = 0
+    private var coveredZeroStartNodes = 0
 
     fun collect(): ActionableRulesCollectionResult {
         if (!isActive()) return ActionableRulesCollectionResult.Failed
@@ -170,12 +177,25 @@ private class TraceActionCollector(
 
         val graph = createSource2SinkGraph(sourceToSink)
         if (!isActive()) return ActionableRulesCollectionResult.Failed
+        val finalTaintMarks = graph.allNodes.map { it.finalTaintMarks() }
 
         val nodeResults = arrayOfNulls<Evaluation>(graph.allNodes.size)
         for (nodeId in graph.allNodes.indices) {
             if (!isActive()) return ActionableRulesCollectionResult.Failed
             val seed = if (graph.sinkNodes.contains(nodeId)) sinkRuleMap() else emptyMap()
-            val result = evaluateNode(graph.allNodes[nodeId], seed)
+            val result = when (graph.ruleResolutionSkipReason(nodeId, finalTaintMarks)) {
+                RuleResolutionSkipReason.UnchangedTaintMarks -> {
+                    unchangedTaintMarkNodes++
+                    Evaluation.Valid(seed)
+                }
+
+                RuleResolutionSkipReason.ZeroStartCoveredByPredecessor -> {
+                    coveredZeroStartNodes++
+                    evaluateZeroStartWithoutFullTrace(graph.allNodes[nodeId], seed)
+                }
+
+                null -> evaluateNode(graph.allNodes[nodeId], seed)
+            }
             if (result === Evaluation.Failed) return ActionableRulesCollectionResult.Failed
             nodeResults[nodeId] = result
         }
@@ -193,6 +213,10 @@ private class TraceActionCollector(
         }
 
         val rules = collected.freeze()
+        logger.debug {
+            "Rule search skipped $unchangedTaintMarkNodes unchanged-mark and " +
+                "$coveredZeroStartNodes covered-Zero full node resolutions out of ${graph.allNodes.size}"
+        }
         return if (rules.isEmpty()) {
             ActionableRulesCollectionResult.Failed
         } else {
@@ -209,6 +233,18 @@ private class TraceActionCollector(
 
         if (!isActive()) return Evaluation.Failed
         return evaluateResolvedTraces(traces, TraceOrigin.OuterNode, seed)
+    }
+
+    private fun evaluateZeroStartWithoutFullTrace(
+        node: TraceResolver.InterProceduralTraceNode,
+        seed: Rules,
+    ): Evaluation {
+        val startEntry = (node as TraceResolver.InterProceduralStart2FinalTraceNode)
+            .trace.startEntry as TraceEntry.SourceStartEntry
+        val collected = RulesAccumulator()
+        collected.addAll(seed)
+        collected.addRuleActions(startEntry)
+        return Evaluation.Valid(collected.freeze())
     }
 
     private fun evaluateSummary(summary: SummaryTrace): Evaluation {
@@ -398,6 +434,52 @@ private class TraceActionCollector(
         val rules = RulesAccumulator()
         sinkRules.forEach { rules.addSink(sinkStatement, it) }
         return rules.freeze()
+    }
+}
+
+private fun Source2SinkTraceGraph.ruleResolutionSkipReason(
+    nodeId: Int,
+    finalTaintMarks: List<Set<TaintMarkAccessor>>,
+): RuleResolutionSkipReason? {
+    val trace = (allNodes[nodeId] as? TraceResolver.InterProceduralStart2FinalTraceNode)?.trace
+        ?: return null
+    val finalMarks = finalTaintMarks[nodeId]
+
+    return when (val startEntry = trace.startEntry) {
+        is TraceEntry.MethodEntry -> RuleResolutionSkipReason.UnchangedTaintMarks.takeIf {
+            startEntry.facts.taintMarks() == finalMarks
+        }
+
+        is TraceEntry.SourceStartEntry -> RuleResolutionSkipReason.ZeroStartCoveredByPredecessor.takeIf {
+            directPredecessors(nodeId).any { predecessorId ->
+                finalTaintMarks[predecessorId] == finalMarks
+            }
+        }
+    }
+}
+
+private fun Source2SinkTraceGraph.directPredecessors(nodeId: Int): Set<Int> = buildSet {
+    root2SourceBwd[nodeId]?.forEach { add(it) }
+    root2SinkBwd[nodeId]?.forEach { add(it) }
+}
+
+private fun TraceResolver.InterProceduralTraceNode.finalTaintMarks(): Set<TaintMarkAccessor> =
+    when (this) {
+        is TraceResolver.InterProceduralStart2FinalTraceNode -> trace.final.taintMarks()
+        is TraceResolver.InterProceduralSummaryTraceNode -> trace.final.taintMarks()
+    }
+
+private fun TraceEntry.Final.taintMarks(): Set<TaintMarkAccessor> =
+    edges.mapToTaintMarks { it.fact }
+
+private fun Set<InitialFactAp>.taintMarks(): Set<TaintMarkAccessor> =
+    mapToTaintMarks { it }
+
+private inline fun <T> Iterable<T>.mapToTaintMarks(
+    fact: (T) -> InitialFactAp,
+): Set<TaintMarkAccessor> = buildSet {
+    for (element in this@mapToTaintMarks) {
+        addAll(fact(element).taintMarks())
     }
 }
 
