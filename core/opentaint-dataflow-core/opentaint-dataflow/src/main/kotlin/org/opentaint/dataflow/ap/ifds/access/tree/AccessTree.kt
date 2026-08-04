@@ -100,8 +100,9 @@ class AccessTree(
         keepStartAccessor: Boolean,
     ): FinalFactAp? {
         val accessorIdx = with(apManager) { accessor.idx }
-        val cleared = access.clearAllAccessorOccurrences(accessorIdx, keepStartAccessor, IdentityHashMap())
-            ?: return null
+        val cleared = access.clearAllAccessorOccurrences(
+            accessorIdx, keepStartAccessor, retainDeepAccessorExclusions = exclusions !is ExclusionSet.Universe, IdentityHashMap()
+        ) ?: return null
 
         return if (cleared === access) this else AccessTree(apManager, base, cleared, exclusions)
     }
@@ -567,12 +568,10 @@ class AccessTree(
 
             var filtered: AccessNode = this
             deepAccessorExclusion.marksFromDepth1.forEach {
-                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = false, IdentityHashMap())
-                    ?: return null
+                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = false, cache = IdentityHashMap()) ?: return null
             }
             deepAccessorExclusion.marksFromDepth2.forEach {
-                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = true, IdentityHashMap())
-                    ?: return null
+                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = true, cache = IdentityHashMap()) ?: return null
             }
 
             val belowClaim = deepAccessorExclusion.collapseToDepth1()
@@ -666,21 +665,29 @@ class AccessTree(
         fun clearAllAccessorOccurrences(
             accessorIdx: AccessorIdx,
             keepStartAccessor: Boolean,
+            retainDeepAccessorExclusions: Boolean = true,
             cache: IdentityHashMap<AccessNode, AccessNode?>,
         ): AccessNode? {
             val transformed = transformAccessorsNonEmpty { currentAccessorIdx, node ->
                 if (keepStartAccessor || currentAccessorIdx != accessorIdx) {
-                    node.clearAccessorOccurrencesBelow(accessorIdx, cache)
+                    node.clearAccessorOccurrencesBelow(accessorIdx, retainDeepAccessorExclusions, cache)
                 } else {
                     null
                 }
             }
 
-            return transformed?.annotateAnyFieldMarkExclusion(accessorIdx, keepStartAccessor)
+            return transformed?.let {
+                if (retainDeepAccessorExclusions) {
+                    it.annotateAnyFieldMarkExclusion(accessorIdx, keepStartAccessor)
+                } else {
+                    it.updateDeepExclusion(null)
+                }
+            }
         }
 
         private fun clearAccessorOccurrencesBelow(
             accessorIdx: AccessorIdx,
+            retainDeepAccessorExclusions: Boolean,
             cache: IdentityHashMap<AccessNode, AccessNode?>,
         ): AccessNode? {
             if (cache.containsKey(this)) return cache[this]
@@ -688,10 +695,16 @@ class AccessTree(
 
             val transformed = transformAccessorsNonEmpty { currentAccessorIdx, node ->
                 if (currentAccessorIdx == accessorIdx) null
-                else node.clearAccessorOccurrencesBelow(accessorIdx, cache)
+                else node.clearAccessorOccurrencesBelow(accessorIdx, retainDeepAccessorExclusions, cache)
             }
 
-            val result = transformed?.annotateAnyFieldMarkExclusion(accessorIdx, false)
+            val result = transformed?.let {
+                if (retainDeepAccessorExclusions) {
+                    it.annotateAnyFieldMarkExclusion(accessorIdx, keepCurrentNodeAccessor = false)
+                } else {
+                    it.updateDeepExclusion(null)
+                }
+            }
 
             cache[this] = result
             return result
