@@ -20,6 +20,17 @@ import kotlin.io.path.readText
 import kotlin.io.path.walk
 import kotlin.io.path.writeText
 
+fun parseResolutionTable(reportDir: Path): Map<String, Path> {
+    val json = Json { ignoreUnknownKeys = true }
+    val table = HashMap<String, Path>()
+    reportDir.walk().filter { it.extension == "json" && it.name.startsWith("table-") }.forEach { f ->
+        json.decodeFromString<List<GradleProjectResolver.TableEntry>>(f.readText()).forEach { e ->
+            table.putIfAbsent(e.coord, Path(e.file))
+        }
+    }
+    return table
+}
+
 class GradleProjectResolver(
     private val resolverDir: Path,
     override val projectSourceRoot: Path
@@ -188,6 +199,9 @@ class GradleProjectResolver(
     )
 
     @Serializable
+    data class TableEntry(val coord: String, val file: String)
+
+    @Serializable
     data class GradleDependencies(
         val manifests: Map<String, GradleDependenciesManifest>? = null
     )
@@ -293,6 +307,10 @@ class GradleProjectResolver(
 
         private const val CLASSES_REPORT_DIR_PROPERTY = "OPENTAINT_CLASSES_REPORT_DIR"
 
+        private const val RESOLVE_TABLE_TASK = "opentaintResolveTable"
+
+        private const val TABLE_REPORT_DIR_PROPERTY = "opentaint.table.dir"
+
         private val GRADLE_CLASSES_INIT_SCRIPT = """
             import groovy.json.JsonOutput
 
@@ -373,6 +391,43 @@ class GradleProjectResolver(
             }
             
             apply plugin: GitHubDependencyGraphPlugin
+        """.trimIndent()
+
+        private val GRADLE_RESOLUTION_TABLE_INIT_SCRIPT = """
+            import groovy.json.JsonOutput
+            import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+
+            def reportDir = new File(System.getProperty("$TABLE_REPORT_DIR_PROPERTY"))
+            reportDir.mkdirs()
+
+            gradle.rootProject { root -> root.tasks.register("$RESOLVE_TABLE_TASK") }
+
+            allprojects { p ->
+                p.afterEvaluate {
+                    def reportTask = p.tasks.register("opentaintReportTable") {
+                        doLast {
+                            def seen = [] as Set
+                            def out = []
+                            p.configurations.findAll { it.canBeResolved }.each { cfg ->
+                                try {
+                                    cfg.incoming.artifactView { v -> v.lenient = true }.artifacts.each { art ->
+                                        def id = art.id.componentIdentifier
+                                        if (!(id instanceof ModuleComponentIdentifier)) return
+                                        def coord = id.group + ":" + id.module + ":" + id.version
+                                        if (!seen.add(coord)) return
+                                        out.add([coord: coord, file: art.file.absolutePath])
+                                    }
+                                } catch (Exception e) {
+                                    println "opentaint: failed to resolve " + cfg.name + " in " + p.path + ": " + e
+                                }
+                            }
+                            def name = "table-" + p.path.replace(":", "_") + ".json"
+                            new File(reportDir, name).text = JsonOutput.toJson(out)
+                        }
+                    }
+                    p.rootProject.tasks.named("$RESOLVE_TABLE_TASK").configure { dependsOn reportTask }
+                }
+            }
         """.trimIndent()
 
         private fun resolveGradleDependencyCmdArgs(workDir: Path, initScript: Path, reportDir: Path): List<String> =
