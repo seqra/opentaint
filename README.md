@@ -108,11 +108,11 @@
 
 > The open source taint analysis engine for the AI era. Powered by formal inter-procedural dataflow analysis. Customizable and self-hosted, built so AI agents drive your application security analysis without burning tokens on every scan. AI-ready open source alternative to *Semgrep Pro* and *CodeQL*.
 
-OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, the agent records vulnerability patterns as AST-pattern taint rules and the behavior of opaque code as dataflow summaries. On every scan, the engine applies those rules and consults those summaries while formal inter-procedural dataflow analysis tracks tainted values across the codebase. This creates a repeatable loop:
+OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, the agent records vulnerability patterns as AST-pattern taint rules and the behavior of opaque code as dependency models. On every scan, the engine applies those rules and dependency models while formal inter-procedural dataflow analysis tracks tainted values across the codebase. This creates a repeatable loop:
 
-- **Learn on demand, search on every scan.** The agent learns the attack surface, trust boundaries, vulnerability patterns, and opaque code behavior when new context is needed. The engine applies the resulting taint rules and consults the resulting dataflow summaries on every scan without spending model tokens again.
-- **Make every security review executable.** The agent turns vulnerability patterns into AST-pattern taint rules and opaque code behavior into dataflow summaries. Both become versioned, reviewable analysis artifacts.
-- **Fast scans. Fewer false alarms. Fewer missed findings.** The engine runs formal inter-procedural dataflow analysis, applying taint rules and consulting dataflow summaries as it tracks tainted values across procedures, fields, aliases, async code, and persistence layers at scale.
+- **Learn on demand, search on every scan.** The agent learns the attack surface, trust boundaries, vulnerability patterns, and opaque code behavior when new context is needed. The engine applies the resulting taint rules and applies the resulting dependency models on every scan without spending model tokens again.
+- **Make every security review executable.** The agent turns vulnerability patterns into AST-pattern taint rules and opaque code behavior into dependency models. Both become versioned, reviewable analysis artifacts.
+- **Fast scans. Fewer false alarms. Fewer missed findings.** The engine runs formal inter-procedural dataflow analysis, applying taint rules and dependency models as it tracks tainted values across procedures, fields, aliases, async code, and persistence layers at scale.
 - **Open source, batteries included.** Engine, AST-pattern rules, agent skills, and CI integrations ship as one stack under Apache 2.0 and MIT.
 
 ## Quick Start
@@ -163,14 +163,14 @@ AI makes code cheaper to produce and harder to fully review. Security work moves
 - **Did the agent write a vulnerability into code you never reviewed?** The output can look finished and pass its tests while an untrusted value crosses helpers, fields, or libraries you never read before reaching a dangerous operation. OpenTaint reports the complete source-to-sink taint trace before the change becomes invisible security debt. **Generate fast. Verify before merge.**
 - **Is the feature done if a vulnerability ships with it?** A feature that passes its tests can still carry security debt into production, where the fix competes with roadmap work and incident response. OpenTaint finds forbidden source-to-sink flows in the pull request and reports the taint trace before that debt becomes an emergency. **Make secure part of done.**
 - **Will your security agent find tomorrow what it found today?** An agent can discover a vulnerability pattern once, then miss it on the next nondeterministic review. OpenTaint records that pattern as a versioned AST-pattern taint rule that the engine applies on every scan. **Turn every discovery into deterministic coverage.**
-- **How many times will you pay an agent to review the same risk?** Your last security review already paid to understand the application’s trust boundaries, vulnerability patterns, and opaque code behavior. Every scan that starts from zero spends tokens rebuilding security context you already owned. OpenTaint records that context as taint rules and dataflow summaries, then applies the rules and consults the summaries on every change. **Spend tokens only when new context must be learned. Keep every scan fast enough to enforce.**
+- **How many times will you pay an agent to review the same risk?** Your last security review already paid to understand the application’s trust boundaries, vulnerability patterns, and opaque code behavior. Every scan that starts from zero spends tokens rebuilding security context you already owned. OpenTaint records that context as taint rules and dependency models, then applies both on every change. **Spend tokens only when new context must be learned. Keep every scan fast enough to enforce.**
 
-OpenTaint breaks that cycle by separating adaptive learning from deterministic analysis. The agent investigates new security context when needed. The engine applies the resulting taint rules, consults the dataflow summaries, and runs taint analysis on every scan. Each review becomes coverage for every future commit.
+OpenTaint breaks that cycle by separating adaptive learning from deterministic analysis. The agent investigates new security context when needed. The engine applies the resulting taint rules and dependency models, and runs taint analysis on every scan. Each review becomes coverage for every future commit.
 
 ### Proof, not promises
 
 - **[Detection depth, compared](https://opentaint.org/blog/semgrep-vs-codeql-vs-opentaint).** See Semgrep, CodeQL, and OpenTaint run against five progressively harder Java XSS cases, from direct returns to builders with virtual dispatch.
-- **[A real unauthenticated RCE, from endpoint to exploit](https://opentaint.org/blog/conductor-rce-cve-2026-58138).** Follow CVE-2026-58138 through Conductor and GraalVM, see why four stock scans missed it, and how the agent turned the review into a tested taint rule and reusable dataflow summary.
+- **[A real unauthenticated RCE, from endpoint to exploit](https://opentaint.org/blog/conductor-rce-cve-2026-58138).** Follow CVE-2026-58138 through Conductor and GraalVM, see why four stock scans missed it, and how the agent turned the review into a tested taint rule and reusable dependency model.
 
 ---
 
@@ -182,13 +182,13 @@ OpenTaint includes agent skills that turn static analysis into an end-to-end app
 npx skills add https://github.com/seqra/opentaint
 ```
 
-The `appsec-agent` skill orchestrates a full project assessment: build the project, run OpenTaint, discover the attack surface, add targeted taint rules, create summaries for opaque library code, triage findings, and optionally generate dynamic proof-of-concept checks for confirmed vulnerabilities.
+The `appsec-agent` skill orchestrates a full project assessment: build the project, run OpenTaint, discover the attack surface, add targeted taint rules, model opaque library code, triage findings, and optionally generate dynamic proof-of-concept checks for confirmed vulnerabilities.
 
 Included skills cover the common security-analysis loop:
 
 - **Scan and triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Coverage expansion:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Dataflow summaries:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Dependency models:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---
 
