@@ -159,6 +159,15 @@ class MavenProjectResolver(
                 .filter { artifact -> artifact.artifactName !in buildArtifactsNames }
                 .mapNotNull { artifact -> mavenLocalRepoPath.resolve(artifact.artifactJarPath).takeIf { it.exists() } }
         }
+
+        fun resolveDependencies(
+            resolvePath: (MavenArtifact) -> Path? = { mavenLocalRepoPath.resolve(it.artifactJarPath).takeIf { p -> p.exists() } },
+        ): List<ResolvedDependency> {
+            val buildArtifactsNames = buildArtifacts.mapTo(mutableSetOf()) { artifacts.getValue(it).artifactName }
+            return artifacts.values
+                .filter { it.artifactName !in buildArtifactsNames }
+                .mapNotNull { a -> resolvePath(a)?.let { ResolvedDependency(it, a.groupId, a.artifactId, a.version) } }
+        }
     }
 
     @Serializable
