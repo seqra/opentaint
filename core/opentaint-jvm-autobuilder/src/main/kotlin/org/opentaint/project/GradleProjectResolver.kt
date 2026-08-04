@@ -36,7 +36,9 @@ class GradleProjectResolver(
     override val projectSourceRoot: Path
 ) : ProjectResolver {
     private val resolvedModules = mutableListOf<ProjectModuleClasses>()
-    private val resolvedProjectDependencies = mutableListOf<Path>()
+    private val resolvedProjectDependencies = mutableListOf<ResolvedDependency>()
+
+    private var resolutionTable: Map<String, Path> = emptyMap()
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -118,6 +120,23 @@ class GradleProjectResolver(
         }
     }
 
+    private val tableResolverInitScript: Path by lazy {
+        resolverDir.resolve("resolution-table.gradle").apply { writeText(GRADLE_RESOLUTION_TABLE_INIT_SCRIPT) }
+    }
+
+    private fun resolveResolutionTable() {
+        val outDir = resolverDir.resolve("table-out").createDirectories()
+        val gradleExecutable = resolveGradleExecutable(projectSourceRoot)
+        val args = listOf(gradleExecutable) + gradleBuildFlags + listOf(
+            "--init-script", tableResolverInitScript.absolutePathString(),
+            "-D$TABLE_REPORT_DIR_PROPERTY=${outDir.absolutePathString()}",
+            RESOLVE_TABLE_TASK,
+        )
+        val status = ProjectResolver.runCommand(projectSourceRoot, args, javaToolchain)
+        if (status != 0) logger.warn { "Gradle resolution-table returned $status for: $projectSourceRoot" }
+        resolutionTable = parseResolutionTable(outDir)
+    }
+
     private fun resolveDependencies(): Boolean {
         val depGraphOutFolder = resolverDir.resolve("dg-out").createDirectories()
 
@@ -131,6 +150,8 @@ class GradleProjectResolver(
             return false
         }
 
+        resolveResolutionTable()
+        logger.info { "Gradle resolution table size: ${resolutionTable.size} for: $projectSourceRoot" }
         resolveDependenciesFromGraph(depGraphOutFolder)
 
         return true
@@ -145,7 +166,7 @@ class GradleProjectResolver(
                 dependencyResolver.addDependencies(deps)
             }
 
-        resolvedProjectDependencies += dependencyResolver.resolveDependenciesJars()
+        resolvedProjectDependencies += dependencyResolver.resolveDependencies(resolutionTable)
     }
 
     private class GradleDependencyResolver {
@@ -165,30 +186,14 @@ class GradleProjectResolver(
             }
         }
 
-        fun resolveDependenciesJars(): List<Path> {
-            val allDependenciesInfo = dependenciesInfo.entries.sortedBy { it.key }
-
-            val resolvedDirectDependencies = allDependenciesInfo
-                .filter { it.key in directDependencies }
-                .mapNotNull { resolveJarPath(it.value) }
-
-            val resolvedIndirectDependencies = allDependenciesInfo
-                .filter { it.key !in directDependencies }
-                .mapNotNull { resolveJarPath(it.value) }
-
-            return resolvedDirectDependencies + resolvedIndirectDependencies
-        }
-
-        private fun resolveJarPath(dependency: GradleDependencyInfo): Path? {
-            val gradlePath = gradleLocalRepoPath.resolve(dependency.gradleArtifactDir)
-            if (gradlePath.isDirectory()) {
-                gradlePath.walk().firstOrNull { it.name == dependency.artifactJarName }?.let { return it }
-            }
-
-            val mavenPath = mavenLocalRepoPath.resolve(dependency.mavenArtifactDir).resolve(dependency.artifactJarName)
-            if (mavenPath.isRegularFile()) return mavenPath
-
-            return null
+        fun resolveDependencies(table: Map<String, Path>): List<ResolvedDependency> {
+            val all = dependenciesInfo.entries.sortedBy { it.key }
+            val direct = all.filter { it.key in directDependencies }
+            val indirect = all.filterNot { it.key in directDependencies }
+            fun resolve(d: GradleDependencyInfo): ResolvedDependency? =
+                table["${d.groupId}:${d.artifactId}:${d.version}"]
+                    ?.let { ResolvedDependency(it, d.groupId, d.artifactId, d.version) }
+            return (direct + indirect).mapNotNull { resolve(it.value) }
         }
     }
 
