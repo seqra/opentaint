@@ -158,7 +158,7 @@ class SideEffectRequirementAutomataApStorage : SideEffectRequirementApStorage {
             relevantGraphs.forEach { graphIdx ->
                 val graph = requirementGraphs[graphIdx]
 
-                if (!factAccess.containsAll(graph)) {
+                if (!factAccess.containsAllAccessPaths(graph)) {
                     return@forEach
                 }
 

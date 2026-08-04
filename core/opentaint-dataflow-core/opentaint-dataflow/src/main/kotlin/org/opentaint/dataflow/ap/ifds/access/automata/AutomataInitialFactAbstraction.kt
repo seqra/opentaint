@@ -45,7 +45,8 @@ class AutomataInitialFactAbstraction(initialStatement: CommonInst) : InitialFact
         typeChecker: FactTypeChecker
     ): List<Pair<InitialFactAp, FinalFactAp>> {
         val basedFacts = addedFacts.getOrCreate(fact.base)
-        return basedFacts.addAndAbstract(fact.access, typeChecker).map {
+        val access = fact.access.withoutAnyFieldAccessorExclusions()
+        return basedFacts.addAndAbstract(access, typeChecker).map {
             Pair(
                 AccessGraphInitialFactAp(fact.base, it, ExclusionSet.Empty),
                 AccessGraphFinalFactAp(fact.base, it, ExclusionSet.Empty)
