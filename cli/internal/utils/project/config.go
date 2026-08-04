@@ -15,10 +15,17 @@ type Config struct {
 }
 
 type JavaProject struct {
-	SourceRoot    string   `yaml:"sourceRoot"`
-	JavaToolchain string   `yaml:"javaToolchain,omitempty"`
-	Modules       []Module `yaml:"modules"`
-	Dependencies  []string `yaml:"dependencies,omitempty"`
+	SourceRoot    string               `yaml:"sourceRoot"`
+	JavaToolchain string               `yaml:"javaToolchain,omitempty"`
+	Modules       []Module             `yaml:"modules"`
+	Dependencies  []ResolvedDependency `yaml:"dependencies,omitempty"`
+}
+
+type ResolvedDependency struct {
+	Path     string `yaml:"path"`
+	Group    string `yaml:"group,omitempty"`
+	Artifact string `yaml:"artifact,omitempty"`
+	Version  string `yaml:"version,omitempty"`
 }
 
 type GoProject struct {
@@ -32,10 +39,10 @@ type Module struct {
 }
 
 type legacyConfig struct {
-	SourceRoot    string   `yaml:"sourceRoot"`
-	JavaToolchain string   `yaml:"javaToolchain,omitempty"`
-	Modules       []Module `yaml:"modules"`
-	Dependencies  []string `yaml:"dependencies,omitempty"`
+	SourceRoot    string               `yaml:"sourceRoot"`
+	JavaToolchain string               `yaml:"javaToolchain,omitempty"`
+	Modules       []Module             `yaml:"modules"`
+	Dependencies  []ResolvedDependency `yaml:"dependencies,omitempty"`
 }
 
 func LoadConfig(projectModelPath string) (*Config, error) {
@@ -79,7 +86,9 @@ func (c *Config) AllModules() []Module {
 func (c *Config) AllDependencies() []string {
 	var deps []string
 	for _, jp := range c.JavaProjects {
-		deps = append(deps, jp.Dependencies...)
+		for _, d := range jp.Dependencies {
+			deps = append(deps, d.Path)
+		}
 	}
 	return deps
 }

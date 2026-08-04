@@ -23,7 +23,8 @@ javaProjects:
       - moduleSourceRoot: java_0/sources
         packages: [com.example]
         moduleClasses: [java_0/classes/main]
-    dependencies: [libs/a.jar]
+    dependencies:
+      - path: libs/a.jar
 goProjects:
   - projectDir: go_0
 `)
@@ -56,7 +57,8 @@ modules:
   - moduleSourceRoot: src
     packages: [com.legacy]
     moduleClasses: [dist/app.jar]
-dependencies: [lib/commons-io.jar]
+dependencies:
+  - path: lib/commons-io.jar
 `)
 
 	config, err := LoadConfig(dir)
@@ -78,6 +80,19 @@ dependencies: [lib/commons-io.jar]
 	}
 	if got := config.PrimarySourceRoot(); got != "src" {
 		t.Errorf("PrimarySourceRoot = %q, want src", got)
+	}
+}
+
+func TestAllDependenciesReturnsPaths(t *testing.T) {
+	c := &Config{JavaProjects: []JavaProject{{
+		Dependencies: []ResolvedDependency{
+			{Path: "/d/os-2.18.0.jar", Group: "org.opensearch.client", Artifact: "opensearch-rest-client", Version: "2.18.0"},
+			{Path: "/d/os-3.5.0.jar", Version: "3.5.0"},
+		},
+	}}}
+	got := c.AllDependencies()
+	if len(got) != 2 || got[0] != "/d/os-2.18.0.jar" || got[1] != "/d/os-3.5.0.jar" {
+		t.Fatalf("unexpected: %v", got)
 	}
 }
 
