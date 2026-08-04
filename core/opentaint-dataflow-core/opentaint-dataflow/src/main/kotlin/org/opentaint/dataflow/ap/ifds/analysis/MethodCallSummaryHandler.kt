@@ -33,6 +33,8 @@ interface MethodCallSummaryHandler {
         }
     }
 
+    fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> = listOf(summaryEdge)
+
     fun handleZeroToFact(
         currentFactAp: FinalFactAp,
         summaryEffect: EdgeRefinement,

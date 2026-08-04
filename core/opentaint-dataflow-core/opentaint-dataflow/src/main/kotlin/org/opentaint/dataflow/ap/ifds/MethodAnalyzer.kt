@@ -1053,10 +1053,18 @@ class NormalMethodAnalyzer(
     ) {
         summaryEdgesHandled++
 
-        val applicableSummaries = methodSummaries.filter { isApplicableExitToReturnEdge(it) }
         val handler = analysisManager.getMethodCallSummaryHandler(
             apManager, analysisContext, currentEdge.statement
         )
+
+        val applicableSummaries = methodSummaries.flatMap { summary ->
+            if (!isApplicableExitToReturnEdge(summary)) return@flatMap emptyList()
+
+            when (summary) {
+                is ZeroToZero -> listOf(summary)
+                is ZeroToFact -> handler.prepareZeroToFactSummary(summary)
+            }
+        }
 
         for (methodSummary in applicableSummaries) {
             if (!cancellation.isActive()) return
