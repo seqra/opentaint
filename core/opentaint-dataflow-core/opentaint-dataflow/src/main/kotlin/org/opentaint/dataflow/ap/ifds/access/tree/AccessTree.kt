@@ -131,7 +131,9 @@ class AccessTree(
 
     private sealed interface AccessTreeDelta : FinalFactAp.Delta
 
-    data object EmptyAccessTreeDelta : AccessTreeDelta {
+    data class EmptyAccessTreeDelta(
+        val deepAccessorExclusion: DeepAccessorExclusion?,
+    ) : AccessTreeDelta {
         override val isEmpty: Boolean get() = true
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
         override fun getStartAccessors(): Set<Accessor> = emptySet()
@@ -178,7 +180,7 @@ class AccessTree(
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
                 if (!node.isFinal) return emptyList()
-                return listOf(EmptyAccessTreeDelta)
+                return listOf(EmptyAccessTreeDelta(deepAccessorExclusion = null))
             }
 
             node = node.getChild(accessor) ?: return emptyList()
@@ -199,7 +201,7 @@ class AccessTree(
             .takeIf { !it.isEmpty }
             ?.let { NodeAccessTreeDelta(apManager, it) }
 
-        return listOfNotNull(nonAbstractDelta, EmptyAccessTreeDelta)
+        return listOfNotNull(nonAbstractDelta, EmptyAccessTreeDelta(filteredNode.deepAccessorExclusion))
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
