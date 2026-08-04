@@ -5,14 +5,18 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonNDF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSummaryStorageWithAp
 import org.opentaint.ir.api.common.cfg.CommonInst
 
-class MethodNDInitialToFinalCactusApSummariesStorage(methodEntryPoint: CommonInst) :
-    CommonNDF2FSummary<AccessNode>(methodEntryPoint), CactusFinalApAccess {
-    private class Builder : NDF2FBBuilder<AccessNode>(), CactusFinalApAccess
+class MethodNDInitialToFinalCactusApSummariesStorage(
+    override val cactusManager: CactusApManager,
+    methodEntryPoint: CommonInst,
+) : CommonNDF2FSummary<AccessNode>(methodEntryPoint), CactusFinalApAccess {
+    private class Builder(
+        override val cactusManager: CactusApManager,
+    ) : NDF2FBBuilder<AccessNode>(), CactusFinalApAccess
 
     override fun createStorage(): Storage<AccessNode> = object :
         DefaultNDF2FSummaryStorageWithAp<AccessPathWithCycles.AccessNode?, AccessNode>(methodEntryPoint),
         CactusInitialApAccess {
-        override fun createBuilder(): NDF2FBBuilder<AccessNode> = Builder()
+        override fun createBuilder(): NDF2FBBuilder<AccessNode> = Builder(cactusManager)
 
         override fun createStorage(idx: Int): Storage<AccessPathWithCycles.AccessNode?, AccessNode> = FactStorage(idx)
 

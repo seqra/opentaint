@@ -9,20 +9,23 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonFactSideEffectSummary.
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class FactSESummariesCactusStorage(
+    override val cactusManager: CactusApManager,
     methodInitialInst: CommonInst
 ) : CommonFactSideEffectSummary<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>(methodInitialInst),
     CactusInitialApAccess, CactusFinalApAccess {
     override fun createStorage(): Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
-        CactusSEStorage()
+        CactusSEStorage(cactusManager)
 }
 
-private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
+private class CactusSEStorage(
+    private val cactusManager: CactusApManager,
+) : Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
     private var initialAccessToStorage =
         persistentHashMapOf<AccessPathWithCycles.AccessNode?, CactusSEMergeStorage>()
 
     private fun getOrCreate(initialAccess: AccessPathWithCycles.AccessNode?): CactusSEMergeStorage =
         initialAccessToStorage.getOrElse(initialAccess) {
-            CactusSEMergeStorage(initialAccess).also {
+            CactusSEMergeStorage(cactusManager, initialAccess).also {
                 initialAccessToStorage = initialAccessToStorage.put(initialAccess, it)
             }
         }
@@ -48,13 +51,17 @@ private class CactusSEStorage : Storage<AccessPathWithCycles.AccessNode?, Access
     }
 }
 
-private class CactusSEMergeStorage(val initialAccess: AccessPathWithCycles.AccessNode?) :
+private class CactusSEMergeStorage(
+    private val cactusManager: CactusApManager,
+    val initialAccess: AccessPathWithCycles.AccessNode?,
+) :
     CommonFactSideEffectSummary.SideEffectExclusionMergingStorage<AccessPathWithCycles.AccessNode?>() {
     override fun createBuilder(): FactSEBuilder<AccessPathWithCycles.AccessNode?> =
-        FactSECactusApBuilder().setInitialAp(initialAccess)
+        FactSECactusApBuilder(cactusManager).setInitialAp(initialAccess)
 }
 
-private class FactSECactusApBuilder: FactSEBuilder<AccessPathWithCycles.AccessNode?>(),
-    CactusInitialApAccess, CactusFinalApAccess {
+private class FactSECactusApBuilder(
+    override val cactusManager: CactusApManager,
+): FactSEBuilder<AccessPathWithCycles.AccessNode?>(), CactusInitialApAccess, CactusFinalApAccess {
     override fun nonNullIAP(iap: AccessPathWithCycles.AccessNode?): AccessPathWithCycles.AccessNode? = iap
 }

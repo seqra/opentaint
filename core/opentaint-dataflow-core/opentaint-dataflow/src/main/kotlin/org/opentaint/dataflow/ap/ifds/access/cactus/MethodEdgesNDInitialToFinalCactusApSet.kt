@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSetStorage
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesNDInitialToFinalCactusApSet(
+    override val cactusManager: CactusApManager,
     initialStatement: CommonInst,
     languageManager: LanguageManager,
     maxInstIdx: Int,

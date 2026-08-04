@@ -8,20 +8,23 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.access.cactus.AccessCactus.AccessNode as AccessCactusNode
 
 class MethodInitialToFinalApSummaries(
+    override val cactusManager: CactusApManager,
     methodInitialStatement: CommonInst,
 ) : CommonF2FSummary<AccessPathWithCycles.AccessNode?, AccessCactusNode>(methodInitialStatement),
     CactusInitialApAccess, CactusFinalApAccess {
     override fun createStorage(): Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> =
-        MethodTaintedSummariesGroupedByFactStorage()
+        MethodTaintedSummariesGroupedByFactStorage(cactusManager)
 }
 
-private class MethodTaintedSummariesInitialApStorage {
+private class MethodTaintedSummariesInitialApStorage(
+    private val cactusManager: CactusApManager,
+) {
     private var initialAccessToStorage =
         persistentHashMapOf<AccessPathWithCycles.AccessNode?, MethodTaintedSummariesMergingStorage>()
 
     fun getOrCreate(initialAccess: AccessPathWithCycles.AccessNode?): MethodTaintedSummariesMergingStorage =
         initialAccessToStorage.getOrElse(initialAccess) {
-            MethodTaintedSummariesMergingStorage(initialAccess).also {
+            MethodTaintedSummariesMergingStorage(cactusManager, initialAccess).also {
                 initialAccessToStorage = initialAccessToStorage.put(initialAccess, it)
             }
         }
@@ -33,9 +36,10 @@ private class MethodTaintedSummariesInitialApStorage {
     }
 }
 
-private class MethodTaintedSummariesGroupedByFactStorage
-    : CommonF2FSummary.Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
-    private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage()
+private class MethodTaintedSummariesGroupedByFactStorage(
+    cactusManager: CactusApManager,
+) : CommonF2FSummary.Storage<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode> {
+    private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage(cactusManager)
 
     override fun add(
         edges: List<CommonF2FSummary.StorageEdge<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>>,
@@ -79,7 +83,10 @@ private class MethodTaintedSummariesGroupedByFactStorage
     }
 }
 
-private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPathWithCycles.AccessNode?) {
+private class MethodTaintedSummariesMergingStorage(
+    private val cactusManager: CactusApManager,
+    val initialAccess: AccessPathWithCycles.AccessNode?,
+) {
     private var exclusion: ExclusionSet? = null
     private var edges: AccessCactusNode? = null
     private var edgesDelta: AccessCactusNode? = null
@@ -116,7 +123,7 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
         val delta = edgesDelta ?: return emptySequence()
         edgesDelta = null
 
-        return FactToFactEdgeBuilderBuilder()
+        return FactToFactEdgeBuilderBuilder(cactusManager)
             .setInitialAp(initialAccess)
             .setExitAp(delta)
             .setExclusion(exclusion!!)
@@ -126,15 +133,16 @@ private class MethodTaintedSummariesMergingStorage(val initialAccess: AccessPath
     fun summaries(): F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactus.AccessNode>? {
         val exclusion = this.exclusion ?: return null
         val edges = this.edges!!
-        return FactToFactEdgeBuilderBuilder()
+        return FactToFactEdgeBuilderBuilder(cactusManager)
             .setInitialAp(initialAccess)
             .setExitAp(edges)
             .setExclusion(exclusion)
     }
 }
 
-private class FactToFactEdgeBuilderBuilder :
-    F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactusNode>(),
+private class FactToFactEdgeBuilderBuilder(
+    override val cactusManager: CactusApManager,
+) : F2FBBuilder<AccessPathWithCycles.AccessNode?, AccessCactusNode>(),
     CactusInitialApAccess, CactusFinalApAccess {
     override fun nonNullIAP(iap: AccessPathWithCycles.AccessNode?): AccessPathWithCycles.AccessNode? = iap
 }

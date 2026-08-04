@@ -11,7 +11,9 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAbstraction
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.cactus.AccessCactus.AccessNode as AccessCactusNode
 
-class CactusInitialFactAbstraction: InitialFactAbstraction {
+class CactusInitialFactAbstraction(
+    private val manager: CactusApManager,
+): InitialFactAbstraction {
     private val initialFacts = MethodSameMarkInitialFact(hashMapOf())
 
     override fun addAbstractedInitialFact(
@@ -57,7 +59,7 @@ class CactusInitialFactAbstraction: InitialFactAbstraction {
             val initialAbstractAp = AccessPathWithCycles(concreteFactBase, initialAbstractAccessNode, abstractExcludes)
 
             val apAccess = AccessCactusNode.createAbstractNodeFromAp(initialAbstractAccessNode)
-            val ap = AccessCactus(concreteFactBase, apAccess, abstractExcludes)
+            val ap = AccessCactus(manager, concreteFactBase, apAccess, abstractExcludes)
 
             facts.addAnalyzedInitialFact(initialAbstractAccessNode, abstractExcludes)
             abstractFacts.add(initialAbstractAp to ap)
