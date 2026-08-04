@@ -240,6 +240,7 @@ class AccessTree(
         @JvmField val interned: Boolean,
         @JvmField val isAbstract: Boolean,
         @JvmField val isFinal: Boolean,
+        @JvmField val deepAccessorExclusion: DeepAccessorExclusion?,
         @JvmField val accessors: IntArray?,
         @JvmField val accessorNodes: Array<AccessNode>?,
     ) {
@@ -249,11 +250,18 @@ class AccessTree(
         @JvmField val containsStatic: Boolean
 
         init {
+            check(deepAccessorExclusion == null || isAbstract) {
+                "AnyFieldMarkExclusions on a non-abstract node"
+            }
+        }
+
+        init {
             var hash = 0L
             var depth = 0
             var containsStatic = false
 
             if (isAbstract) hash += 1
+            if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
 
             if (isFinal) {
                 depth = 1
@@ -298,6 +306,7 @@ class AccessTree(
 
             if (hash != other.hash) return false
             if (isAbstract != other.isAbstract || isFinal != other.isFinal) return false
+            if (deepAccessorExclusion != other.deepAccessorExclusion) return false
 
             if (!accessors.contentEquals(other.accessors)) return false
             return accessorNodes.contentEquals(other.accessorNodes)
@@ -583,7 +592,7 @@ class AccessTree(
         }
 
         fun clearChild(accessor: AccessorIdx): AccessNode = when (accessor) {
-            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, accessors, accessorNodes)
+            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, deepAccessorExclusion, accessors, accessorNodes)
             else -> removeSingleAccessor(accessor)
         }
 
@@ -1008,6 +1017,7 @@ class AccessTree(
             interned = true,
             isAbstract = isAbstract,
             isFinal = isFinal,
+            deepAccessorExclusion = deepAccessorExclusion,
             accessors = accessors,
             accessorNodes = accessorNodes
         )
@@ -1292,7 +1302,7 @@ class AccessTree(
             transformer: (AccessorIdx, AccessNode) -> AccessNode?
         ): AccessNode {
             val newAccessors = transformAccessors(accessors, accessorNodes, transformer) ?: return this
-            return manager.create(isAbstract, isFinal, newAccessors.first, newAccessors.second)
+            return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
         private fun limitFieldAccess(
@@ -1373,7 +1383,7 @@ class AccessTree(
 
         private fun removeSingleAccessor(accessor: AccessorIdx): AccessNode {
             val newAccessors = removeSingleAccessor(accessor, accessors, accessorNodes) ?: return this
-            return manager.create(isAbstract, isFinal, newAccessors.first, newAccessors.second)
+            return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
         internal class Serializer(
@@ -1568,6 +1578,7 @@ class AccessTree(
                 manager,
                 interned = true,
                 isAbstract = isAbstract, isFinal = isFinal,
+                deepAccessorExclusion = null,
                 accessors = null, accessorNodes = null
             )
 
@@ -1583,6 +1594,7 @@ class AccessTree(
                     node.manager,
                     interned = false,
                     isAbstract = false, isFinal = false,
+                    deepAccessorExclusion = null,
                     accessors = intArrayOf(accessor),
                     accessorNodes = arrayOf(node)
                 )
@@ -1591,32 +1603,34 @@ class AccessTree(
             fun TreeApManager.create(
                 isAbstract: Boolean,
                 isFinal: Boolean,
+                deepAccessorExclusion: DeepAccessorExclusion?,
                 accessors: IntArray?,
                 accessorNodes: Array<AccessNode>?
             ): AccessNode =
                 if (isAbstract) {
                     if (isFinal) {
-                        createElementAndField(abstractFinalNode, accessors, accessorNodes)
+                        createElementAndField(abstractFinalNode, deepAccessorExclusion, accessors, accessorNodes)
                     } else {
-                        createElementAndField(abstractNode, accessors, accessorNodes)
+                        createElementAndField(abstractNode, deepAccessorExclusion, accessors, accessorNodes)
                     }
                 } else {
                     if (isFinal) {
-                        createElementAndField(finalNode, accessors, accessorNodes)
+                        createElementAndField(finalNode, deepAccessorExclusion = null, accessors, accessorNodes)
                     } else {
-                        createElementAndField(emptyNode, accessors, accessorNodes)
+                        createElementAndField(emptyNode, deepAccessorExclusion = null, accessors, accessorNodes)
                     }
                 }
 
             @JvmStatic
             private fun createElementAndField(
                 base: AccessNode,
+                deepAccessorExclusion: DeepAccessorExclusion?,
                 accessors: IntArray?,
                 accessorNodes: Array<AccessNode>?,
             ): AccessNode {
                 val nonEmptyAccessors = accessors?.takeIf { it.isNotEmpty() }
                 val nonEmptyAccessorNodes = accessorNodes?.takeIf { nonEmptyAccessors != null }
-                return if (nonEmptyAccessors == null) {
+                return if (nonEmptyAccessors == null && deepAccessorExclusion == null) {
                     base
                 } else {
                     AccessNode(
@@ -1624,6 +1638,7 @@ class AccessTree(
                         interned = false,
                         isAbstract = base.isAbstract,
                         isFinal = base.isFinal,
+                        deepAccessorExclusion = deepAccessorExclusion,
                         accessors = nonEmptyAccessors,
                         accessorNodes = nonEmptyAccessorNodes
                     )
