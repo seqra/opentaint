@@ -3,7 +3,7 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
@@ -74,7 +74,7 @@ class GoMethodCallSummaryHandler(
 
     override fun handleSummary(
         currentFactAp: FinalFactAp,
-        summaryEffect: SummaryEdgeApplication,
+        summaryEffect: MethodSummaryEdgeApplicationUtils.EdgeRefinement,
         summaryEdge: SummaryEdge,
         createSideEffectRequirement: (refinement: ExclusionSet) -> Sequent?,
         handleSummaryEdge: (initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp) -> Sequent
