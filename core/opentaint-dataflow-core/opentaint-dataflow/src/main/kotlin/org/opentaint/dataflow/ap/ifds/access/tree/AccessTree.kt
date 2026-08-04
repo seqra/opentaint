@@ -800,12 +800,19 @@ class AccessTree(
                 a.mergeAddStep(b, results)
             }
 
+        private fun intersectDeepExclusion(other: AccessNode): DeepAccessorExclusion? = when {
+            !this.isAbstract -> other.deepAccessorExclusion
+            !other.isAbstract -> this.deepAccessorExclusion
+            else -> DeepAccessorExclusion.intersect(this.deepAccessorExclusion, other.deepAccessorExclusion)
+        }
+
         private fun mergeAddStep(
             other: AccessNode,
             results: Object2ObjectOpenHashMap<AccessNodeMergePair, AccessNode>
         ): AccessNode {
             val isAbstract = this.isAbstract || other.isAbstract
             val isFinal = this.isFinal || other.isFinal
+            val deepExclusions = intersectDeepExclusion(other)
 
             val mergedAccessors = mergeAccessors(
                 other.accessors, other.accessorNodes, onOtherNode = { _, _ -> }
@@ -815,6 +822,7 @@ class AccessTree(
             if (
                 isAbstract == this.isAbstract
                 && isFinal == this.isFinal
+                && deepExclusions == this.deepAccessorExclusion
                 && mergedAccessors == null
             ) {
                 return this
@@ -823,7 +831,7 @@ class AccessTree(
             val accessors = mergedAccessors?.first ?: accessors
             val accessorNodes = mergedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, accessors, accessorNodes)
+            return manager.create(isAbstract, isFinal, deepExclusions, accessors, accessorNodes)
         }
 
         fun mergeAddDelta(other: AccessNode, foldToAny: Boolean = true): Pair<AccessNode, AccessNode?> =
@@ -839,7 +847,11 @@ class AccessTree(
             val isFinalDelta = !this.isFinal && other.isFinal
 
             val isAbstract = this.isAbstract || other.isAbstract
-            val isAbstractDelta = !this.isAbstract && other.isAbstract
+            val deepExclusion = intersectDeepExclusion(other)
+
+            val abstractionPointChanged = isAbstract != this.isAbstract || deepExclusion != this.deepAccessorExclusion
+            val isAbstractDelta = abstractionPointChanged && isAbstract
+            val deltaDeepExclusion = if (isAbstractDelta) deepExclusion else null
 
             val deltaAccessors = IntArrayList()
             val deltaAccessorNodes = arrayListOf<AccessNode>()
@@ -862,7 +874,7 @@ class AccessTree(
             }
 
             if (
-                isAbstract == this.isAbstract
+                !abstractionPointChanged
                 && isFinal == this.isFinal
                 && mergedAccessors == null
             ) {
@@ -870,14 +882,14 @@ class AccessTree(
             }
 
             val delta = manager.create(
-                isAbstractDelta, isFinalDelta,
+                isAbstractDelta, isFinalDelta, deltaDeepExclusion,
                 deltaAccessors.toIntArray(), deltaAccessorNodes.toTypedArray(),
             ).takeIf { !it.isEmpty }
 
             val accessors = mergedAccessors?.first ?: accessors
             val accessorNodes = mergedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, accessors, accessorNodes) to delta
+            return manager.create(isAbstract, isFinal, deepExclusion, accessors, accessorNodes) to delta
         }
 
         private inline fun <T: Any> mergeNodeLoop(
