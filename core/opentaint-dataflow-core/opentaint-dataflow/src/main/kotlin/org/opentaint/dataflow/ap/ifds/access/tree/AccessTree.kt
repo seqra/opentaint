@@ -89,7 +89,18 @@ class AccessTree(
             ?.let { AccessTree(apManager, base, it, exclusions) }
 
     override fun abstractOnly(): FinalFactAp =
-        AccessTree(apManager, base, apManager.abstractNode, exclusions)
+        AccessTree(apManager, base, access.abstractOnly(), exclusions)
+
+    override fun clearAllAccessorOccurrences(
+        accessor: Accessor,
+        keepStartAccessor: Boolean,
+    ): FinalFactAp? {
+        val accessorIdx = with(apManager) { accessor.idx }
+        val cleared = access.clearAllAccessorOccurrences(accessorIdx, keepStartAccessor, IdentityHashMap())
+            ?: return null
+
+        return if (cleared === access) this else AccessTree(apManager, base, cleared, exclusions)
+    }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
@@ -613,6 +624,57 @@ class AccessTree(
             val accessorNodes = transformedAccessors?.second ?: accessorNodes
 
             return manager.create(isAbstract, isFinal, accessors, accessorNodes)
+
+        fun clearAllAccessorOccurrences(
+            accessorIdx: AccessorIdx,
+            keepStartAccessor: Boolean,
+            cache: IdentityHashMap<AccessNode, AccessNode?>,
+        ): AccessNode? {
+            val transformed = transformAccessorsNonEmpty { currentAccessorIdx, node ->
+                if (keepStartAccessor || currentAccessorIdx != accessorIdx) {
+                    node.clearAccessorOccurrencesBelow(accessorIdx, cache)
+                } else {
+                    null
+                }
+            }
+
+            return transformed?.annotateAnyFieldMarkExclusion(accessorIdx, keepStartAccessor)
+        }
+
+        private fun clearAccessorOccurrencesBelow(
+            accessorIdx: AccessorIdx,
+            cache: IdentityHashMap<AccessNode, AccessNode?>,
+        ): AccessNode? {
+            if (cache.containsKey(this)) return cache[this]
+            manager.cancellation.checkpoint()
+
+            val transformed = transformAccessorsNonEmpty { currentAccessorIdx, node ->
+                if (currentAccessorIdx == accessorIdx) null
+                else node.clearAccessorOccurrencesBelow(accessorIdx, cache)
+            }
+
+            val result = transformed?.annotateAnyFieldMarkExclusion(accessorIdx, false)
+
+            cache[this] = result
+            return result
+        }
+
+        private fun annotateAnyFieldMarkExclusion(markIdx: AccessorIdx, keepCurrentNodeAccessor: Boolean): AccessNode {
+            if (!isAbstract) return this
+
+            val annotated = if (keepCurrentNodeAccessor) {
+                deepAccessorExclusion.addMarkFromDepth2(markIdx)
+            } else {
+                deepAccessorExclusion.addMarkFromDepth1(markIdx)
+            }
+            if (annotated == deepAccessorExclusion) return this
+
+            return manager.create(isAbstract, isFinal, annotated, accessors, accessorNodes)
+        }
+
+        fun abstractOnly(): AccessNode =
+            manager.create(isAbstract = true, isFinal = false, deepAccessorExclusion, accessors = null, accessorNodes = null)
+
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {
