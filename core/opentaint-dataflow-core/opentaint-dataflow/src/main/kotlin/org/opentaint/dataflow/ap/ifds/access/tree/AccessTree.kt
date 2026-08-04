@@ -780,7 +780,7 @@ class AccessTree(
 
             if (mergedAccessors == null) return this
 
-            return manager.create(isAbstract, isFinal, mergedAccessors.first, mergedAccessors.second)
+            return manager.create(isAbstract, isFinal, deepAccessorExclusion, mergedAccessors.first, mergedAccessors.second)
         }
 
         private data class AccessNodeMergePair(val left: AccessNode, val right: AccessNode) {
@@ -1282,7 +1282,7 @@ class AccessTree(
                 }
             }
 
-            val resultNode = manager.create(isAbstract = false, isFinal, accessors = null, accessorNodes = null)
+            val resultNode = manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors = null, accessorNodes = null)
                 .bulkMergeAddAccessors(nestedAccessors)
 
             val concatenatedNode = concatNode?.let { resultNode.mergeAdd(it) } ?: resultNode
