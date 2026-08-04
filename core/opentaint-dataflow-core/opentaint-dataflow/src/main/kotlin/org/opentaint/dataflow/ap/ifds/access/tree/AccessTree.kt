@@ -28,7 +28,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isF
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
-import org.opentaint.dataflow.ap.ifds.serialization.AnyFieldMarkExclusionsSerializer
+import org.opentaint.dataflow.ap.ifds.serialization.DeepExclusionsSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.forEachInt
@@ -1543,8 +1543,8 @@ class AccessTree(
             val manager: TreeApManager,
             private val context: SummarySerializationContext
         ) {
-            private val anyFieldMarkExclusionsSerializer = with(manager) {
-                AnyFieldMarkExclusionsSerializer(context, { it.idx }, { it.accessor })
+            private val deepExclusionsSerializer = with(manager) {
+                DeepExclusionsSerializer(context, { it.idx }, { it.accessor })
             }
 
             fun DataOutputStream.writeAccessNode(node: AccessNode) {
@@ -1561,7 +1561,7 @@ class AccessTree(
                 write(mask)
 
                 node.deepAccessorExclusion?.let {
-                    with(anyFieldMarkExclusionsSerializer) {
+                    with(deepExclusionsSerializer) {
                         writeAnyFieldMarkExclusions(it)
                     }
                 }
@@ -1584,7 +1584,7 @@ class AccessTree(
                 val isAbstract = mask.and(2) > 0
 
                 val anyFieldMarkExclusions = if (mask.and(4) > 0) {
-                    with(anyFieldMarkExclusionsSerializer) {
+                    with(deepExclusionsSerializer) {
                         readAnyFieldMarkExclusions()
                     }
                 } else {
