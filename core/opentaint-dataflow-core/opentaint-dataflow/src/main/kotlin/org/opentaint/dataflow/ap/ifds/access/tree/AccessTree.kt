@@ -555,7 +555,32 @@ class AccessTree(
                 ?: error("Impossible accessor")
 
         fun removeAbstraction(): AccessNode =
-            manager.create(isAbstract = false, isFinal, accessors, accessorNodes)
+            manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodes)
+
+        private fun AccessNode.filterDeepExclusion(deepAccessorExclusion: DeepAccessorExclusion?): AccessNode? {
+            if (deepAccessorExclusion == null) return this
+
+            var filtered: AccessNode = this
+            deepAccessorExclusion.marksFromDepth1.forEach {
+                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = false, IdentityHashMap())
+                    ?: return null
+            }
+            deepAccessorExclusion.marksFromDepth2.forEach {
+                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = true, IdentityHashMap())
+                    ?: return null
+            }
+
+            val belowClaim = deepAccessorExclusion.collapseToDepth1()
+            val cache = IdentityHashMap<AccessNode, AccessNode>()
+            var annotated = filtered.transformAccessors { _, node ->
+                node.annotateAbstractNodes(belowClaim, cache)
+            }
+            if (annotated.isAbstract) {
+                val merged = DeepAccessorExclusion.merge(annotated.deepAccessorExclusion, deepAccessorExclusion)
+                annotated = annotated.updateDeepExclusion(merged)
+            }
+            return annotated
+        }
 
         private fun prependAnyAccessor(): AccessNode {
             val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
@@ -630,7 +655,8 @@ class AccessTree(
             val accessors = transformedAccessors?.first ?: accessors
             val accessorNodes = transformedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, accessors, accessorNodes)
+            return manager.create(isAbstract, isFinal, deepAccessorExclusion, accessors, accessorNodes)
+        }
 
         fun clearAllAccessorOccurrences(
             accessorIdx: AccessorIdx,
@@ -1226,6 +1252,7 @@ class AccessTree(
             val concatNode = if (isAbstract && other != null) {
                 other.filterTypes(typeChecker, path)
                     ?.node?.limitElementAccess(limit = subsequentArrayElementLimit)
+                    ?.filterDeepExclusion(deepAccessorExclusion)
             } else null
 
             val nestedAccessors = mutableListOf<IntObjectImmutablePair<AccessNode>>()
