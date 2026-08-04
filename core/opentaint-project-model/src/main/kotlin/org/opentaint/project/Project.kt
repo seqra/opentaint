@@ -22,13 +22,24 @@ sealed interface CommonProject {
     fun sourceRoot(): Path?
 }
 
+@Serializable
+data class ResolvedDependency(
+    val path: @Serializable(with = PathAsStringSerializer::class) Path,
+    val group: String? = null,
+    val artifact: String? = null,
+    val version: String? = null,
+) {
+    fun relativeTo(base: Path): ResolvedDependency = copy(path = path.relativeTo(base))
+    fun resolve(base: Path): ResolvedDependency = copy(path = base.resolve(path))
+}
+
 @Suppress("DEPRECATION")
 @Serializable
 data class JavaProject(
     val sourceRoot: @Serializable(with = PathAsStringSerializer::class) Path? = null,
     val javaToolchain: @Serializable(with = PathAsStringSerializer::class) Path? = null,
     val modules: List<ProjectModuleClasses> = emptyList(),
-    val dependencies: List<@Serializable(with = PathAsStringSerializer::class) Path> = emptyList(),
+    val dependencies: List<ResolvedDependency> = emptyList(),
     @Deprecated("Use top-level Project.javaProjects instead")
     val subProjects: List<JavaProject> = emptyList(),
 ): CommonProject {
@@ -46,7 +57,7 @@ data class JavaProject(
         sourceRoot?.let { base.resolve(it) },
         javaToolchain?.let { base.resolve(it) },
         modules.map { it.resolve(base) },
-        dependencies.map { base.resolve(it) },
+        dependencies.map { it.resolve(base) },
         subProjects.map { it.resolve(base) }
     )
 
