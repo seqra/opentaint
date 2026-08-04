@@ -1,7 +1,9 @@
 package org.opentaint.dataflow.util
 
+import java.util.concurrent.CancellationException
+
 class Cancellation {
-    class Cancelled : Exception("Operation cancelled") {
+    class Cancelled : CancellationException("Operation cancelled") {
         override fun fillInStackTrace(): Throwable = this
     }
 
