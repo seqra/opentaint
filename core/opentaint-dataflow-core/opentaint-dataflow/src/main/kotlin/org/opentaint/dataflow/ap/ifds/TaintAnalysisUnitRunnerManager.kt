@@ -31,6 +31,8 @@ import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker.VerifiedVulnera
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker.VulnerabilityVerificationStatus
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithInterproceduralTrace
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.action.ActionableRulesCollectionResult
+import org.opentaint.dataflow.ap.ifds.trace.action.collectActionableRules
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.ap.ifds.trace.path.generateTracePath
@@ -213,6 +215,33 @@ class TaintAnalysisUnitRunnerManager(
         return vulnerabilities
     }
 
+    fun resolveVulnerabilityActionableRules(
+        vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
+        timeout: Duration,
+        cancellationTimeout: Duration
+    ): List<ActionableRulesCollectionResult> {
+        if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { ActionableRulesCollectionResult.Failed }
+        }
+
+        cancellation.activate()
+
+        val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
+            cancellation.cancel()
+            updateFailureStatus(Status.OOM)
+            logger.error { "Running low on memory, stopping actionable rules resolution" }
+        }
+
+        return traceResolverMemoryManager.runWithMemoryManager {
+            resolveTraceActionableRulesWithCancellation(
+                vulnerabilities, timeout, cancellationTimeout
+            )
+        }
+    }
+
     fun resolveVulnerabilityTraces(
         vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
         resolverParams: TracePathResolveParams,
@@ -220,6 +249,12 @@ class TaintAnalysisUnitRunnerManager(
         cancellationTimeout: Duration
     ): List<VulnerabilityWithTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { VulnerabilityWithTrace(it.vulnerability, TracePathGenerationResult.Failure) }
+        }
+
         cancellation.activate()
 
         val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
@@ -243,6 +278,12 @@ class TaintAnalysisUnitRunnerManager(
         cancellationTimeout: Duration
     ): List<VulnerabilityWithInterproceduralTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { VulnerabilityWithInterproceduralTrace(it, trace = null) }
+        }
+
         cancellation.activate()
 
         val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
@@ -350,12 +391,43 @@ class TaintAnalysisUnitRunnerManager(
         )
     }
 
+    private fun resolveTraceActionableRulesWithCancellation(
+        vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
+        timeout: Duration,
+        cancellationTimeout: Duration,
+    ): List<ActionableRulesCollectionResult> {
+        val traceResolutionContext = object : ParallelProcessingContext<VulnerabilityWithInterproceduralTrace, ActionableRulesCollectionResult>(
+            analyzerDispatcher, name = "Trace actionable entries resolution", vulnerabilities
+        ) {
+            override fun processItem(item: VulnerabilityWithInterproceduralTrace): ProcessingResult<VulnerabilityWithInterproceduralTrace, ActionableRulesCollectionResult> {
+                val resolved = collectActionableRules(item)
+                return ProcessingResult.Done(resolved)
+            }
+
+            override fun createUnprocessed(item: VulnerabilityWithInterproceduralTrace): ActionableRulesCollectionResult =
+                ActionableRulesCollectionResult.Failed
+
+            override fun reportStats() {
+                logger.info { reportMemoryUsage() }
+            }
+        }
+
+        return traceResolutionContext.processAll(
+            progressScope, timeout, cancellationTimeout, cancellation
+        )
+    }
+
     fun confirmVulnerabilities(
         entryPoints: Set<CommonMethod>,
         vulnerabilities: List<TaintVulnerability>,
         timeout: Duration,
         cancellationTimeout: Duration
     ): List<TaintVulnerability> {
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities
+        }
+
         cancellation.activate()
 
         val confirmed = mutableListOf<TaintVulnerability>()

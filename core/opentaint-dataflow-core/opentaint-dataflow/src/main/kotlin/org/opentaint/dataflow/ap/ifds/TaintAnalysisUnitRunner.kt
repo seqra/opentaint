@@ -91,6 +91,13 @@ class TaintAnalysisUnitRunner(
     override fun resetApManager(apManager: ApManager) {
         resetQueue()
 
+        loadedSummaries.clear()
+        methodSummariesSerializer = MethodSummariesSerializer(
+            summarySerializationContext,
+            analysisManager,
+            apManager
+        )
+
         internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
         externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
 
@@ -111,7 +118,7 @@ class TaintAnalysisUnitRunner(
     private val eventsProcessed = LongAdder()
     private val eventsEnqueued = LongAdder()
 
-    private val methodSummariesSerializer = MethodSummariesSerializer(
+    private var methodSummariesSerializer = MethodSummariesSerializer(
         summarySerializationContext,
         analysisManager,
         apManager

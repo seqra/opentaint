@@ -3,6 +3,7 @@ package org.opentaint.jvm.sast.dataflow
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
@@ -19,6 +20,9 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
         private const val OPTIONAL_RULE_ID = "optional-flow-rule"
         private const val STREAM_RULE_ID = "stream-flow-rule"
         private const val ASYNC_RULE_ID = "async-flow-rule"
+        private const val BASE_ONLY_SETTER_RULE_ID = "base-only-setter-regression"
+        private const val BASE_ONLY_NESTED_REFERENCE_RULE_ID = "base-only-nested-reference-regression"
+        private const val BASE_ONLY_TRACE_RESOLUTION_RULE_ID = "base-only-trace-resolution-regression"
     }
 
     override val sourceFileExtension: String = "java"
@@ -75,6 +79,74 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
     }
 
     @Test
+    fun `base-only flow - tainted field survives an unrelated setter`() {
+        val testCls = "$SAMPLE_PACKAGE.KkFileViewSetterIdentityRegressionSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", BASE_ONLY_SETTER_RULE_ID, listOf(Argument(0) to TAINT_MARK))
+            )
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "taintedLocalSurvivesUnrelatedSetters",
+            ruleId = BASE_ONLY_SETTER_RULE_ID,
+            testName = "BaseOnly unrelated setter regression"
+        )
+    }
+
+    @Test
+    fun `base-only flow - tainted child survives installation into an outer field`() {
+        val testCls = "$SAMPLE_PACKAGE.BaseOnlyNestedReferenceRegressionSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(
+                    testCls,
+                    "sink",
+                    BASE_ONLY_NESTED_REFERENCE_RULE_ID,
+                    listOf(Argument(0) to TAINT_MARK),
+                )
+            )
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nestedReferenceFlow",
+            ruleId = BASE_ONLY_NESTED_REFERENCE_RULE_ID,
+            testName = "BaseOnly nested reference installation regression"
+        )
+    }
+
+    @Test
+    fun `base-only flow - trace resolves through nested factory result`() {
+        val testCls = "$SAMPLE_PACKAGE.BaseOnlyTraceResolutionFuzzSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(
+                    testCls,
+                    "sink",
+                    BASE_ONLY_TRACE_RESOLUTION_RULE_ID,
+                    listOf(Argument(0) to TAINT_MARK),
+                )
+            ),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nestedFactory",
+            ruleId = BASE_ONLY_TRACE_RESOLUTION_RULE_ID,
+            testName = "BaseOnly nested factory trace resolution",
+            apMode = ApMode.BaseOnlyField,
+        )
+    }
+
+    @Test
     fun `interprocedural flow - source to sink through chained methods`() {
         val testCls = "$SAMPLE_PACKAGE.InterproceduralDataFlowSample"
         val config = SerializedTaintConfig(
@@ -88,6 +160,44 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             entryPointName = "interproceduralDataFlow",
             ruleId = "ip-flow-rule",
             testName = "interprocedural flow"
+        )
+    }
+
+    @Test
+    fun `over-approximate start trace - non-zero summary starts at method entry`() {
+        val testCls = "$SAMPLE_PACKAGE.OverApproximateStartTraceSample"
+        val ruleId = "over-approximate-non-zero-start"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", ruleId, listOf(Argument(0) to TAINT_MARK))),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nonZeroSummary",
+            ruleId = ruleId,
+            testName = "non-Zero summary direct MethodEntry",
+            apMode = ApMode.BaseOnlyField,
+        )
+    }
+
+    @Test
+    fun `over-approximate start trace - first zero origin on every CFG branch is retained`() {
+        val testCls = "$SAMPLE_PACKAGE.OverApproximateStartTraceSample"
+        val ruleId = "over-approximate-zero-frontier"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", ruleId, listOf(Argument(0) to TAINT_MARK))),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "zeroSummary",
+            ruleId = ruleId,
+            testName = "Zero summary CFG origin frontier",
+            apMode = ApMode.BaseOnlyField,
         )
     }
 

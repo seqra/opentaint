@@ -8,6 +8,7 @@ include("opentaint-java-querylang")
 include("opentaint-java-querylang:samples")
 include("opentaint-go-querylang")
 include("samples")
+include("samples-dependency")
 
 fun DependencySubstitutions.substituteProjects(group: String, projects: List<String>) {
     for (projectName in projects) {

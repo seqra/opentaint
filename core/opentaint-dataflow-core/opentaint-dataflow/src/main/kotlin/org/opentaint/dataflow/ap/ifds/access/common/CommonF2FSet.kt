@@ -16,7 +16,7 @@ abstract class CommonF2FSet<IAP, FAP>(
     data class AccessWithExclusion<FAP>(val access: FAP, val exclusion: ExclusionSet)
 
     interface ApStorage<IAP, FAP> {
-        fun add(statement: CommonInst, initial: IAP, final: AccessWithExclusion<FAP>): AccessWithExclusion<FAP>?
+        fun add(statement: CommonInst, initial: IAP, final: AccessWithExclusion<FAP>): List<AccessWithExclusion<FAP>>
         fun filter(dst: MutableList<Pair<IAP, AccessWithExclusion<FAP>>>, statement: CommonInst, finalPattern: IAP)
         fun filter(dst: MutableList<AccessWithExclusion<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
     }
@@ -29,24 +29,21 @@ abstract class CommonF2FSet<IAP, FAP>(
         statement: CommonInst,
         initialAp: InitialFactAp,
         finalAp: FinalFactAp,
-    ): Pair<InitialFactAp, FinalFactAp>? {
+    ): List<Pair<InitialFactAp, FinalFactAp>> {
         check(initialAp.exclusions == finalAp.exclusions) { "Edge exclusion mismatch" }
 
         val edgeStorage = storage.getOrCreate(finalAp.base).getOrCreate(initialAp.base)
 
         val final = AccessWithExclusion(getFinalAccess(finalAp), finalAp.exclusions)
-        val addedAccessWithExclusion = edgeStorage.add(statement, getInitialAccess(initialAp), final)
-            ?: return null
-
-        if (addedAccessWithExclusion === final) return initialAp to finalAp
-
-        val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), addedAccessWithExclusion.exclusion)
-
-        val newExitAp = createFinal(
-            finalAp.base, addedAccessWithExclusion.access, addedAccessWithExclusion.exclusion
-        )
-
-        return newInitialAp to newExitAp
+        return edgeStorage.add(statement, getInitialAccess(initialAp), final).map { added ->
+            if (added === final) {
+                initialAp to finalAp
+            } else {
+                val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), added.exclusion)
+                val newExitAp = createFinal(finalAp.base, added.access, added.exclusion)
+                newInitialAp to newExitAp
+            }
+        }
     }
 
     abstract fun mostAbstractPattern(base: AccessPathBase): IAP

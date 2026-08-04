@@ -4,6 +4,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.AnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.util.analysis.ApplicationGraph
@@ -11,7 +13,8 @@ import org.opentaint.util.analysis.ApplicationGraph
 interface TaintAnalysisManager : AnalysisManager {
     sealed interface Phase {
         data object Prescan : Phase
-        data object FullScan : Phase
+        data object ShallowScan : Phase
+        data class FullScan(val actionableRules: Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>) : Phase
     }
 
     fun selectPhase(phase: Phase)
