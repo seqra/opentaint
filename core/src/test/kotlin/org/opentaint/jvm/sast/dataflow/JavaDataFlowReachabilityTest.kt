@@ -164,6 +164,44 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
     }
 
     @Test
+    fun `over-approximate start trace - non-zero summary starts at method entry`() {
+        val testCls = "$SAMPLE_PACKAGE.OverApproximateStartTraceSample"
+        val ruleId = "over-approximate-non-zero-start"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", ruleId, listOf(Argument(0) to TAINT_MARK))),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nonZeroSummary",
+            ruleId = ruleId,
+            testName = "non-Zero summary direct MethodEntry",
+            apMode = ApMode.BaseOnlyField,
+        )
+    }
+
+    @Test
+    fun `over-approximate start trace - first zero origin on every CFG branch is retained`() {
+        val testCls = "$SAMPLE_PACKAGE.OverApproximateStartTraceSample"
+        val ruleId = "over-approximate-zero-frontier"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", ruleId, listOf(Argument(0) to TAINT_MARK))),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "zeroSummary",
+            ruleId = ruleId,
+            testName = "Zero summary CFG origin frontier",
+            apMode = ApMode.BaseOnlyField,
+        )
+    }
+
+    @Test
     fun `branch flow - source to sink through conditional branches`() {
         val testCls = "$SAMPLE_PACKAGE.BranchLoopDataFlowSample"
         val config = SerializedTaintConfig(

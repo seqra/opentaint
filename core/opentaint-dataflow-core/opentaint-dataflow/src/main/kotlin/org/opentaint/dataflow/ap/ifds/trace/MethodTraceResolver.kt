@@ -15,7 +15,9 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdgeSearcher
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.baseonly.ABSTRACT_EMPTY_ACCESS
@@ -119,6 +121,7 @@ class MethodTraceResolver(
         val startEntry: TraceEntry.StartTraceEntry,
         val final: TraceEntry.Final,
         val traceKind: TraceKind,
+        val isStartOverApproximation: Boolean = false,
     )
 
     @Suppress("EqualsOrHashCode")
@@ -541,6 +544,152 @@ class MethodTraceResolver(
         }
     }
 
+    /**
+     * Resolves only the information needed to connect an inter-procedural summary to a method start.
+     *
+     * A summary with a non-Zero premise already carries its method-entry facts, so reconstructing the
+     * intra-procedural path cannot add information to [Start2FinalTrace]. This also covers mixed
+     * summaries: their Zero premises are produced inside the method while their non-Zero premises
+     * determine the method start. For an all-Zero summary, the resolver walks the CFG forward and
+     * stops each path at its first Z2F edge carrying the requested mark. Backward resolution then
+     * starts at that frontier instead of at the summary final. The exact resolver remains the
+     * completeness fallback for summaries for which the frontier cannot produce a source start.
+     */
+    fun resolveIntraProceduralOverApproximateStart2FinalTrace(
+        summaryTrace: SummaryTrace,
+        cancellation: Cancellation,
+    ): List<Start2FinalTrace> {
+        val st = summaryTrace.universeTrace()
+        check(st.method == methodEntryPoint) { "Incorrect summary trace" }
+
+        val premises = st.final.summaryPremises()
+        if (premises.nonZeroFacts.isNotEmpty()) {
+            val methodEntryFacts = premises.nonZeroFacts
+            val start = TraceEntry.MethodEntry(methodEntryFacts, methodEntryPoint)
+            return listOf(
+                Start2FinalTrace(
+                    methodEntryPoint,
+                    start,
+                    st.final,
+                    st.traceKind,
+                    isStartOverApproximation = true,
+                )
+            )
+        }
+        if (!premises.hasZero) {
+            return resolveIntraProceduralStart2FinalTrace(st, cancellation)
+        }
+
+        val requestedFactsByMark = st.final.edges
+            .filterIsInstance<TraceEdge.SourceTraceEdge>()
+            .flatMap { edge -> edge.fact.taintMarks().map { mark -> mark to edge.fact } }
+            .groupBy({ it.first }, { it.second })
+
+        if (requestedFactsByMark.isEmpty()) {
+            return resolveIntraProceduralStart2FinalTrace(st, cancellation)
+        }
+
+        val starts = hashSetOf<TraceEntry.SourceStartEntry>()
+        for ((mark, requestedFacts) in requestedFactsByMark) {
+            val origins = findFirstZeroFactOrigins(mark, cancellation)
+            val originQueries = buildSet {
+                for (origin in origins) {
+                    origin.rebaseRequestedFacts(requestedFacts).forEach { pattern ->
+                        add(origin.statement to pattern)
+                    }
+                }
+            }
+            for ((originStatement, originPattern) in originQueries) {
+                val originTrace = SummaryTrace(
+                    method = methodEntryPoint,
+                    final = TraceEntry.Final(
+                        edges = setOf(TraceEdge.SourceTraceEdge(originPattern)),
+                        statement = originStatement,
+                    ),
+                    traceKind = TraceKind.TraceToFactAfterStatement,
+                )
+
+                val prefixTraces = resolveIntraProceduralStart2FinalTrace(originTrace, cancellation)
+                prefixTraces.mapNotNullTo(starts) { it.startEntry as? TraceEntry.SourceStartEntry }
+            }
+        }
+
+        if (starts.isEmpty()) {
+            return resolveIntraProceduralStart2FinalTrace(st, cancellation)
+        }
+
+        return starts.map { start ->
+            Start2FinalTrace(
+                methodEntryPoint,
+                start,
+                st.final,
+                st.traceKind,
+                isStartOverApproximation = true,
+            )
+        }
+    }
+
+    private data class SummaryPremises(
+        val hasZero: Boolean,
+        val nonZeroFacts: Set<InitialFactAp>,
+    )
+
+    private fun TraceEntry.Final.summaryPremises(): SummaryPremises {
+        var hasZero = false
+        val nonZeroFacts = hashSetOf<InitialFactAp>()
+        for (edge in edges) {
+            when (edge) {
+                is TraceEdge.SourceTraceEdge -> hasZero = true
+                is TraceEdge.MethodTraceEdge -> nonZeroFacts += edge.initialFact
+                is TraceEdge.MethodTraceNDEdge -> nonZeroFacts += edge.initialFacts
+            }
+        }
+        return SummaryPremises(hasZero, nonZeroFacts)
+    }
+
+    private data class ZeroFactOrigin(
+        val statement: CommonInst,
+        val fact: FinalFactAp,
+    )
+
+    private fun findFirstZeroFactOrigins(
+        mark: TaintMarkAccessor,
+        cancellation: Cancellation,
+    ): List<ZeroFactOrigin> {
+        val result = arrayListOf<ZeroFactOrigin>()
+        val visited = BitSet(graph.instructions.size)
+        val unprocessed = IntArrayList()
+        unprocessed.add(analysisManager.getInstIndex(methodEntryPoint.statement))
+
+        while (unprocessed.isNotEmpty() && cancellation.isActive()) {
+            val statementIdx = unprocessed.removeInt(unprocessed.lastIndex)
+            if (!visited.add(statementIdx)) continue
+
+            val statement = graph.instructions[statementIdx]
+            val matchingFacts = edges.allZeroToFactFactsAtStatement(statement)
+                .filter { mark in it.taintMarks() }
+            if (matchingFacts.isNotEmpty()) {
+                matchingFacts.forEach { result += ZeroFactOrigin(statement, it) }
+                continue
+            }
+
+            graph.graph.forEachSuccessor(statementIdx) { successor ->
+                if (!visited.get(successor)) unprocessed.add(successor)
+            }
+        }
+
+        return result
+    }
+
+    private fun ZeroFactOrigin.rebaseRequestedFacts(
+        requestedFacts: List<InitialFactAp>,
+    ): Set<InitialFactAp> = requestedFacts.mapTo(hashSetOf()) { requested ->
+        requested.rebase(fact.base).replaceExclusions(ExclusionSet.Universe)
+    }
+
+    private fun FactAp.taintMarks(): Set<TaintMarkAccessor> =
+        getAllAccessors().filterIsInstanceTo(hashSetOf())
+
     fun resolveIntraProceduralStart2FinalTrace(
         summaryTrace: SummaryTrace,
         cancellation: Cancellation,
@@ -591,14 +740,16 @@ class MethodTraceResolver(
         builder.resolveTrace(start2FinalTrace.traceKind)
         stats.traceResolverSteps += builder.steps
 
-        val requiredStartId = builder.entryManager.entryId(start2FinalTrace.startEntry)
-        if (!builder.startEntryIds.contains(requiredStartId)) {
-            logger.warn("Trace start entry to found for: $methodEntryPoint")
-            return emptyList()
-        }
+        if (!start2FinalTrace.isStartOverApproximation) {
+            val requiredStartId = builder.entryManager.entryId(start2FinalTrace.startEntry)
+            if (!builder.startEntryIds.contains(requiredStartId)) {
+                logger.warn("Trace start entry to found for: $methodEntryPoint")
+                return emptyList()
+            }
 
-        builder.startEntryIds.clear()
-        builder.startEntryIds.set(requiredStartId)
+            builder.startEntryIds.clear()
+            builder.startEntryIds.set(requiredStartId)
+        }
 
         builder.removeUnreachableNodes()
         if (collapseUnchangedNodes) {

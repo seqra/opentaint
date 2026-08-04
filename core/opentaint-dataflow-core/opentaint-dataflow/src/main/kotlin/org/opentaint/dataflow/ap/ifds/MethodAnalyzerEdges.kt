@@ -116,6 +116,12 @@ class MethodAnalyzerEdges(
         return result
     }
 
+    fun allZeroToFactFactsAtStatement(statement: CommonInst): List<FinalFactAp> {
+        val result = mutableListOf<FinalFactAp>()
+        zeroToFactEdges.collectApAtStatement(result, statement)
+        return result
+    }
+
     fun allFactToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<Pair<InitialFactAp, FinalFactAp>> {
         val result = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
         taintedToFactEdges.collectApAtStatement(result, statement, finalFactPattern)

@@ -491,7 +491,10 @@ class TraceResolver(
 
                 val resolved = manager.withMethodRunner(trace.method) {
                     val traceResolver = methodTraceResolver(trace.method)
-                    traceResolver.resolveIntraProceduralStart2FinalTrace(trace, cancellation)
+                    traceResolver.resolveIntraProceduralOverApproximateStart2FinalTrace(
+                        trace,
+                        cancellation,
+                    )
                 }
 
                 synchronized(generalized) {
