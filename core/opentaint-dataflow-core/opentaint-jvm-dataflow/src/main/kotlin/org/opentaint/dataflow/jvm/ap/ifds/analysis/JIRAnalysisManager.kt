@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -36,6 +37,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
+import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodStartPrecondition
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
@@ -235,6 +237,12 @@ class JIRAnalysisManager(
             JIRMethodCallSummaryHandler(statement, analysisContext, apManager)
         }
     }
+
+    override fun getMethodCallSummaryPreconditionHandler(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        statement: CommonInst
+    ): MethodCallSummaryPreconditionHandler = JIRMethodCallSummaryPreconditionHandler
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

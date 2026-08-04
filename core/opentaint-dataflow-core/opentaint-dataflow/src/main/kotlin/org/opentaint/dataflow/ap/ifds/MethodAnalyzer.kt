@@ -142,10 +142,12 @@ interface MethodAnalyzer {
     fun resetApManager(apManager: ApManager)
 
     sealed interface MethodCallHandler {
-        data class ZeroToZeroHandler(val currentEdge: ZeroToZero) : MethodCallHandler
-        data class ZeroToFactHandler(val currentEdge: ZeroToFact, val startFactBase: AccessPathBase) : MethodCallHandler
-        data class FactToFactHandler(val currentEdge: FactToFact, val startFactBase: AccessPathBase) : MethodCallHandler
-        data class NDFactToFactHandler(val currentEdge: NDFactToFact, val startFactBase: AccessPathBase) : MethodCallHandler
+        val currentEdge: Edge
+
+        data class ZeroToZeroHandler(override val currentEdge: ZeroToZero) : MethodCallHandler
+        data class ZeroToFactHandler(override val currentEdge: ZeroToFact, val startFactBase: AccessPathBase) : MethodCallHandler
+        data class FactToFactHandler(override val currentEdge: FactToFact, val startFactBase: AccessPathBase) : MethodCallHandler
+        data class NDFactToFactHandler(override val currentEdge: NDFactToFact, val startFactBase: AccessPathBase) : MethodCallHandler
     }
 
     sealed interface MethodCallResolutionFailureHandler {
@@ -537,6 +539,68 @@ class NormalMethodAnalyzer(
         }
     }
 
+    private fun propagateZeroCallSuccessFact(
+        callExpr: CommonCallExpr,
+        edge: ZeroInitialEdge,
+        fact: MethodCallFlowFunction.ZeroCallSuccessFact,
+        ep: MethodEntryPoint,
+    ) {
+        when (fact) {
+            is MethodCallFlowFunction.CallToStartZeroFact -> {
+                val callerEdge = ZeroToZero(methodEntryPoint, edge.statement)
+                runner.subscribeOnMethodSummaries(callerEdge, ep)
+            }
+
+            is MethodCallFlowFunction.CallToStartZFact -> {
+                val callerEdge = ZeroToFact(methodEntryPoint, edge.statement, fact.callerFactAp)
+                runner.subscribeOnMethodSummaries(callerEdge, ep, fact.startFactBase)
+            }
+
+            is MethodCallFlowFunction.CallToReturnFFact,
+            is MethodCallFlowFunction.CallToReturnNonDistributiveFact,
+            is MethodCallFlowFunction.CallToReturnZFact,
+            is MethodCallFlowFunction.CallToReturnZeroFact -> propagateZeroCallFact(callExpr, edge, fact)
+        }
+    }
+
+    private fun propagateFactCallSuccessFact(
+        callExpr: CommonCallExpr,
+        edge: FactToFact,
+        fact: MethodCallFlowFunction.FactCallSuccessFact,
+        ep: MethodEntryPoint,
+    ) {
+        when (fact) {
+            is MethodCallFlowFunction.CallToStartFFact -> {
+                val callerEdge = FactToFact(methodEntryPoint, fact.initialFactAp, edge.statement, fact.callerFactAp)
+                handleInputFactChange(edge.initialFactAp, callerEdge.initialFactAp)
+                runner.subscribeOnMethodSummaries(callerEdge, ep, fact.startFactBase)
+            }
+
+            is MethodCallFlowFunction.CallToReturnFFact,
+            is MethodCallFlowFunction.CallToReturnZFact,
+            is MethodCallFlowFunction.CallToReturnNonDistributiveFact,
+            is MethodCallFlowFunction.SideEffectRequirement,
+            is MethodCallFlowFunction.FactSideEffect -> propagateFactCallFact(callExpr, edge, fact)
+        }
+    }
+
+    private fun propagateNDFactCallSuccessFact(
+        callExpr: CommonCallExpr,
+        edge: NDFactToFact,
+        fact: MethodCallFlowFunction.NDFactCallSuccessFact,
+        ep: MethodEntryPoint,
+    ) {
+        when (fact) {
+            is MethodCallFlowFunction.CallToStartNDFFact -> {
+                val callerEdge = NDFactToFact(methodEntryPoint, fact.initialFacts, edge.statement, fact.callerFactAp)
+                runner.subscribeOnMethodSummaries(callerEdge, ep, fact.startFactBase)
+            }
+
+            is MethodCallFlowFunction.CallToReturnZFact,
+            is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> propagateNDFactCallFact(callExpr, edge, fact)
+        }
+    }
+
     private fun addInitialZeroEdge() {
         val edge = ZeroToZero(methodEntryPoint, methodEntryPoint.statement)
         addSequentialEdge(edge)
@@ -752,18 +816,46 @@ class NormalMethodAnalyzer(
         handleMethodCall(handler, entryPoint)
     }
 
-    private fun handleMethodCall(handler: MethodCallHandler, ep: MethodEntryPoint) = when (handler) {
-        is MethodCallHandler.ZeroToZeroHandler ->
-            runner.subscribeOnMethodSummaries(handler.currentEdge, ep)
+    private fun handleMethodCall(handler: MethodCallHandler, ep: MethodEntryPoint) {
+        val statement = handler.currentEdge.statement
+        val callExpr = analysisManager.getCallExpr(statement) ?: error("Expected call expression")
+        val returnValue: CommonValue? = (statement as? CommonAssignInst)?.lhv
+        val flowFunction = analysisManager.getMethodCallFlowFunction(
+            apManager,
+            analysisContext,
+            returnValue,
+            callExpr,
+            statement,
+            generateTrace = false,
+        )
+        
+        return when (handler) {
+            is MethodCallHandler.ZeroToZeroHandler -> {
+                flowFunction.propagateZeroToZeroResolutionSuccess(ep).forEach {
+                    propagateZeroCallSuccessFact(callExpr, handler.currentEdge, it, ep)
+                }
+            }
 
-        is MethodCallHandler.ZeroToFactHandler ->
-            runner.subscribeOnMethodSummaries(handler.currentEdge, ep, handler.startFactBase)
+            is MethodCallHandler.ZeroToFactHandler -> {
+                flowFunction.propagateZeroToFactResolutionSuccess(handler.currentEdge.factAp, handler.startFactBase, ep).forEach {
+                    propagateZeroCallSuccessFact(callExpr, handler.currentEdge, it, ep)
+                }
+            }
 
-        is MethodCallHandler.FactToFactHandler ->
-            runner.subscribeOnMethodSummaries(handler.currentEdge, ep, handler.startFactBase)
+            is MethodCallHandler.FactToFactHandler -> {
+                val edge = handler.currentEdge
+                flowFunction.propagateFactToFactResolutionSuccess(edge.initialFactAp, edge.factAp, handler.startFactBase, ep).forEach {
+                    propagateFactCallSuccessFact(callExpr, edge, it, ep)
+                }
+            }
 
-        is MethodCallHandler.NDFactToFactHandler ->
-            runner.subscribeOnMethodSummaries(handler.currentEdge, ep, handler.startFactBase)
+            is MethodCallHandler.NDFactToFactHandler -> {
+                val edge = handler.currentEdge
+                flowFunction.propagateNDFactToFactResolutionSuccess(edge.initialFacts, edge.factAp, handler.startFactBase, ep).forEach {
+                    propagateNDFactCallSuccessFact(callExpr, edge, it, ep)
+                }
+            }
+        }
     }
 
     override fun handleMethodCallResolutionFailure(

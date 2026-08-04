@@ -20,6 +20,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.go.GoCallExpr
@@ -30,6 +31,7 @@ import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.trace.GoMethodCallPrecondition
+import org.opentaint.dataflow.go.trace.GoMethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.go.trace.GoMethodSequentPrecondition
 import org.opentaint.dataflow.go.trace.GoMethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -157,6 +159,12 @@ class GoAnalysisManager(
             statement as GoIRInst
         )
     }
+
+    override fun getMethodCallSummaryPreconditionHandler(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        statement: CommonInst
+    ): MethodCallSummaryPreconditionHandler = GoMethodCallSummaryPreconditionHandler
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

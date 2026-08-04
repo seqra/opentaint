@@ -80,8 +80,9 @@ class JIRMethodCallRuleBasedSummaryRewriter(
             val simplifiedCondition = conditionRewriter.rewrite(cleanRule.condition)
             if (simplifiedCondition.isFalse) continue
 
-            val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>().mapTo(hashSetOf()) { it.position }
-            indexRule(cleanRule, positions, ruleInfo.relevantTaintMarks)
+            cleanRule.actionsAfter.filterIsInstance<RemoveMark>().forEach { action ->
+                indexRule(cleanRule, setOf(action.position), ruleInfo.relevantTaintMarks + action.mark.name)
+            }
         }
 
         result

@@ -1,17 +1,20 @@
 package org.opentaint.dataflow.jvm.ap.ifds.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
+import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
@@ -44,11 +47,11 @@ class JIRMethodCallPrecondition(
 
     private val taintCtx get() = analysisContext.taint
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
-        val results = mutableListOf<CallPrecondition>()
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> {
+        val results = mutableListOf<CallPrecondition<CallPreconditionFact>>()
 
         results += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: CallPrecondition.Unchanged
+            ?: mkUnchanged()
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }
@@ -64,13 +67,21 @@ class JIRMethodCallPrecondition(
         val preconditions = mutableListOf<CallFailurePreconditionFact>()
 
         if (startFactBase != AccessPathBase.Return) {
-            preconditions += CallPreconditionFact.UnresolvedCallSkip
+            preconditions += MethodCallPrecondition.UnresolvedCallSkip
         }
 
         preconditions += rulePreconditionForFactResolutionFailure(fact, startFactBase)
 
         return preconditions
     }
+
+    override fun factPreconditionResolutionSuccess(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+        ep: MethodEntryPoint
+    ): List<CallSuccessPreconditionFact> = listOf(
+        MethodCallPrecondition.CallToStartResolved(fact, startFactBase, ep)
+    )
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
         if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) {
@@ -103,9 +114,9 @@ class JIRMethodCallPrecondition(
         val rulePreconditions = mutableListOf<TaintRulePrecondition>()
         rulePreconditions.factSourceRulePrecondition(fact, startBase)
 
-        rulePreconditions.mapTo(this) { CallPreconditionFact.CallToReturnTaintRule(it) }
+        rulePreconditions.mapTo(this) { MethodCallPrecondition.CallToReturnTaintRule(it) }
 
-        this += CallPreconditionFact.CallToStart(fact, startBase)
+        this += MethodCallPrecondition.CallToStart(fact, startBase)
     }
 
     private fun rulePreconditionForFactResolutionFailure(
@@ -115,7 +126,7 @@ class JIRMethodCallPrecondition(
         val rulePreconditions = mutableListOf<TaintRulePrecondition>()
         rulePreconditions.factPassRulePrecondition(fact, startBase)
 
-        return rulePreconditions.map { CallPreconditionFact.CallToReturnTaintRule(it) }
+        return rulePreconditions.map { MethodCallPrecondition.CallToReturnTaintRule(it) }
     }
 
     private fun MutableList<TaintRulePrecondition>.factSourceRulePrecondition(
