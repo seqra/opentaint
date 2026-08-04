@@ -14,6 +14,18 @@ REQUEST_TIMEOUT = 60
 RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
 MIN_CHART_BYTES = 2048
+ERROR_BODY_LIMIT = 200
+
+TERMINAL_STATUS_HINTS = {
+    400: (
+        "the sealed token was rejected before it was decrypted; star-history.com "
+        "may have rotated the key in star_history_lib.seal.SEALING_PUBLIC_KEY"
+    ),
+    401: (
+        "the GitHub token was decrypted but refused; refresh the "
+        "STAR_HISTORY_TOKEN secret with a valid personal access token"
+    ),
+}
 
 
 def chart_url(
@@ -31,6 +43,16 @@ def redact(url: str) -> str:
     return re.sub(r"(sealed_token=)[^&]*", r"\1***", url)
 
 
+def describe_http_error(error: urllib.error.HTTPError) -> str:
+    try:
+        body = error.read().decode("utf-8", "replace").strip()
+    except OSError:
+        body = ""
+    if not body:
+        return f"HTTP {error.code}"
+    return f"HTTP {error.code}: {redact(body[:ERROR_BODY_LIMIT])}"
+
+
 def fetch_svg(url: str) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     last_error = ""
@@ -41,7 +63,10 @@ def fetch_svg(url: str) -> str:
                 content_type = response.headers.get("Content-Type", "")
                 body = response.read().decode("utf-8")
         except urllib.error.HTTPError as error:
-            last_error = f"HTTP {error.code}"
+            last_error = describe_http_error(error)
+            hint = TERMINAL_STATUS_HINTS.get(error.code)
+            if hint:
+                raise ChartError(f"{redact(url)} failed: {last_error} — {hint}")
         except (urllib.error.URLError, TimeoutError) as error:
             last_error = str(error)
         except UnicodeDecodeError as error:

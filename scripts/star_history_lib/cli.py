@@ -6,6 +6,7 @@ import sys
 from . import ChartError
 from .client import CHART_ENDPOINT, chart_url, fetch_svg
 from .raster import asset_paths, rasterize, write_raster_page
+from .seal import seal_token
 from .svg import background_of, sanitize_svg, viewport_of
 
 
@@ -52,9 +53,17 @@ def build_manifest(args: argparse.Namespace) -> dict:
     charts = []
     assets = []
 
+    sealed = seal_token(args.token) if args.token else ""
+    if not sealed:
+        print(
+            "::warning::No STAR_HISTORY_TOKEN set; falling back to the shared "
+            "star-history.com token pool, which is often rate-limited",
+            file=sys.stderr,
+        )
+
     for theme in THEMES:
         url = chart_url(
-            args.repository, theme, args.token, args.chart_type, args.legend
+            args.repository, theme, sealed, args.chart_type, args.legend
         )
         svg = fetch_sanitized_svg(url)
         svg_path = os.path.join(args.output_dir, f"{args.basename}-{theme}.svg")
