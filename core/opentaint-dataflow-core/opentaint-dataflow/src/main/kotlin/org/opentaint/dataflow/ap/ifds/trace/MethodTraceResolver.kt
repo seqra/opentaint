@@ -1230,10 +1230,7 @@ class MethodTraceResolver(
                         is MethodCallPrecondition.UnresolvedCallSkip -> this += PartiallyResolvedBoundCallAction.UnresolvedCallSkip(currentEdge)
 
                         is MethodCallPrecondition.CallToReturnTaintRule -> {
-                            if (fact.precondition is TaintRulePrecondition.Source && currentEdge !is TraceEdge.SourceTraceEdge) {
-                                // We search for pass-rule, not source rule
-                                return@forEach
-                            }
+                            if (skipRulePropagation(fact, currentEdge)) return@forEach
 
                             this += PartiallyResolvedBoundCallAction.CallRule(currentEdge, fact.precondition)
                         }
@@ -1286,6 +1283,7 @@ class MethodTraceResolver(
             return null
         }
 
+        // all summaries have the same entry-point
         val ep = summary.first().call2Start.method
         val primary = MergedPrimaryCall2StartAction(ep, summary)
         return PartialCallEdgeCombination(unchanged, primary, mergedRules)
@@ -1380,6 +1378,10 @@ class MethodTraceResolver(
         ) : PartiallyResolvedMergedCallAction
     }
 
+    private fun skipRulePropagation(fact: MethodCallPrecondition.CallToReturnTaintRule, currentEdge: TraceEdge) =
+        // We search for pass-rule, not source rule
+        fact.precondition is TaintRulePrecondition.Source && currentEdge !is TraceEdge.SourceTraceEdge
+
     private fun MutableList<PartiallyResolvedCallAction>.propagateCall(
         currentEdge: TraceEdge,
         preconditionFacts: List<CallPreconditionFact>,
@@ -1387,10 +1389,7 @@ class MethodTraceResolver(
         for (fact in preconditionFacts) {
             when (fact) {
                 is MethodCallPrecondition.CallToReturnTaintRule -> {
-                    if (fact.precondition is TaintRulePrecondition.Source && currentEdge !is TraceEdge.SourceTraceEdge) {
-                        // We search for pass-rule, not source rule
-                        continue
-                    }
+                    if (skipRulePropagation(fact, currentEdge)) continue
 
                     this += PartiallyResolvedCallAction.CallRule(currentEdge, fact.precondition)
                 }
