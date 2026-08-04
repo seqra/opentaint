@@ -206,7 +206,12 @@ class AccessTree(
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
         when (val d = delta as AccessTreeDelta) {
-            EmptyAccessTreeDelta -> return this
+            is EmptyAccessTreeDelta -> {
+                val deepAccessorExclusion = d.deepAccessorExclusion ?: return this
+                val annotated = access.annotateAbstractNodes(deepAccessorExclusion, IdentityHashMap())
+                if (annotated === access) return this
+                return AccessTree(apManager, base, annotated, exclusions)
+            }
             is NodeAccessTreeDelta -> {
                 val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, d.node)
                     ?: return null
@@ -669,14 +674,41 @@ class AccessTree(
             } else {
                 deepAccessorExclusion.addMarkFromDepth1(markIdx)
             }
-            if (annotated == deepAccessorExclusion) return this
 
-            return manager.create(isAbstract, isFinal, annotated, accessors, accessorNodes)
+            return updateDeepExclusion(annotated)
         }
+
+        private fun updateDeepExclusion(annotation: DeepAccessorExclusion?) =
+            if (annotation == deepAccessorExclusion) {
+                this
+            } else {
+                manager.create(isAbstract, isFinal, annotation, accessors, accessorNodes)
+            }
 
         fun abstractOnly(): AccessNode =
             manager.create(isAbstract = true, isFinal = false, deepAccessorExclusion, accessors = null, accessorNodes = null)
 
+        fun annotateAbstractNodes(
+            incoming: DeepAccessorExclusion,
+            cache: IdentityHashMap<AccessNode, AccessNode>,
+        ): AccessNode {
+            cache[this]?.let { return it }
+
+            manager.cancellation.checkpoint()
+
+            val transformed = transformAccessors { _, node ->
+                node.annotateAbstractNodes(incoming, cache)
+            }
+
+            val result = if (!transformed.isAbstract) {
+                transformed
+            } else {
+                val merged = DeepAccessorExclusion.merge(transformed.deepAccessorExclusion, incoming)
+                transformed.updateDeepExclusion(merged)
+            }
+
+            cache[this] = result
+            return result
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {
