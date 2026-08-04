@@ -10,5 +10,5 @@ interface CactusFinalApAccess: FinalApAccess<AccessCactus.AccessNode> {
         (factAp as AccessCactus).access
 
     override fun createFinal(base: AccessPathBase, ap: AccessCactus.AccessNode, ex: ExclusionSet): FinalFactAp =
-        AccessCactus(base, ap, ex)
+        AccessCactus(base, ap.forExclusions(ex), ex)
 }
