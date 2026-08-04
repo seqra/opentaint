@@ -1390,6 +1390,10 @@ class AccessTree(
             val manager: TreeApManager,
             private val context: SummarySerializationContext
         ) {
+            private val anyFieldMarkExclusionsSerializer = with(manager) {
+                AnyFieldMarkExclusionsSerializer(context, { it.idx }, { it.accessor })
+            }
+
             fun DataOutputStream.writeAccessNode(node: AccessNode) {
                 var mask = 0
                 if (node.isFinal) {
@@ -1398,7 +1402,16 @@ class AccessTree(
                 if (node.isAbstract) {
                     mask += 2
                 }
+                if (node.deepAccessorExclusion != null) {
+                    mask += 4
+                }
                 write(mask)
+
+                node.deepAccessorExclusion?.let {
+                    with(anyFieldMarkExclusionsSerializer) {
+                        writeAnyFieldMarkExclusions(it)
+                    }
+                }
 
                 writeInt(node.accessors?.size ?: 0)
                 if (node.accessors != null) {
@@ -1417,9 +1430,17 @@ class AccessTree(
                 val isFinal = mask.and(1) > 0
                 val isAbstract = mask.and(2) > 0
 
+                val anyFieldMarkExclusions = if (mask.and(4) > 0) {
+                    with(anyFieldMarkExclusionsSerializer) {
+                        readAnyFieldMarkExclusions()
+                    }
+                } else {
+                    null
+                }
+
                 val accessorsSize = readInt()
                 if (accessorsSize == 0) {
-                    return manager.create(isAbstract, isFinal)
+                    return manager.create(isAbstract, isFinal, anyFieldMarkExclusions, accessors = null, accessorNodes = null)
                 }
 
                 val deserializedAccessors = Array(accessorsSize) {
@@ -1446,7 +1467,7 @@ class AccessTree(
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
                 }
 
-                return AccessNode(manager, interned = false, isAbstract, isFinal, accessors, accessNodes)
+                return AccessNode(manager, interned = false, isAbstract, isFinal, anyFieldMarkExclusions, accessors, accessNodes)
             }
         }
 
