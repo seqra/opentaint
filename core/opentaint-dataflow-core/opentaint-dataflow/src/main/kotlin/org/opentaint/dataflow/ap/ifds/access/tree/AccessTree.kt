@@ -499,7 +499,7 @@ class AccessTree(
 
         fun splitOnMatching(otherAccess: AccessPath.AccessNode?): MatchResult  {
             if (otherAccess == null) {
-                if (!isAbstract) return MatchResult.NotMatched
+                if (!isAbstract || deepAccessorExclusion != null) return MatchResult.NotMatched
 
                 val remainder = removeAbstraction().takeIf { !it.isEmpty }
                 return MatchResult.MatchedWithRemainder(remainder)
@@ -520,7 +520,7 @@ class AccessTree(
                     ?: return MatchResult.NotMatched
             }
 
-            if (!node.isAbstract) return MatchResult.NotMatched
+            if (!node.isAbstract || node.deepAccessorExclusion != null) return MatchResult.NotMatched
 
             val remainder = this.reconstructRemainder(accessorsOnPath, idx = 0)
             return MatchResult.MatchedWithRemainder(remainder)
