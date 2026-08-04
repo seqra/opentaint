@@ -9,7 +9,6 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
-import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
@@ -247,25 +246,9 @@ class GradleProjectResolver(
         }
     }
 
-    data class GradleDependencyInfo(
-        val groupId: String,
-        val artifactId: String,
-        val version: String,
-    ) {
-        val artifactJarName: String by lazy { "${artifactId}-${version}.jar" }
-        val mavenArtifactDir: List<String> by lazy { groupId.split(".") + listOf(artifactId, version) }
-        val gradleArtifactDir: List<String> by lazy { listOf(groupId, artifactId, version) }
-    }
+    data class GradleDependencyInfo(val groupId: String, val artifactId: String, val version: String)
 
     companion object {
-        private val mavenLocalRepoPath by lazy {
-            Path(System.getProperty("user.home")) / ".m2" / "repository"
-        }
-
-        private val gradleLocalRepoPath by lazy {
-            Path(System.getProperty("user.home")) / ".gradle" / "caches" / "modules-2" / "files-2.1"
-        }
-
         private const val GRADLE_SETTINGS_FILE = "settings.gradle"
         private const val GRADLE_SETTINGS_KTS_FILE = "$GRADLE_SETTINGS_FILE.kts"
         private const val GRADLE_BUILD_FILE = "build.gradle"
