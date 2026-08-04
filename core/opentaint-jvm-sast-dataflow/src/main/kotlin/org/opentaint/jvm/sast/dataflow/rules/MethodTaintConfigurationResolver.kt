@@ -20,6 +20,7 @@ import org.opentaint.dataflow.configuration.jvm.ConstantMatches
 import org.opentaint.dataflow.configuration.jvm.ConstantStringValue
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
+import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.configuration.jvm.CopyMark
 import org.opentaint.dataflow.configuration.jvm.IsConstant
 import org.opentaint.dataflow.configuration.jvm.IsNull
@@ -446,7 +447,14 @@ class MethodTaintConfigurationResolver(
         is SerializedCondition.ContainsMark -> mkOr(
             pos.resolvePosition(ctx)
                 .flatMap { it.resolveArrayPosition() }
-                .map { ContainsMark(it, taintMarkManager.taintMark(tainted)).atom() }
+                .map { position ->
+                    val mark = taintMarkManager.taintMark(tainted)
+                    if (position is PositionWithAccess && position.access == PositionAccessor.AnyFieldAccessor) {
+                        ContainsMarkOnAnyField(position.base, mark).atom()
+                    } else {
+                        ContainsMark(position, mark).atom()
+                    }
+                }
         )
 
         is SerializedCondition.IsType -> resolveIsType(ctx)
