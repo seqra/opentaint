@@ -251,3 +251,83 @@ func TestReportBaselineGUIDReadsFirstRun(t *testing.T) {
 		t.Errorf("got %q, want empty", got)
 	}
 }
+
+// withRules declares the rules a run executed, which is how a comparison tells
+// "this rule found nothing" from "this rule never ran".
+func withRules(report *Report, ruleIDs ...string) *Report {
+	for i := range report.Runs {
+		var rules []ReportingDescriptor
+		for _, id := range ruleIDs {
+			rules = append(rules, ReportingDescriptor{ID: id})
+		}
+		report.Runs[i].Tool.Driver.Rules = rules
+	}
+	return report
+}
+
+func TestCompareKeepsExcludedRuleOutOfFixed(t *testing.T) {
+	baseline := makeReport(
+		makeResult("kept", Error, "a.java", 1, fp("id-kept", "trace-kept")),
+		makeResult("excluded", Error, "b.java", 2, fp("id-excluded", "trace-excluded")),
+		makeResult("kept", Error, "c.java", 3, fp("id-fixed", "trace-fixed")),
+	)
+	// The current scan ran only "kept": "excluded" produced nothing because it
+	// never loaded, while id-fixed genuinely disappeared.
+	current := withRules(makeReport(
+		makeResult("kept", Error, "a.java", 1, fp("id-kept", "trace-kept")),
+	), "kept")
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+
+	if got := cmp.Counts[Absent]; got != 1 {
+		t.Errorf("Fixed = %d, want 1 (only the finding whose rule actually ran)", got)
+	}
+	if got := len(cmp.NotRun); got != 1 {
+		t.Fatalf("NotRun = %d, want 1", got)
+	}
+	if got := *cmp.NotRun[0].RuleID; got != "excluded" {
+		t.Errorf("NotRun holds %q, want the excluded rule", got)
+	}
+}
+
+func TestCompareTreatsMissingRuleListAsEverythingRan(t *testing.T) {
+	// A report that declares no rules says nothing about what ran, so guessing
+	// "excluded" would hide genuinely fixed findings.
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
+	current := makeReport()
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if got := cmp.Counts[Absent]; got != 1 {
+		t.Errorf("Fixed = %d, want 1", got)
+	}
+	if len(cmp.NotRun) != 0 {
+		t.Errorf("NotRun = %d, want 0", len(cmp.NotRun))
+	}
+}
+
+func TestWithAbsentAddsFixedFindingsForDisplayOnly(t *testing.T) {
+	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
+	gone := makeResult("b", Error, "b.java", 2, fp("id-b", "trace-b"))
+
+	listing := current.WithAbsent([]*Result{&gone})
+
+	if got := len(listing.Results()); got != 2 {
+		t.Fatalf("listing holds %d results, want 2", got)
+	}
+	if got := len(current.Results()); got != 1 {
+		t.Errorf("the source report grew to %d results: WithAbsent must not mutate it", got)
+	}
+	added := listing.Results()[1]
+	if added.BaselineState == nil || *added.BaselineState != Absent {
+		t.Error("the added result is not marked absent")
+	}
+	if gone.BaselineState != nil {
+		t.Error("the baseline result itself was stamped; only the copy may be")
+	}
+}

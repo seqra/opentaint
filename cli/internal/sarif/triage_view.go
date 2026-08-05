@@ -31,6 +31,56 @@ type TriageView struct {
 	Added int
 }
 
+// Restrict returns a view whose counts describe only the findings that survived
+// the display filters. Without it, a listing narrowed to one rule would still be
+// summarized with the counts of the whole report — every number on screen would
+// belong to a different set of findings than the one printed above it.
+//
+// filtered must be the result of report.Filter(f) for the report this view was
+// computed from.
+func (v *TriageView) Restrict(filtered *Report, f Filters) *TriageView {
+	if v == nil || !f.active() {
+		return v
+	}
+	restricted := *v
+	restricted.Suppressions = CollectSuppressionStats(filtered)
+	restricted.Comparison = v.Comparison.restrict(filtered, f)
+	return &restricted
+}
+
+// restrict recounts a comparison over the filtered current results, and narrows
+// the baseline-side lists (which have no counterpart in the current report) with
+// the same filters.
+func (c *Comparison) restrict(filtered *Report, f Filters) *Comparison {
+	if c == nil {
+		return nil
+	}
+	out := &Comparison{
+		states:       c.states,
+		Counts:       make(map[BaselineState]int),
+		BaselineGUID: c.BaselineGUID,
+	}
+	for _, r := range filtered.Results() {
+		if r.BaselineState == nil {
+			out.Unmatchable++
+			continue
+		}
+		out.Counts[*r.BaselineState]++
+	}
+	for _, r := range c.Absent {
+		if f.matchesAs(r, Absent) {
+			out.Absent = append(out.Absent, r)
+		}
+	}
+	for _, r := range c.NotRun {
+		if f.matchesAs(r, Absent) {
+			out.NotRun = append(out.NotRun, r)
+		}
+	}
+	out.Counts[Absent] = len(out.Absent)
+	return out
+}
+
 // baselineItems renders the Baseline group, or nil when no baseline applies.
 // Zero-valued state counts are omitted so the group stays readable; the states
 // that matter are the ones that happened.
@@ -58,6 +108,12 @@ func (v *TriageView) baselineItems(out *output.Printer) []any {
 	// "Fixed" reads better than SARIF's "absent" for a finding that is gone.
 	if count := v.Comparison.Counts[Absent]; count > 0 {
 		items = append(items, out.FieldItem("Fixed", count))
+	}
+	// Baseline findings whose rule did not run are deliberately not folded into
+	// "Fixed": excluding a rule would otherwise read as having resolved every
+	// finding it ever produced.
+	if count := len(v.Comparison.NotRun); count > 0 {
+		items = append(items, out.FieldItem("Rule not run", count))
 	}
 	if v.Comparison.Unmatchable > 0 {
 		items = append(items, out.FieldItem("Not comparable", v.Comparison.Unmatchable))
