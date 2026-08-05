@@ -3,6 +3,7 @@ package org.opentaint.dataflow.ap.ifds.analysis
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryApRefinement
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
@@ -15,10 +16,20 @@ interface MethodCallSummaryHandler {
     val factTypeChecker: FactTypeChecker
 
     sealed interface SummaryEdge {
+        val methodEntryPoint: MethodEntryPoint
         val final: FinalFactAp
 
-        data class F2F(val initial: InitialFactAp, override val final: FinalFactAp) : SummaryEdge
-        data class NdF2F(val initial: Set<InitialFactAp>, override val final: FinalFactAp) : SummaryEdge
+        data class F2F(
+            override val methodEntryPoint: MethodEntryPoint,
+            val initial: InitialFactAp,
+            override val final: FinalFactAp,
+        ) : SummaryEdge
+
+        data class NdF2F(
+            override val methodEntryPoint: MethodEntryPoint,
+            val initial: Set<InitialFactAp>,
+            override val final: FinalFactAp,
+        ) : SummaryEdge
     }
 
     fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp>

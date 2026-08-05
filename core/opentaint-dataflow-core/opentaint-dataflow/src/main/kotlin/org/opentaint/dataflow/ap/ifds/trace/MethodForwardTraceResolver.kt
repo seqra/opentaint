@@ -307,7 +307,9 @@ class MethodForwardTraceResolver(
 
             for (summaryEdgeEffect in summaryEdgeEffects) {
                 for (methodSummary in summaryEdges) {
-                    val summaryEdge = SummaryEdge.F2F(methodSummary.initialFactAp, methodSummary.factAp)
+                    val summaryEdge = SummaryEdge.F2F(
+                        methodSummary.methodEntryPoint, methodSummary.initialFactAp, methodSummary.factAp
+                    )
                     val sf = handleSummaryEdge(callerFact, summaryEdgeEffect, summaryEdge)
                     handleSequentFact(currentEdge, sf)
                     summaryApplied = true
