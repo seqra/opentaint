@@ -76,7 +76,7 @@ func ParseGateSeverities(values []string) ([]string, error) {
 			if normalized == "" {
 				continue
 			}
-			if err := sarif.ValidateSeverity(normalized); err != nil {
+			if err := sarif.ValidateSeverityFor("--error-on-severity", normalized); err != nil {
 				return nil, err
 			}
 			out = append(out, normalized)

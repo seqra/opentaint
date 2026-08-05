@@ -17,6 +17,10 @@ type Comparison struct {
 	// Absent lists the baseline results that no longer appear — the fixed
 	// findings. They are reported, never written back into the current report.
 	Absent []*Result
+	// NotRun lists baseline results whose rule did not run in the current scan,
+	// so their absence says nothing about whether they were fixed. Counting them
+	// as fixed would report a rule exclusion as a wave of resolved findings.
+	NotRun []*Result
 	// Unmatchable counts current results carrying no identity fingerprint, which
 	// therefore cannot be compared at all.
 	Unmatchable int
@@ -87,15 +91,78 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 		cmp.Counts[state]++
 	}
 
+	executed := current.executedRuleIDs()
 	for id, results := range byIdentity {
 		if matched[id] {
 			continue
 		}
-		cmp.Absent = append(cmp.Absent, results...)
+		for _, r := range results {
+			if !ranInCurrentScan(r, executed) {
+				cmp.NotRun = append(cmp.NotRun, r)
+				continue
+			}
+			cmp.Absent = append(cmp.Absent, r)
+		}
 	}
 	cmp.Counts[Absent] = len(cmp.Absent)
 
 	return cmp, nil
+}
+
+// WithAbsent returns a shallow copy of the report whose first run also carries
+// the given baseline results, each stamped absent. It exists so that the fixed
+// findings — which live in the baseline and never in the current report — can be
+// listed on request. Only the display path calls it; the copies never reach a
+// report that is written back.
+func (report *Report) WithAbsent(absent []*Result) *Report {
+	if len(absent) == 0 || len(report.Runs) == 0 {
+		return report
+	}
+
+	out := *report
+	out.Runs = make([]Run, len(report.Runs))
+	copy(out.Runs, report.Runs)
+
+	run := out.Runs[0]
+	results := make([]Result, 0, len(run.Results)+len(absent))
+	results = append(results, run.Results...)
+	for _, r := range absent {
+		fixed := *r
+		state := Absent
+		fixed.BaselineState = &state
+		results = append(results, fixed)
+	}
+	run.Results = results
+	out.Runs[0] = run
+	return &out
+}
+
+// executedRuleIDs returns the ids of the rules the run declares it executed, or
+// nil when the report declares none — in which case nothing can be said about
+// which rules ran and every unmatched baseline finding is treated as fixed.
+func (report *Report) executedRuleIDs() map[string]bool {
+	ids := map[string]bool{}
+	for i := range report.Runs {
+		for _, rule := range report.Runs[i].Tool.Driver.Rules {
+			if rule.ID != "" {
+				ids[rule.ID] = true
+			}
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return ids
+}
+
+// ranInCurrentScan reports whether the rule behind a baseline result was part of
+// the current scan. A result without a rule id is assumed to have run: guessing
+// "excluded" would hide a genuinely fixed finding.
+func ranInCurrentScan(r *Result, executed map[string]bool) bool {
+	if executed == nil || r.RuleID == nil || *r.RuleID == "" {
+		return true
+	}
+	return executed[*r.RuleID]
 }
 
 // sameTrace reports whether the current result's full-trace fingerprint equals

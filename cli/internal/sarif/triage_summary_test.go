@@ -126,3 +126,83 @@ func TestSummarySuppressionsGroupReportsNotHonored(t *testing.T) {
 		t.Errorf("rejected suppressions must be surfaced:\n%s", out)
 	}
 }
+
+func TestRestrictCountsOnlyWhatTheFilterKept(t *testing.T) {
+	baseline := makeReport(
+		makeResult("sql", Error, "a.java", 1, fp("id-a", "trace-a")),
+		makeResult("xss", Error, "b.java", 2, fp("id-b", "trace-b")),
+		makeResult("sql", Error, "c.java", 3, fp("id-gone", "trace-gone")),
+	)
+	current := withRules(makeReport(
+		makeResult("sql", Error, "a.java", 1, fp("id-a", "trace-a")),         // unchanged
+		makeResult("xss", Error, "b.java", 2, fp("id-fresh", "trace-fresh")), // new
+	), "sql", "xss")
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	cmp.Apply(current)
+	view := &TriageView{Comparison: cmp, Suppressions: CollectSuppressionStats(current)}
+
+	filters := Filters{RuleIDs: []string{"xss"}}
+	restricted := view.Restrict(current.Filter(filters), filters)
+
+	if got := restricted.Comparison.Counts[New]; got != 1 {
+		t.Errorf("New = %d, want 1", got)
+	}
+	if got := restricted.Comparison.Counts[Unchanged]; got != 0 {
+		t.Errorf("Unchanged = %d, want 0: the unchanged finding belongs to another rule", got)
+	}
+	// Two baseline findings are gone (id-b under xss, id-gone under sql); the
+	// filter keeps only the xss one.
+	if got := restricted.Comparison.Counts[Absent]; got != 1 {
+		t.Errorf("Fixed = %d, want 1: only the xss finding survives the filter", got)
+	}
+	if got := view.Comparison.Counts[Absent]; got != 2 {
+		t.Errorf("unrestricted Fixed = %d, want 2", got)
+	}
+	if got := restricted.Suppressions.Total; got != 1 {
+		t.Errorf("Suppressions.Total = %d, want 1", got)
+	}
+	// The unrestricted view still describes the whole report.
+	if got := view.Comparison.Counts[Unchanged]; got != 1 {
+		t.Errorf("Restrict mutated the original view: Unchanged = %d, want 1", got)
+	}
+}
+
+func TestRestrictKeepsFixedFindingsTheFilterNames(t *testing.T) {
+	baseline := makeReport(makeResult("sql", Error, "c.java", 3, fp("id-gone", "trace-gone")))
+	current := withRules(makeReport(), "sql")
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	view := &TriageView{Comparison: cmp}
+
+	filters := Filters{BaselineStates: []string{"absent"}}
+	restricted := view.Restrict(current.Filter(filters), filters)
+	if got := restricted.Comparison.Counts[Absent]; got != 1 {
+		t.Errorf("Fixed = %d, want 1", got)
+	}
+
+	other := Filters{BaselineStates: []string{"new"}}
+	if got := view.Restrict(current.Filter(other), other).Comparison.Counts[Absent]; got != 0 {
+		t.Errorf("Fixed = %d, want 0 when the filter does not name absent", got)
+	}
+}
+
+func TestDisplayFingerprintIsTheOneTriageResolves(t *testing.T) {
+	r := makeResult("a", Error, "a.java", 1, fp("source-sink-value", "trace-value"))
+	report := makeReport(r)
+
+	shown := fingerprintAbbrev(&report.Runs[0].Results[0], "")
+	resolved, err := ResolvePrefix(report, DefaultIdentityKey, shown)
+	if err != nil {
+		t.Fatalf("the fingerprint the listing shows does not resolve: %v", err)
+	}
+	if got, _ := Identity(resolved, DefaultIdentityKey); got != "source-sink-value" {
+		t.Errorf("resolved %q, want the source-sink value", got)
+	}
+}

@@ -22,7 +22,7 @@ type TriageConfig struct {
 	Accept             []string
 	Defer              []string
 	Unsuppress         []string
-	Justification      string
+	Justifications     []string
 	Output             string
 	ErrorOnFindings    bool
 	ErrorOnSeverity    []string
@@ -47,7 +47,9 @@ Arguments:
   sarif  - Path to the SARIF report to triage
 
 A finding is named by a fingerprint prefix, git-style — the value shown as
-"Fingerprint:" by 'opentaint summary --show-findings'.
+"Fingerprint:" by 'opentaint summary --show-findings'. Both commands read the
+same key, so the value on screen is the value to paste here; --fingerprint-key
+changes it on either side.
 
 Examples:
   # See what changed since the last release, without modifying anything
@@ -81,7 +83,7 @@ func init() {
 	triageCmd.Flags().StringArrayVar(&triageFlags.Accept, "accept", nil, "Accept the finding with this fingerprint prefix: won't fix (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Defer, "defer", nil, "Defer the finding with this fingerprint prefix: not fixing for now (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Unsuppress, "unsuppress", nil, "Remove the suppression from the finding with this fingerprint prefix (repeatable)")
-	triageCmd.Flags().StringVar(&triageFlags.Justification, "justification", "", "Why the finding is accepted or deferred (required with --accept/--defer)")
+	triageCmd.Flags().StringArrayVar(&triageFlags.Justifications, "justification", nil, "Why the finding is accepted or deferred (required with --accept/--defer; one per run)")
 	triageCmd.Flags().StringVarP(&triageFlags.Output, "output", "o", "", "Write the triaged report here (default: rewrite the input in place)")
 	addGateFlags(triageCmd, &triageFlags.ErrorOnFindings, &triageFlags.ErrorOnSeverity)
 	triageCmd.Flags().BoolVar(&triageFlags.ShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
@@ -99,6 +101,10 @@ func runTriage(cfg TriageConfig, reportPath string) {
 	if err != nil {
 		out.Fatalf("%s", err)
 	}
+	justification, err := singleJustification(cfg.Justifications)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
 
 	absReportPath := log.AbsPathOrExit(reportPath, "sarif path")
 	report, err := sarif.LoadReport(absReportPath)
@@ -112,7 +118,7 @@ func runTriage(cfg TriageConfig, reportPath string) {
 		Accept:             cfg.Accept,
 		Defer:              cfg.Defer,
 		Unsuppress:         cfg.Unsuppress,
-		Justification:      cfg.Justification,
+		Justification:      justification,
 	}
 	if cfg.Baseline != "" {
 		opts.Baseline, opts.BaselinePath = loadBaselineOrExit(cfg.Baseline, absReportPath)
@@ -140,9 +146,27 @@ func runTriage(cfg TriageConfig, reportPath string) {
 	printSarifSummary(report, outputPath, sarif.Filters{}, sarif.ListingOptions{
 		MaxNestingLevel: -1,
 		ShowSuppressed:  cfg.ShowSuppressed,
+		FingerprintKey:  cfg.FingerprintKey,
 	}, outcome.View, cfg.ShowFindings)
 
 	exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report, outcome.View)
+}
+
+// singleJustification enforces that one triage run records one reason. The flag
+// is repeatable only so that passing it twice can be caught: a second
+// --justification would otherwise overwrite the first, silently filing every
+// decision in the run under the wrong reason.
+func singleJustification(values []string) (string, error) {
+	switch len(values) {
+	case 0:
+		return "", nil
+	case 1:
+		return values[0], nil
+	default:
+		return "", fmt.Errorf("--justification was given %d times, but one run records one reason.\n"+
+			"Run triage once per justification, or pass a single --justification covering every finding in this run",
+			len(values))
+	}
 }
 
 // exitOnGate reports the gate verdict and exits with ExitFindings when it trips.

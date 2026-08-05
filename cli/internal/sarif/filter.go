@@ -7,10 +7,6 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
-// DefaultFingerprintKey is the partialFingerprints key matched by
-// --partial-fingerprint when --partial-fingerprint-key is not supplied.
-const DefaultFingerprintKey = "vulnerabilityWithTraceHash/v1"
-
 // Filters describes the finding-selection criteria supplied on the summary
 // command. Empty fields mean "do not filter on this dimension".
 type Filters struct {
@@ -18,7 +14,7 @@ type Filters struct {
 	Severities     []string // SARIF levels: error/warning/note/none
 	RuleIDs        []string // full id, leaf, or doublestar glob over the full id
 	Fingerprints   []string // git-style prefixes of the chosen fingerprint key's value
-	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
+	FingerprintKey string   // partialFingerprints key to match ("" = DefaultIdentityKey)
 	BaselineStates []string // SARIF baselineState values: new/unchanged/updated/absent
 }
 
@@ -74,6 +70,36 @@ func (f Filters) matches(r *Result) bool {
 		return false
 	}
 	return true
+}
+
+// matchesAs is matches for a result whose baseline state is known from the
+// comparison rather than carried on the result itself. Fixed findings live in
+// the baseline report and are never stamped with a state, so they can only be
+// filtered by a caller that already knows what they are.
+func (f Filters) matchesAs(r *Result, state BaselineState) bool {
+	if len(f.BaselineStates) > 0 && !stateNamed(state, f.BaselineStates) {
+		return false
+	}
+	stateless := f
+	stateless.BaselineStates = nil
+	return stateless.matches(r)
+}
+
+// WantsAbsent reports whether the filter asks for fixed findings, which the
+// caller must add to the listing from the baseline: they exist nowhere in the
+// current report.
+func (f Filters) WantsAbsent() bool {
+	return stateNamed(Absent, f.BaselineStates)
+}
+
+// stateNamed reports whether states names the given baseline state.
+func stateNamed(state BaselineState, states []string) bool {
+	for _, s := range states {
+		if strings.EqualFold(strings.TrimSpace(s), string(state)) {
+			return true
+		}
+	}
+	return false
 }
 
 // matchBaselineState reports whether the result's baselineState equals any
@@ -191,10 +217,11 @@ func MatchesRuleID(full string, values []string) bool {
 
 // fingerprintValue returns the result's partialFingerprints value under key, or
 // "" when the key is absent or its value is empty. When key is empty the default
-// key is used.
+// identity key is used — the same one triage resolves prefixes against, so a
+// fingerprint shown in the listing can always be pasted into triage --accept.
 func fingerprintValue(r *Result, key string) string {
 	if key == "" {
-		key = DefaultFingerprintKey
+		key = DefaultIdentityKey
 	}
 	v, _ := Identity(r, key)
 	return v
@@ -221,8 +248,14 @@ var validSeverities = map[string]bool{"error": true, "warning": true, "note": tr
 
 // ValidateSeverity returns an error if level is not a recognized SARIF level.
 func ValidateSeverity(level string) error {
+	return ValidateSeverityFor("--severity", level)
+}
+
+// ValidateSeverityFor is ValidateSeverity for a caller whose flag is not
+// --severity, so the message names the flag the user actually typed.
+func ValidateSeverityFor(flag, level string) error {
 	if validSeverities[strings.ToLower(strings.TrimSpace(level))] {
 		return nil
 	}
-	return fmt.Errorf("invalid --severity %q: valid values are error, warning, note, none", level)
+	return fmt.Errorf("invalid %s %q: valid values are error, warning, note, none", flag, level)
 }

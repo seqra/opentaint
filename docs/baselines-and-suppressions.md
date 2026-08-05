@@ -73,7 +73,9 @@ opentaint triage baselines/main.sarif \
 A finding is named by a **fingerprint prefix**, git-style — the value shown as
 `Fingerprint:` by `opentaint summary --show-findings`. An ambiguous or unknown
 prefix is an error, never a guess. `--accept`, `--defer`, and `--unsuppress` are
-repeatable; one `--justification` applies to every decision in the invocation.
+repeatable; one `--justification` applies to every decision in the invocation,
+and passing it twice is an error rather than a silent "last one wins" — run
+`triage` once per reason.
 
 Each decision is written as a SARIF suppression (see
 [Suppression reference](#suppression-reference)):
@@ -144,8 +146,26 @@ left byte-for-byte unchanged. Two flags control it:
 > On `scan`/`triage` it is a boolean that *writes* the state into the file.
 > On `summary` it takes a value and *filters* the listing. They do not overlap.
 
-`absent` (fixed) findings are counted and can be listed, but are never written
-into the output report — surfacing a fixed finding as a live alert would be wrong.
+The filter reads whichever states are available: the ones a previous
+`--write-baseline-state` persisted into the report, or the ones a `--baseline`
+on the same command line computes on the spot. Both work:
+
+```bash
+# states computed now
+opentaint summary scan.sarif --baseline main.sarif --baseline-state new --show-findings
+
+# states already in the file, written by the scan that produced it
+opentaint scan --baseline main.sarif --write-baseline-state -o scan.sarif .
+opentaint summary scan.sarif --baseline-state new --show-findings
+```
+
+Asking for a state when the report carries none and no baseline was given is an
+error, not an empty listing — "0 findings" would read as a clean bill of health
+for a report nobody compared against anything.
+
+`absent` (fixed) findings are never written into the output report — surfacing a
+fixed finding as a live alert would be wrong — but `--baseline-state absent`
+lists them, read from the baseline, which is how you see what a change fixed.
 
 ### Finding identity
 
@@ -154,11 +174,17 @@ moving code around does not invent new findings. Two fingerprints exist:
 
 | Key | Hashes | Behavior |
 |-----|--------|----------|
-| `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. **Default for baseline matching.** |
+| `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. **Default.** |
 | `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact; changes if anything on the path moves. |
 
-`--fingerprint-key` overrides the identity key on `scan`, `triage`, and
-`summary`. The source→sink hash is the default because a decision should survive
+`--fingerprint-key` selects it, and one key governs everything a command does
+with fingerprints: baseline matching, the prefix `triage` resolves, the value
+`summary --show-findings` prints as `Fingerprint:`, and what
+`--partial-fingerprint` matches. That is why a fingerprint copied off the screen
+always names a finding to `triage`. (`--partial-fingerprint-key` is a deprecated
+alias for `--fingerprint-key`.)
+
+The source→sink hash is the default because a decision should survive
 refactoring of an unrelated helper the flow happens to pass through. The finer
 trace hash is what distinguishes `unchanged` from `updated`.
 
@@ -274,6 +300,9 @@ doublestar glob over the full id — the same grammar as `summary --rule-id`.
 `rules.exclude`.
 
 Notes:
+- Excluding a rule does not fake a wave of fixes. A baseline finding whose rule
+  did not run in the current scan is reported as `Rule not run`, separately from
+  `Fixed`, because its absence says nothing about whether anyone fixed it.
 - A pattern matching no rule produces a warning, so a typo cannot silently look
   effective.
 - A selection that ends up matching **no** rules is an error, not a silent scan

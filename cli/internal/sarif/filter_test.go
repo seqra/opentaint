@@ -36,7 +36,7 @@ func TestMatchSeverity(t *testing.T) {
 
 func TestMatchFingerprint(t *testing.T) {
 	r := makeResult("r", Error, "a.java", 1, map[string]string{
-		DefaultFingerprintKey: "abc123def456",
+		DefaultIdentityKey: "abc123def456",
 	})
 	if !matchFingerprint(&r, "", []string{"abc123"}) {
 		t.Error("expected git-style prefix match on default key")

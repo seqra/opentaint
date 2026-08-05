@@ -220,15 +220,15 @@ reflects the full set the tool ran.
 | `--path` | Show only findings whose file path matches this glob (`**` supported, repeatable) |
 | `--severity` | Show only findings of this SARIF level: `error`, `warning`, `note`, `none` (repeatable) |
 | `--rule-id` | Show only findings for this rule: full id, leaf name (after `:` or last `.`), or glob over the full id (repeatable) |
-| `--partial-fingerprint` | Show only findings whose partial fingerprint starts with this value, git-hash style (repeatable). With `--show-findings`, each finding's header reads `Fingerprint: <abbrev>` — copy that value back into this flag to re-focus on it. |
-| `--partial-fingerprint-key` | partialFingerprints key matched by `--partial-fingerprint` (default `vulnerabilityWithTraceHash/v1`) |
+| `--partial-fingerprint` | Show only findings whose fingerprint starts with this value, git-hash style (repeatable). With `--show-findings`, each finding's header reads `Fingerprint: <abbrev>` — copy that value back into this flag to re-focus on it, or into `triage --accept` to record a decision on it. |
+| `--partial-fingerprint-key` | Deprecated alias for `--fingerprint-key` |
 | `--max-nesting-level` | Collapse code-flow steps deeper than this call-nesting level (`-1` = no cap). Best-effort: depth is derived from step kinds and method names, so flows lacking method info may over-collapse |
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
 | `--code-flow` | Render code flows: `all`, a 1-based index, or unset (first flow only). On multi-flow findings the listing also shows a `Code flows: <N>` field. |
 | `--baseline` | Compare against this SARIF report and show new/unchanged/updated/fixed counts. The file is never modified. |
-| `--baseline-state` | Show only findings whose state is one of `new` \| `unchanged` \| `updated` \| `absent` (repeatable, needs `--baseline`) |
+| `--baseline-state` | Show only findings whose state is one of `new` \| `unchanged` \| `updated` \| `absent` (repeatable). Reads the states persisted by `--write-baseline-state`, or the ones `--baseline` computes now; `absent` lists the fixed findings from the baseline. |
 | `--suppressed` | Include suppressed findings in the listing (hidden by default) |
-| `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
+| `--fingerprint-key` | partialFingerprints key identifying a finding (default `vulnerabilitySourceSinkHash/v1`). One key governs baseline matching, the `Fingerprint:` value shown, `--partial-fingerprint`, and the prefix `triage` resolves. |
 
 Filters combine as OR within a dimension and AND across dimensions.
 
