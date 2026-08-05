@@ -2,7 +2,7 @@ package org.opentaint.dataflow.ap.ifds.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
-import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -32,11 +32,11 @@ interface MethodCallPrecondition {
     object UnresolvedCallSkip : CallPreconditionFact, CallFailurePreconditionFact
     data class CallToReturnTaintRule(val precondition: TaintRulePrecondition) : CallPreconditionFact, CallFailurePreconditionFact, CallSuccessPreconditionFact
     data class CallToStart(val callerFact: InitialFactAp, val startFactBase: AccessPathBase) : CallPreconditionFact
-    data class CallToStartResolved(val callerFact: InitialFactAp, val startFactBase: AccessPathBase, val method: MethodEntryPoint): CallSuccessPreconditionFact
+    data class CallToStartResolved(val callerFact: InitialFactAp, val startFactBase: AccessPathBase, val method: MethodWithContext): CallSuccessPreconditionFact
 
     fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>>
     fun factPreconditionResolutionFailure(fact: InitialFactAp, startFactBase: AccessPathBase): List<CallFailurePreconditionFact>
-    fun factPreconditionResolutionSuccess(fact: InitialFactAp, startFactBase: AccessPathBase, ep: MethodEntryPoint): List<CallSuccessPreconditionFact>
+    fun factPreconditionResolutionSuccess(fact: InitialFactAp, startFactBase: AccessPathBase, method: MethodWithContext): List<CallSuccessPreconditionFact>
 
     data class PassRuleConditionFacts(val facts: List<InitialFactAp>)
 

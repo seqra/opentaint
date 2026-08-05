@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -252,7 +253,7 @@ class PIRMethodCallFlowFunction(
     override fun propagateSuccessCallFact(
         factAp: FinalFactAp,
         startFactBase: AccessPathBase,
-        ep: MethodEntryPoint,
+        method: MethodWithContext,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
         addCallToStart: (callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
