@@ -1450,8 +1450,8 @@ class NormalMethodAnalyzer(
         }
     }
 
-    private fun FactToFact.summaryEdge() = SummaryEdge.F2F(initialFactAp, factAp)
-    private fun NDFactToFact.summaryEdge() = SummaryEdge.NdF2F(initialFacts, factAp)
+    private fun FactToFact.summaryEdge() = SummaryEdge.F2F(this.methodEntryPoint, initialFactAp, factAp)
+    private fun NDFactToFact.summaryEdge() = SummaryEdge.NdF2F(this.methodEntryPoint, initialFacts, factAp)
 
     override fun cleanup() {
         methodEntryPointsCache = hashMapOf()
