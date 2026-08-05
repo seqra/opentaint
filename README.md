@@ -102,10 +102,10 @@
 
 > The open source taint analysis engine for the AI era. Powered by formal inter-procedural dataflow analysis. Customizable and self-hosted, built so AI agents drive your application security analysis without burning tokens on every scan. AI-ready open source alternative to *Semgrep Pro* and *CodeQL*.
 
-OpenTaint is an open source taint analysis engine designed to work with AI agents. During a security review, a security agent finds vulnerabilities. The OpenTaint agent enacts versioned AST-pattern taint rules from those vulnerabilities and captures opaque code behavior as dependency models. On every scan, the engine applies those rules and dependency models while formal inter-procedural dataflow analysis tracks tainted values across the codebase. This creates a repeatable loop:
+OpenTaint lets you turn what agents learn during a probabilistic security review into reusable, deterministic scans. A security agent reviews the application and finds vulnerabilities. The OpenTaint agent enacts versioned AST-pattern taint rules from those vulnerabilities and captures opaque code behavior as dependency models. On every scan, the engine uses those rules and dependency models to perform formal inter-procedural dataflow analysis across the codebase.
 
-- **Review on demand, scan on every change.** A security agent reviews the attack surface, trust boundaries, vulnerabilities, and opaque code behavior when new context is needed. The engine applies the resulting taint rules and dependency models on every scan without spending model tokens again.
 - **Make every security review executable.** The OpenTaint agent enacts AST-pattern taint rules from vulnerabilities and captures opaque code behavior as dependency models. Both become versioned, reviewable analysis artifacts.
+- **Turn what agents learn into reusable search.** A security agent reviews the attack surface, trust boundaries, vulnerabilities, and opaque code behavior when new context is needed. OpenTaint preserves that knowledge as AST-pattern taint rules and dependency models, then applies both on every scan without spending model tokens again.
 - **Fast scans. Fewer false alarms. Fewer missed findings.** The engine runs formal inter-procedural dataflow analysis, applying taint rules and dependency models as it tracks tainted values across procedures, fields, aliases, async code, and persistence layers at scale.
 - **Open source, batteries included.** Engine, AST-pattern rules, agent skills, and CI integrations ship as one stack under Apache 2.0 and MIT.
 
