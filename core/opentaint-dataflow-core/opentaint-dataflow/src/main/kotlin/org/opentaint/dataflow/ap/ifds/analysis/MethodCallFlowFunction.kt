@@ -2,7 +2,7 @@ package org.opentaint.dataflow.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -100,10 +100,10 @@ interface MethodCallFlowFunction {
     fun propagateFactToFactResolutionFailure(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<FactCallFailureFact>
     fun propagateNDFactToFactResolutionFailure(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<NDFactCallFailureFact>
 
-    fun propagateZeroToZeroResolutionSuccess(ep: MethodEntryPoint): Set<ZeroCallSuccessFact>
-    fun propagateZeroToFactResolutionSuccess(currentFactAp: FinalFactAp, startFactBase: AccessPathBase, ep: MethodEntryPoint): Set<ZeroCallSuccessFact>
-    fun propagateFactToFactResolutionSuccess(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp, startFactBase: AccessPathBase, ep: MethodEntryPoint): Set<FactCallSuccessFact>
-    fun propagateNDFactToFactResolutionSuccess(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp, startFactBase: AccessPathBase, ep: MethodEntryPoint): Set<NDFactCallSuccessFact>
+    fun propagateZeroToZeroResolutionSuccess(method: MethodWithContext): Set<ZeroCallSuccessFact>
+    fun propagateZeroToFactResolutionSuccess(currentFactAp: FinalFactAp, startFactBase: AccessPathBase, method: MethodWithContext): Set<ZeroCallSuccessFact>
+    fun propagateFactToFactResolutionSuccess(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp, startFactBase: AccessPathBase, method: MethodWithContext): Set<FactCallSuccessFact>
+    fun propagateNDFactToFactResolutionSuccess(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp, startFactBase: AccessPathBase, method: MethodWithContext): Set<NDFactCallSuccessFact>
 
     interface Default : MethodCallFlowFunction {
         override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {
@@ -249,18 +249,18 @@ interface MethodCallFlowFunction {
             )
         }
 
-        override fun propagateZeroToZeroResolutionSuccess(ep: MethodEntryPoint): Set<ZeroCallSuccessFact> =
+        override fun propagateZeroToZeroResolutionSuccess(method: MethodWithContext): Set<ZeroCallSuccessFact> =
             setOf(CallToStartZeroFact)
 
         override fun propagateZeroToFactResolutionSuccess(
             currentFactAp: FinalFactAp,
             startFactBase: AccessPathBase,
-            ep: MethodEntryPoint,
+            method: MethodWithContext,
         ): Set<ZeroCallSuccessFact> = buildSet {
             propagateSuccessCallFact(
                 factAp = currentFactAp,
                 startFactBase = startFactBase,
-                ep = ep,
+                method = method,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                 },
@@ -282,12 +282,12 @@ interface MethodCallFlowFunction {
             initialFactAp: InitialFactAp,
             currentFactAp: FinalFactAp,
             startFactBase: AccessPathBase,
-            ep: MethodEntryPoint,
+            method: MethodWithContext,
         ): Set<FactCallSuccessFact> = buildSet {
             propagateSuccessCallFact(
                 factAp = currentFactAp,
                 startFactBase = startFactBase,
-                ep = ep,
+                method = method,
                 addSideEffectRequirement = { factReader ->
                     this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
                 },
@@ -312,12 +312,12 @@ interface MethodCallFlowFunction {
             initialFacts: Set<InitialFactAp>,
             currentFactAp: FinalFactAp,
             startFactBase: AccessPathBase,
-            ep: MethodEntryPoint,
+            method: MethodWithContext,
         ): Set<NDFactCallSuccessFact> = buildSet {
             propagateSuccessCallFact(
                 factAp = currentFactAp,
                 startFactBase = startFactBase,
-                ep = ep,
+                method = method,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                 },
@@ -356,7 +356,7 @@ interface MethodCallFlowFunction {
         fun propagateSuccessCallFact(
             factAp: FinalFactAp,
             startFactBase: AccessPathBase,
-            ep: MethodEntryPoint,
+            method: MethodWithContext,
             addSideEffectRequirement: (FinalFactReader) -> Unit,
             addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
             addCallToStart: (callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,

@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -78,9 +78,9 @@ class JIRMethodCallPrecondition(
     override fun factPreconditionResolutionSuccess(
         fact: InitialFactAp,
         startFactBase: AccessPathBase,
-        ep: MethodEntryPoint
+        method: MethodWithContext
     ): List<CallSuccessPreconditionFact> = listOf(
-        MethodCallPrecondition.CallToStartResolved(fact, startFactBase, ep)
+        MethodCallPrecondition.CallToStartResolved(fact, startFactBase, method)
     )
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {

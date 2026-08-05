@@ -1135,7 +1135,8 @@ class MethodTraceResolver(
         callActions.forEachCartesianProduct { actions ->
             resolveCall2StartActions(actions, preconditionFunction, callees) { boundActions ->
                 boundActions.forEachCartesianProduct { resolvedActions ->
-                    mergeCallActions(resolvedActions)?.let { body(it) }
+                    val mergedActions = mergeCallActions(resolvedActions)
+                    mergedActions.forEach(body)
                 }
             }
         }
@@ -1163,10 +1164,8 @@ class MethodTraceResolver(
                 }
 
                 is MethodCallResolutionResult.ResolvedMethod -> {
-                    methodEntryPoints(callee.method).forEach {
-                        val expandedActions = resolveCall2StartSuccess(actions, preconditionFunction, it)
-                        process(expandedActions)
-                    }
+                    val expandedActions = resolveCall2StartSuccess(actions, preconditionFunction, callee.method)
+                    process(expandedActions)
                 }
             }
         }
@@ -1175,9 +1174,9 @@ class MethodTraceResolver(
     private fun resolveCall2StartSuccess(
         actions: Array<ActionOrUnchanged<PartiallyResolvedCallAction>>,
         preconditionFunction: MethodCallPrecondition,
-        ep: MethodEntryPoint
+        method: MethodWithContext
     ): List<List<ActionOrUnchanged<PartiallyResolvedBoundCallAction>>> = resolveCall2StartActions(actions) { callerFact, base ->
-        preconditionFunction.factPreconditionResolutionSuccess(callerFact, base, ep)
+        preconditionFunction.factPreconditionResolutionSuccess(callerFact, base, method)
     }
 
     private fun resolveCall2StartFailure(
@@ -1246,7 +1245,7 @@ class MethodTraceResolver(
 
     private fun mergeCallActions(
         aouGroup: Array<ActionOrUnchanged<PartiallyResolvedBoundCallAction>>,
-    ): PartialCallEdgeCombination? {
+    ): List<PartialCallEdgeCombination> {
         val unchanged = hashSetOf<TraceEdge>()
         val rules = hashSetOf<PartiallyResolvedBoundCallAction.CallRule>()
         val summary = hashSetOf<PartiallyResolvedBoundCallAction.Call2Start>()
@@ -1270,23 +1269,28 @@ class MethodTraceResolver(
 
         if (summary.isEmpty()) {
             if (unresolvedSkips.isEmpty()) {
-                return PartialCallEdgeCombination(unchanged, primary = null, mergedRules)
+                return listOf(PartialCallEdgeCombination(unchanged, primary = null, mergedRules))
             }
 
             val skippedEdges = unresolvedSkips.mapTo(hashSetOf()) { it.currentEdge }
             val primary = MergedPrimaryUnresolvedCallSkip(UnresolvedCallSkip(skippedEdges, skippedEdges))
-            return PartialCallEdgeCombination(unchanged, primary, mergedRules)
+            return listOf(PartialCallEdgeCombination(unchanged, primary, mergedRules))
         }
 
         if (unresolvedSkips.isNotEmpty()) {
             // note: we have a summary (i.e. call resolved) and an unresolved call
-            return null
+            return emptyList()
         }
 
-        // all summaries have the same entry-point
-        val ep = summary.first().call2Start.method
-        val primary = MergedPrimaryCall2StartAction(ep, summary)
-        return PartialCallEdgeCombination(unchanged, primary, mergedRules)
+        // all summaries have the same method
+        val method = summary.first().call2Start.method
+        val result = mutableListOf<PartialCallEdgeCombination>()
+        for (ep in methodEntryPoints(method)) {
+            val primary = MergedPrimaryCall2StartAction(ep, summary)
+            result += PartialCallEdgeCombination(unchanged, primary, mergedRules)
+        }
+
+        return result
     }
 
     private fun mergeCallRules(callRules: HashSet<PartiallyResolvedBoundCallAction.CallRule>): Set<MergedRuleAction> {
