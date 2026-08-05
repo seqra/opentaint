@@ -171,11 +171,28 @@ private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): CleanResult {
     val head = accessors.first()
     val tail = accessors.drop(1)
     if (tail.isEmpty()) {
-        if (cleaner is Cleaner.Mark &&
-            cleaner.reach == TaintCleanReach.ExactAndAnyField &&
-            startsWithAccessor(AnyAccessor)
-        ) {
-            return cleanAnyFieldMark(cleaner.mark, keepStartAccessor = false)
+        if (cleaner is Cleaner.Mark && startsWithAccessor(AnyAccessor)) {
+            when (cleaner.reach) {
+                TaintCleanReach.ExactAndAnyField -> {
+                    return cleanAnyFieldMark(cleaner.mark, keepStartAccessor = false)
+                }
+
+                TaintCleanReach.Exact -> {
+                    val factAfterAny = readAccessor(AnyAccessor)
+                        ?: error("Impossible")
+
+                    val clearedAfterAny = factAfterAny.clearAccessor(head)
+                    val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
+
+                    val factWithoutAny = clearAccessor(AnyAccessor)
+                    val cleanedWithoutAny = factWithoutAny?.clearAccessor(head)
+
+                    return CleanResult(
+                        listOfNotNull(restoredAfterAny, cleanedWithoutAny),
+                        removedAlternative = clearedAfterAny != factAfterAny || cleanedWithoutAny != factWithoutAny,
+                    )
+                }
+            }
         }
 
         if (!startsWithAccessor(head)) {

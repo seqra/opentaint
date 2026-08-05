@@ -121,7 +121,7 @@ class FactCleanerContractTest {
     }
 
     @Test
-    fun `mark cleanup explicitly chooses whether AnyField is a target`() {
+    fun `exact mark cleanup follows an AnyField abstraction`() {
         for (manager in managers()) {
             var fact = manager.createFinalAp(base, ExclusionSet.Empty)
             for (accessor in listOf(AnyAccessor, mark).asReversed()) {
@@ -135,7 +135,11 @@ class FactCleanerContractTest {
             val exactResult = fact.clean(exactCleaner)
             val anyFieldResult = fact.clean(anyFieldCleaner)
 
-            assertEquals(listOf(fact), exactResult.survivingFacts)
+            assertTrue(
+                exactResult.removedAlternative,
+                "${manager::class.simpleName} did not remove the exact alternative behind AnyField: " +
+                    "$fact -> $exactResult",
+            )
             assertTrue(
                 anyFieldResult.survivingFacts.isEmpty() ||
                     anyFieldResult.survivingFacts.none {
