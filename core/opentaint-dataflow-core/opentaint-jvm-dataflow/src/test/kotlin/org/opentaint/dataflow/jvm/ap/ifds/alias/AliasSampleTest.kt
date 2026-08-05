@@ -2,6 +2,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
@@ -584,6 +585,8 @@ class AliasSampleTest : BasicTestUtils() {
 
     @Test
     fun `record invokedynamic is not analyzed as a call to its bootstrap method`() {
+        assumeTrue(javaFeatureVersion() >= 17, "Record fixture requires Java 17")
+
         val method = findMethod(RECORD_SAMPLE, "recordHashCodeInlined")
         val recordHashCode = cp.findClassOrNull("$RECORD_SAMPLE\$Payload")
             ?.declaredMethods
@@ -646,6 +649,9 @@ class AliasSampleTest : BasicTestUtils() {
 
     private fun interProcParams(depth: Int) =
         JIRLocalAliasAnalysis.Params(useAliasAnalysis = true, aliasAnalysisInterProcCallDepth = depth)
+
+    private fun javaFeatureVersion(): Int =
+        System.getProperty("java.specification.version").removePrefix("1.").substringBefore('.').toInt()
 
     private fun JIRMethod.findSinkCall(sinkName: String): JIRCallInst =
         instList.filterIsInstance<JIRCallInst>().first {

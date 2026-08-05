@@ -4,6 +4,7 @@ import org.opentaint.ir.api.jvm.JavaVersion
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRRawAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRRawCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRRawFieldRef
@@ -151,7 +152,7 @@ open class ApproximationsTest : BaseTest() {
             val location = inst.location
             assertTrue(location.method === method)
 
-            val callExpr = inst.callExpr
+            val callExpr = inst.callExpr as? JIRMethodCallExpr ?: return@forEach
             types += callExpr.type.typeName
             types += callExpr.method.returnType.typeName
             types += callExpr.method.enclosingType.typeName
