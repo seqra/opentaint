@@ -3,7 +3,13 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.SideEffectKind
+import org.opentaint.dataflow.ap.ifds.SideEffectSummary
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactEdgeSummarySubscription
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeSubscriptionManager.FactNDEdgeSummarySubscription
@@ -36,6 +42,7 @@ class BaseOnlySubscriptionAndReqTest {
     private val fieldA = FieldAccessor("Owner", "a", "Value")
     private val fieldB = FieldAccessor("Owner", "b", "Value")
     private val mark = TaintMarkAccessor("m")
+    private val entryPoint by lazy { MethodEntryPoint(EmptyMethodContext, inst) }
 
     private val method = object : CommonMethod {
         override val name: String = "baseOnlySubscription"
@@ -79,6 +86,61 @@ class BaseOnlySubscriptionAndReqTest {
         access: BaseOnlyAccess,
         base: AccessPathBase = AccessPathBase.Return,
     ): BaseOnlyFinalFactAp = BaseOnlyFinalFactAp(manager, base, access, ExclusionSet.Universe)
+
+    @Test
+    fun `summary storage publishes only non-empty deltas`() {
+        val storage = SummaryEdgeStorageWithSubscribers(manager, entryPoint)
+        val summaryDeltas = mutableListOf<List<Edge>>()
+        val requirementDeltas = mutableListOf<List<InitialFactAp>>()
+        val sideEffectDeltas = mutableListOf<List<SideEffectSummary>>()
+        storage.subscribeOnEdges(object : SummaryEdgeStorageWithSubscribers.Subscriber {
+            override fun newSummaryEdges(edges: List<Edge>) {
+                summaryDeltas.add(edges)
+            }
+
+            override fun newSideEffectRequirement(
+                methodEntryPoint: MethodEntryPoint,
+                requirements: List<InitialFactAp>,
+            ) {
+                requirementDeltas.add(requirements)
+            }
+
+            override fun newSideEffectSummaries(
+                methodEntryPoint: MethodEntryPoint,
+                sideEffects: List<SideEffectSummary>,
+            ) {
+                sideEffectDeltas.add(sideEffects)
+            }
+        })
+
+        storage.addEdges(emptyList())
+        storage.sideEffectRequirement(emptyList())
+        storage.addSideEffectSummaries(emptyList())
+        assertTrue(summaryDeltas.isEmpty())
+        assertTrue(requirementDeltas.isEmpty())
+        assertTrue(sideEffectDeltas.isEmpty())
+
+        val edge = Edge.FactToFact(
+            entryPoint,
+            initial(pattern(fieldA)),
+            inst,
+            BaseOnlyFinalFactAp(manager, AccessPathBase.Return, marked(fieldA), ExclusionSet.Empty),
+        )
+        storage.addEdges(listOf(edge))
+        assertEquals(1, summaryDeltas.size)
+        assertEquals(1, requirementDeltas.size)
+
+        storage.addEdges(listOf(edge))
+        assertEquals(1, summaryDeltas.size, "a subsumed edge has no publication delta")
+        assertEquals(1, requirementDeltas.size, "a subsumed requirement has no publication delta")
+
+        val sideEffect = SideEffectSummary.ZeroSideEffectSummary(object : SideEffectKind {})
+        storage.addSideEffectSummaries(listOf(sideEffect))
+        assertEquals(1, sideEffectDeltas.size)
+
+        storage.addSideEffectSummaries(listOf(sideEffect))
+        assertEquals(1, sideEffectDeltas.size, "a duplicate side effect has no publication delta")
+    }
 
     @Test
     fun `fact subscription broadcasts conservative candidates for both residual modes`() {
