@@ -421,7 +421,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
     }
 
     @Test
-    fun `returning exact cleaner preserves AnyField taint and unrelated marks`() {
+    fun `returning exact cleaner follows AnyField and preserves unrelated marks`() {
         val cleanedMark = "cleaned"
         val unrelatedMark = "unrelated"
         val config = SerializedTaintConfig(
@@ -460,7 +460,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
         )
 
         assertEquals(
-            setOf("returning-cleaned-any", "returning-unrelated-exact"),
+            setOf("returning-unrelated-exact"),
             findingIds(config, "returningPlainCleaner"),
         )
     }
