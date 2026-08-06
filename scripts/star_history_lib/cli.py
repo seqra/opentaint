@@ -2,32 +2,30 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 from . import ChartError
-from .client import CHART_ENDPOINT, chart_url, fetch_svg
+from .chart import PAGE_HEIGHT, PAGE_WIDTH, palette_of, render
 from .raster import asset_paths, rasterize, write_raster_page
-from .seal import seal_token
-from .svg import background_of, sanitize_svg, viewport_of
+from .stars import API_ROOT, star_timeline
 
 
 THEMES = ("light", "dark")
 
 
-def add_mirror_parser(subparsers) -> None:
-    parser = subparsers.add_parser("mirror")
+def add_build_parser(subparsers) -> None:
+    parser = subparsers.add_parser("build")
     parser.add_argument("--repository", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--basename", default="star-history")
-    parser.add_argument("--token", default=os.environ.get("STAR_HISTORY_TOKEN", ""))
-    parser.add_argument("--chart-type", default="date")
-    parser.add_argument("--legend", default="top-left")
-    parser.set_defaults(handler=mirror)
+    parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""))
+    parser.set_defaults(handler=build)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Mirror star-history.com charts")
+    parser = argparse.ArgumentParser(description="Chart a repository's star history")
     subparsers = parser.add_subparsers(required=True)
-    add_mirror_parser(subparsers)
+    add_build_parser(subparsers)
 
     raster_parser = subparsers.add_parser("rasterize")
     raster_parser.add_argument("--manifest", required=True)
@@ -41,65 +39,55 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def fetch_sanitized_svg(url: str) -> str:
-    return sanitize_svg(fetch_svg(url))
+def write_chart(args: argparse.Namespace, timeline: dict, theme: str) -> dict:
+    svg = render(args.repository, timeline, theme)
+    svg_path = os.path.join(args.output_dir, f"{args.basename}-{theme}.svg")
+    png_path = os.path.join(args.output_dir, f"{args.basename}-{theme}.png")
+    with open(svg_path, "w", encoding="utf-8") as handle:
+        handle.write(svg)
+
+    background = palette_of(theme)["background"]
+    return {
+        "theme": theme,
+        "svg": svg_path,
+        "png": png_path,
+        "raster_page": write_raster_page(
+            svg_path, background, PAGE_WIDTH, PAGE_HEIGHT
+        ),
+        "background": background,
+        "width": PAGE_WIDTH,
+        "height": PAGE_HEIGHT,
+        "bytes": len(svg.encode("utf-8")),
+    }
 
 
-def build_manifest(args: argparse.Namespace) -> dict:
-    if args.repository.count("/") != 1:
-        raise ChartError(f"--repository must be owner/name, got '{args.repository}'")
-
+def build_manifest(args: argparse.Namespace, now: datetime) -> dict:
     os.makedirs(args.output_dir, exist_ok=True)
-    charts = []
-    assets = []
+    timeline = star_timeline(args.repository, args.token, now)
 
-    sealed = seal_token(args.token) if args.token else ""
-    if not sealed:
-        print(
-            "::warning::No STAR_HISTORY_TOKEN set; falling back to the shared "
-            "star-history.com token pool, which is often rate-limited",
-            file=sys.stderr,
-        )
-
-    for theme in THEMES:
-        url = chart_url(
-            args.repository, theme, sealed, args.chart_type, args.legend
-        )
-        svg = fetch_sanitized_svg(url)
-        svg_path = os.path.join(args.output_dir, f"{args.basename}-{theme}.svg")
-        png_path = os.path.join(args.output_dir, f"{args.basename}-{theme}.png")
-        with open(svg_path, "w", encoding="utf-8") as handle:
-            handle.write(svg)
-
-        width, height = viewport_of(svg, theme)
-        background = background_of(svg, theme)
-        charts.append(
-            {
-                "theme": theme,
-                "svg": svg_path,
-                "png": png_path,
-                "raster_page": write_raster_page(
-                    svg_path, background, width, height
-                ),
-                "background": background,
-                "width": width,
-                "height": height,
-                "bytes": len(svg.encode("utf-8")),
-            }
-        )
-        assets.extend((svg_path, png_path))
+    charts = [write_chart(args, timeline, theme) for theme in THEMES]
+    assets = [path for chart in charts for path in (chart["svg"], chart["png"])]
 
     return {
         "repository": args.repository,
-        "source": CHART_ENDPOINT,
+        "source": f"{API_ROOT}/repos/{args.repository}/stargazers",
         "authenticated": bool(args.token),
+        "stars": timeline["total"],
+        "sampled": timeline["sampled"],
+        "points": len(timeline["points"]),
+        "generated_at": now.isoformat(timespec="seconds"),
         "assets": assets,
         "charts": charts,
     }
 
 
-def mirror(args: argparse.Namespace) -> int:
-    print(json.dumps(build_manifest(args)))
+def build(args: argparse.Namespace) -> int:
+    if not args.token:
+        raise ChartError(
+            "no GitHub token available; the workflow must pass GITHUB_TOKEN so the "
+            "stargazer pages can be read without hitting the anonymous rate limit"
+        )
+    print(json.dumps(build_manifest(args, datetime.now(timezone.utc))))
     return 0
 
 

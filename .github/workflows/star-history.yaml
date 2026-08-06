@@ -7,6 +7,7 @@ on:
       - .github/workflows/star-history.yaml
       - scripts/star_history.py
       - scripts/star_history_lib/**
+      - scripts/test_star_history.py
 
   schedule:
     - cron: '23 4 * * *'
@@ -27,7 +28,6 @@ env:
   RELEASE_TAG: star-history/latest
   OUTPUT_DIR: dist/star-history
   SCALE: '2'
-  PYNACL_VERSION: '1.6.2'
 
 jobs:
   publish:
@@ -43,20 +43,19 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install chart dependencies
+      - name: Run chart unit tests
         run: |
           set -euo pipefail
 
-          python3 -m pip install --disable-pip-version-check --quiet \
-            "pynacl==$PYNACL_VERSION"
+          python3 -m unittest discover -s scripts -p 'test_star_history.py'
 
-      - name: Mirror upstream charts
+      - name: Render star history charts
         env:
-          STAR_HISTORY_TOKEN: ${{ secrets.STAR_HISTORY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          python3 scripts/star_history.py mirror \
+          python3 scripts/star_history.py build \
             --repository "$GITHUB_REPOSITORY" \
             --output-dir "$OUTPUT_DIR" \
             > manifest.json
@@ -100,10 +99,13 @@ jobs:
           ASSET_LIST=$(python3 scripts/star_history.py assets --manifest manifest.json)
           mapfile -t ASSETS <<< "$ASSET_LIST"
 
+          STARS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["stars"])' manifest.json)
+
           printf '%s\n' \
-            "Star history charts for \`$GITHUB_REPOSITORY\`, sanitized and mirrored from star-history.com." \
+            "Star history charts for \`$GITHUB_REPOSITORY\`, rendered from the GitHub stargazer API." \
             "" \
             "- **Updated:** $UPDATED_AT" \
+            "- **Stars:** $STARS" \
             "" \
             "The \`.png\` assets are the ones embedded in the README. GitHub serves" \
             "release assets as \`application/octet-stream\`, which its image proxy" \
