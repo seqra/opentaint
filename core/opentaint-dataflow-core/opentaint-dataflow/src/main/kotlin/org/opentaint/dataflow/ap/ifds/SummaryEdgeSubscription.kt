@@ -789,6 +789,7 @@ class SummaryEdgeStorageWithSubscribers(
         addFactToFactEdges(factToFactEdges, addedEdges)
         addNDFactToFactEdges(ndFactToFactEdges, addedEdges)
 
+        if (addedEdges.isEmpty()) return
         for (subscriber in subscribers) {
             subscriber.newSummaryEdges(addedEdges)
         }
@@ -823,6 +824,7 @@ class SummaryEdgeStorageWithSubscribers(
     fun sideEffectRequirement(requirements: List<InitialFactAp>) {
         val addedRequirements = sideEffectRequirement.add(requirements)
 
+        if (addedRequirements.isEmpty()) return
         for (subscriber in subscribers) {
             subscriber.newSideEffectRequirement(methodEntryPoint, addedRequirements)
         }
@@ -851,6 +853,7 @@ class SummaryEdgeStorageWithSubscribers(
 
         val addedSideEffects = addedZeroSideEffects + addedFactSideEffects
 
+        if (addedSideEffects.isEmpty()) return
         for (subscriber in subscribers) {
             subscriber.newSideEffectSummaries(methodEntryPoint, addedSideEffects)
         }
