@@ -46,14 +46,19 @@ class TaintAnalysisUnitRunner(
 
     private object EventComparator : Comparator<Any> {
         override fun compare(o1: Any, o2: Any): Int {
-            // Non-MethodAnalyzer events go first, MethodAnalyzers are sorted by analyzerSteps in ascending order
-
             val methodAnalyzer1 = o1 as? MethodAnalyzer
             val methodAnalyzer2 = o2 as? MethodAnalyzer
 
             if (methodAnalyzer1 === methodAnalyzer2) {
                 return 0
             }
+
+            val zeroToZeroPriority1 = methodAnalyzer1?.containsUnprocessedZeroToZeroEdges == true
+            val zeroToZeroPriority2 = methodAnalyzer2?.containsUnprocessedZeroToZeroEdges == true
+            if (zeroToZeroPriority1 != zeroToZeroPriority2) {
+                return if (zeroToZeroPriority1) -1 else 1
+            }
+
             if (methodAnalyzer1 == null) {
                 return -1
             }
@@ -91,6 +96,9 @@ class TaintAnalysisUnitRunner(
     override fun resetApManager(apManager: ApManager) {
         resetQueue()
 
+        loadedSummaries.clear()
+        methodSummariesSerializer = MethodSummariesSerializer(summarySerializationContext, analysisManager, apManager)
+
         internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
         externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
 
@@ -111,7 +119,7 @@ class TaintAnalysisUnitRunner(
     private val eventsProcessed = LongAdder()
     private val eventsEnqueued = LongAdder()
 
-    private val methodSummariesSerializer = MethodSummariesSerializer(
+    private var methodSummariesSerializer = MethodSummariesSerializer(
         summarySerializationContext,
         analysisManager,
         apManager
@@ -204,8 +212,9 @@ class TaintAnalysisUnitRunner(
             var processed = true
             when (event) {
                 is MethodAnalyzer -> {
+                    val processingZeroToZeroEdges = event.containsUnprocessedZeroToZeroEdges
                     while (event.containsUnprocessedEdges && isActive) {
-                        if (steps++ > RUNNER_STEPS_QUANT) {
+                        if (steps++ > RUNNER_STEPS_QUANT || processingZeroToZeroEdges != event.containsUnprocessedZeroToZeroEdges) {
                             processed = false
                             eventPriorityQueue.add(event)
                             break
