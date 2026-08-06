@@ -21,6 +21,7 @@ dependencies {
     implementation(opentaint_ir_api_storage)
     implementation(opentaint_ir_storage)
 
+    implementation(Libs.fastutil)
     implementation(KotlinDependency.Libs.kotlin_logging)
 }
 

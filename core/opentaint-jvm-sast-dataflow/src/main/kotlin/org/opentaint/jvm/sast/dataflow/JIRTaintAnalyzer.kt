@@ -37,8 +37,8 @@ class JIRTaintAnalyzer(
     override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> {
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        val explicitExceptionsOnlyGraph = JExplicitExceptionsOnlyApplicationGraph(mainGraph)
-        return JIRSafeApplicationGraph(explicitExceptionsOnlyGraph)
+        val tryBoundaryExceptionsGraph = JTryBoundaryExceptionsApplicationGraph(mainGraph)
+        return JIRSafeApplicationGraph(tryBoundaryExceptionsGraph)
     }
 
     private val analysisParams get() = JIRAnalysisManager.Params(
