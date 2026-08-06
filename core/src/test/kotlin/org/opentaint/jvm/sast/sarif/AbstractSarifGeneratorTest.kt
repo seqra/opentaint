@@ -2,6 +2,7 @@ package org.opentaint.jvm.sast.sarif
 
 import io.github.detekt.sarif4k.Location
 import io.github.detekt.sarif4k.Region
+import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.ThreadFlowLocation
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
@@ -20,10 +21,12 @@ abstract class AbstractSarifGeneratorTest: AnalysisTest() {
         val threadFlowLocations: List<ThreadFlowLocation>
     )
 
-    fun generateSarifReport(traces: List<VulnerabilityWithTrace>): SarifData {
+    fun generateSarifResults(
+        traces: List<VulnerabilityWithTrace>,
+        options: SarifGenerationOptions = SarifGenerationOptions(),
+    ): List<Result> {
         val locs = cp.registeredLocations.filter { !it.isRuntime }
         val sourceFileResolver = JIRSourceFileResolver(sourcesDir, locs.associateWith { sourcesDir })
-        val options = SarifGenerationOptions()
 
         val generator = JirSarifGenerator(
             options = options,
@@ -32,9 +35,11 @@ abstract class AbstractSarifGeneratorTest: AnalysisTest() {
             traits = traits
         )
 
-        val sarif = generator.generateSarif(traces.asSequence(), emptyList())
+        return generator.generateSarif(traces.asSequence(), emptyList()).results.toList()
+    }
 
-        val results = sarif.results.toList()
+    fun generateSarifReport(traces: List<VulnerabilityWithTrace>): SarifData {
+        val results = generateSarifResults(traces)
         val resultLocations = results.flatMap { it.locations.orEmpty() }
         val threadFlowLocations = results
             .flatMap { it.codeFlows.orEmpty() }
