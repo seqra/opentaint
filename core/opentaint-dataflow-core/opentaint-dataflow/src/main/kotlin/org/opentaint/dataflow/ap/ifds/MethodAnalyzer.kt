@@ -47,6 +47,8 @@ interface MethodAnalyzer {
 
     val containsUnprocessedEdges: Boolean
 
+    val containsUnprocessedZeroToZeroEdges: Boolean
+
     val containsDelayedEdges: Boolean
 
     fun tabulationAlgorithmStep()
@@ -182,11 +184,14 @@ class NormalMethodAnalyzer(
     private val methodInstGraph = analysisManager.getMethodInstGraph(runner.graph, analysisContext, methodEntryPoint.method)
 
     private var analyzerEnqueued = false
-    private var unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+    private var unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
     private var enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
 
     override val containsUnprocessedEdges: Boolean
         get() = !unprocessedEdges.isEmpty
+
+    override val containsUnprocessedZeroToZeroEdges: Boolean
+        get() = unprocessedEdges.containsZeroToZeroEdges
 
     override var analyzerSteps: Long = 0
         private set
@@ -304,7 +309,7 @@ class NormalMethodAnalyzer(
         analyzerEnqueued = false
 
         // Create new empty list to shrink internal array
-        unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
         enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
 
         flushPendingSummaryEdges()
@@ -1369,7 +1374,7 @@ class NormalMethodAnalyzer(
     }
 
     private fun resetEdgeProcessingStorage(apManager: ApManager) {
-        unprocessedEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
         enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
 
         pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
@@ -1440,6 +1445,9 @@ class EmptyMethodAnalyzer(
     }
 
     override val containsUnprocessedEdges: Boolean
+        get() = false
+
+    override val containsUnprocessedZeroToZeroEdges: Boolean
         get() = false
 
     override val containsDelayedEdges: Boolean
@@ -1634,6 +1642,9 @@ class TimedMethodAnalyzer(
 
     override val containsUnprocessedEdges: Boolean
         get() = base.containsUnprocessedEdges
+
+    override val containsUnprocessedZeroToZeroEdges: Boolean
+        get() = base.containsUnprocessedZeroToZeroEdges
 
     override val containsDelayedEdges: Boolean
         get() = base.containsDelayedEdges
