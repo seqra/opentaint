@@ -174,7 +174,8 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        val ifdsGraph = JIRSafeApplicationGraph(mainGraph)
+        val tryBoundaryExceptionsGraph = JTryBoundaryExceptionsApplicationGraph(mainGraph)
+        val ifdsGraph = JIRSafeApplicationGraph(tryBoundaryExceptionsGraph)
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
