@@ -44,16 +44,21 @@ class TaintAnalysisUnitRunner(
         runner = this
     )
 
-    private object EventComparator : Comparator<Any> {
+    internal object EventComparator : Comparator<Any> {
         override fun compare(o1: Any, o2: Any): Int {
-            // Non-MethodAnalyzer events go first, MethodAnalyzers are sorted by analyzerSteps in ascending order
-
             val methodAnalyzer1 = o1 as? MethodAnalyzer
             val methodAnalyzer2 = o2 as? MethodAnalyzer
 
             if (methodAnalyzer1 === methodAnalyzer2) {
                 return 0
             }
+
+            val zeroToZeroPriority1 = methodAnalyzer1?.containsUnprocessedZeroToZeroEdges == true
+            val zeroToZeroPriority2 = methodAnalyzer2?.containsUnprocessedZeroToZeroEdges == true
+            if (zeroToZeroPriority1 != zeroToZeroPriority2) {
+                return if (zeroToZeroPriority1) -1 else 1
+            }
+
             if (methodAnalyzer1 == null) {
                 return -1
             }
@@ -211,6 +216,7 @@ class TaintAnalysisUnitRunner(
             var processed = true
             when (event) {
                 is MethodAnalyzer -> {
+                    var processingZeroToZeroEdges = event.containsUnprocessedZeroToZeroEdges
                     while (event.containsUnprocessedEdges && isActive) {
                         if (steps++ > RUNNER_STEPS_QUANT) {
                             processed = false
@@ -219,6 +225,16 @@ class TaintAnalysisUnitRunner(
                         }
 
                         event.tabulationAlgorithmStep()
+
+                        if (processingZeroToZeroEdges && !event.containsUnprocessedZeroToZeroEdges) {
+                            if (event.containsUnprocessedEdges) {
+                                processed = false
+                                eventPriorityQueue.add(event)
+                            }
+                            break
+                        }
+
+                        processingZeroToZeroEdges = event.containsUnprocessedZeroToZeroEdges
                     }
                 }
 
@@ -336,6 +352,12 @@ class TaintAnalysisUnitRunner(
 
     override fun enqueueMethodAnalyzer(analyzer: MethodAnalyzer) {
         addUnprocessedEvent(analyzer)
+    }
+
+    override fun reprioritizeMethodAnalyzer(analyzer: MethodAnalyzer) {
+        if (eventPriorityQueue.remove(analyzer)) {
+            eventPriorityQueue.add(analyzer)
+        }
     }
 
     data class MethodAnalysisDelayed(val analyzer: MethodAnalyzer)
