@@ -86,9 +86,11 @@ abstract class SarifGenerator<IL>(
         var partialFingerPrints: Map<String, String>? = null
 
         if (options.generateFingerprint) {
+            val sinkFingerprint = computeSinkFingerprint(sinkLocation)
             val fullFingerprint = computeFingerprint(ruleId, sinkLocation, FingerprintKind.FULL_TRACE, threadFlows)
             val sourceSinkFingerprint = computeFingerprint(ruleId, sinkLocation, FingerprintKind.SOURCE_SINK, threadFlows)
             partialFingerPrints = mapOf(
+                "vulnerabilitySinkHash/v1" to sinkFingerprint,
                 "vulnerabilityWithTraceHash/v1" to fullFingerprint,
                 "vulnerabilitySourceSinkHash/v1" to sourceSinkFingerprint,
             )
@@ -113,6 +115,13 @@ abstract class SarifGenerator<IL>(
 
     private enum class FingerprintKind {
         FULL_TRACE, SOURCE_SINK
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun computeSinkFingerprint(vulnerabilityLocation: IL): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        digest.addLocationFingerprint(vulnerabilityLocation)
+        return Base64.encode(digest.digest())
     }
 
     @OptIn(ExperimentalEncodingApi::class)
