@@ -1088,6 +1088,13 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
+- function: java.util.Comparator#reversed
+  signature: () java.util.Comparator
+  copy:
+  - from: this
+    to:
+    - result
+    - .java.util.Comparator#Delegate#java.lang.Object
 - function: java.util.Collections#unmodifiableSet
   signature: (java.util.Set) java.util.Set
   overrides: false
