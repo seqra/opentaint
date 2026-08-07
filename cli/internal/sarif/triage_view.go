@@ -99,11 +99,25 @@ func (v *TriageView) baselineItems(out *output.Printer) []any {
 	}{
 		{"New", New},
 		{"Unchanged", Unchanged},
-		{"Updated", Updated},
 	} {
 		if count := v.Comparison.Counts[entry.state]; count > 0 {
 			items = append(items, out.FieldItem(entry.label, count))
 		}
+	}
+	// "Updated" is one SARIF state covering two different findings-level events,
+	// so it is reported by what actually moved. Anything the comparison could not
+	// attribute stays under the plain label rather than being guessed at.
+	attributed := 0
+	for _, change := range []Change{ChangeSource, ChangePath} {
+		count := v.Comparison.ChangeCounts[change]
+		if count == 0 {
+			continue
+		}
+		attributed += count
+		items = append(items, out.FieldItem("Updated, "+change.Label(), count))
+	}
+	if rest := v.Comparison.Counts[Updated] - attributed; rest > 0 {
+		items = append(items, out.FieldItem("Updated", rest))
 	}
 	// "Fixed" reads better than SARIF's "absent" for a finding that is gone.
 	if count := v.Comparison.Counts[Absent]; count > 0 {

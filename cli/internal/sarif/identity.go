@@ -35,10 +35,28 @@ var identityAliases = map[string]string{
 var IdentityAliases = []string{"trace", "source-sink", "sink"}
 
 // DefaultIdentityKey is the fingerprint key used to decide whether a finding in
-// one report is "the same finding" as one in another report. The source/sink
-// hash is the default because a suppression or baseline entry should survive
-// edits to helper methods the flow happens to pass through.
-const DefaultIdentityKey = SourceSinkFingerprintKey
+// one report is "the same finding" as one in another report. The sink hash is
+// the default because it names the vulnerable statement and nothing else, so a
+// decision survives every edit to how the untrusted data reaches it. The
+// analyzer already reports one finding per rule and sink, so the coarsest key
+// loses no findings — it only stops them from changing identity.
+const DefaultIdentityKey = SinkFingerprintKey
+
+// identityLadder is the keys ordered coarsest to finest. Each one adds detail to
+// the one before it, which is what lets a matched finding say what moved.
+var identityLadder = []string{SinkFingerprintKey, SourceSinkFingerprintKey, TraceFingerprintKey}
+
+// finerKeys returns the keys that refine key, nearest first. A key outside the
+// ladder is refined by the trace hash alone: an unrecognized identity may still
+// be compared for an exact match, which is all the trace hash reports.
+func finerKeys(key string) []string {
+	for i, k := range identityLadder {
+		if k == key {
+			return identityLadder[i+1:]
+		}
+	}
+	return []string{TraceFingerprintKey}
+}
 
 // ResolveIdentityKey normalizes a user-supplied identity key, falling back to
 // DefaultIdentityKey when unset and expanding the short aliases. Any other key

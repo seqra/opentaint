@@ -5,16 +5,30 @@ import (
 	"testing"
 )
 
-// fp builds a partialFingerprints map from a source/sink hash and a trace hash.
-func fp(sourceSink, trace string) map[string]string {
+// fps builds a partialFingerprints map from all three hashes, as the analyzer
+// emits them. An empty value leaves that key out.
+func fps(sink, sourceSink, trace string) map[string]string {
 	m := map[string]string{}
-	if sourceSink != "" {
-		m[SourceSinkFingerprintKey] = sourceSink
-	}
-	if trace != "" {
-		m[TraceFingerprintKey] = trace
+	for key, value := range map[string]string{
+		SinkFingerprintKey:       sink,
+		SourceSinkFingerprintKey: sourceSink,
+		TraceFingerprintKey:      trace,
+	} {
+		if value != "" {
+			m[key] = value
+		}
 	}
 	return m
+}
+
+// fp is fps for a finding whose sink is implied by its source/sink hash, which
+// is the common case: one sink, one source, one finding.
+func fp(sourceSink, trace string) map[string]string {
+	sink := ""
+	if sourceSink != "" {
+		sink = "sink-of-" + sourceSink
+	}
+	return fps(sink, sourceSink, trace)
 }
 
 func TestCompareClassifiesNewUnchangedUpdatedAbsent(t *testing.T) {
@@ -329,5 +343,105 @@ func TestWithAbsentAddsFixedFindingsForDisplayOnly(t *testing.T) {
 	}
 	if gone.BaselineState != nil {
 		t.Error("the baseline result itself was stamped; only the copy may be")
+	}
+}
+
+// Under the default sink identity, a finding that keeps its sink but gains a
+// different source is "updated", and the report must be able to say which.
+func TestChangeUnderSinkIdentityNamesWhatMoved(t *testing.T) {
+	baseline := makeReport(
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")),
+		makeResult("b", Error, "b.java", 2, fps("sink-b", "src-b", "trace-b")),
+		makeResult("c", Error, "c.java", 3, fps("sink-c", "src-c", "trace-c")),
+	)
+	current := makeReport(
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")),        // nothing moved
+		makeResult("b", Error, "b.java", 2, fps("sink-b", "src-b-other", "trace-b2")), // source moved
+		makeResult("c", Error, "c.java", 3, fps("sink-c", "src-c", "trace-c-longer")), // path moved
+	)
+
+	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+
+	results := current.Results()
+	for _, tc := range []struct {
+		name  string
+		idx   int
+		state BaselineState
+		want  Change
+	}{
+		{"nothing moved", 0, Unchanged, ChangeNone},
+		{"source moved", 1, Updated, ChangeSource},
+		{"path moved", 2, Updated, ChangePath},
+	} {
+		if got := cmp.StateOf(results[tc.idx]); got != tc.state {
+			t.Errorf("%s: state = %q, want %q", tc.name, got, tc.state)
+		}
+		if got := cmp.ChangeOf(results[tc.idx]); got != tc.want {
+			t.Errorf("%s: change = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+
+	if got := cmp.ChangeCounts[ChangeSource]; got != 1 {
+		t.Errorf("source-changed count = %d, want 1", got)
+	}
+	if got := cmp.ChangeCounts[ChangePath]; got != 1 {
+		t.Errorf("path-changed count = %d, want 1", got)
+	}
+	if got := cmp.Counts[Updated]; got != 2 {
+		t.Errorf("updated count = %d, want 2; every change is still one SARIF state", got)
+	}
+}
+
+// A source that moves drags the trace with it. The report names the source,
+// because that is the more meaningful of the two.
+func TestChangeReportsTheCoarsestThingThatMoved(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
+	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-z", "trace-z")))
+
+	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if got := cmp.ChangeOf(current.Results()[0]); got != ChangeSource {
+		t.Errorf("change = %q, want %q", got, ChangeSource)
+	}
+}
+
+// Choosing a finer identity leaves less to refine: under source/sink, a moved
+// source is a different finding, not an updated one.
+func TestChangeUnderSourceSinkIdentityOnlyReportsPath(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
+	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a2")))
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if got := cmp.ChangeOf(current.Results()[0]); got != ChangePath {
+		t.Errorf("change = %q, want %q", got, ChangePath)
+	}
+	if got := cmp.ChangeCounts[ChangeSource]; got != 0 {
+		t.Errorf("source-changed count = %d, want 0 under a source-binding identity", got)
+	}
+}
+
+// The trace hash is the finest key, so nothing refines it: a match is a match.
+func TestChangeUnderTraceIdentityIsAlwaysNone(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
+	current := makeReport(makeResult("a", Error, "a.java", 9, fps("sink-z", "src-z", "trace-a")))
+
+	cmp, err := CompareToBaseline(current, baseline, TraceFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	r := current.Results()[0]
+	if got := cmp.StateOf(r); got != Unchanged {
+		t.Errorf("state = %q, want unchanged", got)
+	}
+	if got := cmp.ChangeOf(r); got != ChangeNone {
+		t.Errorf("change = %q, want none", got)
 	}
 }

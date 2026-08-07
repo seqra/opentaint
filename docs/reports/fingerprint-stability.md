@@ -31,14 +31,19 @@ The same commit also adds the key `vulnerabilitySinkHash/v1`, and `06c8d25e9`
 puts the rule id into it. The key is now "rule and sink only" — Change 1 of
 section 8, as written. The CLI accepts it as `--fingerprint-key sink`.
 
-Two parts of section 8 are **not** done, and must not be done as written:
+Change 1 of section 8 is fully done. The sink hash is also the default key of
+the CLI. The measurement of section 8 gives the reason: the sink hash is unique
+for each finding (36 of 36), because the analyzer makes one finding for each rule
+and each sink. The coarser key thus loses no finding. It only stops a finding
+from changing its identity.
 
-- **Do not make the sink hash the default key.** Section 8 asks for this because
-  the source/sink hash was not stable. The source/sink hash is stable now. The
-  sink hash is coarser: it merges the findings that have the same sink and
-  different sources.
-- Change 2 (make the flow selection stable) is not done. The commit removes the
-  effect on the report. It does not sort the graph.
+A coarser key hides less than it looks. If the source moves, the finding stays
+the same finding, and the CLI writes `Updated, source changed`. If only the path
+moves, the CLI writes `Updated, path changed`. Use `--fingerprint-key
+source-sink` when a new source must be a new finding.
+
+Change 2 (make the flow selection stable) is **not** done. The commit removes the
+effect on the report. It does not sort the graph.
 
 ---
 
