@@ -9,13 +9,11 @@ import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationMode
 import org.opentaint.jvm.sast.dataflow.JIRCombinedTaintRulesProvider.CombinationOptions
 import org.opentaint.jvm.sast.dataflow.JIRMethodExitRuleProvider
-import org.opentaint.jvm.sast.dataflow.JIRMethodGetDefaultProvider
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.project.ProjectAnalysisContext
 import org.opentaint.jvm.sast.project.spring.SpringRuleProvider
 import org.opentaint.jvm.sast.rules.JIRSemgrepRuleProvider
-import org.opentaint.jvm.sast.util.locationChecker
 
 fun loadTaintConfig(
     cp: JIRClasspath,
@@ -52,7 +50,6 @@ fun TaintRulesProvider.withApproximationConfigs(
 fun ProjectAnalysisContext.analysisConfig(initialConfig: TaintRulesProvider): TaintRulesProvider {
     var config = initialConfig
     config = JIRMethodExitRuleProvider(config)
-    config = JIRMethodGetDefaultProvider(config, projectClasses.locationChecker())
     if (springWebProjectContext != null) {
         config = SpringRuleProvider(config, springWebProjectContext)
     }

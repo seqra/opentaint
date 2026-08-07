@@ -278,13 +278,6 @@ class JIRMethodCallFlowFunction(
                 apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
             )
 
-            val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
-            val passThroughFacts = applyPassThrough(
-                passRules,
-                conditionEvaluator,
-                passEvaluator
-            )
-
             if (startFactBase !is AccessPathBase.ClassStatic) {
                 analysisContext.taint.externalMethodTracker?.let { tracker ->
                     if (JIRCallResolver.alwaysIgnoreMethod(method)) return@let
@@ -295,6 +288,14 @@ class JIRMethodCallFlowFunction(
                     val ruleApplied = startFactBase in passEvaluator.relevantPositionBase
                     tracker.trackExternalMethod(methodName, methodDesc, factPosition, ruleApplied)
                 }
+            }
+
+            val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
+            var passThroughFacts = applyPassThrough(passRules, conditionEvaluator, passEvaluator)
+
+            if (passThroughFacts.isNone) {
+                val defaultRules = JIRMethodGetDefault.defaultPropagationRules(method)
+                passThroughFacts = applyPassThrough(defaultRules, conditionEvaluator, passEvaluator)
             }
 
             passThroughFacts.onSome { evaluatedPass ->

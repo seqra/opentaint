@@ -1,0 +1,43 @@
+package org.opentaint.dataflow.jvm.ap.ifds.analysis
+
+import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
+import org.opentaint.dataflow.configuration.jvm.CopyAllMarks
+import org.opentaint.dataflow.configuration.jvm.PositionAccessor
+import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
+import org.opentaint.dataflow.configuration.jvm.Result
+import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
+import org.opentaint.dataflow.configuration.jvm.This
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.taint.RuleConditionRewriter
+import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.TypeName
+import org.opentaint.ir.impl.cfg.util.isArray
+import org.opentaint.ir.impl.types.TypeNameImpl
+
+object JIRMethodGetDefault {
+    private val objectTypeName = TypeNameImpl.fromTypeName("java.lang.Object")
+
+    private fun TypeName.mayBeArray(): Boolean = isArray || this == objectTypeName
+
+    private val getDefaultActions = listOf(
+        CopyAllMarks(from = This, to = Result)
+    )
+
+    private val getDefaultArrayActions = listOf(
+        CopyAllMarks(from = This, to = PositionWithAccess(Result, PositionAccessor.ElementAccessor))
+    )
+
+    fun defaultPropagationRules(method: JIRMethod): List<RuleWithCondition<TaintPassThrough>> {
+        if (method.isStatic) return emptyList()
+
+        if (!method.name.startsWith("get")) return emptyList()
+
+        var actions = getDefaultActions
+        if (method.returnType.mayBeArray()) {
+            actions = actions + getDefaultArrayActions
+        }
+
+        val getDefaultRule = TaintPassThrough(method, mkTrue(), actions, info = null)
+        return listOf(RuleWithCondition(getDefaultRule, RuleConditionRewriter.trueExpr))
+    }
+}

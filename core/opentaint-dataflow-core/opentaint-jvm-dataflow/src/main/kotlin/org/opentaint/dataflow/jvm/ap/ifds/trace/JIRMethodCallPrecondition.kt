@@ -19,6 +19,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevant
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodGetDefault
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
@@ -133,7 +134,8 @@ class JIRMethodCallPrecondition(
         fact: InitialFactAp,
         startBase: AccessPathBase,
     ) {
-        val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, fact = null).toList()
+        val providedPassRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, fact = null).toList()
+        val passRules = providedPassRules + JIRMethodGetDefault.defaultPropagationRules(callExpr.method.method)
         if (passRules.isEmpty()) return
 
         val entryFactReader = InitialFactReader(fact.rebase(startBase), apManager)
