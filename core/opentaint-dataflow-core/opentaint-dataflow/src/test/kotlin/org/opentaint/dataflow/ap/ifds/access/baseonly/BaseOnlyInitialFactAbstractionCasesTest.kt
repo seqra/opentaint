@@ -222,6 +222,28 @@ class BaseOnlyInitialFactAbstractionCasesTest {
     }
 
     @Test
+    fun `exclusion below one field does not unblock a sibling field`() {
+        val m = mgr(fieldSensitive = true)
+        val sibling = FieldAccessor("A", "sibling", "B")
+        val abstraction = BaseOnlyInitialFactAbstraction(m)
+
+        abstraction.addAbstractedInitialFact(m.finalOf(sibling, mark), FactTypeChecker.Dummy)
+        abstraction.registerNewInitialFact(
+            m.mostAbstractInitialAp(arg0).exclude(sibling),
+            FactTypeChecker.Dummy,
+        )
+
+        var fieldScopedDemand = m.mostAbstractInitialAp(arg0).prependAccessor(field)
+        fieldScopedDemand = fieldScopedDemand.exclude(mark)
+        val produced = abstraction.registerNewInitialFact(fieldScopedDemand, FactTypeChecker.Dummy)
+
+        assertTrue(
+            produced.isEmpty(),
+            "an exclusion at $field.* must not unblock $sibling.$mark, got $produced",
+        )
+    }
+
+    @Test
     fun `one exclusion update advances across every newly excluded blocker`() {
         val m = mgr(fieldSensitive = true)
         val stat = ClassStaticAccessor("S")

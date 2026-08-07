@@ -6,8 +6,6 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
-import org.opentaint.dataflow.util.forEachEntry
-import org.opentaint.dataflow.util.long2ObjectMap
 import java.util.concurrent.ConcurrentHashMap
 
 class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
@@ -28,6 +26,7 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
         return result
     }
 
+
     override fun filterTo(dst: MutableList<InitialFactAp>, fact: FinalFactAp) {
         fact as BaseOnlyFinalFactAp
         val storage = based[fact.base] ?: return
@@ -41,23 +40,31 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
     }
 
     private class RequirementStorage {
-        private val requirements = long2ObjectMap<BaseOnlyInitialFactAp>()
+        private class RequirementNode(initial: BaseOnlyInitialFactAp) {
+            @Volatile
+            var requirement: BaseOnlyInitialFactAp = initial
+        }
+
+        private val requirements = BaseOnlyInitialAccessIndex<RequirementNode>()
         private val delta = Long2ObjectOpenHashMap<BaseOnlyInitialFactAp>()
 
         fun mergeAdd(requirement: BaseOnlyInitialFactAp): BaseOnlyInitialFactAp? {
-            val previous = requirements.get(requirement.access)
-            if (previous == null) {
-                requirements.put(requirement.access, requirement)
+            var added = false
+            val node = requirements.getOrCreate(requirement.access) {
+                added = true
+                RequirementNode(requirement)
+            }
+            if (added) {
                 delta.put(requirement.access, requirement)
                 return requirement
             }
 
-            val merged = previous.mergeAdd(requirement) ?: return null
-            requirements.put(requirement.access, merged)
+            val previous = node.requirement
+            val update = previous.mergeWithAdded(requirement) ?: return null
+            val merged = update.merged
+            node.requirement = merged
 
-            val addedExclusions = requirement.exclusions.addedComparedTo(previous.exclusions)
-            check(addedExclusions !is ExclusionSet.Empty)
-            val addedRequirement = requirement.replaceExclusions(addedExclusions) as BaseOnlyInitialFactAp
+            val addedRequirement = requirement.replaceExclusions(update.added) as BaseOnlyInitialFactAp
             val previousDelta = delta[requirement.access]
             val mergedDelta = checkNotNull(previousDelta.mergeAdd(addedRequirement))
             delta.put(requirement.access, mergedDelta)
@@ -70,7 +77,8 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
         }
 
         fun filterTo(dst: MutableList<InitialFactAp>, fact: BaseOnlyAccess) {
-            requirements.forEachEntry { _, requirement ->
+            requirements.collectCandidates(fact) { _, node ->
+                val requirement = node.requirement
                 if (baseOnlySummaryInitialMatches(fact, requirement.access)) {
                     dst.add(requirement)
                 }
@@ -78,26 +86,34 @@ class BaseOnlySideEffectRequirementApStorage : SideEffectRequirementApStorage {
         }
 
         fun collectAllTo(dst: MutableList<InitialFactAp>) {
-            requirements.forEachEntry { _, requirement -> dst.add(requirement) }
+            requirements.collectAll { _, node -> dst.add(node.requirement) }
         }
     }
 }
 
-private fun ExclusionSet.addedComparedTo(previous: ExclusionSet): ExclusionSet = when (this) {
-    ExclusionSet.Empty -> ExclusionSet.Empty
-    ExclusionSet.Universe -> error("Unexpected universe exclusion")
-    is ExclusionSet.Concrete -> when (previous) {
-        ExclusionSet.Empty -> this
-        ExclusionSet.Universe -> ExclusionSet.Empty
-        is ExclusionSet.Concrete -> {
-            val added = set.removeAll(previous.set)
-            when {
-                added === set -> this
-                added.isEmpty() -> ExclusionSet.Empty
-                else -> ExclusionSet.Concrete(added, added.hashCode())
-            }
-        }
+private data class ExclusionMerge(
+    val merged: BaseOnlyInitialFactAp,
+    val added: ExclusionSet,
+)
+
+private fun BaseOnlyInitialFactAp.mergeWithAdded(requirement: BaseOnlyInitialFactAp): ExclusionMerge? {
+    val previousExclusions = exclusions
+    val incomingExclusions = requirement.exclusions
+    if (incomingExclusions is ExclusionSet.Empty) return null
+    if (previousExclusions is ExclusionSet.Empty) {
+        return ExclusionMerge(requirement, incomingExclusions)
     }
+    check(previousExclusions is ExclusionSet.Concrete && incomingExclusions is ExclusionSet.Concrete)
+
+    val previousSet = previousExclusions.set as BaseOnlyExclusionAccessorSet
+    val incomingSet = incomingExclusions.set as BaseOnlyExclusionAccessorSet
+    val update = previousSet.unionWithAdded(incomingSet) ?: return null
+    val mergedExclusions = ExclusionSet.Concrete(update.union)
+    val addedExclusions = ExclusionSet.Concrete(update.added)
+    return ExclusionMerge(
+        BaseOnlyInitialFactAp(requirement.manager, requirement.base, requirement.access, mergedExclusions),
+        addedExclusions,
+    )
 }
 
 private fun BaseOnlyInitialFactAp?.mergeAdd(requirement: BaseOnlyInitialFactAp): BaseOnlyInitialFactAp? {

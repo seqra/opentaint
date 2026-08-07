@@ -15,8 +15,10 @@ class BaseOnlyFinalFactAp(
     val manager: BaseOnlyApManager,
     override val base: AccessPathBase,
     val access: BaseOnlyAccess,
-    override val exclusions: ExclusionSet,
+    exclusions: ExclusionSet,
 ) : FinalFactAp {
+    override val exclusions: ExclusionSet = manager.compactExclusions(exclusions)
+
     init {
         BaseOnlyAccessOps.requireCanonical(access, allowTransientCollapsed = true)
     }

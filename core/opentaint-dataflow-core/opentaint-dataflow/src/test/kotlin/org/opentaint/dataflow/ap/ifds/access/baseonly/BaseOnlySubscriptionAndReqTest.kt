@@ -144,7 +144,7 @@ class BaseOnlySubscriptionAndReqTest {
     }
 
     @Test
-    fun `fact subscription broadcasts conservative candidates for both residual modes`() {
+    fun `fact subscription indexes applicable and empty delta candidates`() {
         val sub = manager.accessPathSubscription()
         val callerInitial = initial(pattern(fieldA))
         val exactExit = final(pattern(fieldA))
@@ -157,13 +157,13 @@ class BaseOnlySubscriptionAndReqTest {
         assertNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, extendedExit))
 
         val summaryInitial = initial(pattern(fieldA))
-        val nonEmpty = mutableListOf<FactEdgeSummarySubscription>()
-        sub.collectFactEdge(nonEmpty, summaryInitial, emptyDeltaRequired = false)
-        assertEquals(3, nonEmpty.size, "the downstream residual operation filters conservative candidates")
+        val applicable = mutableListOf<FactEdgeSummarySubscription>()
+        sub.collectFactEdge(applicable, summaryInitial, emptyDeltaRequired = false)
+        assertEquals(2, applicable.size, "identity and non-empty delta candidates are applicable")
 
         val empty = mutableListOf<FactEdgeSummarySubscription>()
         sub.collectFactEdge(empty, summaryInitial, emptyDeltaRequired = true)
-        assertEquals(3, empty.size, "a projected BaseOnly exit cannot soundly partition residual modes")
+        assertEquals(1, empty.size, "only the identity candidate has an empty delta")
     }
 
     @Test
@@ -218,7 +218,7 @@ class BaseOnlySubscriptionAndReqTest {
     }
 
     @Test
-    fun `fact and ND subscription collection equals a conservative registration scan`() {
+    fun `fact subscription index equals BaseOnly delta scan`() {
         val exits = listOf(
             pattern(fieldA),
             marked(fieldA),
@@ -237,14 +237,65 @@ class BaseOnlySubscriptionAndReqTest {
             sub.addNDFactToFact(inst, AccessPathBase.This, ndInitial, final(exit))
         }
 
-        for (emptyRequired in listOf(false, true)) {
-            val factResult = mutableListOf<FactEdgeSummarySubscription>()
-            sub.collectFactEdge(factResult, initial(summaryAccess), emptyRequired)
-            assertEquals(exits.size, factResult.size, "F2F candidate scan, empty=$emptyRequired")
+        val applicable = mutableListOf<FactEdgeSummarySubscription>()
+        sub.collectFactEdge(applicable, initial(summaryAccess), emptyDeltaRequired = false)
+        val expectedApplicable = exits.count { exit ->
+            val match = BaseOnlyAccessOps.matchPrefix(exit, summaryAccess)
+            match.emptyDelta || match.hasSuffix
+        }
+        assertEquals(expectedApplicable, applicable.size)
 
-            val ndResult = mutableListOf<FactNDEdgeSummarySubscription>()
-            sub.collectFactNDEdge(ndResult, initial(summaryAccess), emptyRequired)
-            assertEquals(exits.size, ndResult.size, "ND candidate scan, empty=$emptyRequired")
+        val empty = mutableListOf<FactEdgeSummarySubscription>()
+        sub.collectFactEdge(empty, initial(summaryAccess), emptyDeltaRequired = true)
+        val expectedEmpty = exits.count { exit ->
+            BaseOnlyAccessOps.matchPrefix(exit, summaryAccess).emptyDelta
+        }
+        assertEquals(expectedEmpty, empty.size)
+
+        val ndResult = mutableListOf<FactNDEdgeSummarySubscription>()
+        sub.collectFactNDEdge(ndResult, initial(summaryAccess), emptyDeltaRequired = false)
+        assertEquals(exits.size, ndResult.size, "ND indexing is outside this change")
+    }
+
+    @Test
+    fun `fact subscription index equals matchPrefix for all canonical shapes`() {
+        val static = manager.interner.index(ClassStaticAccessor("Owner"))
+        val fieldAIdx = manager.interner.index(fieldA)
+        val fieldBIdx = manager.interner.index(fieldB)
+        val markIdx = manager.interner.index(mark)
+        val accesses = listOf(
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 0),
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 1),
+            BaseOnlyAccessOps.abstractAt(static, NO_ACCESSOR, 1),
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 2),
+            BaseOnlyAccessOps.abstractAt(static, NO_ACCESSOR, 2),
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, fieldAIdx, 2),
+            packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, markIdx),
+            packBaseOnlyAccess(NO_ACCESSOR, fieldAIdx, markIdx),
+            packBaseOnlyAccess(NO_ACCESSOR, fieldBIdx, markIdx),
+            packBaseOnlyAccess(static, NO_ACCESSOR, markIdx),
+            packBaseOnlyAccess(static, fieldAIdx, markIdx),
+        )
+        val sub = manager.accessPathSubscription()
+        val callerInitial = initial(pattern(fieldA))
+        accesses.forEach { exit ->
+            assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, callerInitial, final(exit)))
+        }
+
+        accesses.forEach { summaryAccess ->
+            val applicable = mutableListOf<FactEdgeSummarySubscription>()
+            sub.collectFactEdge(applicable, initial(summaryAccess), emptyDeltaRequired = false)
+            val expectedApplicable = accesses.count { exit ->
+                BaseOnlyAccessOps.matchPrefix(exit, summaryAccess).let { it.emptyDelta || it.hasSuffix }
+            }
+            assertEquals(expectedApplicable, applicable.size, "applicable lookup for $summaryAccess")
+
+            val empty = mutableListOf<FactEdgeSummarySubscription>()
+            sub.collectFactEdge(empty, initial(summaryAccess), emptyDeltaRequired = true)
+            val expectedEmpty = accesses.count { exit ->
+                BaseOnlyAccessOps.matchPrefix(exit, summaryAccess).emptyDelta
+            }
+            assertEquals(expectedEmpty, empty.size, "empty-delta lookup for $summaryAccess")
         }
     }
 
@@ -313,6 +364,7 @@ class BaseOnlySubscriptionAndReqTest {
         storage.collectAllRequirementsTo(all)
         assertEquals(setOf<InitialFactAp>(requirementA, requirementB), all.toSet())
     }
+
 
     @Test
     fun `side effect requirement publishes exclusion delta and retains the union`() {

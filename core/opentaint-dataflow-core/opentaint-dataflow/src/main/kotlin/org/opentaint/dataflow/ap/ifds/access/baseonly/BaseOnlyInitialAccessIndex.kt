@@ -9,7 +9,7 @@ import org.opentaint.dataflow.util.int2ObjectMap
  * A single-writer/multiple-reader index over the three packed BaseOnly access slots.
  *
  * Patterned traversal is deliberately conservative and returns candidates only. Callers apply
- * [baseOnlySummaryInitialMatches] as the authoritative semantic predicate before emission.
+ * the semantic predicate of their operation before emission.
  */
 internal class BaseOnlyInitialAccessIndex<V : Any> {
     private class FieldNode<V : Any> {
@@ -27,6 +27,11 @@ internal class BaseOnlyInitialAccessIndex<V : Any> {
         val suffixNode = fieldNode.fields.getOrCreateNullable(access.fieldIdx) { SuffixNode() }
         return suffixNode.suffixes.getOrCreateNullable(access.rawSuffixSlot, create)
     }
+
+    fun get(access: BaseOnlyAccess): V? =
+        statics.get(access.staticIdx)
+            ?.fields?.get(access.fieldIdx)
+            ?.suffixes?.get(access.rawSuffixSlot)
 
     fun collectAll(consume: (BaseOnlyAccess, V) -> Unit) {
         statics.forEachEntry { staticIdx, fieldNode ->
