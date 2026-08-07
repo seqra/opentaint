@@ -293,7 +293,7 @@ class JIRMethodCallFlowFunction(
             val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
             var passThroughFacts = applyPassThrough(passRules, conditionEvaluator, passEvaluator)
 
-            if (passThroughFacts.isNone) {
+            if (passThroughFacts.isNone && !analysisContext.analysisManager.params.disableDefaultGetModel) {
                 val defaultRules = JIRMethodGetDefault.defaultPropagationRules(method)
                 passThroughFacts = applyPassThrough(defaultRules, conditionEvaluator, passEvaluator)
             }

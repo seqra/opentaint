@@ -54,6 +54,9 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val trackExternalMethods: Boolean by option(help = "Track external methods, produce external methods YAML lists")
         .flag()
 
+    private val disableDefaultGetModel: Boolean by option(help = "Disable default model for java getter")
+        .flag(default = false)
+
     private val javaDataflowApproximations: List<Path> by option(help = "Directory of compiled approximation class files")
         .directory()
         .multiple()
@@ -116,6 +119,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     override fun javaOptions() = ProjectAnalysisOptions(
         common = commonOptions,
         projectKind = projectKind,
+        disableDefaultGetModel = disableDefaultGetModel,
         approximationOptions = DataFlowApproximationLoader.Options(
             customApproximationPaths = javaDataflowApproximations,
         ),
