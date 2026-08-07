@@ -32,6 +32,7 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.util.merge
 import org.opentaint.util.onSome
 
 class JIRMethodCallFlowFunction(
@@ -293,9 +294,10 @@ class JIRMethodCallFlowFunction(
             val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
             var passThroughFacts = applyPassThrough(passRules, conditionEvaluator, passEvaluator)
 
-            if (passThroughFacts.isNone && !analysisContext.analysisManager.params.disableDefaultGetModel) {
+            if (/*todo: fix owasp  passThroughFacts.isNone && */!analysisContext.analysisManager.params.disableDefaultGetModel) {
                 val defaultRules = JIRMethodGetDefault.defaultPropagationRules(method)
-                passThroughFacts = applyPassThrough(defaultRules, conditionEvaluator, passEvaluator)
+                val defaultPass = applyPassThrough(defaultRules, conditionEvaluator, passEvaluator)
+                passThroughFacts = passThroughFacts.merge(defaultPass)
             }
 
             passThroughFacts.onSome { evaluatedPass ->
