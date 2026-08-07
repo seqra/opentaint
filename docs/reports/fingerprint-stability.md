@@ -6,44 +6,60 @@
 
 ---
 
-## Status: corrected in analyzer 908e924b3
+## Status: not corrected. Change 1 is done
 
-**Do not use sections 1 to 7 as a statement about the analyzer of today.** They
-describe the analyzer of 2026.08.01. The commit `908e924b3` ("Small fixes",
-PR #336) corrects the cause. Read this section first, then read the rest as the
-record of the defect.
+Sections 1 to 7 still apply. The cause is **not** repaired.
 
-What the commit changes: the event order in the IFDS scheduler. An analyzer that
-holds unprocessed zero-to-zero edges now goes first. This order comes from the
-content, not from the time at which a thread puts an event into the queue.
+An earlier version of this section said that the commit `908e924b3` ("Small
+fixes", PR #336) repairs the cause. That statement was wrong. The author of the
+commit says it is not a repair for this defect, and a measurement agrees.
 
-Measurement after the change, on the reproduction project
-(`projects/local/taint-nondeterminism` in the regression harness), with 10 runs
-and 5 different thread counts:
+**What #336 changes:** the order of the events in the IFDS scheduler, so that an
+analyzer with unprocessed zero-to-zero edges goes first. It also stops the empty
+notifications to the subscribers, and it clears a stale cache when the access-path
+mode changes. It does not touch the delay of an analyzer, the increase of the
+fact-depth limit, or the detection of quiescence. These are the parts that make
+the result depend on the order.
 
-| Measurement | Before | After |
+**Measurement.** Runs of the same code on the reproduction project
+(`projects/local/taint-nondeterminism` in the regression harness), which reports
+5244 statements with facts:
+
+| Measurement | Before #336 | After #336 (`06c8d25e9`) |
 |---|---|---|
-| `vulnerabilitySourceSinkHash/v1` set | changes between runs | the same in all 10 runs |
-| Complete SARIF results, all fields | change between runs | the same in all runs |
-| Delayed-analyzer set in each round | changes between runs | the same in all runs |
+| Statements with different facts, 3 runs | 278, 300, 314 | 268, 392, 364 |
+| `vulnerabilitySourceSinkHash/v1` set | the same in all runs | the same in all runs |
+| Delayed-analyzer set in each round | the same in all runs | the same in all runs |
 
-The same commit also adds the key `vulnerabilitySinkHash/v1`, and `06c8d25e9`
-puts the rule id into it. The key is now "rule and sink only" — Change 1 of
-section 8, as written. The CLI accepts it as `--fingerprint-key sink`.
+The fact sets are not stable, before or after. The size of the difference does
+not decrease.
 
-Change 1 of section 8 is fully done. The sink hash is also the default key of
-the CLI. The measurement of section 8 gives the reason: the sink hash is unique
-for each finding (36 of 36), because the analyzer makes one finding for each rule
-and each sink. The coarser key thus loses no finding. It only stops a finding
-from changing its identity.
+**The reproduction project cannot answer the fingerprint question.** Its
+fingerprints do not change, before or after the commit — the value is the same
+in both. Each of its findings has one route from the source to the sink, so a
+different fact set cannot make the analyzer select a different source. The
+measurements in sections 1 to 7, which used Stirling-PDF, had more than one route
+for each finding. To test a fingerprint again, use a project with more than one
+route to a sink.
+
+**What is done.** The commit `908e924b3` adds the key `vulnerabilitySinkHash/v1`,
+and `06c8d25e9` puts the rule id into it. The key is now "rule and sink only" —
+Change 1 of section 8, as written. The CLI accepts it as `--fingerprint-key sink`
+and uses it as the default key.
+
+The measurement of section 8 gives the reason: the sink hash is unique for each
+finding (36 of 36), because the analyzer makes one finding for each rule and each
+sink. The coarser key thus loses no finding. It only stops a finding from
+changing its identity. Because the cause is not repaired, this key is the
+mitigation, not a convenience.
 
 A coarser key hides less than it looks. If the source moves, the finding stays
 the same finding, and the CLI writes `Updated, source changed`. If only the path
 moves, the CLI writes `Updated, path changed`. Use `--fingerprint-key
 source-sink` when a new source must be a new finding.
 
-Change 2 (make the flow selection stable) is **not** done. The commit removes the
-effect on the report. It does not sort the graph.
+Change 2 (make the flow selection stable) is **not** done. This is the change
+that repairs the cause.
 
 ---
 

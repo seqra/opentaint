@@ -187,7 +187,10 @@ the screen always names a finding to `triage`. (`--partial-fingerprint-key` is a
 deprecated alias for `--fingerprint-key`.)
 
 The sink hash is the default because it names the vulnerable statement and
-nothing else, so a decision survives every edit to how the data gets there. It
+nothing else, so a decision survives every edit to how the data gets there —
+including the ones the analyzer makes on its own, since its choice of source is
+not yet stable between runs of the same code (see
+`docs/reports/fingerprint-stability.md`). It
 costs nothing in precision: the analyzer already reports one finding per rule and
 sink, so the coarsest key is still one fingerprint per finding — it only stops
 findings from changing identity. All three hash the rule id, so no fingerprint
