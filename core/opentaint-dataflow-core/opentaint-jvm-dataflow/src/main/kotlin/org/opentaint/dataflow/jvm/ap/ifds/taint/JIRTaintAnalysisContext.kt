@@ -24,10 +24,9 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.taint.RuleConditionRewriter
 import org.opentaint.ir.api.jvm.JIRField
-import org.opentaint.ir.api.jvm.JIRMethod
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 
 class JIRTaintAnalysisContext(
@@ -46,67 +45,80 @@ class JIRTaintAnalysisContext(
         taintSinkTracker.reset()
     }
 
-    private fun JIRInst.callExpr(): JIRCallExpr = callExpr ?: error("Non-call statement")
-    private fun JIRCallExpr.calleeMethod(): JIRMethod = method.method
-    private fun JIRInst.calleeMethod(): JIRMethod = callExpr().calleeMethod()
+    private fun JIRInst.methodCallExprOrNull(): JIRMethodCallExpr? =
+        callExpr as? JIRMethodCallExpr
 
     fun allRelevantSourceRulesForCallStatement(statement: JIRInst): Iterable<TaintMethodSource> {
         if (analysisContext.phase is Phase.Prescan) return emptyList()
-        return taintConfig.sourceRulesForMethod(statement.calleeMethod(), statement, fact = null, allRelevant = true)
+        val method = statement.methodCallExprOrNull()?.method?.method ?: return emptyList()
+        return taintConfig.sourceRulesForMethod(method, statement, fact = null, allRelevant = true)
     }
 
     fun allRelevantCleanRulesForCallStatement(statement: JIRInst): Iterable<TaintCleaner> {
         if (analysisContext.phase is Phase.Prescan) return emptyList()
-        return taintConfig.cleanerRulesForMethod(statement.calleeMethod(), statement, fact = null, allRelevant = true)
+        val method = statement.methodCallExprOrNull()?.method?.method ?: return emptyList()
+        return taintConfig.cleanerRulesForMethod(method, statement, fact = null, allRelevant = true)
     }
 
     fun sourceRulesForCallStatement(
         statement: JIRInst,
-        callExpr: JIRCallExpr,
+        callExpr: JIRMethodCallExpr,
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
-    ) = prepareCallStatementRules(
-        taintConfig.sourceRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
-        TaintMethodSource::condition,
-        statement, callExpr, returnValue
-    )
+    ): List<RuleWithCondition<TaintMethodSource>> {
+        val method = callExpr.method.method
+        return prepareCallStatementRules(
+            taintConfig.sourceRulesForMethod(method, statement, fact, allRelevant = false),
+            TaintMethodSource::condition,
+            statement, callExpr, returnValue
+        )
+    }
 
     fun sinkRulesForCallStatement(
         statement: JIRInst,
-        callExpr: JIRCallExpr,
+        callExpr: JIRMethodCallExpr,
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
-    ) = prepareCallStatementRules(
-        taintConfig.sinkRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
-        TaintMethodSink::condition,
-        statement, callExpr, returnValue
-    )
+    ): List<RuleWithCondition<TaintMethodSink>> {
+        val method = callExpr.method.method
+        return prepareCallStatementRules(
+            taintConfig.sinkRulesForMethod(method, statement, fact, allRelevant = false),
+            TaintMethodSink::condition,
+            statement, callExpr, returnValue
+        )
+    }
 
     fun cleanRulesForCallStatement(
         statement: JIRInst,
-        callExpr: JIRCallExpr,
+        callExpr: JIRMethodCallExpr,
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
-    ) = prepareCallStatementRules(
-        taintConfig.cleanerRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
-        TaintCleaner::condition,
-        statement, callExpr, returnValue
-    )
+    ): List<RuleWithCondition<TaintCleaner>> {
+        val method = callExpr.method.method
+        return prepareCallStatementRules(
+            taintConfig.cleanerRulesForMethod(method, statement, fact, allRelevant = false),
+            TaintCleaner::condition,
+            statement, callExpr, returnValue
+        )
+    }
 
     fun passRulesForCallStatement(
         statement: JIRInst,
-        callExpr: JIRCallExpr,
+        callExpr: JIRMethodCallExpr,
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
-    ) = prepareCallStatementRules(
-        taintConfig.passTroughRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
-        TaintPassThrough::condition,
-        statement, callExpr, returnValue
-    )
+    ): List<RuleWithCondition<TaintPassThrough>> {
+        val method = callExpr.method.method
+        return prepareCallStatementRules(
+            taintConfig.passTroughRulesForMethod(method, statement, fact, allRelevant = false),
+            TaintPassThrough::condition,
+            statement, callExpr, returnValue
+        )
+    }
 
     private inline fun <T: TaintConfigurationItem> prepareCallStatementRules(
         rules: Iterable<T>, cond: T.() -> Condition,
-        statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?,
+        statement: JIRInst, callExpr: JIRMethodCallExpr, returnValue: JIRImmediate?,
     ): List<RuleWithCondition<T>> {
         val conditionRewriter = JIRMarkAwareConditionRewriter(
             CallPositionToJIRValueResolver(callExpr, returnValue),

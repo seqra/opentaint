@@ -28,17 +28,22 @@ concurrency:
 
 jobs:
   check:
+    name: Run tests on JDK ${{ matrix.jdk }}
     runs-on: ubuntu-latest
     container: gitlab/gitlab-runner-helper:ubuntu-x86_64-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 11, 17 ]
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 11
+      - name: Set up JDK ${{ matrix.jdk }}
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: ${{ matrix.jdk }}
           distribution: 'temurin'
 
       - name: Install Go-ir dependencies
@@ -63,6 +68,6 @@ jobs:
         if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-reports-ci-dataflow
+          name: gradle-reports-ci-dataflow-jdk${{ matrix.jdk }}
           path: '**/build/reports/'
           retention-days: 1

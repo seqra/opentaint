@@ -15,7 +15,7 @@ import org.opentaint.jvm.graph.JApplicationGraph
 import java.util.BitSet
 
 interface CallResolver {
-    fun resolveMethodCall(callStmt: Stmt.Call, level: Int): List<JIRMethod>?
+    fun resolveMethodCall(callStmt: Stmt.MethodCall, level: Int): List<JIRMethod>?
     fun buildMethodGraph(method: JIRMethod): JIRInstGraph?
     fun externalCallModel(method: JIRMethod): List<ExternalAssign>
 }
@@ -28,7 +28,7 @@ abstract class JirCallResolver(
 ): CallResolver {
     abstract fun buildMethodJig(entryPoint: JIRInst): JIRInstGraph
 
-    override fun resolveMethodCall(callStmt: Stmt.Call, level: Int): List<JIRMethod>? {
+    override fun resolveMethodCall(callStmt: Stmt.MethodCall, level: Int): List<JIRMethod>? {
         if (level >= params.aliasAnalysisInterProcCallDepth) return null
 
         val methods = callResolver.allKnownOverridesOrNull(callStmt.method)
@@ -56,7 +56,7 @@ class CallTreeNode(val ctx: ContextInfo, val instEvalCtx: InstEvalContext) {
     private val emptyCalls = BitSet()
     private val calls = Int2ObjectOpenHashMap<ResolvedCall>()
 
-    fun resolveCall(stmt: Stmt.Call, callResolver: CallResolver): Map<JIRMethod, ResolvedCallMethod>? {
+    fun resolveCall(stmt: Stmt.MethodCall, callResolver: CallResolver): Map<JIRMethod, ResolvedCallMethod>? {
         if (emptyCalls.get(stmt.originalIdx)) return ResolvedCall.empty.methods
 
         return calls.getOrPut(stmt.originalIdx) {
@@ -87,7 +87,7 @@ private class NestedCallInstEvalCtx(val call: Stmt.Call, val ctx: ContextInfo) :
     override fun createLocal(idx: Int): Local = Local(idx, ctx)
 }
 
-private fun resolveCallNoCache(stmt: Stmt.Call, ctx: ContextInfo, callResolver: CallResolver): ResolvedCall {
+private fun resolveCallNoCache(stmt: Stmt.MethodCall, ctx: ContextInfo, callResolver: CallResolver): ResolvedCall {
     val methods = callResolver.resolveMethodCall(stmt, ctx.level)
         ?: return ResolvedCall.empty
 
@@ -106,5 +106,5 @@ private fun resolveCallNoCache(stmt: Stmt.Call, ctx: ContextInfo, callResolver: 
     return ResolvedCall(resolvedCall)
 }
 
-private fun mkContextId(stmt: Stmt.Call, methodIdx: Int): Int =
+private fun mkContextId(stmt: Stmt.MethodCall, methodIdx: Int): Int =
     (stmt.originalIdx * 1000) + methodIdx

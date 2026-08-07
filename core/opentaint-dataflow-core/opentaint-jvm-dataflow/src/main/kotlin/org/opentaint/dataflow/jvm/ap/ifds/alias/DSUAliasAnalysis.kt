@@ -150,16 +150,18 @@ class DSUAliasAnalysis(
 
     private fun evalCall(stmt: Stmt.Call, state: State, callFrame: CallTreeNode): State {
         // todo: use instance alloc info
-        val resolvedCall = callFrame.resolveCall(stmt, methodCallResolver)
+        val resolvedCall = (stmt as? Stmt.MethodCall)?.let {
+            callFrame.resolveCall(it, methodCallResolver)
+        }
         if (resolvedCall != null) {
             val result = evalCall(stmt, state, callFrame, resolvedCall)
             if (result != null) return result
         }
 
         var resultState = state
-        if (stmt.lValue != null) {
+        stmt.lValue?.let { lValue ->
             val info = aliasSetFromInfo(CallReturn(stmt, callFrame.ctx))
-            resultState = resultState.removeOldAndMergeWith(stmt.lValue.aliasInfo().index(), info)
+            resultState = resultState.removeOldAndMergeWith(lValue.aliasInfo().index(), info)
         }
 
         if (!stmt.cantMutateAliasedHeap()) {
@@ -172,7 +174,8 @@ class DSUAliasAnalysis(
             resultState = resultState.invalidateOuterHeapAliases(argAliases)
         }
 
-        val externalModel = methodCallResolver.externalCallModel(stmt.method)
+        val method = (stmt as? Stmt.MethodCall)?.method
+        val externalModel = method?.let(methodCallResolver::externalCallModel).orEmpty()
         resultState = externalModel.fold(resultState) { s, model ->
             model.evalExternalCallModel(stmt, s)
         }
@@ -566,6 +569,7 @@ class DSUAliasAnalysis(
 
     private fun Stmt.Call.cantMutateAliasedHeap(): Boolean {
         if (args.any { it !is SimpleValue.Primitive }) return false
+        val method = (this as? Stmt.MethodCall)?.method ?: return false
         return method.isStatic || method.isConstructor
     }
 }

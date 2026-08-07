@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
@@ -38,16 +39,16 @@ class JIRMethodAnalysisContext(
 
     val lambdaCallResolution = Int2ObjectOpenHashMap<JIRLambdaTracker.LambdaTracker>()
 
-    fun cachedCallFF(stmtIdx: Int, body: () -> JIRMethodCallFlowFunction): JIRMethodCallFlowFunction =
+    fun cachedCallFF(stmtIdx: Int, body: () -> MethodCallFlowFunction): MethodCallFlowFunction =
         getCallFFCache().computeIfAbsent(stmtIdx) { body() }
 
     fun cachedCallSH(stmtIdx: Int, body: () -> JIRMethodCallSummaryHandler): JIRMethodCallSummaryHandler =
         getCallSHCache().computeIfAbsent(stmtIdx) { body() }
 
-    private var callFFCache: Reference<Int2ObjectOpenHashMap<JIRMethodCallFlowFunction>>? = null
-    private fun getCallFFCache(): Int2ObjectOpenHashMap<JIRMethodCallFlowFunction> {
+    private var callFFCache: Reference<Int2ObjectOpenHashMap<MethodCallFlowFunction>>? = null
+    private fun getCallFFCache(): Int2ObjectOpenHashMap<MethodCallFlowFunction> {
         callFFCache?.get()?.let { return it }
-        return int2ObjectMap<JIRMethodCallFlowFunction>().also {
+        return int2ObjectMap<MethodCallFlowFunction>().also {
             callFFCache = refManager.createRef(it)
         }
     }

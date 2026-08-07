@@ -8,12 +8,12 @@ import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.PredefinedPrimitives
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRBool
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRClassConstant
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRGraph
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstList
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
 import org.opentaint.ir.api.jvm.cfg.JIRValue
@@ -74,7 +74,7 @@ object SpringReactorOperatorsTransformer : JIRInstExtFeature {
     private fun findOperatorsSetField(
         graph: JIRGraph,
         setInst: JIRInst,
-        setCall: JIRCallExpr,
+        setCall: JIRMethodCallExpr,
         classInitializer: JIRMethod
     ): Pair<JIRFieldRef, JIRValue>? {
         val (fieldRef, instance, fieldValue) = setCall.args
@@ -90,7 +90,7 @@ object SpringReactorOperatorsTransformer : JIRInstExtFeature {
             ?: return null
 
         val fieldUpdaterRef = JIRFieldRef(instance = null, fieldUpdater)
-        val fieldUpdaterCall = findSingleAssignedValue<JIRCallExpr>(
+        val fieldUpdaterCall = findSingleAssignedValue<JIRMethodCallExpr>(
             classInitializerGraph, clinitReturn, fieldUpdaterRef
         )?.takeIf { it.method.method.isJavaAtomicRefFieldUpdater() }
             ?: return null
@@ -148,9 +148,9 @@ object SpringReactorOperatorsTransformer : JIRInstExtFeature {
         return results.singleOrNull()
     }
 
-    private fun findOperatorsSet(inst: JIRInst): JIRCallExpr? {
-        val call = inst.callExpr
-        val method = call?.method ?: return null
+    private fun findOperatorsSet(inst: JIRInst): JIRMethodCallExpr? {
+        val call = inst.callExpr as? JIRMethodCallExpr ?: return null
+        val method = call.method
         if (!method.isStatic) return null
 
         if (method.enclosingType.typeName != OPERATORS_CLASS) return null

@@ -35,12 +35,12 @@ import org.opentaint.ir.api.jvm.JIRClassType
 import org.opentaint.ir.api.jvm.JIRRefType
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRBool
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRConstant
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInt
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRNullConstant
 import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
 import org.opentaint.ir.api.jvm.cfg.JIRValue
@@ -226,14 +226,14 @@ class JIRBasicAtomEvaluator(
         }
         .mapNotNull { it.args.getOrNull(0) as? JIRConstant }
 
-    private fun List<AliasInfo>.findAllocCalls(): List<JIRCallExpr> {
+    private fun List<AliasInfo>.findAllocCalls(): List<JIRMethodCallExpr> {
         val allocs = filterIsInstance<AliasAllocInfo>()
         if (allocs.isEmpty()) return emptyList()
 
         val instList = (statement as JIRInst).location.method.instList
         return allocs
             .mapNotNull { instList.getOrNull(it.allocInst) }
-            .mapNotNull { it.callExpr }
+            .mapNotNull { it.callExpr as? JIRMethodCallExpr }
     }
 
     private fun matches(value: JIRValue, pattern: Regex, matchArrayValue: Boolean): Boolean {

@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
@@ -36,12 +38,16 @@ import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
+import org.opentaint.ir.api.jvm.cfg.JIRDynamicCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.impl.features.usagesExt
+import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -577,6 +583,34 @@ class AliasSampleTest : BasicTestUtils() {
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
     }
 
+    @Test
+    fun `record invokedynamic is not analyzed as a call to its bootstrap method`() {
+        assumeTrue(javaFeatureVersion() >= 17, "Record fixture requires Java 17")
+
+        val method = findMethod(RECORD_SAMPLE, "recordHashCodeInlined")
+        val recordHashCode = cp.findClassOrNull("$RECORD_SAMPLE\$Payload")
+            ?.declaredMethods
+            ?.single { it.name == "hashCode" }
+            ?: error("Record hashCode method not found")
+        val dynamicInst = recordHashCode.instList.single { it.callExpr is JIRDynamicCallExpr }
+        val dynamicCall = dynamicInst.callExpr as JIRDynamicCallExpr
+
+        assertEquals("bootstrap", dynamicCall.bootstrapMethod.name)
+        assertEquals(dynamicCall.callSiteReturnType, dynamicCall.type)
+        assertFalse { dynamicCall.type == dynamicCall.bootstrapMethod.returnType }
+
+        val usages = runBlocking { cp.usagesExt() }
+        val graph = JApplicationGraphImpl(cp, usages)
+        assertTrue { graph.callees(dynamicInst).none() }
+
+        assertDoesNotThrow {
+            val aa = aaForMethodKnowingObjectMethods(method, depth = 2)
+            val sink = method.findSinkCall("sinkOneValue")
+            val aliases = aa.sinkArgApAliases(sink)
+            assertTrue { aliases.any { it.base == Argument(0) } }
+        }
+    }
+
     private fun aaForMethod(
         method: JIRMethod,
         params: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params()
@@ -592,11 +626,37 @@ class AliasSampleTest : BasicTestUtils() {
         return JIRLocalAliasAnalysis(ep, graph, callResolver, noRules, localReachability, cancellation, manager, params)
     }
 
+    private fun aaForMethodKnowingObjectMethods(method: JIRMethod, depth: Int): JIRLocalAliasAnalysis {
+        val ep = method.instList.first()
+        val usages = runBlocking { cp.usagesExt() }
+        val graph = JApplicationGraphImpl(cp, usages)
+
+        // Make the bootstrap implementation available. The test must still not
+        // enter it: invokedynamic executes its linked call site, not the bootstrap.
+        val sampleLoc = method.enclosingClass.declaration.location
+        val objectMethodsLoc =
+            cp.findClassOrNull("java.lang.runtime.ObjectMethods")?.declaration?.location
+        val knownLocs = setOfNotNull(sampleLoc, objectMethodsLoc)
+
+        val callResolver = JIRCallResolver(cp, MultiLocationUnit(knownLocs))
+        val localReachability = JIRLocalVariableReachability(method, graph, manager)
+        val cancellation = Cancellation().also { it.activate() }
+
+        return JIRLocalAliasAnalysis(
+            ep, graph, callResolver, noRules, localReachability, cancellation, manager, interProcParams(depth)
+        )
+    }
+
     private fun interProcParams(depth: Int) =
         JIRLocalAliasAnalysis.Params(useAliasAnalysis = true, aliasAnalysisInterProcCallDepth = depth)
 
+    private fun javaFeatureVersion(): Int =
+        System.getProperty("java.specification.version").removePrefix("1.").substringBefore('.').toInt()
+
     private fun JIRMethod.findSinkCall(sinkName: String): JIRCallInst =
-        instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == sinkName }
+        instList.filterIsInstance<JIRCallInst>().first {
+            (it.callExpr as? JIRMethodCallExpr)?.method?.name == sinkName
+        }
 
     private fun JIRLocalAliasAnalysis.valueApAliases(value: JIRValue, stmt: JIRInst): List<AliasApInfo> =
         valueAliases(value, stmt).filterIsInstance<AliasApInfo>()
@@ -631,6 +691,13 @@ class AliasSampleTest : BasicTestUtils() {
         override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc != this.loc
     }
 
+    private class MultiLocationUnit(val locs: Set<RegisteredLocation>) : JIRUnitResolver {
+        override fun resolve(method: JIRMethod): UnitType =
+            if (method.enclosingClass.declaration.location in locs) SingletonUnit else UnknownUnit
+
+        override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc !in locs
+    }
+
     companion object {
         const val ALIAS_SAMPLE_PKG = "sample.alias"
         const val SIMPLE_SAMPLE = "$ALIAS_SAMPLE_PKG.SimpleAliasSample"
@@ -639,6 +706,7 @@ class AliasSampleTest : BasicTestUtils() {
         const val INTERPROC_SAMPLE = "$ALIAS_SAMPLE_PKG.InterProcAliasSample"
         const val FLAKY_SAMPLE = "$ALIAS_SAMPLE_PKG.FlakyAliasSample"
         const val HEADER_VALUES_SAMPLE = "sample.alias.HeaderValuesHangSample"
+        const val RECORD_SAMPLE = "$ALIAS_SAMPLE_PKG.RecordAliasSample"
 
         private const val FIELD_VALUE = "value"
         private const val FIELD_BOX = "box"

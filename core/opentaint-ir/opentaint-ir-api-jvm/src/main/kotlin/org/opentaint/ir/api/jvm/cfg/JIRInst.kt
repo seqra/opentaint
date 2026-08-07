@@ -585,18 +585,20 @@ data class JIRInstanceOfExpr(
 }
 
 interface JIRCallExpr : JIRExpr, CommonCallExpr {
-    val method: JIRTypedMethod
-
     override val args: List<JIRValue>
-
-    override val type: JIRType
-        get() = method.returnType
 
     override val operands: List<JIRValue>
         get() = args
 }
 
-interface JIRInstanceCallExpr : JIRCallExpr, CommonInstanceCallExpr {
+interface JIRMethodCallExpr : JIRCallExpr {
+    val method: JIRTypedMethod
+
+    override val type: JIRType
+        get() = method.returnType
+}
+
+interface JIRInstanceCallExpr : JIRMethodCallExpr, CommonInstanceCallExpr {
     override val instance: JIRValue
     val declaredMethod: JIRTypedMethod
 
@@ -639,8 +641,9 @@ data class JIRLambdaExpr(
     val isNewInvokeSpecial: Boolean
         get() = lambdaInvokeKind == BsmHandleTag.MethodHandle.NEW_INVOKE_SPECIAL
 
-    override val method get() = bsmRef.method
+    val bootstrapMethod get() = bsmRef.method
     override val args get() = callSiteArgs
+    override val type get() = callSiteReturnType
 
     override fun <T> accept(visitor: JIRExprVisitor<T>): T {
         return visitor.visitJIRLambdaExpr(this)
@@ -656,8 +659,9 @@ data class JIRDynamicCallExpr(
     val callSiteArgs: List<JIRValue>,
 ) : JIRCallExpr {
 
-    override val method get() = bsmRef.method
+    val bootstrapMethod get() = bsmRef.method
     override val args get() = callSiteArgs
+    override val type get() = callSiteReturnType
 
     override fun <T> accept(visitor: JIRExprVisitor<T>): T {
         return visitor.visitJIRDynamicCallExpr(this)
@@ -695,7 +699,7 @@ data class JIRVirtualCallExpr(
 data class JIRStaticCallExpr(
     private val methodRef: TypedMethodRef,
     override val args: List<JIRValue>,
-) : JIRCallExpr {
+) : JIRMethodCallExpr {
 
     override val method: JIRTypedMethod get() = methodRef.method
 

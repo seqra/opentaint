@@ -3,6 +3,7 @@ package org.opentaint.jvm.graph
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.ir.impl.features.SyncUsagesExtension
 
@@ -36,14 +37,14 @@ open class JApplicationGraphImpl(
     }
 
     override fun callees(node: JIRInst): Sequence<JIRMethod> {
-        val callExpr = node.callExpr ?: return emptySequence()
+        val callExpr = node.callExpr as? JIRMethodCallExpr ?: return emptySequence()
         return sequenceOf(callExpr.method.method)
     }
 
     override fun callers(method: JIRMethod): Sequence<JIRInst> {
         return usages.findUsages(method).flatMap {
             it.flowGraph().instructions.asSequence().filter { inst ->
-                val callExpr = inst.callExpr ?: return@filter false
+                val callExpr = inst.callExpr as? JIRMethodCallExpr ?: return@filter false
                 callExpr.method.method == method
             }
         }

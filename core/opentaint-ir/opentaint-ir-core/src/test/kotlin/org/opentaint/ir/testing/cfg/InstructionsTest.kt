@@ -43,7 +43,9 @@ class InstructionsTest : BaseInstructionsTest() {
         val bench = cp.findClass<Benchmark>()
         val use = bench.declaredMethods.first { it.name == "use" }
         val instructions = method.instList.instructions
-        val firstUse = instructions.indexOfFirst { it.callExpr?.method?.method == use }
+        val firstUse = instructions.indexOfFirst {
+            (it.callExpr as? JIRMethodCallExpr)?.method?.method == use
+        }
         val assign = instructions[firstUse + 1] as JIRAssignInst
         assertEquals("b", (assign.lhv as JIRLocalVar).name)
         assertEquals("a", (assign.rhv as JIRLocalVar).name)
@@ -54,7 +56,9 @@ class InstructionsTest : BaseInstructionsTest() {
         val clazz = cp.findClass<SimpleAlias1>()
         val method = clazz.declaredMethods.first { it.name == "invoke" }
         val instructions = method.instList.instructions
-        val usedArgumentExprs = instructions.filter { it.callExpr?.method?.method?.name == "println" }
+        val usedArgumentExprs = instructions.filter {
+            (it.callExpr as? JIRMethodCallExpr)?.method?.method?.name == "println"
+        }
             .flatMap { it.callExpr?.args.orEmpty() }
         val usedArgumentNames = usedArgumentExprs.map { (it as JIRArgument).name }
         assertEquals(listOf("i", "j", "b", "d"), usedArgumentNames)
@@ -248,7 +252,7 @@ class InstructionsTest : BaseInstructionsTest() {
         val callDoSmth = instList.mapNotNull { it.callExpr }.first {
             it.toString().contains("doSmth")
         }
-        assertEquals("doSmth", callDoSmth.method.method.name)
+        assertEquals("doSmth", (callDoSmth as JIRMethodCallExpr).method.method.name)
     }
 
     @Test
@@ -258,7 +262,7 @@ class InstructionsTest : BaseInstructionsTest() {
         val callDefaultMethod = instList.mapNotNull { it.callExpr }.first {
             it.toString().contains("defaultMethod")
         }
-        assertEquals("defaultMethod", callDefaultMethod.method.method.name)
+        assertEquals("defaultMethod", (callDefaultMethod as JIRMethodCallExpr).method.method.name)
     }
 
     @Test

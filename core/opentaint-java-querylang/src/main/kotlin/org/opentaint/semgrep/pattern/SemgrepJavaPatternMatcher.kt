@@ -15,6 +15,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInt
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRNewExpr
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
@@ -703,7 +704,7 @@ class SemgrepJavaPatternMatcher(
         pattern: MethodInvocation,
         expr: JIRExpr,
     ): SemgrepMatchingResult {
-        if (expr !is JIRCallExpr) {
+        if (expr !is JIRMethodCallExpr) {
             val exprs = expandLocalVar(position, expr)
             val variants = exprs.map { match(it.second, pattern, it.first) }
             return mergeLocalVarVariantMatches(strategy, variants)

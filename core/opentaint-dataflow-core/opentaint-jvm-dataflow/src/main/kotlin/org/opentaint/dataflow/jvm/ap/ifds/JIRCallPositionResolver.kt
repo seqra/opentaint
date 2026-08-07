@@ -20,9 +20,9 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRParameter
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRArgument
-import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRMethodCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.ext.toType
 
@@ -33,7 +33,7 @@ sealed interface CallPositionValue {
 }
 
 class CallPositionToJIRValueResolver(
-    private val callExpr: JIRCallExpr,
+    private val callExpr: JIRMethodCallExpr,
     private val returnValue: JIRImmediate?
 ) : PositionResolver<CallPositionValue> {
     override fun resolve(position: Position): CallPositionValue = when (position) {
@@ -45,6 +45,24 @@ class CallPositionToJIRValueResolver(
 
         is PositionWithAccess, // todo?
         is ClassStatic -> CallPositionValue.None
+    }
+}
+
+class JIRMethodCallPositionBaseTypeResolver(
+    private val callExpr: JIRMethodCallExpr
+) : PositionTypeResolver {
+    override fun resolve(position: PositionAccess): CommonType? {
+        if (position !is PositionAccess.Simple) return null
+
+        return when (val base = position.base) {
+            is AccessPathBase.Argument -> callExpr.args.getOrNull(base.idx)?.type
+            is AccessPathBase.Return -> callExpr.type
+            is AccessPathBase.This -> (callExpr as? JIRInstanceCallExpr)?.instance?.type
+            is AccessPathBase.ClassStatic,
+            is AccessPathBase.Constant,
+            is AccessPathBase.Exception,
+            is AccessPathBase.LocalVar -> null
+        }
     }
 }
 
