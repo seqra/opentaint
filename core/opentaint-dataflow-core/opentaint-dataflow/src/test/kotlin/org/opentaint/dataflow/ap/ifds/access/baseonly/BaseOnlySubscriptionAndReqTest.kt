@@ -315,6 +315,29 @@ class BaseOnlySubscriptionAndReqTest {
     }
 
     @Test
+    fun `side effect requirement publishes exclusion delta and retains the union`() {
+        val storage = manager.sideEffectRequirementApStorage()
+        val access = pattern(fieldA)
+        val first = BaseOnlyInitialFactAp(
+            manager,
+            AccessPathBase.This,
+            access,
+            ExclusionSet.Empty.add(fieldA),
+        )
+        val expanded = first.replaceExclusions(first.exclusions.add(fieldB))
+
+        assertEquals(listOf<InitialFactAp>(first), storage.add(listOf(first)))
+
+        val delta = storage.add(listOf(expanded))
+        assertEquals(1, delta.size)
+        assertEquals(ExclusionSet.Empty.add(fieldB), delta.single().exclusions)
+
+        val retained = mutableListOf<InitialFactAp>()
+        storage.collectAllRequirementsTo(retained)
+        assertEquals(listOf(expanded), retained)
+    }
+
+    @Test
     fun `side effect requirement filtering equals a scan reference`() {
         val storage = manager.sideEffectRequirementApStorage()
         val requirements = listOf(
