@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestResolveIdentityKeyDefaultsToSourceSink(t *testing.T) {
+func TestResolveIdentityKeyDefaultsToSink(t *testing.T) {
 	key, err := ResolveIdentityKey("")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if key != SourceSinkFingerprintKey {
-		t.Errorf("got %q, want %q", key, SourceSinkFingerprintKey)
+	if key != SinkFingerprintKey {
+		t.Errorf("got %q, want %q", key, SinkFingerprintKey)
 	}
 }
 

@@ -176,8 +176,8 @@ the most exact identity to the coarsest:
 | `--fingerprint-key` | Full key | Hashes | Behavior |
 |-----|-----|--------|----------|
 | `trace` | `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact; changes if anything on the path moves. |
-| `source-sink` | `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. **Default.** |
-| `sink` | `vulnerabilitySinkHash/v1` | the sink statement alone | Survives a change to where the untrusted data comes from. |
+| `source-sink` | `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. |
+| `sink` | `vulnerabilitySinkHash/v1` | rule + sink | Survives any change to how the untrusted data reaches the sink. **Default.** |
 
 `--fingerprint-key` takes the short name or the full key, and one key governs
 everything a command does with fingerprints: baseline matching, the prefix
@@ -186,16 +186,33 @@ and what `--partial-fingerprint` matches. That is why a fingerprint copied off
 the screen always names a finding to `triage`. (`--partial-fingerprint-key` is a
 deprecated alias for `--fingerprint-key`.)
 
-The source→sink hash is the default because a decision should survive
-refactoring of an unrelated helper the flow happens to pass through. The finer
-trace hash is what distinguishes `unchanged` from `updated`.
+The sink hash is the default because it names the vulnerable statement and
+nothing else, so a decision survives every edit to how the data gets there. It
+costs nothing in precision: the analyzer already reports one finding per rule and
+sink, so the coarsest key is still one fingerprint per finding — it only stops
+findings from changing identity. All three hash the rule id, so no fingerprint
+ever spans two rules that fire on one statement.
 
-Choose `sink` when you care about the vulnerable statement rather than how data
-reaches it — one decision on `Runtime.exec(cmd)` then covers every route into it,
-and stays put when a new caller adds another one. It is the coarsest identity, so
-it also merges the most: several findings that differ only in their source become
-one entry, and suppressing it suppresses them all. All three hash the rule id, so
-no fingerprint ever spans two rules that fire on one statement.
+Pick a finer key when the route is part of what you are deciding about. Under
+`source-sink`, data arriving at a known-dangerous sink from a *new* source is a
+new finding that must be triaged again; under `sink`, an existing decision covers
+it.
+
+### What changed underneath
+
+A finding that matches the baseline can still have moved below its identity.
+SARIF has one word for all of it — `updated` — so the summary says which:
+
+| Line | Meaning |
+|------|---------|
+| `Unchanged` | Nothing below the identity moved. |
+| `Updated, source changed` | The same sink, now reached from a source that was not in the baseline. Worth a look: a new entry point reaches code already known to be dangerous. |
+| `Updated, path changed` | The same source and sink, joined by a different call path. Usually a refactoring in between. |
+
+Both remain `updated` in the SARIF `baselineState`, so `--baseline-state updated`
+selects either. The distinction narrows with a finer identity: under
+`source-sink` a moved source is `new` + `absent` rather than `updated`, and under
+`trace` nothing is left to refine, so a match is always `unchanged`.
 
 Comparing reports built with different fingerprint keys is a hard error, not a
 silent zero-match. Findings that carry no fingerprint at all (a report produced

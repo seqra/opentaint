@@ -20,6 +20,7 @@ func result(ruleID, identity string, trace string) sarif.Result {
 			},
 		}},
 		PartialFingerprints: map[string]string{
+			sarif.SinkFingerprintKey:       identity,
 			sarif.SourceSinkFingerprintKey: identity,
 			sarif.TraceFingerprintKey:      trace,
 		},

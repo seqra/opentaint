@@ -202,7 +202,7 @@ func TestDisplayFingerprintIsTheOneTriageResolves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the fingerprint the listing shows does not resolve: %v", err)
 	}
-	if got, _ := Identity(resolved, DefaultIdentityKey); got != "source-sink-value" {
-		t.Errorf("resolved %q, want the source-sink value", got)
+	if got, _ := Identity(resolved, DefaultIdentityKey); got != "sink-of-source-sink-value" {
+		t.Errorf("resolved %q, want the value under the default key", got)
 	}
 }

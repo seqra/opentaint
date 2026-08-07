@@ -9,11 +9,15 @@ import (
 // report. States are keyed by result pointer, so a Comparison is only valid for
 // the exact *Report it was computed from.
 type Comparison struct {
-	states map[*Result]BaselineState
+	states  map[*Result]BaselineState
+	changes map[*Result]Change
 
 	// Counts holds the number of current results in each state, plus the number
 	// of baseline results with no match in the current report under Absent.
 	Counts map[BaselineState]int
+	// ChangeCounts holds the number of Updated results per kind of change, so a
+	// report can say a source moved rather than only that something did.
+	ChangeCounts map[Change]int
 	// Absent lists the baseline results that no longer appear — the fixed
 	// findings. They are reported, never written back into the current report.
 	Absent []*Result
@@ -35,6 +39,45 @@ func (c *Comparison) StateOf(r *Result) BaselineState {
 		return ""
 	}
 	return c.states[r]
+}
+
+// Change says what moved underneath the identity of a finding that matched the
+// baseline. SARIF's baselineState has one value for all of it — "updated" — but
+// the two cases mean different things to whoever reads the report, so they are
+// counted and named apart.
+type Change string
+
+const (
+	// ChangeNone is a finding that matched with nothing below it moved.
+	ChangeNone Change = ""
+	// ChangeSource is the same sink reached from a different source: the data
+	// now arrives by a route that was not in the baseline. Worth a look — a new
+	// entry point can reach code that was already known to be dangerous.
+	ChangeSource Change = "source"
+	// ChangePath is the same source and the same sink, joined by a different
+	// call path. Usually a refactoring of the code in between.
+	ChangePath Change = "path"
+)
+
+// Label describes a change in the words a report uses.
+func (c Change) Label() string {
+	switch c {
+	case ChangeSource:
+		return "source changed"
+	case ChangePath:
+		return "path changed"
+	default:
+		return ""
+	}
+}
+
+// ChangeOf returns what moved under a matched result, or ChangeNone when
+// nothing did or the result was not matched at all.
+func (c *Comparison) ChangeOf(r *Result) Change {
+	if c == nil {
+		return ChangeNone
+	}
+	return c.changes[r]
 }
 
 // CompareToBaseline classifies every result in current against baseline, using
@@ -63,10 +106,13 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 
 	cmp := &Comparison{
 		states:       make(map[*Result]BaselineState),
+		changes:      make(map[*Result]Change),
 		Counts:       make(map[BaselineState]int),
+		ChangeCounts: make(map[Change]int),
 		BaselineGUID: baseline.RunGUID(),
 	}
 
+	refinements := finerKeys(key)
 	matched := make(map[string]bool, len(byIdentity))
 	for _, r := range current.Results() {
 		id, ok := Identity(r, key)
@@ -83,9 +129,13 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 		}
 
 		matched[id] = true
+		change := changeUnder(r, previous, refinements)
 		state := Updated
-		if sameTrace(r, previous) {
+		if change == ChangeNone {
 			state = Unchanged
+		} else {
+			cmp.changes[r] = change
+			cmp.ChangeCounts[change]++
 		}
 		cmp.states[r] = state
 		cmp.Counts[state]++
@@ -165,18 +215,37 @@ func ranInCurrentScan(r *Result, executed map[string]bool) bool {
 	return executed[*r.RuleID]
 }
 
-// sameTrace reports whether the current result's full-trace fingerprint equals
-// that of any baseline result sharing its identity. A missing trace fingerprint
-// on either side counts as unchanged: the finer comparison is unavailable, and
-// claiming "updated" on missing data would be noise.
-func sameTrace(current *Result, previous []*Result) bool {
-	currentTrace, ok := Identity(current, TraceFingerprintKey)
+// changeUnder reports the coarsest thing that moved below a finding's identity.
+// The refinements are ordered nearest-first, so the first one that differs is
+// the most meaningful description of the change: a source that moved is worth
+// saying even though the path moved along with it.
+func changeUnder(current *Result, previous []*Result, refinements []string) Change {
+	for _, key := range refinements {
+		if sameUnder(current, previous, key) {
+			continue
+		}
+		switch key {
+		case SourceSinkFingerprintKey:
+			return ChangeSource
+		default:
+			return ChangePath
+		}
+	}
+	return ChangeNone
+}
+
+// sameUnder reports whether the current result's fingerprint under key equals
+// that of any baseline result sharing its identity. A missing fingerprint on
+// either side counts as the same: the finer comparison is unavailable, and
+// claiming a change on missing data would be noise.
+func sameUnder(current *Result, previous []*Result, key string) bool {
+	currentValue, ok := Identity(current, key)
 	if !ok {
 		return true
 	}
 	for _, p := range previous {
-		previousTrace, ok := Identity(p, TraceFingerprintKey)
-		if !ok || previousTrace == currentTrace {
+		previousValue, ok := Identity(p, key)
+		if !ok || previousValue == currentValue {
 			return true
 		}
 	}
