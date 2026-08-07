@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/seqra/opentaint/internal/sarif"
 	"github.com/seqra/opentaint/internal/triage"
@@ -187,7 +188,7 @@ func init() {
 // a report against a baseline.
 func addBaselineFlags(cmd *cobra.Command, baseline *string, fingerprintKey *string) {
 	cmd.Flags().StringVar(baseline, "baseline", "", "Previous SARIF report to compare against and inherit suppressions from")
-	cmd.Flags().StringVar(fingerprintKey, "fingerprint-key", "", "partialFingerprints key identifying a finding: matched across reports, shown in the listing, and resolved by triage (default "+sarif.DefaultIdentityKey+")")
+	cmd.Flags().StringVar(fingerprintKey, "fingerprint-key", "", "Which fingerprint identifies a finding across reports, in the listing and in triage: "+strings.Join(sarif.IdentityAliases, " | ")+", or a partialFingerprints key (default source-sink)")
 }
 
 // loadBaselineOrExit resolves and loads a baseline report, refusing to use the

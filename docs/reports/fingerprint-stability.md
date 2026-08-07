@@ -6,6 +6,42 @@
 
 ---
 
+## Status: corrected in analyzer 908e924b3
+
+**Do not use sections 1 to 7 as a statement about the analyzer of today.** They
+describe the analyzer of 2026.08.01. The commit `908e924b3` ("Small fixes",
+PR #336) corrects the cause. Read this section first, then read the rest as the
+record of the defect.
+
+What the commit changes: the event order in the IFDS scheduler. An analyzer that
+holds unprocessed zero-to-zero edges now goes first. This order comes from the
+content, not from the time at which a thread puts an event into the queue.
+
+Measurement after the change, on the reproduction project
+(`projects/local/taint-nondeterminism` in the regression harness), with 10 runs
+and 5 different thread counts:
+
+| Measurement | Before | After |
+|---|---|---|
+| `vulnerabilitySourceSinkHash/v1` set | changes between runs | the same in all 10 runs |
+| Complete SARIF results, all fields | change between runs | the same in all runs |
+| Delayed-analyzer set in each round | changes between runs | the same in all runs |
+
+The same commit also adds the key `vulnerabilitySinkHash/v1`, and `06c8d25e9`
+puts the rule id into it. The key is now "rule and sink only" — Change 1 of
+section 8, as written. The CLI accepts it as `--fingerprint-key sink`.
+
+Two parts of section 8 are **not** done, and must not be done as written:
+
+- **Do not make the sink hash the default key.** Section 8 asks for this because
+  the source/sink hash was not stable. The source/sink hash is stable now. The
+  sink hash is coarser: it merges the findings that have the same sink and
+  different sources.
+- Change 2 (make the flow selection stable) is not done. The commit removes the
+  effect on the report. It does not sort the graph.
+
+---
+
 ## 1. Read this first
 
 Five facts. Read only this section if you have no time.

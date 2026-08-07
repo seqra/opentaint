@@ -170,23 +170,32 @@ lists them, read from the baseline, which is how you see what a change fixed.
 ### Finding identity
 
 Findings are matched across reports by a **fingerprint**, not by line number, so
-moving code around does not invent new findings. Two fingerprints exist:
+moving code around does not invent new findings. Three fingerprints exist, from
+the most exact identity to the coarsest:
 
-| Key | Hashes | Behavior |
-|-----|--------|----------|
-| `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. **Default.** |
-| `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact; changes if anything on the path moves. |
+| `--fingerprint-key` | Full key | Hashes | Behavior |
+|-----|-----|--------|----------|
+| `trace` | `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact; changes if anything on the path moves. |
+| `source-sink` | `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. **Default.** |
+| `sink` | `vulnerabilitySinkHash/v1` | the sink statement alone | Survives a change to where the untrusted data comes from. |
 
-`--fingerprint-key` selects it, and one key governs everything a command does
-with fingerprints: baseline matching, the prefix `triage` resolves, the value
-`summary --show-findings` prints as `Fingerprint:`, and what
-`--partial-fingerprint` matches. That is why a fingerprint copied off the screen
-always names a finding to `triage`. (`--partial-fingerprint-key` is a deprecated
-alias for `--fingerprint-key`.)
+`--fingerprint-key` takes the short name or the full key, and one key governs
+everything a command does with fingerprints: baseline matching, the prefix
+`triage` resolves, the value `summary --show-findings` prints as `Fingerprint:`,
+and what `--partial-fingerprint` matches. That is why a fingerprint copied off
+the screen always names a finding to `triage`. (`--partial-fingerprint-key` is a
+deprecated alias for `--fingerprint-key`.)
 
 The source→sink hash is the default because a decision should survive
 refactoring of an unrelated helper the flow happens to pass through. The finer
 trace hash is what distinguishes `unchanged` from `updated`.
+
+Choose `sink` when you care about the vulnerable statement rather than how data
+reaches it — one decision on `Runtime.exec(cmd)` then covers every route into it,
+and stays put when a new caller adds another one. It is the coarsest identity, so
+it also merges the most: several findings that differ only in their source become
+one entry, and suppressing it suppresses them all. All three hash the rule id, so
+no fingerprint ever spans two rules that fire on one statement.
 
 Comparing reports built with different fingerprint keys is a hard error, not a
 silent zero-match. Findings that carry no fingerprint at all (a report produced

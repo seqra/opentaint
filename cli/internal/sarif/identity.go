@@ -6,17 +6,33 @@ import (
 	"strings"
 )
 
-// Fingerprint keys emitted by the analyzer under result.partialFingerprints.
+// Fingerprint keys emitted by the analyzer under result.partialFingerprints,
+// from the most exact identity to the coarsest. Every one of them hashes the
+// rule id, so a fingerprint never spans two rules.
 //
-// TraceFingerprintKey hashes the rule id, the sink, and every location on every
-// trace: an exact identity that changes whenever anything on the flow path
-// moves. SourceSinkFingerprintKey hashes the rule id, the sink, and the source
-// (first) location of each trace, so it survives refactoring of the
-// intermediate call path.
+// TraceFingerprintKey adds the sink and every location on every trace: an exact
+// identity that changes whenever anything on the flow path moves.
+// SourceSinkFingerprintKey adds the sink and the source (first) location of each
+// trace, so it survives refactoring of the intermediate call path.
+// SinkFingerprintKey adds the sink alone, so it survives any change to where the
+// untrusted data comes from.
 const (
 	TraceFingerprintKey      = "vulnerabilityWithTraceHash/v1"
 	SourceSinkFingerprintKey = "vulnerabilitySourceSinkHash/v1"
+	SinkFingerprintKey       = "vulnerabilitySinkHash/v1"
 )
+
+// identityAliases are the short names accepted for the keys above, so a user
+// writes --fingerprint-key sink rather than the versioned SARIF key.
+var identityAliases = map[string]string{
+	"trace":       TraceFingerprintKey,
+	"source-sink": SourceSinkFingerprintKey,
+	"sourcesink":  SourceSinkFingerprintKey,
+	"sink":        SinkFingerprintKey,
+}
+
+// IdentityAliases lists the short names in coarsening order, for help text.
+var IdentityAliases = []string{"trace", "source-sink", "sink"}
 
 // DefaultIdentityKey is the fingerprint key used to decide whether a finding in
 // one report is "the same finding" as one in another report. The source/sink
@@ -25,9 +41,10 @@ const (
 const DefaultIdentityKey = SourceSinkFingerprintKey
 
 // ResolveIdentityKey normalizes a user-supplied identity key, falling back to
-// DefaultIdentityKey when unset. Any key is accepted — a report may carry
-// fingerprints this build does not know about — but a blank one is rejected
-// rather than silently matching nothing.
+// DefaultIdentityKey when unset and expanding the short aliases. Any other key
+// is accepted as written — a report may carry fingerprints this build does not
+// know about — but a blank one is rejected rather than silently matching
+// nothing.
 func ResolveIdentityKey(key string) (string, error) {
 	if key == "" {
 		return DefaultIdentityKey, nil
@@ -35,6 +52,9 @@ func ResolveIdentityKey(key string) (string, error) {
 	trimmed := strings.TrimSpace(key)
 	if trimmed == "" {
 		return "", fmt.Errorf("fingerprint key must not be blank")
+	}
+	if full, ok := identityAliases[strings.ToLower(trimmed)]; ok {
+		return full, nil
 	}
 	return trimmed, nil
 }

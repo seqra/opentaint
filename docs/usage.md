@@ -116,7 +116,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 |------|-------------|
 | `--baseline` | Previous SARIF report to compare against and inherit suppressions from |
 | `--write-baseline-state` | Persist `result.baselineState` and `run.baselineGuid` into the output report (needs `--baseline`) |
-| `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
+| `--fingerprint-key` | Which fingerprint identifies a finding across reports: `trace`, `source-sink` (default), `sink`, or a full partialFingerprints key |
 | `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
 | `--error-on-severity` | Restrict `--error-on-findings` to these levels: `error`, `warning`, `note`, `none` (repeatable, default all) |
 
@@ -228,7 +228,7 @@ reflects the full set the tool ran.
 | `--baseline` | Compare against this SARIF report and show new/unchanged/updated/fixed counts. The file is never modified. |
 | `--baseline-state` | Show only findings whose state is one of `new` \| `unchanged` \| `updated` \| `absent` (repeatable). Reads the states persisted by `--write-baseline-state`, or the ones `--baseline` computes now; `absent` lists the fixed findings from the baseline. |
 | `--suppressed` | Include suppressed findings in the listing (hidden by default) |
-| `--fingerprint-key` | partialFingerprints key identifying a finding (default `vulnerabilitySourceSinkHash/v1`). One key governs baseline matching, the `Fingerprint:` value shown, `--partial-fingerprint`, and the prefix `triage` resolves. |
+| `--fingerprint-key` | Which fingerprint identifies a finding: `trace` (exact), `source-sink` (default), `sink` (the sink statement alone), or a full partialFingerprints key. One key governs baseline matching, the `Fingerprint:` value shown, `--partial-fingerprint`, and the prefix `triage` resolves. |
 
 Filters combine as OR within a dimension and AND across dimensions.
 
@@ -260,7 +260,7 @@ opentaint triage scan.sarif --defer 8bc1d2 --justification "waiting on OT-412"
 | `--output`, `-o` | Write the triaged report here (default: rewrite the input in place) |
 | `--show-findings` | List the findings, not just the summary |
 | `--suppressed` | Include suppressed findings in the listing |
-| `--fingerprint-key` | partialFingerprints key identifying a finding across reports (default `vulnerabilitySourceSinkHash/v1`) |
+| `--fingerprint-key` | Which fingerprint identifies a finding across reports: `trace`, `source-sink` (default), `sink`, or a full partialFingerprints key |
 | `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
 | `--error-on-severity` | Restrict `--error-on-findings` to these levels (repeatable, default all) |
 

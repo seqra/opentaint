@@ -128,3 +128,58 @@ func TestResolvePrefixEmptyIsAnError(t *testing.T) {
 		t.Error("expected empty prefix to error rather than match everything")
 	}
 }
+
+func TestResolveIdentityKeyExpandsAliases(t *testing.T) {
+	cases := map[string]string{
+		"sink":          SinkFingerprintKey,
+		"SINK":          SinkFingerprintKey,
+		" source-sink ": SourceSinkFingerprintKey,
+		"sourcesink":    SourceSinkFingerprintKey,
+		"trace":         TraceFingerprintKey,
+	}
+	for in, want := range cases {
+		got, err := ResolveIdentityKey(in)
+		if err != nil {
+			t.Fatalf("ResolveIdentityKey(%q): %v", in, err)
+		}
+		if got != want {
+			t.Errorf("ResolveIdentityKey(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestResolveIdentityKeyPassesUnknownKeysThrough(t *testing.T) {
+	got, err := ResolveIdentityKey("somethingElse/v9")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "somethingElse/v9" {
+		t.Errorf("got %q, want the key unchanged", got)
+	}
+}
+
+// The analyzer hashes the rule id into every fingerprint, so two rules on one
+// statement carry different sink hashes and must not be conflated.
+func TestCompareOnSinkHashSeparatesRulesOnOneStatement(t *testing.T) {
+	sink := func(v string) map[string]string { return map[string]string{SinkFingerprintKey: v} }
+	baseline := makeReport(makeResult("sqli", Error, "a.java", 1, sink("sqli-s1")))
+	current := makeReport(
+		makeResult("sqli", Error, "a.java", 1, sink("sqli-s1")), // unchanged
+		makeResult("xss", Error, "a.java", 1, sink("xss-s1")),   // new: different rule
+	)
+
+	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	results := current.Results()
+	if got := cmp.StateOf(results[0]); got != Unchanged {
+		t.Errorf("same rule and sink: got %q, want unchanged", got)
+	}
+	if got := cmp.StateOf(results[1]); got != New {
+		t.Errorf("other rule on the same sink: got %q, want new", got)
+	}
+	if len(cmp.Absent) != 0 {
+		t.Errorf("nothing was fixed, but %d results are absent", len(cmp.Absent))
+	}
+}
