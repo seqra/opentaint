@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -166,7 +167,7 @@ class BaseOnlySubscriptionAndReqTest {
     }
 
     @Test
-    fun `zero subscription broadcasts conservative candidates`() {
+    fun `zero subscription indexes applicable candidates`() {
         val sub = manager.accessPathSubscription()
         sub.addZeroToFact(inst, AccessPathBase.This, final(pattern(fieldA)))
         sub.addZeroToFact(inst, AccessPathBase.This, final(marked(fieldA)))
@@ -174,7 +175,7 @@ class BaseOnlySubscriptionAndReqTest {
 
         val collected = mutableListOf<ZeroEdgeSummarySubscription>()
         sub.collectZeroEdge(collected, initial(pattern(fieldA)))
-        assertEquals(3, collected.size, "the downstream residual operation rejects inapplicable candidates")
+        assertEquals(2, collected.size, "identity and non-empty delta candidates are applicable")
     }
 
     @Test
@@ -244,6 +245,46 @@ class BaseOnlySubscriptionAndReqTest {
             val ndResult = mutableListOf<FactNDEdgeSummarySubscription>()
             sub.collectFactNDEdge(ndResult, initial(summaryAccess), emptyRequired)
             assertEquals(exits.size, ndResult.size, "ND candidate scan, empty=$emptyRequired")
+        }
+    }
+
+    @Test
+    fun `zero subscription index equals matchPrefix for all canonical shapes`() {
+        val static = manager.interner.index(ClassStaticAccessor("Owner"))
+        val fieldAIdx = manager.interner.index(fieldA)
+        val fieldBIdx = manager.interner.index(fieldB)
+        val markIdx = manager.interner.index(mark)
+        val accesses = listOf(
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 0),
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 1),
+            BaseOnlyAccessOps.abstractAt(static, NO_ACCESSOR, 1),
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, NO_ACCESSOR, 2),
+            BaseOnlyAccessOps.abstractAt(static, NO_ACCESSOR, 2),
+            BaseOnlyAccessOps.abstractAt(NO_ACCESSOR, fieldAIdx, 2),
+            packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, markIdx),
+            packBaseOnlyAccess(NO_ACCESSOR, fieldAIdx, markIdx),
+            packBaseOnlyAccess(NO_ACCESSOR, fieldBIdx, markIdx),
+            packBaseOnlyAccess(static, NO_ACCESSOR, markIdx),
+            packBaseOnlyAccess(static, fieldAIdx, markIdx),
+        )
+        val sub = manager.accessPathSubscription()
+        accesses.forEach { exit ->
+            assertNotNull(
+                sub.addZeroToFact(
+                    inst,
+                    AccessPathBase.ClassStatic,
+                    final(exit, AccessPathBase.ClassStatic),
+                )
+            )
+        }
+
+        accesses.forEach { summaryAccess ->
+            val actual = mutableListOf<ZeroEdgeSummarySubscription>()
+            sub.collectZeroEdge(actual, initial(summaryAccess, AccessPathBase.ClassStatic))
+            val expected = accesses.count { exit ->
+                BaseOnlyAccessOps.matchPrefix(exit, summaryAccess).let { it.emptyDelta || it.hasSuffix }
+            }
+            assertEquals(expected, actual.size, "applicable lookup for $summaryAccess")
         }
     }
 

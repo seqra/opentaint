@@ -28,14 +28,21 @@ class MethodBaseOnlyAccessPathSubscription(
     private class Z2FSub(private val manager: BaseOnlyApManager) :
         CommonAPSub.Z2FSubStorage<BaseOnlyAccess, BaseOnlyAccess> {
         private val edges = LongOpenHashSet()
+        private val edgeIndex = BaseOnlyInitialAccessIndex<Unit>()
 
         override fun add(callerExitAp: BaseOnlyAccess): CommonZeroEdgeSubBuilder<BaseOnlyAccess>? {
             if (!edges.add(callerExitAp)) return null
+            edgeIndex.getOrCreate(callerExitAp) { Unit }
             return ZeroBuilder(manager).setNode(callerExitAp)
         }
 
         override fun find(dst: MutableList<CommonZeroEdgeSubBuilder<BaseOnlyAccess>>, summaryInitialFact: BaseOnlyAccess) {
-            edges.forEach { exit -> dst += ZeroBuilder(manager).setNode(exit) }
+            edgeIndex.collectCandidates(summaryInitialFact) { exit, _ ->
+                val match = BaseOnlyAccessOps.matchPrefix(exit, summaryInitialFact)
+                if (match.emptyDelta || match.hasSuffix) {
+                    dst += ZeroBuilder(manager).setNode(exit)
+                }
+            }
         }
     }
 
