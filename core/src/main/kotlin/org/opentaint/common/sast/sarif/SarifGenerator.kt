@@ -136,8 +136,17 @@ abstract class SarifGenerator<IL>(
         digest.update(ruleId.toByteArray())
         digest.addLocationFingerprint(vulnerabilityLocation)
 
-        traces
-            ?.map { computeTraceFingerprint(it, kind) }
+        // The source/sink identity is "which sources reach this sink", not "how
+        // many paths land on each". The emitted flows are a sample of the real
+        // paths, so two runs can pick a different number of paths through the
+        // same source; hashing the multiset would make the identity move even
+        // though the finding did not. Distinct sources only.
+        val perTrace = traces?.map { computeTraceFingerprint(it, kind) }
+        val considered = when (kind) {
+            FingerprintKind.SOURCE_SINK -> perTrace?.distinctBy { it.toList() }
+            FingerprintKind.FULL_TRACE -> perTrace
+        }
+        considered
             ?.sortedWith(Arrays::compare)
             ?.forEach(digest::update)
 
