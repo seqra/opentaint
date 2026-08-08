@@ -108,7 +108,9 @@ func (v *TriageView) baselineItems(out *output.Printer) []any {
 	// so it is reported by what actually moved. Anything the comparison could not
 	// attribute stays under the plain label rather than being guessed at.
 	attributed := 0
-	for _, change := range []Change{ChangeSource, ChangePath} {
+	// ChangePath is deliberately absent: see the note on it in baseline.go. Its
+	// findings fall through to the plain "Updated" line below.
+	for _, change := range []Change{ChangeSource} {
 		count := v.Comparison.ChangeCounts[change]
 		if count == 0 {
 			continue
