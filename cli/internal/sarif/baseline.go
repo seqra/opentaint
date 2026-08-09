@@ -55,10 +55,7 @@ const (
 	// entry point can reach code that was already known to be dangerous.
 	ChangeSource Change = "source"
 	// ChangePath is the same source and the same sink, joined by a different
-	// call path. NOT REPORTED: it is derived from the full-trace fingerprint,
-	// which the analyzer does not yet compute deterministically -- two runs over
-	// unchanged code disagree on ~95% of it, so the line was ~100% false
-	// positives. Restore it in triage_view.go once the trace hash is stable.
+	// call path. Usually a refactoring of the code in between.
 	ChangePath Change = "path"
 )
 
