@@ -92,8 +92,17 @@ class SyncUsagesExtension(private val hierarchyExtension: HierarchyExtension, pr
             cp.toJIRClass(it.source)
                 .declaredMethods
                 .slice(it.offsets.map { it.toInt() })
-        }
+        }.stableOrder()
     }
+
+    /**
+     * The usage query has no ORDER BY, so callers come back in whatever order the storage
+     * happens to hold them -- which is insertion order, set by whichever background loader
+     * persisted the class first. The set is the same every run; the order is not, and the
+     * analysis is sensitive to the order it resolves callers in.
+     */
+    private fun Sequence<JIRMethod>.stableOrder(): Sequence<JIRMethod> =
+        sortedWith(compareBy({ it.enclosingClass.name }, { it.name }, { it.description }))
 
     private fun JIRMethod.isOverriddenBy(method: JIRMethod): Boolean {
         if (name == method.name && description == method.description) {

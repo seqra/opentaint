@@ -111,7 +111,7 @@ private abstract class HierarchyExtensionBase(protected val cp: JIRClasspath) : 
     ): Sequence<JIRClassOrInterface> {
         return when {
             jIRClass.isFinal -> emptySequence()
-            else -> explicitSubClasses(jIRClass, entireHierarchy, false)
+            else -> explicitSubClasses(jIRClass, entireHierarchy, false).stableOrder()
         }.appendOwn(jIRClass, includeOwn)
     }
 
@@ -122,6 +122,7 @@ private abstract class HierarchyExtensionBase(protected val cp: JIRClasspath) : 
         val desc = jIRMethod.description
         val name = jIRMethod.name
         return explicitSubClasses(jIRMethod.enclosingClass, entireHierarchy = true, true)
+            .stableOrder()
             .mapNotNull { it.findDeclaredMethodOrNull(name, desc) }
             .filter { !it.isPrivate }
     }
@@ -228,6 +229,16 @@ private class HierarchyExtensionSQL(cp: JIRClasspath) : HierarchyExtensionBase(c
         return cp.subClasses(name, entireHierarchy).map { cp.toJIRClass(it) }
     }
 }
+
+/**
+ * Subclasses come back ordered by [Classes.id][CLASSES.ID], a surrogate key handed out by
+ * whichever background loader reached the persistence lock first. The set is the same every
+ * run; the order is not, and the analysis is sensitive to the order it resolves virtual calls
+ * in, so two runs over unchanged code ended up with different facts. Sorting by name gives a
+ * total order that depends only on the code.
+ */
+private fun Sequence<JIRClassOrInterface>.stableOrder(): Sequence<JIRClassOrInterface> =
+    sortedBy { it.name }
 
 private fun Sequence<JIRClassOrInterface>.appendOwn(
     root: JIRClassOrInterface,

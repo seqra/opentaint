@@ -20,6 +20,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 abstract class InitialFactAbstractionTest {
@@ -40,6 +41,9 @@ abstract class InitialFactAbstractionTest {
         val MARK_2 = TaintMarkAccessor("test-mark-2")
         val TYPE_INFO_A = TypeInfoAccessor("A")
         val TYPE_INFO_B = TypeInfoAccessor("B")
+
+        val STATIC_A = ClassStaticAccessor("StaticA")
+        val STATIC_B = ClassStaticAccessor("StaticB")
     }
 
     abstract fun mkApManager(strategy: AnyAccessorUnrollStrategy): ApManager
@@ -496,6 +500,45 @@ abstract class InitialFactAbstractionTest {
                     secondProduced
                 )
             }",
+        )
+    }
+
+    /**
+     * The abstraction must be confluent: the same registered initial facts and the same added
+     * fact must yield the same abstraction whatever order the engine saw them in. Exclusions
+     * from every caller accumulate into one set per trie node, so an abstraction built before
+     * the last caller registered could otherwise keep the smaller set and leave the fact store
+     * dependent on IFDS thread scheduling -- which is how SARIF fingerprints started drifting
+     * between runs over unchanged code.
+     */
+    @Test
+    fun `abstraction does not depend on the order facts are registered`() {
+        val analyzedFirst = initialFact(AccessPathBase.ClassStatic).exclude(STATIC_A)
+        val analyzedSecond = initialFact(AccessPathBase.ClassStatic).exclude(STATIC_B)
+        val added = finalFact(AccessPathBase.ClassStatic, STATIC_A, FIELD_A_B)
+
+        // add the concrete fact while only the first caller is known, then the second arrives
+        val interleaved = newAbstraction().run {
+            buildSet {
+                registerNewInitialFact(analyzedFirst, FactTypeChecker.Dummy).forEach { add(it.first) }
+                addAbstractedInitialFact(added, FactTypeChecker.Dummy).forEach { add(it.first) }
+                registerNewInitialFact(analyzedSecond, FactTypeChecker.Dummy).forEach { add(it.first) }
+            }
+        }
+
+        // both callers known before the concrete fact shows up
+        val batched = newAbstraction().run {
+            buildSet {
+                registerNewInitialFact(analyzedFirst, FactTypeChecker.Dummy).forEach { add(it.first) }
+                registerNewInitialFact(analyzedSecond, FactTypeChecker.Dummy).forEach { add(it.first) }
+                addAbstractedInitialFact(added, FactTypeChecker.Dummy).forEach { add(it.first) }
+            }
+        }
+
+        assertEquals(
+            batched.map { "$it" }.toSortedSet(),
+            interleaved.map { "$it" }.toSortedSet(),
+            "Abstraction depends on registration order",
         )
     }
 
