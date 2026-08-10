@@ -35,6 +35,42 @@ class AccessorInterner {
         }
 
         fun getOrNull(idx: Int): Accessor? = accessors.getOrNull(idx)
+
+        fun snapshotTo(dst: MutableList<Accessor>): Unit = synchronized(this) {
+            dst.addAll(accessors)
+        }
+    }
+
+    /**
+     * Interns [accessors] in a canonical (content-sorted) order. Index assignment is
+     * otherwise first-come across analysis threads, and those indices order hash-set and
+     * access-tree iteration inside the analyzers -- which makes edge identities, and
+     * therefore trace fingerprints, depend on thread scheduling. Interning the universe
+     * up front pins every index to a value derived only from the input.
+     */
+    fun preIntern(accessors: Iterable<Accessor>) {
+        accessors.sortedWith(CANONICAL_ORDER).forEach { index(it) }
+    }
+
+    // Diagnostics: -Dprobe.internerdump=<path> writes the idx -> accessor tables at
+    // shutdown. Determinism depends on every accessor kind being pre-interned; when a new
+    // feature introduces one that is not, diffing two dumps names it directly (any entry
+    // whose index differs between runs was interned in arrival order).
+    init {
+        System.getProperty("probe.internerdump")?.let { path ->
+            Runtime.getRuntime().addShutdownHook(Thread {
+                val f = java.io.File("$path.${DUMP_SEQ.incrementAndGet()}")
+                f.writeText(buildString {
+                    listOf("fields" to fields, "statics" to statics, "taints" to taints, "types" to types)
+                        .forEach { (name, st) ->
+                            appendLine("== $name ==")
+                            val dst = mutableListOf<Accessor>()
+                            st.snapshotTo(dst)
+                            dst.forEachIndexed { i, a -> appendLine("$i\t${canonicalKey(a)}\t${a.javaClass.simpleName}") }
+                        }
+                })
+            })
+        }
     }
 
     private val fields = AccessorStorage()
@@ -92,6 +128,19 @@ class AccessorInterner {
     }
 
     companion object {
+        private val DUMP_SEQ = java.util.concurrent.atomic.AtomicInteger()
+
+        private val CANONICAL_ORDER: Comparator<Accessor> =
+            compareBy({ it.javaClass.name }, { canonicalKey(it) })
+
+        private fun canonicalKey(a: Accessor): String = when (a) {
+            is FieldAccessor -> a.className + '|' + a.fieldName + '|' + a.fieldType
+            is ClassStaticAccessor -> a.typeName
+            is TaintMarkAccessor -> a.mark
+            is TypeInfoAccessor -> a.typeName
+            else -> a.toString()
+        }
+
         const val BASIC_KIND_BITS = 2
         const val BASIC_KIND_MASK = 0b11
         const val FIELD_KIND = 0b00

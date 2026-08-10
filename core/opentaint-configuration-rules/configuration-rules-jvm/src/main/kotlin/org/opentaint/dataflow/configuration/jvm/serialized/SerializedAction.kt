@@ -10,18 +10,30 @@ data class SerializedTaintAssignAction(
     val kind: String,
     val annotatedWith: SerializedTypeNameMatcher? = null,
     val pos: PositionBaseWithModifiers,
-): SerializedAction
+): SerializedAction {
+    init {
+        SerializedRuleUniverse.recordTaintKind(kind)
+    }
+}
 
 @Serializable
 data class SerializedTaintCleanAction(
     val taintKind: String? = null,
     val pos: PositionBaseWithModifiers,
     val reach: TaintCleanReach = TaintCleanReach.Exact,
-): SerializedAction
+): SerializedAction {
+    init {
+        SerializedRuleUniverse.recordTaintKind(taintKind)
+    }
+}
 
 @Serializable
 data class SerializedTaintPassAction(
     val taintKind: String? = null,
     val from: PositionBaseWithModifiers,
     val to: PositionBaseWithModifiers,
-): SerializedAction
+): SerializedAction {
+    init {
+        SerializedRuleUniverse.recordTaintKind(taintKind)
+    }
+}

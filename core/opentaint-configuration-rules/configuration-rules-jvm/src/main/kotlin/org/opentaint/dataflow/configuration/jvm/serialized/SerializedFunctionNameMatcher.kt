@@ -24,7 +24,11 @@ sealed interface SerializedFunctionNameMatcher {
         override val `package`: SerializedSimpleNameMatcher.Simple,
         override val `class`: SerializedSimpleNameMatcher.Simple,
         override val name: SerializedSimpleNameMatcher.Simple,
-    ) : SerializedFunctionNameMatcher
+    ) : SerializedFunctionNameMatcher {
+        init {
+            SerializedRuleUniverse.recordMatcherClass(`package`.value, `class`.value)
+        }
+    }
 
     @Serializable
     data class Complex(
