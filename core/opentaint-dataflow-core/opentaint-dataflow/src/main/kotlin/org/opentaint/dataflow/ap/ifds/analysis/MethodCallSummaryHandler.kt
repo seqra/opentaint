@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
+import org.opentaint.dataflow.util.cartesianProductMapTo
 
 interface MethodCallSummaryHandler {
     val factTypeChecker: FactTypeChecker
@@ -33,18 +34,20 @@ interface MethodCallSummaryHandler {
         ) : SummaryEdge
     }
 
-    fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp>
+    fun prepareSummaryInitialFact(fact: InitialFactAp): List<InitialFactAp>
+
+    fun prepareSummaryFinalFact(fact: FinalFactAp, checker: FactTypeChecker = factTypeChecker): List<FinalFactAp>
 
     fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> {
         if (summaryFact == null) return setOf(Sequent.ZeroToZero)
 
-        val summaryExitFacts = mapMethodExitToReturnFlowFact(summaryFact)
-        return summaryExitFacts.mapTo(hashSetOf()) {
-            Sequent.ZeroToFact(it, TraceInfo.ApplySummary)
-        }
+        return setOf(Sequent.ZeroToFact(summaryFact, TraceInfo.ApplySummary))
     }
 
-    fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> = listOf(summaryEdge)
+    fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> =
+        prepareSummaryFinalFact(summaryEdge.factAp).map {
+            Edge.ZeroToFact(summaryEdge.methodEntryPoint, summaryEdge.statement, it)
+        }
 
     fun handleZeroToFact(
         currentFactAp: FinalFactAp,
@@ -82,7 +85,14 @@ interface MethodCallSummaryHandler {
         Sequent.FactToFact(initialFactAp.refine(initialFactRefinement), summaryFactAp, TraceInfo.ApplySummary)
     }
 
-    fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> = listOf(summaryEdge)
+    fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> {
+        val finalFacts = prepareSummaryFinalFact(summaryEdge.factAp)
+        return prepareSummaryInitialFact(summaryEdge.initialFactAp).flatMap { initialFactAp ->
+            finalFacts.map { factAp ->
+                Edge.FactToFact(summaryEdge.methodEntryPoint, initialFactAp, summaryEdge.statement, factAp)
+            }
+        }
+    }
 
     fun handleNDFactToFact(
         initialFacts: Set<InitialFactAp>,
@@ -109,7 +119,17 @@ interface MethodCallSummaryHandler {
         )
     }
 
-    fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> = listOf(summaryEdge)
+    fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<SummaryEdge.NdF2F> {
+        val finalFacts = prepareSummaryFinalFact(summaryEdge.factAp)
+        return summaryEdge.initialFacts
+            .map { prepareSummaryInitialFact(it) }
+            .cartesianProductMapTo { it.toHashSet() }
+            .flatMap { initialFacts ->
+                finalFacts.map { factAp ->
+                    SummaryEdge.NdF2F(summaryEdge.methodEntryPoint, initialFacts, factAp)
+                }
+            }
+    }
 
     fun InitialFactAp.refine(exclusionSet: ExclusionSet?) =
         if (exclusionSet == null) this else replaceExclusions(exclusionSet)
@@ -121,35 +141,40 @@ interface MethodCallSummaryHandler {
         createSideEffectRequirement: (refinement: ExclusionSet) -> Sequent?,
         handleSummaryEdge: (initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp) -> Sequent
     ): Set<Sequent> {
-        val mappedSummaryFacts = mapMethodExitToReturnFlowFact(summaryEdge.final)
+        val summaryFinalFact = summaryEdge.final
 
         return when (summaryEffect) {
-            is SummaryEdgeApplication -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
-                val summaryFactAp = mappedSummaryFact
-                    .concat(factTypeChecker, summaryEffect.delta)
-                    ?: return@mapNotNullTo null
+            is SummaryEdgeApplication -> {
+                val summaryFactAp = summaryFinalFact.concat(factTypeChecker, summaryEffect.delta)
+                    ?: return emptySet()
 
                 when (summaryEffect) {
                     is SummaryApRefinement -> {
                         // todo: filter exclusions
                         val fact = summaryFactAp.replaceExclusions(currentFactAp.exclusions)
-                        handleSummaryEdge(null, fact)
+                        setOf(handleSummaryEdge(null, fact))
                     }
 
                     is SummaryExclusionRefinement -> {
                         val fact = summaryFactAp.replaceExclusions(summaryEffect.exclusion)
-                        handleSummaryEdge(summaryEffect.exclusion, fact)
+                        setOf(handleSummaryEdge(summaryEffect.exclusion, fact))
                     }
                 }
             }
 
-            is EdgeRefinement.UniverseRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) {
-                handleSummaryEdge(ExclusionSet.Universe, it.replaceExclusions(ExclusionSet.Universe))
-            }
+            is EdgeRefinement.UniverseRefinement -> setOf(
+                handleSummaryEdge(
+                    ExclusionSet.Universe,
+                    summaryFinalFact.replaceExclusions(ExclusionSet.Universe)
+                )
+            )
 
-            is EdgeRefinement.IdRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) {
-                handleSummaryEdge(currentFactAp.exclusions, it.replaceExclusions(currentFactAp.exclusions))
-            }
+            is EdgeRefinement.IdRefinement -> setOf(
+                handleSummaryEdge(
+                    currentFactAp.exclusions,
+                    summaryFinalFact.replaceExclusions(currentFactAp.exclusions)
+                )
+            )
         }
     }
 }

@@ -962,11 +962,12 @@ class NormalMethodAnalyzer(
                 runner
             )
 
+            val summariesToApply = sideEffectSummaries.flatMap { handler.prepareSideEffectSummary(it) }
+
             applyMethodSideEffectSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
-                methodInitialFactBase = sub.methodInitialFactBase,
-                sideEffectSummaries = sideEffectSummaries,
+                sideEffectSummaries = summariesToApply,
                 handleSideEffect = handler::handleZeroToFact
             )
         }
@@ -985,11 +986,12 @@ class NormalMethodAnalyzer(
                 runner,
             )
 
+            val summariesToApply = sideEffectSummaries.flatMap { handler.prepareSideEffectSummary(it) }
+
             applyMethodSideEffectSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
-                methodInitialFactBase = sub.methodInitialFactBase,
-                sideEffectSummaries = sideEffectSummaries,
+                sideEffectSummaries = summariesToApply,
             ) { currentFactAp, summaryEffect, kind ->
                 handler.handleFactToFact(sub.currentEdge.initialFactAp, currentFactAp, summaryEffect, kind)
             }
@@ -1091,7 +1093,6 @@ class NormalMethodAnalyzer(
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
-                methodInitialFactBase = sub.methodInitialFactBase,
                 methodSummaries = summariesToApply,
                 handleSummaryEdge = handler::handleZeroToFact
             )
@@ -1104,7 +1105,7 @@ class NormalMethodAnalyzer(
     ) {
         handleMethodNDSummariesSub(
             summarySubs, methodSummaries,
-            { currentEdge }, { currentEdge.factAp }, { methodInitialFactBase }
+            { currentEdge }, { currentEdge.factAp }
         )
     }
 
@@ -1128,7 +1129,6 @@ class NormalMethodAnalyzer(
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
-                methodInitialFactBase = sub.methodInitialFactBase,
                 methodSummaries = summariesToApply,
                 handleSummaryEdge = { currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge ->
                     handler.handleFactToFact(sub.currentEdge.initialFactAp, currentFactAp, summaryEffect, summaryEdge)
@@ -1143,7 +1143,7 @@ class NormalMethodAnalyzer(
     ) {
         handleMethodNDSummariesSub(
             summarySubs, methodSummaries,
-            { currentEdge }, { currentEdge.factAp }, { methodInitialFactBase }
+            { currentEdge }, { currentEdge.factAp }
         )
     }
 
@@ -1167,7 +1167,6 @@ class NormalMethodAnalyzer(
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
                 currentEdgeFactAp = sub.currentEdge.factAp,
-                methodInitialFactBase = sub.methodInitialFactBase,
                 methodSummaries = summariesToApply,
                 handleSummaryEdge = { currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge ->
                     handler.handleNDFactToFact(sub.currentEdge.initialFacts, currentFactAp, summaryEffect, summaryEdge)
@@ -1182,21 +1181,19 @@ class NormalMethodAnalyzer(
     ) {
         handleMethodNDSummariesSub(
             summarySubs, methodSummaries,
-            { currentEdge }, { currentEdge.factAp }, { methodInitialFactBase }
+            { currentEdge }, { currentEdge.factAp }
         )
     }
 
     private fun applyMethodSummaries(
         currentEdge: Edge,
         currentEdgeFactAp: FinalFactAp,
-        methodInitialFactBase: AccessPathBase,
         methodSummaries: List<FactToFact>,
         handleSummaryEdge: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge) -> Set<Sequent>
     ) {
         applyMethodAnySummaries(
             currentEdge,
             currentEdgeFactAp,
-            methodInitialFactBase,
             methodSummaries,
             { it.initialFactAp }
         ) { currentFactAp, summaryEdgeEffect, methodSummary ->
@@ -1207,14 +1204,12 @@ class NormalMethodAnalyzer(
     private fun applyMethodSideEffectSummaries(
         currentEdge: Edge,
         currentEdgeFactAp: FinalFactAp,
-        methodInitialFactBase: AccessPathBase,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>,
         handleSideEffect: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, kind: SideEffectKind) -> Set<Sequent>
     ) {
         applyMethodAnySummaries(
             currentEdge,
             currentEdgeFactAp,
-            methodInitialFactBase,
             sideEffectSummaries,
             { it.initialFactAp }
         ) { currentFactAp, summaryEdgeEffect, methodSummary ->
@@ -1225,19 +1220,16 @@ class NormalMethodAnalyzer(
     private inline fun <S> applyMethodAnySummaries(
         currentEdge: Edge,
         currentEdgeFactAp: FinalFactAp,
-        methodInitialFactBase: AccessPathBase,
         methodSummaries: List<S>,
         getSummaryInitialFact: (S) -> InitialFactAp,
         handleSummary: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, S) -> Set<Sequent>
     ) {
-        val methodInitialFact = currentEdgeFactAp.rebase(methodInitialFactBase)
-
         val summaries = methodSummaries.groupByTo(hashMapOf()) { getSummaryInitialFact(it) }
         for ((summaryInitialFact, summaryEdges) in summaries) {
             if (!cancellation.isActive()) return
 
             val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
-                methodInitialFact, summaryInitialFact
+                currentEdgeFactAp, summaryInitialFact
             )
 
             for (summaryEdgeEffect in summaryEdgeEffects) {
@@ -1256,7 +1248,6 @@ class NormalMethodAnalyzer(
         methodSummaries: List<NDFactToFact>,
         subEdge: Sub.() -> Edge,
         subFact: Sub.() -> FinalFactAp,
-        subInitialFactBase: Sub.() -> AccessPathBase,
     ) {
         summaryEdgesHandled++
 
@@ -1277,7 +1268,6 @@ class NormalMethodAnalyzer(
                 summaryHandler = handler,
                 currentEdge = currentEdge,
                 currentEdgeFactAp = sub.subFact(),
-                methodInitialFactBase = sub.subInitialFactBase(),
                 methodSummaries = summariesToApply,
             )
         }
@@ -1287,22 +1277,19 @@ class NormalMethodAnalyzer(
         summaryHandler: MethodCallSummaryHandler,
         currentEdge: Edge,
         currentEdgeFactAp: FinalFactAp,
-        methodInitialFactBase: AccessPathBase,
-        methodSummaries: List<NDFactToFact>,
+        methodSummaries: List<SummaryEdge.NdF2F>,
     ) {
-        val methodInitialFact = currentEdgeFactAp.rebase(methodInitialFactBase)
-
         nextSummary@for (summaryEdge in methodSummaries) {
             if (!cancellation.isActive()) return
 
             val requiredFacts = mutableListOf<InitialFactAp>()
-            for (summaryInitialFact in summaryEdge.initialFacts) {
-                if (!methodInitialFact.matchNDInitial(summaryInitialFact)) {
+            for (summaryInitialFact in summaryEdge.initial) {
+                if (!currentEdgeFactAp.matchNDInitial(summaryInitialFact)) {
                     requiredFacts.add(summaryInitialFact)
                 }
             }
 
-            if (requiredFacts.size == summaryEdge.initialFacts.size) continue
+            if (requiredFacts.size == summaryEdge.initial.size) continue
 
             val requiredInitials = mutableListOf<List<Set<InitialFactAp>>>()
             for (requiredFact in requiredFacts) {
@@ -1314,13 +1301,7 @@ class NormalMethodAnalyzer(
                         factAtStatement.rebase(requiredFact.base).matchNDInitial(requiredFact)
                 }
 
-                val mappedRequiredFacts = analysisContext.methodCallFactMapper.mapMethodExitToReturnFlowFact(
-                    currentEdge.statement, requiredFact
-                )
-
-                val factInitials = mappedRequiredFacts.flatMapTo(hashSetOf()) {
-                    searcher.findMatchingEdgesInitialFacts(currentEdge.statement, it)
-                }
+                val factInitials = searcher.findMatchingEdgesInitialFacts(currentEdge.statement, requiredFact)
 
                 if (factInitials.isEmpty()) {
                     continue@nextSummary
@@ -1342,7 +1323,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleZeroToFact(
                                 currentEdgeFactAp,
                                 EdgeRefinement.UniverseRefinement,
-                                summaryEdge.summaryEdge()
+                                summaryEdge
                             )
                         }
 
@@ -1352,7 +1333,7 @@ class NormalMethodAnalyzer(
                                 initialFact,
                                 currentEdgeFactAp,
                                 EdgeRefinement.UniverseRefinement,
-                                summaryEdge.summaryEdge()
+                                summaryEdge
                             )
                         }
 
@@ -1361,7 +1342,7 @@ class NormalMethodAnalyzer(
                                 ndSummaryInitial,
                                 currentEdgeFactAp,
                                 EdgeRefinement.UniverseRefinement,
-                                summaryEdge.summaryEdge()
+                                summaryEdge
                             )
                         }
                     }
@@ -1375,7 +1356,7 @@ class NormalMethodAnalyzer(
                                     currentEdge.initialFactAp,
                                     currentEdgeFactAp,
                                     EdgeRefinement.IdRefinement,
-                                    summaryEdge.summaryEdge()
+                                    summaryEdge
                                 )
                             }
 
@@ -1384,7 +1365,7 @@ class NormalMethodAnalyzer(
                                     ndSummaryInitial,
                                     currentEdgeFactAp,
                                     EdgeRefinement.UniverseRefinement,
-                                    summaryEdge.summaryEdge()
+                                    summaryEdge
                                 )
                             }
                         }
@@ -1395,7 +1376,7 @@ class NormalMethodAnalyzer(
                             ndSummaryInitial + currentEdge.initialFacts,
                             currentEdgeFactAp,
                             EdgeRefinement.UniverseRefinement,
-                            summaryEdge.summaryEdge()
+                            summaryEdge
                         )
                     }
                 }
@@ -1431,9 +1412,9 @@ class NormalMethodAnalyzer(
     }
 
     override fun resolveCalleeFact(statement: CommonInst, factAp: FinalFactAp): Set<FinalFactAp> =
-        analysisContext.methodCallFactMapper.mapMethodExitToReturnFlowFact(
-            statement, factAp, FactTypeChecker.Dummy
-        ).toSet()
+        analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
+            .prepareSummaryFinalFact(factAp, FactTypeChecker.Dummy)
+            .toSet()
 
     private fun updateTaintRulesStats(
         finalEdgeFact: FinalFactAp?,
@@ -1451,7 +1432,6 @@ class NormalMethodAnalyzer(
     }
 
     private fun FactToFact.summaryEdge() = SummaryEdge.F2F(this.methodEntryPoint, initialFactAp, factAp)
-    private fun NDFactToFact.summaryEdge() = SummaryEdge.NdF2F(this.methodEntryPoint, initialFacts, factAp)
 
     override fun cleanup() {
         methodEntryPointsCache = hashMapOf()

@@ -11,6 +11,10 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 
 interface MethodSideEffectSummaryHandler {
+    fun prepareSideEffectSummary(
+        sideEffectSummary: SideEffectSummary.FactSideEffectSummary,
+    ): List<SideEffectSummary.FactSideEffectSummary>
+
     fun handleZeroToZero(
         sideEffects: List<SideEffectSummary.ZeroSideEffectSummary>,
     ): Set<Sequent> = emptySet()

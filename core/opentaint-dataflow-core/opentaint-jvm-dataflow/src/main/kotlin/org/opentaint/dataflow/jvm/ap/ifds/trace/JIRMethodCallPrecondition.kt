@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePreconditionFact
@@ -43,8 +42,6 @@ class JIRMethodCallPrecondition(
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
 ) : MethodCallPrecondition.Default {
-    private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
-
     private val taintCtx get() = analysisContext.taint
 
     override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> {
@@ -190,5 +187,5 @@ class JIRMethodCallPrecondition(
         statement.location.method.instList.toList()
 
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
-        methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 }

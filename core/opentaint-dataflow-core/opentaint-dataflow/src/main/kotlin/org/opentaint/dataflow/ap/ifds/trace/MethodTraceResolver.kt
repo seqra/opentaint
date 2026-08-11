@@ -20,7 +20,6 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.AnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallResolutionResult
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallResolutionPreconditionFact
@@ -77,8 +76,10 @@ class MethodTraceResolver(
     private val methodEntryPoint: MethodEntryPoint = analysisContext.methodEntryPoint
     private val analysisManager: AnalysisManager get() = runner.analysisManager
     private val manager: AnalysisUnitRunnerManager get() = runner.manager
-    private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
     private val apManager: ApManager get() = runner.apManager
+
+    private fun summaryHandler(statement: CommonInst) =
+        analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
 
     // Enum can give non-determinacy as its entries have new hash code on every JVM run.
     // Override hashcode() and equals() when using enum as a field in classes whose objects
@@ -452,8 +453,9 @@ class MethodTraceResolver(
         statement: CommonInst,
         calleeEntry: TraceEntry.MethodEntry
     ): List<SummaryTrace> {
+        val handler = summaryHandler(statement)
         val traceEdges = calleeEntry.facts.flatMap { fact ->
-            val mappedFacts = methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
+            val mappedFacts = handler.prepareSummaryInitialFact(fact)
             mappedFacts.map { resolveIntraProceduralTraceEdge(statement, it, includeStatement = false) }
         }
 
@@ -1645,7 +1647,7 @@ class MethodTraceResolver(
         startFact: MethodCallPrecondition.CallToStartResolved,
         statement: CommonInst
     ) {
-        val summaryHandler = analysisManager.getMethodCallSummaryPreconditionHandler(apManager, analysisContext, statement)
+        val summaryHandler = summaryHandler(statement)
         val resolvedCallSummaries = mutableListOf<CallSummary>()
 
         val methodSummaries = manager.findFactToFactSummaryEdges(callee, startFact.startFactBase)
@@ -1658,31 +1660,25 @@ class MethodTraceResolver(
 
             if (deltas.isEmpty()) continue
 
-            val applicableSummaries = summaryHandler.prepareFactToFactSummary(summaryEdge)
-            applicableSummaries.forEach { applicableSummary ->
-                // it is ok to map call arguments via exit2return
-                val mappedSummaryInitial = methodCallFactMapper.mapMethodExitToReturnFlowFact(
-                    statement, applicableSummary.initialFactAp
-                )
+            val mappedSummaryInitial = summaryHandler.prepareSummaryInitialFact(summaryEdge.initialFactAp)
 
-                for ((matchedEntryFact, delta) in deltas) {
-                    // todo: remove this check?
-                    if (!mappedSummaryFact.contains(matchedEntryFact)) continue
+            for ((matchedEntryFact, delta) in deltas) {
+                // todo: remove this check?
+                if (!mappedSummaryFact.contains(matchedEntryFact)) continue
 
-                    for (mappedSummaryInitialFact in mappedSummaryInitial) {
-                        val precondition = mappedSummaryInitialFact
-                            .concat(delta)
-                            .replaceExclusions(callerFact.exclusions)
+                for (mappedSummaryInitialFact in mappedSummaryInitial) {
+                    val precondition = mappedSummaryInitialFact
+                        .concat(delta)
+                        .replaceExclusions(callerFact.exclusions)
 
-                        resolvedCallSummaries.addCallSummaryEntry(
-                            currentTraceEdge = currentEdge,
-                            precondition = precondition,
-                            preconditionDelta = delta,
-                            callee = callee,
-                            summaryFinalFact = matchedEntryFact,
-                            summaryEdge = summaryEdge,
-                        )
-                    }
+                    resolvedCallSummaries.addCallSummaryEntry(
+                        currentTraceEdge = currentEdge,
+                        precondition = precondition,
+                        preconditionDelta = delta,
+                        callee = callee,
+                        summaryFinalFact = matchedEntryFact,
+                        summaryEdge = summaryEdge,
+                    )
                 }
             }
         }
@@ -1699,7 +1695,7 @@ class MethodTraceResolver(
             if (!mappedSummaryFact.contains(callerFact)) continue
 
             val mappedSummaryInitialFacts = summaryEdge.initialFacts.map {
-                methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, it)
+                summaryHandler.prepareSummaryInitialFact(it)
             }
 
             mappedSummaryInitialFacts.cartesianProductMapTo { mappedFactGroup ->

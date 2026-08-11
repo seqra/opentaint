@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
@@ -23,8 +24,11 @@ class JIRMethodCallSummaryHandler(
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
-    override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> =
-        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
+    override fun prepareSummaryInitialFact(fact: InitialFactAp): List<InitialFactAp> =
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
+
+    override fun prepareSummaryFinalFact(fact: FinalFactAp, checker: FactTypeChecker): List<FinalFactAp> =
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, checker)
 
     override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
         super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->
@@ -69,24 +73,26 @@ class JIRMethodCallSummaryHandler(
     }
 
     override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
-            Edge.FactToFact(
+        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).flatMap { (resultFact, refinement) ->
+            val rewrittenEdge = Edge.FactToFact(
                 summaryEdge.methodEntryPoint,
                 refinement.refineFact(summaryEdge.initialFactAp),
                 summaryEdge.statement,
                 refinement.refineFact(resultFact)
             )
+            super.prepareFactToFactSummary(rewrittenEdge)
         }
 
-    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<SummaryEdge.NdF2F> =
+        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).flatMap { (resultFact, refinement) ->
             check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
-            Edge.NDFactToFact(
+            val rewrittenEdge = Edge.NDFactToFact(
                 summaryEdge.methodEntryPoint,
                 summaryEdge.initialFacts,
                 summaryEdge.statement,
                 resultFact,
             )
+            super.prepareNDFactToFactSummary(rewrittenEdge)
         }
 
     private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
