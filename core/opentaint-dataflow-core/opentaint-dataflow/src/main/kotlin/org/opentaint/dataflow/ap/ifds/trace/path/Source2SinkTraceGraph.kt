@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry.SourceStartEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
@@ -156,6 +157,14 @@ private object NodeComparator : Comparator<InterProceduralTraceNode> {
     }
 }
 
+// The comparators below order node-index assignment, and every downstream iteration
+// (int-set bucket layouts in both graphs, A* heap insertion, the greedy cover) inherits
+// that order -- so it reaches the reported witnesses and their fingerprints. The keys are
+// built ONLY from domain content (method signatures, instruction coordinates, printed
+// facts), never from hashCode(): a hashCode-based order is stable within one build but
+// reshuffles whenever any constituent class changes its field layout or hash formula,
+// which moved trace fingerprints on analyzer upgrades with unchanged input.
+
 private object SummaryNodeComparator : Comparator<InterProceduralSummaryTraceNode> {
     override fun compare(
         a: InterProceduralSummaryTraceNode,
@@ -164,6 +173,9 @@ private object SummaryNodeComparator : Comparator<InterProceduralSummaryTraceNod
         MethodComparator.compare(a.trace.method, b.trace.method).let { if (it != 0) return it }
         a.trace.traceKind.compareTo(b.trace.traceKind).let { if (it != 0) return it }
         FinalEntryComparator.compare(a.trace.final, b.trace.final).let { if (it != 0) return it }
+        // Last resort for key-identical but distinct nodes: keeps the order total (a
+        // stable-sort tie would fall back to run-varying arrival order). Only this rare
+        // residue depends on hash formulas; every primary dimension above is domain content.
         return a.hashCode().compareTo(b.hashCode())
     }
 }
@@ -183,12 +195,14 @@ private object FullNodeComparator : Comparator<InterProceduralStart2FinalTraceNo
 
 private object MethodComparator : Comparator<MethodEntryPoint> {
     override fun compare(a: MethodEntryPoint, b: MethodEntryPoint): Int =
-        a.hashCode().compareTo(b.hashCode())
+        a.orderKey().compareTo(b.orderKey())
 }
 
 private object FinalEntryComparator : Comparator<TraceEntry.Final> {
-    override fun compare(a: TraceEntry.Final, b: TraceEntry.Final): Int =
-        a.edges.hashCode().compareTo(b.edges.hashCode())
+    override fun compare(a: TraceEntry.Final, b: TraceEntry.Final): Int {
+        instKey(a.statement).compareTo(instKey(b.statement)).let { if (it != 0) return it }
+        return edgesKey(a.edges).compareTo(edgesKey(b.edges))
+    }
 }
 
 private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
@@ -197,6 +211,9 @@ private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
             is SourceStartEntry -> when (b) {
                 is SourceStartEntry -> {
                     a.priority().compareTo(b.priority()).let { if (it != 0) return it }
+                    instKey(a.statement).compareTo(instKey(b.statement)).let { if (it != 0) return it }
+                    edgesKey(a.edges).compareTo(edgesKey(b.edges)).let { if (it != 0) return it }
+                    actionsKey(a).compareTo(actionsKey(b)).let { if (it != 0) return it }
                     a.hashCode().compareTo(b.hashCode())
                 }
 
@@ -205,10 +222,39 @@ private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
 
             is TraceEntry.MethodEntry -> when (b) {
                 is SourceStartEntry -> 1
-                is TraceEntry.MethodEntry -> a.facts.hashCode().compareTo(b.facts.hashCode())
+                is TraceEntry.MethodEntry -> {
+                    a.entryPoint.orderKey().compareTo(b.entryPoint.orderKey()).let { if (it != 0) return it }
+                    factsKey(a.facts).compareTo(factsKey(b.facts)).let { if (it != 0) return it }
+                    a.hashCode().compareTo(b.hashCode())
+                }
             }
         }
     }
+}
+
+private fun MethodEntryPoint.orderKey(): String = instKey(statement) + "@" + context
+
+private fun instKey(inst: org.opentaint.ir.api.common.cfg.CommonInst): String =
+    inst.location.method.toString() + "#" + inst.location.index
+
+private fun factsKey(facts: Collection<org.opentaint.dataflow.ap.ifds.access.InitialFactAp>): String =
+    facts.map { it.toString() }.sorted().joinToString(",")
+
+private fun edgesKey(edges: Collection<MethodTraceResolver.TraceEdge>): String =
+    edges.map { edgeKey(it) }.sorted().joinToString(";")
+
+private fun actionsKey(entry: SourceStartEntry): String = buildString {
+    // Full toString, not class names: two source entries can differ only in their rule
+    // payloads, and a key tie falls back to build-fragile hashCode ordering.
+    append(entry.sourcePrimaryAction?.toString() ?: "-")
+    append('|')
+    entry.sourceOtherActions.map { it.toString() }.sorted().joinTo(this, ",")
+}
+
+private fun edgeKey(edge: MethodTraceResolver.TraceEdge): String = when (edge) {
+    is MethodTraceResolver.TraceEdge.SourceTraceEdge -> "S|" + edge.fact
+    is MethodTraceResolver.TraceEdge.MethodTraceEdge -> "M|" + edge.initialFact + "|" + edge.fact
+    is MethodTraceResolver.TraceEdge.MethodTraceNDEdge -> "N|" + factsKey(edge.initialFacts) + "|" + edge.fact
 }
 
 private fun SourceStartEntry.priority(): Int {

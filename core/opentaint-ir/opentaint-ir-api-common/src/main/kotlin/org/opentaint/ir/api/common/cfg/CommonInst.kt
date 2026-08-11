@@ -8,6 +8,10 @@ interface CommonInst {
 
 interface CommonInstLocation {
     val method: CommonMethod
+
+    /** Position of the instruction inside its method body: a JVM-object-free coordinate
+     * for stable ordering (see trace/path/Source2SinkTraceGraph.kt). */
+    val index: Int
 }
 
 interface CommonAssignInst : CommonInst {

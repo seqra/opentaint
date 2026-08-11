@@ -436,12 +436,32 @@ class MethodTraceResolver(
         fun actions(): Int = actionVariants.size
     }
 
+    // Set-to-sequence frontiers. Every iteration marked stableOrder below drives entry
+    // creation order, which becomes entry ids, successor layout, and finally the rendered
+    // flow steps. Java hash-set iteration order is a function of the element hash formulas
+    // AND of insertion order (colliding buckets keep insertion order) -- the former moves
+    // whenever a participating class changes its field layout, the latter races between
+    // runs. Sorting by printed domain content removes both dependencies.
+    private fun Iterable<InitialFactAp>.stableOrder(): List<InitialFactAp> = sortedBy { it.toString() }
+
+    private fun Iterable<TraceEdge>.stableEdgeOrder(): List<TraceEdge> = sortedBy { edgeOrderKey(it) }
+
+    private fun edgeOrderKey(edge: TraceEdge): String = when (edge) {
+        is TraceEdge.SourceTraceEdge -> "S|" + edge.fact
+        is TraceEdge.MethodTraceEdge -> "M|" + edge.initialFact + "|" + edge.fact
+        is TraceEdge.MethodTraceNDEdge ->
+            "N|" + edge.initialFacts.map { it.toString() }.sorted().joinToString(",") + "|" + edge.fact
+    }
+
+    private fun factSetKey(facts: Set<InitialFactAp>): String =
+        facts.map { it.toString() }.sorted().joinToString(",")
+
     fun resolveIntraProceduralTrace(
         statement: CommonInst,
         facts: Set<InitialFactAp>,
         includeStatement: Boolean = false,
     ): List<SummaryTrace> {
-        val edges = facts.map { resolveIntraProceduralTraceEdge(statement, it, includeStatement) }
+        val edges = facts.stableOrder().map { resolveIntraProceduralTraceEdge(statement, it, includeStatement) }
         return edges.traceToFactSummaryEdges(statement, includeStatement)
     }
 
@@ -449,7 +469,7 @@ class MethodTraceResolver(
         statement: CommonInst,
         calleeEntry: TraceEntry.MethodEntry
     ): List<SummaryTrace> {
-        val traceEdges = calleeEntry.facts.flatMap { fact ->
+        val traceEdges = calleeEntry.facts.stableOrder().flatMap { fact ->
             val mappedFacts = methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
             mappedFacts.map { resolveIntraProceduralTraceEdge(statement, it, includeStatement = false) }
         }
@@ -484,7 +504,7 @@ class MethodTraceResolver(
         val universeFact = fact.replaceExclusions(ExclusionSet.Universe)
         val matchingInitialFacts = searcher.searchInitialFacts(statement, universeFact, includeStatement)
 
-        return matchingInitialFacts.map { initialFacts ->
+        return matchingInitialFacts.sortedBy { factSetKey(it) }.map { initialFacts ->
             val universeInitial = initialFacts.mapTo(hashSetOf()) { it.replaceExclusions(ExclusionSet.Universe) }
 
             when (universeInitial.size) {
@@ -722,7 +742,7 @@ class MethodTraceResolver(
                 if (!mapper.isTranslated(key)) return@forEachIntEntry
 
                 val translatedId = mapper.translate(key)
-                actionVariants.put(translatedId, value.toList())
+                actionVariants.put(translatedId, value.sortedBy { actionVariantKey(it) })
             }
 
             result += FullStart2FinalTrace(
@@ -819,7 +839,7 @@ class MethodTraceResolver(
         val entryEdges = hashSetOf<TraceEdge>()
         val sources = hashSetOf<SourceOtherAction>()
 
-        for (edge in entry.edges) {
+        for (edge in entry.edges.stableEdgeOrder()) {
             // We always have fact before entry point
             if (!containsEntryEdge(entry.statement, edge)) return
 
@@ -873,6 +893,67 @@ class MethodTraceResolver(
         }
     }
 
+    // The action-variant list order is the first-wins pick order in the path renderer
+    // (TracePath.resolveEntry): freezing raw hash-set iteration here bakes hash-formula
+    // and insertion-order dependence into the reported flow.
+    private fun instOrderKey(inst: CommonInst): String =
+        inst.location.method.toString() + "#" + inst.location.index
+
+    private fun edgeSetKey(edges: Set<TraceEdge>): String =
+        edges.map { edgeOrderKey(it) }.sorted().joinToString(";")
+
+    private fun passKey(action: TraceEntryAction.PassAction): String =
+        edgeSetKey(action.edges) + "/" + edgeSetKey(action.edgesAfter)
+
+    private fun summaryTraceKey(trace: SummaryTrace): String =
+        instOrderKey(trace.method.statement) + "@" + trace.method.context + "|" + trace.traceKind +
+            "|" + instOrderKey(trace.final.statement) + "|" + edgeSetKey(trace.final.edges)
+
+    // Exhaustive and content-deep on purpose: two distinct actions must never compare
+    // equal, or the tie falls back to racy hash-set insertion order. In particular two
+    // summaries of the same callee with different final statements produce identical
+    // call-site edges -- the summary content is the only discriminator (observed as the
+    // resolveFontCacheKey inst-15-vs-1 witness flip).
+    private fun actionOrderKey(action: TraceEntryAction?): String = when (action) {
+        null -> "-"
+        is TraceEntryAction.Sequential -> "Seq|" + passKey(action)
+        is TraceEntryAction.SequentialSourceRule ->
+            "SSR|" + edgeSetKey(action.sourceEdges) + "|" + action.rule
+        is TraceEntryAction.CallSourceRule ->
+            "CSR|" + edgeSetKey(action.sourceEdges) + "|" + action.rule
+        is TraceEntryAction.EntryPointSourceRule ->
+            "EPS|" + edgeSetKey(action.sourceEdges) + "|" + instOrderKey(action.entryPoint.statement) +
+                "@" + action.entryPoint.context + "|" + action.rule
+        is TraceEntryAction.CallRule -> "CR|" + passKey(action) + "|" + action.rule
+        is TraceEntryAction.CallSummary -> "CS|" + passKey(action) + "|" + summaryTraceKey(action.summaryTrace)
+        is TraceEntryAction.CallSourceSummary ->
+            "CSS|" + edgeSetKey(action.sourceEdges) + "|" + summaryTraceKey(action.summaryTrace)
+        is TraceEntryAction.UnresolvedCallSkip -> "UCS|" + passKey(action)
+    }
+
+    private fun combinationOrderKey(combination: ActionEdgeCombination): String = buildString {
+        combination.unchanged.map { edgeOrderKey(it) }.sorted().joinTo(this, ";")
+        append('#')
+        append(actionOrderKey(combination.primary))
+        append('#')
+        combination.other.map { actionOrderKey(it) }.sorted().joinTo(this, ",")
+    }
+
+    private fun actionVariantKey(variant: ActionVariant): String = buildString {
+        append(actionOrderKey(variant.primaryAction))
+        append('#')
+        variant.otherActions.map { actionOrderKey(it) }.sorted().joinTo(this, ",")
+        append('#')
+        append(edgeSetKey(variant.unchanged))
+    }
+
+    private fun sequentPreconditionKey(precondition: SequentPrecondition): String = when (precondition) {
+        is SequentPrecondition.Unchanged -> "0"
+        is MethodSequentPrecondition.PreconditionFactsForInitialFact ->
+            "1|" + precondition.fact + "|" + precondition.preconditionFacts.map { it.toString() }.sorted().joinToString(",")
+        is MethodSequentPrecondition.SequentSource -> "2|" + precondition.fact
+    }
+
     private sealed interface ActionOrUnchanged<T> {
         data class Unchanged<T>(val edge: TraceEdge) : ActionOrUnchanged<T>
         data class Action<T>(val action: T) : ActionOrUnchanged<T>
@@ -896,7 +977,7 @@ class MethodTraceResolver(
 
             val callEdges = mutableListOf<List<ActionOrUnchanged<PartiallyResolvedCallAction>>>()
 
-            for (edge in entry.edges) {
+            for (edge in entry.edges.stableEdgeOrder()) {
                 val preconditions = callFactPrecondition(preconditionFunction, edge.fact, callees)
                 val callActions = mutableListOf<ActionOrUnchanged<PartiallyResolvedCallAction>>()
 
@@ -954,11 +1035,11 @@ class MethodTraceResolver(
 
             val sequentActions = mutableListOf<List<ActionOrUnchanged<SequentialAction>>>()
 
-            for (edge in entry.edges) {
+            for (edge in entry.edges.stableEdgeOrder()) {
                 val preconditions = preconditionFunction.factPrecondition(edge.fact)
                 val actions = mutableListOf<ActionOrUnchanged<SequentialAction>>()
 
-                for (precondition in preconditions) {
+                for (precondition in preconditions.sortedBy { sequentPreconditionKey(it) }) {
                     when (precondition) {
                         is SequentPrecondition.Unchanged -> actions += ActionOrUnchanged.Unchanged(edge)
                         is MethodSequentPrecondition.SequentPreconditionFacts -> {
@@ -969,7 +1050,7 @@ class MethodTraceResolver(
 
                             when (precondition) {
                                 is MethodSequentPrecondition.PreconditionFactsForInitialFact -> {
-                                    precondition.preconditionFacts.mapTo(actions) { fact ->
+                                    precondition.preconditionFacts.stableOrder().mapTo(actions) { fact ->
                                         ActionOrUnchanged.Action(
                                             TraceEntryAction.Sequential(setOf(edge.replaceFact(fact)), setOf(edge))
                                         )
@@ -1064,7 +1145,10 @@ class MethodTraceResolver(
     ) {
         val variantsByEdges = hashMapOf<Set<TraceEdge>, MutableSet<ActionVariant>>()
 
-        for (sequent in actionsCombination) {
+        // The loop assigns entry ids (addPredecessor for Unchanged/SourceStart entries),
+        // and the combination list order is inherited from hash-set walks upstream --
+        // sort by combination content first.
+        for (sequent in actionsCombination.sortedBy { combinationOrderKey(it) }) {
             if (sequent.other.isEmpty()) {
                 if (sequent.primary == null) {
                     addPredecessor(entry, TraceEntry.Unchanged(sequent.unchanged, statement))
@@ -1087,7 +1171,13 @@ class MethodTraceResolver(
             }
         }
 
-        for ((edges, variants) in variantsByEdges) {
+        // Iteration order assigns entry ids: a raw HashMap walk here is ordered by the
+        // edge-set hash (moves on any TraceEdge field-layout change) and by racy insertion
+        // within colliding buckets.
+        val orderedVariantGroups = variantsByEdges.entries.sortedBy { (edges, _) ->
+            edges.map { edgeOrderKey(it) }.sorted().joinToString(";")
+        }
+        for ((edges, variants) in orderedVariantGroups) {
             val action = createAction(statement, edges, variants)
             addPredecessor(entry, action)
         }
@@ -1795,7 +1885,7 @@ class MethodTraceResolver(
 
         val actionVariants = Int2ObjectOpenHashMap<List<ActionVariant>>()
         unsafeActionVariants().forEachIntEntry { key, value ->
-            actionVariants.put(key, value.toList())
+            actionVariants.put(key, value.sortedBy { actionVariantKey(it) })
         }
 
         return FullStart2FinalTrace(
