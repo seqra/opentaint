@@ -16,19 +16,21 @@ import org.opentaint.dataflow.ap.ifds.ValueAccessor
  * and within a kind (every identity-bearing field is included; [Accessor.toString] is not
  * enough -- [FieldAccessor] prints neither its package nor its field type).
  *
- * This is key MATERIAL for canonical fact keys and interner dumps. It is NOT an ordering:
- * every ordering decision uses [Accessor]'s own [Comparable] implementation, which is the
- * single canonical order. The `when` is exhaustive on purpose -- a new accessor kind must
- * fail compilation here rather than silently fall back to a non-injective representation.
+ * Components are length-framed, so even unusual bytecode identifiers cannot make two
+ * distinct fields collide. Ordering uses [Accessor.compareTo]; this key is for hashing and
+ * serialization. The `when` is exhaustive on purpose -- a new accessor kind must fail
+ * compilation here rather than silently fall back to a process-specific representation.
  */
 internal fun Accessor.contentKey(): String = when (this) {
-    is FieldAccessor -> "F|$className|$fieldName|$fieldType"
-    is ClassStaticAccessor -> "S|$typeName"
-    is TaintMarkAccessor -> "T|$mark"
-    is TypeInfoAccessor -> "Y|$typeName"
-    ElementAccessor -> "[*]"
-    FinalAccessor -> "[$]"
-    AnyAccessor -> "[any]"
-    ValueAccessor -> "[value]"
-    TypeInfoGroupAccessor -> "[type]"
+    is FieldAccessor -> "F${className.framed()}${fieldName.framed()}${fieldType.framed()}"
+    is ClassStaticAccessor -> "S${typeName.framed()}"
+    is TaintMarkAccessor -> "T${mark.framed()}"
+    is TypeInfoAccessor -> "Y${typeName.framed()}"
+    ElementAccessor -> "E"
+    FinalAccessor -> "D"
+    AnyAccessor -> "A"
+    ValueAccessor -> "V"
+    TypeInfoGroupAccessor -> "G"
 }
+
+private fun String.framed(): String = "$length:$this"

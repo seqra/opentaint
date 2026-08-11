@@ -77,13 +77,6 @@ import org.opentaint.jvm.util.typename
 private val logger = object : KLogging() {}.logger
 
 const val GeneratedSpringRegistry = "__spring_registry__"
-
-// The generated registry is referenced as a class-static during analysis; registering it in
-// the rule universe lets the analyzer pre-intern its accessor canonically like every other.
-private val registerSpringRegistryAccessor = run {
-    org.opentaint.dataflow.configuration.jvm.serialized.SerializedRuleUniverse
-        .recordStaticPosition(GeneratedSpringRegistry)
-}
 const val GeneratedSpringControllerDispatcher = "__spring_dispatcher__"
 const val GeneratedSpringControllerDispatcherDispatchMethod = "__dispatch__"
 const val GeneratedSpringControllerDispatcherCleanupMethod = "__cleanup__"

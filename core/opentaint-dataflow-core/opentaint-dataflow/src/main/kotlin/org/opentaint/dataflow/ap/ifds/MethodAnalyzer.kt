@@ -344,8 +344,7 @@ class NormalMethodAnalyzer(
     }
 
     // Keys are the facts' CONTENT; TraceInfo is deliberately excluded. Facts that tie on
-    // the key are ordered by the stable sort in arrival order -- the layout the whole
-    // determinism verification base was measured under (see AccessorInterner.preIntern).
+    // the key are ordered by the stable sort in arrival order.
     private fun sequentContentKey(sf: Sequent): String = when (sf) {
         Sequent.Unchanged -> "0"
         Sequent.ZeroToZero -> "1"

@@ -3,7 +3,6 @@ package org.opentaint.common.sast.dataflow
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRuleUniverse
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
@@ -86,46 +85,11 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     val refManager = RefManager()
     val cancellation = Cancellation()
 
-    /**
-     * Accessors that can be enumerated from the analysis input before the run: fields and
-     * class names from the program representation (platform-specific), plus the taint marks
-     * and class-static positions of the loaded rule set. Pre-interning them in canonical
-     * order pins accessor indices to values derived only from the input; otherwise indices
-     * are handed out in thread arrival order, and that order leaks through iteration order
-     * into edge identities and finally into trace fingerprints.
-     */
-    protected open fun platformAccessorUniverse(): Sequence<Accessor> = emptySequence()
-
-    private fun warnNoCanonicalInterning() {
-        logger.warn {
-            "canonical accessor interning is only implemented for the tree AP mode; " +
-                "with ${options.ifdsApMode} the SARIF trace fingerprints may vary between runs of identical input"
-        }
-    }
-
-    private val seedAccessors: List<Accessor> by lazy {
-        buildList {
-            addAll(platformAccessorUniverse())
-            SerializedRuleUniverse.taintKinds().mapTo(this) { TaintMarkAccessor(it) }
-            SerializedRuleUniverse.staticPositionClassNames().mapTo(this) { ClassStaticAccessor(it) }
-            SerializedRuleUniverse.matcherClassNames().mapTo(this) { ClassStaticAccessor(it) }
-            SerializedRuleUniverse.fieldModifiers().mapTo(this) { (cls, field, type) ->
-                FieldAccessor(cls, field, type)
-            }
-        }.also {
-            logger.info { "Accessor seed: ${it.size} entries" }
-        }
-    }
-
     private val apManager by lazy {
-        // Both phases are seeded with the same statically enumerated universe. Carrying the
-        // prescan's interner into this seed was tried and rejected: the prescan is itself a
-        // parallel fixpoint with discovery-order interning, so its snapshot is not stable
-        // between runs, and an unstable seed shifts every index after the first difference.
         when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation, seedAccessors)
-            ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation).also { warnNoCanonicalInterning() }
-            ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation).also { warnNoCanonicalInterning() }
+            ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation)
+            ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation)
+            ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation)
         }
     }
 
@@ -168,7 +132,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     private fun prescan(startMethods: List<MethodWithContext>) {
         analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
-        ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation, seedAccessors))
+        ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
 
         val prescanTimeout = options.ifdsTimeout * 0.3
         runCatching { ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds) }

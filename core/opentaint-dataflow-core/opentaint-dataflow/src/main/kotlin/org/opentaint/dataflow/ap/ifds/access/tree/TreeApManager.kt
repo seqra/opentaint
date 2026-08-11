@@ -22,6 +22,7 @@ import org.opentaint.dataflow.ap.ifds.access.MethodFinalApSummariesStorage
 import org.opentaint.dataflow.ap.ifds.access.MethodInitialToFinalApSummariesStorage
 import org.opentaint.dataflow.ap.ifds.access.MethodNDInitialToFinalApSummariesStorage
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
+import org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusion
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
@@ -36,14 +37,12 @@ class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     refManager: RefManager,
     override val cancellation: Cancellation,
-    preInternAccessors: Iterable<Accessor> = emptyList(),
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
 
-    val interner = AccessorInterner().apply { preIntern(preInternAccessors) }
+    val interner = AccessorInterner()
 
-    // Content key per accessor index, cached: key MATERIAL for canonical fact keys, not an
-    // ordering. Ordering decisions go through [accessorIdxContentOrder] below.
+    // Content key per accessor index, cached for canonical fact keys and hashes.
     private val contentOrderKeys = java.util.concurrent.ConcurrentHashMap<Int, String>()
 
     // Resolution cache for the comparator's hot path: the interner read takes its storage
@@ -55,15 +54,17 @@ class TreeApManager(
         accessorsByIdx[idx] ?: interner.accessor(idx)?.also { accessorsByIdx.putIfAbsent(idx, it) }
 
     /**
-     * The canonical walk order for idx-keyed collections: the cached content-key string.
+     * The canonical walk order for idx-keyed collections: [Accessor]'s natural order.
      * Walks whose emission order can reach edge creation sort with this, so the order is a
      * function of the accessor content and never of the arrival order in which indices
-     * were assigned across analysis threads. The string order (not Accessor's Comparable)
-     * is deliberate -- it is the layout the whole determinism verification base was
-     * measured under; see the note on [AccessorInterner.preIntern].
+     * were assigned across analysis threads.
      */
     val accessorIdxContentOrder: Comparator<AccessorIdx> =
-        Comparator { a, b -> accessorContentKey(a).compareTo(accessorContentKey(b)) }
+        Comparator { a, b ->
+            val left = resolvedAccessor(a) ?: error("Accessor not found: $a")
+            val right = resolvedAccessor(b) ?: error("Accessor not found: $b")
+            left.compareTo(right)
+        }
 
     override fun factContentKey(fact: org.opentaint.dataflow.ap.ifds.access.FinalFactAp): String {
         fact as AccessTree
@@ -72,21 +73,33 @@ class TreeApManager(
             append('/')
             nodeContentKey(fact.access, this)
             append('/')
-            append(fact.exclusions)
+            append(exclusionContentKey(fact.exclusions))
         }
     }
 
-    override fun factContentKey(fact: org.opentaint.dataflow.ap.ifds.access.InitialFactAp): String =
-        fact.toString() // AccessPath is a chain, printed in path order: run-stable already
+    override fun factContentKey(fact: org.opentaint.dataflow.ap.ifds.access.InitialFactAp): String {
+        fact as AccessPath
+        return buildString {
+            append(fact.base)
+            var node = fact.access
+            while (node != null) {
+                appendFramed(accessorContentKey(node.accessor), this)
+                node = node.next
+            }
+            append("/*/").append(exclusionContentKey(fact.exclusions))
+        }
+    }
 
     private fun nodeContentKey(node: AccessTree.AccessNode, sb: StringBuilder) {
         if (node.isAbstract) sb.append('*')
         if (node.isFinal) sb.append('$')
+        node.deepAccessorExclusion?.let { sb.append(deepExclusionContentKey(it)) }
         val entries = ArrayList<Pair<AccessorIdx, AccessTree.AccessNode>>(4)
         node.forEachAccessor { a, child -> entries.add(a to child) }
         entries.sortWith(compareBy(accessorIdxContentOrder) { it.first })
         for ((a, child) in entries) {
-            sb.append('(').append(accessorContentKey(a)).append(':')
+            sb.append('(')
+            appendFramed(accessorContentKey(a), sb)
             nodeContentKey(child, sb)
             sb.append(')')
         }
@@ -94,8 +107,35 @@ class TreeApManager(
 
     fun accessorContentKey(idx: AccessorIdx): String {
         contentOrderKeys[idx]?.let { return it }
-        val accessor = resolvedAccessor(idx) ?: return "\u0000$idx"
+        val accessor = resolvedAccessor(idx) ?: error("Accessor not found: $idx")
         return contentOrderKeys.computeIfAbsent(idx) { accessor.contentKey() }
+    }
+
+    fun accessorContentHash(idx: AccessorIdx): Int = accessorContentKey(idx).hashCode()
+
+    private fun exclusionContentKey(exclusion: ExclusionSet): String = when (exclusion) {
+        ExclusionSet.Empty -> "{}"
+        ExclusionSet.Universe -> "*"
+        is ExclusionSet.Concrete -> exclusion.set.asSequence()
+            .map { it.contentKey() }
+            .sorted()
+            .joinToString(prefix = "{", postfix = "}") { "${it.length}:$it" }
+    }
+
+    fun deepExclusionContentKey(exclusion: DeepAccessorExclusion): String = buildString {
+        fun appendAccessors(accessors: IntArray) {
+            accessors.asSequence().map(::accessorContentKey).sorted()
+                .forEach { appendFramed(it, this@buildString) }
+        }
+        append("!{d0=")
+        appendAccessors(exclusion.accessorsFromDepth0)
+        append(";d1=")
+        appendAccessors(exclusion.accessorsFromDepth1)
+        append('}')
+    }
+
+    private fun appendFramed(value: String, sb: StringBuilder) {
+        sb.append(value.length).append(':').append(value)
     }
 
     val Accessor.idx: AccessorIdx

@@ -284,7 +284,10 @@ class AccessTree(
             var containsStatic = false
 
             if (isAbstract) hash += 1
-            if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
+            // Deep exclusions store compact accessor indices. Their own hash is therefore
+            // process-order-dependent when accessors are discovered concurrently. Equality
+            // still compares the complete value, while this stable hash only controls
+            // hash-table bucket placement.
 
             if (isFinal) {
                 depth = 1
@@ -352,7 +355,7 @@ class AccessTree(
                 if (isFinal) {
                     appendLine(FinalAccessor.toSuffix())
                 } else {
-                    val annotation = deepAccessorExclusion?.toString().orEmpty()
+                    val annotation = deepAccessorExclusion?.let(manager::deepExclusionContentKey).orEmpty()
                     appendLine("/*$annotation$suffix")
                 }
             }
@@ -379,7 +382,18 @@ class AccessTree(
 
         private fun accessorIndex(accessor: AccessorIdx): Int {
             if (accessors == null) return -1
-            return accessors.binarySearch(accessor)
+            var low = 0
+            var high = accessors.lastIndex
+            while (low <= high) {
+                val mid = (low + high).ushr(1)
+                val cmp = manager.accessorIdxContentOrder.compare(accessors[mid], accessor)
+                when {
+                    cmp < 0 -> low = mid + 1
+                    cmp > 0 -> high = mid - 1
+                    else -> return mid
+                }
+            }
+            return -(low + 1)
         }
 
         private fun getNodeByAccessor(accessor: AccessorIdx): AccessNode? =
@@ -785,7 +799,9 @@ class AccessTree(
                 uniqueAccessors.add(IntObjectImmutablePair(accessor, mergedNodes))
             }
 
-            uniqueAccessors.sortBy { it.firstInt() }
+            uniqueAccessors.sortWith { a, b ->
+                manager.accessorIdxContentOrder.compare(a.firstInt(), b.firstInt())
+            }
             val addedAccessors = IntArray(uniqueAccessors.size) { uniqueAccessors[it].firstInt() }
             val addedNodes = Array(uniqueAccessors.size) { uniqueAccessors[it].second() }
 
@@ -1015,7 +1031,7 @@ class AccessTree(
             var ai = 0
             var bi = 0
             while (ai < aAccessors.size && bi < bAccessors.size) {
-                val cmp = aAccessors[ai].compareTo(bAccessors[bi])
+                val cmp = manager.accessorIdxContentOrder.compare(aAccessors[ai], bAccessors[bi])
                 when {
                     cmp < 0 -> ai++
                     cmp > 0 -> bi++
@@ -1405,7 +1421,7 @@ class AccessTree(
                 val accessorsCmp = when {
                     otherAccessor == -1 -> -1 // thisField != null
                     thisAccessor == -1 -> 1 // otherField != null
-                    else -> thisAccessor.compareTo(otherAccessor)
+                    else -> manager.accessorIdxContentOrder.compare(thisAccessor, otherAccessor)
                 }
 
                 if (accessorsCmp < 0) {
@@ -1535,7 +1551,7 @@ class AccessTree(
         }
 
         private fun removeSingleAccessor(accessor: AccessorIdx): AccessNode {
-            val newAccessors = removeSingleAccessor(accessor, accessors, accessorNodes) ?: return this
+            val newAccessors = removeSingleAccessor(manager, accessor, accessors, accessorNodes) ?: return this
             return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
@@ -1614,7 +1630,9 @@ class AccessTree(
                     with(manager) { deserializedAccessors[it].idx }
                 }
 
-                val accessors = accessorIndices.sortedArray()
+                val accessors = accessorIndices.toTypedArray()
+                    .apply { sortWith(manager.accessorIdxContentOrder) }
+                    .toIntArray()
                 val accessNodes = Array(accessorsSize) { dstIdx ->
                     val dstAccessor = with(manager) { accessors[dstIdx].accessor }
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
@@ -1629,6 +1647,7 @@ class AccessTree(
 
             @JvmStatic
             private fun removeSingleAccessor(
+                manager: TreeApManager,
                 accessor: AccessorIdx,
                 accessors: IntArray?,
                 nodes: Array<AccessNode>?
@@ -1638,7 +1657,21 @@ class AccessTree(
                 }
                 nodes!!
 
-                val accessorIdx = accessors.binarySearch(accessor)
+                var low = 0
+                var high = accessors.lastIndex
+                var accessorIdx = -1
+                while (low <= high) {
+                    val mid = (low + high).ushr(1)
+                    val cmp = manager.accessorIdxContentOrder.compare(accessors[mid], accessor)
+                    when {
+                        cmp < 0 -> low = mid + 1
+                        cmp > 0 -> high = mid - 1
+                        else -> {
+                            accessorIdx = mid
+                            break
+                        }
+                    }
+                }
                 if (accessorIdx < 0) return null
 
                 val newAccessorsSize = accessors.size - 1

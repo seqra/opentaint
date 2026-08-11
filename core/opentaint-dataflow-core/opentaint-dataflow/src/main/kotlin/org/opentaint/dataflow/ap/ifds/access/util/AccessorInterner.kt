@@ -35,52 +35,9 @@ class AccessorInterner {
         }
 
         // Synchronized against concurrent [index] calls: ArrayList reads during a grow
-        // are a data race and can transiently observe null for a present element. A racy
-        // read here would make content-ordered comparisons fall back to index order --
-        // exactly the nondeterminism this class exists to remove.
+        // are a data race and can transiently observe null for a present element, breaking
+        // content-ordered comparisons.
         fun getOrNull(idx: Int): Accessor? = synchronized(this) { accessors.getOrNull(idx) }
-
-        fun snapshotTo(dst: MutableList<Accessor>): Unit = synchronized(this) {
-            dst.addAll(accessors)
-        }
-    }
-
-    /**
-     * Interns [accessors] in canonical (content-sorted) order. Index assignment is
-     * otherwise first-come across analysis threads, and those indices order hash-set and
-     * access-tree iteration inside the analyzers -- which makes edge identities, and
-     * therefore trace fingerprints, depend on thread scheduling. Interning the universe
-     * up front pins every index to a value derived only from the input.
-     *
-     * The order is (kind, content string), NOT [Accessor]'s Comparable order: the whole
-     * verification base (36 stable runs across three builds) was measured with this
-     * layout, and switching the layout was observed to shift analysis exploration into a
-     * different -- and in one case race-exposing -- regime. Any change here must re-verify
-     * trace determinism from scratch on a full corpus, not only pass the unit invariants.
-     */
-    fun preIntern(accessors: Iterable<Accessor>) {
-        accessors.sortedWith(compareBy({ it.javaClass.name }, { it.contentKey() })).forEach { index(it) }
-    }
-
-    // Diagnostics: -Dprobe.internerdump=<path> writes the idx -> accessor tables at
-    // shutdown. Determinism depends on every accessor kind being pre-interned; when a new
-    // feature introduces one that is not, diffing two dumps names it directly (any entry
-    // whose index differs between runs was interned in arrival order).
-    init {
-        System.getProperty("probe.internerdump")?.let { path ->
-            Runtime.getRuntime().addShutdownHook(Thread {
-                val f = java.io.File("$path.${DUMP_SEQ.incrementAndGet()}")
-                f.writeText(buildString {
-                    listOf("fields" to fields, "statics" to statics, "taints" to taints, "types" to types)
-                        .forEach { (name, st) ->
-                            appendLine("== $name ==")
-                            val dst = mutableListOf<Accessor>()
-                            st.snapshotTo(dst)
-                            dst.forEachIndexed { i, a -> appendLine("$i\t${a.contentKey()}\t${a.javaClass.simpleName}") }
-                        }
-                })
-            })
-        }
     }
 
     private val fields = AccessorStorage()
@@ -138,8 +95,6 @@ class AccessorInterner {
     }
 
     companion object {
-        private val DUMP_SEQ = java.util.concurrent.atomic.AtomicInteger()
-
         const val BASIC_KIND_BITS = 2
         const val BASIC_KIND_MASK = 0b11
         const val FIELD_KIND = 0b00

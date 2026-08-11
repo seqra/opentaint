@@ -197,7 +197,7 @@ class AccessPath(
 
     override val depth: Int get() = size
 
-    override fun toString(): String = "$base${access ?: ""}.*/$exclusions"
+    override fun toString(): String = apManager.factContentKey(this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -228,7 +228,7 @@ class AccessPath(
         val size: Int
 
         init {
-            var hash = accessor
+            var hash = manager.accessorContentHash(accessor)
             if (next != null) hash += 17 * next.hash
             this.hash = hash
         }

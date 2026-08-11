@@ -68,9 +68,6 @@ class LambdaAnonymousClassFeature : JIRClasspathExtFeature {
         return null
     }
 
-    /** Every lambda class synthesized so far; complete once the generating instruction lists are built. */
-    fun allLambdaClasses(): List<JIRLambdaClass> = lambdaClasses.values.toList()
-
     fun generateLambda(location: JIRInstLocation, lambda: JIRLambdaExpr): JIRLambdaClass {
         val lambdaClassName = with(location) {
             "${method.enclosingClass.name}$${method.name}_${method.descriptionHash()}\$jIR_lambda$${index}"
