@@ -98,18 +98,15 @@ interface MethodAnalyzer {
     fun collectStats(stats: MethodStats)
 
     data class ZeroToFactSub(
-        val currentEdge: ZeroToFact,
-        val methodInitialFactBase: AccessPathBase
+        val currentEdge: ZeroToFact
     )
 
     data class FactToFactSub(
-        val currentEdge: FactToFact,
-        val methodInitialFactBase: AccessPathBase
+        val currentEdge: FactToFact
     )
 
     data class NDFactToFactSub(
-        val currentEdge: NDFactToFact,
-        val methodInitialFactBase: AccessPathBase
+        val currentEdge: NDFactToFact
     )
 
     fun handleResolvedMethodCall(method: MethodWithContext, handler: MethodCallHandler)

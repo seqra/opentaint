@@ -902,7 +902,7 @@ class MethodTraceResolver(
                 for (precondition in preconditions) {
                     when (precondition) {
                         is CallPrecondition.Unchanged -> callActions += ActionOrUnchanged.Unchanged(edge)
-                        is PreconditionFactsForInitialFact<CallPreconditionFact> -> {
+                        is PreconditionFactsForInitialFact -> {
                             val initialEdge = edge.replaceFact(precondition.initialFact)
                             if (!skipFactCheck && !containsEntryEdge(entry.statement, initialEdge)) {
                                 continue

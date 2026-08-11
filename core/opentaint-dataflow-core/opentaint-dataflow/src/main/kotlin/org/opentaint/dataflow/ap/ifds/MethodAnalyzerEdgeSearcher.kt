@@ -105,7 +105,7 @@ abstract class MethodAnalyzerEdgeSearcher(
             )
 
             val preconditions = preconditionFunction.factPrecondition(fact)
-            return preconditions.queryResult<_, CallPrecondition.Unchanged, PreconditionFactsForInitialFact<CallPreconditionFact>> { initialFact }
+            return preconditions.queryResult<_, CallPrecondition.Unchanged, PreconditionFactsForInitialFact> { initialFact }
         } else {
             val preconditionFunction = analysisManager.getMethodSequentPrecondition(
                 apManager, analysisContext, statement

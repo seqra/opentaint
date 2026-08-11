@@ -13,7 +13,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondit
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
@@ -44,11 +43,11 @@ class JIRMethodCallPrecondition(
 ) : MethodCallPrecondition.Default {
     private val taintCtx get() = analysisContext.taint
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> {
-        val results = mutableListOf<CallPrecondition<CallPreconditionFact>>()
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
+        val results = mutableListOf<CallPrecondition>()
 
         results += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: mkUnchanged()
+            ?: CallPrecondition.Unchanged
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }

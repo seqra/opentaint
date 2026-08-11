@@ -13,7 +13,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePr
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.GoFunctionSignature
@@ -51,11 +50,11 @@ class GoMethodCallPrecondition(
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> {
-        val result = mutableListOf<CallPrecondition<CallPreconditionFact>>()
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
+        val result = mutableListOf<CallPrecondition>()
 
         result += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: mkUnchanged()
+            ?: CallPrecondition.Unchanged
 
         analysisContext.aliasAnalysis.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let {
