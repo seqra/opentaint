@@ -127,7 +127,8 @@ interface MethodAnalyzer {
 
     fun resolveCalleeFact(
         statement: CommonInst,
-        factAp: FinalFactAp
+        factAp: FinalFactAp,
+        callee: MethodEntryPoint,
     ): Set<FinalFactAp>
 
     fun allIntraProceduralFacts(): Map<CommonInst, Set<FinalFactAp>>
@@ -1379,9 +1380,13 @@ class NormalMethodAnalyzer(
         return resolver.resolveForwardTrace(statement, fact, includeStatement, relevantFactFilter)
     }
 
-    override fun resolveCalleeFact(statement: CommonInst, factAp: FinalFactAp): Set<FinalFactAp> =
+    override fun resolveCalleeFact(
+        statement: CommonInst,
+        factAp: FinalFactAp,
+        callee: MethodEntryPoint,
+    ): Set<FinalFactAp> =
         analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
-            .prepareSummaryFinalFact(factAp, FactTypeChecker.Dummy)
+            .prepareSummaryFinalFact(factAp, callee)
             .toSet()
 
     private fun updateTaintRulesStats(
@@ -1609,7 +1614,11 @@ class EmptyMethodAnalyzer(
         TODO("Not yet implemented")
     }
 
-    override fun resolveCalleeFact(statement: CommonInst, factAp: FinalFactAp): Set<FinalFactAp> {
+    override fun resolveCalleeFact(
+        statement: CommonInst,
+        factAp: FinalFactAp,
+        callee: MethodEntryPoint,
+    ): Set<FinalFactAp> {
         TODO("Not yet implemented")
     }
 
@@ -1878,12 +1887,13 @@ class TimedMethodAnalyzer(
     override fun resolveCalleeFact(
         statement: CommonInst,
         factAp: FinalFactAp,
+        callee: MethodEntryPoint,
     ): Set<FinalFactAp> = timeOperation(
         operation = "resolveCalleeFact",
         category = OpCategory.TRACE,
         addToTotalTime = false,
     ) {
-        base.resolveCalleeFact(statement, factAp)
+        base.resolveCalleeFact(statement, factAp, callee)
     }
 
     override fun allIntraProceduralFacts(): Map<CommonInst, Set<FinalFactAp>> = timeOperation(

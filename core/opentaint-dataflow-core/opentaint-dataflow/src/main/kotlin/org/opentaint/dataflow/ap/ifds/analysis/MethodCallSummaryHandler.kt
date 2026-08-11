@@ -34,9 +34,9 @@ interface MethodCallSummaryHandler {
         ) : SummaryEdge
     }
 
-    fun prepareSummaryInitialFact(fact: InitialFactAp): List<InitialFactAp>
+    fun prepareSummaryInitialFact(fact: InitialFactAp, callee: MethodEntryPoint): List<InitialFactAp>
 
-    fun prepareSummaryFinalFact(fact: FinalFactAp, checker: FactTypeChecker = factTypeChecker): List<FinalFactAp>
+    fun prepareSummaryFinalFact(fact: FinalFactAp, callee: MethodEntryPoint): List<FinalFactAp>
 
     fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> {
         if (summaryFact == null) return setOf(Sequent.ZeroToZero)
@@ -44,10 +44,12 @@ interface MethodCallSummaryHandler {
         return setOf(Sequent.ZeroToFact(summaryFact, TraceInfo.ApplySummary))
     }
 
-    fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> =
-        prepareSummaryFinalFact(summaryEdge.factAp).map {
-            Edge.ZeroToFact(summaryEdge.methodEntryPoint, summaryEdge.statement, it)
+    fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> {
+        val callee = summaryEdge.methodEntryPoint
+        return prepareSummaryFinalFact(summaryEdge.factAp, callee).map {
+            Edge.ZeroToFact(callee, summaryEdge.statement, it)
         }
+    }
 
     fun handleZeroToFact(
         currentFactAp: FinalFactAp,
@@ -86,10 +88,11 @@ interface MethodCallSummaryHandler {
     }
 
     fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> {
-        val finalFacts = prepareSummaryFinalFact(summaryEdge.factAp)
-        return prepareSummaryInitialFact(summaryEdge.initialFactAp).flatMap { initialFactAp ->
+        val callee = summaryEdge.methodEntryPoint
+        val finalFacts = prepareSummaryFinalFact(summaryEdge.factAp, callee)
+        return prepareSummaryInitialFact(summaryEdge.initialFactAp, callee).flatMap { initialFactAp ->
             finalFacts.map { factAp ->
-                Edge.FactToFact(summaryEdge.methodEntryPoint, initialFactAp, summaryEdge.statement, factAp)
+                Edge.FactToFact(callee, initialFactAp, summaryEdge.statement, factAp)
             }
         }
     }
@@ -120,13 +123,14 @@ interface MethodCallSummaryHandler {
     }
 
     fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<SummaryEdge.NdF2F> {
-        val finalFacts = prepareSummaryFinalFact(summaryEdge.factAp)
+        val callee = summaryEdge.methodEntryPoint
+        val finalFacts = prepareSummaryFinalFact(summaryEdge.factAp, callee)
         return summaryEdge.initialFacts
-            .map { prepareSummaryInitialFact(it) }
+            .map { prepareSummaryInitialFact(it, callee) }
             .cartesianProductMapTo { it.toHashSet() }
             .flatMap { initialFacts ->
                 finalFacts.map { factAp ->
-                    SummaryEdge.NdF2F(summaryEdge.methodEntryPoint, initialFacts, factAp)
+                    SummaryEdge.NdF2F(callee, initialFacts, factAp)
                 }
             }
     }

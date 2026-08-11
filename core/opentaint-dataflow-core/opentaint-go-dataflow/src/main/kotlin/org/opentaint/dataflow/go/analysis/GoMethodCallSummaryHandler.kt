@@ -3,6 +3,7 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -25,12 +26,12 @@ class GoMethodCallSummaryHandler(
 ) : MethodCallSummaryHandler {
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
 
-    override fun prepareSummaryInitialFact(fact: InitialFactAp): List<InitialFactAp> {
+    override fun prepareSummaryInitialFact(fact: InitialFactAp, callee: MethodEntryPoint): List<InitialFactAp> {
         return GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
     }
 
-    override fun prepareSummaryFinalFact(fact: FinalFactAp, checker: FactTypeChecker): List<FinalFactAp> {
-        return GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, checker)
+    override fun prepareSummaryFinalFact(fact: FinalFactAp, callee: MethodEntryPoint): List<FinalFactAp> {
+        return GoMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
     }
 
     private val callExpr: GoCallExpr by lazy {

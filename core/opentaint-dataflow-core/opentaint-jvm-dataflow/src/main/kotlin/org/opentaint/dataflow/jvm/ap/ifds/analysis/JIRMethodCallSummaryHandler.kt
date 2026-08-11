@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -24,11 +25,11 @@ class JIRMethodCallSummaryHandler(
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
-    override fun prepareSummaryInitialFact(fact: InitialFactAp): List<InitialFactAp> =
+    override fun prepareSummaryInitialFact(fact: InitialFactAp, callee: MethodEntryPoint): List<InitialFactAp> =
         JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
-    override fun prepareSummaryFinalFact(fact: FinalFactAp, checker: FactTypeChecker): List<FinalFactAp> =
-        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, checker)
+    override fun prepareSummaryFinalFact(fact: FinalFactAp, callee: MethodEntryPoint): List<FinalFactAp> =
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
 
     override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
         super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->

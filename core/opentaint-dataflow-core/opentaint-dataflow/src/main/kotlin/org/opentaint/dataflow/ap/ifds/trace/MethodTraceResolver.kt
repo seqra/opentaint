@@ -452,7 +452,7 @@ class MethodTraceResolver(
     ): List<SummaryTrace> {
         val handler = analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
         val traceEdges = calleeEntry.facts.flatMap { fact ->
-            val mappedFacts = handler.prepareSummaryInitialFact(fact)
+            val mappedFacts = handler.prepareSummaryInitialFact(fact, calleeEntry.entryPoint)
             mappedFacts.map { resolveIntraProceduralTraceEdge(statement, it, includeStatement = false) }
         }
 
@@ -1657,7 +1657,7 @@ class MethodTraceResolver(
 
             if (deltas.isEmpty()) continue
 
-            val mappedSummaryInitial = summaryHandler.prepareSummaryInitialFact(summaryEdge.initialFactAp)
+            val mappedSummaryInitial = summaryHandler.prepareSummaryInitialFact(summaryEdge.initialFactAp, callee)
 
             for ((matchedEntryFact, delta) in deltas) {
                 // todo: remove this check?
@@ -1692,7 +1692,7 @@ class MethodTraceResolver(
             if (!mappedSummaryFact.contains(callerFact)) continue
 
             val mappedSummaryInitialFacts = summaryEdge.initialFacts.map {
-                summaryHandler.prepareSummaryInitialFact(it)
+                summaryHandler.prepareSummaryInitialFact(it, callee)
             }
 
             mappedSummaryInitialFacts.cartesianProductMapTo { mappedFactGroup ->
