@@ -405,18 +405,6 @@ class NormalMethodAnalyzer(
                 handleUnchangedStatementEdge(edge)
             }
 
-            is MethodCallFlowFunction.Drop -> {
-                // do nothing
-            }
-
-            is MethodCallFlowFunction.CallToReturnZeroFact -> {
-                handleStatementEdge(edge, ZeroToZero(methodEntryPoint, edge.statement))
-            }
-
-            is MethodCallFlowFunction.CallToReturnZFact -> {
-                handleStatementEdge(edge, ZeroToFact(methodEntryPoint, edge.statement, fact.factAp))
-            }
-
             is MethodCallFlowFunction.CallToStartZeroFact -> {
                 val callerEdge = ZeroToZero(methodEntryPoint, edge.statement)
 
@@ -432,21 +420,11 @@ class NormalMethodAnalyzer(
                 resolveMethodCall(callExpr, edge.statement, handler, failureHandler)
             }
 
-            is MethodCallFlowFunction.CallToReturnFFact -> {
-                val edgeAfterStatement = FactToFact(methodEntryPoint, fact.initialFactAp, edge.statement, fact.factAp)
-                handleStatementEdge(edge, edgeAfterStatement)
-            }
-
-            is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> {
-                val edgeAfterStatement = NDFactToFact(
-                    methodEntryPoint, fact.initialFacts, edge.statement, fact.factAp
-                )
-                handleStatementEdge(edge, edgeAfterStatement)
-            }
-
             is MethodCallFlowFunction.ZeroSideEffect -> {
                 addZeroSideEffect(fact.kind)
             }
+
+            is MethodCallFlowFunction.Call2ReturnFact -> propagateCall2ReturnFact(edge, fact)
         }
     }
 
@@ -458,20 +436,6 @@ class NormalMethodAnalyzer(
         when (fact) {
             is MethodCallFlowFunction.Unchanged -> {
                 handleUnchangedStatementEdge(edge)
-            }
-
-            is MethodCallFlowFunction.Drop -> {
-                // do nothing
-            }
-
-            is MethodCallFlowFunction.CallToReturnFFact -> {
-                val edgeAfterStatement = FactToFact(methodEntryPoint, fact.initialFactAp, edge.statement, fact.factAp)
-                handleStatementEdge(edge, edgeAfterStatement)
-            }
-
-            is MethodCallFlowFunction.CallToReturnZFact -> {
-                val edgeAfterStatement = ZeroToFact(methodEntryPoint, edge.statement, fact.factAp)
-                handleStatementEdge(edge, edgeAfterStatement)
             }
 
             is MethodCallFlowFunction.CallToStartFFact -> {
@@ -492,12 +456,7 @@ class NormalMethodAnalyzer(
                 addFactSideEffect(edge, fact.initialFactAp, fact.kind)
             }
 
-            is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> {
-                val edgeAfterStatement = NDFactToFact(
-                    methodEntryPoint, fact.initialFacts, edge.statement, fact.factAp
-                )
-                handleStatementEdge(edge, edgeAfterStatement)
-            }
+            is MethodCallFlowFunction.Call2ReturnFact -> propagateCall2ReturnFact(edge, fact)
         }
     }
 
@@ -511,22 +470,6 @@ class NormalMethodAnalyzer(
                 handleUnchangedStatementEdge(edge)
             }
 
-            is MethodCallFlowFunction.Drop -> {
-                // do nothing
-            }
-
-            is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> {
-                val edgeAfterStatement = NDFactToFact(
-                    methodEntryPoint, fact.initialFacts, edge.statement, fact.factAp
-                )
-                handleStatementEdge(edge, edgeAfterStatement)
-            }
-
-            is MethodCallFlowFunction.CallToReturnZFact -> {
-                val edgeAfterStatement = ZeroToFact(methodEntryPoint, edge.statement, fact.factAp)
-                handleStatementEdge(edge, edgeAfterStatement)
-            }
-
             is MethodCallFlowFunction.CallToStartNDFFact -> {
                 val callerEdge = NDFactToFact(methodEntryPoint, fact.initialFacts, edge.statement, fact.callerFactAp)
 
@@ -534,11 +477,12 @@ class NormalMethodAnalyzer(
                 val failureHandler = MethodCallResolutionFailureHandler.NDFactToFactHandler(callerEdge, fact.startFactBase)
                 resolveMethodCall(callExpr, edge.statement, handler, failureHandler)
             }
+
+            is MethodCallFlowFunction.Call2ReturnFact -> propagateCall2ReturnFact(edge, fact)
         }
     }
 
     private fun propagateZeroCallSuccessFact(
-        callExpr: CommonCallExpr,
         edge: ZeroInitialEdge,
         fact: MethodCallFlowFunction.ZeroCallSuccessFact,
         method: MethodWithContext,
@@ -554,15 +498,11 @@ class NormalMethodAnalyzer(
                 handleMethodCall(method) { runner.subscribeOnMethodSummaries(callerEdge, it, fact.startFactBase) }
             }
 
-            is MethodCallFlowFunction.CallToReturnFFact,
-            is MethodCallFlowFunction.CallToReturnNonDistributiveFact,
-            is MethodCallFlowFunction.CallToReturnZFact,
-            is MethodCallFlowFunction.CallToReturnZeroFact -> propagateZeroCallFact(callExpr, edge, fact)
+            is MethodCallFlowFunction.Call2ReturnFact -> propagateCall2ReturnFact(edge, fact)
         }
     }
 
     private fun propagateFactCallSuccessFact(
-        callExpr: CommonCallExpr,
         edge: FactToFact,
         fact: MethodCallFlowFunction.FactCallSuccessFact,
         method: MethodWithContext,
@@ -574,16 +514,19 @@ class NormalMethodAnalyzer(
                 handleMethodCall(method) { runner.subscribeOnMethodSummaries(callerEdge, it, fact.startFactBase) }
             }
 
-            is MethodCallFlowFunction.CallToReturnFFact,
-            is MethodCallFlowFunction.CallToReturnZFact,
-            is MethodCallFlowFunction.CallToReturnNonDistributiveFact,
-            is MethodCallFlowFunction.SideEffectRequirement,
-            is MethodCallFlowFunction.FactSideEffect -> propagateFactCallFact(callExpr, edge, fact)
+            is MethodCallFlowFunction.SideEffectRequirement -> {
+                addSideEffectRequirement(edge, fact.initialFactAp)
+            }
+
+            is MethodCallFlowFunction.FactSideEffect -> {
+                addFactSideEffect(edge, fact.initialFactAp, fact.kind)
+            }
+
+            is MethodCallFlowFunction.Call2ReturnFact -> propagateCall2ReturnFact(edge, fact)
         }
     }
 
     private fun propagateNDFactCallSuccessFact(
-        callExpr: CommonCallExpr,
         edge: NDFactToFact,
         fact: MethodCallFlowFunction.NDFactCallSuccessFact,
         method: MethodWithContext,
@@ -594,8 +537,36 @@ class NormalMethodAnalyzer(
                 handleMethodCall(method) { runner.subscribeOnMethodSummaries(callerEdge, it, fact.startFactBase) }
             }
 
-            is MethodCallFlowFunction.CallToReturnZFact,
-            is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> propagateNDFactCallFact(callExpr, edge, fact)
+            is MethodCallFlowFunction.Call2ReturnFact -> propagateCall2ReturnFact(edge, fact)
+        }
+    }
+
+    private fun propagateCall2ReturnFact(edge: Edge, fact: MethodCallFlowFunction.Call2ReturnFact) {
+        when (fact) {
+            is MethodCallFlowFunction.CallToReturnZeroFact -> {
+                handleStatementEdge(edge, ZeroToZero(methodEntryPoint, edge.statement))
+            }
+
+            is MethodCallFlowFunction.CallToReturnZFact -> {
+                val edgeAfterStatement = ZeroToFact(methodEntryPoint, edge.statement, fact.factAp)
+                handleStatementEdge(edge, edgeAfterStatement)
+            }
+
+            is MethodCallFlowFunction.CallToReturnFFact -> {
+                val edgeAfterStatement = FactToFact(methodEntryPoint, fact.initialFactAp, edge.statement, fact.factAp)
+                handleStatementEdge(edge, edgeAfterStatement)
+            }
+
+            is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> {
+                val edgeAfterStatement = NDFactToFact(
+                    methodEntryPoint, fact.initialFacts, edge.statement, fact.factAp
+                )
+                handleStatementEdge(edge, edgeAfterStatement)
+            }
+
+            is MethodCallFlowFunction.Drop -> {
+                // do nothing
+            }
         }
     }
 
@@ -820,27 +791,27 @@ class NormalMethodAnalyzer(
         when (handler) {
             is MethodCallHandler.ZeroToZeroHandler -> {
                 flowFunction.propagateZeroToZeroResolutionSuccess(method).forEach {
-                    propagateZeroCallSuccessFact(callExpr, handler.currentEdge, it, method)
+                    propagateZeroCallSuccessFact(handler.currentEdge, it, method)
                 }
             }
 
             is MethodCallHandler.ZeroToFactHandler -> {
                 flowFunction.propagateZeroToFactResolutionSuccess(handler.currentEdge.factAp, handler.startFactBase, method).forEach {
-                    propagateZeroCallSuccessFact(callExpr, handler.currentEdge, it, method)
+                    propagateZeroCallSuccessFact(handler.currentEdge, it, method)
                 }
             }
 
             is MethodCallHandler.FactToFactHandler -> {
                 val edge = handler.currentEdge
                 flowFunction.propagateFactToFactResolutionSuccess(edge.initialFactAp, edge.factAp, handler.startFactBase, method).forEach {
-                    propagateFactCallSuccessFact(callExpr, edge, it, method)
+                    propagateFactCallSuccessFact(edge, it, method)
                 }
             }
 
             is MethodCallHandler.NDFactToFactHandler -> {
                 val edge = handler.currentEdge
                 flowFunction.propagateNDFactToFactResolutionSuccess(edge.initialFacts, edge.factAp, handler.startFactBase, method).forEach {
-                    propagateNDFactCallSuccessFact(callExpr, edge, it, method)
+                    propagateNDFactCallSuccessFact(edge, it, method)
                 }
             }
         }
