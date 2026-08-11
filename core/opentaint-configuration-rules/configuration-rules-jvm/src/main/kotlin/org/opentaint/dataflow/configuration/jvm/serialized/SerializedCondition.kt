@@ -139,7 +139,11 @@ sealed interface SerializedCondition {
     data class ContainsMark(
         val tainted: String,
         val pos: PositionBaseWithModifiers,
-    ): SerializedCondition
+    ): SerializedCondition {
+        init {
+            SerializedRuleUniverse.recordTaintKind(tainted)
+        }
+    }
 
     @Serializable
     data class NumberOfArgs(val numberOfArgs: Int): SerializedCondition

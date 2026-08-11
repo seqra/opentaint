@@ -21,7 +21,11 @@ import kotlinx.serialization.encoding.Encoder
 
 @Serializable(with = PositionBaseSerializer::class)
 sealed interface PositionBase {
-    data class ClassStatic(val className: String) : PositionBase
+    data class ClassStatic(val className: String) : PositionBase {
+        init {
+            SerializedRuleUniverse.recordStaticPosition(className)
+        }
+    }
     data class Argument(val idx: Int?) : PositionBase
     data class AnyArgument(val classifier: String) : PositionBase
     data object This : PositionBase
@@ -141,7 +145,11 @@ class WithModifiersSerializer: KSerializer<PositionBaseWithModifiers.WithModifie
 sealed interface PositionModifier {
     data object ArrayElement : PositionModifier
     data object AnyField : PositionModifier
-    data class Field(val className: String, val fieldName: String, val fieldType: String) : PositionModifier
+    data class Field(val className: String, val fieldName: String, val fieldType: String) : PositionModifier {
+        init {
+            SerializedRuleUniverse.recordFieldModifier(className, fieldName, fieldType)
+        }
+    }
 
     fun serializedStr(): String = when (this) {
         ArrayElement -> "[*]"

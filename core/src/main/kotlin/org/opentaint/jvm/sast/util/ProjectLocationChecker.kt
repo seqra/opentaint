@@ -8,6 +8,9 @@ import org.opentaint.jvm.sast.project.ProjectClasses
 class ProjectLocationChecker(val classes: ProjectClasses) : ClassLocationChecker {
     override fun isProjectClass(cls: JIRClassOrInterface): Boolean = classes.isProjectClass(cls)
     override fun isProjectLocation(loc: RegisteredLocation): Boolean = classes.isProjectLocation(loc)
+
+    override fun projectClassNames(): Sequence<String> =
+        classes.projectClasses.values.asSequence().flatten()
 }
 
 fun ProjectClasses.locationChecker(): ClassLocationChecker = ProjectLocationChecker(this)

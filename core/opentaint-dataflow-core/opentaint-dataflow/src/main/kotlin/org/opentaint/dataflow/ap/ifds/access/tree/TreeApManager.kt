@@ -36,10 +36,11 @@ class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     refManager: RefManager,
     override val cancellation: Cancellation,
+    preInternAccessors: Iterable<Accessor> = emptyList(),
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
 
-    val interner = AccessorInterner()
+    val interner = AccessorInterner().apply { preIntern(preInternAccessors) }
 
     // Content key per accessor index, cached: key MATERIAL for canonical fact keys, not an
     // ordering. Ordering decisions go through [accessorIdxContentOrder] below.
