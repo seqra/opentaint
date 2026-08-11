@@ -78,9 +78,6 @@ class MethodTraceResolver(
     private val manager: AnalysisUnitRunnerManager get() = runner.manager
     private val apManager: ApManager get() = runner.apManager
 
-    private fun summaryHandler(statement: CommonInst) =
-        analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
-
     // Enum can give non-determinacy as its entries have new hash code on every JVM run.
     // Override hashcode() and equals() when using enum as a field in classes whose objects
     // can be stored in sets etc.
@@ -453,7 +450,7 @@ class MethodTraceResolver(
         statement: CommonInst,
         calleeEntry: TraceEntry.MethodEntry
     ): List<SummaryTrace> {
-        val handler = summaryHandler(statement)
+        val handler = analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
         val traceEdges = calleeEntry.facts.flatMap { fact ->
             val mappedFacts = handler.prepareSummaryInitialFact(fact)
             mappedFacts.map { resolveIntraProceduralTraceEdge(statement, it, includeStatement = false) }
@@ -1647,7 +1644,7 @@ class MethodTraceResolver(
         startFact: MethodCallPrecondition.CallToStartResolved,
         statement: CommonInst
     ) {
-        val summaryHandler = summaryHandler(statement)
+        val summaryHandler = analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
         val resolvedCallSummaries = mutableListOf<CallSummary>()
 
         val methodSummaries = manager.findFactToFactSummaryEdges(callee, startFact.startFactBase)
