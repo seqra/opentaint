@@ -82,8 +82,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
             @Suppress("UNCHECKED_CAST")
             storages.add(storage as S)
 
-            storage.children.forEachEntry { _, s ->
-                if (s == null) return@forEachEntry
+            storage.forEachChildContentOrdered { _, s ->
                 unprocessedStorages.add(s)
             }
         }
@@ -106,15 +105,26 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
             @Suppress("UNCHECKED_CAST")
             body(accessors, storage as S)
 
-            storage.children.forEachEntry { accessor, s ->
-                if (s == null) return@forEachEntry
-
+            storage.forEachChildContentOrdered { accessor, s ->
                 val childrenAccessors = accessors.clone()
                 childrenAccessors.add(accessor)
 
                 unprocessedStorages.add(childrenAccessors to s)
             }
         }
+    }
+
+    // The children map is keyed by accessor index; its native iteration order follows the
+    // index values, which are assigned in analysis-thread arrival order. Every traversal
+    // whose output order can reach edge or summary emission walks in content order instead.
+    private inline fun forEachChildContentOrdered(body: (AccessorIdx, S) -> Unit) {
+        var count = 0
+        children.forEachEntry { _, s -> if (s != null) count++ }
+        if (count == 0) return
+        val entries = ArrayList<Pair<Int, S>>(count)
+        children.forEachEntry { a, s -> if (s != null) entries.add(a to s) }
+        if (count > 1) entries.sortWith(compareBy(manager.accessorIdxContentOrder) { it.first })
+        for ((a, s) in entries) body(a, s)
     }
 
     fun removeChildren(predicate: (AccessorIdx, S) -> Boolean) {

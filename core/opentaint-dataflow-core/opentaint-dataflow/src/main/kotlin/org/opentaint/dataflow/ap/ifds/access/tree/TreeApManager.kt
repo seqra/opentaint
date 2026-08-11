@@ -25,6 +25,7 @@ import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
+import org.opentaint.dataflow.ap.ifds.access.util.contentKey
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
@@ -39,6 +40,62 @@ class TreeApManager(
     val refManager = refManager.softRefManager("Tree")
 
     val interner = AccessorInterner()
+
+    // Content key per accessor index, cached: key MATERIAL for canonical fact keys, not an
+    // ordering. Ordering decisions go through [accessorIdxContentOrder] below.
+    private val contentOrderKeys = java.util.concurrent.ConcurrentHashMap<Int, String>()
+
+    // Resolution cache for the comparator's hot path: the interner read takes its storage
+    // lock, so resolve each index once. Only successful resolutions are cached -- caching
+    // a transient failure would freeze a wrong ordering for the accessor's lifetime.
+    private val accessorsByIdx = java.util.concurrent.ConcurrentHashMap<Int, Accessor>()
+
+    private fun resolvedAccessor(idx: AccessorIdx): Accessor? =
+        accessorsByIdx[idx] ?: interner.accessor(idx)?.also { accessorsByIdx.putIfAbsent(idx, it) }
+
+    /**
+     * The canonical walk order for idx-keyed collections: the cached content-key string.
+     * Walks whose emission order can reach edge creation sort with this, so the order is a
+     * function of the accessor content and never of the arrival order in which indices
+     * were assigned across analysis threads. The string order (not Accessor's Comparable)
+     * is deliberate -- it is the layout the whole determinism verification base was
+     * measured under; see the note on [AccessorInterner.preIntern].
+     */
+    val accessorIdxContentOrder: Comparator<AccessorIdx> =
+        Comparator { a, b -> accessorContentKey(a).compareTo(accessorContentKey(b)) }
+
+    override fun factContentKey(fact: org.opentaint.dataflow.ap.ifds.access.FinalFactAp): String {
+        fact as AccessTree
+        return buildString {
+            append(fact.base)
+            append('/')
+            nodeContentKey(fact.access, this)
+            append('/')
+            append(fact.exclusions)
+        }
+    }
+
+    override fun factContentKey(fact: org.opentaint.dataflow.ap.ifds.access.InitialFactAp): String =
+        fact.toString() // AccessPath is a chain, printed in path order: run-stable already
+
+    private fun nodeContentKey(node: AccessTree.AccessNode, sb: StringBuilder) {
+        if (node.isAbstract) sb.append('*')
+        if (node.isFinal) sb.append('$')
+        val entries = ArrayList<Pair<AccessorIdx, AccessTree.AccessNode>>(4)
+        node.forEachAccessor { a, child -> entries.add(a to child) }
+        entries.sortWith(compareBy(accessorIdxContentOrder) { it.first })
+        for ((a, child) in entries) {
+            sb.append('(').append(accessorContentKey(a)).append(':')
+            nodeContentKey(child, sb)
+            sb.append(')')
+        }
+    }
+
+    fun accessorContentKey(idx: AccessorIdx): String {
+        contentOrderKeys[idx]?.let { return it }
+        val accessor = resolvedAccessor(idx) ?: return "\u0000$idx"
+        return contentOrderKeys.computeIfAbsent(idx) { accessor.contentKey() }
+    }
 
     val Accessor.idx: AccessorIdx
         get() = interner.index(this)

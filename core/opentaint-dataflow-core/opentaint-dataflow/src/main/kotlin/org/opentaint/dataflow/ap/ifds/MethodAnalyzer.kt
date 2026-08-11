@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction.StartFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver
@@ -330,8 +331,32 @@ class NormalMethodAnalyzer(
         handleSequentFact(edge, sequentialFacts)
     }
 
-    private fun handleSequentFact(edge: Edge, sf: Iterable<Sequent>) =
-        sf.forEach { handleSequentFact(edge, it) }
+    private fun handleSequentFact(edge: Edge, sf: Iterable<Sequent>) {
+        // One processing step can derive several facts; the set's insertion order follows
+        // whatever the generating rule or walk produced, which can differ between runs.
+        // Ordering the batch by fact content makes the emission order run-independent.
+        val batch = sf as? Collection<Sequent> ?: sf.toList()
+        if (batch.size <= 1) {
+            batch.forEach { handleSequentFact(edge, it) }
+            return
+        }
+        batch.sortedBy { sequentContentKey(it) }.forEach { handleSequentFact(edge, it) }
+    }
+
+    // Keys are the facts' CONTENT; TraceInfo is deliberately excluded. Facts that tie on
+    // the key are ordered by the stable sort in arrival order -- the layout the whole
+    // determinism verification base was measured under (see AccessorInterner.preIntern).
+    private fun sequentContentKey(sf: Sequent): String = when (sf) {
+        Sequent.Unchanged -> "0"
+        Sequent.ZeroToZero -> "1"
+        is Sequent.ZeroToFact -> "2|" + apManager.factContentKey(sf.factAp)
+        is Sequent.FactToFact ->
+            "3|" + apManager.factContentKey(sf.initialFactAp) + "|" + apManager.factContentKey(sf.factAp)
+        is Sequent.NDFactToFact -> "4|" + apManager.factContentKey(sf.factAp)
+        is Sequent.SideEffectRequirement -> "5|" + apManager.factContentKey(sf.initialFactAp)
+        is Sequent.ZeroSideEffect -> "6|" + sf.kind
+        is Sequent.FactSideEffect -> "7|" + apManager.factContentKey(sf.initialFactAp) + "|" + sf.kind
+    }
 
     private fun handleSequentFact(edge: Edge, sf: Sequent) {
         val edgeAfterStatement = when (sf) {
@@ -380,19 +405,55 @@ class NormalMethodAnalyzer(
                     is ZeroToFact -> flowFunction.propagateZeroToFact(edge.factAp)
                 }
 
-                callFacts.forEach {
+                callFacts.contentOrdered().forEach {
                     propagateZeroCallFact(callExpr, edge, it)
                 }
             }
 
-            is FactToFact -> flowFunction.propagateFactToFact(edge.initialFactAp, edge.factAp).forEach {
+            is FactToFact -> flowFunction.propagateFactToFact(edge.initialFactAp, edge.factAp).contentOrdered().forEach {
                 propagateFactCallFact(callExpr, edge, it)
             }
 
-            is NDFactToFact -> flowFunction.propagateNDFactToFact(edge.initialFacts, edge.factAp).forEach {
+            is NDFactToFact -> flowFunction.propagateNDFactToFact(edge.initialFacts, edge.factAp).contentOrdered().forEach {
                 propagateNDFactCallFact(callExpr, edge, it)
             }
         }
+    }
+
+    // Same rationale as handleSequentFact: a call step derives a batch of facts whose set
+    // order follows the generating rule or walk; ordering by content makes it run-stable.
+    private fun <T : MethodCallFlowFunction.CallFact> Collection<T>.contentOrdered(): Collection<T> {
+        if (size <= 1) return this
+        return sortedBy { callFactContentKey(it) }
+    }
+
+    // Exhaustive on the sealed hierarchy on purpose: a new CallFact variant must fail
+    // compilation here rather than silently fall into a catch-all key. TraceInfo is
+    // deliberately excluded from the keys, as in [sequentContentKey].
+    private fun callFactContentKey(fact: MethodCallFlowFunction.CallFact): String = when (fact) {
+        MethodCallFlowFunction.Unchanged -> "0"
+        MethodCallFlowFunction.CallToReturnZeroFact -> "1"
+        MethodCallFlowFunction.CallToStartZeroFact -> "2"
+        is MethodCallFlowFunction.CallToReturnFFact ->
+            "3|" + apManager.factContentKey(fact.initialFactAp) + "|" + apManager.factContentKey(fact.factAp)
+        is MethodCallFlowFunction.CallToStartFFact ->
+            "4|" + fact.startFactBase + "|" + apManager.factContentKey(fact.initialFactAp) +
+                "|" + apManager.factContentKey(fact.callerFactAp)
+        is MethodCallFlowFunction.CallToReturnZFact -> "5|" + apManager.factContentKey(fact.factAp)
+        is MethodCallFlowFunction.CallToStartZFact ->
+            "6|" + fact.startFactBase + "|" + apManager.factContentKey(fact.callerFactAp)
+        is MethodCallFlowFunction.CallToReturnNonDistributiveFact ->
+            "7|" + apManager.factContentKey(fact.factAp) +
+                "|" + fact.initialFacts.map { apManager.factContentKey(it) }.sorted().joinToString(",")
+        is MethodCallFlowFunction.CallToStartNDFFact ->
+            "8|" + fact.startFactBase + "|" + apManager.factContentKey(fact.callerFactAp) +
+                "|" + fact.initialFacts.map { apManager.factContentKey(it) }.sorted().joinToString(",")
+        is MethodCallFlowFunction.SideEffectRequirement ->
+            "9|" + apManager.factContentKey(fact.initialFactAp)
+        is MethodCallFlowFunction.ZeroSideEffect -> "A|" + fact.kind
+        is MethodCallFlowFunction.FactSideEffect ->
+            "B|" + apManager.factContentKey(fact.initialFactAp) + "|" + fact.kind
+        is MethodCallFlowFunction.Drop -> "C"
     }
 
     private fun propagateZeroCallFact(

@@ -22,6 +22,16 @@ interface ApManager {
     val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy
     val cancellation: Cancellation
 
+    /**
+     * A key that is equal for equal fact content across runs and total within a run.
+     * Used to order same-batch derivations so their emission order cannot depend on
+     * accessor index assignment. The default falls back to toString, which is only
+     * run-stable for managers whose printing does not follow index order.
+     */
+    fun factContentKey(fact: FinalFactAp): String = fact.toString()
+
+    fun factContentKey(fact: InitialFactAp): String = fact.toString()
+
     fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction
 
     fun methodEdgesFinalApSet(methodInitialStatement: CommonInst, maxInstIdx: Int, languageManager: LanguageManager): MethodEdgesFinalApSet

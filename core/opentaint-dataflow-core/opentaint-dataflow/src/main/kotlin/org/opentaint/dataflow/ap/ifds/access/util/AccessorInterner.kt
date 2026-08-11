@@ -34,7 +34,11 @@ class AccessorInterner {
             }
         }
 
-        fun getOrNull(idx: Int): Accessor? = accessors.getOrNull(idx)
+        // Synchronized against concurrent [index] calls: ArrayList reads during a grow
+    // are a data race and can transiently observe null for a present element. A racy
+    // read here would make content-ordered comparisons fall back to index order --
+    // exactly the nondeterminism this class exists to remove.
+    fun getOrNull(idx: Int): Accessor? = synchronized(this) { accessors.getOrNull(idx) }
     }
 
     private val fields = AccessorStorage()

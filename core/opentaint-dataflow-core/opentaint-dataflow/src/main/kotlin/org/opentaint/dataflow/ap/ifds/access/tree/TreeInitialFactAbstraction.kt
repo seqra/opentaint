@@ -97,6 +97,27 @@ class TreeInitialFactAbstraction(
         }
     }
 
+    private inline fun AccessTreeNode.forEachAccessorContentOrdered(body: (AccessorIdx, AccessTreeNode) -> Unit) {
+        var count = 0
+        forEachAccessor { _, _ -> count++ }
+        if (count <= 1) {
+            forEachAccessor(body)
+            return
+        }
+        val entries = ArrayList<Pair<Int, AccessTreeNode>>(count)
+        forEachAccessor { a, n -> entries.add(a to n) }
+        entries.sortWith(compareBy(apManager.accessorIdxContentOrder) { it.first })
+        for ((a, n) in entries) body(a, n)
+    }
+
+    private inline fun IntOpenHashSet.forEachIntContentOrdered(body: (Int) -> Unit) {
+        if (size <= 1) {
+            forEachInt(body)
+            return
+        }
+        toIntArray().toTypedArray().apply { sortWith(apManager.accessorIdxContentOrder) }.forEach(body)
+    }
+
     private fun MethodSameBaseInitialFact.unrollAnyAccessors(
         unrollRequests: List<AnyAccessorUnrollRequest>,
         typeChecker: FactTypeChecker
@@ -109,9 +130,9 @@ class TreeInitialFactAbstraction(
         for (unrollRequest in unrollRequests) {
             apManager.cancellation.checkpoint()
 
-            unrollRequest.accessors.forEachInt { accessor ->
+            unrollRequest.accessors.forEachIntContentOrdered { accessor ->
                 val accessorInstance = with(apManager) { accessor.accessor }
-                if (!unrollStrategy.unrollAccessor(accessorInstance)) return@forEachInt
+                if (!unrollStrategy.unrollAccessor(accessorInstance)) return@forEachIntContentOrdered
 
                 val accessorFilter = unrollRequest.currentAp.createFilter(typeChecker)
                 val accessorStatus = accessorFilter.check(accessorInstance)
@@ -121,16 +142,16 @@ class TreeInitialFactAbstraction(
                         // accept
                     }
 
-                    is FactTypeChecker.FilterResult.Reject -> return@forEachInt
+                    is FactTypeChecker.FilterResult.Reject -> return@forEachIntContentOrdered
                 }
 
                 val prefix = ReversedApNode(accessor, unrollRequest.currentAp)
 
                 val nodeFilter = prefix.createFilter(typeChecker)
-                val filteredNode = unrollRequest.node.filterAccessNode(nodeFilter) ?: return@forEachInt
+                val filteredNode = unrollRequest.node.filterAccessNode(nodeFilter) ?: return@forEachIntContentOrdered
 
                 newFacts += filteredNode.addReversedApParents(prefix)
-                    ?: return@forEachInt
+                    ?: return@forEachIntContentOrdered
             }
         }
 
@@ -200,7 +221,7 @@ class TreeInitialFactAbstraction(
                 abstractAccessPath(state.analyzedTrieRoot, FINAL_ACCESSOR_IDX, node, state.currentAp, unprocessed, createAbstractAp)
             }
 
-            state.added.forEachAccessor { accessor, node ->
+            state.added.forEachAccessorContentOrdered { accessor, node ->
                 abstractAccessPath(state.analyzedTrieRoot, accessor, node, state.currentAp, unprocessed, createAbstractAp)
             }
         }
@@ -268,7 +289,7 @@ class TreeInitialFactAbstraction(
             createAbstractAp(ReversedApNode(FINAL_ACCESSOR_IDX, currentAp))
         }
 
-        addedNode.forEachAccessor { accessor, node ->
+        addedNode.forEachAccessorContentOrdered { accessor, node ->
             val nextAp = ReversedApNode(accessor, currentAp)
             if (!accessor.isAlwaysUnrollNext()) {
                 createAbstractAp(nextAp)
