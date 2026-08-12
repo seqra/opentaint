@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.MethodAccessPathSubscription
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.serialization.MethodEntryPointSummaries
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.dataflow.util.concurrentReadSafeForEach
@@ -565,9 +566,13 @@ class SummaryEdgeSubscriptionManager(
             handleF2F: MethodAnalyzer.(List<FactToFactSub>, List<S>) -> Unit,
             handleZ2F: MethodAnalyzer.(List<ZeroToFactSub>, List<S>) -> Unit,
             handleND2F: MethodAnalyzer.(List<NDFactToFactSub>, List<S>) -> Unit,
+            emptyDeltaRequired: Boolean = false,
         ) {
-            subscriptionStorage.findFactEdgeSub(summaryInitialFact).forEach { (ep, subscriptions) ->
-                val summarySubs = subscriptions.mapTo(mutableListOf()) {
+            subscriptionStorage.findFactEdgeSub(summaryInitialFact, emptyDeltaRequired).forEach { (ep, subscriptions) ->
+                val summarySubs = subscriptions.mapNotNullTo(mutableListOf()) {
+                    if (emptyDeltaRequired && !it.callerPathEdge.factAp.hasEmptyDelta(summaryInitialFact)) {
+                        return@mapNotNullTo null
+                    }
                     FactToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
                 }
 
@@ -578,7 +583,10 @@ class SummaryEdgeSubscriptionManager(
             }
 
             subscriptionStorage.findZeroEdgeSub(summaryInitialFact).forEach { (ep, subscriptions) ->
-                val summarySubs = subscriptions.mapTo(mutableListOf()) {
+                val summarySubs = subscriptions.mapNotNullTo(mutableListOf()) {
+                    if (emptyDeltaRequired && !it.callerPathEdge.factAp.hasEmptyDelta(summaryInitialFact)) {
+                        return@mapNotNullTo null
+                    }
                     ZeroToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
                 }
 
@@ -588,8 +596,11 @@ class SummaryEdgeSubscriptionManager(
                 analyzer.handleZ2F(summarySubs, summaries)
             }
 
-            subscriptionStorage.findFactNDEdgeSub(summaryInitialFact).forEach { (ep, subscriptions) ->
-                val summarySubs = subscriptions.mapTo(mutableListOf()) {
+            subscriptionStorage.findFactNDEdgeSub(summaryInitialFact, emptyDeltaRequired).forEach { (ep, subscriptions) ->
+                val summarySubs = subscriptions.mapNotNullTo(mutableListOf()) {
+                    if (emptyDeltaRequired && !it.callerPathEdge.factAp.hasEmptyDelta(summaryInitialFact)) {
+                        return@mapNotNullTo null
+                    }
                     NDFactToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
                 }
 
@@ -611,34 +622,116 @@ class SummaryEdgeSubscriptionManager(
                 }
             }
 
+            if (manager.apManager !is BaseOnlyApManager) {
+                for ((summaryInitialFact, summaries) in sameInitialFactEdges) {
+                    applySummaries(
+                        subscriptionStorage, summaryInitialFact, summaries,
+                        MethodAnalyzer::handleFactToFactMethodNDSummaryEdge,
+                        MethodAnalyzer::handleZeroToFactMethodNDSummaryEdge,
+                        MethodAnalyzer::handleNDFactToFactMethodNDSummaryEdge,
+                        emptyDeltaRequired = true,
+                    )
+                }
+                return
+            }
+
+            val factActivations = linkedMapOf<
+                MethodEntryPoint,
+                MutableMap<FactToFactSub, MutableSet<Edge.NDFactToFact>>,
+            >()
+            val zeroActivations = linkedMapOf<
+                MethodEntryPoint,
+                MutableMap<ZeroToFactSub, MutableSet<Edge.NDFactToFact>>,
+            >()
+            val ndActivations = linkedMapOf<
+                MethodEntryPoint,
+                MutableMap<NDFactToFactSub, MutableSet<Edge.NDFactToFact>>,
+            >()
+
             for ((summaryInitialFact, summaries) in sameInitialFactEdges) {
-                applySummaries(
-                    subscriptionStorage, summaryInitialFact, summaries,
-                    MethodAnalyzer::handleFactToFactMethodNDSummaryEdge,
-                    MethodAnalyzer::handleZeroToFactMethodNDSummaryEdge,
-                    MethodAnalyzer::handleNDFactToFactMethodNDSummaryEdge,
-                )
+                subscriptionStorage.findFactEdgeSub(summaryInitialFact, emptyDeltaRequired = true)
+                    .forEach { (ep, subscriptions) ->
+                        val bySubscription = factActivations.getOrPut(ep, ::linkedMapOf)
+                        subscriptions.forEach { subscription ->
+                            if (subscription.callerPathEdge.factAp.hasEmptyDelta(summaryInitialFact)) {
+                                val sub = FactToFactSub(
+                                    subscription.callerPathEdge,
+                                    subscription.calleeInitialFactBase,
+                                )
+                                bySubscription.getOrPut(sub, ::linkedSetOf).addAll(summaries)
+                            }
+                        }
+                    }
+
+                subscriptionStorage.findZeroEdgeSub(summaryInitialFact)
+                    .forEach { (ep, subscriptions) ->
+                        val bySubscription = zeroActivations.getOrPut(ep, ::linkedMapOf)
+                        subscriptions.forEach { subscription ->
+                            if (subscription.callerPathEdge.factAp.hasEmptyDelta(summaryInitialFact)) {
+                                val sub = ZeroToFactSub(
+                                    subscription.callerPathEdge,
+                                    subscription.calleeInitialFactBase,
+                                )
+                                bySubscription.getOrPut(sub, ::linkedSetOf).addAll(summaries)
+                            }
+                        }
+                    }
+
+                subscriptionStorage.findFactNDEdgeSub(summaryInitialFact, emptyDeltaRequired = true)
+                    .forEach { (ep, subscriptions) ->
+                        val bySubscription = ndActivations.getOrPut(ep, ::linkedMapOf)
+                        subscriptions.forEach { subscription ->
+                            if (subscription.callerPathEdge.factAp.hasEmptyDelta(summaryInitialFact)) {
+                                val sub = NDFactToFactSub(
+                                    subscription.callerPathEdge,
+                                    subscription.calleeInitialFactBase,
+                                )
+                                bySubscription.getOrPut(sub, ::linkedSetOf).addAll(summaries)
+                            }
+                        }
+                    }
+            }
+
+            factActivations.forEach { (ep, bySubscription) ->
+                val analyzer = processingCtx.getMethodAnalyzer(ep)
+                bySubscription.forEach { (sub, summaries) ->
+                    analyzer.handleFactToFactMethodNDSummaryEdge(listOf(sub), summaries.toList())
+                }
+            }
+            zeroActivations.forEach { (ep, bySubscription) ->
+                val analyzer = processingCtx.getMethodAnalyzer(ep)
+                bySubscription.forEach { (sub, summaries) ->
+                    analyzer.handleZeroToFactMethodNDSummaryEdge(listOf(sub), summaries.toList())
+                }
+            }
+            ndActivations.forEach { (ep, bySubscription) ->
+                val analyzer = processingCtx.getMethodAnalyzer(ep)
+                bySubscription.forEach { (sub, summaries) ->
+                    analyzer.handleNDFactToFactMethodNDSummaryEdge(listOf(sub), summaries.toList())
+                }
             }
         }
     }
 
     private inner class NewSideEffectRequirementEvent(
         private val methodEntryPoint: MethodEntryPoint,
-        private val sideEffectRequirements: List<InitialFactAp>
+        private val sideEffectRequirements: List<InitialFactAp>,
     ) : SummaryEvent {
         override fun processMethodSummary() {
             val methodSubscriptions = methodSummarySubscriptions[methodEntryPoint] ?: return
 
             sideEffectRequirements.forEach { sideEffectRequirement ->
-                methodSubscriptions.findFactEdgeSub(sideEffectRequirement, emptyDeltaRequired = true).forEach { (ep, subscriptions) ->
-                    val analyzer = processingCtx.getMethodAnalyzer(ep)
-                    for (subscription in subscriptions) {
-                        analyzer.handleMethodSideEffectRequirement(
-                            subscription.callerPathEdge, subscription.calleeInitialFactBase,
-                            listOf(sideEffectRequirement)
-                        )
+                methodSubscriptions.findFactEdgeSub(sideEffectRequirement, emptyDeltaRequired = true)
+                    .forEach { (ep, subscriptions) ->
+                        val analyzer = processingCtx.getMethodAnalyzer(ep)
+                        for (subscription in subscriptions) {
+                            analyzer.handleMethodSideEffectRequirement(
+                                subscription.callerPathEdge,
+                                subscription.calleeInitialFactBase,
+                                listOf(sideEffectRequirement),
+                            )
+                        }
                     }
-                }
             }
         }
     }
@@ -737,6 +830,7 @@ class SummaryEdgeSubscriptionManager(
             processingCtx.addSummaryEdgeEvent(NewSideEffectSummaryEvent(methodEntryPoint, sideEffects))
         }
     }
+
 }
 
 class SummaryEdgeStorageWithSubscribers(
@@ -962,6 +1056,13 @@ class SummaryEdgeStorageWithSubscribers(
             it.setEntryPoint(methodEntryPoint).build()
         })
 
+    fun factToFactEdges(finalFactPattern: FinalFactAp): List<FactToFact> =
+        collectToListWithPostProcess(mutableListOf(), {
+            taintedFactSummaryEdges.filterEdgesByFinalTo(it, finalFactPattern)
+        }, {
+            it.setEntryPoint(methodEntryPoint).build()
+        })
+
     fun factNDEdges(finalFactBase: AccessPathBase): List<Edge.NDFactToFact> =
         collectToListWithPostProcess(mutableListOf(), {
             ndF2FSummaryEdges.filterEdgesTo(it, initialFactPattern = null, finalFactBase)
@@ -996,9 +1097,12 @@ class SummaryEdgeStorageWithSubscribers(
         collectAllZeroToFactSummariesTo(sourceEdges)
         val sourceSummaries = sourceEdges.sumOf { (it as? Edge.ZeroToFact)?.factAp?.size ?: 0 }
 
-        val passEdges = mutableListOf<FactToFact>()
-        collectAllFactToFactSummariesTo(passEdges)
-        val passSummaries = passEdges.sumOf { it.factAp.size }
+        val passSummaries = taintedFactSummaryEdges.storageStats()?.finalFactSizeSum
+            ?: run {
+                val passEdges = mutableListOf<FactToFact>()
+                collectAllFactToFactSummariesTo(passEdges)
+                passEdges.sumOf { it.factAp.size.toLong() }
+            }
 
         stats.stats(methodEntryPoint.method).sourceSummaries += sourceSummaries
         stats.stats(methodEntryPoint.method).passSummaries += passSummaries
@@ -1169,6 +1273,12 @@ abstract class MethodSummaryEdgesForExitPoint<E : Edge, B : EdgeBuilder<B>, Stor
     fun filterEdgesTo(dst: MutableList<B>, containsPattern: Pattern) {
         processStorageEdges(dst) { storage, result ->
             storageFilterEdgesTo(result, storage, containsPattern)
+        }
+    }
+
+    fun forEachStorage(body: (Storage) -> Unit) {
+        exitPointsStorage.concurrentReadSafeMapIndexed { _, storage ->
+            body(storage)
         }
     }
 

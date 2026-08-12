@@ -327,8 +327,9 @@ slot iterator.
 - `depth` equals this compact size. It is a bounded retention metric, not an
   attempt to reproduce Tree's node count, logical wrapper depth, or Any-cycle
   sentinel.
-- `isAbstract` is true exactly when the logical graph contains abstract-node
-  acceptance. Delta emptiness is independent of abstractness.
+- `isAbstract` is true exactly when the current logical node has abstract
+  acceptance. An abstraction after a concrete prefix becomes current only after
+  that prefix is consumed. Delta emptiness is independent of abstractness.
 
 These metrics intentionally describe the compact representation. Semantic
 operations must not use them as logical-path lengths.

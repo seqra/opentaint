@@ -5,9 +5,12 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.SideEffectSummary.FactSideEffectSummary
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -52,6 +55,7 @@ class BaseOnlyTreeDifferentialStorageTest {
             AnyAccessorUnrollStrategy.AnyAccessorDisabled,
             Cancellation(),
             fieldSensitive = true,
+            summaryStorageFieldGeneralizationEnabled = true,
         )
 
     @Test
@@ -178,6 +182,131 @@ class BaseOnlyTreeDifferentialStorageTest {
             baseOnlyNDBuilders.map { it.setEntryPoint(entryPoint).setExitStatement(inst).build().factAp },
             "method ND patterned",
         )
+    }
+
+    @Test
+    fun `generalized F2F summaries cover every Tree member application`() {
+        val (tree, baseOnly) = managers()
+        val fields = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            FieldAccessor("Owner", "generalized-$index", "Value")
+        }
+        val marks = fields.indices.map { index -> TaintMarkAccessor("generalized-mark-$index") }
+        val treeStorage = tree.methodInitialToFinalApSummariesStorage(inst)
+        val baseOnlyStorage = baseOnly.methodInitialToFinalApSummariesStorage(inst)
+
+        treeStorage.add(
+            fields.mapIndexed { index, field ->
+                Edge.FactToFact(
+                    entryPoint,
+                    tree.initialOf(
+                        AccessPathBase.This,
+                        if (index == 0) exA else ExclusionSet.Empty,
+                        field,
+                    ),
+                    inst,
+                    tree.abstractFinalOf(AccessPathBase.Return, fields.reversed()[index])
+                        .replaceExclusions(if (index == 0) exA else ExclusionSet.Empty),
+                )
+            },
+            mutableListOf(),
+        )
+        baseOnlyStorage.add(
+            fields.mapIndexed { index, field ->
+                Edge.FactToFact(
+                    entryPoint,
+                    baseOnly.initialOf(
+                        AccessPathBase.This,
+                        if (index == 0) exA else ExclusionSet.Empty,
+                        field,
+                    ),
+                    inst,
+                    baseOnly.abstractFinalOf(AccessPathBase.Return, fields.reversed()[index])
+                        .replaceExclusions(if (index == 0) exA else ExclusionSet.Empty),
+                )
+            },
+            mutableListOf(),
+        )
+
+        val baseOnlyStored = mutableListOf<org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder>()
+        baseOnlyStorage.filterEdgesTo(
+            baseOnlyStored,
+            initialFactPattern = null,
+            finalFactBase = AccessPathBase.Return,
+        )
+        assertEquals(1, baseOnlyStored.size, "the eligible field family must be generalized")
+
+        fields.forEachIndexed { index, field ->
+            val treeSelected = mutableListOf<org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder>()
+            val baseOnlySelected = mutableListOf<org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder>()
+            treeStorage.filterEdgesTo(
+                treeSelected,
+                tree.finalOf(AccessPathBase.This, field, marks[index]),
+                AccessPathBase.Return,
+            )
+            baseOnlyStorage.filterEdgesTo(
+                baseOnlySelected,
+                baseOnly.finalOf(AccessPathBase.This, field, marks[index]),
+                AccessPathBase.Return,
+            )
+
+            assertTrue(treeSelected.isNotEmpty(), "Tree member $index must be applicable")
+            assertTrue(baseOnlySelected.isNotEmpty(), "generalization lost Tree member $index")
+            val input = baseOnly.finalOf(AccessPathBase.This, field, marks[index])
+            val applied = baseOnlySelected.flatMap { builder ->
+                val summary = builder
+                    .setEntryPoint(entryPoint)
+                    .setExitStatement(inst)
+                    .build()
+                MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
+                    input,
+                    summary.initialFactAp,
+                ).mapNotNull { effect ->
+                    when (effect) {
+                        is SummaryEdgeApplication.SummaryApRefinement ->
+                            summary.factAp
+                                .concat(FactTypeChecker.Dummy, effect.delta)
+                                ?.replaceExclusions(input.exclusions)
+
+                        is SummaryEdgeApplication.SummaryExclusionRefinement ->
+                            summary.factAp.replaceExclusions(effect.exclusion)
+                    }
+                }
+            }
+            val expected = baseOnly.exactInitialOf(
+                AccessPathBase.Return,
+                fields.reversed()[index],
+                marks[index],
+            )
+            assertTrue(
+                applied.any { it.contains(expected) },
+                "applying the generalized summary does not cover Tree member $index: $applied",
+            )
+        }
+    }
+
+    @Test
+    fun `field generalization keeps concrete field mark mappings exact`() {
+        val (_, baseOnly) = managers()
+        val fields = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            FieldAccessor("Owner", "marked-$index", "Value")
+        }
+        val storage = baseOnly.methodInitialToFinalApSummariesStorage(inst)
+        storage.add(
+            fields.mapIndexed { index, field ->
+                val memberMark = TaintMarkAccessor("member-$index")
+                Edge.FactToFact(
+                    entryPoint,
+                    baseOnly.exactInitialOf(AccessPathBase.This, field, memberMark),
+                    inst,
+                    baseOnly.finalOf(AccessPathBase.Return, fields.reversed()[index], memberMark),
+                )
+            },
+            mutableListOf(),
+        )
+
+        val stored = mutableListOf<org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder>()
+        storage.filterEdgesTo(stored, initialFactPattern = null, finalFactBase = AccessPathBase.Return)
+        assertEquals(fields.size, stored.size)
     }
 
     @Test
@@ -309,6 +438,12 @@ class BaseOnlyTreeDifferentialStorageTest {
 
     private fun ApManager.initialOf(base: AccessPathBase, exclusions: ExclusionSet, vararg accessors: Accessor): InitialFactAp {
         var fact = mostAbstractInitialAp(base).replaceExclusions(exclusions)
+        accessors.reversed().forEach { fact = fact.prependAccessor(it) }
+        return fact
+    }
+
+    private fun ApManager.exactInitialOf(base: AccessPathBase, vararg accessors: Accessor): InitialFactAp {
+        var fact = createFinalInitialAp(base, ExclusionSet.Empty)
         accessors.reversed().forEach { fact = fact.prependAccessor(it) }
         return fact
     }

@@ -88,4 +88,45 @@ class MethodEdgesInitialToFinalApSetTest {
             assertTrue(edges.add(statement, initial2, final2).isEmpty(), "$name duplicate delta")
         }
     }
+
+    @Test
+    fun `batch insertion has the same exact delta as scalar insertion`() {
+        val strategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
+        val managers = listOf(
+            "Tree" to TreeApManager(strategy, RefManager(), org.opentaint.dataflow.util.Cancellation()),
+            "Automata" to AutomataApManager(strategy, org.opentaint.dataflow.util.Cancellation()),
+            "Cactus" to CactusApManager(strategy, org.opentaint.dataflow.util.Cancellation()),
+            "BaseOnly" to BaseOnlyApManager(strategy, org.opentaint.dataflow.util.Cancellation(), fieldSensitive = true),
+        )
+
+        managers.forEach { (name, manager) ->
+            val exclusion = ExclusionSet.Concrete(TaintMarkAccessor("excluded"))
+            val initials = listOf(
+                manager.mostAbstractInitialAp(AccessPathBase.This)
+                    .prependAccessor(TaintMarkAccessor("origin-1"))
+                    .replaceExclusions(exclusion),
+                manager.mostAbstractInitialAp(AccessPathBase.LocalVar(0))
+                    .prependAccessor(TaintMarkAccessor("origin-2"))
+                    .replaceExclusions(exclusion),
+            )
+            val final = manager.createFinalAp(AccessPathBase.Return, exclusion)
+                .prependAccessor(TaintMarkAccessor("result"))
+            val scalar = manager.methodEdgesInitialToFinalApSet(statement, 0, languageManager)
+            val batch = manager.methodEdgesInitialToFinalApSet(statement, 0, languageManager)
+
+            val scalarDelta = initials.flatMap { scalar.add(statement, it, final) }
+            val batchDelta = arrayListOf<Pair<InitialFactAp, FinalFactAp>>()
+            batch.addAll(statement, initials, final) { initial, addedFinal ->
+                batchDelta += initial to addedFinal
+            }
+
+            assertEquals(scalarDelta, batchDelta, "$name propagation delta")
+
+            val scalarState = arrayListOf<Pair<InitialFactAp, FinalFactAp>>()
+            val batchState = arrayListOf<Pair<InitialFactAp, FinalFactAp>>()
+            scalar.collectApAtStatement(scalarState, statement)
+            batch.collectApAtStatement(batchState, statement)
+            assertEquals(scalarState.toSet(), batchState.toSet(), "$name stored relation")
+        }
+    }
 }

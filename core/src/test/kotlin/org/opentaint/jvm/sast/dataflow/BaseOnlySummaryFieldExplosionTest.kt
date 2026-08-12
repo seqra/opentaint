@@ -79,7 +79,80 @@ class BaseOnlySummaryFieldExplosionTest : AnalysisTest() {
         assertEquals(
             initial.exclusions,
             final.exclusions,
-            "the generalized edge must carry one correlated suffix-exclusion union",
+            "the generalized edge must carry one common suffix exclusion",
+        )
+    }
+
+    @Test
+    fun `conclusion worklist groups alternative field premises`() {
+        var groupedPremises = 0L
+        var conclusionTransfers = 0L
+
+        runAnalysis(
+            config = config,
+            entryPointClass = testClass,
+            entryPointMethod = "fieldEnumerationExplosion",
+            apMode = ApMode.BaseOnlyField,
+        ) { analyzer, _ ->
+            val helper = cp.findClassOrNull(testClass)!!.declaredMethods
+                .single { it.name == "permuteField" }
+            analyzer.ifdsEngine.collectMethodStats().stats[helper]?.let { stats ->
+                groupedPremises = stats.transparentF2FEdges
+                conclusionTransfers = stats.transparentF2FGroups
+            }
+        }
+
+        assertTrue(groupedPremises > conclusionTransfers)
+    }
+
+    @Test
+    fun `field premises converge on one exact passthrough input`() {
+        var maxPremisesPerConclusion: Int? = null
+
+        runAnalysis(
+            config = config,
+            entryPointClass = testClass,
+            entryPointMethod = "exactFinalConvergence",
+            apMode = ApMode.BaseOnlyField,
+        ) { analyzer, _ ->
+            val helper = cp.findClassOrNull(testClass)!!.declaredMethods
+                .single { it.name == "convergeFieldPremises" }
+            maxPremisesPerConclusion = analyzer.ifdsEngine.collectMethodStats()
+                .stats[helper]
+                ?.transparentF2FMaxGroup
+        }
+
+        assertEquals(
+            2,
+            maxPremisesPerConclusion,
+            "both exact field premises must converge on the same passthrough conclusion",
+        )
+    }
+
+    @Test
+    fun `irrelevant call is transferred once for alternative exact premises`() {
+        var callTransferGroups = 0L
+        var callTransferEdges = 0L
+
+        val vulnerabilities = runAnalysis(
+            config = config,
+            entryPointClass = testClass,
+            entryPointMethod = "irrelevantCallConclusionSharing",
+            apMode = ApMode.BaseOnlyField,
+        ) { analyzer, _ ->
+            val method = cp.findClassOrNull(testClass)!!.declaredMethods
+                .single { it.name == "convergeFieldPremisesAcrossIrrelevantCall" }
+            analyzer.ifdsEngine.collectMethodStats().stats[method]?.let { stats ->
+                callTransferGroups = stats.baseOnlyF2FCallTransferGroups
+                callTransferEdges = stats.baseOnlyF2FCallTransferEdges
+            }
+        }
+
+        assertTrue(vulnerabilities.isNotEmpty(), "the exact source-to-sink premises must be retained")
+        assertTrue(callTransferGroups > 0, "the irrelevant call must use a conclusion-only transfer")
+        assertTrue(
+            callTransferEdges > callTransferGroups,
+            "alternative exact premises must share one irrelevant-call transfer",
         )
     }
 
@@ -106,4 +179,5 @@ class BaseOnlySummaryFieldExplosionTest : AnalysisTest() {
             entry is ResolvedInterProceduralTraceEntry.InnerCall && entry.innerTrace.containsMethod(name)
         }
     }
+
 }

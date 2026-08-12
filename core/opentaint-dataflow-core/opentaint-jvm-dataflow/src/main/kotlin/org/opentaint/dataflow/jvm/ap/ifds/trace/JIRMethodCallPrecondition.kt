@@ -19,6 +19,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevant
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager.ResolvedCallFactRelevance
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
@@ -45,15 +46,43 @@ class JIRMethodCallPrecondition(
 
     override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
         val results = mutableListOf<CallPrecondition>()
-
-        results += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: CallPrecondition.Unchanged
+        addFactPreconditions(results, fact)
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
-            preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }
+            addFactPreconditions(results, aliasedFact)
         }
 
         return results
+    }
+
+    private fun addFactPreconditions(
+        results: MutableList<CallPrecondition>,
+        fact: InitialFactAp,
+    ) {
+        val targetRelevance = analysisContext.analysisManager.resolvedCallFactRelevance(
+            apManager, analysisContext, callExpr, statement, fact,
+        )
+        val callPreconditions = preconditionForFact(fact)
+
+        when (targetRelevance) {
+            ResolvedCallFactRelevance.AllRelevant -> {
+                results += callPreconditions?.let { PreconditionFactsForInitialFact(fact, it) }
+                    ?: CallPrecondition.Unchanged
+            }
+
+            ResolvedCallFactRelevance.AllSkipped -> {
+                results += CallPrecondition.Unchanged
+                callPreconditions
+                    ?.filterNot { it is CallPreconditionFact.CallToStart }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { results += PreconditionFactsForInitialFact(fact, it) }
+            }
+
+            ResolvedCallFactRelevance.Mixed -> {
+                results += CallPrecondition.Unchanged
+                callPreconditions?.let { results += PreconditionFactsForInitialFact(fact, it) }
+            }
+        }
     }
 
     override fun factPreconditionResolutionFailure(

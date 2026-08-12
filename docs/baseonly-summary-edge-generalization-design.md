@@ -146,11 +146,11 @@ budget:
 4. publish the representative in the insertion delta;
 5. absorb every later eligible edge in that group without re-enumerating it.
 
-A value below 20, such as 16, makes the 20-field reproduction deterministic
-after conclusion subsumption has reduced it to 21 edges, while not widening
-small ordinary field transfers. The constant must be configurable or at least
-isolated so E2E performance/precision evaluation can tune it without changing
-semantics.
+The budget is 8: eight distinct canonical field transfers remain exact and the
+ninth generalizes the group. This makes the 20-field reproduction deterministic
+without aggressively widening ordinary one-off field transfers. The constant
+is isolated so E2E performance/precision evaluation can tune it without
+changing semantics.
 
 The transition is monotone for IFDS consumers. Previously emitted concrete
 edges are not retracted, but all later collection observes only the generalized
@@ -158,17 +158,27 @@ representative.
 
 ## Exclusions
 
-The generalized representative uses the union of every member exclusion:
+Field/element/static exclusions describe structural accessors erased by the
+projection. They are therefore removed before member exclusions are combined.
+Only exclusions that can occur in the remaining suffix slot are retained.
 
 ```text
-E = E1 union E2 union ... union En
+project(E) = E without field, element, static, or Any accessors
 ```
 
-The suffix remains `ABSTRACT_MARK` after structural-accessor erasure, so the
-exclusions still belong to that suffix and must be retained. A later absorbed
-member extends this union; if the union changes, storage publishes the updated
-representative as an insertion delta. Exact-key exclusion intersection remains
-unchanged before generalization.
+After projection, the generalized members are alternative edges with the same
+premise and conclusion. Their exclusions are intersected:
+
+```text
+E = project(E1) intersect project(E2) ... intersect project(En)
+```
+
+Union is incorrect here: an exclusion belonging to one erased premise would
+then reject a suffix accepted by another member, producing a false negative.
+A later absorbed member can only keep or shrink the representative exclusion.
+If it shrinks, storage publishes the updated representative as an insertion
+delta. Exact-key exclusion intersection remains unchanged before
+generalization.
 
 ## Storage organization
 
@@ -192,37 +202,32 @@ published canonical summaries
 ```
 
 Once a group is generalized, its exact aggregates and membership can be
-dropped. The group key and accumulated exclusion union remain so later members
+dropped. The group key and common projected exclusion remain so later members
 can update the representative without restoring accessor enumeration.
 
 Collection does not perform generalization. It reads the published primary
 snapshot, applies the existing initial-pattern filter, and derives normalized
 trace views as it does today.
 
-## Trace-resolution requirement
+## Fact-set and trace boundary
 
-A synthesized generalized summary must have a resolvable method-side witness.
-Publishing it only from
-`MethodInitialToFinalBaseOnlyApSummariesStorage` is insufficient if backward
-resolution still searches only the concrete
-`MethodEdgesInitialToFinalBaseOnlyApSet` entries.
+Summary-storage generalization does not require or enable fact-set
+generalization. `summaryStorageFieldGeneralizationEnabled` controls only the
+F2F summary storage. The pre-existing `fieldGeneralizationEnabled` trace view
+is independent, remains disabled by default, and is not changed by this
+feature. The method F2F fact set therefore remains exact in the configuration
+used by summary generalization.
 
-The method F2F fact set remains exact during forward analysis. It must not
-replace or emit exact edges with generalized edges.
+The supported summary-generalization configuration keeps
+`fieldGeneralizationEnabled` false. Enabling both mechanisms would give the
+summary representative and the trace-only fact view different exclusion
+reducers and is outside this design.
 
-As a temporary trace-resolution bridge, `BaseOnlyApManager` has a one-way
-trace-resolution mode. While that mode is disabled, fact-set insertion and
-collection retain their original exact behavior. While it is enabled,
-collection may additionally project eligible exact witnesses into the same
-field-erased shape used by summary storage. This trace view does not apply the
-summary-storage budget: a statement containing one eligible exact edge may
-witness a generalized method summary created from edges accumulated elsewhere.
-The projected edge is never inserted into the fact set and never enters the
-forward worklist.
-
-The generalized trace is an abstract witness, so it need not enumerate all
-concrete read/write paths. It must, however, connect the method entry and exit
-facts accepted by the generalized forward edge.
+When resolving a generalized summary, the existing BaseOnly compatibility
+relation selects its concrete method-side witnesses. Each selected witness
+must connect an exact member premise and conclusion covered by the generalized
+edge. The end-to-end regression test must resolve a complete trace with
+summary generalization enabled and fact/trace generalization disabled.
 
 ## Required tests
 
@@ -243,21 +248,27 @@ facts accepted by the generalized forward edge.
 - all insertion orders produce the same final representation;
 - a batch crossing the budget emits only the representative from that batch;
 - later members of a generalized group do not re-expand it;
+- a later member that shrinks the common suffix exclusion publishes the
+  broader representative;
 - different initial/final bases do not share a budget;
 - any edge with a non-empty initial or final static slot is never generalized;
 - static-prefixed edges continue to use ordinary subsumption;
 - Normal/Value and semantic/type/final suffixes do not merge;
-- the representative has the union of all contributor exclusions;
+- the representative intersects suffix-valid contributor exclusions;
+- structural exclusions erased by projection are not retained;
 - element-accessor members participate in the same budget as field members;
 - a later absorbed member updates and re-emits the representative only when
-  its exclusion grows the union;
+  its common suffix exclusion shrinks;
 - unrelated summaries remain unchanged;
 - normalized aliases remain collection-only.
+- summary-storage and fact-trace generalization flags are independent in both
+  directions.
 
 ### Consumer laws
 
-- applying the generalized edge covers every forward result produced by each
-  removed contributor;
+- applying the generalized edge through the real delta/concat/exclusion
+  refinement path covers every forward result produced by each removed
+  contributor;
 - initial-pattern filtering returns the generalized edge for every compatible
   concrete field caller;
 - full trace resolution succeeds through the generalized method-side witness;

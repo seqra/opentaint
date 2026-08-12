@@ -34,6 +34,7 @@ class BaseOnlyApManager(
     override val cancellation: Cancellation,
     val fieldSensitive: Boolean = false,
     val fieldGeneralizationEnabled: Boolean = false,
+    val summaryStorageFieldGeneralizationEnabled: Boolean = false,
 ) : ApManager {
     val interner = AccessorInterner()
 
@@ -146,4 +147,5 @@ class BaseOnlyApManager(
 
     override fun createSerializer(context: SummarySerializationContext): ApSerializer =
         BaseOnlySerializer(this, context)
+
 }

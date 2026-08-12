@@ -36,6 +36,40 @@ public class BaseOnlySummaryFieldExplosionSample {
         sink(result.f00);
     }
 
+    public static void exactFinalConvergence(int readSelector) {
+        Fields input = new Fields();
+        String tainted = source();
+        input.f00 = tainted;
+        input.f01 = tainted;
+
+        sink(input.f00);
+        convergeFieldPremises(input, readSelector);
+    }
+
+    public static void irrelevantCallConclusionSharing(int readSelector) {
+        Fields input = new Fields();
+        String tainted = source();
+        input.f00 = tainted;
+        input.f01 = tainted;
+
+        String selected = convergeFieldPremisesAcrossIrrelevantCall(input, readSelector);
+        sink(selected);
+    }
+
+    private static String convergeFieldPremisesAcrossIrrelevantCall(Fields input, int readSelector) {
+        String selected;
+        switch (readSelector) {
+            case 0: selected = input.f00; break;
+            default: selected = input.f01;
+        }
+        passthrough(selected);
+        irrelevantCall();
+        return selected;
+    }
+
+    private static void irrelevantCall() {
+    }
+
     private static Fields permuteField(
             Fields input,
             int readSelector,
@@ -87,6 +121,19 @@ public class BaseOnlySummaryFieldExplosionSample {
             default: input.f19 = selected;
         }
         return input;
+    }
+
+    private static void convergeFieldPremises(Fields input, int readSelector) {
+        String selected;
+        switch (readSelector) {
+            case 0: selected = input.f00; break;
+            default: selected = input.f01;
+        }
+        passthrough(selected);
+    }
+
+    private static String passthrough(String value) {
+        return value;
     }
 
     private static class Fields {

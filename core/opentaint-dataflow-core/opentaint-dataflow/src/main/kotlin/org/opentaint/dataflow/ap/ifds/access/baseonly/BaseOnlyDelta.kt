@@ -30,7 +30,7 @@ class BaseOnlyNodeFinalDelta(
     override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? =
         manager.readAccess(access, accessor)?.let { BaseOnlyNodeFinalDelta(manager, it) }
 
-    override fun isAbstract(): Boolean = access.hasAp
+    override fun isAbstract(): Boolean = access.isRootAbstract
 
     override fun equals(other: Any?): Boolean =
         this === other || (other is BaseOnlyNodeFinalDelta && access == other.access)
@@ -67,7 +67,7 @@ class BaseOnlyNodeInitialDelta(
     override fun readAccessor(accessor: Accessor): InitialFactAp.Delta? =
         manager.readAccess(access, accessor)?.let { BaseOnlyNodeInitialDelta(manager, it) }
 
-    override fun isAbstract(): Boolean = access.hasAp
+    override fun isAbstract(): Boolean = access.isRootAbstract
 
     override fun concat(other: InitialFactAp.Delta): InitialFactAp.Delta = when (other) {
         BaseOnlyEmptyInitialDelta -> this

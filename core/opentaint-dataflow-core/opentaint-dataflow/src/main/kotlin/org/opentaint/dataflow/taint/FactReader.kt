@@ -51,6 +51,8 @@ class FinalFactReader(
 
     fun replaceFact(factAp: FinalFactAp) = FinalFactReader(factAp, apManager).also { it.refinement = refinement }
 
+    fun copy() = FinalFactReader(factAp, apManager).also { it.refinement = refinement }
+
     fun refineFact(factAp: InitialFactAp): InitialFactAp {
         if (!hasRefinement) return factAp
         val refinedAp = factAp.replaceExclusions(factAp.exclusions.union(refinement))

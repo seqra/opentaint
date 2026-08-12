@@ -163,7 +163,27 @@ class BaseOnlySubscriptionAndReqTest {
 
         val empty = mutableListOf<FactEdgeSummarySubscription>()
         sub.collectFactEdge(empty, summaryInitial, emptyDeltaRequired = true)
-        assertEquals(1, empty.size, "only the identity candidate has an empty delta")
+        assertEquals(2, empty.size, "empty-delta mode uses the same conservative candidates")
+    }
+
+    @Test
+    fun `fact subscription preserves exclusion-distinct registrations`() {
+        val sub = manager.accessPathSubscription()
+        val access = pattern(fieldA)
+        val exit = final(marked(fieldA))
+        val first = initial(access).replaceExclusions(ExclusionSet.Empty.add(fieldA))
+        val expanded = first.replaceExclusions(first.exclusions.add(fieldB))
+
+        assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, first, exit))
+        assertNotNull(sub.addFactToFact(inst, AccessPathBase.This, expanded, exit))
+        assertNull(sub.addFactToFact(inst, AccessPathBase.This, first, exit))
+
+        val collected = mutableListOf<FactEdgeSummarySubscription>()
+        sub.collectFactEdge(collected, initial(access), emptyDeltaRequired = false)
+
+        val retained = collected.map { it.setStatements(entryPoint, inst).callerPathEdge }.toSet()
+        assertEquals(setOf(first, expanded), retained.mapTo(hashSetOf()) { it.initialFactAp })
+        assertEquals(setOf(first.exclusions, expanded.exclusions), retained.mapTo(hashSetOf()) { it.factAp.exclusions })
     }
 
     @Test
@@ -247,10 +267,7 @@ class BaseOnlySubscriptionAndReqTest {
 
         val empty = mutableListOf<FactEdgeSummarySubscription>()
         sub.collectFactEdge(empty, initial(summaryAccess), emptyDeltaRequired = true)
-        val expectedEmpty = exits.count { exit ->
-            BaseOnlyAccessOps.matchPrefix(exit, summaryAccess).emptyDelta
-        }
-        assertEquals(expectedEmpty, empty.size)
+        assertEquals(expectedApplicable, empty.size)
 
         val ndResult = mutableListOf<FactNDEdgeSummarySubscription>()
         sub.collectFactNDEdge(ndResult, initial(summaryAccess), emptyDeltaRequired = false)
@@ -292,10 +309,11 @@ class BaseOnlySubscriptionAndReqTest {
 
             val empty = mutableListOf<FactEdgeSummarySubscription>()
             sub.collectFactEdge(empty, initial(summaryAccess), emptyDeltaRequired = true)
-            val expectedEmpty = accesses.count { exit ->
-                BaseOnlyAccessOps.matchPrefix(exit, summaryAccess).emptyDelta
-            }
-            assertEquals(expectedEmpty, empty.size, "empty-delta lookup for $summaryAccess")
+            assertEquals(
+                expectedApplicable,
+                empty.size,
+                "empty-delta mode uses the same conservative candidates for $summaryAccess",
+            )
         }
     }
 

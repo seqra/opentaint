@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.CommonAPSub
@@ -48,14 +47,16 @@ class MethodBaseOnlyAccessPathSubscription(
 
     private class F2FSub(private val manager: BaseOnlyApManager) :
         CommonAPSub.F2FSubStorage<BaseOnlyAccess, BaseOnlyAccess> {
-        private val storage = Object2ObjectOpenHashMap<InitialFactAp, LongOpenHashSet>()
+        private val initialFactsByExit =
+            BaseOnlyInitialAccessIndex<MutableSet<BaseOnlyInitialFactAp>>()
 
         override fun add(
             callerInitialAp: InitialFactAp,
             callerExitAp: BaseOnlyAccess,
         ): CommonFactEdgeSubBuilder<BaseOnlyAccess>? {
-            val exits = storage.getOrPut(callerInitialAp) { LongOpenHashSet() }
-            if (!exits.add(callerExitAp)) return null
+            callerInitialAp as BaseOnlyInitialFactAp
+            val initialFacts = initialFactsByExit.getOrCreate(callerExitAp, ::hashSetOf)
+            if (!initialFacts.add(callerInitialAp)) return null
             return FactBuilder(manager)
                 .setCallerNode(callerExitAp)
                 .setCallerInitialAp(callerInitialAp)
@@ -67,13 +68,23 @@ class MethodBaseOnlyAccessPathSubscription(
             summaryInitialFact: BaseOnlyAccess,
             emptyDeltaRequired: Boolean,
         ) {
-            for ((initial, exits) in storage) {
-                exits.forEach { exit ->
-                    dst += FactBuilder(manager)
-                        .setCallerNode(exit)
-                        .setCallerInitialAp(initial)
-                        .setCallerExclusion(initial.exclusions)
-                }
+            initialFactsByExit.collectCandidates(summaryInitialFact) { exit, initialFacts ->
+                val match = BaseOnlyAccessOps.matchPrefix(exit, summaryInitialFact)
+                if (!match.emptyDelta && !match.hasSuffix) return@collectCandidates
+                collectExit(dst, exit, initialFacts)
+            }
+        }
+
+        private fun collectExit(
+            dst: MutableList<CommonFactEdgeSubBuilder<BaseOnlyAccess>>,
+            exit: BaseOnlyAccess,
+            initialFacts: Set<BaseOnlyInitialFactAp>,
+        ) {
+            initialFacts.forEach { initial ->
+                dst += FactBuilder(manager)
+                    .setCallerNode(exit)
+                    .setCallerInitialAp(initial)
+                    .setCallerExclusion(initial.exclusions)
             }
         }
     }

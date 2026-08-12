@@ -3,12 +3,18 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyFinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyInitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
@@ -28,10 +34,13 @@ import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer
+import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.SelectedTaintRulesProvider
@@ -46,9 +55,20 @@ import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.jvm.JIRClasspath
+import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRExpr
+import org.opentaint.ir.api.jvm.cfg.JIRExprVisitor
+import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRInstVisitor
+import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
+import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
+import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.ir.api.jvm.ext.usedFields
+import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
@@ -61,6 +81,32 @@ class JIRAnalysisManager(
     val externalMethodTracker: ExternalMethodTracker? = null,
     private val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
+    private object StaticFieldAccessDetector :
+        JIRExprVisitor.Default<Boolean>,
+        JIRInstVisitor.Default<Boolean> {
+        override fun defaultVisitJIRExpr(expr: JIRExpr): Boolean =
+            expr.operands.any { it.accept(this) }
+
+        override fun defaultVisitJIRInst(inst: JIRInst): Boolean =
+            inst.operands.any { it.accept(this) }
+
+        override fun visitJIRFieldRef(value: JIRFieldRef): Boolean =
+            value.field.isStatic || defaultVisitJIRExpr(value)
+    }
+
+    private class FactBaseAccessDetector(
+        private val base: AccessPathBase,
+    ) : JIRExprVisitor.Default<Boolean>, JIRInstVisitor.Default<Boolean> {
+        override fun defaultVisitJIRExpr(expr: JIRExpr): Boolean =
+            expr.operands.any { it.accept(this) }
+
+        override fun defaultVisitJIRInst(inst: JIRInst): Boolean =
+            inst.operands.any { it.accept(this) }
+
+        override fun defaultVisitJIRValue(value: JIRValue): Boolean =
+            MethodFlowFunctionUtils.accessPathBase(value) == base || defaultVisitJIRExpr(value)
+    }
+
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
     private val phaseTaintConfig = SelectedTaintRulesProvider(taintConfig)
 
@@ -72,12 +118,25 @@ class JIRAnalysisManager(
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
+    private sealed interface ClassStaticLeafFootprint {
+        data object NotLeaf : ClassStaticLeafFootprint
+        data class Fields(val fields: Set<org.opentaint.ir.api.jvm.JIRField>) : ClassStaticLeafFootprint
+    }
+
+    private val classStaticLeafFootprints = ConcurrentHashMap<JIRMethod, ClassStaticLeafFootprint>()
+    private val classStaticTransparentCalls =
+        ConcurrentHashMap<Pair<MethodEntryPoint, JIRInst>, ClassStaticLeafFootprint>()
+    @Volatile
+    private var classStaticFootprintIndex: JIRClassStaticFootprintIndex? = null
 
     private var currentPhase: Phase = Phase.Prescan
     val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
         currentPhase = phase
+        classStaticLeafFootprints.clear()
+        classStaticTransparentCalls.clear()
+        classStaticFootprintIndex = null
         contexts.forEach { it.resetAnalysisCache() }
 
         when (phase) {
@@ -153,6 +212,7 @@ class JIRAnalysisManager(
             localVariableReachability,
             aliasAnalysis,
             taintContext,
+            callResolver.callResolver,
         ).also {
             contexts.add(it)
         }
@@ -291,6 +351,184 @@ class JIRAnalysisManager(
         jIRDowncast<JIRInst>(statement)
 
         return JIRMethodSummaryEdgeProcessor(analysisContext, graph, this, statement)
+    }
+
+    override fun isTransparentToFact(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        graph: MethodInstGraph,
+        statement: CommonInst,
+        fact: FinalFactAp,
+    ): Boolean {
+        if (apManager !is BaseOnlyApManager) return false
+        jIRDowncast<JIRInst>(statement)
+        jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
+        if (graph.isExitPoint(this, statement)) return false
+
+        val callExpr = getCallExpr(statement)
+        if (callExpr != null) {
+            if (fact.base != AccessPathBase.ClassStatic) return false
+            return isClassStaticTransparentLeafCall(analysisContext, statement, callExpr, fact)
+        }
+
+        if (statement !is JIRAssignInst && statement !is JIRReturnInst && statement !is JIRThrowInst) {
+            return true
+        }
+
+        if (statement !is JIRAssignInst) return false
+        if (fact.base == AccessPathBase.ClassStatic) {
+            return !statement.accept(StaticFieldAccessDetector)
+        }
+        return !statement.accept(FactBaseAccessDetector(fact.base))
+    }
+
+    private fun isClassStaticTransparentLeafCall(
+        analysisContext: JIRMethodAnalysisContext,
+        statement: JIRInst,
+        callExpr: JIRCallExpr,
+        fact: FinalFactAp,
+    ): Boolean {
+        if (analysisContext.taint.hasRulesForCallStatement(statement)) return false
+        val footprint = classStaticTransparentCalls.computeIfAbsent(
+            analysisContext.methodEntryPoint to statement,
+        ) {
+            val callees = analysisContext.callResolver.resolve(callExpr, statement, analysisContext)
+            if (callees.isEmpty()) return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+
+            val fields = hashSetOf<org.opentaint.ir.api.jvm.JIRField>()
+            for (callee in callees) {
+                val method = when (callee) {
+                    is JIRCallResolver.MethodResolutionResult.ConcreteMethod -> callee.method.method
+                    JIRCallResolver.MethodResolutionResult.MethodResolutionFailed,
+                    is JIRCallResolver.MethodResolutionResult.Lambda ->
+                        return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+                } as JIRMethod
+                when (val target = classStaticLeafFootprint(method)) {
+                    ClassStaticLeafFootprint.NotLeaf ->
+                        return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+                    is ClassStaticLeafFootprint.Fields -> fields += target.fields
+                }
+            }
+            ClassStaticLeafFootprint.Fields(fields)
+        }
+
+        if (footprint !is ClassStaticLeafFootprint.Fields) return false
+        return footprint.fields.none { field -> factMayObserveStaticField(fact, field) }
+    }
+
+    private fun classStaticLeafFootprint(method: JIRMethod): ClassStaticLeafFootprint =
+        classStaticLeafFootprints.computeIfAbsent(method) {
+            val instructions = method.instList.toList()
+            if (instructions.isEmpty()) return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+            if (instructions.any { getCallExpr(it) != null }) {
+                return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+            }
+
+            val statement = instructions.first()
+            if (taintConfig.exitSourceRulesForMethod(method, statement, fact = null, allRelevant = true).any()) {
+                return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+            }
+            if (taintConfig.sinkRulesForMethodExit(
+                    method, statement, fact = null, initialFacts = null, allRelevant = true
+                ).any()
+            ) {
+                return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+            }
+
+            val fields = method.usedFields.let { usages -> usages.reads + usages.writes }
+                .filterTo(hashSetOf()) { it.isStatic }
+            ClassStaticLeafFootprint.Fields(fields)
+        }
+
+    private fun factMayObserveStaticField(
+        fact: FinalFactAp,
+        field: org.opentaint.ir.api.jvm.JIRField,
+    ): Boolean {
+        val access = MethodFlowFunctionUtils.mkFieldAccess(field, instance = null)
+            as MethodFlowFunctionUtils.StaticRefAccess
+        val classFact = fact.readAccessor(access.classStaticAccessor) ?: return false
+        return MethodFlowFunctionUtils.run {
+            classFact.mayReadAccessor(AccessPathBase.ClassStatic, access.accessor)
+        }
+    }
+
+    override fun factIsRelevantToResolvedMethod(
+        apManager: ApManager,
+        callerContext: MethodAnalysisContext,
+        method: MethodWithContext,
+        fact: FactAp,
+    ): Boolean {
+        if (currentPhase !is Phase.ShallowScan) return true
+        if (apManager !is BaseOnlyApManager) return true
+        if (fact !is BaseOnlyFinalFactAp && fact !is BaseOnlyInitialFactAp) return true
+        if (fact.base != AccessPathBase.ClassStatic) return true
+        callerContext as JIRMethodAnalysisContext
+
+        val footprint = classStaticFootprintIndex ?: synchronized(this) {
+            classStaticFootprintIndex ?: JIRClassStaticFootprintIndex(
+                callerContext.callResolver,
+                phaseTaintConfig,
+                contexts::toList,
+            ).also { classStaticFootprintIndex = it }
+        }
+        return footprint.mayObserve(method, fact)
+    }
+
+    internal enum class ResolvedCallFactRelevance {
+        AllRelevant,
+        AllSkipped,
+        Mixed,
+    }
+
+    internal fun resolvedCallFactRelevance(
+        apManager: ApManager,
+        context: JIRMethodAnalysisContext,
+        call: JIRCallExpr,
+        statement: JIRInst,
+        fact: FactAp,
+    ): ResolvedCallFactRelevance {
+        if (currentPhase !is Phase.ShallowScan || apManager !is BaseOnlyApManager) {
+            return ResolvedCallFactRelevance.AllRelevant
+        }
+        if (fact.base != AccessPathBase.ClassStatic) return ResolvedCallFactRelevance.AllRelevant
+
+        var hasRelevantTarget = false
+        var hasSkippedTarget = false
+
+        fun classify(method: MethodWithContext) {
+            if (factIsRelevantToResolvedMethod(apManager, context, method, fact)) {
+                hasRelevantTarget = true
+            } else {
+                hasSkippedTarget = true
+            }
+        }
+
+        context.callResolver.resolve(call, statement, context).forEach { result ->
+            when (result) {
+                is JIRCallResolver.MethodResolutionResult.ConcreteMethod -> classify(result.method)
+                JIRCallResolver.MethodResolutionResult.MethodResolutionFailed -> Unit
+                is JIRCallResolver.MethodResolutionResult.Lambda -> {
+                    context.lambdaCallResolution[statement.location.index]?.forEachRegisteredLambda(
+                        object : JIRLambdaTracker.LambdaSubscriber {
+                            override fun newLambda(
+                                method: JIRMethod,
+                                lambdaClass: LambdaAnonymousClassFeature.JIRLambdaClass,
+                            ) {
+                                val implementation = lambdaClass.findMethodOrNull(method.name, method.description)
+                                    ?: return
+                                classify(MethodWithContext(implementation, EmptyMethodContext))
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        return when {
+            hasRelevantTarget && hasSkippedTarget -> ResolvedCallFactRelevance.Mixed
+            hasSkippedTarget -> ResolvedCallFactRelevance.AllSkipped
+            else -> ResolvedCallFactRelevance.AllRelevant
+        }
     }
 
     override fun isReachable(

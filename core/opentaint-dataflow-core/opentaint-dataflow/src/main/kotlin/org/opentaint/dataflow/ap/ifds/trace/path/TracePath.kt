@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.trace.path
 
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntObjectImmutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import mu.KLogging
@@ -63,7 +64,12 @@ fun TaintAnalysisUnitRunnerManager.generateTracePath(
     }
 }
 
-private class NodeTrace(val sink2Root: IntArray, val root2Source: IntArray)
+internal class NodeTrace(val sink2Root: IntArray, val root2Source: IntArray)
+
+internal data class NodesForPathResolution(
+    val root2Source: List<TraceResolver.InterProceduralTraceNode>,
+    val root2SinkNoRoot: List<TraceResolver.InterProceduralTraceNode>,
+)
 
 sealed interface ResolvedInterProceduralTraceEntry {
     val entry: TraceEntry
@@ -116,21 +122,34 @@ private fun Source2SinkTraceGraph.resolvedNodeTrace(
     runner: TaintAnalysisUnitRunnerManager,
     params: TracePathResolveParams,
 ): ResolvedNodeTrace? {
-    val root2Source = trace.root2Source.map { allNodes[it] }
-    val root2Sink = trace.sink2Root.map { allNodes[it] }.reversed()
+    val nodes = nodesForPathResolution(trace.sink2Root, trace.root2Source)
 
-    val resolvedRoot2Source = root2Source.map {
+    val resolvedRoot2Source = nodes.root2Source.map {
         runner.resolveNodePath(it, params) ?: return null
     }
 
-    val rootToSinkNoRoot = root2Sink.drop(1).map {
+    val rootToSinkNoRoot = nodes.root2SinkNoRoot.map {
         runner.resolveNodePath(it, params) ?: return null
     }
 
     return ResolvedNodeTrace(resolvedRoot2Source, rootToSinkNoRoot)
 }
 
-private fun <T> Source2SinkTraceGraph.processMethodTrace(
+internal fun Source2SinkTraceGraph.nodesForPathResolution(
+    sink2Root: IntArray,
+    root2Source: IntArray,
+): NodesForPathResolution = NodesForPathResolution(
+    root2Source = root2Source
+        .map { allNodes[it] }
+        .filterNot { it is TraceResolver.InterProceduralMethodEntryNode },
+    root2SinkNoRoot = sink2Root
+        .map { allNodes[it] }
+        .asReversed()
+        .drop(1)
+        .filterNot { it is TraceResolver.InterProceduralMethodEntryNode },
+)
+
+internal fun <T> Source2SinkTraceGraph.processMethodTrace(
     mg: Source2SinkMethodTraceGraph,
     trace: MethodTrace,
     handleNodeTrace: (NodeTrace) -> T?
@@ -138,8 +157,9 @@ private fun <T> Source2SinkTraceGraph.processMethodTrace(
     val result = NodeTrace(IntArray(trace.sink2Root.size), IntArray(trace.root2Source.size))
     val sinkMethod = trace.sink2Root[0]
     mg.sink2RootMethodNodes.get(sinkMethod)?.forEachInt { node ->
+        if (allNodes[node] is TraceResolver.InterProceduralMethodEntryNode) return@forEachInt
         result.sink2Root[0] = node
-        processMethodTrace(
+        processMethodTraceNodes(
             1,
             trace.sink2Root,
             result.sink2Root,
@@ -147,7 +167,7 @@ private fun <T> Source2SinkTraceGraph.processMethodTrace(
             { root2SinkBwd.get(it) }
         ) {
             result.root2Source[0] = result.sink2Root.last()
-            processMethodTrace(
+            processMethodTraceNodes(
                 1,
                 trace.root2Source,
                 result.root2Source,
@@ -161,7 +181,7 @@ private fun <T> Source2SinkTraceGraph.processMethodTrace(
     return null
 }
 
-private fun <T> processMethodTrace(
+private fun <T> Source2SinkTraceGraph.processMethodTraceNodes(
     i: Int,
     traceArray: IntArray,
     nodeTraceArray: IntArray,
@@ -179,18 +199,39 @@ private fun <T> processMethodTrace(
     val curCandidateNodes = methodNodes(curMethodId)
         ?: return null
 
-    val successorNodes = nodeSuccessors(prevNode)
-        ?: return null
+    val successorNodes = successorsAcrossMethodEntryBoundaries(prevNode, nodeSuccessors)
 
     successorNodes.forEachInt { succNode ->
         if (!curCandidateNodes.contains(succNode)) return@forEachInt
 
         nodeTraceArray[i] = succNode
 
-        processMethodTrace(i + 1, traceArray, nodeTraceArray, methodNodes, nodeSuccessors, next)
+        processMethodTraceNodes(i + 1, traceArray, nodeTraceArray, methodNodes, nodeSuccessors, next)
             ?.let { return it }
     }
     return null
+}
+
+private fun Source2SinkTraceGraph.successorsAcrossMethodEntryBoundaries(
+    node: Int,
+    nodeSuccessors: (Int) -> IntOpenHashSet?,
+): IntOpenHashSet {
+    val result = IntOpenHashSet()
+    val visitedBoundaries = IntOpenHashSet()
+    val pending = IntArrayList()
+    nodeSuccessors(node)?.forEachInt { pending.add(it) }
+
+    while (pending.size > 0) {
+        val successor = pending.removeInt(pending.size - 1)
+        if (allNodes[successor] !is TraceResolver.InterProceduralMethodEntryNode) {
+            result.add(successor)
+            continue
+        }
+        if (!visitedBoundaries.add(successor)) continue
+        nodeSuccessors(successor)?.forEachInt { pending.add(it) }
+    }
+
+    return result
 }
 
 private fun TaintAnalysisUnitRunnerManager.resolveNodePath(
@@ -211,6 +252,8 @@ private fun TaintAnalysisUnitRunnerManager.resolveNodePath(
                     node.trace, cancellation, collapseUnchangedNodes = true
                 )
             }
+
+            is TraceResolver.InterProceduralMethodEntryNode -> emptyList()
         }
     }
 

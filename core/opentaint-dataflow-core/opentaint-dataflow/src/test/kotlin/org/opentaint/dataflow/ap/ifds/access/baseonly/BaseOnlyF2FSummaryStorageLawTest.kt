@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
@@ -30,7 +31,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BaseOnlyF2FSummaryStorageLawTest {
-    private val manager = BaseOnlyApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, Cancellation())
+    private val manager = BaseOnlyApManager(
+        AnyAccessorUnrollStrategy.AnyAccessorDisabled,
+        Cancellation(),
+        summaryStorageFieldGeneralizationEnabled = true,
+    )
     private val entryPoint by lazy { MethodEntryPoint(EmptyMethodContext, inst) }
     private val exA = ExclusionSet.Concrete(TaintMarkAccessor("excluded-a"))
     private val exB = ExclusionSet.Concrete(TaintMarkAccessor("excluded-b"))
@@ -408,7 +413,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
-    fun `field generalization has a sixteen edge budget and monotone deltas`() {
+    fun `field generalization has an eight edge budget and monotone deltas`() {
         val members = (0 until 18).map { index ->
             storageEdge(
                 initial = packBaseOnlyAccess(NO_ACCESSOR, field("budget-$index"), ABSTRACT_MARK),
@@ -419,7 +424,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
         val representative = Record(
             initial = ABSTRACT_EMPTY_ACCESS,
             final = ABSTRACT_EMPTY_ACCESS,
-            exclusion = exA.union(exB),
+            exclusion = ExclusionSet.Empty,
         )
         val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
 
@@ -438,17 +443,19 @@ class BaseOnlyF2FSummaryStorageLawTest {
         val afterCrossing = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
         storage.collectSummariesTo(afterCrossing, null)
         assertEquals(listOf(representative), afterCrossing.map(::record))
+        assertEquals(
+            MAX_FIELD_ENUMERATION_EDGES + 1,
+            belowBudgetDelta.size + crossingDelta.size,
+            "already published exact deltas cannot be retracted when the group is generalized",
+        )
 
         val absorbed = members[MAX_FIELD_ENUMERATION_EDGES + 1].copy(exclusion = exC)
         val absorbedDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
         storage.add(listOf(absorbed), absorbedDelta)
-        val representativeWithAbsorbedExclusion = representative.copy(
-            exclusion = exA.union(exB).union(exC),
-        )
-        assertEquals(
-            listOf(representativeWithAbsorbedExclusion),
-            absorbedDelta.map(::record),
-            "a later member must update the representative without re-enumerating the group",
+        val representativeWithAbsorbedExclusion = representative
+        assertTrue(
+            absorbedDelta.isEmpty(),
+            "a member that does not change the common exclusion emits no new representative",
         )
 
         val afterAbsorption = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
@@ -461,11 +468,162 @@ class BaseOnlyF2FSummaryStorageLawTest {
     }
 
     @Test
+    fun `absorbed member publishes a broader representative when common exclusion shrinks`() {
+        val commonExclusion = ExclusionSet.Concrete(TaintMarkAccessor("initially-common"))
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        val members = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            storageEdge(
+                initial = packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    field("shrinking-$index"),
+                    ABSTRACT_MARK,
+                ),
+                final = ABSTRACT_EMPTY_ACCESS,
+                exclusion = commonExclusion,
+            )
+        }
+
+        val crossingDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.add(members, crossingDelta)
+        assertEquals(
+            listOf(Record(ABSTRACT_EMPTY_ACCESS, ABSTRACT_EMPTY_ACCESS, commonExclusion)),
+            crossingDelta.map(::record),
+        )
+
+        val absorbed = storageEdge(
+            initial = packBaseOnlyAccess(
+                NO_ACCESSOR,
+                field("shrinking-absorbed"),
+                ABSTRACT_MARK,
+            ),
+            final = ABSTRACT_EMPTY_ACCESS,
+            exclusion = ExclusionSet.Empty,
+        )
+        val broaderDelta = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.add(listOf(absorbed), broaderDelta)
+        val broader = Record(ABSTRACT_EMPTY_ACCESS, ABSTRACT_EMPTY_ACCESS, ExclusionSet.Empty)
+        assertEquals(listOf(broader), broaderDelta.map(::record))
+
+        val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(current, null)
+        assertEquals(listOf(broader), current.map(::record))
+    }
+
+    @Test
+    fun `field generalization does not erase concrete semantic suffixes`() {
+        val members = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            storageEdge(
+                initial = packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    field("marked-in-$index"),
+                    mark("marked-suffix-$index"),
+                ),
+                final = packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    field("marked-out-$index"),
+                    mark("marked-suffix-$index"),
+                ),
+            )
+        }
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        storage.add(members, mutableListOf())
+
+        val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(current, null)
+
+        assertEquals(
+            members.size,
+            current.size,
+            "field by concrete-mark mappings are semantic alternatives, not field enumeration",
+        )
+    }
+
+    @Test
+    fun `generalized alternatives intersect suffix exclusions`() {
+        val excludedByOneAlternative = TaintMarkAccessor("excluded-by-one-alternative")
+        val members = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            storageEdge(
+                initial = packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    field("alternative-$index"),
+                    ABSTRACT_MARK,
+                ),
+                final = ABSTRACT_EMPTY_ACCESS,
+                exclusion = if (index == 0) {
+                    ExclusionSet.Concrete(excludedByOneAlternative)
+                } else {
+                    ExclusionSet.Empty
+                },
+            )
+        }
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        storage.add(members, mutableListOf())
+
+        val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(current, null)
+        val representative = current.single().apply {
+            setInitialFactBase(AccessPathBase.This)
+            setExitFactBase(AccessPathBase.Return)
+        }.build()
+            .setEntryPoint(entryPoint)
+            .setExitStatement(inst)
+            .build()
+
+        assertEquals(ExclusionSet.Empty, representative.initialFactAp.exclusions)
+
+        val input = BaseOnlyFinalFactAp(
+            manager,
+            AccessPathBase.This,
+            packBaseOnlyAccess(
+                NO_ACCESSOR,
+                field("alternative-1"),
+                manager.interner.index(excludedByOneAlternative),
+            ),
+            ExclusionSet.Empty,
+        )
+        assertTrue(
+            MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
+                input,
+                representative.initialFactAp,
+            ).isNotEmpty(),
+            "an exclusion from one erased premise must not reject a suffix accepted by another",
+        )
+    }
+
+    @Test
+    fun `generalized exclusion keeps only common suffix accessors`() {
+        val commonMark = TaintMarkAccessor("common-suffix-exclusion")
+        val members = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+            val structural = FieldAccessor("Owner", "excluded-field-$index", "Value")
+            storageEdge(
+                initial = packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    field("common-exclusion-$index"),
+                    ABSTRACT_MARK,
+                ),
+                final = ABSTRACT_EMPTY_ACCESS,
+                exclusion = ExclusionSet.Empty.add(commonMark).add(structural),
+            )
+        }
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        storage.add(members, mutableListOf())
+
+        val current = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesTo(current, null)
+
+        assertEquals(
+            ExclusionSet.Concrete(commonMark),
+            record(current.single()).exclusion,
+            "exclusions for erased fields are meaningless; the common suffix exclusion remains",
+        )
+    }
+
+    @Test
     fun `field generalization can be disabled`() {
         val exactManager = BaseOnlyApManager(
             AnyAccessorUnrollStrategy.AnyAccessorDisabled,
             Cancellation(),
-            fieldGeneralizationEnabled = false,
+            summaryStorageFieldGeneralizationEnabled = false,
         )
         val members = (0 until MAX_FIELD_ENUMERATION_EDGES + 2).map { index ->
             storageEdge(
@@ -508,7 +666,7 @@ class BaseOnlyF2FSummaryStorageLawTest {
         val representative = Record(
             initial = ABSTRACT_EMPTY_ACCESS,
             final = ABSTRACT_EMPTY_ACCESS,
-            exclusion = exA.union(exB),
+            exclusion = ExclusionSet.Empty,
         )
         val orders = buildList {
             add(members)
@@ -780,6 +938,24 @@ class BaseOnlyF2FSummaryStorageLawTest {
             storage.collectSummariesTo(queried, pattern)
             assertEquals(expected, queried.map(::record).toSet(), "pattern=$pattern")
         }
+    }
+
+    @Test
+    fun `final-pattern query selects only overlapping finals after index promotion`() {
+        val storage = MethodInitialToFinalBaseOnlyApSummariesStorage(inst, manager).createStorage()
+        val initial = packBaseOnlyAccess(NO_ACCESSOR, field("final-query-initial"), ABSTRACT_MARK)
+        val finals = List(96) { index ->
+            packBaseOnlyAccess(NO_ACCESSOR, NO_ACCESSOR, mark("final-query-$index"))
+        }
+        storage.add(finals.map { final -> storageEdge(initial, final) }, mutableListOf())
+
+        val queried = mutableListOf<CommonF2FSummary.F2FBBuilder<BaseOnlyAccess, BaseOnlyAccess>>()
+        storage.collectSummariesByFinalTo(queried, finals[73])
+
+        assertEquals(
+            setOf(Record(initial, finals[73], ExclusionSet.Empty)),
+            queried.map(::record).toSet(),
+        )
     }
 
     private fun edge(initial: BaseOnlyAccess, final: BaseOnlyAccess, exclusion: ExclusionSet): Edge.FactToFact =

@@ -69,24 +69,40 @@ class JIRMethodCallSummaryHandler(
     }
 
     override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
-            Edge.FactToFact(
-                summaryEdge.methodEntryPoint,
-                refinement.refineFact(summaryEdge.initialFactAp),
-                summaryEdge.statement,
-                refinement.refineFact(resultFact)
-            )
+        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { rewritten ->
+            if (rewritten.isIdentity) return@map summaryEdge
+
+            val refinement = rewritten.createFactReader(apManager)
+            val initialFact = refinement.refineFact(summaryEdge.initialFactAp)
+            val finalFact = refinement.refineFact(rewritten.fact)
+            if (initialFact == summaryEdge.initialFactAp && finalFact == summaryEdge.factAp) {
+                summaryEdge
+            } else {
+                Edge.FactToFact(
+                    summaryEdge.methodEntryPoint,
+                    initialFact,
+                    summaryEdge.statement,
+                    finalFact,
+                )
+            }
         }
 
     override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { rewritten ->
+            if (rewritten.isIdentity) return@map summaryEdge
+
+            val refinement = rewritten.createFactReader(apManager)
             check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
-            Edge.NDFactToFact(
-                summaryEdge.methodEntryPoint,
-                summaryEdge.initialFacts,
-                summaryEdge.statement,
-                resultFact,
-            )
+            if (rewritten.fact == summaryEdge.factAp) {
+                summaryEdge
+            } else {
+                Edge.NDFactToFact(
+                    summaryEdge.methodEntryPoint,
+                    summaryEdge.initialFacts,
+                    summaryEdge.statement,
+                    rewritten.fact,
+                )
+            }
         }
 
     private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {

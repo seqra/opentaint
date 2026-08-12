@@ -32,8 +32,10 @@ import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.cfg.JIRVirtualCallExpr
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 import org.opentaint.ir.api.jvm.ext.isSubClassOf
+import org.opentaint.ir.api.jvm.ext.usedMethods
 import org.opentaint.ir.impl.cfg.util.isClass
 import org.opentaint.jvm.util.toJIRClassOrInterface
+import org.objectweb.asm.Opcodes
 import java.util.concurrent.ConcurrentHashMap
 
 class JIRCallResolver(
@@ -49,18 +51,32 @@ class JIRCallResolver(
             .forEach { knownLocationIds.add(it.id) }
     }
 
-    private val methodOverridesCache = ConcurrentHashMap<JIRMethod, List<JIRMethod>>()
+    private val methodOverridesCache = ConcurrentHashMap<Pair<JIRMethod, JIRClassOrInterface>, List<JIRMethod>>()
+    private val bridgeTargetCache = ConcurrentHashMap<JIRMethod, List<JIRMethod>>()
 
     private fun methodOverrides(method: JIRMethod, baseClass: JIRClassOrInterface): List<JIRMethod> {
         if (method.isFinal || method.isConstructor || method.isStatic || method.isClassInitializer) {
             return emptyList()
         }
 
-        return methodOverridesCache.computeIfAbsent(method) {
+        return methodOverridesCache.computeIfAbsent(method to baseClass) {
             val overrides = hierarchy.findOverrides(method, baseClass, knownLocationIds)
             val knownOverrides = overrides.filter { unitResolver.resolve(it) != UnknownUnit }
             knownOverrides.ifEmpty { emptyList() }
         }
+    }
+
+    private fun bridgeTarget(method: JIRMethod): JIRMethod? {
+        if (method.access and Opcodes.ACC_BRIDGE == 0) return null
+        return bridgeTargetCache.computeIfAbsent(method) {
+            method.usedMethods.mapNotNullTo(mutableListOf()) { target ->
+                target.takeIf {
+                    target.enclosingClass == method.enclosingClass &&
+                        target.name == method.name &&
+                        target.description != method.description
+                }
+            }
+        }.singleOrNull()
     }
 
     sealed interface MethodResolutionResult {
@@ -90,8 +106,9 @@ class JIRCallResolver(
     fun resolve(call: JIRCallExpr, location: JIRInst, context: JIRMethodAnalysisContext): List<MethodResolutionResult> {
         val method = call.method.method
         val methodIgnored = unitResolver.resolve(method) == UnknownUnit
+        val declaredMethod = (call as? JIRInstanceCallExpr)?.declaredMethod?.method ?: method
 
-        if (methodIgnored && alwaysIgnoreMethod(method)) {
+        if (alwaysIgnoreMethod(declaredMethod)) {
             return listOf(MethodResolutionResult.MethodResolutionFailed)
         }
 
@@ -163,9 +180,11 @@ class JIRCallResolver(
         }
 
         val ctxBuilder = MethodContextCreator(context, call, location, instanceTypeConstraints = null)
-        val methodsWithContext = methods.flatMapTo(hashSetOf()) { (m, constraint) ->
+        val methodsWithContext = methods.asSequence().filter { (method, _) ->
+            ctxBuilder.bridgeArgumentsMayReturnNormally(method)
+        }.flatMap { (m, constraint) ->
             ctxBuilder.withInstanceTypeConstraint(constraint).attachContext(m)
-        }
+        }.toHashSet()
 
         methodsWithContext.mapTo(result) {
             MethodResolutionResult.ConcreteMethod(it)
@@ -306,6 +325,22 @@ class JIRCallResolver(
             return paramTypeConstraints.getOrPut(paramIdx) {
                 resolveValueTypeConstraints(arg, location, context).orEmpty()
             }
+        }
+
+        fun bridgeArgumentsMayReturnNormally(method: JIRMethod): Boolean {
+            val target = bridgeTarget(method) ?: return true
+            return target.parameters.all { parameter ->
+                val targetType = parameter.type.toJIRClassOrInterface(cp) ?: return@all true
+                val constraints = paramTypeConstraints(parameter.index)
+                constraints.isEmpty() || constraints.any { it.mayBeInstanceOf(targetType) }
+            }
+        }
+
+        private fun TypeConstraintInfo.mayBeInstanceOf(target: JIRClassOrInterface): Boolean {
+            if (type == target || type.isSubClassOf(target)) return true
+            if (exactType) return false
+            if (target.isSubClassOf(type)) return true
+            return type.isInterface || target.isInterface
         }
 
         fun attachContext(method: JIRMethod): List<MethodWithContext> {

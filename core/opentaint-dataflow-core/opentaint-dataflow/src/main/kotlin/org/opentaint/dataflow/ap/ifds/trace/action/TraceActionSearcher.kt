@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.trace.action
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -15,6 +17,7 @@ import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithInterproceduralTrac
 import org.opentaint.dataflow.ap.ifds.trace.path.Source2SinkTraceGraph
 import org.opentaint.dataflow.ap.ifds.trace.path.createSource2SinkGraph
 import org.opentaint.dataflow.ap.ifds.trace.withMethodRunner
+import org.opentaint.dataflow.util.CompactIntSet
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
@@ -46,6 +49,7 @@ fun TaintAnalysisUnitRunnerManager.collectActionableRules(
         trace = trace,
         sinkStatement = vulnerability.vulnerability.statement,
         sinkRules = vulnerability.vulnerability.vulnerabilityRules.keys,
+        shouldMaterializeNode = trace.sourceToSinkTrace::requiresFullTraceResolution,
         materializeNode = { node ->
             withMethodRunner(node.methodEntryPoint) {
                 val resolver = methodTraceResolver(node.methodEntryPoint)
@@ -63,6 +67,8 @@ fun TaintAnalysisUnitRunnerManager.collectActionableRules(
                             cancellation,
                             collapseUnchangedNodes = true,
                         )
+
+                    is TraceResolver.InterProceduralMethodEntryNode -> emptyList()
                 }
             }
         },
@@ -83,6 +89,7 @@ fun collectActionableRules(
     trace: TraceResolver.Trace,
     sinkStatement: CommonInst,
     sinkRules: Collection<CommonTaintConfigurationItem>,
+    shouldMaterializeNode: (TraceResolver.InterProceduralTraceNode) -> Boolean = { true },
     materializeNode: (TraceResolver.InterProceduralTraceNode) -> List<FullStart2FinalTrace>,
     materializeSummary: (SummaryTrace) -> List<FullStart2FinalTrace>,
     isActive: () -> Boolean = { true },
@@ -91,6 +98,7 @@ fun collectActionableRules(
         trace,
         sinkStatement,
         sinkRules,
+        shouldMaterializeNode,
         materializeNode,
         materializeSummary,
         isActive,
@@ -138,6 +146,7 @@ private class TraceActionCollector(
     private val trace: TraceResolver.Trace,
     private val sinkStatement: CommonInst,
     sinkRules: Collection<CommonTaintConfigurationItem>,
+    private val shouldMaterializeNode: (TraceResolver.InterProceduralTraceNode) -> Boolean,
     private val materializeNode: (TraceResolver.InterProceduralTraceNode) -> List<FullStart2FinalTrace>,
     private val materializeSummary: (SummaryTrace) -> List<FullStart2FinalTrace>,
     private val isActive: () -> Boolean,
@@ -156,8 +165,12 @@ private class TraceActionCollector(
     private val sinkRules = sinkRules.toSet()
     private val summaryResults = hashMapOf<SummaryTrace, Evaluation>()
     private val summariesInProgress = hashSetOf<SummaryTrace>()
+    private val callSummaryRelevance = hashMapOf<TraceEntryAction.CallSummary, Boolean>()
+    private val sharedNodeResults = hashMapOf<SummaryTrace, Evaluation>()
+    private var metadataFilteredNodes = 0
     private var unchangedTaintMarkNodes = 0
     private var coveredZeroStartNodes = 0
+    private var sharedNodeResolutions = 0
 
     fun collect(): ActionableRulesCollectionResult {
         if (!isActive()) return ActionableRulesCollectionResult.Failed
@@ -177,13 +190,13 @@ private class TraceActionCollector(
 
         val graph = createSource2SinkGraph(sourceToSink)
         if (!isActive()) return ActionableRulesCollectionResult.Failed
-        val finalTaintMarks = graph.allNodes.map { it.finalTaintMarks() }
+        val finalTaintMarks = graph.allNodes.map { sourceToSink.finalTaintMarks(it) }
 
         val nodeResults = arrayOfNulls<Evaluation>(graph.allNodes.size)
         for (nodeId in graph.allNodes.indices) {
             if (!isActive()) return ActionableRulesCollectionResult.Failed
             val seed = if (graph.sinkNodes.contains(nodeId)) sinkRuleMap() else emptyMap()
-            val result = when (graph.ruleResolutionSkipReason(nodeId, finalTaintMarks)) {
+            val result = when (graph.ruleResolutionSkipReason(nodeId, finalTaintMarks, sourceToSink)) {
                 RuleResolutionSkipReason.UnchangedTaintMarks -> {
                     unchangedTaintMarkNodes++
                     Evaluation.Valid(seed)
@@ -214,8 +227,10 @@ private class TraceActionCollector(
 
         val rules = collected.freeze()
         logger.debug {
-            "Rule search skipped $unchangedTaintMarkNodes unchanged-mark and " +
-                "$coveredZeroStartNodes covered-Zero full node resolutions out of ${graph.allNodes.size}"
+            "Rule search skipped $metadataFilteredNodes metadata-filtered and " +
+                "$unchangedTaintMarkNodes unchanged-mark and $coveredZeroStartNodes covered-Zero " +
+                "full node resolutions out of ${graph.allNodes.size}; shared $sharedNodeResolutions " +
+                "identical full queries"
         }
         return if (rules.isEmpty()) {
             ActionableRulesCollectionResult.Failed
@@ -228,11 +243,47 @@ private class TraceActionCollector(
         node: TraceResolver.InterProceduralTraceNode,
         seed: Rules,
     ): Evaluation {
+        if (!shouldMaterializeNode(node)) {
+            metadataFilteredNodes++
+            return Evaluation.Valid(seed)
+        }
+
+        val sharedQuery = node.sharedFullTraceQuery()
+        if (sharedQuery != null) {
+            sharedNodeResults[sharedQuery]?.let { result ->
+                sharedNodeResolutions++
+                return result.withSeed(seed)
+            }
+        }
+
         val traces = materializeNode(node)
-        if (traces.isEmpty()) return Evaluation.Invalid
+        if (traces.isEmpty()) {
+            if (sharedQuery != null) sharedNodeResults[sharedQuery] = Evaluation.Invalid
+            return Evaluation.Invalid
+        }
 
         if (!isActive()) return Evaluation.Failed
-        return evaluateResolvedTraces(traces, TraceOrigin.OuterNode, seed)
+        val result = evaluateResolvedTraces(traces, TraceOrigin.OuterNode, emptyMap())
+        if (sharedQuery != null && result !== Evaluation.Failed) sharedNodeResults[sharedQuery] = result
+        return result.withSeed(seed)
+    }
+
+    private fun TraceResolver.InterProceduralTraceNode.sharedFullTraceQuery(): SummaryTrace? = when (this) {
+        is TraceResolver.InterProceduralSummaryTraceNode -> null
+        is TraceResolver.InterProceduralMethodEntryNode -> null
+        is TraceResolver.InterProceduralStart2FinalTraceNode -> if (trace.isStartOverApproximation) {
+            SummaryTrace(trace.method, trace.final, trace.traceKind)
+        } else {
+            null
+        }
+    }
+
+    private fun Evaluation.withSeed(seed: Rules): Evaluation {
+        if (this !is Evaluation.Valid || seed.isEmpty()) return this
+        val collected = RulesAccumulator()
+        collected.addAll(rules)
+        collected.addAll(seed)
+        return Evaluation.Valid(collected.freeze())
     }
 
     private fun evaluateZeroStartWithoutFullTrace(
@@ -324,18 +375,30 @@ private class TraceActionCollector(
             }
         }
 
-        val reachableEntries = trace.corridorWithout(invalidEntries, isActive)
-        if (trace.finalId !in reachableEntries) return Evaluation.Invalid
-
         val collected = RulesAccumulator()
         collected.addAll(seed)
-        for (entryId in reachableEntries) {
-            if (!isActive()) return Evaluation.Failed
+
+        fun collectEntry(entryId: Int) {
             entryRules[entryId]?.let(collected::addAll)
             val entry = trace.entries[entryId]
             if (entry !is TraceEntry.Action) {
                 collected.addRuleActions(entry)
             }
+        }
+
+        if (invalidEntries.isEmpty()) {
+            trace.entries.indices.forEach { entryId ->
+                if (!isActive()) return Evaluation.Failed
+                collectEntry(entryId)
+            }
+            return Evaluation.Valid(collected.freeze())
+        }
+
+        val reachableEntries = trace.corridorWithout(invalidEntries, isActive)
+        if (!reachableEntries.contains(trace.finalId)) return Evaluation.Invalid
+        reachableEntries.forEach { entryId ->
+            if (!isActive()) return Evaluation.Failed
+            collectEntry(entryId)
         }
 
         return Evaluation.Valid(collected.freeze())
@@ -377,8 +440,10 @@ private class TraceActionCollector(
     private fun ActionVariant.relevantSummary(origin: TraceOrigin): SummaryTrace? =
         when (val action = primaryAction) {
             is TraceEntryAction.CallSourceSummary -> action.summaryTrace
-            is TraceEntryAction.CallSummary -> action.summaryTrace.takeIf {
-                action.summaryEdges.introducesOrChangesTaintMarks() && it.shouldExpand()
+            is TraceEntryAction.CallSummary -> action.summaryTrace.takeIf { summary ->
+                callSummaryRelevance.getOrPut(action) {
+                    action.summaryEdges.introducesOrChangesTaintMarks() && summary.shouldExpand()
+                }
             }
             else -> null
         }
@@ -440,11 +505,16 @@ private class TraceActionCollector(
 private fun Source2SinkTraceGraph.ruleResolutionSkipReason(
     nodeId: Int,
     finalTaintMarks: List<Set<TaintMarkAccessor>>,
+    sourceToSink: TraceResolver.SourceToSinkTrace,
 ): RuleResolutionSkipReason? {
-    val trace = (allNodes[nodeId] as? TraceResolver.InterProceduralStart2FinalTraceNode)?.trace
-        ?: return null
+    val node = allNodes[nodeId]
     val finalMarks = finalTaintMarks[nodeId]
 
+    if (node is TraceResolver.InterProceduralMethodEntryNode) {
+        return RuleResolutionSkipReason.UnchangedTaintMarks
+    }
+
+    val trace = (node as? TraceResolver.InterProceduralStart2FinalTraceNode)?.trace ?: return null
     return when (val startEntry = trace.startEntry) {
         is TraceEntry.MethodEntry -> RuleResolutionSkipReason.UnchangedTaintMarks.takeIf {
             startEntry.facts.taintMarks() == finalMarks
@@ -463,10 +533,13 @@ private fun Source2SinkTraceGraph.directPredecessors(nodeId: Int): Set<Int> = bu
     root2SinkBwd[nodeId]?.forEach { add(it) }
 }
 
-private fun TraceResolver.InterProceduralTraceNode.finalTaintMarks(): Set<TaintMarkAccessor> =
-    when (this) {
-        is TraceResolver.InterProceduralStart2FinalTraceNode -> trace.final.taintMarks()
-        is TraceResolver.InterProceduralSummaryTraceNode -> trace.final.taintMarks()
+private fun TraceResolver.SourceToSinkTrace.finalTaintMarks(
+    node: TraceResolver.InterProceduralTraceNode,
+): Set<TaintMarkAccessor> =
+    when (node) {
+        is TraceResolver.InterProceduralStart2FinalTraceNode -> node.trace.final.taintMarks()
+        is TraceResolver.InterProceduralSummaryTraceNode -> node.trace.final.taintMarks()
+        is TraceResolver.InterProceduralMethodEntryNode -> node.entry.facts.taintMarks()
     }
 
 private fun TraceEntry.Final.taintMarks(): Set<TaintMarkAccessor> =
@@ -524,23 +597,24 @@ private class RulesAccumulator {
 private fun FullStart2FinalTrace.corridorWithout(
     invalidEntries: Set<Int>,
     isActive: () -> Boolean,
-): Set<Int> {
-    val allowed = entries.indices.filterTo(hashSetOf()) { it !in invalidEntries }
-    if (startEntryId !in allowed || finalId !in allowed || !isActive()) return emptySet()
+): CompactIntSet {
+    fun isAllowed(entryId: Int): Boolean =
+        entryId in entries.indices && entryId !in invalidEntries
 
-    val reachable = reachableNodes(setOf(startEntryId), allowed, isActive) { entryId ->
-        successors.get(entryId)?.let { successors ->
-            buildList { successors.forEach { add(it) } }
-        }.orEmpty()
-    }
+    if (!isAllowed(startEntryId) || !isAllowed(finalId) || !isActive()) return CompactIntSet()
 
-    val predecessors = Array(entries.size) { mutableSetOf<Int>() }
-    for ((from, successors) in successors) {
-        if (!isActive()) return emptySet()
-        successors.forEach { to -> predecessors[to] += from }
+    val reachable = reachableCompactNodes(setOf(startEntryId), ::isAllowed, isActive, successors::get)
+
+    val predecessors = Int2ObjectOpenHashMap<CompactIntSet>()
+    reachable.forEach { from ->
+        if (!isActive()) return CompactIntSet()
+        successors.get(from)?.forEach { to ->
+            if (reachable.contains(to)) {
+                predecessors.computeIfAbsent(to) { CompactIntSet() }.add(from)
+            }
+        }
     }
-    val canReachFinal = reachableNodes(setOf(finalId), allowed, isActive) { predecessors[it] }
-    return reachable.intersect(canReachFinal)
+    return reachableCompactNodes(setOf(finalId), reachable::contains, isActive, predecessors::get)
 }
 
 private fun Source2SinkTraceGraph.corridor(
@@ -594,6 +668,30 @@ private fun reachableNodes(
         for (successor in next(node)) {
             if (!isActive()) return emptySet()
             if (successor in allowed && successor !in reached) pending.addLast(successor)
+        }
+    }
+    return reached
+}
+
+private fun reachableCompactNodes(
+    initial: Collection<Int>,
+    isAllowed: (Int) -> Boolean,
+    isActive: () -> Boolean,
+    next: (Int) -> CompactIntSet?,
+): CompactIntSet {
+    val reached = CompactIntSet()
+    val pending = IntArrayList()
+    initial.forEach {
+        if (isActive() && isAllowed(it)) pending.add(it)
+    }
+    while (pending.isNotEmpty()) {
+        if (!isActive()) return CompactIntSet()
+        val node = pending.removeInt(pending.lastIndex)
+        if (reached.contains(node)) continue
+        reached.add(node)
+        next(node)?.forEach { successor ->
+            if (!isActive()) return CompactIntSet()
+            if (isAllowed(successor) && !reached.contains(successor)) pending.add(successor)
         }
     }
     return reached

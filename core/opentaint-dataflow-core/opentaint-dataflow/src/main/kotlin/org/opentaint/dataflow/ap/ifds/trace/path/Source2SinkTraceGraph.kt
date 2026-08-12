@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSink
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSource
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralStart2FinalTraceNode
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralMethodEntryNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralSummaryTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.SourceToSinkTrace
@@ -113,13 +114,15 @@ private fun Source2SinkTraceGraph.traverseStartToSink(
         return
     }
 
-    val finalEntry = when (node) {
-        is InterProceduralStart2FinalTraceNode -> node.trace.final
-        is InterProceduralSummaryTraceNode -> node.trace.final
-    }
+    val sinkSuccessors = when (node) {
+        is InterProceduralStart2FinalTraceNode ->
+            trace.findSuccessors(node, kind = CallToSink, node.trace.final.statement)
 
-    val lastStatement = finalEntry.statement
-    val sinkSuccessors = trace.findSuccessors(node, kind = CallToSink, lastStatement)
+        is InterProceduralSummaryTraceNode ->
+            trace.findSuccessors(node, kind = CallToSink, node.trace.final.statement)
+
+        is InterProceduralMethodEntryNode -> trace.findSuccessors(node, kind = CallToSink)
+    }
     if (sinkSuccessors.isEmpty()) {
         // todo: fix trace
         return
@@ -146,13 +149,28 @@ private object NodeComparator : Comparator<InterProceduralTraceNode> {
     ): Int = when (a) {
         is InterProceduralSummaryTraceNode -> when (b) {
             is InterProceduralSummaryTraceNode -> SummaryNodeComparator.compare(a, b)
+            is InterProceduralMethodEntryNode,
+            is InterProceduralStart2FinalTraceNode -> -1
+        }
+
+        is InterProceduralMethodEntryNode -> when (b) {
+            is InterProceduralSummaryTraceNode -> 1
+            is InterProceduralMethodEntryNode -> MethodEntryNodeComparator.compare(a, b)
             is InterProceduralStart2FinalTraceNode -> -1
         }
 
         is InterProceduralStart2FinalTraceNode -> when (b) {
-            is InterProceduralSummaryTraceNode -> 1
+            is InterProceduralSummaryTraceNode,
+            is InterProceduralMethodEntryNode -> 1
             is InterProceduralStart2FinalTraceNode -> FullNodeComparator.compare(a, b)
         }
+    }
+}
+
+private object MethodEntryNodeComparator : Comparator<InterProceduralMethodEntryNode> {
+    override fun compare(a: InterProceduralMethodEntryNode, b: InterProceduralMethodEntryNode): Int {
+        MethodComparator.compare(a.entry.entryPoint, b.entry.entryPoint).let { if (it != 0) return it }
+        return a.entry.facts.hashCode().compareTo(b.entry.facts.hashCode())
     }
 }
 

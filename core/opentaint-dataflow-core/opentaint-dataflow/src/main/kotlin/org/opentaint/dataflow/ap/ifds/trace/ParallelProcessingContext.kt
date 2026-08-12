@@ -54,6 +54,13 @@ abstract class ParallelProcessingContext<T, R : Any>(
     private val results: AtomicReferenceArray<R> = AtomicReferenceArray<R>(tasks.size)
     private val terminated: AtomicIntegerArray = AtomicIntegerArray(tasks.size)
 
+    protected fun activeTasksSnapshot(): List<T> = buildList {
+        for (i in tasks.indices) {
+            if (terminated.get(i) != 0) continue
+            latestState.get(i)?.let(::add)
+        }
+    }
+
     private val scope = CoroutineScope(dispatcher)
 
     private val exceptionHandler = CoroutineExceptionHandler { _, exception ->

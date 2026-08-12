@@ -10,42 +10,29 @@ import org.opentaint.dataflow.jvm.util.JIRHierarchyInfo
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.ext.allSuperHierarchy
-import java.util.LinkedList
-import java.util.Queue
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+
+private data class ResolvedMethodRules<S : SerializedRule>(
+    val storage: MethodClassTaintRulesStorage<S>?,
+)
 
 class MethodTaintRulesStorage<S : SerializedRule> private constructor(
     private val patternManager: PatternManager,
     private val hierarchyInfo: JIRHierarchyInfo,
-    private val concreteMethodNameRules: MutableMap<String, MethodClassTaintRulesStorage<S>>,
+    private val methodNameRules: ConcurrentHashMap<String, ResolvedMethodRules<S>>,
     private val patternMethodRules: Map<Regex, Array<SerializedRule>>,
     private val anyMethodRules: MethodClassTaintRulesStorage<S>?,
 ) {
-    private val methodNameWithoutConcreteRules = hashSetOf<String>()
-
     fun findRules(rules: MutableList<S>, method: JIRMethod) {
         anyMethodRules?.findRules(rules, method)
 
-        val concreteRules = concreteMethodNameRules[method.name]
-        if (concreteRules != null) {
-            concreteRules.findRules(rules, method)
-            return
+        val resolved = methodNameRules.computeIfAbsent(method.name) { methodName ->
+            val builder = MethodClassTaintRulesStorage.Builder<S>(patternManager, hierarchyInfo, methodName)
+            resolvePatterns(patternMethodRules, methodName, builder)
+            ResolvedMethodRules(builder.build())
         }
-
-        if (method.name in methodNameWithoutConcreteRules) {
-            return
-        }
-
-        val builder = MethodClassTaintRulesStorage.Builder<S>(patternManager, hierarchyInfo, method.name)
-        resolvePatterns(patternMethodRules, method.name, builder)
-        val storage = builder.build()
-
-        if (storage == null) {
-            methodNameWithoutConcreteRules.add(method.name)
-            return
-        }
-
-        concreteMethodNameRules[method.name] = storage
-        storage.findRules(rules, method)
+        resolved.storage?.findRules(rules, method)
     }
 
     class Builder<S : SerializedRule>(
@@ -86,10 +73,10 @@ class MethodTaintRulesStorage<S : SerializedRule> private constructor(
                 .mapValuesTo(hashMapOf()) { it.value.toTypedArray<SerializedRule>() }
 
 
-            val concreteRules = hashMapOf<String, MethodClassTaintRulesStorage<S>>()
+            val concreteRules = ConcurrentHashMap<String, ResolvedMethodRules<S>>()
             for ((methodName, builder) in concreteMethodNameRules) {
                 resolvePatterns(compiledPatternMethodRules, methodName, builder)
-                concreteRules[methodName] = builder.build() ?: continue
+                concreteRules[methodName] = ResolvedMethodRules(builder.build())
             }
 
             return MethodTaintRulesStorage(
@@ -125,15 +112,20 @@ private class MethodClassTaintRulesStorage<S : SerializedRule> private construct
     private val concreteMethodName: String?,
     private val patterns: ClassNamePattern<S>,
     private val anyRules: Array<S>,
-    private val concreteClassRules: MutableMap<String, MutableSet<S>>,
+    initialConcreteClassRules: Map<String, Set<S>>,
 ) {
-    private val patternResolvedClasses = hashSetOf<String>()
-    private val pushDelayRulesQueue: Queue<Pair<String, Iterable<S>>> = LinkedList()
+    private val concreteClassRules = ConcurrentHashMap<String, MutableSet<S>>()
+    private val resolvedPatternRules = ConcurrentHashMap<String, Set<S>>()
+    private val pushDelayRulesQueue = ConcurrentLinkedQueue<Pair<String, Iterable<S>>>()
 
     init {
-        for ((className, rules) in concreteClassRules) {
+        for ((className, rules) in initialConcreteClassRules) {
+            val concurrentRules = ConcurrentHashMap.newKeySet<S>()
+            concurrentRules.addAll(rules)
+            this.concreteClassRules[className] = concurrentRules
             registerRules(className, rules)
         }
+        pushDelayedRules()
     }
 
     private fun registerRules(className: String, rules: Iterable<S>) {
@@ -142,12 +134,8 @@ private class MethodClassTaintRulesStorage<S : SerializedRule> private construct
     }
 
     private fun pushDelayedRules() {
-        if (pushDelayRulesQueue.isEmpty()) return
-
-        val iter = pushDelayRulesQueue.iterator()
-        while (iter.hasNext()) {
-            val (className, rules) = iter.next()
-            iter.remove()
+        while (true) {
+            val (className, rules) = pushDelayRulesQueue.poll() ?: return
 
             val cls = hierarchyInfo.cp.findClassOrNull(className) ?: continue
             pushRuleForSuperTypes(cls, rules)
@@ -169,7 +157,7 @@ private class MethodClassTaintRulesStorage<S : SerializedRule> private construct
         cls.allSuperHierarchy.filter { c ->
             c.declaredMethods.any { it.name == concreteMethodName }
         }.forEach { c ->
-            concreteClassRules.getOrPut(c.name, ::hashSetOf).addAll(conditionedRules)
+            concreteClassRules.computeIfAbsent(c.name) { ConcurrentHashMap.newKeySet() }.addAll(conditionedRules)
         }
     }
 
@@ -207,23 +195,21 @@ private class MethodClassTaintRulesStorage<S : SerializedRule> private construct
             }
         }
 
-        if (!patternResolvedClasses.add(className)) {
-            return
+        val newRules = resolvedPatternRules.computeIfAbsent(className) {
+            val resolved = hashSetOf<S>()
+            resolveClassNamePattern(patterns, className, resolved)
+
+            if (innerClassNameWithDots != null) {
+                resolveClassNamePattern(patterns, innerClassNameWithDots, resolved)
+            }
+
+            if (resolved.isNotEmpty()) {
+                registerRules(className, resolved)
+                pushDelayedRules()
+                concreteClassRules.computeIfAbsent(className) { ConcurrentHashMap.newKeySet() }.addAll(resolved)
+            }
+            resolved
         }
-
-        val newRules = hashSetOf<S>()
-        resolveClassNamePattern(patterns, className, newRules)
-
-        if (innerClassNameWithDots != null) {
-            resolveClassNamePattern(patterns, innerClassNameWithDots, newRules)
-        }
-
-        if (newRules.isEmpty()) return
-
-        registerRules(className, newRules)
-        pushDelayedRules()
-
-        concreteClassRules.getOrPut(className, ::hashSetOf).addAll(newRules)
         dst.addAll(newRules)
 
         return

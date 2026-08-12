@@ -6,8 +6,10 @@ import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
@@ -103,6 +105,25 @@ interface AnalysisManager: LanguageManager {
         graph: MethodInstGraph,
         statement: CommonInst
     ): MethodEdgePostProcessor? = null
+
+    /**
+     * Returns true only when processing [fact] at [statement] is guaranteed to produce the same
+     * fact through `Unchanged`, without producing any additional flow or side effect.
+     */
+    fun isTransparentToFact(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        graph: MethodInstGraph,
+        statement: CommonInst,
+        fact: FinalFactAp,
+    ): Boolean = false
+
+    fun factIsRelevantToResolvedMethod(
+        apManager: ApManager,
+        callerContext: MethodAnalysisContext,
+        method: MethodWithContext,
+        fact: FactAp,
+    ): Boolean = true
 
     fun isReachable(
         apManager: ApManager,

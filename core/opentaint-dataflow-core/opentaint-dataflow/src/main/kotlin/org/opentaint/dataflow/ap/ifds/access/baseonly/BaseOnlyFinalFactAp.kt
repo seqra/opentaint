@@ -26,7 +26,7 @@ class BaseOnlyFinalFactAp(
     override val size: Int get() = access.size
     override val depth: Int get() = size
 
-    override fun isAbstract(): Boolean = access.hasAp
+    override fun isAbstract(): Boolean = access.isRootAbstract
 
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
         BaseOnlyFinalFactAp(manager, newBase, BaseOnlyAccessOps.restoreAbstraction(access), exclusions)
@@ -182,6 +182,11 @@ class BaseOnlyFinalFactAp(
             }
         }
         return result
+    }
+
+    override fun hasEmptyDelta(other: InitialFactAp): Boolean {
+        other as BaseOnlyInitialFactAp
+        return base == other.base && access == other.access
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {

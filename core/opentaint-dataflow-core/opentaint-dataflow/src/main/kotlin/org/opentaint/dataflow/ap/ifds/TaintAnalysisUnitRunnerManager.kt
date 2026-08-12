@@ -47,6 +47,7 @@ import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.LongAdder
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicInteger
@@ -312,7 +313,10 @@ class TaintAnalysisUnitRunnerManager(
         val traceResolutionContext = object : ParallelProcessingContext<TraceResolver.State, VulnerabilityWithInterproceduralTrace>(
             analyzerDispatcher, name = "Trace resolution", states
         ) {
+            private val iterations = ConcurrentHashMap<TaintVulnerability, LongAdder>()
+
             override fun processItem(item: TraceResolver.State): ProcessingResult<TraceResolver.State, VulnerabilityWithInterproceduralTrace> {
+                iterations.computeIfAbsent(item.vulnerability) { LongAdder() }.increment()
                 val res = traceResolver.resolveTrace(item)
                 return when (res) {
                     is TraceResolver.TraceResolutionResult.InProgress -> {
@@ -337,7 +341,7 @@ class TaintAnalysisUnitRunnerManager(
             override fun reportStats() {
                 logger.info { reportMemoryUsage() }
 
-                logger.debug {
+                logger.info {
                     val methodStats = collectMethodStats()
                     val mostTRMethods = methodStats.stats.values.sortedByDescending { it.traceResolverSteps }
 
@@ -354,6 +358,20 @@ class TaintAnalysisUnitRunnerManager(
                             appendLine("Delta")
                             mostTrDelta.take(5).forEach { appendLine(it) }
                         }
+
+                        appendLine("Active traces")
+                        activeTasksSnapshot()
+                            .sortedByDescending { iterations[it.vulnerability]?.sum() ?: 0L }
+                            .take(10)
+                            .forEach { state ->
+                                val vulnerability = state.vulnerability
+                                val debug = traceResolver.debugInfo(state)
+                                appendLine(
+                                    "iterations=${iterations[vulnerability]?.sum() ?: 0}, " +
+                                        "rule=${vulnerability.ruleId}, sink=${vulnerability.statement}, " +
+                                        "phase=${debug.phase}, request=${debug.request}, ${debug.graph}"
+                                )
+                            }
                     }
                 }
             }

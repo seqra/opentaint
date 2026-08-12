@@ -42,6 +42,7 @@ class SelectedTaintRulesProvider(
         val methodExitSink = SelectedRule<TaintMethodExitSink>()
 
         val methodCleaner = SelectedRule<TaintCleaner>()
+
     }
 
     @Volatile
@@ -63,12 +64,14 @@ class SelectedTaintRulesProvider(
                 when (rule) {
                     is TaintMethodSource -> {
                         val actions = rule.actionsAfter.relevantActions(actions) ?: continue
-                        selected.methodSource.add(inst, rule.copy(actionsAfter = actions))
+                        val selectedRule = rule.copy(actionsAfter = actions)
+                        selected.methodSource.add(inst, selectedRule)
                     }
 
                     is TaintCleaner -> {
                         val actions = rule.actionsAfter.relevantActions(actions) ?: continue
-                        selected.methodCleaner.add(inst, rule.copy(actionsAfter = actions))
+                        val selectedRule = rule.copy(actionsAfter = actions)
+                        selected.methodCleaner.add(inst, selectedRule)
                     }
 
                     is TaintMethodEntrySink -> {
@@ -88,17 +91,20 @@ class SelectedTaintRulesProvider(
 
                     is TaintEntryPointSource -> {
                         val actions = rule.actionsAfter.relevantActions(actions) ?: continue
-                        selected.methodEntrySource.add(inst, rule.copy(actionsAfter = actions))
+                        val selectedRule = rule.copy(actionsAfter = actions)
+                        selected.methodEntrySource.add(inst, selectedRule)
                     }
 
                     is TaintMethodExitSource -> {
                         val actions = rule.actionsAfter.relevantActions(actions) ?: continue
-                        selected.methodExitSource.add(inst, rule.copy(actionsAfter = actions))
+                        val selectedRule = rule.copy(actionsAfter = actions)
+                        selected.methodExitSource.add(inst, selectedRule)
                     }
 
                     is TaintStaticFieldSource -> {
                         val actions = rule.actionsAfter.relevantActions(actions) ?: continue
-                        selected.staticFieldSource.add(inst, rule.copy(actionsAfter = actions))
+                        val selectedRule = rule.copy(actionsAfter = actions)
+                        selected.staticFieldSource.add(inst, selectedRule)
                     }
 
                     is TaintPassThrough -> continue

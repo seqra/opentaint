@@ -22,7 +22,7 @@ class BaseOnlyInitialFactAp(
     override val size: Int get() = access.size
     override val depth: Int get() = access.size
 
-    override fun isAbstract(): Boolean = access.hasAp
+    override fun isAbstract(): Boolean = access.isRootAbstract
 
     override fun rebase(newBase: AccessPathBase): InitialFactAp =
         BaseOnlyInitialFactAp(manager, newBase, access, exclusions)

@@ -110,6 +110,15 @@ class MethodAnalyzerEdges(
         }
     }
 
+    fun addFactToFactSupports(
+        statement: CommonInst,
+        initialFacts: Iterable<InitialFactAp>,
+        finalFact: FinalFactAp,
+        emitDelta: (InitialFactAp, FinalFactAp) -> Unit,
+    ) {
+        taintedToFactEdges.addAll(statement, initialFacts, finalFact, emitDelta)
+    }
+
     fun allZeroToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<FinalFactAp> {
         val result = mutableListOf<FinalFactAp>()
         zeroToFactEdges.collectApAtStatement(result, statement, finalFactPattern)
@@ -145,6 +154,7 @@ class MethodAnalyzerEdges(
         ndFactToFactEdges.collectApAtStatement(result, statement, initialFacts, finalFactPattern)
         return result
     }
+
 
     private class SameInitialZeroFactEdges(
         maxInstIdx: Int,

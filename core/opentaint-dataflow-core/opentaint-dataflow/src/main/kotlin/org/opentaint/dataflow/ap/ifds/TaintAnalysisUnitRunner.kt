@@ -16,6 +16,7 @@ import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.RelevantFactFilter
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
+import org.opentaint.dataflow.ap.ifds.trace.TraceSummarizer
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.util.concurrentReadSafeForEach
@@ -505,10 +506,14 @@ class TaintAnalysisUnitRunner(
         }
     }
 
-    fun methodTraceResolver(methodEntryPoint: MethodEntryPoint): MethodTraceResolver {
+    fun methodTraceResolver(
+        methodEntryPoint: MethodEntryPoint,
+        traceSummarizer: TraceSummarizer? = null,
+        traceResolutionActionHardLimit: Int? = null,
+    ): MethodTraceResolver {
         val methodRunners = methodAnalyzers(methodEntryPoint)
         val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.methodTraceResolver()
+        return runner.methodTraceResolver(traceSummarizer, traceResolutionActionHardLimit)
     }
 
     fun resolveIntraProceduralForwardFullTrace(

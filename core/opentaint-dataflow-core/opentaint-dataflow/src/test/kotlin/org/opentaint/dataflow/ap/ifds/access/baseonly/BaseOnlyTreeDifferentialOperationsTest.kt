@@ -108,6 +108,33 @@ class BaseOnlyTreeDifferentialOperationsTest {
         }
     }
 
+    @Test
+    fun `BaseOnly empty-delta predicate is equivalent to materialized delta inspection`() {
+        val manager = managers().second
+        val finals = listOf(
+            manager.finalOf(mark),
+            manager.finalOf(field, mark),
+            manager.abstractFinalOf(field),
+            manager.mostAbstractFinalAp(base),
+        )
+        val initials = listOf(
+            manager.finalInitialOf(mark),
+            manager.finalInitialOf(field, mark),
+            manager.abstractInitialOf(field),
+            manager.mostAbstractInitialAp(base),
+        )
+
+        for (finalFact in finals) {
+            for (initialFact in initials) {
+                assertEquals(
+                    finalFact.delta(initialFact).any { it.isEmpty },
+                    finalFact.hasEmptyDelta(initialFact),
+                    "final=$finalFact, initial=$initialFact",
+                )
+            }
+        }
+    }
+
     private fun readable(list: ReadableAccessorList<*>, sequence: List<Accessor>): Boolean {
         var current: ReadableAccessorList<*> = list
         for (accessor in sequence) {
@@ -165,6 +192,41 @@ class BaseOnlyTreeDifferentialOperationsTest {
                 (AnyAccessor.containsAccessor(treeStart) && AnyAccessor in baseOnly.getStartAccessors())
             assertTrue(represented, "$scenario lost symbolic Tree start edge $treeStart")
         }
+    }
+
+    @Test
+    fun `abstract status follows the current logical root after concrete prefix reads`() {
+        val (treeManager, baseOnlyManager) = managers()
+
+        fun assertRootStatus(
+            tree: ReadableAccessorList<*>,
+            baseOnly: ReadableAccessorList<*>,
+            expected: Boolean,
+            stage: String,
+        ) {
+            assertEquals(expected, tree.isAbstract(), "$stage: unexpected Tree status")
+            assertEquals(tree.isAbstract(), baseOnly.isAbstract(), "$stage: BaseOnly differs from Tree")
+        }
+
+        var treeFinal: ReadableAccessorList<*> = treeManager.abstractFinalOf(stat, field)
+        var baseOnlyFinal: ReadableAccessorList<*> = baseOnlyManager.abstractFinalOf(stat, field)
+        assertRootStatus(treeFinal, baseOnlyFinal, expected = false, "final before prefix reads")
+        treeFinal = assertNotNull(treeFinal.readAccessor(stat) as? ReadableAccessorList<*>)
+        baseOnlyFinal = assertNotNull(baseOnlyFinal.readAccessor(stat) as? ReadableAccessorList<*>)
+        assertRootStatus(treeFinal, baseOnlyFinal, expected = false, "final after static read")
+        treeFinal = assertNotNull(treeFinal.readAccessor(field) as? ReadableAccessorList<*>)
+        baseOnlyFinal = assertNotNull(baseOnlyFinal.readAccessor(field) as? ReadableAccessorList<*>)
+        assertRootStatus(treeFinal, baseOnlyFinal, expected = true, "final after complete prefix read")
+
+        var treeInitial: ReadableAccessorList<*> = treeManager.abstractInitialOf(stat, field)
+        var baseOnlyInitial: ReadableAccessorList<*> = baseOnlyManager.abstractInitialOf(stat, field)
+        assertRootStatus(treeInitial, baseOnlyInitial, expected = false, "initial before prefix reads")
+        treeInitial = assertNotNull(treeInitial.readAccessor(stat) as? ReadableAccessorList<*>)
+        baseOnlyInitial = assertNotNull(baseOnlyInitial.readAccessor(stat) as? ReadableAccessorList<*>)
+        assertRootStatus(treeInitial, baseOnlyInitial, expected = false, "initial after static read")
+        treeInitial = assertNotNull(treeInitial.readAccessor(field) as? ReadableAccessorList<*>)
+        baseOnlyInitial = assertNotNull(baseOnlyInitial.readAccessor(field) as? ReadableAccessorList<*>)
+        assertRootStatus(treeInitial, baseOnlyInitial, expected = true, "initial after complete prefix read")
     }
 
     @Test
@@ -370,7 +432,8 @@ class BaseOnlyTreeDifferentialOperationsTest {
                 assertTrue(afterInner.startsWithAccessor(mark), "absorbing inner field must preserve terminal")
                 assertEquals(baseOnlyManager.finalOf(field, mark), baseOnlyResult)
             } else {
-                assertTrue(baseOnlyResult.isAbstract(), "an exact field-only suffix has no terminal to retain")
+                assertFalse(baseOnlyResult.isAbstract(), "the abstraction is still behind the retained field")
+                assertTrue(assertNotNull(baseOnlyResult.readAccessor(field)).isAbstract())
                 assertEquals(baseOnlyTarget, baseOnlyResult)
             }
         }

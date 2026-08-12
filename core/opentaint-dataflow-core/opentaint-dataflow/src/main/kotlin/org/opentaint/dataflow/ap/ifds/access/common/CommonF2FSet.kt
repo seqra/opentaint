@@ -21,6 +21,7 @@ abstract class CommonF2FSet<IAP, FAP>(
         fun filter(dst: MutableList<AccessWithExclusion<FAP>>, statement: CommonInst, initial: IAP, finalPattern: IAP)
     }
 
+
     abstract fun createApStorage(): ApStorage<IAP, FAP>
 
     private val storage = ExitFactBaseStorage()
@@ -29,19 +30,39 @@ abstract class CommonF2FSet<IAP, FAP>(
         statement: CommonInst,
         initialAp: InitialFactAp,
         finalAp: FinalFactAp,
-    ): List<Pair<InitialFactAp, FinalFactAp>> {
+    ): List<Pair<InitialFactAp, FinalFactAp>> = buildList {
+        addOne(statement, initialAp, finalAp) { addedInitial, addedFinal ->
+            add(addedInitial to addedFinal)
+        }
+    }
+
+    override fun addAll(
+        statement: CommonInst,
+        initialAps: Iterable<InitialFactAp>,
+        finalAp: FinalFactAp,
+        emitDelta: (InitialFactAp, FinalFactAp) -> Unit,
+    ) {
+        initialAps.forEach { initialAp -> addOne(statement, initialAp, finalAp, emitDelta) }
+    }
+
+    private fun addOne(
+        statement: CommonInst,
+        initialAp: InitialFactAp,
+        finalAp: FinalFactAp,
+        emitDelta: (InitialFactAp, FinalFactAp) -> Unit,
+    ) {
         check(initialAp.exclusions == finalAp.exclusions) { "Edge exclusion mismatch" }
 
         val edgeStorage = storage.getOrCreate(finalAp.base).getOrCreate(initialAp.base)
 
         val final = AccessWithExclusion(getFinalAccess(finalAp), finalAp.exclusions)
-        return edgeStorage.add(statement, getInitialAccess(initialAp), final).map { added ->
+        edgeStorage.add(statement, getInitialAccess(initialAp), final).forEach { added ->
             if (added === final) {
-                initialAp to finalAp
+                emitDelta(initialAp, finalAp)
             } else {
                 val newInitialAp = createInitial(initialAp.base, getInitialAccess(initialAp), added.exclusion)
                 val newExitAp = createFinal(finalAp.base, added.access, added.exclusion)
-                newInitialAp to newExitAp
+                emitDelta(newInitialAp, newExitAp)
             }
         }
     }

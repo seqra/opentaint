@@ -331,9 +331,10 @@ three abstraction positions are equivalent.
   `BaseOnlyNodeInitialDelta#isAbstract`.
 
 - Old behavior: only suffix-position abstraction made a delta abstract.
-- New behavior: abstraction in any slot makes it abstract.
-- Motivation: `isAbstract` should describe the access, not one encoding
-  position.
+- New behavior: abstraction in any slot makes it abstract once no concrete
+  prefix remains before it.
+- Motivation: `isAbstract` describes abstract acceptance at the current logical
+  node, independently of the packed slot holding that node.
 - Verdict: keep.
 
 ### 25. Initial-fact abstraction

@@ -36,7 +36,7 @@ class BaseOnlyInitialFactAbstraction(
         val blockedAtByFact = Long2LongOpenHashMap()
         val concreteTypeBlockerByFact = Long2IntOpenHashMap().apply { defaultReturnValue(NO_ACCESSOR) }
 
-        fun addExclusionDelta(
+        fun addExclusionsAndFindUnblockedAccessors(
             pattern: BaseOnlyAccess,
             exclusions: Set<Accessor>,
         ): IntArrayList? {
@@ -46,17 +46,14 @@ class BaseOnlyInitialFactAbstraction(
             if (knownExclusions == null) {
                 if (compactExclusions.isEmpty()) return null
 
-                val addedAccessors = IntArrayList(compactExclusions.size)
-                compactExclusions.forEachIndex(addedAccessors::add)
                 knownExclusionsByPattern[pattern] = compactExclusions
-                return addedAccessors
+                return newlyExcludedBlockedAccessors(compactExclusions, previouslyExcluded = null)
             }
 
-            val update = knownExclusions.unionWithAdded(compactExclusions) ?: return null
-            val addedAccessors = IntArrayList(update.added.size)
-            update.added.forEachIndex(addedAccessors::add)
-            knownExclusionsByPattern[pattern] = update.union
-            return addedAccessors
+            val union = knownExclusions.unionIfChanged(compactExclusions) ?: return null
+
+            knownExclusionsByPattern[pattern] = union
+            return newlyExcludedBlockedAccessors(compactExclusions, knownExclusions)
         }
 
         fun excludes(blockedAt: BaseOnlyAccess, accessor: AccessorIdx): Boolean {
@@ -109,6 +106,22 @@ class BaseOnlyInitialFactAbstraction(
             return unblocked.takeUnless { it.isEmpty() }
         }
 
+        private fun newlyExcludedBlockedAccessors(
+            exclusions: BaseOnlyExclusionAccessorSet,
+            previouslyExcluded: BaseOnlyExclusionAccessorSet?,
+        ): IntArrayList? {
+            var result: IntArrayList? = null
+            val iterator = factsByExclusion.keys.iterator()
+            while (iterator.hasNext()) {
+                val accessor = iterator.nextInt()
+                if (exclusions.containsIndex(accessor) && previouslyExcluded?.containsIndex(accessor) != true) {
+                    val matches = result ?: IntArrayList().also { result = it }
+                    matches.add(accessor)
+                }
+            }
+            return result
+        }
+
         private fun exclusionPatternCovers(pattern: BaseOnlyAccess, blockedAt: BaseOnlyAccess): Boolean =
             pattern == ABSTRACT_EMPTY_ACCESS || BaseOnlyAccessOps.containsAccess(pattern, blockedAt)
     }
@@ -135,18 +148,18 @@ class BaseOnlyInitialFactAbstraction(
         factAp as BaseOnlyInitialFactAp
         val state = perBase.getOrPut(factAp.base) { BaseState() }
 
-        val exclusionDelta = when (val ex = factAp.exclusions) {
-            is ExclusionSet.Concrete -> state.addExclusionDelta(
+        val unblockedAccessors = when (val ex = factAp.exclusions) {
+            is ExclusionSet.Concrete -> state.addExclusionsAndFindUnblockedAccessors(
                 factAp.access,
                 ex.set,
             )
             ExclusionSet.Empty -> null
             ExclusionSet.Universe -> error("Unexpected universe exclusion")
         }
-        if (exclusionDelta == null) return emptyList()
+        if (unblockedAccessors == null) return emptyList()
 
         val out = ArrayList<Pair<InitialFactAp, FinalFactAp>>()
-        val exclusionIterator = exclusionDelta.iterator()
+        val exclusionIterator = unblockedAccessors.iterator()
         while (exclusionIterator.hasNext()) {
             val accessor = exclusionIterator.nextInt()
             val unblocked = state.takeFactsUnblockedBy(accessor, factAp.access) ?: continue

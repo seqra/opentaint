@@ -49,6 +49,7 @@ class BaseOnlyInitialAccessIndexTest {
         }
         val index = BaseOnlyInitialAccessIndex<BaseOnlyAccess>()
         accesses.forEach { access -> index.getOrCreate(access) { access } }
+        accesses.forEach { access -> assertEquals(access, index.get(access)) }
 
         for (pattern in accesses) {
             val actual = hashSetOf<BaseOnlyAccess>()

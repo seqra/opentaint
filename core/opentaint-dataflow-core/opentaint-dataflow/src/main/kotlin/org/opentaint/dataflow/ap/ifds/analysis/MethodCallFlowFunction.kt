@@ -10,6 +10,10 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.taint.FinalFactReader
 
 interface MethodCallFlowFunction {
+    sealed interface FactToFactTransfer {
+        data object Unchanged : FactToFactTransfer
+    }
+
     sealed interface CallFact
 
     sealed interface Call2ReturnFact
@@ -87,6 +91,12 @@ interface MethodCallFlowFunction {
     fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<ZeroCallFact>
     fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp): Set<FactCallFact>
     fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp): Set<NDFactCallFact>
+
+    /**
+     * Returns a conclusion-only call transfer when the exact initial premise cannot affect the
+     * result, or null when the call must be evaluated once per exact premise.
+     */
+    fun createFactToFactTransfer(currentFactAp: FinalFactAp): Set<FactToFactTransfer>? = null
 
     fun propagateZeroToZeroResolutionFailure(): Set<ZeroCallFailureFact>
     fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<ZeroCallFailureFact>

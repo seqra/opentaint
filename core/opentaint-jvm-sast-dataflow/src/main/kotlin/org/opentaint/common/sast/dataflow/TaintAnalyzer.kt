@@ -162,7 +162,11 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         entryPoints: List<Method>,
         startMethods: List<MethodWithContext>,
     ): Pair<List<ActionableRulesCollectionResult.Collected>, Status> {
-        val shallowScanManager = BaseOnlyApManager(unrollStrategy, cancellation, fieldSensitive = true)
+        val shallowScanManager = BaseOnlyApManager(
+            unrollStrategy,
+            cancellation,
+            fieldSensitive = true,
+        )
         analysisManager.selectPhase(TaintAnalysisManager.Phase.ShallowScan)
         ifdsEngine.resetApManager(shallowScanManager)
 

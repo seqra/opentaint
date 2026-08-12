@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentHashMapOf
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.PersistentAccessorSet
@@ -19,23 +21,37 @@ internal fun BaseOnlyApManager.compactExclusions(exclusions: ExclusionSet): Excl
 
 internal class BaseOnlyExclusionAccessorSet private constructor(
     val manager: BaseOnlyApManager,
-    private val indices: IntArray,
+    private val chunks: PersistentMap<Int, Long>,
+    override val size: Int,
     private val cachedHash: Int,
 ) : AbstractSet<Accessor>(), PersistentAccessorSet {
-    override val size: Int get() = indices.size
-
     override fun contains(element: Accessor): Boolean =
-        indices.binarySearch(manager.interner.index(element)) >= 0
+        containsIndex(manager.interner.index(element))
 
-    fun containsIndex(index: Int): Boolean = indices.binarySearch(index) >= 0
+    fun containsIndex(index: Int): Boolean {
+        val mask = chunks[index.chunkIndex()] ?: return false
+        return mask and index.chunkBit() != 0L
+    }
 
     fun forEachIndex(consume: (Int) -> Unit) {
-        indices.forEach(consume)
+        chunks.forEach { (chunkIndex, bits) ->
+            var remaining = bits
+            while (remaining != 0L) {
+                val bit = remaining.countTrailingZeroBits()
+                consume((chunkIndex shl CHUNK_BITS) + bit)
+                remaining = remaining and (remaining - 1)
+            }
+        }
     }
 
     fun union(other: BaseOnlyExclusionAccessorSet): BaseOnlyExclusionAccessorSet {
         require(other.manager === manager)
-        return combine(other, SetOperation.Union)
+        return unionWithAdded(other)?.union ?: this
+    }
+
+    fun unionIfChanged(other: BaseOnlyExclusionAccessorSet): BaseOnlyExclusionAccessorSet? {
+        require(other.manager === manager)
+        return unionWithAdded(other)?.union
     }
 
     /**
@@ -45,51 +61,61 @@ internal class BaseOnlyExclusionAccessorSet private constructor(
      */
     fun unionWithAdded(other: BaseOnlyExclusionAccessorSet): UnionWithAdded? {
         require(other.manager === manager)
-        if (other.indices.isEmpty()) return null
+        if (other.isEmpty()) return null
 
-        var left = 0
-        var added: IntArray? = null
+        var unionChunks = chunks
+        var addedChunks = persistentHashMapOf<Int, Long>()
         var addedSize = 0
         var addedHash = 0
-        for (rightValue in other.indices) {
-            while (left < indices.size && indices[left] < rightValue) left++
-            if (left < indices.size && indices[left] == rightValue) continue
+        other.chunks.forEach { (chunkIndex, otherBits) ->
+            val currentBits = chunks[chunkIndex] ?: 0L
+            val newBits = otherBits and currentBits.inv()
+            if (newBits == 0L) return@forEach
 
-            val addedIndices = added ?: IntArray(other.indices.size).also { added = it }
-            addedIndices[addedSize++] = rightValue
-            addedHash += other.accessorHash(rightValue)
-        }
-        val addedIndices = added?.copyOf(addedSize) ?: return null
-
-        val unionIndices = IntArray(indices.size + addedSize)
-        left = 0
-        var newElement = 0
-        var output = 0
-        while (left < indices.size || newElement < addedIndices.size) {
-            if (newElement == addedIndices.size ||
-                left < indices.size && indices[left] < addedIndices[newElement]
-            ) {
-                unionIndices[output++] = indices[left++]
-            } else {
-                unionIndices[output++] = addedIndices[newElement++]
+            unionChunks = unionChunks.put(chunkIndex, currentBits or newBits)
+            addedChunks = addedChunks.put(chunkIndex, newBits)
+            var remaining = newBits
+            while (remaining != 0L) {
+                val bit = remaining.countTrailingZeroBits()
+                addedSize++
+                addedHash += accessorHash((chunkIndex shl CHUNK_BITS) + bit)
+                remaining = remaining and (remaining - 1)
             }
         }
+        if (addedSize == 0) return null
 
         return UnionWithAdded(
-            union = BaseOnlyExclusionAccessorSet(manager, unionIndices, cachedHash + addedHash),
-            added = BaseOnlyExclusionAccessorSet(manager, addedIndices, addedHash),
+            union = BaseOnlyExclusionAccessorSet(manager, unionChunks, size + addedSize, cachedHash + addedHash),
+            added = BaseOnlyExclusionAccessorSet(manager, addedChunks, addedSize, addedHash),
         )
     }
 
     override fun iterator(): Iterator<Accessor> = object : Iterator<Accessor> {
-        private var next = 0
+        private val chunkIterator = chunks.entries.sortedBy { it.key }.iterator()
+        private var chunkIndex = 0
+        private var remaining = 0L
 
-        override fun hasNext(): Boolean = next < indices.size
+        init {
+            advanceChunk()
+        }
+
+        override fun hasNext(): Boolean = remaining != 0L
 
         override fun next(): Accessor {
             if (!hasNext()) throw NoSuchElementException()
-            return manager.interner.accessor(indices[next++])
+            val bit = remaining.countTrailingZeroBits()
+            val index = (chunkIndex shl CHUNK_BITS) + bit
+            remaining = remaining and (remaining - 1)
+            if (remaining == 0L) advanceChunk()
+            return manager.interner.accessor(index)
                 ?: error("Accessor not found")
+        }
+
+        private fun advanceChunk() {
+            if (!chunkIterator.hasNext()) return
+            val entry = chunkIterator.next()
+            chunkIndex = entry.key
+            remaining = entry.value
         }
     }
 
@@ -98,22 +124,18 @@ internal class BaseOnlyExclusionAccessorSet private constructor(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other is BaseOnlyExclusionAccessorSet) {
-            return manager === other.manager && indices.contentEquals(other.indices)
+            return manager === other.manager &&
+                size == other.size && cachedHash == other.cachedHash && chunks == other.chunks
         }
         return super.equals(other)
     }
 
     override fun addPersistent(accessor: Accessor): PersistentAccessorSet {
         val idx = manager.interner.index(accessor)
-        val position = indices.binarySearch(idx)
-        if (position >= 0) return this
-
-        val insertionPoint = -position - 1
-        val result = IntArray(indices.size + 1)
-        indices.copyInto(result, endIndex = insertionPoint)
-        result[insertionPoint] = idx
-        indices.copyInto(result, destinationOffset = insertionPoint + 1, startIndex = insertionPoint)
-        return BaseOnlyExclusionAccessorSet(manager, result, cachedHash + accessor.hashCode())
+        if (containsIndex(idx)) return this
+        val chunkIndex = idx.chunkIndex()
+        val result = chunks.put(chunkIndex, (chunks[chunkIndex] ?: 0L) or idx.chunkBit())
+        return BaseOnlyExclusionAccessorSet(manager, result, size + 1, cachedHash + accessor.hashCode())
     }
 
     override fun addAllPersistent(accessors: Set<Accessor>): PersistentAccessorSet =
@@ -124,14 +146,15 @@ internal class BaseOnlyExclusionAccessorSet private constructor(
 
     override fun removePersistent(accessor: Accessor): PersistentAccessorSet {
         val idx = manager.interner.index(accessor)
-        val position = indices.binarySearch(idx)
-        if (position < 0) return this
-        if (indices.size == 1) return empty(manager)
+        val chunkIndex = idx.chunkIndex()
+        val currentBits = chunks[chunkIndex] ?: return this
+        val bit = idx.chunkBit()
+        if (currentBits and bit == 0L) return this
+        if (size == 1) return empty(manager)
 
-        val result = IntArray(indices.size - 1)
-        indices.copyInto(result, endIndex = position)
-        indices.copyInto(result, destinationOffset = position, startIndex = position + 1)
-        return BaseOnlyExclusionAccessorSet(manager, result, cachedHash - accessor.hashCode())
+        val newBits = currentBits and bit.inv()
+        val result = if (newBits == 0L) chunks.remove(chunkIndex) else chunks.put(chunkIndex, newBits)
+        return BaseOnlyExclusionAccessorSet(manager, result, size - 1, cachedHash - accessor.hashCode())
     }
 
     override fun removeAllPersistent(accessors: Set<Accessor>): PersistentAccessorSet =
@@ -141,64 +164,30 @@ internal class BaseOnlyExclusionAccessorSet private constructor(
         accessors: Set<Accessor>,
         operation: SetOperation,
     ): BaseOnlyExclusionAccessorSet {
-        if (accessors.isEmpty()) {
-            return if (operation == SetOperation.Intersection) empty(manager) else this
-        }
-
         val other = from(manager, accessors)
-        if (other.indices.isEmpty()) {
-            return if (operation == SetOperation.Intersection) empty(manager) else this
+        return when (operation) {
+            SetOperation.Union -> union(other)
+            SetOperation.Intersection -> filterIndices { other.containsIndex(it) }
+            SetOperation.Difference -> filterIndices { !other.containsIndex(it) }
         }
+    }
 
-        val resultSize = when (operation) {
-            SetOperation.Union -> indices.size + other.indices.size
-            SetOperation.Intersection -> minOf(indices.size, other.indices.size)
-            SetOperation.Difference -> indices.size
+    private inline fun filterIndices(crossinline keep: (Int) -> Boolean): BaseOnlyExclusionAccessorSet {
+        var resultChunks = persistentHashMapOf<Int, Long>()
+        var resultSize = 0
+        var resultHash = 0
+        forEachIndex { index ->
+            if (!keep(index)) return@forEachIndex
+            val chunkIndex = index.chunkIndex()
+            resultChunks = resultChunks.put(chunkIndex, (resultChunks[chunkIndex] ?: 0L) or index.chunkBit())
+            resultSize++
+            resultHash += accessorHash(index)
         }
-        val result = IntArray(resultSize)
-        var left = 0
-        var right = 0
-        var output = 0
-        var hash = cachedHash
-
-        while (left < indices.size || right < other.indices.size) {
-            val leftValue = indices.getOrNull(left)
-            val rightValue = other.indices.getOrNull(right)
-            when {
-                rightValue == null || leftValue != null && leftValue < rightValue -> {
-                    val idx = checkNotNull(leftValue)
-                    if (operation == SetOperation.Intersection) {
-                        hash -= accessorHash(idx)
-                    } else {
-                        result[output++] = idx
-                    }
-                    left++
-                }
-
-                leftValue == null || rightValue < leftValue -> {
-                    if (operation == SetOperation.Union) {
-                        result[output++] = rightValue
-                        hash += accessorHash(rightValue)
-                    }
-                    right++
-                }
-
-                else -> {
-                    val idx = checkNotNull(leftValue)
-                    if (operation == SetOperation.Difference) {
-                        hash -= accessorHash(idx)
-                    } else {
-                        result[output++] = idx
-                    }
-                    left++
-                    right++
-                }
-            }
+        return when (resultSize) {
+            size -> this
+            0 -> empty(manager)
+            else -> BaseOnlyExclusionAccessorSet(manager, resultChunks, resultSize, resultHash)
         }
-
-        if (output == indices.size && indices.indices.all { result[it] == indices[it] }) return this
-        if (output == 0) return empty(manager)
-        return BaseOnlyExclusionAccessorSet(manager, result.copyOf(output), hash)
     }
 
     private fun accessorHash(index: Int): Int =
@@ -214,19 +203,29 @@ internal class BaseOnlyExclusionAccessorSet private constructor(
         fun from(manager: BaseOnlyApManager, accessors: Set<Accessor>): BaseOnlyExclusionAccessorSet {
             if (accessors is BaseOnlyExclusionAccessorSet && accessors.manager === manager) return accessors
 
-            val indices = IntArray(accessors.size)
-            var next = 0
+            var chunks = persistentHashMapOf<Int, Long>()
+            var size = 0
             var hash = 0
             accessors.forEach { accessor ->
-                indices[next++] = manager.interner.index(accessor)
+                val index = manager.interner.index(accessor)
+                val chunkIndex = index.chunkIndex()
+                val bit = index.chunkBit()
+                val currentBits = chunks[chunkIndex] ?: 0L
+                if (currentBits and bit != 0L) return@forEach
+                chunks = chunks.put(chunkIndex, currentBits or bit)
+                size++
                 hash += accessor.hashCode()
             }
-            indices.sort()
-            return BaseOnlyExclusionAccessorSet(manager, indices, hash)
+            return BaseOnlyExclusionAccessorSet(manager, chunks, size, hash)
         }
 
         fun empty(manager: BaseOnlyApManager): BaseOnlyExclusionAccessorSet =
-            BaseOnlyExclusionAccessorSet(manager, IntArray(0), 0)
+            BaseOnlyExclusionAccessorSet(manager, persistentHashMapOf(), 0, 0)
+
+        private const val CHUNK_BITS = 6
+
+        private fun Int.chunkIndex(): Int = this ushr CHUNK_BITS
+        private fun Int.chunkBit(): Long = 1L shl (this and 63)
     }
 
     data class UnionWithAdded(

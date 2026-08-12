@@ -135,6 +135,10 @@ val BaseOnlyAccess.apSlot: Int
 
 val BaseOnlyAccess.hasAp: Boolean get() = apSlot >= 0
 
+/** Whether abstract acceptance is available at the current logical node. */
+val BaseOnlyAccess.isRootAbstract: Boolean
+    get() = hasAp && staticIdx < 0 && fieldIdx < 0
+
 val BaseOnlyAccess.hasSemanticMark: Boolean get() = suffixIdx >= 0 && suffixIdx != FINAL_ACCESSOR_IDX
 
 val BaseOnlyAccess.hasTerminalAccessor: Boolean get() = suffixIdx >= 0

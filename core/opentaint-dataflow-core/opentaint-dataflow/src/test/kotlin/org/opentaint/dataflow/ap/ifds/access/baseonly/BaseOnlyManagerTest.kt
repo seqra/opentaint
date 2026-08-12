@@ -122,13 +122,18 @@ class BaseOnlyManagerTest {
                     val update =
                         (compactLeft.set as BaseOnlyExclusionAccessorSet)
                             .unionWithAdded(compactRight.set as BaseOnlyExclusionAccessorSet)
+                    val changedUnion =
+                        (compactLeft.set as BaseOnlyExclusionAccessorSet)
+                            .unionIfChanged(compactRight.set as BaseOnlyExclusionAccessorSet)
                     val expectedAdded =
                         (right as ExclusionSet.Concrete).subtract(left as ExclusionSet.Concrete)
                     if (expectedAdded is ExclusionSet.Empty) {
                         assertEquals(null, update)
+                        assertEquals(null, changedUnion)
                     } else {
                         assertEquals(left.union(right), ExclusionSet.Concrete(checkNotNull(update).union))
                         assertEquals(expectedAdded, ExclusionSet.Concrete(update.added))
+                        assertEquals(left.union(right), ExclusionSet.Concrete(checkNotNull(changedUnion)))
                     }
                 }
             }

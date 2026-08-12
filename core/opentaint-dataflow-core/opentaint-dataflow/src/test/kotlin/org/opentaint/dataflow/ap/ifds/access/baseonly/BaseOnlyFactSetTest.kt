@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
@@ -38,11 +39,13 @@ class BaseOnlyFactSetTest {
     private fun mkManager(
         fieldSensitive: Boolean = false,
         fieldGeneralizationEnabled: Boolean = true,
+        summaryStorageFieldGeneralizationEnabled: Boolean = false,
     ) = BaseOnlyApManager(
         AnyAccessorUnrollStrategy.AnyAccessorDisabled,
         org.opentaint.dataflow.util.Cancellation(),
         fieldSensitive = fieldSensitive,
         fieldGeneralizationEnabled = fieldGeneralizationEnabled,
+        summaryStorageFieldGeneralizationEnabled = summaryStorageFieldGeneralizationEnabled,
     )
 
     private val dummyMethod = object : CommonMethod {
@@ -133,6 +136,53 @@ class BaseOnlyFactSetTest {
         val collected = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
         set.collectApAtStatement(collected, inst)
         assertEquals(1, collected.size)
+    }
+
+    @Test
+    fun `f2f keeps a final coverage antichain`() {
+        val m = mkManager(fieldSensitive = true)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val initial = m.mostAbstractInitialAp(AccessPathBase.Return).replaceExclusions(ExclusionSet.Empty)
+        val fieldFinal = m.finalFact(AccessPathBase.This, field1, mark)
+            .replaceExclusions(ExclusionSet.Empty)
+        val generalFinal = m.finalFact(AccessPathBase.This, mark)
+            .replaceExclusions(ExclusionSet.Empty)
+
+        assertEquals(listOf(initial to fieldFinal), set.add(inst, initial, fieldFinal))
+        assertEquals(listOf(initial to generalFinal), set.add(inst, initial, generalFinal))
+        assertTrue(
+            set.add(inst, initial, fieldFinal).isEmpty(),
+            "a final already covered by the stored abstract final is not republished",
+        )
+
+        val collected = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(collected, inst)
+        assertEquals(listOf(initial to generalFinal), collected)
+    }
+
+    @Test
+    fun `covered final still contributes to shared exclusion state`() {
+        val m = mkManager(fieldSensitive = true)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val ex1 = ExclusionSet.Concrete(TaintMarkAccessor("excluded-general"))
+        val ex2 = ExclusionSet.Concrete(TaintMarkAccessor("excluded-covered"))
+        val initial1 = m.mostAbstractInitialAp(AccessPathBase.Return).replaceExclusions(ex1)
+        val initial2 = initial1.replaceExclusions(ex2)
+        val generalFinal = m.finalFact(AccessPathBase.This, mark).replaceExclusions(ex1)
+        val coveredFinal = m.finalFact(AccessPathBase.This, field1, mark).replaceExclusions(ex2)
+
+        assertEquals(listOf(initial1 to generalFinal), set.add(inst, initial1, generalFinal))
+        val delta = set.add(inst, initial2, coveredFinal)
+
+        assertEquals(1, delta.size)
+        assertEquals(ex1.union(ex2), delta.single().first.exclusions)
+        assertEquals(ex1.union(ex2), delta.single().second.exclusions)
+        assertTrue(
+            BaseOnlyAccessOps.covers(
+                (delta.single().second as BaseOnlyFinalFactAp).access,
+                (coveredFinal as BaseOnlyFinalFactAp).access,
+            )
+        )
     }
 
     @Test
@@ -299,6 +349,43 @@ class BaseOnlyFactSetTest {
             m.mostAbstractInitialAp(AccessPathBase.Return),
         )
         assertEquals(listOf<FinalFactAp>(concreteFinal), concreteLookup)
+    }
+
+    @Test
+    fun `f2f final pattern lookup remains exact after final index promotion`() {
+        val m = mkManager(fieldSensitive = true)
+        val set = m.methodEdgesInitialToFinalApSet(inst, 0, lm)
+        val initial = BaseOnlyInitialFactAp(
+            m,
+            AccessPathBase.This,
+            ABSTRACT_EMPTY_ACCESS,
+            ExclusionSet.Empty,
+        )
+        val terminal = m.interner.index(TaintMarkAccessor("indexed-terminal"))
+        val finals = (0 until 64).map { index ->
+            BaseOnlyFinalFactAp(
+                m,
+                AccessPathBase.Return,
+                packBaseOnlyAccess(
+                    NO_ACCESSOR,
+                    m.interner.index(FieldAccessor("Indexed", "field$index", "Value")),
+                    terminal,
+                ),
+                ExclusionSet.Empty,
+            ).also { set.add(inst, initial, it) }
+        }
+        val selected = finals[47]
+        val pattern = BaseOnlyInitialFactAp(
+            m,
+            selected.base,
+            selected.access,
+            ExclusionSet.Empty,
+        )
+
+        val collected = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        set.collectApAtStatement(collected, inst, pattern)
+
+        assertEquals(listOf<Pair<InitialFactAp, FinalFactAp>>(initial to selected), collected)
     }
 
     @Test
@@ -494,6 +581,67 @@ class BaseOnlyFactSetTest {
             m.mostAbstractInitialAp(AccessPathBase.This),
         )
         assertTrue(generalizedLookup.isEmpty())
+    }
+
+    @Test
+    fun `summary and fact trace generalization flags are independent`() {
+        fun collectedSizes(
+            factTraceGeneralization: Boolean,
+            summaryGeneralization: Boolean,
+        ): Pair<Int, Int> {
+            val manager = mkManager(
+                fieldSensitive = true,
+                fieldGeneralizationEnabled = factTraceGeneralization,
+                summaryStorageFieldGeneralizationEnabled = summaryGeneralization,
+            )
+            val factSet = manager.methodEdgesInitialToFinalApSet(inst, 0, lm)
+            val summaries = manager.methodInitialToFinalApSummariesStorage(inst)
+            val entryPoint = MethodEntryPoint(EmptyMethodContext, inst)
+            val edges = (0..MAX_FIELD_ENUMERATION_EDGES).map { index ->
+                val initial = BaseOnlyInitialFactAp(
+                    manager,
+                    AccessPathBase.Return,
+                    packBaseOnlyAccess(
+                        NO_ACCESSOR,
+                        manager.interner.index(FieldAccessor("Input", "isolated-$index", "Value")),
+                        ABSTRACT_MARK,
+                    ),
+                    ExclusionSet.Empty,
+                )
+                val final = BaseOnlyFinalFactAp(
+                    manager,
+                    AccessPathBase.This,
+                    ABSTRACT_EMPTY_ACCESS,
+                    ExclusionSet.Empty,
+                )
+                factSet.add(inst, initial, final)
+                Edge.FactToFact(entryPoint, initial, inst, final)
+            }
+
+            summaries.add(edges, mutableListOf())
+            manager.enableTraceResolutionMode()
+
+            val factViews = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+            factSet.collectApAtStatement(factViews, inst)
+            val summaryViews = mutableListOf<FactToFactEdgeBuilder>()
+            summaries.filterEdgesTo(
+                summaryViews,
+                initialFactPattern = null,
+                finalFactBase = AccessPathBase.This,
+            )
+            return factViews.size to summaryViews.size
+        }
+
+        assertEquals(
+            (MAX_FIELD_ENUMERATION_EDGES + 1) to 1,
+            collectedSizes(factTraceGeneralization = false, summaryGeneralization = true),
+            "summary generalization must not add a projected fact-set view",
+        )
+        assertEquals(
+            (MAX_FIELD_ENUMERATION_EDGES + 2) to (MAX_FIELD_ENUMERATION_EDGES + 1),
+            collectedSizes(factTraceGeneralization = true, summaryGeneralization = false),
+            "fact trace generalization must not generalize summary storage",
+        )
     }
 
     @Test

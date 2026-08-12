@@ -20,7 +20,7 @@ class TaintCleanActionEvaluator {
 
         if (from is PositionAccess.Simple) {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            return listOf(EvaluatedCleanAction(fact = null, actionInfo, evc))
+            return listOf(EvaluatedCleanAction(fact = null, actionInfo))
         }
 
         val cleanAccessors = from.accessorList()
@@ -54,13 +54,13 @@ class TaintCleanActionEvaluator {
         val result = mutableListOf<EvaluatedCleanAction>()
         if (factCleaned) {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            result += EvaluatedCleanAction(null, actionInfo, evc)
+            result += EvaluatedCleanAction(null, actionInfo)
         }
 
         return cleanedFacts.mapTo(result) { cleanedFact ->
             val resultFact = fact.replaceFact(cleanedFact)
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            EvaluatedCleanAction(resultFact, actionInfo, evc)
+            EvaluatedCleanAction(resultFact, actionInfo)
         }
     }
 
@@ -80,7 +80,7 @@ class TaintCleanActionEvaluator {
 
                 val cleaned = clearedAfterAny != factAfterAny || cleanedWithoutAny != factWithoutAny
 
-                return listOfNotNull(restoredAfterAny, cleanedWithoutAny) to cleaned
+                return listOfNotNull(restoredAfterAny, cleanedWithoutAny).distinct() to cleaned
             }
 
             if (!fact.startsWithAccessor(head)) {
@@ -99,7 +99,7 @@ class TaintCleanActionEvaluator {
         val remaining = listOfNotNull(fact.clearAccessor(head))
         val (cleanChild, childCleaned) = clearPosition(tail, child)
         val cleanChildWithAccessor = cleanChild.map { it.prependAccessor(head) }
-        val fullFact = remaining + cleanChildWithAccessor
+        val fullFact = (remaining + cleanChildWithAccessor).distinct()
 
         return fullFact to childCleaned
     }
