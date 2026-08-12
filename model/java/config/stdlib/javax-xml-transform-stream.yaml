@@ -7,6 +7,22 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamResult#getWriter
   signature: () java.io.Writer
   taintCopyOnly: true
@@ -28,6 +44,14 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.Reader, java.lang.String) void
   copy:
@@ -35,6 +59,22 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#getInputStream
   signature: () java.io.InputStream
   taintCopyOnly: true
@@ -54,10 +94,34 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#getReader
   signature: () java.io.Reader
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
     to: result
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.Reader) void
@@ -80,6 +144,14 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#getReader
   signature: () java.io.Reader
   taintCopyOnly: true
@@ -93,6 +165,22 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.lang.String) void
   copy:
@@ -100,6 +188,22 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamResult#getOutputStream
   signature: () java.io.OutputStream
   taintCopyOnly: true
@@ -113,6 +217,22 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamResult#getWriter
   signature:
     return: java.io.Writer
@@ -178,6 +298,14 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.File) void
   taintCopyOnly: true
@@ -230,6 +358,14 @@ passThrough:
   signature: () java.io.InputStream
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.xml.transform.stream.StreamSource#buffer#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.xml.transform.Source#content#java.lang.Object
     to: result
 - function: javax.xml.transform.stream.StreamResult#getOutputStream
   signature:

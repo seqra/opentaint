@@ -42,3 +42,18 @@ passThrough:
     to:
     - this
     - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionTemplate#org.mybatis.spring.SqlSessionTemplate
+- function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionFactory
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
