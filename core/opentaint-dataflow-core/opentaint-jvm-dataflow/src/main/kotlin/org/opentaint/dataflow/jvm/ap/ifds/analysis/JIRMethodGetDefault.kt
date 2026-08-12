@@ -9,22 +9,38 @@ import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.This
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.taint.RuleConditionRewriter
+import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.TypeName
 import org.opentaint.ir.impl.cfg.util.isArray
 import org.opentaint.ir.impl.types.TypeNameImpl
 
-object JIRMethodGetDefault {
+class JIRMethodGetDefault(
+    private val config: Configuration,
+) {
+    interface Configuration {
+        fun enableDefaultPropagationForClass(cls: JIRClassOrInterface): Boolean
+    }
+
     private val objectTypeName = TypeNameImpl.fromTypeName("java.lang.Object")
 
     private fun TypeName.mayBeArray(): Boolean = isArray || this == objectTypeName
 
-    private val getDefaultActions = listOf(
-        CopyAllMarks(from = This, to = Result)
+    private fun defaultField(cls: JIRClassOrInterface): PositionAccessor.FieldAccessor =
+        PositionAccessor.FieldAccessor(cls.name, "<get-default>", objectTypeName.typeName)
+
+    private fun defaultPosition(cls: JIRClassOrInterface) =
+        PositionWithAccess(This, defaultField(cls))
+
+    private fun getDefaultActions(cls: JIRClassOrInterface) = listOf(
+        CopyAllMarks(from = defaultPosition(cls), to = Result)
     )
 
-    private val getDefaultArrayActions = listOf(
-        CopyAllMarks(from = This, to = PositionWithAccess(Result, PositionAccessor.ElementAccessor))
+    private fun getDefaultArrayActions(cls: JIRClassOrInterface) = listOf(
+        CopyAllMarks(
+            from = defaultPosition(cls),
+            to = PositionWithAccess(Result, PositionAccessor.ElementAccessor)
+        )
     )
 
     fun defaultPropagationRules(method: JIRMethod): List<RuleWithCondition<TaintPassThrough>> {
@@ -32,9 +48,11 @@ object JIRMethodGetDefault {
 
         if (!method.name.startsWith("get")) return emptyList()
 
-        var actions = getDefaultActions
+        if (!config.enableDefaultPropagationForClass(method.enclosingClass)) return emptyList()
+
+        var actions = getDefaultActions(method.enclosingClass)
         if (method.returnType.mayBeArray()) {
-            actions = actions + getDefaultArrayActions
+            actions = actions + getDefaultArrayActions(method.enclosingClass)
         }
 
         val getDefaultRule = TaintPassThrough(method, mkTrue(), actions, info = null)
