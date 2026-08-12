@@ -214,7 +214,7 @@ private fun TaintAnalysisUnitRunnerManager.resolveNodePath(
         }
     }
 
-    for (trace in traces) {
+    for (trace in traces.sortedWith(FullTraceComparator)) {
         resolveInterProceduralTracePath(trace, params, depth = 0)?.let { return it }
     }
 
@@ -244,10 +244,13 @@ private fun TaintAnalysisUnitRunnerManager.resolveInterProceduralTracePath(
 
         if (!visited.add(entry)) continue
 
-        trace.successors[entry]?.forEach {
-            val updatedPath = path.plus(it)
-            unprocessed.addLast(IntObjectImmutablePair(it, updatedPath))
-        }
+        trace.successors[entry]
+            ?.toSet()
+            ?.sortedWith { a, b -> trace.compareEntryIds(a, b) }
+            ?.forEach {
+                val updatedPath = path.plus(it)
+                unprocessed.addLast(IntObjectImmutablePair(it, updatedPath))
+            }
     }
 
     return null
@@ -281,7 +284,7 @@ private fun TaintAnalysisUnitRunnerManager.resolveEntry(
     }
 
     val variants = trace.actionVariants.get(entryId)
-    for (variant in variants) {
+    for (variant in variants.sortedWith(ActionVariantComparator)) {
         resolveActionVariant(entry, variant, params, depth)?.let { return it }
     }
     return null
@@ -309,7 +312,7 @@ private fun TaintAnalysisUnitRunnerManager.resolveActionVariant(
         )
     }
 
-    for (trace in innerTraces) {
+    for (trace in innerTraces.sortedWith(FullTraceComparator)) {
         resolveInterProceduralTracePath(trace, params, depth + 1)?.let {
             return ResolvedInterProceduralTraceEntry.InnerCall(entry, variant, it)
         }

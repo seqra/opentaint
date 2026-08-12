@@ -3,8 +3,6 @@ package org.opentaint.dataflow.ap.ifds.trace.path
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
-import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
-import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry.SourceStartEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSink
@@ -137,83 +135,4 @@ private fun Source2SinkTraceGraph.traverseStartToSink(
 
 private inline fun Iterable<InterProceduralTraceNode>.forEachNodeOrdered(body: (InterProceduralTraceNode) -> Unit) {
     sortedWith(NodeComparator).forEach { body(it) }
-}
-
-private object NodeComparator : Comparator<InterProceduralTraceNode> {
-    override fun compare(
-        a: InterProceduralTraceNode,
-        b: InterProceduralTraceNode
-    ): Int = when (a) {
-        is InterProceduralSummaryTraceNode -> when (b) {
-            is InterProceduralSummaryTraceNode -> SummaryNodeComparator.compare(a, b)
-            is InterProceduralStart2FinalTraceNode -> -1
-        }
-
-        is InterProceduralStart2FinalTraceNode -> when (b) {
-            is InterProceduralSummaryTraceNode -> 1
-            is InterProceduralStart2FinalTraceNode -> FullNodeComparator.compare(a, b)
-        }
-    }
-}
-
-private object SummaryNodeComparator : Comparator<InterProceduralSummaryTraceNode> {
-    override fun compare(
-        a: InterProceduralSummaryTraceNode,
-        b: InterProceduralSummaryTraceNode
-    ): Int {
-        MethodComparator.compare(a.trace.method, b.trace.method).let { if (it != 0) return it }
-        a.trace.traceKind.compareTo(b.trace.traceKind).let { if (it != 0) return it }
-        FinalEntryComparator.compare(a.trace.final, b.trace.final).let { if (it != 0) return it }
-        return a.hashCode().compareTo(b.hashCode())
-    }
-}
-
-private object FullNodeComparator : Comparator<InterProceduralStart2FinalTraceNode> {
-    override fun compare(
-        a: InterProceduralStart2FinalTraceNode,
-        b: InterProceduralStart2FinalTraceNode
-    ): Int {
-        MethodComparator.compare(a.trace.method, b.trace.method).let { if (it != 0) return it }
-        a.trace.traceKind.compareTo(b.trace.traceKind).let { if (it != 0) return it }
-        FinalEntryComparator.compare(a.trace.final, b.trace.final).let { if (it != 0) return it }
-        StartEntryComparator.compare(a.trace.startEntry, b.trace.startEntry).let { if (it != 0) return it }
-        return a.hashCode().compareTo(b.hashCode())
-    }
-}
-
-private object MethodComparator : Comparator<MethodEntryPoint> {
-    override fun compare(a: MethodEntryPoint, b: MethodEntryPoint): Int =
-        a.hashCode().compareTo(b.hashCode())
-}
-
-private object FinalEntryComparator : Comparator<TraceEntry.Final> {
-    override fun compare(a: TraceEntry.Final, b: TraceEntry.Final): Int =
-        a.edges.hashCode().compareTo(b.edges.hashCode())
-}
-
-private object StartEntryComparator : Comparator<TraceEntry.StartTraceEntry> {
-    override fun compare(a: TraceEntry.StartTraceEntry, b: TraceEntry.StartTraceEntry): Int {
-        return when (a) {
-            is SourceStartEntry -> when (b) {
-                is SourceStartEntry -> {
-                    a.priority().compareTo(b.priority()).let { if (it != 0) return it }
-                    a.hashCode().compareTo(b.hashCode())
-                }
-
-                is TraceEntry.MethodEntry -> -1
-            }
-
-            is TraceEntry.MethodEntry -> when (b) {
-                is SourceStartEntry -> 1
-                is TraceEntry.MethodEntry -> a.facts.hashCode().compareTo(b.facts.hashCode())
-            }
-        }
-    }
-}
-
-private fun SourceStartEntry.priority(): Int {
-    if (sourcePrimaryAction != null) return 2
-    if (sourceOtherActions.any { it is TraceEntryAction.EntryPointSourceRule }) return 0
-    if (sourceOtherActions.any { it is TraceEntryAction.CallSourceRule }) return 1
-    return 3
 }
