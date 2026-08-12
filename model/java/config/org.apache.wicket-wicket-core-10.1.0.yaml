@@ -9,7 +9,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#renderBodyOnly#java.lang.Object
     to: result
 - function:
     package: org.apache.wicket
@@ -21,7 +21,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#parent#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#getDefaultModel
   copy:
@@ -31,7 +31,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
 - function: org.apache.wicket.model.util.GenericBaseModel#createSerializableVersionOf
   copy:
@@ -40,7 +40,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.wicket.model.util.GenericBaseModel#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.model.util.GenericBaseModel#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.wicket.Component#replaceWith
@@ -54,14 +54,14 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#children#java.lang.Object
   - from:
     - this
     - .org.apache.wicket.Component#children#java.lang.Object
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#children#java.lang.Object
     to: result
   - from:
     - this
@@ -75,7 +75,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#children#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#setVisibilityAllowed
   copy:
@@ -85,7 +85,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#visibilityAllowed#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#getInnermostModel
   copy:
@@ -97,7 +97,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
 - function: org.apache.wicket.MarkupContainer#autoAdd
   copy:
@@ -114,7 +114,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.model.IModel#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.model.IModel#content#java.lang.Object
 - function: org.apache.wicket.Component#getParent
   copy:
   - from:
@@ -123,7 +123,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#parent#java.lang.Object
     to: result
 - function: org.apache.wicket.MarkupContainer#iterator
   copy:
@@ -141,13 +141,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#markupId#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#render
   copy:
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: arg(0)
   - from:
     - this
@@ -163,7 +163,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#markupId#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#setDefaultModel
   copy:
@@ -176,14 +176,14 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
   - from:
     - this
@@ -201,7 +201,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#ignoreAttributeModifier#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#<init>
   copy:
@@ -260,7 +260,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#children#java.lang.Object
 - function: org.apache.wicket.MarkupContainer#getAssociatedMarkupStream
   copy:
   - from: this
@@ -273,7 +273,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#page#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#wrap
   copy:
@@ -289,7 +289,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.model.IModel#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.model.IModel#content#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#setEnabled
   copy:
@@ -299,7 +299,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#enabled#java.lang.Object
     to: result
 - function: org.apache.wicket.MarkupContainer#renderAll
   copy:
@@ -315,7 +315,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#setDefaultModelObject
   copy:
@@ -328,14 +328,14 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
   - from:
     - this
@@ -349,13 +349,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#visible#java.lang.Object
     to: result
 - function: org.apache.wicket.Component#onRender
   copy:
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: arg(0)
   - from:
     - this
@@ -369,7 +369,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
 - function:
     package: org.apache.wicket.model
@@ -382,7 +382,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.model.IModel#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.model.IModel#content#java.lang.Object
 - function: org.apache.wicket.Component#setVersioned
   copy:
   - from:
@@ -391,5 +391,5 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#<rule-storage>#java.lang.Object
+    - .org.apache.wicket.Component#versioned#java.lang.Object
     to: result

@@ -989,7 +989,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1722,7 +1722,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2041,7 +2041,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2893,7 +2893,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3772,7 +3772,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Scanner#useDelimiter
   signature: (java.util.regex.Pattern) java.util.Scanner
   copy:
@@ -3919,7 +3919,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Map#of
   signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
     java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
@@ -3985,7 +3985,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.SequencedMap#putLast
   copy:
   - from: arg(1)
@@ -4652,7 +4652,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Collection#<init>
   copy:
   - from: arg(0)
@@ -4660,7 +4660,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.StringJoiner#add
   signature: (java.lang.CharSequence) java.util.StringJoiner
   taintCopyOnly: true
@@ -5170,7 +5170,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5186,7 +5186,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5198,7 +5198,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.StringJoiner#<init>
   signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
     void
@@ -5480,7 +5480,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result
@@ -5538,7 +5538,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from: this
     to: result

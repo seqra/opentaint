@@ -217,7 +217,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -231,7 +231,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -312,7 +312,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -405,7 +405,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -471,7 +471,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -597,7 +597,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -666,7 +666,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.CharBuffer#put
   signature:
     params:
@@ -868,7 +868,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.IntBuffer#put
   signature: (int, java.nio.IntBuffer, int, int) java.nio.IntBuffer
   copy:
@@ -900,7 +900,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.IntBuffer#put
   signature: (int, int[]) java.nio.IntBuffer
   copy:
@@ -1017,7 +1017,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1026,7 +1026,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1104,11 +1104,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.ByteBuffer#asCharBuffer
   signature: () java.nio.CharBuffer
   copy:
@@ -1221,7 +1221,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1247,11 +1247,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.CharBuffer#slice
   signature: (int, int) java.nio.Buffer
   taintCopyOnly: true
@@ -1339,7 +1339,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1486,7 +1486,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1538,11 +1538,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.ByteBuffer#putInt
   signature: (int) java.nio.ByteBuffer
   copy:
@@ -1670,7 +1670,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.ShortBuffer#duplicate
   signature: () java.nio.Buffer
   taintCopyOnly: true
@@ -1835,7 +1835,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1896,7 +1896,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2129,7 +2129,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
 - function: java.nio.CharBuffer#put
   signature:
     params:
@@ -2229,11 +2229,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: arg(0)
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: arg(0)
@@ -2383,7 +2383,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2427,7 +2427,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2496,7 +2496,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2639,7 +2639,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2727,7 +2727,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2748,7 +2748,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2782,7 +2782,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
   - from:
     - arg(0)
     - '[*]'
@@ -2852,7 +2852,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2879,7 +2879,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
   - from: arg(1)
     to: this
 - function: java.nio.DoubleBuffer#put
@@ -2959,7 +2959,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -3204,7 +3204,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result

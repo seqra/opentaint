@@ -7,7 +7,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#class#java.lang.Object
     to: result
   - from:
     - this
@@ -32,7 +32,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.fs.BlockLocation#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.BlockLocation#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.io.Text#set
@@ -42,7 +42,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
 - function: org.apache.hadoop.net.DNS#getDefaultIP
   copy:
   - from: arg(*)
@@ -51,13 +51,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
     to: arg(0)
   - from: this
     to: result
   - from:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
     to: result
   - from: this
     to: arg(0)
@@ -67,13 +67,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.io.UTF8#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.UTF8#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.net.NodeBase#getNetworkLocation
   copy:
   - from:
     - this
-    - .org.apache.hadoop.net.NodeBase#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.Object
     to: result
   - from:
     - this
@@ -85,7 +85,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.io.BytesWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.BytesWritable#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.util.StringUtils#stringToPath
   copy:
@@ -101,7 +101,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.net.NodeBase#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#parent#java.lang.Object
     to: result
   - from:
     - this
@@ -111,7 +111,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.DF#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DF#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -123,7 +123,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -131,7 +131,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -142,7 +142,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
 - function: org.apache.hadoop.net.DNSToSwitchMapping#resolve
   copy:
   - from: arg(0)
@@ -155,7 +155,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -169,7 +169,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
     to: result
   - from:
     - this
@@ -179,7 +179,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -198,14 +198,14 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
   - from: arg(*)
     to: this
 - function: org.apache.hadoop.fs.DF#getDirPath
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.DF#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DF#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -217,7 +217,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -228,7 +228,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.UTF8#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.UTF8#content#java.lang.Object
 - function: org.apache.hadoop.fs.LocalDirAllocator#createTmpFileForWrite
   copy:
   - from: arg(*)
@@ -245,7 +245,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.net.NodeBase#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#name#java.lang.Object
     to: result
   - from:
     - this
@@ -255,7 +255,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -267,7 +267,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
     to: result
   - from:
     - this
@@ -277,7 +277,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#resource#java.lang.Object
     to: result
   - from:
     - this
@@ -290,7 +290,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.UTF8#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.UTF8#content#java.lang.Object
 - function: org.apache.hadoop.fs.FileSystem#getFileStatus
   copy:
   - from: arg(0)
@@ -314,7 +314,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#classLoader#java.lang.Object
 - function: org.apache.hadoop.io.BytesWritable#set
   copy:
   - from: arg(0)
@@ -322,7 +322,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.BytesWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.BytesWritable#content#java.lang.Object
 - function: org.apache.hadoop.fs.FileUtil#stat2Paths
   copy:
   - from: arg(*)
@@ -347,7 +347,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.io.BytesWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.BytesWritable#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.fs.ContentSummary#toString
   copy:
@@ -366,7 +366,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -377,7 +377,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.io.GenericWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.GenericWritable#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.fs.DU#getDirPath
   copy:
@@ -385,14 +385,14 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.DU#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DU#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.io.GenericWritable#set
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.GenericWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.GenericWritable#content#java.lang.Object
   - from: arg(0)
     to: this
 - function:
@@ -405,7 +405,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.BlockLocation#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.BlockLocation#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.net.DNS#reverseDns
   copy:
@@ -416,14 +416,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.util.LineReader#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.LineReader#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.fs.FileStatus#getPath
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -439,7 +439,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -448,13 +448,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.util.ProgramDriver#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.ProgramDriver#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .org.apache.hadoop.util.ProgramDriver#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.ProgramDriver#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.fs.FileSystem#makeQualified
@@ -469,7 +469,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -481,7 +481,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -501,13 +501,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
     to: arg(0)
   - from: this
     to: result
   - from:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
     to: result
   - from: this
     to: arg(0)
@@ -526,7 +526,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
 - function: org.apache.hadoop.io.MapFile$Reader#get
   copy:
   - from: arg(0)
@@ -539,13 +539,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.io.MapFile$Reader#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.MapFile$Reader#content#java.lang.Object
     to: arg(1)
   - from: this
     to: arg(1)
   - from:
     - this
-    - .org.apache.hadoop.io.MapFile$Reader#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.MapFile$Reader#content#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -553,7 +553,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -563,7 +563,7 @@ passThrough:
     to: arg(0)
   - from:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -574,7 +574,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.UTF8#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.UTF8#content#java.lang.Object
 - function: org.apache.hadoop.fs.LocalDirAllocator#getAllLocalPathsToRead
   copy:
   - from: arg(*)
@@ -602,12 +602,12 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
 - function: org.apache.hadoop.conf.Configuration#writeXml
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#value#java.lang.Object
     to: arg(0)
   - from:
     - this
@@ -619,7 +619,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.io.MapFile$Reader#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.MapFile$Reader#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.net.StandardSocketFactory#createSocket
   copy:
@@ -630,11 +630,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -643,7 +643,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.util.LineReader#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.LineReader#content#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -653,7 +653,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.FsShell#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FsShell#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.conf.Configuration#getConfResourceAsReader
   copy:
@@ -671,7 +671,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
     to: result
   - from:
     - this
@@ -682,20 +682,20 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.ByteWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.ByteWritable#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.util.GenericOptionsParser#getLibJars
   copy:
   - from:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
     to: arg(0)
   - from: this
     to: result
   - from:
     - this
-    - .org.apache.hadoop.util.GenericOptionsParser#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.util.GenericOptionsParser#args#java.lang.Object
     to: result
   - from: this
     to: arg(0)
@@ -707,7 +707,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -718,12 +718,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
 - function: org.apache.hadoop.conf.Configuration#getStringCollection
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
     to: result
   - from:
     - this
@@ -733,7 +733,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
     to: result
   - from:
     - this
@@ -750,7 +750,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
 - function: org.apache.hadoop.fs.FileSystem#setTimes
   copy:
   - from: arg(2)
@@ -774,7 +774,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#name#java.lang.Object
 - function:
     package: org.apache.hadoop.io
     class: MapFile$Writer
@@ -786,20 +786,20 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.io.MapFile$Writer#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.MapFile$Writer#buffer#java.lang.Object
 - function: org.apache.hadoop.fs.FsShell#<init>
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.fs.FsShell#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FsShell#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.io.ArrayWritable#get
   copy:
   - from:
     - this
-    - .org.apache.hadoop.io.ArrayWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.ArrayWritable#elements#java.lang.Object
     to: result
   - from: this
     to: result
@@ -811,7 +811,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.fs.Path#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.Path#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -820,14 +820,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.io.ArrayWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.ArrayWritable#elements#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.fs.DF#getMount
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.DF#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DF#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -837,7 +837,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.io.Text#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.Text#value#java.lang.Object
     to: result
 - function: org.apache.hadoop.io.UTF8#readString
   copy:
@@ -854,13 +854,13 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.fs.BlockLocation#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.BlockLocation#content#java.lang.Object
 - function: org.apache.hadoop.net.NodeBase#setParent
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#parent#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -869,7 +869,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.io.ByteWritable#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.ByteWritable#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -877,7 +877,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#classLoader#java.lang.Object
     to: result
   - from:
     - this
@@ -891,7 +891,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
     to: result
   - from:
     - this
@@ -901,7 +901,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.io.UTF8#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.UTF8#content#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -914,11 +914,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.apache.hadoop.fs.DF#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DF#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.fs.DF#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DF#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -927,7 +927,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -948,11 +948,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.fs.DU#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DU#content#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.hadoop.fs.DU#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.DU#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -964,7 +964,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.io.MapFile$Writer#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.MapFile$Writer#buffer#java.lang.Object
 - function: org.apache.hadoop.fs.FileSystem#getContentSummary
   copy:
   - from: arg(0)
@@ -976,13 +976,13 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.io.MapFile$Reader#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.io.MapFile$Reader#content#java.lang.Object
 - function: org.apache.hadoop.fs.FileStatus#<init>
   copy:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.fs.FileStatus#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
   - from: arg(*)
     to: this
 - function: org.apache.hadoop.net.DNS#getIPs
@@ -993,7 +993,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
     to: result
   - from: this
     to: result
