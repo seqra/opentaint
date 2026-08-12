@@ -13,13 +13,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.EntityProxy#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.EntityProxy#content#java.lang.Object
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#setMessage
   copy:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -29,7 +29,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -45,13 +45,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.EntityProxy#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.EntityProxy#content#java.lang.Object
     to: result
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#getPath
   copy:
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.Object
     to: result
   - from:
     - this
@@ -68,7 +68,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.ValueProxy#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.ValueProxy#content#java.lang.Object
     to: result
 - function:
     package: com.google.web.bindery.requestfactory.shared
@@ -80,14 +80,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.ValueProxy#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.ValueProxy#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#getMessageTemplate
   copy:
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.Object
     to: result
   - from:
     - this
@@ -98,7 +98,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -107,7 +107,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#<rule-storage>#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.Object
     to: result
   - from:
     - this

@@ -414,7 +414,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#<rule-storage>#java.lang.Object
+    - .org.springframework.core.io.Resource#file#java.lang.Object
     to: result
 - function: org.springframework.core.io.ByteArrayResource#getContentAsString
   signature: (*) java.lang.String
@@ -828,7 +828,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#<rule-storage>#java.lang.Object
+    - .org.springframework.core.io.Resource#uri#java.lang.Object
     to: result
 - function: org.springframework.util.ClassUtils#convertResourcePathToClassName
   copy:
@@ -1399,7 +1399,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.core.io.Resource#<rule-storage>#java.lang.Object
+    - .org.springframework.core.io.Resource#uri#java.lang.Object
 - function: org.springframework.util.MultiValueMap#getFirst
   copy:
   - from:
@@ -1411,7 +1411,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#<rule-storage>#java.lang.Object
+    - .org.springframework.core.io.Resource#url#java.lang.Object
     to: result
 - function: org.springframework.util.StringUtils#quote
   copy:
@@ -1882,7 +1882,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#<rule-storage>#java.lang.Object
+    - .org.springframework.core.io.Resource#file#java.lang.Object
     to: result
 - function: org.springframework.util.StringUtils#addStringToArray
   overrides: false
