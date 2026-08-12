@@ -15,7 +15,13 @@ import org.opentaint.ir.api.jvm.TypeName
 import org.opentaint.ir.impl.cfg.util.isArray
 import org.opentaint.ir.impl.types.TypeNameImpl
 
-object JIRMethodGetDefault {
+class JIRMethodGetDefault(
+    private val config: Configuration,
+) {
+    interface Configuration {
+        fun enableDefaultPropagationForClass(cls: JIRClassOrInterface): Boolean
+    }
+
     private val objectTypeName = TypeNameImpl.fromTypeName("java.lang.Object")
 
     private fun TypeName.mayBeArray(): Boolean = isArray || this == objectTypeName
@@ -41,6 +47,8 @@ object JIRMethodGetDefault {
         if (method.isStatic) return emptyList()
 
         if (!method.name.startsWith("get")) return emptyList()
+
+        if (!config.enableDefaultPropagationForClass(method.enclosingClass)) return emptyList()
 
         var actions = getDefaultActions(method.enclosingClass)
         if (method.returnType.mayBeArray()) {

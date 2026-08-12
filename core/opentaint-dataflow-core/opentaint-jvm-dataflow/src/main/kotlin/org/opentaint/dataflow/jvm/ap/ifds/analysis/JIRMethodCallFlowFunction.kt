@@ -294,8 +294,9 @@ class JIRMethodCallFlowFunction(
                 }
             }
 
-            if (/*todo: fix owasp  passThroughFacts.isNone && */!analysisContext.analysisManager.params.disableDefaultGetModel) {
-                val defaultRules = JIRMethodGetDefault.defaultPropagationRules(method)
+            analysisContext.analysisManager.params.defaultGetModel?.run {
+                /*todo: fix owasp, propagate default only if  passThroughFacts.isNone */
+                val defaultRules = defaultPropagationRules(method)
                 val defaultPass = applyPassThrough(defaultRules, conditionEvaluator, passEvaluator)
                 passThroughFacts = passThroughFacts.merge(defaultPass)
             }
