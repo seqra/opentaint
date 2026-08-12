@@ -1,5 +1,27 @@
 language: java
 passThrough:
+- function: java.lang.Integer#intValue
+  signature: () int
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Integer#valueOf
+  signature: (int) java.lang.Integer
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Double#doubleValue
+  signature: () double
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Double#valueOf
+  signature: (double) java.lang.Double
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
 - function: java.lang.String#intern
   signature: () java.lang.String
   copy:
