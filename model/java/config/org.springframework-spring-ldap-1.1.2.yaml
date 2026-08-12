@@ -733,3 +733,45 @@ passThrough:
     - result
     - .java.lang.StringBuffer#delegate#java.lang.AbstractStringBuilder
     - .java.lang.AbstractStringBuilder#value#java.lang.String
+- function: org.springframework.ldap.support.LdapRdn#addComponent
+  taintCopyOnly: true
+  copy:
+  - from: arg(*)
+    to: this
+- function: org.springframework.ldap.support.LdapRdnComponent#getValue
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.support.LdapRdnComponent#<init>
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
+- function: org.springframework.ldap.support.LdapRdn#getComponent
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.support.LdapRdnComponent#setValue
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ldap.support.LdapRdn#getComponents
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.support.LdapRdnComponent#getKey
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ldap.support.LdapRdnComponent#setKey
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this

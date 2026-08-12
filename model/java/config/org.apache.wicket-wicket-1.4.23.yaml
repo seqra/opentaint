@@ -11,6 +11,8 @@ passThrough:
     - this
     - .org.apache.wicket.Component#componentBorder#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: org.apache.wicket.PageParameters#toRequestParameters
   copy:
   - from: this
@@ -33,6 +35,8 @@ passThrough:
     - this
     - .org.apache.wicket.Component#markupStream#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: org.apache.wicket.Component#setMarkupStream
   copy:
   - from:
@@ -43,6 +47,8 @@ passThrough:
     - this
     - .org.apache.wicket.Component#markupStream#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: org.apache.wicket.Component#findMarkupStream
   copy:
   - from:
@@ -52,6 +58,8 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#markupStream#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: org.apache.wicket.Response#encodeURL
   copy:

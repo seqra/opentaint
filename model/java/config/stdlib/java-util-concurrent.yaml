@@ -124,6 +124,18 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.concurrent.Future#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.concurrent.CompletableFuture#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.concurrent.CompletionStage#content#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#replace
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
   copy:
@@ -161,6 +173,18 @@ passThrough:
     to: result
   - from: this
     to: result
+  - from:
+    - this
+    - .java.util.concurrent.CompletionStage#content#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.util.concurrent.Future#content#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.util.concurrent.CompletableFuture#content#java.lang.Object
+    to: result
 - function: java.util.concurrent.CompletableFuture#complete
   signature: (java.lang.Object) boolean
   overrides: false
@@ -170,8 +194,7 @@ passThrough:
     - this
     - .java.util.concurrent.Future#value#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#reduce
-  signature: (long, java.util.function.BiFunction, java.util.function.BiFunction)
-    java.lang.Object
+  signature: (long, java.util.function.BiFunction, java.util.function.BiFunction) java.lang.Object
   taintCopyOnly: true
   copy:
   - from: this
@@ -237,6 +260,18 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.concurrent.Future#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.concurrent.CompletableFuture#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.concurrent.CompletionStage#content#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#elements
   signature: () java.util.Enumeration
   copy:
@@ -301,6 +336,18 @@ passThrough:
   signature: () java.lang.Object
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.util.concurrent.CompletionStage#content#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.util.concurrent.Future#content#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.util.concurrent.CompletableFuture#content#java.lang.Object
     to: result
 - function: java.util.concurrent.ConcurrentHashMap#reduceKeys
   signature: (long, java.util.function.BiFunction) java.lang.Object

@@ -26,6 +26,12 @@ passThrough:
     to:
     - result
     - '[*]'
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function:
     package: <builtin>
     name: copy
@@ -59,3 +65,27 @@ passThrough:
     to:
     - result
     - .<pointer>#<deref>
+- function:
+    package: <builtin>
+    name: append
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function:
+    package: <builtin>
+    name: copy
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - arg(0)
+    - '[*]'

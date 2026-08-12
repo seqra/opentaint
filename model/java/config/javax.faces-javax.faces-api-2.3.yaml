@@ -26,8 +26,7 @@ passThrough:
   - from: arg(0)
     to: result
 - function: javax.faces.convert.Converter#getAsObject
-  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent,
-    java.lang.String) java.lang.Object
+  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.String) java.lang.Object
   copy:
   - from: arg(2)
     to: result
@@ -149,8 +148,7 @@ passThrough:
   - from: arg(0)
     to: this
 - function: javax.faces.model.SelectItemGroup#<init>
-  signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[])
-    void
+  signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[]) void
   copy:
   - from:
     - arg(3)
@@ -174,6 +172,12 @@ passThrough:
     - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(0)
     to: this
+  - from:
+    - arg(3)
+    - '[*]'
+    to:
+    - this
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
 - function: javax.faces.model.ResultDataModel#<init>
   signature: () void
   copy:
@@ -229,6 +233,24 @@ passThrough:
     to:
     - this
     - .javax.faces.model.ArrayDataModel#elements#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.faces.model.ArrayDataModel#elements#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: javax.faces.model.DataModel#getRowData
   signature: () java.lang.Object
   copy:
@@ -244,14 +266,15 @@ passThrough:
     - this
     - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: javax.faces.context.ExternalContext#encodeActionURL
   signature: (java.lang.String) java.lang.String
   copy:
   - from: arg(0)
     to: result
 - function: javax.faces.convert.Converter#getAsString
-  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent,
-    java.lang.Object) java.lang.String
+  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.Object) java.lang.String
   copy:
   - from: arg(2)
     to: result
@@ -303,6 +326,12 @@ passThrough:
     - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
 - function: javax.faces.context.ExternalContext#encodeResourceURL
   signature: (java.lang.String) java.lang.String
   copy:
@@ -357,6 +386,8 @@ passThrough:
     - this
     - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: javax.faces.model.DataModel#setWrappedData
   signature: (java.lang.Object) void
   copy:
@@ -372,6 +403,8 @@ passThrough:
     to:
     - this
     - .javax.faces.model.DataModel#wrappedData#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: javax.faces.model.DataModelEvent#getRowData
   signature: () java.lang.Object
   copy:
