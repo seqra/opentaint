@@ -18,6 +18,8 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to: this
 - function: org.springframework.ws.soap.SoapMessage#getSoapAction
   copy:
   - from:
@@ -43,6 +45,8 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to: this
 - function: org.springframework.ws.soap.SoapHeaderElement#getText
   copy:
   - from:
@@ -324,6 +328,8 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to: this
 - function: org.springframework.ws.soap.SoapElement#getSource
   taintCopyOnly: true
   copy:
@@ -472,6 +478,8 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from: arg(0)
+    to: this
 - function: org.springframework.ws.pox.dom.DomPoxMessage#getDocument
   signature:
     return: org.w3c.dom.Document
@@ -826,3 +834,168 @@ passThrough:
     - this
     - .org.springframework.ws.soap.SoapElement#attributeValue#java.lang.String
     to: result
+- function: org.springframework.ws.mime.MimeMessage#getAttachment
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapMessage#getEnvelope
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapBody#getPayloadResult
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeader#examineAllHeaderElements
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#setDocument
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#getAttachment
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapMessage#getSoapHeader
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapMessage#getDocument
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapMessage#getSoapBody
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeader#getResult
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#setSaajMessage
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#getAttachments
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#getEnvelope
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapMessage#getVersion
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeader#examineHeaderElements
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.mime.MimeMessage#getAttachments
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeaderElement#getResult
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#getSoapAction
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#getDocument
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeaderElement#setText
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#getSaajMessage
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.saaj.SaajSoapMessage#setSoapAction
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.SoapHeader#examineMustUnderstandHeaderElements
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.mime.MimeMessage#addAttachment
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+- function: org.springframework.ws.soap.SoapBody#getPayloadSource
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeaderElement#getText
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapBody#getFault
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeaderElement#getActorOrRole
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapMessage#setSoapAction
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.SoapMessage#getSoapAction
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.ws.soap.SoapHeader#addHeaderElement
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.SoapHeaderElement#setActorOrRole
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.ws.soap.SoapMessage#setDocument
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this

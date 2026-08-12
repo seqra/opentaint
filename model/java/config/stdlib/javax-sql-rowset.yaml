@@ -23,10 +23,30 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: (java.lang.String) java.util.Collection
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
     to: result
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: () java.util.Collection
@@ -47,10 +67,26 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#createCopy
   signature: () javax.sql.rowset.CachedRowSet
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
     to: result
 - function: javax.sql.rowset.CachedRowSet#createShared
   signature: () javax.sql.RowSet
@@ -69,16 +105,64 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.JoinRowSet#getRowSets
   signature: () java.util.Collection
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
     to: result
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.rowset.Joinable) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: (int) java.util.Collection
   taintCopyOnly: true
@@ -95,6 +179,14 @@ passThrough:
   signature: () java.sql.ResultSet
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
     to: result
 - function: javax.sql.rowset.CachedRowSet#setSyncProvider
   signature: (java.lang.String) *
@@ -155,6 +247,22 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+    to: result
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], int[]) void
   taintCopyOnly: true
@@ -170,6 +278,14 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+    to: result
 - function: javax.sql.rowset.CachedRowSet#populate
   signature: (java.sql.ResultSet) void
   taintCopyOnly: true
@@ -181,6 +297,14 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#getOriginal
   signature: () java.sql.ResultSet
   taintCopyOnly: true
@@ -191,6 +315,14 @@ passThrough:
   signature: (int) java.util.Collection
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
     to: result
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet, int) void
@@ -203,15 +335,51 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet, java.lang.String) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#getOriginal
   signature: () java.sql.ResultSet
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
     to: result
 - function: javax.sql.rowset.JoinRowSet#toCachedRowSet
   signature: () javax.sql.rowset.CachedRowSet
@@ -276,6 +444,46 @@ passThrough:
     - arg(0)
     - '[*]'
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], int[]) void
   copy:
@@ -285,13 +493,69 @@ passThrough:
     - arg(0)
     - '[*]'
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#elements#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.WebRowSet#elements#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: () java.util.Collection
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
+    to: result
 - function: javax.sql.rowset.CachedRowSet#createCopyNoConstraints
   signature: () javax.sql.rowset.CachedRowSet
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#entries#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .java.sql.ResultSet#elements#java.lang.Object
     to: result

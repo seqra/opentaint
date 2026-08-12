@@ -5,25 +5,45 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (char) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (char) java.lang.Appendable
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (char[]) java.lang.AbstractStringBuilder
@@ -42,20 +62,56 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (float) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.AbstractStringBuilder) java.lang.AbstractStringBuilder
@@ -66,6 +122,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
@@ -75,6 +143,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence) java.lang.Appendable
   copy:
@@ -84,6 +164,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.Object) java.lang.AbstractStringBuilder
   copy:
@@ -93,6 +185,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -102,6 +206,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
   copy:
@@ -111,10 +227,26 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (long) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#append
   signature: (char[], int, int) java.lang.AbstractStringBuilder
@@ -133,6 +265,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -142,6 +298,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   copy:
@@ -151,40 +319,80 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#appendCodePoint
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#charAt
   signature: (int) char
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#delete
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#deleteCharAt
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#getChars
   signature: (int, int, char[], int) void
   copy:
   - from: this
+    to: arg(2)
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: arg(2)
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, boolean) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, char) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, char[]) java.lang.AbstractStringBuilder
@@ -203,20 +411,56 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, float) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
@@ -227,6 +471,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
   copy:
@@ -236,6 +492,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -245,10 +513,26 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, long) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, char[], int, int) java.lang.AbstractStringBuilder
@@ -267,6 +551,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -276,6 +584,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#replace
   signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -285,65 +605,125 @@ passThrough:
     to: this
   - from: arg(2)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(2)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#reverse
   signature: () java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#setCharAt
   signature: (int, char) void
   copy:
   - from: arg(1)
     to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.AbstractStringBuilder#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.AbstractStringBuilder#substring
   signature: (int) java.lang.String
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.AbstractStringBuilder#substring
   signature: (int, int) java.lang.String
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#<init>
   signature: (java.lang.CharSequence) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (boolean) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#append
   signature: (char) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char) java.lang.Appendable
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#append
   signature: (char) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char[]) java.lang.AbstractStringBuilder
@@ -362,6 +742,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (char[]) java.lang.StringBuffer
   copy:
@@ -379,35 +783,83 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (double) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#append
   signature: (float) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (float) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#append
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#append
   signature: (int) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (java.lang.AbstractStringBuilder) java.lang.AbstractStringBuilder
@@ -418,6 +870,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.AbstractStringBuilder) java.lang.StringBuffer
   copy:
@@ -427,6 +891,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
   copy:
@@ -436,6 +912,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence) java.lang.Appendable
   copy:
@@ -445,6 +933,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence) java.lang.StringBuffer
   copy:
@@ -454,6 +954,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.Object) java.lang.AbstractStringBuilder
   copy:
@@ -463,6 +975,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.Object) java.lang.StringBuffer
   copy:
@@ -472,6 +996,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -481,6 +1017,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.String) java.lang.StringBuffer
   copy:
@@ -490,6 +1038,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
   copy:
@@ -499,6 +1059,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.StringBuffer) java.lang.StringBuffer
   copy:
@@ -508,15 +1080,35 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (long) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#append
   signature: (long) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#append
   signature: (char[], int, int) java.lang.AbstractStringBuilder
@@ -535,6 +1127,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (char[], int, int) java.lang.StringBuffer
   copy:
@@ -552,6 +1168,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -561,6 +1201,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   copy:
@@ -570,6 +1222,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#append
   signature: (java.lang.CharSequence, int, int) java.lang.StringBuffer
   copy:
@@ -579,65 +1243,125 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#appendCodePoint
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#appendCodePoint
   signature: (int) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#charAt
   signature: (int) char
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#delete
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#delete
   signature: (int, int) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#deleteCharAt
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#deleteCharAt
   signature: (int) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#getChars
   signature: (int, int, char[], int) void
   copy:
   - from: this
+    to: arg(2)
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: arg(2)
 - function: java.lang.StringBuffer#insert
   signature: (int, boolean) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, boolean) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char[]) java.lang.AbstractStringBuilder
@@ -656,6 +1380,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, char[]) java.lang.StringBuffer
   copy:
@@ -673,35 +1421,83 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, double) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, float) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, float) java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, int) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
@@ -712,6 +1508,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence) java.lang.StringBuffer
   copy:
@@ -721,6 +1529,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
   copy:
@@ -730,6 +1550,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.Object) java.lang.StringBuffer
   copy:
@@ -739,6 +1571,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -748,6 +1592,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.String) java.lang.StringBuffer
   copy:
@@ -757,15 +1613,35 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, long) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, long) java.lang.StringBuffer
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#insert
   signature: (int, char[], int, int) java.lang.AbstractStringBuilder
@@ -784,6 +1660,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, char[], int, int) java.lang.StringBuffer
   copy:
@@ -801,6 +1701,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -810,6 +1734,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.StringBuffer
   copy:
@@ -819,6 +1755,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#replace
   signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -828,6 +1776,18 @@ passThrough:
     to: this
   - from: arg(2)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(2)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#replace
   signature: (int, int, java.lang.String) java.lang.StringBuffer
   copy:
@@ -837,70 +1797,134 @@ passThrough:
     to: this
   - from: arg(2)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(2)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#reverse
   signature: () java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#reverse
   signature: () java.lang.StringBuffer
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#setCharAt
   signature: (int, char) void
   copy:
   - from: arg(1)
     to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuffer#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuffer#substring
   signature: (int) java.lang.String
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuffer#substring
   signature: (int, int) java.lang.String
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#<init>
   signature: (java.lang.CharSequence) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (boolean) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#append
   signature: (char) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char) java.lang.Appendable
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#append
   signature: (char) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char[]) java.lang.AbstractStringBuilder
@@ -919,6 +1943,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (char[]) java.lang.StringBuilder
   copy:
@@ -936,35 +1984,83 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (double) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (double) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#append
   signature: (float) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (float) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#append
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#append
   signature: (int) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence) java.lang.AbstractStringBuilder
@@ -975,6 +2071,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence) java.lang.Appendable
   copy:
@@ -984,6 +2092,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence) java.lang.StringBuilder
   copy:
@@ -993,6 +2113,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.Object) java.lang.AbstractStringBuilder
   copy:
@@ -1002,6 +2134,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.Object) java.lang.StringBuilder
   copy:
@@ -1011,6 +2155,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -1020,6 +2176,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.String) java.lang.StringBuilder
   copy:
@@ -1029,6 +2197,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.StringBuffer) java.lang.AbstractStringBuilder
   copy:
@@ -1038,6 +2218,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.StringBuffer) java.lang.StringBuilder
   copy:
@@ -1047,15 +2239,35 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (long) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#append
   signature: (long) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#append
   signature: (char[], int, int) java.lang.AbstractStringBuilder
@@ -1074,6 +2286,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (char[], int, int) java.lang.StringBuilder
   copy:
@@ -1091,6 +2327,30 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -1100,6 +2360,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.Appendable
   copy:
@@ -1109,6 +2381,18 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#append
   signature: (java.lang.CharSequence, int, int) java.lang.StringBuilder
   copy:
@@ -1118,65 +2402,125 @@ passThrough:
     to: this
   - from: arg(0)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#appendCodePoint
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#appendCodePoint
   signature: (int) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#charAt
   signature: (int) char
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#delete
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#delete
   signature: (int, int) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#deleteCharAt
   signature: (int) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#deleteCharAt
   signature: (int) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#getChars
   signature: (int, int, char[], int) void
   copy:
   - from: this
+    to: arg(2)
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: arg(2)
 - function: java.lang.StringBuilder#insert
   signature: (int, boolean) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, boolean) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char[]) java.lang.AbstractStringBuilder
@@ -1195,6 +2539,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, char[]) java.lang.StringBuilder
   copy:
@@ -1212,35 +2580,83 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, double) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, double) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, float) java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, float) java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, int) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, int) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence) java.lang.AbstractStringBuilder
@@ -1251,6 +2667,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence) java.lang.StringBuilder
   copy:
@@ -1260,6 +2688,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.Object) java.lang.AbstractStringBuilder
   copy:
@@ -1269,6 +2709,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.Object) java.lang.StringBuilder
   copy:
@@ -1278,6 +2730,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -1287,6 +2751,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.String) java.lang.StringBuilder
   copy:
@@ -1296,15 +2772,35 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, long) java.lang.AbstractStringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, long) java.lang.StringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#insert
   signature: (int, char[], int, int) java.lang.AbstractStringBuilder
@@ -1323,6 +2819,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, char[], int, int) java.lang.StringBuilder
   copy:
@@ -1340,6 +2860,30 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.AbstractStringBuilder
   copy:
@@ -1349,6 +2893,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#insert
   signature: (int, java.lang.CharSequence, int, int) java.lang.StringBuilder
   copy:
@@ -1358,6 +2914,18 @@ passThrough:
     to: this
   - from: arg(1)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(1)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#replace
   signature: (int, int, java.lang.String) java.lang.AbstractStringBuilder
   copy:
@@ -1367,6 +2935,18 @@ passThrough:
     to: this
   - from: arg(2)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(2)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#replace
   signature: (int, int, java.lang.String) java.lang.StringBuilder
   copy:
@@ -1376,33 +2956,69 @@ passThrough:
     to: this
   - from: arg(2)
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
+  - from: arg(2)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+  - from: arg(2)
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#reverse
   signature: () java.lang.AbstractStringBuilder
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#reverse
   signature: () java.lang.StringBuilder
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#setCharAt
   signature: (int, char) void
   copy:
   - from: arg(1)
     to: this
+  - from: arg(1)
+    to:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
 - function: java.lang.StringBuilder#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result
 - function: java.lang.StringBuilder#substring
   signature: (int) java.lang.String
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
+    to: result
 - function: java.lang.StringBuilder#substring
   signature: (int, int) java.lang.String
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.CharSequence#content#java.lang.Object
     to: result

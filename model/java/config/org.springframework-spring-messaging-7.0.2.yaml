@@ -203,6 +203,8 @@ passThrough:
     to:
     - this
     - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
+  - from: arg(1)
+    to: this
 - function: org.springframework.messaging.support.GenericMessage#<init>
   taintCopyOnly: true
   copy:
@@ -279,6 +281,8 @@ passThrough:
     to:
     - this
     - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
+  - from: arg(1)
+    to: this
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#setNativeHeader
   signature:
     params:
@@ -387,6 +391,8 @@ passThrough:
   copy:
   - from: arg(1)
     to: result
+  - from: this
+    to: result
 - function:
     package: org.springframework.messaging.support
     class: MessageHeaderAccessor
@@ -418,4 +424,79 @@ passThrough:
   - from:
     - this
     - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaderValues#java.util.List
+    to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#toMap
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#getMessageHeaders
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#setNativeHeader
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.MessageHeaderAccessor#copyHeaders
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.MessageHeaderAccessor#getHeader
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#toMessageHeaders
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeaders
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#toNativeHeaderMap
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#copyHeadersIfAbsent
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeader
+  taintCopyOnly: true
+  copy:
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.MessageHeaderAccessor#setHeader
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.MessageHeaderAccessor#setHeaderIfAbsent
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: this
+- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#getNativeHeader
+  taintCopyOnly: true
+  copy:
+  - from: this
     to: result
