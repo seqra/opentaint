@@ -6,9 +6,56 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConcurrentReadSafeLongCollectionsTest {
+    @Test
+    fun `object map supports concurrent reads while single writer grows`() {
+        val map = object2IntMap<Int>()
+        val done = AtomicBoolean(false)
+        val start = CountDownLatch(1)
+        val failures = ConcurrentLinkedQueue<Throwable>()
+
+        val readers = List(READER_COUNT) {
+            thread(name = "object-map-reader-$it", isDaemon = true) {
+                start.await()
+                try {
+                    while (!done.get()) {
+                        val value = map.getInt(PROBE_KEY.toInt())
+                        assertTrue(
+                            value == ConcurrentReadSafeObject2IntMap.NO_VALUE || value == PROBE_KEY.toInt(),
+                            "observed a partially published value: $value",
+                        )
+                    }
+                } catch (failure: Throwable) {
+                    failures.add(failure)
+                }
+            }
+        }
+
+        val writer = thread(name = "object-map-writer", isDaemon = true) {
+            start.await()
+            try {
+                for (key in 1..ENTRY_COUNT) map.put(key, key)
+            } catch (failure: Throwable) {
+                failures.add(failure)
+            } finally {
+                done.set(true)
+            }
+        }
+
+        start.countDown()
+        writer.join(10_000)
+        assertFalse(writer.isAlive, "writer did not finish")
+        readers.forEach { it.join(10_000) }
+        assertTrue(readers.none(Thread::isAlive), "a reader did not observe the completed write")
+
+        assertTrue(failures.isEmpty(), failures.joinToString("\n") { it.stackTraceToString() })
+        assertEquals(ENTRY_COUNT, map.size)
+        assertEquals(PROBE_KEY.toInt(), map.getInt(PROBE_KEY.toInt()))
+    }
+
     @Test
     fun `long map supports concurrent reads while single writer rehashes`() {
         val map = long2ObjectMap<Long>()
