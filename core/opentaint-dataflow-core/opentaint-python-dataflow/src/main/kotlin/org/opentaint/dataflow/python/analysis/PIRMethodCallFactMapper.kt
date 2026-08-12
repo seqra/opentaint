@@ -113,6 +113,17 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
             else -> null
         }
 
+    fun mapCallSiteBaseToCaller(call: PIRCall, base: AccessPathBase): AccessPathBase? =
+        when (base) {
+            is AccessPathBase.Argument -> call.args.getOrNull(base.idx)?.value?.let { valueToBase(it) }
+            is AccessPathBase.Return -> call.target?.let { valueToBase(it) }
+            is AccessPathBase.This -> valueToBase(call.callee)
+            is AccessPathBase.LocalVar -> null
+            is AccessPathBase.ClassStatic -> base
+            is AccessPathBase.Constant -> base
+            else -> null
+        }
+
     private fun <F : FactAp> mapMethodExitToReturnFlowFact(
         call: PIRCall,
         factAp: F,

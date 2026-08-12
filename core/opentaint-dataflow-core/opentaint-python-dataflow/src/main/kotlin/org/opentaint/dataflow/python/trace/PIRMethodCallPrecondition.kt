@@ -11,7 +11,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondit
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.python.PIRCallAnyArgumentResolver
 import org.opentaint.dataflow.python.PIRCallAtomEvaluator
 import org.opentaint.dataflow.python.PIRCallResolver
@@ -54,9 +53,9 @@ class PIRMethodCallPrecondition(
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> = buildList {
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> = buildList {
         this += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: mkUnchanged()
+            ?: CallPrecondition.Unchanged
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasBeforeStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let {

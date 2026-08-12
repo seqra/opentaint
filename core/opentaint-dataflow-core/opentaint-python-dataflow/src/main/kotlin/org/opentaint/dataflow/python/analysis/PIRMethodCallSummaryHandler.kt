@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
@@ -14,6 +15,7 @@ import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.alias.forEachAliasBeforeCallStatement
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.dataflow.util.cartesianProductMapTo
 import kotlin.collections.plusAssign
 
 class PIRMethodCallSummaryHandler(
@@ -31,43 +33,50 @@ class PIRMethodCallSummaryHandler(
         PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, resolvedMethods)
     }
 
-    private fun FinalFactAp.toCallerFrame(callee: PIRFunction): FinalFactAp? =
-        factMapper.toCallerFrame(callInst, callee, base)?.let { rebase(it) }
-
     private val MethodEntryPoint.callee: PIRFunction get() = method as PIRFunction
 
-    override fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> {
-        val callerFrameFact = summaryEdge.factAp.toCallerFrame(summaryEdge.methodEntryPoint.callee) ?: return emptyList()
-        return listOf(Edge.ZeroToFact(summaryEdge.methodEntryPoint, summaryEdge.statement, callerFrameFact))
+    private fun FinalFactAp.toCallSiteFrame(callee: MethodEntryPoint): FinalFactAp? =
+        factMapper.toCallerFrame(callInst, callee.callee, base)?.let { rebase(it) }
+
+    private fun FinalFactAp.mapToCaller(): List<FinalFactAp> =
+        factMapper.mapMethodExitToReturnFlowFact(callInst, this, factTypeChecker)
+
+    override fun prepareSummaryInitialFact(fact: InitialFactAp, callee: MethodEntryPoint): List<InitialFactAp> {
+        val callSiteBase = factMapper.toCallerFrame(callInst, callee.callee, fact.base) ?: return emptyList()
+        val callerBase = factMapper.mapCallSiteBaseToCaller(callInst, callSiteBase) ?: return emptyList()
+        return listOf(fact.rebase(callerBase))
     }
+
+    override fun prepareSummaryFinalFact(fact: FinalFactAp, callee: MethodEntryPoint): List<FinalFactAp> =
+        fact.toCallSiteFrame(callee)?.mapToCaller().orEmpty()
 
     override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> {
-        val callerFrameFact = summaryEdge.factAp.toCallerFrame(summaryEdge.methodEntryPoint.callee) ?: return emptyList()
-        return summaryRewriter.rewriteSummaryFact(callerFrameFact).map { (resultFact, refinement) ->
-            Edge.FactToFact(
-                summaryEdge.methodEntryPoint,
-                refinement.refineFact(summaryEdge.initialFactAp),
-                summaryEdge.statement,
-                refinement.refineFact(resultFact),
-            )
+        val callee = summaryEdge.methodEntryPoint
+        val callSiteFact = summaryEdge.factAp.toCallSiteFrame(callee) ?: return emptyList()
+
+        return summaryRewriter.rewriteSummaryFact(callSiteFact).flatMap { (resultFact, refinement) ->
+            val initialFacts = prepareSummaryInitialFact(refinement.refineFact(summaryEdge.initialFactAp), callee)
+            refinement.refineFact(resultFact).mapToCaller().flatMap { finalFact ->
+                initialFacts.map { Edge.FactToFact(callee, it, summaryEdge.statement, finalFact) }
+            }
         }
     }
 
-    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> {
-        val callerFrameFact = summaryEdge.factAp.toCallerFrame(summaryEdge.methodEntryPoint.callee) ?: return emptyList()
-        return summaryRewriter.rewriteSummaryFact(callerFrameFact).map { (resultFact, refinement) ->
+    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<SummaryEdge.NdF2F> {
+        val callee = summaryEdge.methodEntryPoint
+        val callSiteFact = summaryEdge.factAp.toCallSiteFrame(callee) ?: return emptyList()
+
+        val initialFacts = summaryEdge.initialFacts
+            .map { prepareSummaryInitialFact(it, callee) }
+            .cartesianProductMapTo { it.toHashSet() }
+
+        return summaryRewriter.rewriteSummaryFact(callSiteFact).flatMap { (resultFact, refinement) ->
             check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
-            Edge.NDFactToFact(
-                summaryEdge.methodEntryPoint,
-                summaryEdge.initialFacts,
-                summaryEdge.statement,
-                resultFact,
-            )
+            resultFact.mapToCaller().flatMap { finalFact ->
+                initialFacts.map { SummaryEdge.NdF2F(callee, it, finalFact) }
+            }
         }
     }
-
-    override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> =
-        factMapper.mapMethodExitToReturnFlowFact(callInst, fact, factTypeChecker)
 
     override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
         super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->
@@ -113,8 +122,6 @@ class PIRMethodCallSummaryHandler(
 
     private fun SummaryEdge.hasMemoryEffect(): Boolean {
         if (this !is SummaryEdge.F2F) return true
-        val callerFrameInitial = factMapper.toCallerFrame(callInst, methodEntryPoint.callee, initial.base)
-            ?.let { initial.rebase(it) } ?: return true
-        return !final.equalTo(callerFrameInitial)
+        return !final.equalTo(initial)
     }
 }

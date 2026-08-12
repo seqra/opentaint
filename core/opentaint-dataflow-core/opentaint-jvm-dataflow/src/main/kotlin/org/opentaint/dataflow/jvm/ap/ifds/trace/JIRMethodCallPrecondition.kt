@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePreconditionFact
@@ -14,7 +13,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondit
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.ap.ifds.trace.mkUnchanged
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
@@ -43,15 +41,13 @@ class JIRMethodCallPrecondition(
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
 ) : MethodCallPrecondition.Default {
-    private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
-
     private val taintCtx get() = analysisContext.taint
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>> {
-        val results = mutableListOf<CallPrecondition<CallPreconditionFact>>()
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
+        val results = mutableListOf<CallPrecondition>()
 
         results += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: mkUnchanged()
+            ?: CallPrecondition.Unchanged
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }
@@ -190,5 +186,5 @@ class JIRMethodCallPrecondition(
         statement.location.method.instList.toList()
 
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
-        methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 }

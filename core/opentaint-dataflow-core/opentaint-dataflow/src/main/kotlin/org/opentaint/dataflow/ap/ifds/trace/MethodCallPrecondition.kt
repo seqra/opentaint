@@ -14,14 +14,14 @@ import org.opentaint.dataflow.taint.preconditionDnf
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 interface MethodCallPrecondition {
-    sealed interface CallPrecondition<T> {
-        data object Unchanged : CallPrecondition<Nothing>
+    sealed interface CallPrecondition {
+        data object Unchanged : CallPrecondition
     }
 
-    data class PreconditionFactsForInitialFact<T>(
+    data class PreconditionFactsForInitialFact(
         val initialFact: InitialFactAp,
-        val preconditionFacts: List<T>,
-    ): CallPrecondition<T>
+        val preconditionFacts: List<CallPreconditionFact>,
+    ): CallPrecondition
 
     sealed interface CallPreconditionFact
     sealed interface CallResolutionPreconditionFact
@@ -34,7 +34,7 @@ interface MethodCallPrecondition {
     data class CallToStart(val callerFact: InitialFactAp, val startFactBase: AccessPathBase) : CallPreconditionFact
     data class CallToStartResolved(val callerFact: InitialFactAp, val startFactBase: AccessPathBase, val method: MethodWithContext): CallSuccessPreconditionFact
 
-    fun factPrecondition(fact: InitialFactAp): List<CallPrecondition<CallPreconditionFact>>
+    fun factPrecondition(fact: InitialFactAp): List<CallPrecondition>
     fun factPreconditionResolutionFailure(fact: InitialFactAp, startFactBase: AccessPathBase): List<CallFailurePreconditionFact>
     fun factPreconditionResolutionSuccess(fact: InitialFactAp, startFactBase: AccessPathBase, method: MethodWithContext): List<CallSuccessPreconditionFact>
 
@@ -85,6 +85,3 @@ interface MethodCallPrecondition {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-fun <A> mkUnchanged(): CallPrecondition<A> =
-    CallPrecondition.Unchanged as CallPrecondition<A>

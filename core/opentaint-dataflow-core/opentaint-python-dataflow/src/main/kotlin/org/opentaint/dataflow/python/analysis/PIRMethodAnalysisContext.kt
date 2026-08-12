@@ -14,6 +14,6 @@ class PIRMethodAnalysisContext(
     val aliasAnalysis: PIRLocalAliasAnalysis?,
 ) : MethodAnalysisContext {
 
-    override val methodCallFactMapper: PIRMethodCallFactMapper
+    val methodCallFactMapper: PIRMethodCallFactMapper
         get() = PIRMethodCallFactMapper
 }

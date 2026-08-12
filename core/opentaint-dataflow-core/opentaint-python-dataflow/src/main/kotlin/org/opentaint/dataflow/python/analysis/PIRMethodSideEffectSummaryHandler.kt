@@ -1,12 +1,18 @@
 package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.SideEffectSummary
 import org.opentaint.dataflow.taint.MethodSideEffectHandlerWithAnyAccessorRequestHandling
+import org.opentaint.ir.api.python.PIRCall
 
-/**
- * No-op side effect handler for the minimal prototype.
- * All methods use default implementations from MethodSideEffectSummaryHandler.
- */
 class PIRMethodSideEffectSummaryHandler(
-    override val runner: AnalysisRunner
-) : MethodSideEffectHandlerWithAnyAccessorRequestHandling
+    private val callInst: PIRCall,
+    private val ctx: PIRMethodAnalysisContext,
+    override val runner: AnalysisRunner,
+) : MethodSideEffectHandlerWithAnyAccessorRequestHandling {
+    override fun prepareSideEffectSummary(
+        sideEffectSummary: SideEffectSummary.FactSideEffectSummary,
+    ): List<SideEffectSummary.FactSideEffectSummary> =
+        ctx.methodCallFactMapper.mapMethodExitToReturnFlowFact(callInst, sideEffectSummary.initialFactAp)
+            .map { sideEffectSummary.copy(initialFactAp = it) }
+}
