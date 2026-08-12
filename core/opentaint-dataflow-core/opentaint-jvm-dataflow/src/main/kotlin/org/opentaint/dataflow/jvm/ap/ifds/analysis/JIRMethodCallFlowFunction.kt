@@ -279,6 +279,9 @@ class JIRMethodCallFlowFunction(
                 apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
             )
 
+            val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
+            var passThroughFacts = applyPassThrough(passRules, conditionEvaluator, passEvaluator)
+
             if (startFactBase !is AccessPathBase.ClassStatic) {
                 analysisContext.taint.externalMethodTracker?.let { tracker ->
                     if (JIRCallResolver.alwaysIgnoreMethod(method)) return@let
@@ -290,9 +293,6 @@ class JIRMethodCallFlowFunction(
                     tracker.trackExternalMethod(methodName, methodDesc, factPosition, ruleApplied)
                 }
             }
-
-            val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
-            var passThroughFacts = applyPassThrough(passRules, conditionEvaluator, passEvaluator)
 
             if (/*todo: fix owasp  passThroughFacts.isNone && */!analysisContext.analysisManager.params.disableDefaultGetModel) {
                 val defaultRules = JIRMethodGetDefault.defaultPropagationRules(method)
