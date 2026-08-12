@@ -63,7 +63,7 @@ class Approximations(
     private val originalToApproximationPriority: ConcurrentMap<OriginalClassName, Int> = ConcurrentHashMap()
 
     private val approximationPathPriority = approximationPaths
-        .mapIndexed { priority, path -> File(path).canonicalPath to priority }
+        .mapIndexed { priority, path -> path.canonicalPathOrSelf() to priority }
         .toMap()
 
     private val versionMap: VersionMap = versions.associate { it.target to it.version }
@@ -84,7 +84,14 @@ class Approximations(
     )
 
     private fun approximationPriority(path: String): Int =
-        approximationPathPriority[File(path).canonicalPath] ?: -1
+        approximationPathPriority[path.canonicalPathOrSelf()] ?: -1
+
+    /**
+     * Location paths are not always real file paths: JavaRuntimeModuleLocation encodes the module
+     * and the java home into a single string separated by NUL, which makes canonicalPath throw.
+     */
+    private fun String.canonicalPathOrSelf(): String =
+        runCatching { File(this).canonicalPath }.getOrDefault(this)
 
     internal fun registerApproximation(
         originalClassName: OriginalClassName,
