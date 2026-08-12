@@ -60,7 +60,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.lang3.mutable.MutableObject#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.mutable.MutableObject#content#java.lang.Object
 - function: org.apache.commons.lang3.text.CompositeFormat#format
   copy:
   - from: arg(0)
@@ -72,7 +72,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.lang3.concurrent.ConstantInitializer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.concurrent.ConstantInitializer#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.commons.lang3.text.WordUtils#capitalizeFully
@@ -103,7 +103,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -126,7 +126,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -134,7 +134,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -142,13 +142,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -165,7 +165,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -223,7 +223,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -242,7 +242,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -260,7 +260,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -320,7 +320,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.StringUtils#join
   copy:
@@ -341,7 +341,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -355,7 +355,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -420,7 +420,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -443,7 +443,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -452,7 +452,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -493,7 +493,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -508,7 +508,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -518,7 +518,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -526,7 +526,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -534,7 +534,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: arg(0)
   - from: this
     to: arg(0)
@@ -580,7 +580,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -588,7 +588,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -599,7 +599,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.lang3.text.StrSubstitutor#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrSubstitutor#content#java.lang.Object
 - function: org.apache.commons.lang3.ObjectUtils#identityToString
   signature:
     params:
@@ -622,7 +622,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -640,7 +640,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -699,7 +699,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -744,7 +744,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.text.StrTokenizer#reset
   copy:
@@ -760,7 +760,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -769,7 +769,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.commons.lang3.tuple.MutablePair#<init>
@@ -812,7 +812,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.ArrayUtils#subarray
   overrides: false
@@ -825,7 +825,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.StringUtils#splitPreserveAllTokens
   copy:
@@ -841,7 +841,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -854,7 +854,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -872,7 +872,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -888,7 +888,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -907,7 +907,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1048,7 +1048,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1057,7 +1057,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1117,7 +1117,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1130,7 +1130,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1152,7 +1152,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1161,7 +1161,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1195,7 +1195,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1222,7 +1222,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1235,7 +1235,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1248,7 +1248,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1286,7 +1286,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.concurrent.ConstantInitializer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.concurrent.ConstantInitializer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.text.StrBuilder#setNullText
   copy:
@@ -1294,7 +1294,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1304,7 +1304,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1312,7 +1312,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1331,7 +1331,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1418,7 +1418,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1442,7 +1442,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1457,7 +1457,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1471,7 +1471,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1480,7 +1480,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1506,7 +1506,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.ArrayUtils#add
   overrides: false
@@ -1523,7 +1523,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1542,7 +1542,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1562,7 +1562,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1597,7 +1597,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1610,7 +1610,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1676,7 +1676,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1692,7 +1692,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1757,7 +1757,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1800,7 +1800,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1826,7 +1826,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1834,7 +1834,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1842,7 +1842,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1852,14 +1852,14 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.text.StrBuilder#setNewLineText
   overrides: false
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1889,7 +1889,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
     to: result
 - function: org.apache.commons.lang3.ObjectUtils#min
   overrides: false
@@ -1940,7 +1940,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1949,7 +1949,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1982,7 +1982,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.lang3.text.StrTokenizer#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrTokenizer#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.commons.lang3.ClassUtils#getShortClassName
@@ -2009,7 +2009,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2026,7 +2026,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.commons.lang3.text.StrBuilder#append
@@ -2034,7 +2034,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -2043,7 +2043,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.lang3.text.StrBuilder#<rule-storage>#java.lang.Object
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
     to: result
   - from: this
     to: result

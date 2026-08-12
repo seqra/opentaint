@@ -19,7 +19,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Multipart#<rule-storage>#java.lang.Object
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -34,14 +34,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Multipart#<rule-storage>#java.lang.Object
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
     to: result
 - function: javax.mail.Part#getDisposition
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#disposition#java.lang.Object
     to: result
   - from:
     - this
@@ -52,7 +52,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Multipart#<rule-storage>#java.lang.Object
+    - .javax.mail.Multipart#parent#java.lang.Object
     to: result
   - from:
     - this
@@ -68,11 +68,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Header#<rule-storage>#java.lang.Object
+    - .javax.mail.Header#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Header#<rule-storage>#java.lang.Object
+    - .javax.mail.Header#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -87,7 +87,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#content#java.lang.Object
     to: result
   - from:
     - this
@@ -126,11 +126,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#replyTo#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#replyTo#java.lang.Object
     to: result
   - from:
     - this
@@ -141,7 +141,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#content#java.lang.Object
     to: result
   - from:
     - this
@@ -192,11 +192,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#recipients#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#recipients#java.lang.Object
     to: result
   - from:
     - this
@@ -229,7 +229,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Header#<rule-storage>#java.lang.Object
+    - .javax.mail.Header#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -238,11 +238,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#from#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#from#java.lang.Object
     to: result
   - from:
     - this
@@ -253,7 +253,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
   - from:
     - this
@@ -264,11 +264,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#folder#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#folder#java.lang.Object
     to: result
   - from:
     - this
@@ -279,7 +279,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Header#<rule-storage>#java.lang.Object
+    - .javax.mail.Header#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -293,7 +293,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
   - from:
     - this
@@ -313,13 +313,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Multipart#<rule-storage>#java.lang.Object
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
 - function: javax.mail.Part#getFileName
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#fileName#java.lang.Object
     to: result
   - from:
     - this
@@ -334,14 +334,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Multipart#<rule-storage>#java.lang.Object
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
     to: result
 - function: javax.mail.Part#getMatchingHeaders
   signature: (java.lang.String[]) java.util.Enumeration
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
   - from:
     - this
@@ -352,7 +352,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#headers#java.lang.Object
     to: result
   - from:
     - this
@@ -364,7 +364,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#text#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -375,11 +375,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#recipients#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#recipients#java.lang.Object
   - from: arg(1)
     to:
     - this
@@ -393,7 +393,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Multipart#<rule-storage>#java.lang.Object
+    - .javax.mail.Multipart#bodyParts#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.mail.Part#getDescription
@@ -401,7 +401,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#description#java.lang.Object
     to: result
   - from:
     - this
@@ -412,11 +412,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#subject#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#subject#java.lang.Object
     to: result
   - from:
     - this
@@ -427,7 +427,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#contentType#java.lang.Object
     to: result
   - from:
     - this
@@ -438,11 +438,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#recipients#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#recipients#java.lang.Object
     to: result
   - from:
     - this
@@ -494,11 +494,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Part#<rule-storage>#java.lang.Object
+    - .javax.mail.Part#recipients#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Message#<rule-storage>#java.lang.Object
+    - .javax.mail.Message#recipients#java.lang.Object
   - from: arg(1)
     to:
     - this
