@@ -124,5 +124,4 @@ jobs:
             --title "go-server/latest" \
             --notes "Floating release tracking the latest go-ssa-server version (v${{ steps.changes.outputs.version }})" \
             --latest=false \
-            --prerelease \
             dist/*

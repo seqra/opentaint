@@ -7,6 +7,31 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 object EdgeCollection {
+    class UnprocessedEdgeList(apManager: ApManager, methodEntryPoint: MethodEntryPoint) {
+        private val zeroToZeroEdges = arrayListOf<Edge.ZeroToZero>()
+        private val otherEdges = EdgeList(apManager, methodEntryPoint)
+
+        val containsZeroToZeroEdges: Boolean
+            get() = zeroToZeroEdges.isNotEmpty()
+
+        val isEmpty: Boolean
+            get() = zeroToZeroEdges.isEmpty() && otherEdges.isEmpty
+
+        val size: Int
+            get() = zeroToZeroEdges.size + otherEdges.size
+
+        fun add(edge: Edge) {
+            if (edge is Edge.ZeroToZero) {
+                zeroToZeroEdges.add(edge)
+            } else {
+                otherEdges.add(edge)
+            }
+        }
+
+        fun removeLast(): Edge =
+            zeroToZeroEdges.removeLastOrNull() ?: otherEdges.removeLast()
+    }
+
     class EdgeList(
         private val apManager: ApManager,
         private val methodEntryPoint: MethodEntryPoint

@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.taint
 
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -36,7 +37,16 @@ class TaintSourceActionPreconditionEvaluator(
         position: PositionAccess,
         mark: TaintMarkAccessor
     ): Maybe<List<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>>> {
-        if (!factReader.containsPositionWithTaintMark(position, mark)) return Maybe.none()
-        return Maybe.some(listOf(rule to action))
+        if (factReader.containsPositionWithTaintMark(position, mark)) {
+            return Maybe.some(listOf(rule to action))
+        }
+
+        if (position is PositionAccess.Complex && position.accessor == AnyAccessor) {
+            if (factReader.containsPositionWithTaintMark(position.base, mark)) {
+                return Maybe.some(listOf(rule to action))
+            }
+        }
+
+        return Maybe.none()
     }
 }

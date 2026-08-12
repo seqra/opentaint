@@ -10,6 +10,7 @@ import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 class MethodEdgesInitialToFinalCactusApSet(
+    override val cactusManager: CactusApManager,
     methodInitialStatement: CommonInst,
     private val maxInstIdx: Int,
     private val languageManager: LanguageManager

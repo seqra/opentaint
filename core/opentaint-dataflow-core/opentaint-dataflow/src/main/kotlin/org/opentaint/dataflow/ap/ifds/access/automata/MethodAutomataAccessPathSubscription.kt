@@ -102,7 +102,7 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
             graphIndex.localizeIndexedGraphContainsAllGraph(summaryInitialFactAp).forEach { edgeIdx ->
                 val (initialAp, final) = edges[edgeIdx]
 
-                if (!final.containsAll(summaryInitialFactAp)) {
+                if (!final.containsAllAccessPaths(summaryInitialFactAp)) {
                     return@forEach
                 }
 
@@ -142,7 +142,7 @@ class MethodAutomataAccessPathSubscription : CommonAPSub<AccessGraph, AccessGrap
 
             override fun collect(dst: MutableList<AccessGraph>, summaryInitialFact: AccessGraph) {
                 for (graph in graphList) {
-                    if (graph.containsAll(summaryInitialFact)) {
+                    if (graph.containsAllAccessPaths(summaryInitialFact)) {
                         dst.add(graph)
                     }
                 }

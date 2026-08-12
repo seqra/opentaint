@@ -6,9 +6,11 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.FinalApAccess
 
 interface CactusFinalApAccess: FinalApAccess<AccessCactus.AccessNode> {
+    val cactusManager: CactusApManager
+
     override fun getFinalAccess(factAp: FinalFactAp): AccessCactus.AccessNode =
         (factAp as AccessCactus).access
 
     override fun createFinal(base: AccessPathBase, ap: AccessCactus.AccessNode, ex: ExclusionSet): FinalFactAp =
-        AccessCactus(base, ap, ex)
+        AccessCactus(cactusManager, base, ap.forExclusions(ex), ex)
 }

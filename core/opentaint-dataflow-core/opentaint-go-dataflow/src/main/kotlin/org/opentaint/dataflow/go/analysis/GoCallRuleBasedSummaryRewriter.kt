@@ -3,6 +3,7 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.go.serialized.GoUserDefinedRuleInfo
 import org.opentaint.dataflow.go.GoCallExpr
 import org.opentaint.dataflow.go.GoFlowFunctionUtils.resolvePosAccess
@@ -72,7 +73,7 @@ class GoCallRuleBasedSummaryRewriter(
         val cleanedFact = userRuleDefinedActions.applyCleanerActions(
             evalAction = { f, rule, action ->
                 val pos = action.pos.resolvePosAccess()
-                cleanEvaluator.removeFinalFact(f, pos, TaintMarkAccessor(action.mark), rule, action)
+                cleanEvaluator.removeFinalFact(f, pos, TaintMarkAccessor(action.mark), rule, action, TaintCleanReach.Exact)
             },
             itemRule = { it.rule },
             itemActions = { action ->

@@ -112,7 +112,6 @@ jobs:
         with:
           release-version: ${{ steps.manual_release.outputs.new-version || steps.version.outputs.new_release_version }}
           tag-prefix: 'github/'
-          component-name: 'GitHub Action'
 
     outputs:
       release_version: ${{ steps.manual_release.outputs.new-version || steps.version.outputs.new_release_version }}

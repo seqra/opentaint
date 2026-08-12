@@ -13,6 +13,12 @@ data class AccessGraphInitialFactAp(
     override val access: AccessGraph,
     override val exclusions: ExclusionSet,
 ) : InitialFactAp, AccessGraphAccessorList {
+    init {
+        check(access.deepAccessorExclusion == null) {
+            "Initial facts cannot carry AnyField mark exclusions"
+        }
+    }
+
     override val size: Int get() = access.size
     override val depth: Int get() = size
 
@@ -93,7 +99,7 @@ data class AccessGraphInitialFactAp(
         factAp as AccessGraphInitialFactAp
 
         if (base != factAp.base) return false
-        return access.containsAll(factAp.access)
+        return access.containsAllAccessPaths(factAp.access)
     }
 
     override fun compatibilityFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactCompatibilityFilter =

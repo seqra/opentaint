@@ -8,6 +8,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.access.cactus.AccessCactus.AccessNode as AccessCactusNode
 
 class MethodEdgesFinalCactusApSet(
+    override val cactusManager: CactusApManager,
     methodInitialStatement: CommonInst,
     private val maxInstIdx: Int,
     private val languageManager: LanguageManager,

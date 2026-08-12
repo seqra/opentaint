@@ -2,6 +2,7 @@ package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.python.TaintCleanAction
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
@@ -18,6 +19,6 @@ class PIRTaintCleanActionEvaluator(private val call: PIRCall) {
     ): List<EvaluatedCleanAction> {
         val variable = action.pos.resolveAp(call) ?: return listOf(initialFact)
         val mark = TaintMarkAccessor(action.mark.name)
-        return evaluator.removeFinalFact(initialFact, variable, mark, rule, action)
+        return evaluator.removeFinalFact(initialFact, variable, mark, rule, action, TaintCleanReach.Exact)
     }
 }

@@ -101,6 +101,5 @@ jobs:
             --title "analyzer/latest" \
             --notes "Floating release tracking the latest analyzer version (v${{ steps.changes.outputs.version }})" \
             --latest=false \
-            --prerelease \
             core/build/libs/opentaint-project-analyzer.jar \
             opentaint-models.tar.gz

@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.EdgeRefinement
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryApRefinement
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
@@ -47,7 +48,7 @@ interface MethodCallSummaryHandler {
 
     fun handleZeroToFact(
         currentFactAp: FinalFactAp,
-        summaryEffect: SummaryEdgeApplication,
+        summaryEffect: EdgeRefinement,
         summaryEdge: SummaryEdge,
     ): Set<Sequent> = handleSummary(
         currentFactAp,
@@ -68,7 +69,7 @@ interface MethodCallSummaryHandler {
     fun handleFactToFact(
         initialFactAp: InitialFactAp,
         currentFactAp: FinalFactAp,
-        summaryEffect: SummaryEdgeApplication,
+        summaryEffect: EdgeRefinement,
         summaryEdge: SummaryEdge,
     ): Set<Sequent> = handleSummary(
         currentFactAp,
@@ -86,7 +87,7 @@ interface MethodCallSummaryHandler {
     fun handleNDFactToFact(
         initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
-        summaryEffect: SummaryEdgeApplication,
+        summaryEffect: EdgeRefinement,
         summaryEdge: SummaryEdge,
     ): Set<Sequent> = handleSummary(
         currentFactAp,
@@ -115,7 +116,7 @@ interface MethodCallSummaryHandler {
 
     fun handleSummary(
         currentFactAp: FinalFactAp,
-        summaryEffect: SummaryEdgeApplication,
+        summaryEffect: EdgeRefinement,
         summaryEdge: SummaryEdge,
         createSideEffectRequirement: (refinement: ExclusionSet) -> Sequent?,
         handleSummaryEdge: (initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp) -> Sequent
@@ -123,21 +124,31 @@ interface MethodCallSummaryHandler {
         val mappedSummaryFacts = mapMethodExitToReturnFlowFact(summaryEdge.final)
 
         return when (summaryEffect) {
-            is SummaryApRefinement -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
-                // todo: filter exclusions
+            is SummaryEdgeApplication -> mappedSummaryFacts.mapNotNullTo(hashSetOf()) { mappedSummaryFact ->
                 val summaryFactAp = mappedSummaryFact
                     .concat(factTypeChecker, summaryEffect.delta)
-                    ?.replaceExclusions(currentFactAp.exclusions)
                     ?: return@mapNotNullTo null
 
-                handleSummaryEdge(null, summaryFactAp)
+                when (summaryEffect) {
+                    is SummaryApRefinement -> {
+                        // todo: filter exclusions
+                        val fact = summaryFactAp.replaceExclusions(currentFactAp.exclusions)
+                        handleSummaryEdge(null, fact)
+                    }
+
+                    is SummaryExclusionRefinement -> {
+                        val fact = summaryFactAp.replaceExclusions(summaryEffect.exclusion)
+                        handleSummaryEdge(summaryEffect.exclusion, fact)
+                    }
+                }
             }
 
-            is SummaryExclusionRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) { mappedSummaryFact ->
-                // todo: filter exclusions
-                val summaryFactAp = mappedSummaryFact.replaceExclusions(summaryEffect.exclusion)
+            is EdgeRefinement.UniverseRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) {
+                handleSummaryEdge(ExclusionSet.Universe, it.replaceExclusions(ExclusionSet.Universe))
+            }
 
-                handleSummaryEdge(summaryEffect.exclusion, summaryFactAp)
+            is EdgeRefinement.IdRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) {
+                handleSummaryEdge(currentFactAp.exclusions, it.replaceExclusions(currentFactAp.exclusions))
             }
         }
     }

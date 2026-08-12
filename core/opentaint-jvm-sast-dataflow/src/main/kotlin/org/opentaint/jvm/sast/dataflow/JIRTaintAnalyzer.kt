@@ -31,17 +31,23 @@ class JIRTaintAnalyzer(
     val taintConfiguration: TaintRulesProvider,
     val projectClasses: ClassLocationChecker,
     options: TaintAnalyzerOptions,
+    val jirOptions: JIRAnalysisOptions = JIRAnalysisOptions(),
     val analysisUnit: JIRUnitResolver = PackageUnitResolver(projectClasses),
     externalMethodTracker: ExternalMethodTracker? = null,
 ): TaintAnalyzer<JIRMethod, JIRInst>(options, externalMethodTracker) {
     override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> {
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        val explicitExceptionsOnlyGraph = JExplicitExceptionsOnlyApplicationGraph(mainGraph)
-        return JIRSafeApplicationGraph(explicitExceptionsOnlyGraph)
+        val tryBoundaryExceptionsGraph = JTryBoundaryExceptionsApplicationGraph(mainGraph)
+        return JIRSafeApplicationGraph(tryBoundaryExceptionsGraph)
     }
 
+    data class JIRAnalysisOptions(
+        val disableDefaultGetModel: Boolean = false,
+    )
+
     private val analysisParams get() = JIRAnalysisManager.Params(
+        disableDefaultGetModel = jirOptions.disableDefaultGetModel,
         aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
             aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth
         )

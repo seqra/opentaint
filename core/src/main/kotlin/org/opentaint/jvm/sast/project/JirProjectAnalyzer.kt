@@ -58,6 +58,7 @@ class JirProjectAnalyzer(
             cp, config,
             projectClasses = projectClasses.locationChecker(),
             options = options.taintAnalyzerOptions(),
+            jirOptions = JIRTaintAnalyzer.JIRAnalysisOptions(jirOptions.disableDefaultGetModel),
             externalMethodTracker = externalMethodTracker,
         )
     }

@@ -26,6 +26,7 @@ config.local.*
 **/build
 /install/
 core/**/bin/
+**/__pycache__/
 
 # Ignore all hidden files and directories
 .*

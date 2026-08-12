@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.configuration.TaintCleanReach
 
 class TaintCleanActionEvaluator {
     fun removeAllFacts(
@@ -15,16 +16,7 @@ class TaintCleanActionEvaluator {
         action: CommonTaintAction,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
-
-        if (!fact.containsPosition(from)) return listOf(evc)
-
-        if (from is PositionAccess.Simple) {
-            val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            return listOf(EvaluatedCleanAction(fact = null, actionInfo, evc))
-        }
-
-        val cleanAccessors = from.accessorList()
-        return cleanAccessors(cleanAccessors, fact, rule, action, evc)
+        return clean(Cleaner.AllMarks(from), fact, rule, action, evc)
     }
 
     fun removeFinalFact(
@@ -33,80 +25,49 @@ class TaintCleanActionEvaluator {
         markRestriction: TaintMarkAccessor,
         rule: CommonTaintConfigurationItem,
         action: CommonTaintAction,
+        reach: TaintCleanReach,
     ): List<EvaluatedCleanAction> {
         val fact = evc.fact ?: return listOf(evc)
-
-        if (!fact.containsPositionWithTaintMark(from, markRestriction)) return listOf(evc)
-
-        val cleanAccessors = from.accessorList() + markRestriction
-        return cleanAccessors(cleanAccessors, fact, rule, action, evc)
+        return clean(Cleaner.Mark(from, markRestriction, reach), fact, rule, action, evc)
     }
 
-    private fun cleanAccessors(
-        accessors: List<Accessor>,
+    private fun clean(
+        cleaner: Cleaner,
         fact: FinalFactReader,
         rule: CommonTaintConfigurationItem,
         action: CommonTaintAction,
         evc: EvaluatedCleanAction
     ): List<EvaluatedCleanAction> {
-        val (cleanedFacts, factCleaned) = clearPosition(accessors, fact.factAp)
+        val cleaned = fact.clean(cleaner)
+            ?: return listOf(evc)
 
         val result = mutableListOf<EvaluatedCleanAction>()
-        if (factCleaned) {
+        if (cleaned.removedAlternative) {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
             result += EvaluatedCleanAction(null, actionInfo, evc)
         }
 
-        return cleanedFacts.mapTo(result) { cleanedFact ->
+        return cleaned.survivingFacts.mapTo(result) { cleanedFact ->
             val resultFact = fact.replaceFact(cleanedFact)
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
             EvaluatedCleanAction(resultFact, actionInfo, evc)
         }
     }
 
-    private fun clearPosition(accessors: List<Accessor>, fact: FinalFactAp): Pair<List<FinalFactAp>, Boolean> {
-        val head = accessors.first()
-        val tail = accessors.drop(1)
-        if (tail.isEmpty()) {
-            if (fact.startsWithAccessor(AnyAccessor)) {
-                val factAfterAny = fact.readAccessor(AnyAccessor)
-                    ?: error("Impossible")
-
-                val clearedAfterAny = factAfterAny.clearAccessor(head)
-                val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
-
-                val factWithoutAny = fact.clearAccessor(AnyAccessor)
-                val cleanedWithoutAny = factWithoutAny?.clearAccessor(head)
-
-                val cleaned = clearedAfterAny != factAfterAny || cleanedWithoutAny != factWithoutAny
-
-                return listOfNotNull(restoredAfterAny, cleanedWithoutAny) to cleaned
-            }
-
-            if (!fact.startsWithAccessor(head)) {
-                return listOf(fact) to false
-            }
-
-            val clearedFact = fact.clearAccessor(head)
-            val cleaned = clearedFact != fact
-
-            return listOfNotNull(clearedFact) to cleaned
+    private fun FinalFactReader.clean(cleaner: Cleaner): CleanResult? {
+        if (cleaner.position.base() != factAp.base) {
+            return null
         }
 
-        val child = fact.readAccessor(head)
-            ?: return listOf(fact) to false
+        if (cleaner is Cleaner.AllMarks || !cleaner.position.hasAnyField()) {
+            val present = when (cleaner) {
+                is Cleaner.AllMarks -> containsPosition(cleaner.position)
+                is Cleaner.Mark -> containsPositionWithTaintMark(cleaner.position, cleaner.mark)
+            }
+            if (!present) return null
+        }
 
-        val remaining = listOfNotNull(fact.clearAccessor(head))
-        val (cleanChild, childCleaned) = clearPosition(tail, child)
-        val cleanChildWithAccessor = cleanChild.map { it.prependAccessor(head) }
-        val fullFact = remaining + cleanChildWithAccessor
-
-        return fullFact to childCleaned
-    }
-
-    private fun PositionAccess.accessorList(): List<Accessor> = when (this) {
-        is PositionAccess.Simple -> emptyList()
-        is PositionAccess.Complex -> base.accessorList() + accessor
+        return factAp.clean(cleaner)
     }
 }
 
@@ -154,4 +115,117 @@ inline fun <A> List<EvaluatedCleanAction>.evaluatedCleanAction(
         }
     }
     return nextIterationFacts
+}
+
+sealed interface Cleaner {
+    val position: PositionAccess
+
+    fun replacePosition(newPosition: PositionAccess): Cleaner
+
+    data class AllMarks(
+        override val position: PositionAccess,
+    ) : Cleaner {
+        override fun replacePosition(newPosition: PositionAccess): Cleaner = copy(position = newPosition)
+    }
+
+    data class Mark(
+        override val position: PositionAccess,
+        val mark: TaintMarkAccessor,
+        val reach: TaintCleanReach,
+    ) : Cleaner {
+        override fun replacePosition(newPosition: PositionAccess): Cleaner = copy(position = newPosition)
+    }
+}
+
+data class CleanResult(
+    val survivingFacts: List<FinalFactAp>,
+    val removedAlternative: Boolean,
+)
+
+fun FinalFactAp.clean(cleaner: Cleaner): CleanResult {
+    if (cleaner is Cleaner.Mark) {
+        val positionAccessors = cleaner.position.accessors()
+        if (positionAccessors.size == 1 && positionAccessors.single() is AnyAccessor) {
+            return cleanAnyFieldMark(cleaner.mark, keepStartAccessor = true)
+        }
+    }
+
+    return cleanConcrete(cleaner)
+}
+
+private fun Cleaner.removePrefix(prefix: Accessor): Cleaner {
+    val remainingPosition = position.removePrefix(prefix)
+    return replacePosition(remainingPosition)
+}
+
+private fun Cleaner.accessors(): List<Accessor> =
+    position.accessors() + if (this is Cleaner.Mark) listOf(mark) else emptyList()
+
+private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): CleanResult {
+    val accessors = cleaner.accessors()
+    if (accessors.isEmpty()) {
+        check(cleaner is Cleaner.AllMarks)
+        return CleanResult(emptyList(), removedAlternative = true)
+    }
+
+    val head = accessors.first()
+    val tail = accessors.drop(1)
+    if (tail.isEmpty()) {
+        if (cleaner is Cleaner.Mark && startsWithAccessor(AnyAccessor)) {
+            when (cleaner.reach) {
+                TaintCleanReach.ExactAndAnyField -> {
+                    return cleanAnyFieldMark(cleaner.mark, keepStartAccessor = false)
+                }
+
+                TaintCleanReach.Exact -> {
+                    val factAfterAny = readAccessor(AnyAccessor)
+                        ?: error("Impossible")
+
+                    val clearedAfterAny = factAfterAny.clearAccessor(head)
+                    val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
+
+                    val factWithoutAny = clearAccessor(AnyAccessor)
+                    val cleanedWithoutAny = factWithoutAny?.clearAccessor(head)
+
+                    return CleanResult(
+                        listOfNotNull(restoredAfterAny, cleanedWithoutAny),
+                        removedAlternative = clearedAfterAny != factAfterAny || cleanedWithoutAny != factWithoutAny,
+                    )
+                }
+            }
+        }
+
+        if (!startsWithAccessor(head)) {
+            return CleanResult(listOf(this), removedAlternative = false)
+        }
+
+        val cleared = clearAccessor(head)
+        return CleanResult(
+            listOfNotNull(cleared),
+            removedAlternative = cleared != this,
+        )
+    }
+
+    val child = readAccessor(head)
+        ?: return CleanResult(listOf(this), removedAlternative = false)
+
+    val remaining = listOfNotNull(clearAccessor(head))
+    val cleanedChild = child.clean(cleaner.removePrefix(head))
+    val restoredChildren = cleanedChild.survivingFacts.map { it.prependAccessor(head) }
+    return CleanResult(
+        remaining + restoredChildren,
+        removedAlternative = cleanedChild.removedAlternative,
+    )
+}
+
+private fun FinalFactAp.cleanAnyFieldMark(
+    mark: TaintMarkAccessor,
+    keepStartAccessor: Boolean,
+): CleanResult {
+    val cleaned = clearAllAccessorOccurrences(mark, keepStartAccessor)
+        ?: return CleanResult(emptyList(), removedAlternative = true)
+    return CleanResult(
+        survivingFacts = listOf(cleaned),
+        removedAlternative = !keepStartAccessor && cleaned != this,
+    )
 }

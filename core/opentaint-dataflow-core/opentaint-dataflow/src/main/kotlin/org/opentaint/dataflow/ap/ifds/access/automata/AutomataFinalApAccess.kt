@@ -7,5 +7,5 @@ import org.opentaint.dataflow.ap.ifds.access.common.FinalApAccess
 
 interface AutomataFinalApAccess : FinalApAccess<AccessGraph> {
     override fun getFinalAccess(factAp: FinalFactAp): AccessGraph = (factAp as AccessGraphFinalFactAp).access
-    override fun createFinal(base: AccessPathBase, ap: AccessGraph, ex: ExclusionSet): FinalFactAp = AccessGraphFinalFactAp(base, ap, ex)
+    override fun createFinal(base: AccessPathBase, ap: AccessGraph, ex: ExclusionSet): FinalFactAp = AccessGraphFinalFactAp(base, ap.forExclusions(ex), ex)
 }

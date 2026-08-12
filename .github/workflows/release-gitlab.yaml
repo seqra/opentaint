@@ -129,7 +129,6 @@ jobs:
         with:
           release-version: ${{ steps.manual_release.outputs.new-version || steps.release_version.outputs.RELEASE_VERSION }}
           tag-prefix: 'gitlab/'
-          component-name: 'GitLab CI template'
 
     outputs:
       release_version: ${{ steps.manual_release.outputs.new-version || steps.release_version.outputs.RELEASE_VERSION }}

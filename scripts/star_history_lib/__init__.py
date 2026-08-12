@@ -1,0 +1,2 @@
+class ChartError(RuntimeError):
+    pass

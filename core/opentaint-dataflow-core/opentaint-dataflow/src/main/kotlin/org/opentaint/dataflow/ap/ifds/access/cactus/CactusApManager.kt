@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.access.MethodNDInitialToFinalApSummariesSt
 import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
 import org.opentaint.dataflow.ap.ifds.access.FactSideEffectSummariesApStorage
 import org.opentaint.dataflow.ap.ifds.access.cactus.AccessCactus.AccessNode
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
@@ -30,63 +31,65 @@ class CactusApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     override val cancellation: Cancellation,
 ) : ApManager {
+    val interner = AccessorInterner()
+
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
-        CactusInitialFactAbstraction()
+        CactusInitialFactAbstraction(this)
 
     override fun methodEdgesFinalApSet(
         methodInitialStatement: CommonInst,
         maxInstIdx: Int,
         languageManager: LanguageManager
     ): MethodEdgesFinalApSet =
-        MethodEdgesFinalCactusApSet(methodInitialStatement, maxInstIdx, languageManager)
+        MethodEdgesFinalCactusApSet(this, methodInitialStatement, maxInstIdx, languageManager)
 
     override fun methodEdgesInitialToFinalApSet(
         methodInitialStatement: CommonInst,
         maxInstIdx: Int,
         languageManager: LanguageManager
     ): MethodEdgesInitialToFinalApSet =
-        MethodEdgesInitialToFinalCactusApSet(methodInitialStatement, maxInstIdx, languageManager)
+        MethodEdgesInitialToFinalCactusApSet(this, methodInitialStatement, maxInstIdx, languageManager)
 
     override fun methodEdgesNDInitialToFinalApSet(
         methodInitialStatement: CommonInst,
         maxInstIdx: Int,
         languageManager: LanguageManager
     ): MethodEdgesNDInitialToFinalApSet =
-        MethodEdgesNDInitialToFinalCactusApSet(methodInitialStatement, languageManager, maxInstIdx)
+        MethodEdgesNDInitialToFinalCactusApSet(this, methodInitialStatement, languageManager, maxInstIdx)
 
     override fun accessPathSubscription(): MethodAccessPathSubscription =
-        MethodCactusAccessPathSubscription()
+        MethodCactusAccessPathSubscription(this)
 
     override fun sideEffectRequirementApStorage(): SideEffectRequirementApStorage =
         SideEffectRequirementCactusApStorage()
 
     override fun methodFinalApSummariesStorage(methodInitialStatement: CommonInst): MethodFinalApSummariesStorage =
-        MethodFinalTreeApSummariesStorage(methodInitialStatement)
+        MethodFinalTreeApSummariesStorage(this, methodInitialStatement)
 
     override fun methodInitialToFinalApSummariesStorage(methodInitialStatement: CommonInst): MethodInitialToFinalApSummariesStorage =
-        MethodInitialToFinalApSummaries(methodInitialStatement)
+        MethodInitialToFinalApSummaries(this, methodInitialStatement)
 
     override fun methodNDInitialToFinalApSummariesStorage(methodInitialStatement: CommonInst): MethodNDInitialToFinalApSummariesStorage =
-        MethodNDInitialToFinalCactusApSummariesStorage(methodInitialStatement)
+        MethodNDInitialToFinalCactusApSummariesStorage(this, methodInitialStatement)
 
     override fun factSideEffectSummariesApStorage(methodInitialStatement: CommonInst): FactSideEffectSummariesApStorage =
-        FactSESummariesCactusStorage(methodInitialStatement)
+        FactSESummariesCactusStorage(this, methodInitialStatement)
 
-    override fun finalFactList(): FinalFactList = CactusFinalFactList()
+    override fun finalFactList(): FinalFactList = CactusFinalFactList(this)
 
     override fun mostAbstractInitialAp(base: AccessPathBase): InitialFactAp =
         AccessPathWithCycles(base, access = null, exclusions = Empty)
 
     override fun mostAbstractFinalAp(base: AccessPathBase): FinalFactAp =
-        AccessCactus(base, AccessNode.abstractNode(), exclusions = Empty)
+        AccessCactus(this, base, AccessNode.abstractNode(), exclusions = Empty)
 
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        AccessCactus(base, AccessNode.create(isFinal = true), exclusions)
+        AccessCactus(this, base, AccessNode.create(isFinal = true), exclusions)
 
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
         AccessPathWithCycles(base, access = null, exclusions).prependAccessor(FinalAccessor)
 
     override fun createSerializer(context: SummarySerializationContext): ApSerializer {
-        return CactusSerializer(context)
+        return CactusSerializer(this, context)
     }
 }

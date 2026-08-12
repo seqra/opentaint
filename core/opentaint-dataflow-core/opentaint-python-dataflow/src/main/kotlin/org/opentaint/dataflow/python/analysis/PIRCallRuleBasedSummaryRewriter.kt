@@ -3,6 +3,7 @@ package org.opentaint.dataflow.python.analysis
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.python.Position
 import org.opentaint.dataflow.configuration.python.TaintCleanAction
 import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
@@ -78,7 +79,9 @@ class PIRCallRuleBasedSummaryRewriter(
             evalAction = { f, rule, action ->
                 val pos = action.pos.resolveAp(callInst) ?: return@applyCleanerActions listOf(f)
 
-                cleanEvaluator.removeFinalFact(f, pos, TaintMarkAccessor(action.mark.name), rule, action)
+                cleanEvaluator.removeFinalFact(
+                    f, pos, TaintMarkAccessor(action.mark.name), rule, action, TaintCleanReach.Exact
+                )
             },
             itemRule = { it.rule },
             itemActions = { action ->

@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.configuration.jvm.serialized
 
 import kotlinx.serialization.Serializable
+import org.opentaint.dataflow.configuration.TaintCleanReach
 
 sealed interface SerializedAction
 
@@ -15,6 +16,7 @@ data class SerializedTaintAssignAction(
 data class SerializedTaintCleanAction(
     val taintKind: String? = null,
     val pos: PositionBaseWithModifiers,
+    val reach: TaintCleanReach = TaintCleanReach.Exact,
 ): SerializedAction
 
 @Serializable

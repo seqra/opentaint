@@ -149,23 +149,36 @@ After the job completes, you’ll find:
 
 ## Version Selection
 
+There are two independent version selectors.
+
+### GitHub Action version
+
+The tag after `@` selects the integration code. Major and minor tags move to the newest compatible release. Exact tags remain pinned:
+
+* `github/v0` — latest action in major version 0
+* `github/v0.4` — latest action in minor version 0.4
+* `github/v0.4.5` — exact action version 0.4.5
+
+```yaml
+uses: seqra/opentaint/github@github/v0.4
+```
+
+### OpenTaint CLI version
+
 `opentaint-version` supports flexible selectors so you do not need to update this action for every OpenTaint release:
 
 * `latest` - always use the latest stable release
 * `v0` - use the latest stable release in major version 0 (default)
-* `v0.1` - use the latest stable patch in minor version 0.1
-* `v0.1.0` - pin an exact release
+* `v0.4` - use the latest stable patch in minor version 0.4
+* `v0.4.5` - pin an exact release
 
 Examples:
 
 ```yaml
 with:
-  opentaint-version: 'latest'
-```
-
-```yaml
-with:
-  opentaint-version: 'v0.1'
+  opentaint-version: 'v0'      # latest v0.x.y
+  # opentaint-version: 'v0.4'  # latest v0.4.x
+  # opentaint-version: 'v0.4.5'
 ```
 
 

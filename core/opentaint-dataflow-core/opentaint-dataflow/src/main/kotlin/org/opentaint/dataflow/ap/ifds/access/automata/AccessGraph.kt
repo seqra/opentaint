@@ -10,6 +10,8 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusion
+import org.opentaint.dataflow.ap.ifds.access.forExclusions
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
@@ -79,17 +81,33 @@ class AccessGraph(
     private val edges: PersistentInt2LongMap,
     private val nodeSucc: Array<PersistentBitSet?>,
     private val nodePred: Array<PersistentBitSet?>,
+    val deepAccessorExclusion: DeepAccessorExclusion? = null,
 ) {
     private val numNodes: Int get() = nodeSucc.size
 
     val size: Int get() = edges.size
 
-    private val hash: Int by lazy(LazyThreadSafetyMode.PUBLICATION) { dfsHash() }
+    private val hash: Int by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        31 * dfsHash() + deepAccessorExclusion.hashCode()
+    }
+
+    fun withAnyFieldAccessorExclusions(exclusions: DeepAccessorExclusion?): AccessGraph =
+        if (exclusions === deepAccessorExclusion) {
+            this
+        } else {
+            AccessGraph(manager, initial, final, edges, nodeSucc, nodePred, exclusions)
+        }
+
+    fun withoutAnyFieldAccessorExclusions(): AccessGraph =
+        withAnyFieldAccessorExclusions(null)
+
+    fun forExclusions(exclusions: ExclusionSet): AccessGraph =
+        if (exclusions is ExclusionSet.Universe) withAnyFieldAccessorExclusions(null) else this
 
     fun getAllOwnAccessors() =
         edges.keys.mapNotNullTo(hashSetOf()) {
             if (it == manager.anyAccessorIdx) return@mapNotNullTo null
-            with (manager) { it.accessor }
+            with(manager) { it.accessor }
         }
 
     fun getInitialSuccessorsAccessors() = buildSet {
@@ -130,6 +148,7 @@ class AccessGraph(
         if (this === other) return true
         if (other !is AccessGraph) return false
 
+        if (deepAccessorExclusion != other.deepAccessorExclusion) return false
         if (edges.size != other.edges.size) return false
         if (edges.keys != other.edges.keys) return false
 
@@ -277,7 +296,7 @@ class AccessGraph(
     }
 
     private fun create(initial: NodeMarker, final: NodeMarker): AccessGraph =
-        AccessGraph(manager, initial, final, edges, nodeSucc, nodePred)
+        AccessGraph(manager, initial, final, edges, nodeSucc, nodePred, deepAccessorExclusion)
 
     fun startsWith(accessor: AccessorIdx): Boolean =
         getStateSuccessorUnsafe(initial, accessor) != NO_NODE
@@ -321,6 +340,43 @@ class AccessGraph(
         }
     }
 
+    fun enforceAnyFieldAccessorExclusions(
+        exclusions: DeepAccessorExclusion?,
+        keepInitialLevel: Boolean,
+    ): AccessGraph? {
+        if (exclusions == null) return this
+
+        val depth0 = BitSet()
+        exclusions.accessorsFromDepth0.forEach(depth0::set)
+        val withoutDepth0 = removeAccessorOccurrences(depth0, keepInitialLevel = false) ?: return null
+
+        val depth1 = BitSet()
+        exclusions.accessorsFromDepth1.forEach(depth1::set)
+        return withoutDepth0.removeAccessorOccurrences(depth1, keepInitialLevel)
+    }
+
+    fun clearAllAccessorOccurrences(accessorIdx: AccessorIdx, keepStartAccessor: Boolean): AccessGraph? =
+        removeAccessorOccurrences(bitSetOf(accessorIdx), keepInitialLevel = keepStartAccessor)
+
+    private fun removeAccessorOccurrences(accessors: BitSet, keepInitialLevel: Boolean): AccessGraph? {
+        val keepAtInitial = keepInitialLevel && nodePred[initial].let { it == null || it.isEmpty }
+
+        val edgesToRemove = BitSet()
+        accessors.forEach { accessor ->
+            val edge = edges.get(accessor)
+            if (edge == NO_EDGE) return@forEach
+            if (keepAtInitial && edge.from == initial) return@forEach
+            edgesToRemove.set(accessor)
+        }
+
+        if (edgesToRemove.isEmpty) return this
+
+        return mutable()
+            .removeEdges(edgesToRemove)
+            .persist()
+            .removeUnreachableNodes()
+    }
+
     private fun filter(exclusionSet: BitSet): AccessGraph? {
         val mutableCopy = mutable()
         val mutableResult = mutableCopy.clear(exclusionSet) ?: return null
@@ -334,10 +390,13 @@ class AccessGraph(
     fun concat(other: AccessGraph): AccessGraph {
         val mutableCopy = mutable()
         val mutableResult = mutableCopy.concat(other)
+        val composedExclusions = DeepAccessorExclusion.merge(deepAccessorExclusion, other.deepAccessorExclusion)
 
-        if (mutableResult === mutableCopy) return this
+        if (mutableResult === mutableCopy) {
+            return withAnyFieldAccessorExclusions(composedExclusions)
+        }
 
-        return mutableResult.persist()
+        return mutableResult.persist().withAnyFieldAccessorExclusions(composedExclusions)
     }
 
     fun delta(other: AccessGraph): List<AccessGraph> {
@@ -356,13 +415,23 @@ class AccessGraph(
 
     private fun splitOutEmptyDelta(delta: AccessGraph): List<AccessGraph> {
         if (delta.initialNodeIsFinal() && !delta.isEmpty()) {
-            return listOf(delta, manager.emptyGraph())
+            return listOf(
+                delta,
+                manager.emptyGraph().withAnyFieldAccessorExclusions(deepAccessorExclusion),
+            )
         }
 
         return listOf(delta)
     }
 
     fun containsAll(other: AccessGraph): Boolean {
+        if ((DeepAccessorExclusion.intersect(deepAccessorExclusion, other.deepAccessorExclusion)) != deepAccessorExclusion) {
+            return false
+        }
+        return containsAllAccessPaths(other)
+    }
+
+    fun containsAllAccessPaths(other: AccessGraph): Boolean {
         if (other.isEmpty()) return this.initial == this.final
         if (this.isEmpty()) return false
 
@@ -428,7 +497,7 @@ class AccessGraph(
                 .removeUnreachableNodes()
                 ?: return@forEach
 
-            if (!other.containsAll(matchedPrefix)) return@forEach
+            if (!other.containsAllAccessPaths(matchedPrefix)) return@forEach
 
             val deltaSuffix = AccessGraph(manager, splitNode, final, edges, nodeSucc, nodePred)
                 .removeUnreachableNodes()
@@ -472,14 +541,19 @@ class AccessGraph(
 
     fun merge(other: AccessGraph): AccessGraph {
         check(manager === other.manager)
+        if (this == other) return this
 
         val mutableCopy = mutable()
         val mergedMutable = mutableCopy.merge(other)
-        val mergeResult = mergedMutable.persist()
+        val mergeResult = mergedMutable.persist().withAnyFieldAccessorExclusions(
+            DeepAccessorExclusion.intersect(deepAccessorExclusion, other.deepAccessorExclusion)
+        )
         return mergeResult
     }
 
     fun filter(filter: FactTypeChecker.FactCompatibilityFilter): AccessGraph? {
+        if (isEmpty() || filter === FactTypeChecker.AlwaysCompatibleFilter) return this
+
         val rejectedPredecessors = BitSet()
         val finalPredecessors = nodePredecessors(final)
         finalPredecessors.forEach { accessor ->
@@ -612,6 +686,7 @@ class AccessGraph(
         edges, edges.mutable(),
         PersistentArrayBuilder(nodeSucc),
         PersistentArrayBuilder(nodePred),
+        deepAccessorExclusion,
     )
 
     internal class Serializer(
@@ -719,6 +794,7 @@ class MutableAccessGraph(
     private val mutableEdges: PersistentInt2LongMap,
     private val nodeSucc: PersistentArrayBuilder<PersistentBitSet?>,
     private val nodePred: PersistentArrayBuilder<PersistentBitSet?>,
+    private val deepAccessorExclusion: DeepAccessorExclusion?,
 ) {
     private val numNodes: Int get() = nodeSucc.size
 
@@ -729,7 +805,8 @@ class MutableAccessGraph(
             manager,
             initial, final,
             originalPersistentEdges, mutableEdges,
-            nodeSucc, nodePred
+            nodeSucc, nodePred,
+            deepAccessorExclusion,
         )
 
     fun persist(): AccessGraph = AccessGraph(
@@ -737,7 +814,8 @@ class MutableAccessGraph(
         initial, final,
         mutableEdges.persist(originalPersistentEdges),
         nodeSucc.persist(),
-        nodePred.persist()
+        nodePred.persist(),
+        deepAccessorExclusion,
     )
 
     fun prepend(accessor: AccessorIdx): MutableAccessGraph {
@@ -864,6 +942,18 @@ class MutableAccessGraph(
         val freshNode = holeIdx
         updateLastIdx(freshNode)
         return freshNode
+    }
+
+    fun removeEdges(accessors: BitSet): MutableAccessGraph {
+        accessors.forEach { accessor ->
+            val edge = removeEdge(accessor)
+            check(edge != NO_EDGE) { "No edge" }
+
+            removeNodeSuccessor(edge.from, accessor)
+            removeNodePredecessor(edge.to, accessor)
+        }
+
+        return create(initial, final)
     }
 
     fun clear(accessors: BitSet): MutableAccessGraph? {

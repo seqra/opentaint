@@ -60,7 +60,7 @@ class JIRAnalysisManager(
     refManager: RefManager,
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
-    private val params: Params = Params(),
+    val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
@@ -68,6 +68,7 @@ class JIRAnalysisManager(
 
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),
+        val disableDefaultGetModel: Boolean = false,
     )
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()

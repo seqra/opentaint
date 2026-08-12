@@ -82,7 +82,7 @@ class PIRMethodCallSummaryHandler(
 
     override fun handleSummary(
         currentFactAp: FinalFactAp,
-        summaryEffect: MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication,
+        summaryEffect: MethodSummaryEdgeApplicationUtils.EdgeRefinement,
         summaryEdge: SummaryEdge,
         createSideEffectRequirement: (refinement: ExclusionSet) -> Sequent?,
         handleSummaryEdge: (initialFactRefinement: ExclusionSet?, summaryFactAp: FinalFactAp) -> Sequent
