@@ -5734,3 +5734,17 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+- function: java.util.Map$Entry#getKey
+  signature: () java.lang.Object
+  copy:
+  - from:
+    - this
+    - .java.util.Map$Entry#Key#java.lang.Object
+    to: result
+- function: java.util.Map$Entry#getValue
+  signature: () java.lang.Object
+  copy:
+  - from:
+    - this
+    - .java.util.Map$Entry#Value#java.lang.Object
+    to: result
