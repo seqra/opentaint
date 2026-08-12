@@ -3,6 +3,7 @@ package org.opentaint.dataflow.python.analysis
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -12,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.alias.forEachAliasBeforeCallStatement
 import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRFunction
 import kotlin.collections.plusAssign
 
 class PIRMethodCallSummaryHandler(
@@ -29,8 +31,19 @@ class PIRMethodCallSummaryHandler(
         PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, resolvedMethods)
     }
 
-    override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+    private fun FinalFactAp.toCallerFrame(callee: PIRFunction): FinalFactAp? =
+        factMapper.toCallerFrame(callInst, callee, base)?.let { rebase(it) }
+
+    private val MethodEntryPoint.callee: PIRFunction get() = method as PIRFunction
+
+    override fun prepareZeroToFactSummary(summaryEdge: Edge.ZeroToFact): List<Edge.ZeroToFact> {
+        val callerFrameFact = summaryEdge.factAp.toCallerFrame(summaryEdge.methodEntryPoint.callee) ?: return emptyList()
+        return listOf(Edge.ZeroToFact(summaryEdge.methodEntryPoint, summaryEdge.statement, callerFrameFact))
+    }
+
+    override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> {
+        val callerFrameFact = summaryEdge.factAp.toCallerFrame(summaryEdge.methodEntryPoint.callee) ?: return emptyList()
+        return summaryRewriter.rewriteSummaryFact(callerFrameFact).map { (resultFact, refinement) ->
             Edge.FactToFact(
                 summaryEdge.methodEntryPoint,
                 refinement.refineFact(summaryEdge.initialFactAp),
@@ -38,9 +51,11 @@ class PIRMethodCallSummaryHandler(
                 refinement.refineFact(resultFact),
             )
         }
+    }
 
-    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> {
+        val callerFrameFact = summaryEdge.factAp.toCallerFrame(summaryEdge.methodEntryPoint.callee) ?: return emptyList()
+        return summaryRewriter.rewriteSummaryFact(callerFrameFact).map { (resultFact, refinement) ->
             check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
             Edge.NDFactToFact(
                 summaryEdge.methodEntryPoint,
@@ -49,22 +64,10 @@ class PIRMethodCallSummaryHandler(
                 resultFact,
             )
         }
-
-    /**
-     * Translates a callee-frame exit fact into the caller's frame.
-     *
-     * Mirror of the enter pipeline (mapper produces call-site output, then
-     * [PIRMethodCallResolver] applies [PIRMethodCallFactMapper.toCalleeFrame]):
-     * [PIRMethodCallFactMapper.toCallerFrame] first maps the real callee frame
-     * back to the call-site frame (`Argument(0)` → `This`, a keyword-filled
-     * parameter → its raw slot, `Argument(i)` → `Argument(i - offset)`), then
-     * the position-aligned mapper rebases onto the caller's call-site values.
-     */
-    override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> {
-        val callee = resolvedMethods.firstOrNull() ?: return emptyList()
-        val callerFrameBase = factMapper.toCallerFrame(callInst, callee, fact.base) ?: return emptyList()
-        return factMapper.mapMethodExitToReturnFlowFact(callInst, fact.rebase(callerFrameBase), factTypeChecker)
     }
+
+    override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> =
+        factMapper.mapMethodExitToReturnFlowFact(callInst, fact, factTypeChecker)
 
     override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
         super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->
@@ -110,6 +113,8 @@ class PIRMethodCallSummaryHandler(
 
     private fun SummaryEdge.hasMemoryEffect(): Boolean {
         if (this !is SummaryEdge.F2F) return true
-        return !final.equalTo(initial)
+        val callerFrameInitial = factMapper.toCallerFrame(callInst, methodEntryPoint.callee, initial.base)
+            ?.let { initial.rebase(it) } ?: return true
+        return !final.equalTo(callerFrameInitial)
     }
 }

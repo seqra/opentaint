@@ -24,9 +24,6 @@ import org.opentaint.ir.api.python.PIRFunction
  * callee's summary fact is mapped back to the caller: the rule's [PIRUserDefinedRuleInfo.relevantTaintMarks]
  * are removed from the rule's positions so the rule's own action — not a stale propagated mark — decides
  * them. Python mirror of [org.opentaint.dataflow.go.analysis.GoCallRuleBasedSummaryRewriter].
- *
- * Positions resolve in the callee exit frame (`Result` → `AccessPathBase.Return`), the frame the summary
- * fact lives in before [PIRMethodCallSummaryHandler.mapMethodExitToReturnFlowFact].
  */
 class PIRCallRuleBasedSummaryRewriter(
     private val callInst: PIRCall,
