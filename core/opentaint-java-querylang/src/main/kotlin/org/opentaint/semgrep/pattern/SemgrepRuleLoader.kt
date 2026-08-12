@@ -17,6 +17,13 @@ import org.opentaint.semgrep.pattern.conversion.taint.TaintRegisterStateAutomata
 import org.opentaint.semgrep.pattern.conversion.taint.convertTaintAutomataJoinToTaintRules
 import org.opentaint.semgrep.pattern.conversion.taint.convertTaintAutomataToTaintRules
 import org.opentaint.semgrep.pattern.conversion.taint.createTaintAutomata
+import org.opentaint.semgrep.pattern.diff.load.ParsedJoinRuleSnapshot
+import org.opentaint.semgrep.pattern.diff.load.ParsedNormalRuleSnapshot
+import org.opentaint.semgrep.pattern.diff.load.ParsedRuleDescriptor
+import org.opentaint.semgrep.pattern.diff.load.ResolvedJoinItemSnapshot
+import org.opentaint.semgrep.pattern.diff.load.ResolvedJoinRuleSnapshot
+import org.opentaint.semgrep.pattern.diff.load.ResolvedOverrideSnapshot
+import org.opentaint.semgrep.pattern.diff.load.SemgrepRuleLoaderExtension
 import java.nio.file.Path
 import kotlin.io.path.Path
 
@@ -31,10 +38,12 @@ data class RuleMetadata(
 private typealias BuiltRule = RuleWithMetaVars<TaintRegisterStateAutomata, ResolvedMetaVarInfo>
 
 class SemgrepRuleLoader(
-    strategies: List<LanguageStrategy<*, *>>
+    strategies: List<LanguageStrategy<*, *>>,
+    extensions: List<SemgrepRuleLoaderExtension> = emptyList(),
 ) {
     private val strategies: Map<String, LanguageStrategy<*, *>> =
         strategies.associateBy { it.language }
+    private val extensions = extensions.toList()
 
     private fun strategyFor(rule: SemgrepYamlRule): LanguageStrategy<*, *>? =
         rule.languages.orEmpty().firstNotNullOfOrNull { strategies[it.lowercase()] }
@@ -188,6 +197,19 @@ class SemgrepRuleLoader(
             }
             parsedRules[ruleId] = RuleOverride(overrideId, info)
         }
+
+        if (extensions.isNotEmpty()) {
+            for ((targetRuleId, overridingRuleId) in overrideMapping.toSortedMap()) {
+                val target = parsedRules[targetRuleId]?.info ?: continue
+                val overriding = parsedRules[overridingRuleId]?.info ?: continue
+                val snapshot = ResolvedOverrideSnapshot(
+                    targetRule = target.descriptor(),
+                    overridingRule = overriding.descriptor(),
+                    effectiveRuleId = effectiveRuleId(targetRuleId),
+                )
+                extensions.forEach { it.onOverrideResolved(snapshot) }
+            }
+        }
     }
 
     private sealed interface Rule<P> {
@@ -282,6 +304,30 @@ class SemgrepRuleLoader(
         }
 
         parsedRules[id] = rule
+
+        if (extensions.isEmpty()) return
+        when (rule) {
+            is NormalRule -> {
+                val snapshot = ParsedNormalRuleSnapshot(
+                    descriptor = ruleInfo.descriptor(),
+                    rule = rule.rule.snapshot(),
+                    primitiveTracking = ruleInfo.primitiveTracking,
+                    overrideTarget = ruleInfo.overridesRuleId,
+                    metadata = ruleInfo.metadata,
+                )
+                extensions.forEach { it.onNormalRuleParsed(snapshot) }
+            }
+            is JoinRule -> {
+                val snapshot = ParsedJoinRuleSnapshot(
+                    descriptor = ruleInfo.descriptor(),
+                    refs = rule.refs.map { it.copy(renames = it.renames.toList()) },
+                    operations = rule.on.toList(),
+                    metadata = ruleInfo.metadata,
+                )
+                extensions.forEach { it.onJoinRuleParsed(snapshot) }
+            }
+            is RuleOverride -> Unit
+        }
     }
 
     private val builtNormalRules = hashMapOf<String, NormalRule<BuiltRule>>()
@@ -404,6 +450,8 @@ class SemgrepRuleLoader(
         trace: SemgrepRuleLoadStepTrace
     ): TaintAutomataJoinRule? {
         val items = hashMapOf<String, TaintAutomataJoinRuleItem>()
+        val resolvedItems = extensions.takeIf { it.isNotEmpty() }
+            ?.let { hashMapOf<String, ResolvedJoinItemSnapshot>() }
         val aliasItemIds = hashMapOf<String, List<String>>()
         val itemRenames = hashMapOf<String, List<Pair<MetavarAtom, MetavarAtom>>>()
 
@@ -435,6 +483,15 @@ class SemgrepRuleLoader(
                     ?: return null
                 val itemId = if (refIds.size == 1) ref.`as` else "${ref.`as`}#$index"
                 items[itemId] = TaintAutomataJoinRuleItem(itemAutomata.info.ruleId, itemAutomata.rule)
+                resolvedItems?.put(
+                    itemId,
+                    ResolvedJoinItemSnapshot(
+                        itemId = itemId,
+                        alias = ref.`as`,
+                        referencedRuleId = refId,
+                        effectiveRuleId = itemAutomata.info.ruleId,
+                    )
+                )
                 itemId
             }
             itemRenames[ref.`as`] = renames
@@ -460,6 +517,15 @@ class SemgrepRuleLoader(
         if (operations.isEmpty()) {
             trace.error(JoinRuleWithoutJoinOn())
             return null
+        }
+
+        if (extensions.isNotEmpty()) {
+            val snapshot = ResolvedJoinRuleSnapshot(
+                descriptor = rule.info.descriptor(),
+                items = checkNotNull(resolvedItems).toSortedMap(),
+                operations = operations.toList(),
+            )
+            extensions.forEach { it.onJoinRuleResolved(snapshot) }
         }
 
         return TaintAutomataJoinRule(items, operations)
@@ -592,6 +658,49 @@ class SemgrepRuleLoader(
     private fun Rule<*>.modeModifier(): String? {
         if (!info.primitiveTracking) return null
         return PrimitiveTaintExt.PRIMITIVE_TRACKING_ENABLED_MODE
+    }
+
+    private fun RuleInfo.descriptor(): ParsedRuleDescriptor = ParsedRuleDescriptor(
+        qualifiedRuleId = ruleId,
+        shortRuleId = shortRuleId,
+        language = language,
+        relativePath = pathInfo.ruleRelativePath,
+        isLibraryRule = isLibraryRule,
+        isDisabled = isDisabled,
+    )
+
+    private fun effectiveRuleId(ruleId: String): String? {
+        var current = ruleId
+        val seen = hashSetOf<String>()
+        while (seen.add(current)) {
+            val rule = parsedRules[current] ?: return null
+            if (rule !is RuleOverride<*>) return current
+            current = rule.refId
+        }
+        return null
+    }
+
+    private fun SemgrepRule<Formula>.snapshot(): SemgrepRule<Formula> = when (this) {
+        is SemgrepMatchingRule -> SemgrepMatchingRule(rules.map { it.snapshot() })
+        is SemgrepTaintRule -> SemgrepTaintRule(
+            sources = sources.map { it.updatePattern(it.pattern.snapshot()) },
+            sinks = sinks.map { it.updatePattern(it.pattern.snapshot()) },
+            propagators = propagators.map { it.updatePattern(it.pattern.snapshot()) },
+            sanitizers = sanitizers.map { it.updatePattern(it.pattern.snapshot()) },
+        )
+    }
+
+    private fun Formula.snapshot(): Formula = when (this) {
+        is Formula.LeafPattern -> copy()
+        is Formula.And -> Formula.And(children.map { it.snapshot() })
+        is Formula.Or -> Formula.Or(children.map { it.snapshot() })
+        is Formula.Not -> Formula.Not(child.snapshot())
+        is Formula.Inside -> Formula.Inside(child.snapshot())
+        is Formula.MetavarRegex -> copy()
+        is Formula.MetavarFocus -> copy()
+        is Formula.MetavarPattern -> copy(formula = formula.snapshot())
+        is Formula.MetavarCond -> copy()
+        is Formula.Regex -> copy()
     }
 
     companion object {

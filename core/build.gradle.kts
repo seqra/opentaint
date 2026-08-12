@@ -114,6 +114,11 @@ tasks.register<JavaExec>("runProjectAnalyzer") {
     )
 }
 
+tasks.register<JavaExec>("runRuleDiff") {
+    mainClass.set("org.opentaint.semgrep.diff.RuleDiffRunner")
+    classpath = sourceSets.main.get().runtimeClasspath
+}
+
 fun JavaExec.configureAnalyzer(analyzerRunnerClassName: String) {
     mainClass.set(analyzerRunnerClassName)
     classpath = sourceSets.main.get().runtimeClasspath

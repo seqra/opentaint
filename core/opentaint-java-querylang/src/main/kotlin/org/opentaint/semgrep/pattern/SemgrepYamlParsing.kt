@@ -472,6 +472,25 @@ fun convertToRawRule(formula: Formula,
     return formulaDnf.mapNotNull { convertToNormalizedRule(it.literals, semgrepTrace) }
 }
 
+/**
+ * Exposes individual DNF conjunctions to tooling without changing the normal rule-conversion path.
+ * Both this helper and [convertToRawRule] use the same normalizer and normalized-rule converter.
+ */
+internal fun formulaToRawDnfCubes(
+    formula: Formula,
+    semgrepTrace: SemgrepRuleLoadStepTrace,
+): List<RawFormulaDnfCube> = formula.normalizeToNNF(negated = false).toDNF()
+    .mapIndexedNotNull { ordinal, cube ->
+        val raw = convertToNormalizedRule(cube.literals, semgrepTrace) ?: return@mapIndexedNotNull null
+        RawFormulaDnfCube(ordinal, cube.toFormula(), raw)
+    }
+
+internal data class RawFormulaDnfCube(
+    val ordinal: Int,
+    val formula: Formula,
+    val raw: RuleWithMetaVars<RawSemgrepRule, RawMetaVarInfo>,
+)
+
 private fun convertToNormalizedRule(literals: List<NormalizedFormula.Literal>,
                                     semgrepTrace : SemgrepRuleLoadStepTrace): RuleWithMetaVars<RawSemgrepRule, RawMetaVarInfo>? {
     val patterns = mutableListOf<String>()
@@ -602,6 +621,13 @@ private sealed interface NormalizedFormula {
 }
 
 private data class NormalizedFormulaCube(val literals: List<NormalizedFormula.Literal>)
+
+private fun NormalizedFormulaCube.toFormula(): Formula {
+    val formulas = literals.map { literal ->
+        if (literal.negated) Formula.Not(literal.formula) else literal.formula
+    }
+    return if (formulas.size == 1) formulas.single() else Formula.And(formulas)
+}
 
 private fun Formula.normalizeToNNF(negated: Boolean): NormalizedFormula = when (this) {
     is Formula.Inside, // todo: handle inside nested formula
