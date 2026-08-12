@@ -20,7 +20,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getMutableAccessor
   taintCopyOnly: true
@@ -43,18 +43,18 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.GenericMessage#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.GenericMessage#content#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.GenericMessage#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.GenericMessage#content#java.lang.Object
 - function: org.springframework.messaging.support.MessageHeaderAccessor#toMessageHeaders
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#fromMap
   signature: (*) org.springframework.messaging.support.MessageHeaderAccessor
@@ -79,21 +79,21 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeaders
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeader
   signature:
     params:
@@ -118,7 +118,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getAccessor
   taintCopyOnly: true
@@ -129,18 +129,18 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#copyHeadersIfAbsent
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getHeader
   signature:
     return: java.lang.Object
@@ -153,7 +153,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getMessageHeaders
   signature:
@@ -198,11 +198,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
 - function: org.springframework.messaging.support.GenericMessage#<init>
   taintCopyOnly: true
   copy:
@@ -222,11 +222,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
 - function: org.springframework.messaging.support.ErrorMessage#getOriginalMessage
   signature: () org.springframework.messaging.Message
   copy:
@@ -248,7 +248,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.ErrorMessage#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.ErrorMessage#content#java.lang.Object
 - function: org.springframework.messaging.support.MessageHeaderAccessor#setHeaderIfAbsent
   signature:
     params:
@@ -264,21 +264,21 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
 - function: org.springframework.messaging.support.MessageHeaderAccessor#setHeader
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#setNativeHeader
   signature:
     params:
@@ -293,7 +293,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeader
   signature:
@@ -319,7 +319,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.ErrorMessage#<init>
   taintCopyOnly: true
@@ -396,11 +396,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.lang.Object
 - function: org.springframework.messaging.support.ErrorMessage#<init>
   signature:
     params:

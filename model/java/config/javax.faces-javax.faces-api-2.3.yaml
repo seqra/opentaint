@@ -9,15 +9,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ScalarDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ScalarDataModel#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.context.ExternalContext#encodeNamespace
@@ -38,7 +38,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.faces.el.ValueBinding#<rule-storage>#java.lang.Object
+    - .javax.faces.el.ValueBinding#content#java.lang.Object
     to: result
 - function: javax.faces.model.ArrayDataModel#<init>
   signature: () void
@@ -46,32 +46,32 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ArrayDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ArrayDataModel#elements#java.lang.Object
 - function: javax.faces.model.ResultSetDataModel#<init>
   signature: (java.sql.ResultSet) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ResultSetDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ResultSetDataModel#elements#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.SelectItemGroup#<init>
@@ -80,19 +80,19 @@ passThrough:
   - from: arg(3)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(3)
     to: this
   - from: arg(1)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.DataModelEvent#<init>
@@ -101,19 +101,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModelEvent#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModelEvent#content#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .javax.faces.model.DataModelEvent#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModelEvent#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.util.EventObject#<rule-storage>#java.lang.Object
+    - .java.util.EventObject#content#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .java.util.EventObject#<rule-storage>#java.lang.Object
+    - .java.util.EventObject#content#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(0)
@@ -125,11 +125,11 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.faces.model.DataModelEvent#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModelEvent#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.EventObject#<rule-storage>#java.lang.Object
+    - .java.util.EventObject#content#java.lang.Object
     to: result
 - function: javax.faces.model.ScalarDataModel#<init>
   signature: () void
@@ -137,15 +137,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ScalarDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ScalarDataModel#content#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.SelectItemGroup#<init>
@@ -159,19 +159,19 @@ passThrough:
   - from: arg(3)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(3)
     to: this
   - from: arg(1)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.ResultDataModel#<init>
@@ -180,15 +180,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ResultDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ResultDataModel#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.ResultDataModel#<init>
@@ -197,15 +197,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ResultDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ResultDataModel#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.ArrayDataModel#<init>
@@ -214,7 +214,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from:
     - arg(0)
     - '[*]'
@@ -222,19 +222,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ArrayDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ArrayDataModel#elements#java.lang.Object
 - function: javax.faces.model.DataModel#getRowData
   signature: () java.lang.Object
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from:
     - this
@@ -242,7 +242,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
 - function: javax.faces.context.ExternalContext#encodeActionURL
   signature: (java.lang.String) java.lang.String
@@ -261,7 +261,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.faces.el.ValueBinding#<rule-storage>#java.lang.Object
+    - .javax.faces.el.ValueBinding#content#java.lang.Object
   - from: arg(1)
     to: this
 - function: javax.faces.model.ListDataModel#<init>
@@ -270,15 +270,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ListDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ListDataModel#elements#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.SelectItemGroup#getSelectItems
@@ -286,7 +286,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
     to: result
   - from: this
     to: result
@@ -300,7 +300,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.context.ExternalContext#encodeResourceURL
@@ -314,15 +314,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ResultSetDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ResultSetDataModel#elements#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.ListDataModel#<init>
@@ -331,15 +331,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ListDataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.ListDataModel#elements#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.DataModel#getWrappedData
@@ -347,7 +347,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
     to: result
   - from:
     - this
@@ -355,7 +355,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
 - function: javax.faces.model.DataModel#setWrappedData
   signature: (java.lang.Object) void
@@ -363,11 +363,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModel#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.lang.Iterable#<rule-storage>#java.lang.Object
+    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -379,11 +379,11 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.faces.model.DataModelEvent#<rule-storage>#java.lang.Object
+    - .javax.faces.model.DataModelEvent#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.EventObject#<rule-storage>#java.lang.Object
+    - .java.util.EventObject#content#java.lang.Object
     to: result
 - function: javax.faces.model.SelectItemGroup#<init>
   signature: () void
@@ -391,18 +391,18 @@ passThrough:
   - from: arg(3)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(3)
     to: this
   - from: arg(1)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#<rule-storage>#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
   - from: arg(0)
     to: this

@@ -83,7 +83,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -123,7 +123,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1399,7 +1399,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Appendable#<rule-storage>#java.lang.Object
+    - .java.lang.Appendable#buffer#java.lang.Object
     to: result
   - from: this
     to: result
