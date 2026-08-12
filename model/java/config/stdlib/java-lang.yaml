@@ -32,6 +32,10 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.Character#content#java.lang.Object
+    to: result
 - function: java.lang.Character#toUpperCase
   signature: (char) char
   copy:
@@ -72,6 +76,14 @@ passThrough:
   - from: arg(*)
     to: this
   - from: this
+    to: result
+  - from: arg(*)
+    to:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
+  - from:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
     to: result
 - function: java.lang.Class#getConstructors
   signature: () java.lang.reflect.Constructor[]
@@ -187,6 +199,10 @@ passThrough:
   copy:
   - from: this
     to: result
+  - from:
+    - this
+    - .java.lang.Enum#content#java.lang.Object
+    to: result
 - function: java.lang.ProcessBuilder#command
   signature: (java.util.List) java.lang.ProcessBuilder
   copy:
@@ -194,6 +210,14 @@ passThrough:
     to: result
   - from: arg(*)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
+  - from:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
+    to: result
 - function: java.lang.Thread#<init>
   signature: (java.lang.String) void
   overrides: false
@@ -314,6 +338,10 @@ passThrough:
   signature: () java.lang.Process
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
     to: result
 - function: java.lang.Long#toOctalString
   signature: (long) java.lang.String
@@ -556,6 +584,10 @@ passThrough:
     to:
     - this
     - .java.lang.Throwable#cause#java.lang.Object
+  - from:
+    - this
+    - .java.lang.Throwable#cause#java.lang.Object
+    to: result
 - function: java.lang.String#getBytes
   signature: (byte[], int, int, byte, int) void
   taintCopyOnly: true
@@ -615,6 +647,10 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
 - function: java.lang.Class#getClasses
   signature: () java.lang.Class[]
   taintCopyOnly: true
@@ -633,6 +669,10 @@ passThrough:
   signature: (java.lang.ProcessBuilder$Redirect[]) java.lang.Process
   copy:
   - from: this
+    to: result
+  - from:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
     to: result
 - function: java.lang.String#substring
   signature: (int, int) java.lang.String
@@ -700,6 +740,10 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .java.lang.Enum#content#java.lang.Object
 - function: java.lang.Class#getFields
   signature: () java.lang.reflect.Field[]
   taintCopyOnly: true
@@ -781,6 +825,14 @@ passThrough:
     to: result
   - from: arg(*)
     to: this
+  - from: arg(*)
+    to:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
+  - from:
+    - this
+    - .java.lang.ProcessBuilder#buffer#java.lang.Object
+    to: result
 - function: java.lang.String#<init>
   signature:
     params:
@@ -1175,8 +1227,7 @@ passThrough:
   - from: this
     to: result
 - function: java.lang.String#join
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[],
-    int) java.lang.String
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[], int) java.lang.String
   taintCopyOnly: true
   copy:
   - from: arg(*)
@@ -1218,6 +1269,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.Throwable#content#java.lang.Object
 - function: java.lang.ProcessBuilder#command
   signature: (java.lang.String[]) java.lang.ProcessBuilder
   taintCopyOnly: true
@@ -1336,6 +1391,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.Throwable#content#java.lang.Object
 - function: java.lang.String#getBytes
   signature:
     params:
@@ -1436,6 +1495,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.Character#content#java.lang.Object
 - function: java.lang.String#<init>
   signature: (byte[]) void
   copy:
@@ -1564,6 +1627,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .java.lang.Throwable#content#java.lang.Object
 - function: java.lang.String#<init>
   signature: (char[], int, int) void
   copy:

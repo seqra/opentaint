@@ -21,6 +21,8 @@ passThrough:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: org.apache.hadoop.mapred.JobHistory$ReduceAttempt#getLong
   copy:
   - from: this
@@ -56,6 +58,8 @@ passThrough:
   - from:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#properties#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: org.apache.hadoop.mapred.JobID#read
   copy:
@@ -123,6 +127,10 @@ passThrough:
     to:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#<init>
   copy:
   - from: arg(0)
@@ -145,11 +153,15 @@ passThrough:
     to:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#userName#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#getAllTasks
   copy:
   - from:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#tasks#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: org.apache.hadoop.mapred.JobHistory$Task#getTaskAttempts
   copy:
@@ -173,11 +185,17 @@ passThrough:
     to:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#getLong
   copy:
   - from:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#properties#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: org.apache.hadoop.mapred.JobHistory$MapAttempt#get
   copy:
@@ -259,6 +277,8 @@ passThrough:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#properties#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: org.apache.hadoop.mapred.FileOutputFormat#getOutputPath
   copy:
   - from: arg(0)
@@ -282,6 +302,8 @@ passThrough:
   - from:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#userName#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: org.apache.hadoop.record.XmlRecordOutput#writeString
   copy:
@@ -308,6 +330,8 @@ passThrough:
   - from:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#properties#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: org.apache.hadoop.mapred.JobHistory$ReduceAttempt#getTaskAttempts
   copy:
@@ -339,6 +363,10 @@ passThrough:
     to:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
+  - from: arg(1)
+    to: this
+  - from: arg(0)
+    to: this
 - function: org.apache.hadoop.record.CsvRecordInput#readString
   copy:
   - from:

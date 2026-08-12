@@ -1962,6 +1962,12 @@ passThrough:
     - '[*]'
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: com.google.common.collect.Sets#synchronizedNavigableSet
   signature: (*) *
   overrides: false
@@ -2994,6 +3000,12 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: com.google.common.collect.ImmutableMultiset$Builder#setCount
   signature: (java.lang.Object, int) *
   copy:
@@ -3609,6 +3621,12 @@ passThrough:
     - '[*]'
   - from: arg(1)
     to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: com.google.common.collect.Sets#combinations
   signature: (*, int) *
   overrides: false
@@ -3639,6 +3657,18 @@ passThrough:
     to: result
   - from: arg(1)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: com.google.common.collect.Iterables#getOnlyElement
   signature: (*, java.lang.Object) *
   overrides: false
@@ -4241,4 +4271,13 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     to:
     - result
+    - .java.lang.Iterable#Element#java.lang.Object
+- function: com.google.common.collect.ImmutableCollection$Builder#add
+  signature: (*) *
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
     - .java.lang.Iterable#Element#java.lang.Object

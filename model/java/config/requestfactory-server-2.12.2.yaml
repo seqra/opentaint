@@ -24,6 +24,8 @@ passThrough:
     to:
     - this
     - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#setPath
   copy:
   - from: arg(0)
@@ -34,6 +36,8 @@ passThrough:
     to:
     - this
     - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.Object
+  - from: arg(0)
+    to: this
 - function:
     package: com.google.web.bindery.requestfactory.shared
     class: EntityProxy
@@ -56,6 +60,8 @@ passThrough:
   - from:
     - this
     - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function:
     package: com.google.web.bindery.requestfactory.shared
@@ -93,6 +99,8 @@ passThrough:
     - this
     - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.Object
     to: result
+  - from: this
+    to: result
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#setMessageTemplate
   copy:
   - from: arg(0)
@@ -103,6 +111,8 @@ passThrough:
     to:
     - this
     - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#getMessage
   copy:
   - from:
@@ -112,4 +122,6 @@ passThrough:
   - from:
     - this
     - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.Object
+    to: result
+  - from: this
     to: result

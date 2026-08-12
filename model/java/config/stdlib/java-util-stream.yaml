@@ -1,8 +1,7 @@
 language: java
 passThrough:
 - function: java.util.stream.Stream#iterate
-  signature: (java.lang.Object, java.util.function.Predicate, java.util.function.UnaryOperator)
-    java.util.stream.Stream
+  signature: (java.lang.Object, java.util.function.Predicate, java.util.function.UnaryOperator) java.util.stream.Stream
   copy:
   - from: arg(0)
     to:
@@ -143,8 +142,7 @@ passThrough:
     - result
     - .java.util.Optional#Element#java.lang.Object
 - function: java.util.stream.Stream#reduce
-  signature: (java.lang.Object, java.util.function.BiFunction, java.util.function.BinaryOperator)
-    java.lang.Object
+  signature: (java.lang.Object, java.util.function.BiFunction, java.util.function.BinaryOperator) java.lang.Object
   copy:
   - from: arg(0)
     to: result
@@ -421,3 +419,12 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: java.util.stream.Stream#of
+  signature: (java.lang.Object[]) java.util.stream.Stream
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.stream.BaseStream#Element#java.lang.Object
