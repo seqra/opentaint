@@ -14,7 +14,7 @@ import org.opentaint.ir.go.value.GoIRValue
 
 data class GoInstLocation(
     val functionBody: GoIRBody,
-    val index: Int,
+    override val index: Int,
     val blockIndex: Int,
     val position: GoIRPosition?
 ) : CommonInstLocation {
