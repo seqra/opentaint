@@ -130,9 +130,7 @@ class JIRClassOrInterfaceImpl(
         return 31 * declaration.hashCode() + name.hashCode()
     }
 
-    override fun toString(): String {
-        return "(id:${declaration.location.id})$name"
-    }
+    override fun toString(): String = name
 
 }
 
