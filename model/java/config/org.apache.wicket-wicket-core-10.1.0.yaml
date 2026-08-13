@@ -7,8 +7,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#renderBodyOnly#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function:
     package: org.apache.wicket
     class: Component
@@ -26,8 +24,6 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.model.util.GenericBaseModel#createSerializableVersionOf
   copy:
@@ -55,27 +51,17 @@ passThrough:
     - this
     - .org.apache.wicket.Component#children#java.lang.Object
     to: this
-  - from: arg(*)
-    to: this
-  - from: this
-    to: result
-  - from: this
-    to: this
 - function: org.apache.wicket.Component#remove
   copy:
   - from:
     - this
     - .org.apache.wicket.Component#children#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: org.apache.wicket.Component#setVisibilityAllowed
   copy:
   - from:
     - this
     - .org.apache.wicket.Component#visibilityAllowed#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.Component#getInnermostModel
   copy:
@@ -84,8 +70,6 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.MarkupContainer#autoAdd
   copy:
@@ -109,8 +93,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#parent#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: org.apache.wicket.MarkupContainer#iterator
   copy:
   - from: this
@@ -125,15 +107,11 @@ passThrough:
     - this
     - .org.apache.wicket.Component#markupId#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: org.apache.wicket.Component#render
   copy:
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: arg(0)
-  - from: this
     to: arg(0)
 - function:
     package: org.apache.wicket
@@ -163,12 +141,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: this
-  - from: arg(*)
-    to: this
-  - from: this
-    to: result
-  - from: this
-    to: this
 - function: org.apache.wicket.Component#exceptionMessage
   copy:
   - from: arg(0)
@@ -178,8 +150,6 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#ignoreAttributeModifier#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.Component#<init>
   copy:
@@ -235,8 +205,6 @@ passThrough:
     to:
     - this
     - .org.apache.wicket.Component#visible#java.lang.Object
-  - from: arg(*)
-    to: this
 - function: org.apache.wicket.MarkupContainer#getAssociatedMarkupStream
   copy:
   - from: this
@@ -246,8 +214,6 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#page#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.Component#wrap
   copy:
@@ -271,8 +237,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#enabled#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: org.apache.wicket.MarkupContainer#renderAll
   copy:
   - from: this
@@ -284,8 +248,6 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.Component#setDefaultModelObject
   copy:
@@ -303,19 +265,11 @@ passThrough:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: this
-  - from: arg(*)
-    to: this
-  - from: this
-    to: result
-  - from: this
-    to: this
 - function: org.apache.wicket.Component#setVisible
   copy:
   - from:
     - this
     - .org.apache.wicket.Component#visible#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.wicket.Component#onRender
   copy:
@@ -323,15 +277,11 @@ passThrough:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: arg(0)
-  - from: this
-    to: arg(0)
 - function: org.apache.wicket.Component#getDefaultModelObject
   copy:
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function:
     package: org.apache.wicket.model
@@ -350,6 +300,4 @@ passThrough:
   - from:
     - this
     - .org.apache.wicket.Component#versioned#java.lang.Object
-    to: result
-  - from: this
     to: result

@@ -13,10 +13,6 @@ passThrough:
   copy:
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .java.util.logging.LogRecord#content#java.lang.Object
 - function: java.util.logging.LogRecord#<init>
   signature: (java.util.logging.Level, java.lang.String) void
   taintCopyOnly: true
