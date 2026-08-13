@@ -573,6 +573,7 @@ tests:
     positive:
       - security.ssrf.SsrfSamples$SsrfSpringController#unsafeProxy
       - security.ssrf.SsrfSamples$UnsafeProxyServlet#doGet
+      - security.ssrf.SsrfSamples$UnsafeBytesRoundTripProxyServlet#doGet
     negative:
       - security.ssrf.SsrfSamples$SafeProxyServlet#doGet
   - rule-id: java/security/strings.yaml#format-string-external-manipulation
@@ -685,6 +686,7 @@ tests:
       - security.xss.XssHtmlResponseServletSamples$SafeHtmlServlet#doGet
       - security.xss.XssHtmlResponseServletSamples$SafeOutputStreamOctetServlet#doGet
       - security.xss.XssServletSamples$SafeGreetingServlet#doGet
+      - security.xss.XssServletSamples$SafeGreetingBytesRoundTripServlet#doGet
   - rule-id: java/security/xss.yaml#xss-in-spring-app
     positive:
       - security.xss.UnsafeBareBytesController#unsafeBareBytes

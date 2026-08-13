@@ -99,24 +99,18 @@ passThrough:
 - function: javax.sql.rowset.CachedRowSet#setSyncProvider
   signature: (java.lang.String) *
   copy:
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.lang.Object
     - .java.sql.ResultSet#rawBytes#java.lang.Object
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.lang.Object
     - .java.sql.ResultSet#blob#java.lang.Object
     - .java.sql.Blob#data#java.lang.Object
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.lang.Object
@@ -234,24 +228,18 @@ passThrough:
 - function: javax.sql.rowset.CachedRowSet#setTableName
   signature: (java.lang.String) *
   copy:
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.lang.Object
     - .java.sql.ResultSet#rawBytes#java.lang.Object
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.lang.Object
     - .java.sql.ResultSet#blob#java.lang.Object
     - .java.sql.Blob#data#java.lang.Object
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.lang.Object
