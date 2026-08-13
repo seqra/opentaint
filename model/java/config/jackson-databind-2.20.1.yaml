@@ -55,12 +55,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to:
-    - result
-    - .java.util.Iterator#Element#java.lang.Object
 - function: com.fasterxml.jackson.databind.MappingIterator#nextValue
   copy:
   - from: this
@@ -123,10 +117,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
 - function: com.fasterxml.jackson.databind.util.ObjectBuffer#completeAndClearBuffer
   copy:
   - from: arg(0)
@@ -145,10 +135,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
 - function: com.fasterxml.jackson.databind.ObjectMapper#readValue
   signature:
     params:
@@ -156,10 +142,6 @@ passThrough:
       type: java.lang.String
   copy:
   - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
     to: result
 - function: com.fasterxml.jackson.databind.util.TokenBuffer$Parser#getFloatValue
   copy:
@@ -247,10 +229,6 @@ passThrough:
       pos: arg(0)
   copy:
   - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
     to: result
 - function: com.fasterxml.jackson.databind.node.POJONode#getPojo
   copy:
@@ -852,12 +830,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to:
-    - result
-    - .java.util.Iterator#Element#java.lang.Object
 - function: com.fasterxml.jackson.databind.node.POJONode#<init>
   copy:
   - from: arg(0)
@@ -1334,10 +1306,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
 - function: com.fasterxml.jackson.databind.node.ContainerNode#numberNode
   copy:
   - from: arg(0)
@@ -1493,10 +1461,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
 - function: com.fasterxml.jackson.databind.node.ValueNode#findValue
   copy:
   - from: this
@@ -1536,10 +1500,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
 - function: com.fasterxml.jackson.databind.node.ValueNode#findParent
   copy:
   - from: this
@@ -1561,10 +1521,6 @@ passThrough:
       type: byte[]
   copy:
   - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
     to: result
 - function: com.fasterxml.jackson.databind.node.TextNode#valueOf
   copy:
