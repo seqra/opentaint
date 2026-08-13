@@ -22,6 +22,7 @@ import org.opentaint.common.sast.sarif.TracePathNodeEntry
 import org.opentaint.common.sast.sarif.TracePathNodeKind
 import org.opentaint.project.JavaProject
 import org.opentaint.project.ProjectModuleClasses
+import org.opentaint.project.ResolvedDependency
 import java.io.File
 import java.nio.file.Path
 import java.util.jar.JarFile
@@ -65,7 +66,7 @@ abstract class BasicTestUtils {
                     moduleClasses = listOf(samplesJar)
                 )
             ),
-            dependencies = dependencyJars
+            dependencies = dependencyJars.map { ResolvedDependency(it) }
         )
 
         val options = ProjectAnalysisOptions()
