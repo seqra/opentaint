@@ -251,28 +251,12 @@ passThrough:
     to:
     - this
     - .javax.xml.transform.stream.StreamSource#systemId#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#systemId#java.lang.String
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature:
     params:
     - index: 0
       type: java.io.Reader
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
   - from: arg(0)
     to:
     - this
@@ -381,18 +365,6 @@ passThrough:
     - index: 0
       type: java.io.InputStream
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
   - from: arg(0)
     to:
     - this

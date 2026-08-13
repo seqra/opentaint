@@ -262,10 +262,6 @@ passThrough:
     - this
     - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: javax.faces.context.ExternalContext#encodeActionURL
@@ -382,10 +378,6 @@ passThrough:
     - this
     - .javax.faces.model.DataModel#wrappedData#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: javax.faces.model.DataModel#setWrappedData
@@ -399,10 +391,6 @@ passThrough:
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.DataModelEvent#getRowData

@@ -16,10 +16,6 @@ passThrough:
     - this
     - .javax.xml.bind.JAXBElement#value#java.lang.Object
   - from: arg(2)
-    to:
-    - this
-    - .javax.xml.bind.JAXBElement#value#java.lang.Object
-  - from: arg(2)
     to: this
 - function: javax.xml.bind.util.JAXBSource#<init>
   copy:
@@ -35,18 +31,10 @@ passThrough:
     - this
     - .javax.xml.bind.JAXBElement#name#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.xml.bind.JAXBElement#name#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: javax.xml.bind.JAXBElement#setValue
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.bind.JAXBElement#value#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -74,10 +62,6 @@ passThrough:
     - this
     - .javax.xml.bind.JAXBElement#value#java.lang.Object
   - from: arg(3)
-    to:
-    - this
-    - .javax.xml.bind.JAXBElement#value#java.lang.Object
-  - from: arg(3)
     to: this
 - function: javax.xml.bind.Unmarshaller#unmarshal
   copy:
@@ -89,10 +73,6 @@ passThrough:
     to: result
 - function: javax.xml.bind.JAXBElement#getValue
   copy:
-  - from:
-    - this
-    - .javax.xml.bind.JAXBElement#value#java.lang.Object
-    to: result
   - from:
     - this
     - .javax.xml.bind.JAXBElement#value#java.lang.Object

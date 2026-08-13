@@ -103,14 +103,6 @@ passThrough:
     to:
     - this
     - .javax.xml.namespace.QName#localPart#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.namespace.QName#localPart#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.namespace.QName#localPart#java.lang.String
 - function: javax.xml.namespace.QName#getNamespaceURI
   signature:
     return: java.lang.String

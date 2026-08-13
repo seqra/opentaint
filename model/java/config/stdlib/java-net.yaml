@@ -82,22 +82,6 @@ passThrough:
     to:
     - this
     - .java.net.URL#spec#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
 - function: java.net.URL#getContent
   signature: () java.lang.Object
   taintCopyOnly: true
@@ -701,34 +685,6 @@ passThrough:
     to:
     - this
     - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
 - function: java.net.InetAddress#getByAddress
   signature:
     params:
@@ -837,26 +793,6 @@ passThrough:
     - index: 0
       type: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URI#value#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URI#value#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URI#value#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URI#value#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URI#value#java.lang.String
   - from: arg(0)
     to:
     - this
@@ -981,10 +917,6 @@ passThrough:
     to:
     - this
     - .java.net.URL#context#java.net.URL
-  - from: arg(0)
-    to:
-    - this
-    - .java.net.URL#context#java.net.URL
 - function: java.net.URL#getPath
   signature: () java.lang.String
   copy:
@@ -1025,10 +957,6 @@ passThrough:
     - index: 3
       type: java.lang.String
   copy:
-  - from: arg(3)
-    to:
-    - this
-    - .java.net.URL#spec#java.lang.String
   - from: arg(3)
     to:
     - this
@@ -1101,10 +1029,6 @@ passThrough:
   signature:
     return: java.lang.String
   copy:
-  - from:
-    - this
-    - .java.net.URLConnection#headerField#java.lang.String
-    to: result
   - from:
     - this
     - .java.net.URLConnection#headerField#java.lang.String

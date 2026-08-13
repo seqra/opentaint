@@ -555,14 +555,6 @@ passThrough:
     to:
     - this
     - .java.lang.Throwable#message#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Throwable#message#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.RuntimeException#<init>
   signature: (java.lang.Throwable) void
   overrides: false
@@ -625,10 +617,6 @@ passThrough:
       type: java.lang.CharSequence
     return: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.lang.String#content#java.lang.CharSequence
   - from: arg(0)
     to:
     - result
@@ -778,10 +766,6 @@ passThrough:
     - this
     - .java.lang.String#bytes#byte[]
     to: arg(0)
-  - from:
-    - this
-    - .java.lang.String#bytes#byte[]
-    to: arg(0)
 - function: java.lang.Class#getMethods
   signature: () java.lang.reflect.Method[]
   taintCopyOnly: true
@@ -843,38 +827,6 @@ passThrough:
     to:
     - this
     - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#bytes#byte[]
 - function: java.lang.Character#toUpperCase
   signature: (int) int
   copy:
@@ -886,10 +838,6 @@ passThrough:
     - index: 0
       type: char[]
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.String#chars#char[]
   - from: arg(0)
     to:
     - this
@@ -1206,14 +1154,6 @@ passThrough:
     - this
     - .java.lang.String#bytes#byte[]
     to: result
-  - from:
-    - this
-    - .java.lang.String#bytes#byte[]
-    to: result
-  - from:
-    - this
-    - .java.lang.String#bytes#byte[]
-    to: result
 - function: java.lang.String#subSequence
   signature: (int, int) java.lang.CharSequence
   taintCopyOnly: true
@@ -1465,10 +1405,6 @@ passThrough:
     to:
     - result
     - .java.lang.String#chars#char[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.lang.String#chars#char[]
 - function: java.lang.Class#cast
   signature: (java.lang.Object) java.lang.Object
   overrides: false
@@ -1564,10 +1500,6 @@ passThrough:
     - index: 2
       type: byte[]
   copy:
-  - from:
-    - this
-    - .java.lang.String#bytes#byte[]
-    to: arg(2)
   - from:
     - this
     - .java.lang.String#bytes#byte[]
