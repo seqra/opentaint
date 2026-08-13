@@ -158,7 +158,7 @@ passThrough:
     - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#appendTail
   signature: (java.lang.StringBuilder) java.lang.StringBuilder
@@ -370,7 +370,7 @@ passThrough:
     - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#quoteReplacement
   signature: (*) java.lang.String
