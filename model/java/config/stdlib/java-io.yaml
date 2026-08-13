@@ -73,7 +73,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   taintCopyOnly: true
   copy:
   - from: this
@@ -185,7 +185,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   copy:
   - from: this
     to: arg(0)
