@@ -73,7 +73,59 @@ tests:
       - security.passthrough.PassthroughServletAccessorSamples$CookiesServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$HeaderNamesServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$ReaderServlet#doPost
+      - security.passthrough.PassthroughContainerSamples#arrayElementUnsafe
+      - security.passthrough.PassthroughContainerSamples#arraysCopyOfUnsafe
+      - security.passthrough.PassthroughContainerSamples#systemArrayCopyUnsafe
+      - security.passthrough.PassthroughContainerSamples#arraysAsListUnsafe
+      - security.passthrough.PassthroughContainerSamples#listGetUnsafe
+      - security.passthrough.PassthroughContainerSamples#listIterateUnsafe
+      - security.passthrough.PassthroughContainerSamples#listCopyUnsafe
+      - security.passthrough.PassthroughContainerSamples#listUnmodifiableUnsafe
+      - security.passthrough.PassthroughContainerSamples#listToArrayUnsafe
+      - security.passthrough.PassthroughContainerSamples#listJoinUnsafe
+      - security.passthrough.PassthroughContainerSamples#listStreamUnsafe
+      - security.passthrough.PassthroughContainerSamples#linkedListUnsafe
+      - security.passthrough.PassthroughContainerSamples#setIterateUnsafe
+      - security.passthrough.PassthroughContainerSamples#mapValueUnsafe
+      - security.passthrough.PassthroughContainerSamples#mapKeyUnsafe
+      - security.passthrough.PassthroughContainerSamples#mapValuesUnsafe
+      - security.passthrough.PassthroughContainerSamples#mapEntryUnsafe
+      - security.passthrough.PassthroughContainerSamples#propertiesUnsafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonWriteUnsafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonReadUnsafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonReadBytesUnsafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonReadTreeUnsafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonConvertUnsafe
+      - security.passthrough.PassthroughSerializationSamples#yamlDumpUnsafe
+      - security.passthrough.PassthroughSerializationSamples#yamlLoadUnsafe
+      - security.passthrough.PassthroughSerializationSamples#propertiesStoreUnsafe
     negative:
+      - security.passthrough.PassthroughContainerSamples#arrayElementSafe
+      - security.passthrough.PassthroughContainerSamples#arraysCopyOfSafe
+      - security.passthrough.PassthroughContainerSamples#systemArrayCopySafe
+      - security.passthrough.PassthroughContainerSamples#arraysAsListSafe
+      - security.passthrough.PassthroughContainerSamples#listGetSafe
+      - security.passthrough.PassthroughContainerSamples#listIterateSafe
+      - security.passthrough.PassthroughContainerSamples#listCopySafe
+      - security.passthrough.PassthroughContainerSamples#listUnmodifiableSafe
+      - security.passthrough.PassthroughContainerSamples#listToArraySafe
+      - security.passthrough.PassthroughContainerSamples#listJoinSafe
+      - security.passthrough.PassthroughContainerSamples#listStreamSafe
+      - security.passthrough.PassthroughContainerSamples#linkedListSafe
+      - security.passthrough.PassthroughContainerSamples#setIterateSafe
+      - security.passthrough.PassthroughContainerSamples#mapValueSafe
+      - security.passthrough.PassthroughContainerSamples#mapKeySafe
+      - security.passthrough.PassthroughContainerSamples#mapValuesSafe
+      - security.passthrough.PassthroughContainerSamples#mapEntrySafe
+      - security.passthrough.PassthroughContainerSamples#propertiesSafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonWriteSafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonReadSafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonReadBytesSafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonReadTreeSafe
+      - security.passthrough.PassthroughSerializationSamples#jacksonConvertSafe
+      - security.passthrough.PassthroughSerializationSamples#yamlDumpSafe
+      - security.passthrough.PassthroughSerializationSamples#yamlLoadSafe
+      - security.passthrough.PassthroughSerializationSamples#propertiesStoreSafe
       - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendSafe
       - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendCharsSafe
       - security.passthrough.PassthroughValueFlowSamples#stringBufferInsertSafe
