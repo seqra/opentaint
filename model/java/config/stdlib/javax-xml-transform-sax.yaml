@@ -56,7 +56,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXResult#lexicalHandler#org.xml.sax.ext.LexicalHandler
+    - .javax.xml.transform.sax.SAXResult#lexicalHandler#java.lang.Object
 - function:
     package: javax.xml.transform.sax
     class: SAXResult
@@ -70,7 +70,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXResult#contentHandler#org.xml.sax.ContentHandler
+    - .javax.xml.transform.sax.SAXResult#contentHandler#java.lang.Object
 - function: javax.xml.transform.sax.SAXSource#sourceToInputSource
   signature: (javax.xml.transform.Source) org.xml.sax.InputSource
   taintCopyOnly: true
@@ -121,7 +121,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXSource#inputSource#org.xml.sax.InputSource
+    - .javax.xml.transform.sax.SAXSource#inputSource#java.lang.Object
 - function: javax.xml.transform.sax.SAXSource#setInputSource
   signature: (org.xml.sax.InputSource) void
   copy:
@@ -160,7 +160,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.sax.SAXResult#contentHandler#org.xml.sax.ContentHandler
+    - .javax.xml.transform.sax.SAXResult#contentHandler#java.lang.Object
     to: result
 - function: javax.xml.transform.sax.SAXSource#setXMLReader
   signature:
@@ -171,7 +171,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXSource#xmlReader#org.xml.sax.XMLReader
+    - .javax.xml.transform.sax.SAXSource#xmlReader#java.lang.Object
 - function: javax.xml.transform.sax.SAXSource#getInputSource
   signature: () org.xml.sax.InputSource
   taintCopyOnly: true
@@ -225,7 +225,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXSource#xmlReader#org.xml.sax.XMLReader
+    - .javax.xml.transform.sax.SAXSource#xmlReader#java.lang.Object
 - function: javax.xml.transform.sax.SAXSource#setXMLReader
   signature: (org.xml.sax.XMLReader) void
   copy:
@@ -245,7 +245,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.sax.SAXResult#lexicalHandler#org.xml.sax.ext.LexicalHandler
+    - .javax.xml.transform.sax.SAXResult#lexicalHandler#java.lang.Object
     to: result
 - function: javax.xml.transform.sax.SAXResult#setLexicalHandler
   signature: (org.xml.sax.ext.LexicalHandler) void
@@ -295,7 +295,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXSource#inputSource#org.xml.sax.InputSource
+    - .javax.xml.transform.sax.SAXSource#inputSource#java.lang.Object
 - function: javax.xml.transform.sax.SAXResult#setHandler
   signature:
     params:
@@ -305,7 +305,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.sax.SAXResult#contentHandler#org.xml.sax.ContentHandler
+    - .javax.xml.transform.sax.SAXResult#contentHandler#java.lang.Object
 - function: javax.xml.transform.sax.SAXResult#setLexicalHandler
   signature: (org.xml.sax.ext.LexicalHandler) void
   taintCopyOnly: true

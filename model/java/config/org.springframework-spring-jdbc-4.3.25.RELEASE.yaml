@@ -23,6 +23,6 @@ passThrough:
     to: result
   - from:
     - arg(0)
-    - .java.sql.ResultSet#ref#java.sql.Ref
+    - .java.sql.ResultSet#ref#java.lang.Object
     - .java.sql.Ref#value#java.lang.Object
     to: result

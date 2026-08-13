@@ -38,7 +38,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Member#name#java.lang.String
+    - .java.lang.reflect.Member#name#java.lang.Object
     to: result
 - function: java.lang.reflect.Field#setDouble
   signature:
@@ -94,7 +94,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.lang.Class#classLoader#java.lang.ClassLoader
+    - .java.lang.Class#classLoader#java.lang.Object
 - function: java.lang.reflect.Field#get
   signature:
     return: java.lang.Object
@@ -320,7 +320,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Method#parameterTypes#java.lang.Class[]
+    - .java.lang.reflect.Method#parameterTypes#java.lang.Object
     to: result
 - function: java.lang.reflect.Field#setShort
   signature:
@@ -338,7 +338,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Constructor#parameterTypes#java.lang.Class[]
+    - .java.lang.reflect.Constructor#parameterTypes#java.lang.Object
     to: result
 - function: java.lang.reflect.Field#setByte
   signature: (java.lang.Object, byte) void
@@ -365,7 +365,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Method#returnType#java.lang.Class
+    - .java.lang.reflect.Method#returnType#java.lang.Object
     to: result
 - function:
     package: java.lang.reflect
@@ -396,7 +396,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Method#parameterTypes#java.lang.Class[]
+    - .java.lang.reflect.Method#parameterTypes#java.lang.Object
     to: result
 - function:
     package: java.lang.reflect
@@ -415,7 +415,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Member#declaringClass#java.lang.Class
+    - .java.lang.reflect.Member#declaringClass#java.lang.Object
     to: result
 - function: java.lang.reflect.Field#getType
   signature:
@@ -423,7 +423,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Field#declaringClass#java.lang.Class
+    - .java.lang.reflect.Field#declaringClass#java.lang.Object
     to: result
 - function: java.lang.reflect.Constructor#getExceptionTypes
   signature:
@@ -431,5 +431,5 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.reflect.Constructor#parameterTypes#java.lang.Class[]
+    - .java.lang.reflect.Constructor#parameterTypes#java.lang.Object
     to: result

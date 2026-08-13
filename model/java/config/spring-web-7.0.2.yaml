@@ -19,7 +19,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.String
+    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.Object
     to: result
 - function: org.springframework.http.RequestEntity$BodyBuilder#body
   taintCopyOnly: true
@@ -51,92 +51,92 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#allow#org.springframework.http.HttpMethod
+    - .org.springframework.http.HttpHeaders#allow#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#allow#org.springframework.http.HttpMethod
+    - .org.springframework.http.HttpHeaders#allow#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#allowedMethods#java.util.Set
+    - .org.springframework.http.HttpHeaders#allowedMethods#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#allowedMethods#java.util.Set
+    - .org.springframework.http.HttpHeaders#allowedMethods#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    - .org.springframework.http.HttpHeaders#contentDisposition#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    - .org.springframework.http.HttpHeaders#contentDisposition#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#acceptLanguage#java.util.Locale
+    - .org.springframework.http.HttpHeaders#acceptLanguage#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#acceptLanguage#java.util.Locale
+    - .org.springframework.http.HttpHeaders#acceptLanguage#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    - .org.springframework.http.HttpHeaders#contentType#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    - .org.springframework.http.HttpHeaders#contentType#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.time.ZonedDateTime
+    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.time.ZonedDateTime
+    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    - .org.springframework.http.HttpHeaders#host#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    - .org.springframework.http.HttpHeaders#host#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
+    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
+    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
 - function:
     package: org.springframework.http
     class: HttpHeaders
@@ -150,7 +150,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#allowedMethods#java.util.Set
+    - .org.springframework.http.HttpHeaders#allowedMethods#java.lang.Object
 - function:
     package: org.springframework.http
     class: HttpHeaders
@@ -164,7 +164,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#acceptLanguage#java.util.Locale
+    - .org.springframework.http.HttpHeaders#acceptLanguage#java.lang.Object
 - function: org.springframework.http.HttpEntity#getBody
   copy:
   - from:
@@ -194,7 +194,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.server.ServerWebExchange#response#org.springframework.http.server.reactive.ServerHttpResponse
+    - .org.springframework.web.server.ServerWebExchange#response#java.lang.Object
     to: result
 - function: org.springframework.http.HttpEntity#<init>
   bypassVerification: true
@@ -224,7 +224,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.time.ZonedDateTime
+    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.lang.Object
 - function: org.springframework.web.util.UriBuilder#replacePath
   copy:
   - from: this
@@ -251,7 +251,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.server.ServerWebExchange#request#org.springframework.http.server.reactive.ServerHttpRequest
+    - .org.springframework.web.server.ServerWebExchange#request#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.MultipartFile#getBytes
   taintCopyOnly: true
@@ -270,7 +270,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.String
+    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.Object
     to: result
 - function: org.springframework.web.util.UriBuilder#host
   copy:
@@ -309,7 +309,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.String
+    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.MultipartFile#getInputStream
   taintCopyOnly: true
@@ -325,7 +325,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
+    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
 - function: org.springframework.web.util.UriComponentsBuilder#cloneBuilder
   overrides: false
   copy:
@@ -388,7 +388,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.http.RequestEntity#url#java.net.URI
+    - .org.springframework.http.RequestEntity#url#java.lang.Object
 - function: org.springframework.http.ResponseEntity$HeadersBuilder#lastModified
   copy:
   - from: this
@@ -459,92 +459,92 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#allow#org.springframework.http.HttpMethod
+    - .org.springframework.http.HttpHeaders#allow#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#allow#org.springframework.http.HttpMethod
+    - .org.springframework.http.HttpHeaders#allow#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#allowedMethods#java.util.Set
+    - .org.springframework.http.HttpHeaders#allowedMethods#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#allowedMethods#java.util.Set
+    - .org.springframework.http.HttpHeaders#allowedMethods#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    - .org.springframework.http.HttpHeaders#contentDisposition#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    - .org.springframework.http.HttpHeaders#contentDisposition#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#acceptLanguage#java.util.Locale
+    - .org.springframework.http.HttpHeaders#acceptLanguage#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#acceptLanguage#java.util.Locale
+    - .org.springframework.http.HttpHeaders#acceptLanguage#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    - .org.springframework.http.HttpHeaders#contentType#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    - .org.springframework.http.HttpHeaders#contentType#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.time.ZonedDateTime
+    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.time.ZonedDateTime
+    - .org.springframework.http.HttpHeaders#ifModifiedSince#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    - .org.springframework.http.HttpHeaders#host#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    - .org.springframework.http.HttpHeaders#host#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
+    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
+    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
 - function: org.springframework.web.util.UriBuilder#queryParams
   copy:
   - from: this
@@ -579,7 +579,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
 - function: org.springframework.http.RequestEntity#<init>
   signature:
     params:
@@ -589,7 +589,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.http.RequestEntity#method#org.springframework.http.HttpMethod
+    - .org.springframework.http.RequestEntity#method#java.lang.Object
 - function: org.springframework.web.server.ServerWebExchange#getMultipartData
   taintCopyOnly: true
   copy:
@@ -629,7 +629,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    - .org.springframework.http.HttpHeaders#contentDisposition#java.lang.Object
 - function: org.springframework.http.ResponseEntity#getBody
   copy:
   - from:
@@ -649,7 +649,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    - .org.springframework.http.HttpHeaders#host#java.lang.Object
 - function: org.springframework.web.util.UriBuilder#userInfo
   copy:
   - from: this
@@ -674,12 +674,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.MultipartFile#bytes#byte[]
+    - .org.springframework.web.multipart.MultipartFile#bytes#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.String
-    - .java.lang.String#bytes#byte[]
+    - .org.springframework.web.multipart.MultipartFile#originalFilename#java.lang.Object
+    - .java.lang.String#bytes#java.lang.Object
     to: result
 - function: org.springframework.http.RequestEntity#method
   copy:
@@ -778,12 +778,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: org.springframework.http.RequestEntity#<init>
   signature:
     params:
@@ -793,7 +793,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.RequestEntity#method#org.springframework.http.HttpMethod
+    - .org.springframework.http.RequestEntity#method#java.lang.Object
 - function: org.springframework.http.ResponseEntity$HeadersBuilder#headers
   taintCopyOnly: true
   copy:
@@ -905,7 +905,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
 - function: org.springframework.web.server.ServerWebExchange#getAttribute
   taintCopyOnly: true
   copy:
@@ -935,7 +935,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    - .org.springframework.http.HttpHeaders#contentType#java.lang.Object
 - function:
     package: org.springframework.http
     class: HttpHeaders
@@ -958,7 +958,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
+    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
 - function: org.springframework.http.ResponseEntity$HeadersBuilder#cacheControl
   copy:
   - from: this
@@ -994,17 +994,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .java.net.URI#value#java.lang.String
+    - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .java.net.URI#value#java.lang.String
+    - .java.net.URI#value#java.lang.Object
 - function: org.springframework.http.RequestEntity#patch
   copy:
   - from:
@@ -1037,7 +1037,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#allow#org.springframework.http.HttpMethod
+    - .org.springframework.http.HttpHeaders#allow#java.lang.Object
 - function: org.springframework.web.context.request.async.DeferredResult#setResult
   copy:
   - from: arg(0)
@@ -1060,219 +1060,219 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getFirst
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getValuesAsList
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getOrDefault
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getOrEmpty
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getAccept
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getAcceptPatch
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getAccessControlAllowHeaders
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getAccessControlAllowOrigin
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getAccessControlExposeHeaders
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getAccessControlRequestHeaders
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getCacheControl
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getConnection
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getETag
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getIfMatch
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getIfNoneMatch
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getOrigin
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getPragma
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getUpgrade
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getVary
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#headerValues#java.util.List
+    - .org.springframework.http.HttpHeaders#headerValues#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getContentType
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#contentType#org.springframework.http.MediaType
+    - .org.springframework.http.HttpHeaders#contentType#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getHost
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#host#java.net.InetSocketAddress
+    - .org.springframework.http.HttpHeaders#host#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#getContentDisposition
   copy:
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#contentDisposition#org.springframework.http.ContentDisposition
+    - .org.springframework.http.HttpHeaders#contentDisposition#java.lang.Object
     to: result
 - function: org.springframework.http.HttpHeaders#set
   signature: (java.lang.String, java.lang.String) *
@@ -1280,17 +1280,17 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
 - function: org.springframework.http.HttpHeaders#add
   signature: (java.lang.String, java.lang.String) *
   copy:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerValue#java.lang.String
+    - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
 - function: org.springframework.http.RequestEntity#getUrl
   copy:
   - from:
     - this
-    - .org.springframework.http.RequestEntity#url#java.net.URI
+    - .org.springframework.http.RequestEntity#url#java.lang.Object
     to: result
