@@ -55,7 +55,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.reactive.function.client.ClientRequest#method#org.springframework.http.HttpMethod
+    - .org.springframework.web.reactive.function.client.ClientRequest#method#java.lang.Object
     to: result
 - function: org.springframework.web.reactive.function.client.WebClient$Builder#clientConnector
   copy:
@@ -93,7 +93,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.springframework.web.reactive.function.client.ClientRequest$Builder#request#org.springframework.web.reactive.function.client.ClientRequest
+    - .org.springframework.web.reactive.function.client.ClientRequest$Builder#request#java.lang.Object
 - function: org.springframework.web.reactive.function.BodyInserters#fromServerSentEvents
   taintCopyOnly: true
   copy:
@@ -105,7 +105,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.reactive.function.server.ServerRequest#pathVariables#java.util.Map
+    - .org.springframework.web.reactive.function.server.ServerRequest#pathVariables#java.lang.Object
     to: result
 - function: org.springframework.web.reactive.function.client.WebClient#post
   taintCopyOnly: true
@@ -310,7 +310,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.reactive.function.server.ServerRequest#pathVariables#java.util.Map
+    - .org.springframework.web.reactive.function.server.ServerRequest#pathVariables#java.lang.Object
     to: result
 - function: org.springframework.web.reactive.function.client.ClientResponse#bodyToMono
   taintCopyOnly: true
@@ -547,7 +547,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.reactive.function.client.ClientRequest$Builder#request#org.springframework.web.reactive.function.client.ClientRequest
+    - .org.springframework.web.reactive.function.client.ClientRequest$Builder#request#java.lang.Object
     to: result
 - function: org.springframework.web.reactive.function.server.ServerResponse#permanentRedirect
   taintCopyOnly: true

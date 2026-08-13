@@ -25,7 +25,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionFactory#org.apache.ibatis.session.SqlSessionFactory
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionFactory#java.lang.Object
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
   copy:
   - from:
@@ -41,7 +41,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionTemplate#org.mybatis.spring.SqlSessionTemplate
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionTemplate#java.lang.Object
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
   taintCopyOnly: true
   copy:

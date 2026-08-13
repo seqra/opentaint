@@ -13,7 +13,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
   - from: arg(0)
     to: this
 - function: java.text.DateFormatSymbols#getInstanceRef
@@ -21,22 +21,22 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.DecimalFormat#applyLocalizedPattern
   signature:
     params:
@@ -46,12 +46,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
 - function: java.text.Format#formatToCharacterIterator
   signature: (java.lang.Object) java.text.AttributedCharacterIterator
   copy:
@@ -66,7 +66,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
 - function: java.text.DecimalFormat#<init>
   signature:
     params:
@@ -76,12 +76,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
 - function: java.text.MessageFormat#format
   signature: (java.lang.String, java.lang.Object[]) java.lang.String
   copy:
@@ -142,7 +142,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
 - function: java.text.DecimalFormatSymbols#<init>
   signature: (java.util.Locale) void
   taintCopyOnly: true
@@ -155,7 +155,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#equals
   signature: (java.lang.Object) boolean
@@ -187,7 +187,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormat#symbols#java.lang.Object
 - function: java.text.ChoiceFormat#<init>
   signature:
     params:
@@ -199,7 +199,7 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
+    - .java.text.ChoiceFormat#pattern#java.lang.Object
 - function: java.text.MessageFormat#format
   signature: (java.lang.String, java.lang.Object[]) java.lang.String
   taintCopyOnly: true
@@ -237,7 +237,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormat#symbols#java.lang.Object
 - function: java.text.DecimalFormatSymbols#equals
   signature: (java.lang.Object) boolean
   copy:
@@ -255,14 +255,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.DecimalFormat#applyPattern
   signature: (java.lang.String, boolean) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -280,7 +280,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    - .java.text.DecimalFormatSymbols#locale#java.lang.Object
 - function:
     package: java.text
     class: MessageFormat
@@ -307,7 +307,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.MessageFormat#formats#java.text.Format[]
+    - .java.text.MessageFormat#formats#java.lang.Object
     to: result
 - function: java.text.DecimalFormat#toPattern
   signature: (boolean) java.lang.String
@@ -335,7 +335,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
+    - .java.text.ChoiceFormat#pattern#java.lang.Object
 - function: java.text.DecimalFormat#toLocalizedPattern
   signature: () java.lang.String
   copy:
@@ -364,10 +364,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    - .java.text.DecimalFormatSymbols#locale#java.lang.Object
     to:
     - result
-    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    - .java.text.DecimalFormatSymbols#locale#java.lang.Object
 - function:
     package: java.text
     class: DecimalFormat
@@ -378,12 +378,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#currency#java.util.Currency
+    - .java.text.DecimalFormat#currency#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#currency#java.lang.Object
     to: result
 - function: java.text.DateFormat#format
   signature: (java.util.Date) java.lang.String
@@ -404,33 +404,33 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: arg(1)
 - function: java.text.DecimalFormat#format
   signature: (double, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: arg(1)
 - function: java.text.DecimalFormat#format
   signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: arg(1)
 - function: java.text.DateFormatSymbols#setEras
   signature: (java.lang.String[]) void
@@ -438,42 +438,42 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#eras#java.lang.String[]
+    - .java.text.DateFormatSymbols#eras#java.lang.Object
 - function: java.text.DateFormatSymbols#setMonths
   signature: (java.lang.String[]) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#months#java.lang.String[]
+    - .java.text.DateFormatSymbols#months#java.lang.Object
 - function: java.text.DateFormatSymbols#setShortMonths
   signature: (java.lang.String[]) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
+    - .java.text.DateFormatSymbols#shortMonths#java.lang.Object
 - function: java.text.DateFormatSymbols#setWeekdays
   signature: (java.lang.String[]) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
 - function: java.text.DateFormatSymbols#setShortWeekdays
   signature: (java.lang.String[]) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.Object
 - function: java.text.DateFormatSymbols#setAmPmStrings
   signature: (java.lang.String[]) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
+    - .java.text.DateFormatSymbols#amPmStrings#java.lang.Object
 - function: java.text.ChoiceFormat#applyPattern
   signature: (java.lang.String) void
   copy:
@@ -515,7 +515,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
 - function: java.text.MessageFormat#format
   signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
@@ -543,11 +543,11 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: arg(1)
 - function:
     package: java.text
@@ -562,12 +562,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#currency#java.util.Currency
+    - .java.text.DecimalFormat#currency#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#currency#java.lang.Object
 - function:
     package: java.text
     class: MessageFormat
@@ -578,7 +578,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.MessageFormat#locale#java.util.Locale
+    - .java.text.MessageFormat#locale#java.lang.Object
     to: result
 - function: java.text.MessageFormat#<init>
   signature:
@@ -589,28 +589,28 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.text.MessageFormat#locale#java.util.Locale
+    - .java.text.MessageFormat#locale#java.lang.Object
 - function: java.text.DateFormatSymbols#getProviderInstance
   signature: (*) java.text.DateFormatSymbols
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.MessageFormat#applyPattern
   signature:
     params:
@@ -620,7 +620,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
 - function: java.text.Format#format
   signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
@@ -639,11 +639,11 @@ passThrough:
     to: arg(1)
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: arg(1)
   - from:
     - this
@@ -660,7 +660,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
 - function: java.text.NumberFormat#format
   signature: (long) java.lang.String
@@ -669,7 +669,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -684,7 +684,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#roundingMode#java.math.RoundingMode
+    - .java.text.DecimalFormat#roundingMode#java.lang.Object
 - function: java.text.Normalizer#normalize
   signature: (java.lang.CharSequence, java.text.Normalizer$Form) java.lang.String
   taintCopyOnly: true
@@ -705,11 +705,11 @@ passThrough:
     to: arg(1)
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: arg(1)
 - function: java.text.DateFormat#equals
   signature: (java.lang.Object) boolean
@@ -729,45 +729,45 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.DecimalFormatSymbols#<init>
   signature: (java.util.Locale) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+    - .java.text.DecimalFormatSymbols#currency#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#naNSymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#naNSymbol#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#infinity#java.lang.String
+    - .java.text.DecimalFormatSymbols#infinity#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -851,18 +851,18 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .java.text.MessageFormat#format#java.text.Format
+    - .java.text.MessageFormat#format#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.MessageFormat#formats#java.text.Format[]
+    - .java.text.MessageFormat#formats#java.lang.Object
 - function: java.text.ChoiceFormat#toPattern
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
+    - .java.text.ChoiceFormat#pattern#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -891,35 +891,35 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+    - .java.text.DecimalFormatSymbols#currency#java.lang.Object
     to: result
 - function: java.text.DecimalFormatSymbols#getCurrencySymbol
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.Object
     to: result
 - function: java.text.DecimalFormatSymbols#getInternationalCurrencySymbol
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
     to: result
 - function: java.text.DecimalFormatSymbols#getNaN
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#naNSymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#naNSymbol#java.lang.Object
     to: result
 - function: java.text.DecimalFormatSymbols#getInfinity
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#infinity#java.lang.String
+    - .java.text.DecimalFormatSymbols#infinity#java.lang.Object
     to: result
 - function: java.text.DecimalFormatSymbols#getPercent
   signature: () char
@@ -936,7 +936,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -951,62 +951,62 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#parsedNumber#java.lang.Number
+    - .java.text.DecimalFormat#parsedNumber#java.lang.Object
 - function: java.text.DateFormatSymbols#getLocalPatternChars
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getZoneStrings
   signature: () java.lang.String[][]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getEras
   signature: () java.lang.String[]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#eras#java.lang.String[]
+    - .java.text.DateFormatSymbols#eras#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getMonths
   signature: () java.lang.String[]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#months#java.lang.String[]
+    - .java.text.DateFormatSymbols#months#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getShortMonths
   signature: () java.lang.String[]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
+    - .java.text.DateFormatSymbols#shortMonths#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getWeekdays
   signature: () java.lang.String[]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getShortWeekdays
   signature: () java.lang.String[]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.Object
     to: result
 - function: java.text.DateFormatSymbols#getAmPmStrings
   signature: () java.lang.String[]
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
+    - .java.text.DateFormatSymbols#amPmStrings#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -1018,12 +1018,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
     to: result
 - function: java.text.MessageFormat#format
   signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
@@ -1040,11 +1040,11 @@ passThrough:
     to: arg(1)
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: arg(1)
   - from:
     - this
@@ -1081,12 +1081,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
 - function:
     package: java.text
     class: DecimalFormat
@@ -1097,7 +1097,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#roundingMode#java.math.RoundingMode
+    - .java.text.DecimalFormat#roundingMode#java.lang.Object
     to: result
 - function: java.text.NumberFormat#format
   signature: (long) java.lang.String
@@ -1107,7 +1107,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
 - function: java.text.ChoiceFormat#applyPattern
   signature: (java.lang.String) void
@@ -1141,7 +1141,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.ChoiceFormat#limits#double[]
+    - .java.text.ChoiceFormat#limits#java.lang.Object
 - function: java.text.Format#format
   signature: (java.lang.Object) java.lang.String
   taintCopyOnly: true
@@ -1150,7 +1150,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
 - function: java.text.MessageFormat#toPattern
   signature: () java.lang.String
@@ -1210,14 +1210,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.MessageFormat#locale#java.util.Locale
+    - .java.text.MessageFormat#locale#java.lang.Object
 - function: java.text.MessageFormat#toPattern
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
+    - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
 - function: java.text.DecimalFormat#toPattern
   signature:
@@ -1225,12 +1225,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -1245,42 +1245,42 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
 - function: java.text.DecimalFormatSymbols#getInstance
   signature: (*) java.text.DecimalFormatSymbols
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    - .java.text.DecimalFormatSymbols#locale#java.lang.Object
     to:
     - result
-    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    - .java.text.DecimalFormatSymbols#locale#java.lang.Object
 - function: java.text.DateFormatSymbols#getInstance
   signature: (*) java.text.DateFormatSymbols
   copy:
   - from:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
   - from:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
     to:
     - result
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.DateFormat#format
   signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
@@ -1381,7 +1381,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.lang.String#content#java.lang.CharSequence
+    - .java.lang.String#content#java.lang.Object
 - function: java.text.DecimalFormat#applyLocalizedPattern
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -1398,7 +1398,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormat#symbols#java.lang.Object
     to: result
 - function: java.text.DecimalFormatSymbols#setCurrencySymbol
   signature: (java.lang.String) void
@@ -1406,28 +1406,28 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.Object
 - function: java.text.DecimalFormatSymbols#setInternationalCurrencySymbol
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
 - function: java.text.DecimalFormatSymbols#setNaN
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#naNSymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#naNSymbol#java.lang.Object
 - function: java.text.DecimalFormatSymbols#setInfinity
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#infinity#java.lang.String
+    - .java.text.DecimalFormatSymbols#infinity#java.lang.Object
 - function: java.text.DecimalFormatSymbols#setPercent
   signature: (char) void
   copy:
@@ -1567,13 +1567,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#exponentSeparator#java.lang.String
+    - .java.text.DecimalFormatSymbols#exponentSeparator#java.lang.Object
 - function: java.text.DecimalFormatSymbols#getExponentSeparator
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#exponentSeparator#java.lang.String
+    - .java.text.DecimalFormatSymbols#exponentSeparator#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -1649,19 +1649,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
+    - .java.text.ChoiceFormat#pattern#java.lang.Object
 - function: java.text.DecimalFormat#toLocalizedPattern
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.DecimalFormat#pattern#java.lang.Object
     to: result
   - from:
     - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormat#symbols#java.lang.Object
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -1689,35 +1689,35 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#months#java.lang.String[]
+    - .java.text.DateFormatSymbols#months#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
+    - .java.text.DateFormatSymbols#shortMonths#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#eras#java.lang.String[]
+    - .java.text.DateFormatSymbols#eras#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
+    - .java.text.DateFormatSymbols#amPmStrings#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.MessageFormat#equals
   signature: (java.lang.Object) boolean
   copy:
@@ -1771,13 +1771,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+    - .java.text.DecimalFormatSymbols#currency#java.lang.Object
 - function: java.text.DecimalFormatSymbols#getLocale
   signature: () java.util.Locale
   copy:
   - from:
     - this
-    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    - .java.text.DecimalFormatSymbols#locale#java.lang.Object
     to: result
 - function:
     package: java.text
@@ -1854,7 +1854,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
 - function: java.text.MessageFormat#<init>
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -1876,11 +1876,11 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.Object
 - function: java.text.DecimalFormat#applyPattern
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -1902,11 +1902,11 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - .java.text.DateFormatSymbols#weekdays#java.lang.Object
 - function: java.text.DecimalFormat#<init>
   signature: (java.lang.String, java.text.DecimalFormatSymbols) void
   copy:
@@ -1982,7 +1982,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+    - .java.text.DecimalFormatSymbols#currency#java.lang.Object
 - function:
     package: java.text
     class: DecimalFormatSymbols
@@ -2031,7 +2031,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.Object
 - function: java.text.DecimalFormat#<init>
   signature: (java.lang.String) void
   copy:

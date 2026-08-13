@@ -24,29 +24,29 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompositeName#get
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#component#java.lang.String
+    - .javax.naming.CompositeName#component#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#component#java.lang.Object
     to: result
 - function: javax.naming.CompositeName#<init>
   signature:
@@ -57,27 +57,27 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#component#java.lang.String
+    - .javax.naming.CompositeName#component#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.CompoundName#getSuffix
   signature: (*) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.Name#add
   signature:
     params:
@@ -95,7 +95,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.LinkRef#getLinkName
   signature: () java.lang.String
   taintCopyOnly: true
@@ -216,7 +216,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
+    - .javax.naming.CompositeName#suffix#java.lang.Object
 - function: javax.naming.Name#add
   signature: (int, java.lang.String) javax.naming.Name
   condition:
@@ -284,22 +284,22 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.Name#getPrefix
   signature: (int) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
     to: result
   - from: this
     to: result
@@ -309,14 +309,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
+    - .javax.naming.CompositeName#suffix#java.lang.Object
     to: result
 - function: javax.naming.Name#getSuffix
   signature: (int) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
     to: result
   - from: this
     to: result
@@ -329,27 +329,27 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompositeName#add
   signature: (*) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompoundName#<init>
   signature:
     params:
@@ -359,7 +359,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
 - function: javax.naming.Name#add
   signature: (int, java.lang.String) javax.naming.Name
   taintCopyOnly: true
@@ -408,7 +408,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
+    - .javax.naming.CompositeName#suffix#java.lang.Object
     to: result
 - function: javax.naming.Context#composeName
   signature: (java.lang.String, java.lang.String) java.lang.String
@@ -440,23 +440,23 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
     to: result
 - function: javax.naming.CompoundName#add
   signature: (*) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompositeName#<init>
   signature: (java.lang.String) void
   copy:
@@ -494,17 +494,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompositeName#add
   signature:
     params:
@@ -514,21 +514,21 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#component#java.lang.String
+    - .javax.naming.CompositeName#component#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.LinkRef#<init>
   signature: (javax.naming.Name) *
   copy:
   - from:
     - arg(0)
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
     to:
     - this
-    - .javax.naming.LinkRef#linkName#java.lang.String
+    - .javax.naming.LinkRef#linkName#java.lang.Object
 - function: javax.naming.Context#getNameParser
   signature: (java.lang.String) javax.naming.NameParser
   taintCopyOnly: true
@@ -572,7 +572,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.LinkRef#linkName#java.lang.String
+    - .javax.naming.LinkRef#linkName#java.lang.Object
     to: result
 - function: javax.naming.CompoundName#<init>
   signature: (java.util.Enumeration, java.util.Properties) void
@@ -603,7 +603,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
     to: result
 - function: javax.naming.Referenceable#getReference
   signature: () javax.naming.Reference
@@ -635,7 +635,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.naming.Name#add
@@ -656,7 +656,7 @@ passThrough:
   - from: arg(1)
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.CompositeName#<init>
   signature:
     params:
@@ -666,16 +666,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.Name#get
   signature: (int) java.lang.String
   copy:
@@ -712,7 +712,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.CompositeName#getSuffix
   signature: (int) javax.naming.Name
   copy:
@@ -760,17 +760,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompositeName#add
   signature:
     params:
@@ -780,28 +780,28 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.naming.CompositeName#component#java.lang.String
+    - .javax.naming.CompositeName#component#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.CompositeName#getPrefix
   signature: (*) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.Context#getNameParser
   signature: (javax.naming.Name) javax.naming.NameParser
   taintCopyOnly: true
@@ -817,7 +817,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
+    - .javax.naming.CompositeName#suffix#java.lang.Object
 - function: javax.naming.CompositeName#add
   signature: (java.lang.String) javax.naming.Name
   copy:
@@ -841,7 +841,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.CompositeName#addAll
   signature: (int, javax.naming.Name) javax.naming.Name
   copy:
@@ -862,47 +862,47 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompoundName#add
   signature: (*, *) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.CompositeName#getSuffix
   signature: (*) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompositeName#components#java.util.Enumeration
+    - .javax.naming.CompositeName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompositeName#suffix#javax.naming.Name
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.CompositeName#suffix#java.lang.Object
+    - .javax.naming.Name#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.Name#add
   signature:
     params:
@@ -920,29 +920,29 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.CompoundName#addAll
   signature: (*, *) javax.naming.Name
   copy:
   - from:
     - this
-    - .javax.naming.CompoundName#component#java.lang.String
+    - .javax.naming.CompoundName#component#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
   - from:
     - this
-    - .javax.naming.CompoundName#components#java.util.Enumeration
+    - .javax.naming.CompoundName#components#java.lang.Object
     to:
     - result
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
 - function: javax.naming.RefAddr#getType
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .javax.naming.RefAddr#type#java.lang.String
+    - .javax.naming.RefAddr#type#java.lang.Object
     to: result
 - function: javax.naming.NameParser#parse
   signature: (java.lang.String) javax.naming.Name
@@ -966,7 +966,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Name#components#java.util.Enumeration
+    - .javax.naming.Name#components#java.lang.Object
   - from: arg(1)
     to: this
 - function: javax.naming.Name#add
@@ -1004,65 +1004,65 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .javax.naming.Name#component#java.lang.String
+    - .javax.naming.Name#component#java.lang.Object
 - function: javax.naming.Reference#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
 - function: javax.naming.Reference#<init>
   signature: (java.lang.String, javax.naming.RefAddr) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
 - function: javax.naming.Reference#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Reference#factoryClassName#java.lang.String
+    - .javax.naming.Reference#factoryClassName#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .javax.naming.Reference#factoryClassLocation#java.lang.String
+    - .javax.naming.Reference#factoryClassLocation#java.lang.Object
 - function: javax.naming.Reference#<init>
   signature: (java.lang.String, javax.naming.RefAddr, java.lang.String, java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .javax.naming.Reference#factoryClassName#java.lang.String
+    - .javax.naming.Reference#factoryClassName#java.lang.Object
   - from: arg(3)
     to:
     - this
-    - .javax.naming.Reference#factoryClassLocation#java.lang.String
+    - .javax.naming.Reference#factoryClassLocation#java.lang.Object
 - function: javax.naming.Reference#getClassName
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1071,7 +1071,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Reference#factoryClassName#java.lang.String
+    - .javax.naming.Reference#factoryClassName#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1080,7 +1080,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Reference#factoryClassLocation#java.lang.String
+    - .javax.naming.Reference#factoryClassLocation#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1089,39 +1089,27 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.naming.Reference#address#java.lang.Object
     to: result
 - function: javax.naming.Reference#get
   signature: (java.lang.String) javax.naming.RefAddr
   copy:
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.naming.Reference#address#java.lang.Object
     to: result
 - function: javax.naming.Reference#getAll
   signature: () java.util.Enumeration
   copy:
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.naming.Reference#address#java.lang.Object
     to: result
 - function: javax.naming.Reference#add
   signature: (javax.naming.RefAddr) void
@@ -1129,38 +1117,26 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.Reference#address#java.lang.Object
 - function: javax.naming.Reference#add
   signature: (int, javax.naming.RefAddr) void
   copy:
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
   - from: arg(1)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.Reference#address#java.lang.Object
 - function: javax.naming.Reference#remove
   signature: (int) java.lang.Object
   copy:
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
     to: result
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.naming.Reference#address#java.lang.Object
     to: result
 - function: javax.naming.Reference#get
   signature: (int) javax.naming.RefAddr
@@ -1192,7 +1168,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
     to: result
 - function: javax.naming.NameClassPair#setNameInNamespace
   signature:
@@ -1203,7 +1179,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.NameClassPair#name#java.lang.String
+    - .javax.naming.NameClassPair#name#java.lang.Object
 - function: javax.naming.NameClassPair#setName
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -1252,7 +1228,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.NameClassPair#name#java.lang.String
+    - .javax.naming.NameClassPair#name#java.lang.Object
     to: result
 - function: javax.naming.NameClassPair#setName
   signature:
@@ -1263,19 +1239,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.NameClassPair#name#java.lang.String
+    - .javax.naming.NameClassPair#name#java.lang.Object
 - function: javax.naming.Reference#getClassName
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
-    - .javax.naming.RefAddr#type#java.lang.String
+    - .javax.naming.Reference#address#java.lang.Object
+    - .javax.naming.RefAddr#type#java.lang.Object
     to: result
 - function: javax.naming.Name#get
   signature: (int) java.lang.String
@@ -1289,7 +1265,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.NameClassPair#name#java.lang.String
+    - .javax.naming.NameClassPair#name#java.lang.Object
     to: result
 - function: javax.naming.Reference#getFactoryClassLocation
   signature: () java.lang.String
@@ -1320,7 +1296,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.NameClassPair#name#java.lang.String
+    - .javax.naming.NameClassPair#name#java.lang.Object
 - function: javax.naming.Reference#add
   signature:
     params:
@@ -1330,7 +1306,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
 - function: javax.naming.Reference#add
   signature: (javax.naming.RefAddr) void
   taintCopyOnly: true
@@ -1355,12 +1331,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
-    - .javax.naming.RefAddr#type#java.lang.String
+    - .javax.naming.Reference#address#java.lang.Object
+    - .javax.naming.RefAddr#type#java.lang.Object
     to: result
 - function: javax.naming.CompositeName#getPrefix
   signature: (int) javax.naming.Name
@@ -1383,7 +1359,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
+    - .javax.naming.Reference#address#java.lang.Object
 - function: javax.naming.Name#getAll
   signature: () java.util.Enumeration
   taintCopyOnly: true
@@ -1432,7 +1408,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.NameClassPair#name#java.lang.String
+    - .javax.naming.NameClassPair#name#java.lang.Object
     to: result
 - function: javax.naming.Reference#getFactoryClassLocation
   signature:
@@ -1440,10 +1416,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.Reference#className#java.lang.String
+    - .javax.naming.Reference#className#java.lang.Object
     to: result
   - from:
     - this
-    - .javax.naming.Reference#address#javax.naming.RefAddr
-    - .javax.naming.RefAddr#type#java.lang.String
+    - .javax.naming.Reference#address#java.lang.Object
+    - .javax.naming.RefAddr#type#java.lang.Object
     to: result

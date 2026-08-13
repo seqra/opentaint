@@ -296,7 +296,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
 - function: java.util.Collections#checkedSet
   signature: (java.util.Set, java.lang.Class) java.util.Set
   overrides: false
@@ -582,10 +582,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
     to:
     - result
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.SortedMap#headMap
   signature: (java.lang.Object) java.util.SortedMap
   copy:
@@ -656,16 +656,16 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
   - from:
     - this
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
 - function: java.util.Calendar#set
   signature: (int, int, int, int, int, int) void
   copy:
@@ -762,7 +762,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
     to: result
 - function: java.util.Collections#max
   signature: (java.util.Collection, java.util.Comparator) java.lang.Object
@@ -1132,17 +1132,17 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
   - from:
     - arg(0)
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
 - function: java.util.BitSet#get
   signature: (int, int) java.util.BitSet
   copy:
@@ -1902,7 +1902,7 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Arrays#fill
   signature: (long[], long) void
   copy:
@@ -2388,7 +2388,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.StringTokenizer#token#java.lang.String
+    - .java.util.StringTokenizer#token#java.lang.Object
     to: result
 - function: java.util.Collections#unmodifiableCollection
   signature: (java.util.Collection) java.util.Collection
@@ -2577,22 +2577,22 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Calendar#getInstance
   signature: (*, *) java.util.Calendar
   copy:
   - from:
     - this
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
   - from:
     - this
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
 - function: java.util.Map#of
   signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
     java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
@@ -2892,7 +2892,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
 - function: java.util.Arrays#copyOfRange
   signature: (boolean[], int, int) boolean[]
   overrides: false
@@ -3049,7 +3049,7 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.lang.String#bytes#byte[]
+    - .java.lang.String#bytes#java.lang.Object
     to: result
 - function: java.util.List#remove
   signature: (int) java.lang.Object
@@ -3067,7 +3067,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Arrays#copyOfRange
   signature: (float[], int, int) float[]
   overrides: false
@@ -3129,7 +3129,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Collection#spliterator
   signature: () java.util.Spliterator
   taintCopyOnly: true
@@ -3178,17 +3178,17 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
   - from:
     - arg(0)
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
 - function: java.util.Arrays#asList
   signature: (java.lang.Object[]) java.util.List
   taintCopyOnly: true
@@ -3224,7 +3224,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature: (double[], int, int, int) java.util.Spliterator$OfDouble
   taintCopyOnly: true
@@ -3571,7 +3571,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
     to: result
 - function: java.util.Iterator#<init>
   taintCopyOnly: true
@@ -3621,7 +3621,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
     to: result
 - function: java.util.Hashtable#<init>
   signature: (java.util.Map) void
@@ -3664,10 +3664,10 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .java.util.regex.Pattern#regex#java.lang.String
+    - .java.util.regex.Pattern#regex#java.lang.Object
     to:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
 - function: java.util.Collections#list
   signature: (java.util.Enumeration) java.util.ArrayList
   overrides: false
@@ -4298,16 +4298,16 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
   - from:
     - this
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
 - function: java.util.BitSet#xor
   signature: (java.util.BitSet) void
   copy:
@@ -4688,7 +4688,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Spliterators#iterator
   signature: (java.util.Spliterator$OfLong) java.util.PrimitiveIterator$OfLong
   taintCopyOnly: true
@@ -4710,16 +4710,16 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#time#java.util.Date
+    - .java.util.Calendar#time#java.lang.Object
   - from:
     - this
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
     to:
     - result
-    - .java.util.Calendar#timeZone#java.util.TimeZone
+    - .java.util.Calendar#timeZone#java.lang.Object
 - function: java.util.Arrays#fill
   signature: (boolean[], int, int, boolean) void
   copy:
@@ -5208,10 +5208,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
     to:
     - result
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.NavigableMap#tailMap
   signature: (java.lang.Object, boolean) java.util.NavigableMap
   copy:
@@ -5552,13 +5552,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
     to:
     - result
-    - .java.lang.String#content#java.lang.CharSequence
+    - .java.lang.String#content#java.lang.Object
   - from:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
     to: result
 - function: java.util.Collections#checkedSortedSet
   signature: (java.util.SortedSet, java.lang.Class) java.util.SortedSet
@@ -5752,7 +5752,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.Arrays#fill
   signature: (boolean[], boolean) void
   overrides: false
@@ -5852,10 +5852,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
     to:
     - result
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
+    - .java.util.StringJoiner#delimiter#java.lang.Object
 - function: java.util.ListIterator#previous
   signature: () java.lang.Object
   copy:
@@ -6113,7 +6113,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.Scanner#delimiter#java.lang.String
+    - .java.util.Scanner#delimiter#java.lang.Object
     to: result
 - function: java.util.Scanner#findInLine
   signature: (java.util.regex.Pattern) java.lang.String
@@ -6353,3 +6353,51 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
+- function: java.util.Properties#store
+  copy:
+  - from:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
+    to: arg(0)
+  - from:
+    - this
+    - .java.util.Map#MapKey#java.lang.Object
+    to: arg(0)
+  - from:
+    - this
+    - .java.util.Dictionary#MapValue#java.lang.Object
+    to: arg(0)
+  - from:
+    - this
+    - .java.util.Dictionary#MapKey#java.lang.Object
+    to: arg(0)
+- function: java.util.Properties#storeToXML
+  copy:
+  - from:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
+    to: arg(0)
+  - from:
+    - this
+    - .java.util.Dictionary#MapValue#java.lang.Object
+    to: arg(0)
+- function: java.util.Properties#load
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.Dictionary#MapValue#java.lang.Object
+- function: java.util.Properties#loadFromXML
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.util.Dictionary#MapValue#java.lang.Object

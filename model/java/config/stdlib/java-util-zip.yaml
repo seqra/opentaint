@@ -6,7 +6,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.zip.ZipEntry#name#java.lang.String
+    - .java.util.zip.ZipEntry#name#java.lang.Object
     to: result
 - function: java.util.zip.ZipEntry#getName
   signature: () java.lang.String
@@ -25,7 +25,7 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.util.zip.ZipEntry#name#java.lang.String
+    - .java.util.zip.ZipEntry#name#java.lang.Object
     to:
     - this
-    - .java.util.zip.ZipEntry#name#java.lang.String
+    - .java.util.zip.ZipEntry#name#java.lang.Object
