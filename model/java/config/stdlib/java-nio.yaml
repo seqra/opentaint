@@ -141,7 +141,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .int[]
+      type: int[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -430,7 +430,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   copy:
   - from: this
     to: result
@@ -681,7 +681,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .int[]
+      type: int[]
   copy:
   - from: arg(0)
     to: this
@@ -1051,7 +1051,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .short[]
+      type: short[]
   copy:
   - from: arg(0)
     to: this
@@ -1232,7 +1232,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   taintCopyOnly: true
   copy:
   - from: this
@@ -1348,7 +1348,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .double[]
+      type: double[]
   copy:
   - from: arg(0)
     to: this
@@ -1778,7 +1778,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .short[]
+      type: short[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -2413,7 +2413,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
     - index: 1
       type: int
     - index: 2
@@ -2508,7 +2508,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .double[]
+      type: double[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -2640,7 +2640,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .long[]
+      type: long[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -2899,7 +2899,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .char[]
+      type: char[]
   copy:
   - from:
     - this
@@ -2995,7 +2995,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .char[]
+      type: char[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -3222,7 +3222,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
     - index: 1
       type: int
     - index: 2
@@ -3331,7 +3331,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .float[]
+      type: float[]
   copy:
   - from: arg(0)
     to: this
@@ -3616,7 +3616,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .char[]
+      type: char[]
   taintCopyOnly: true
   copy:
   - from: this
@@ -3625,7 +3625,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .char[]
+      type: char[]
   copy:
   - from: arg(0)
     to: this
@@ -3815,7 +3815,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .float[]
+      type: float[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -4052,7 +4052,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .long[]
+      type: long[]
   copy:
   - from: arg(0)
     to: this
