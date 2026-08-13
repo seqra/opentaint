@@ -253,6 +253,57 @@ public class PassthroughValueFlowSamples {
         Runtime.getRuntime().exec(buffer.flip().toString());
     }
 
+    // === models that fill a caller-supplied buffer (arg, not result) ===
+
+    /** String#getChars(int,int,char[],int) copies into the destination array. */
+    @GetMapping("/string-get-chars/unsafe")
+    public void stringGetCharsUnsafe(@RequestParam String input) throws IOException {
+        char[] chars = new char[input.length()];
+        input.getChars(0, input.length(), chars, 0);
+        Runtime.getRuntime().exec(new String(chars));
+    }
+
+    @GetMapping("/string-get-chars/safe")
+    public void stringGetCharsSafe(@RequestParam String input) throws IOException {
+        char[] chars = new char[CONSTANT.length()];
+        CONSTANT.getChars(0, CONSTANT.length(), chars, 0);
+        Runtime.getRuntime().exec(new String(chars));
+    }
+
+    /** ByteBuffer#get(byte[]) drains the buffer into the destination array. */
+    @GetMapping("/byte-buffer-get/unsafe")
+    public void byteBufferGetUnsafe(@RequestParam String input) throws IOException {
+        ByteBuffer buffer = ByteBuffer.wrap(input.getBytes());
+        byte[] drained = new byte[input.length()];
+        buffer.get(drained);
+        Runtime.getRuntime().exec(new String(drained));
+    }
+
+    @GetMapping("/byte-buffer-get/safe")
+    public void byteBufferGetSafe(@RequestParam String input) throws IOException {
+        ByteBuffer buffer = ByteBuffer.wrap(CONSTANT.getBytes());
+        byte[] drained = new byte[CONSTANT.length()];
+        buffer.get(drained);
+        Runtime.getRuntime().exec(new String(drained));
+    }
+
+    /** CharBuffer#get(char[]) does the same for chars. */
+    @GetMapping("/char-buffer-get/unsafe")
+    public void charBufferGetUnsafe(@RequestParam String input) throws IOException {
+        CharBuffer buffer = CharBuffer.wrap(input);
+        char[] drained = new char[input.length()];
+        buffer.get(drained);
+        Runtime.getRuntime().exec(new String(drained));
+    }
+
+    @GetMapping("/char-buffer-get/safe")
+    public void charBufferGetSafe(@RequestParam String input) throws IOException {
+        CharBuffer buffer = CharBuffer.wrap(CONSTANT);
+        char[] drained = new char[CONSTANT.length()];
+        buffer.get(drained);
+        Runtime.getRuntime().exec(new String(drained));
+    }
+
     // === javax.naming slots ===
 
     /** BasicControl stores the control OID, getID reads it back. */

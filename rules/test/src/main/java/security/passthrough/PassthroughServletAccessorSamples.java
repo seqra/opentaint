@@ -127,6 +127,17 @@ public class PassthroughServletAccessorSamples {
         }
     }
 
+    /** getInputStream() + read(byte[]) - the body lands in the caller's array, not in the int result. */
+    @WebServlet("/passthrough/servlet/input-stream")
+    public static class InputStreamServlet extends HttpServlet {
+        @Override
+        protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            byte[] body = new byte[1024];
+            request.getInputStream().read(body);
+            Runtime.getRuntime().exec("cat " + new String(body));
+        }
+    }
+
     /**
      * Negative twin: the same accessors are called, but the executed command is built from
      * constants only, so none of the accessor models may produce a finding here.
