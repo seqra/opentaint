@@ -162,10 +162,6 @@ passThrough:
     to:
     - this
     - .javax.xml.transform.dom.DOMSource#node#org.w3c.dom.Node
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#node#org.w3c.dom.Node
 - function: javax.xml.transform.dom.DOMResult#setNode
   signature:
     params:

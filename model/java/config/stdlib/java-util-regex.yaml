@@ -19,10 +19,6 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.util.regex.Matcher#pattern#java.util.regex.Pattern
     - .java.util.regex.Pattern#regex#java.lang.String
     to: result
@@ -273,10 +269,6 @@ passThrough:
   signature:
     return: java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    to: result
   - from:
     - this
     - .java.util.regex.Matcher#group#java.lang.String
@@ -719,14 +711,6 @@ passThrough:
   signature:
     return: java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.util.regex.Matcher#group#java.lang.String
-    to: result
   - from:
     - this
     - .java.util.regex.Matcher#group#java.lang.String

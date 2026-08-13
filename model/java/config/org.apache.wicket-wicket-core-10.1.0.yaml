@@ -7,10 +7,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#renderBodyOnly#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#renderBodyOnly#java.lang.Object
-    to: result
   - from: this
     to: result
 - function:
@@ -27,10 +23,6 @@ passThrough:
     to: result
 - function: org.apache.wicket.Component#getDefaultModel
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
@@ -55,14 +47,6 @@ passThrough:
     to:
     - this
     - .org.apache.wicket.Component#children#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.wicket.Component#children#java.lang.Object
-  - from:
-    - this
-    - .org.apache.wicket.Component#children#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#children#java.lang.Object
@@ -83,18 +67,10 @@ passThrough:
     - this
     - .org.apache.wicket.Component#children#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#children#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.wicket.Component#setVisibilityAllowed
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#visibilityAllowed#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#visibilityAllowed#java.lang.Object
@@ -104,10 +80,6 @@ passThrough:
 - function: org.apache.wicket.Component#getInnermostModel
   copy:
   - from: arg(0)
-    to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
   - from:
     - this
@@ -137,10 +109,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#parent#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#parent#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.wicket.MarkupContainer#iterator
@@ -157,18 +125,10 @@ passThrough:
     - this
     - .org.apache.wicket.Component#markupId#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#markupId#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.wicket.Component#render
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: arg(0)
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
@@ -195,14 +155,6 @@ passThrough:
     to:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
@@ -223,10 +175,6 @@ passThrough:
     to: result
 - function: org.apache.wicket.Component#setIgnoreAttributeModifier
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#ignoreAttributeModifier#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#ignoreAttributeModifier#java.lang.Object
@@ -288,10 +236,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#visible#java.lang.Object
   - from: arg(*)
-    to:
-    - this
-    - .org.apache.wicket.Component#children#java.lang.Object
-  - from: arg(*)
     to: this
 - function: org.apache.wicket.MarkupContainer#getAssociatedMarkupStream
   copy:
@@ -299,10 +243,6 @@ passThrough:
     to: result
 - function: org.apache.wicket.Component#getPage
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#page#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#page#java.lang.Object
@@ -331,10 +271,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#enabled#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#enabled#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.wicket.MarkupContainer#renderAll
@@ -344,10 +280,6 @@ passThrough:
 - function: org.apache.wicket.Component#getDefaultModelObjectAsString
   copy:
   - from: arg(0)
-    to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: result
   - from:
     - this
@@ -363,14 +295,6 @@ passThrough:
     to:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
@@ -391,10 +315,6 @@ passThrough:
     - this
     - .org.apache.wicket.Component#visible#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.wicket.Component#visible#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.wicket.Component#onRender
@@ -403,18 +323,10 @@ passThrough:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
     to: arg(0)
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: arg(0)
   - from: this
     to: arg(0)
 - function: org.apache.wicket.Component#getDefaultModelObject
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#defaultModel#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#defaultModel#java.lang.Object
@@ -435,10 +347,6 @@ passThrough:
     - .org.apache.wicket.model.IModel#content#java.lang.Object
 - function: org.apache.wicket.Component#setVersioned
   copy:
-  - from:
-    - this
-    - .org.apache.wicket.Component#versioned#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.wicket.Component#versioned#java.lang.Object

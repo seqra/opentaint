@@ -224,10 +224,6 @@ passThrough:
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#originalResultSet#java.sql.ResultSet
-  - from: arg(0)
-    to:
-    - this
-    - .javax.sql.rowset.CachedRowSet#originalResultSet#java.sql.ResultSet
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.rowset.Joinable) void
   taintCopyOnly: true

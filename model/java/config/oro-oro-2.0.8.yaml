@@ -101,8 +101,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to: result
 - function:
     package: org.apache.oro.text.regex
     class: Perl5Substitution

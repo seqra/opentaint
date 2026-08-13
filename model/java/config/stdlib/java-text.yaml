@@ -67,10 +67,6 @@ passThrough:
     to:
     - this
     - .java.text.MessageFormat#pattern#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
 - function: java.text.DecimalFormat#<init>
   signature:
     params:
@@ -263,10 +259,6 @@ passThrough:
 - function: java.text.DecimalFormat#applyPattern
   signature: (java.lang.String, boolean) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
   - from: arg(0)
     to:
     - this
@@ -655,16 +647,8 @@ passThrough:
     to: arg(1)
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.text.Format#content#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to: arg(1)
   - from:
     - this
     - .java.text.Format#content#java.lang.Object
@@ -788,10 +772,6 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormatSymbols#percent#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
 - function:
     package: java.text
     class: MessageFormat
@@ -1068,16 +1048,8 @@ passThrough:
     to: arg(1)
   - from:
     - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.text.Format#content#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to: arg(1)
   - from:
     - this
     - .java.text.Format#content#java.lang.Object
@@ -1746,10 +1718,6 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
 - function: java.text.MessageFormat#equals
   signature: (java.lang.Object) boolean
   copy:

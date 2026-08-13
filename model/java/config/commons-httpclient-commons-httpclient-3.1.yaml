@@ -7,10 +7,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#setQueryString
@@ -20,17 +16,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#queryString#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#queryString#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.NameValuePair#<init>
   copy:
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
   - from: arg(*)
     to:
     - this
@@ -47,10 +35,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#uRI#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#uRI#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.cookie.CookieSpec#formatCookieHeader
@@ -63,18 +47,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#hostConfiguration#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#hostConfiguration#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HostConfiguration#getHost
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
@@ -107,18 +83,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#setRequestHeader
   copy:
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
   - from: arg(*)
     to:
     - this
@@ -132,10 +100,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpMethodBase#setHostConfiguration
   copy:
@@ -144,17 +108,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#hostConfiguration#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#hostConfiguration#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpConnection#setLastResponseInputStream
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -179,18 +135,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseBody#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseBody#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.UsernamePasswordCredentials#setUserName
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -207,10 +155,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HeaderGroup#getCondensedHeader
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
@@ -235,10 +179,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseFooters#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseFooters#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.Header#<init>
@@ -255,10 +195,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.util.URIUtil#getQuery
@@ -267,10 +203,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#getResponseCharSet
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseCharSet#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseCharSet#java.lang.Object
@@ -291,10 +223,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestCharSet#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestCharSet#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpConstants#getContentBytes
@@ -303,10 +231,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#setResponseStream
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -324,17 +248,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#queryString#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#queryString#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpMethod#getRequestHeaders
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
@@ -352,10 +268,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.Cookie#getPath
   copy:
@@ -368,17 +280,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpState#credentials#java.lang.Object
   - from: arg(2)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpState#credentials#java.lang.Object
-  - from: arg(2)
     to: this
 - function: org.apache.commons.httpclient.HttpMethod#getRequestHeader
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
@@ -387,10 +291,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#getRequestHeaderGroup
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
@@ -411,18 +311,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpState#getProxyCredentials
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
@@ -435,10 +327,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.NTCredentials#getHost
@@ -447,18 +335,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.NTCredentials#host#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#host#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HeaderGroup#getHeaders
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
@@ -475,18 +355,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.NTCredentials#setHost
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#host#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -500,17 +372,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpMethod#getQueryString
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#queryString#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#queryString#java.lang.Object
@@ -531,18 +395,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseFooters#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseFooters#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#getResponseHeader
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseHeaders#java.lang.Object
@@ -555,10 +411,6 @@ passThrough:
     - index: 0
       type: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -583,24 +435,12 @@ passThrough:
     to:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
   - from: arg(*)
     to: this
   - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.UsernamePasswordCredentials#getUserName
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
@@ -613,10 +453,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#getResponseBody
@@ -625,18 +461,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseBody#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseBody#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#getRequestHeaders
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
@@ -657,10 +485,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpConstants#getString
@@ -674,10 +498,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpConstants#getAsciiBytes
   copy:
@@ -685,10 +505,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#addResponseFooter
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseFooters#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -714,10 +530,6 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
   - from: arg(2)
     to:
@@ -743,20 +555,12 @@ passThrough:
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#virtualHost#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
   - from: arg(2)
     to: this
   - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpMethodBase#getRequestHeader
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
@@ -773,18 +577,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpState#credentials#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpConnection#setProxyHost
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -797,10 +593,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseFooters#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseFooters#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#getPath
@@ -809,18 +601,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#path#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#path#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HostConfiguration#getHostURL
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
@@ -838,10 +622,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
   - from: arg(*)
-    to:
-    - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
-  - from: arg(*)
     to: this
 - function: org.apache.commons.httpclient.NTCredentials#toString
   copy:
@@ -853,18 +633,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.NTCredentials#host#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#addRequestHeader
   copy:
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
   - from: arg(*)
     to:
     - this
@@ -878,17 +650,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseFooters#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseFooters#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpConnection#setHost
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -905,10 +669,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.cookie.CookieSpec#parseAttribute
@@ -921,18 +681,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpConnection#virtualHost#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#virtualHost#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#setPath
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#path#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -949,10 +701,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.NameValuePair#getValue
@@ -961,18 +709,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#getResponseFooters
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseFooters#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseFooters#java.lang.Object
@@ -986,17 +726,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#path#java.lang.Object
   - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#path#java.lang.Object
-  - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.NameValuePair#getName
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
@@ -1009,10 +741,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#getPath
@@ -1021,18 +749,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#path#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#path#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#getResponseBody
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseBody#java.lang.Object
@@ -1049,10 +769,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#responseHeaders#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.NameValuePair#toString
@@ -1064,10 +780,6 @@ passThrough:
   - from:
     - this
     - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
     to: result
   - from: this
     to: result
@@ -1090,10 +802,6 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
   - from: arg(1)
     to:
@@ -1119,20 +827,12 @@ passThrough:
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#virtualHost#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
     to: this
 - function: org.apache.commons.httpclient.HttpMethod#getURI
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#uRI#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#uRI#java.lang.Object
@@ -1145,18 +845,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#queryString#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethodBase#queryString#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.NTCredentials#setDomain
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -1173,10 +865,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#getResponseBodyAsStream
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseBody#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseBody#java.lang.Object
@@ -1214,10 +902,6 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.NTCredentials#userName#java.lang.Object
   - from: arg(3)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
-  - from: arg(3)
     to: this
   - from: arg(1)
     to: this
@@ -1232,17 +916,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
   - from: arg(*)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#requestHeaders#java.lang.Object
-  - from: arg(*)
     to: this
 - function: org.apache.commons.httpclient.HttpMethod#getResponseHeaders
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#responseHeaders#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#responseHeaders#java.lang.Object
@@ -1251,10 +927,6 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethod#getName
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HttpMethod#name#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HttpMethod#name#java.lang.Object
@@ -1275,18 +947,10 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HostConfiguration#host#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.commons.httpclient.HeaderGroup#getLastHeader
   copy:
-  - from:
-    - this
-    - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
-    to: result
   - from:
     - this
     - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
@@ -1312,17 +976,9 @@ passThrough:
     - this
     - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
   - from: arg(2)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
-  - from: arg(2)
     to: this
 - function: org.apache.commons.httpclient.HeaderGroup#addHeader
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HeaderGroup#headers#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -1365,14 +1021,6 @@ passThrough:
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
   - from: arg(2)
     to:
     - this
@@ -1401,10 +1049,6 @@ passThrough:
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#virtualHost#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
   - from: arg(3)
     to: this
   - from: arg(2)
