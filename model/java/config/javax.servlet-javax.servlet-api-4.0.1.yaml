@@ -31,8 +31,6 @@ passThrough:
     - this
     - .javax.servlet.http.Cookie#path#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: javax.servlet.http.Cookie#getValue
   signature: () java.lang.String
   copy:
@@ -40,16 +38,12 @@ passThrough:
     - this
     - .javax.servlet.http.Cookie#value#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: javax.servlet.http.Cookie#getDomain
   signature: () java.lang.String
   copy:
   - from:
     - this
     - .javax.servlet.http.Cookie#domain#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: javax.servlet.http.PushBuilder#addHeader
   signature: (java.lang.String, java.lang.String) javax.servlet.http.PushBuilder
@@ -72,10 +66,6 @@ passThrough:
     to:
     - this
     - .javax.servlet.http.Cookie#domain#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
 - function: javax.servlet.http.PushBuilder#getMethod
   signature: () java.lang.String
   copy:
@@ -93,8 +83,6 @@ passThrough:
     - this
     - .javax.servlet.http.Cookie#name#java.lang.Object
     to: result
-  - from: this
-    to: result
 - function: javax.servlet.http.Cookie#setPath
   signature: (java.lang.String) void
   copy:
@@ -102,10 +90,6 @@ passThrough:
     to:
     - this
     - .javax.servlet.http.Cookie#path#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
 - function: javax.servlet.http.Cookie#<init>
   signature: (java.lang.String, java.lang.String) void
   copy:
@@ -117,10 +101,6 @@ passThrough:
     to:
     - this
     - .javax.servlet.http.Cookie#value#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
 - function: javax.servlet.http.PushBuilder#getQueryString
   signature: () java.lang.String
   copy:
@@ -179,18 +159,12 @@ passThrough:
     to:
     - this
     - .javax.servlet.http.Cookie#comment#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
 - function: javax.servlet.http.Cookie#getComment
   signature: () java.lang.String
   copy:
   - from:
     - this
     - .javax.servlet.http.Cookie#comment#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: javax.servlet.http.Cookie#setValue
   signature: (java.lang.String) void
@@ -199,10 +173,6 @@ passThrough:
     to:
     - this
     - .javax.servlet.http.Cookie#value#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
 - function: javax.servlet.http.PushBuilder#getSessionId
   signature: () java.lang.String
   copy:

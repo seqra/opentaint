@@ -5,10 +5,6 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.namespace.QName#content#java.lang.Object
 - function: javax.xml.namespace.QName#<init>
   signature: (java.lang.String, java.lang.String) void
   taintCopyOnly: true
@@ -25,10 +21,6 @@ passThrough:
   signature: () java.lang.String
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.xml.namespace.QName#content#java.lang.Object
     to: result
 - function: javax.xml.namespace.QName#valueOf
   signature: (java.lang.String) javax.xml.namespace.QName
@@ -61,10 +53,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.xml.namespace.QName#content#java.lang.Object
-    to: result
 - function: javax.xml.namespace.QName#valueOf
   signature:
     params:
@@ -89,10 +77,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.xml.namespace.QName#content#java.lang.Object
-    to: result
 - function: javax.xml.namespace.QName#<init>
   signature:
     params:
@@ -116,19 +100,11 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.namespace.QName#content#java.lang.Object
 - function: javax.xml.namespace.QName#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.namespace.QName#content#java.lang.Object
 - function: javax.xml.namespace.QName#getLocalPart
   signature: () java.lang.String
   taintCopyOnly: true
