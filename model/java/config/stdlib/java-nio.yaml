@@ -4232,3 +4232,31 @@ passThrough:
     - this
     - .java.nio.ByteBuffer#buffer#java.lang.Object
     to: result
+- function: java.nio.Buffer#flip
+  copy:
+  - from: this
+    to: result
+- function: java.nio.Buffer#rewind
+  copy:
+  - from: this
+    to: result
+- function: java.nio.Buffer#clear
+  copy:
+  - from: this
+    to: result
+- function: java.nio.Buffer#mark
+  copy:
+  - from: this
+    to: result
+- function: java.nio.Buffer#reset
+  copy:
+  - from: this
+    to: result
+- function: java.nio.Buffer#position
+  copy:
+  - from: this
+    to: result
+- function: java.nio.Buffer#limit
+  copy:
+  - from: this
+    to: result
