@@ -22,10 +22,25 @@ type JavaProject struct {
 }
 
 type ResolvedDependency struct {
-	Path     string `yaml:"path"`
-	Group    string `yaml:"group,omitempty"`
-	Artifact string `yaml:"artifact,omitempty"`
-	Version  string `yaml:"version,omitempty"`
+	Path string `yaml:"path"`
+	Purl string `yaml:"purl,omitempty"`
+}
+
+// UnmarshalYAML accepts a legacy bare path string (as a path-only dependency) or the tagged mapping.
+func (d *ResolvedDependency) UnmarshalYAML(unmarshal func(any) error) error {
+	var bareString string
+	if err := unmarshal(&bareString); err == nil {
+		d.Path = bareString
+		return nil
+	}
+
+	type plain ResolvedDependency
+	var p plain
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
+	*d = ResolvedDependency(p)
+	return nil
 }
 
 type GoProject struct {
