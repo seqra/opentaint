@@ -24,13 +24,13 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#<init>
   signature:
     params:
@@ -49,10 +49,6 @@ passThrough:
     to:
     - this
     - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#org.apache.axiom.soap.SOAPMessage
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getAttachments
   copy:
   - from:
@@ -74,13 +70,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setAxiomMessage
   signature:
     params:
@@ -90,7 +86,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#org.apache.axiom.soap.SOAPMessage
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#java.lang.Object
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setDocument
   copy:
   - from: arg(0)
@@ -109,7 +105,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setAxiomMessage
   copy:
@@ -132,20 +128,20 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getAxiomMessage
   signature:
     return: org.apache.axiom.soap.SOAPMessage
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#org.apache.axiom.soap.SOAPMessage
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#axiomMessage#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getAxiomMessage
   copy:
@@ -159,13 +155,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#soapAction#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#getSoapAction
   copy:
@@ -182,7 +178,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.soap.axiom.AxiomSoapMessage#document#java.lang.Object
 - function: org.springframework.ws.soap.axiom.AxiomSoapMessage#setSoapAction
   taintCopyOnly: true
   copy:

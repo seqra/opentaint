@@ -21,7 +21,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.util.CookieGenerator#cookieName#java.lang.String
+    - .org.springframework.web.util.CookieGenerator#cookieName#java.lang.Object
     to: result
 - function: org.springframework.web.util.CookieGenerator#getCookieName
   taintCopyOnly: true
@@ -34,7 +34,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.util.CookieGenerator#cookieName#java.lang.String
+    - .org.springframework.web.util.CookieGenerator#cookieName#java.lang.Object
     to: result
 - function: org.springframework.web.util.CookieGenerator#getCookieName
   signature:
@@ -42,5 +42,5 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.util.CookieGenerator#cookieName#java.lang.String
+    - .org.springframework.web.util.CookieGenerator#cookieName#java.lang.Object
     to: result

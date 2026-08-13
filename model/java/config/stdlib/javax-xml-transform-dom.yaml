@@ -12,7 +12,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
     to: result
 - function: javax.xml.transform.dom.DOMResult#setNode
   signature: (org.w3c.dom.Node) void
@@ -40,14 +40,14 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
 - function: javax.xml.transform.dom.DOMResult#getNode
   signature:
     return: org.w3c.dom.Node
   copy:
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
     to: result
 - function:
     package: javax.xml.transform.dom
@@ -62,7 +62,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
 - function: javax.xml.transform.dom.DOMSource#setNode
   signature: (org.w3c.dom.Node) void
   copy:
@@ -85,7 +85,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
 - function: javax.xml.transform.dom.DOMSource#getNode
   signature: () org.w3c.dom.Node
   copy:
@@ -105,7 +105,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.dom.DOMSource#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMSource#node#java.lang.Object
     to: result
 - function:
     package: javax.xml.transform.dom
@@ -120,12 +120,12 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: javax.xml.transform.dom.DOMResult#getNode
   signature: () org.w3c.dom.Node
   copy:
@@ -133,20 +133,20 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
     to:
     - result
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
     to:
     - result
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
     to: result
   - from:
     - this
@@ -161,7 +161,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.dom.DOMSource#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMSource#node#java.lang.Object
 - function: javax.xml.transform.dom.DOMResult#setNode
   signature:
     params:
@@ -171,7 +171,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
 - function:
     package: javax.xml.transform.dom
     class: DOMResult
@@ -217,20 +217,20 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
     to:
     - result
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#node#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
     to:
     - result
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
     to: result
   - from:
     - this
@@ -264,7 +264,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.dom.DOMSource#node#org.w3c.dom.Node
+    - .javax.xml.transform.dom.DOMSource#node#java.lang.Object
 - function: javax.xml.transform.dom.DOMSource#<init>
   signature: (org.w3c.dom.Node, java.lang.String) void
   copy:

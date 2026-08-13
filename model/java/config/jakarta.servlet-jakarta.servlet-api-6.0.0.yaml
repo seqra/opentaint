@@ -83,42 +83,42 @@ passThrough:
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#queryString#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#queryString#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getRequestURI
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#requestURI#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#requestURI#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getRequestURL
   signature: () java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#requestURL#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#requestURL#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getPathInfo
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#pathInfo#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#pathInfo#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getPathTranslated
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#pathTranslated#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#pathTranslated#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getServletPath
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#servletPath#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#servletPath#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getCookies
   signature: () jakarta.servlet.http.Cookie[]
@@ -139,74 +139,74 @@ passThrough:
     to:
     - result
     - '[*]'
-    - .jakarta.servlet.http.Cookie#name#java.lang.String
+    - .jakarta.servlet.http.Cookie#name#java.lang.Object
   - from:
     - this
     - .jakarta.servlet.http.HttpServletRequest#cookies#java.lang.Object
     to:
     - result
     - '[*]'
-    - .jakarta.servlet.http.Cookie#value#java.lang.String
+    - .jakarta.servlet.http.Cookie#value#java.lang.Object
   - from:
     - this
     - .jakarta.servlet.http.HttpServletRequest#cookies#java.lang.Object
     to:
     - result
     - '[*]'
-    - .jakarta.servlet.http.Cookie#path#java.lang.String
+    - .jakarta.servlet.http.Cookie#path#java.lang.Object
   - from:
     - this
     - .jakarta.servlet.http.HttpServletRequest#cookies#java.lang.Object
     to:
     - result
     - '[*]'
-    - .jakarta.servlet.http.Cookie#domain#java.lang.String
+    - .jakarta.servlet.http.Cookie#domain#java.lang.Object
 - function: jakarta.servlet.http.HttpServletRequest#getRequestedSessionId
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#requestedSessionId#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#requestedSessionId#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getRemoteUser
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#remoteUser#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#remoteUser#java.lang.Object
     to: result
 - function: jakarta.servlet.http.HttpServletRequest#getAuthType
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.HttpServletRequest#authType#java.lang.String
+    - .jakarta.servlet.http.HttpServletRequest#authType#java.lang.Object
     to: result
 - function: jakarta.servlet.http.Cookie#getValue
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.Cookie#value#java.lang.String
+    - .jakarta.servlet.http.Cookie#value#java.lang.Object
     to: result
 - function: jakarta.servlet.http.Cookie#getName
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.Cookie#name#java.lang.String
+    - .jakarta.servlet.http.Cookie#name#java.lang.Object
     to: result
 - function: jakarta.servlet.http.Cookie#getPath
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.Cookie#path#java.lang.String
+    - .jakarta.servlet.http.Cookie#path#java.lang.Object
     to: result
 - function: jakarta.servlet.http.Cookie#getDomain
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .jakarta.servlet.http.Cookie#domain#java.lang.String
+    - .jakarta.servlet.http.Cookie#domain#java.lang.Object
     to: result

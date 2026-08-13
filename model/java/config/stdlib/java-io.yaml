@@ -68,7 +68,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.ByteArrayOutputStream#buffer#byte[]
+    - .java.io.ByteArrayOutputStream#buffer#java.lang.Object
 - function: java.io.InputStream#read
   signature:
     params:
@@ -143,7 +143,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.ByteArrayOutputStream#buffer#byte[]
+    - .java.io.ByteArrayOutputStream#buffer#java.lang.Object
     to: result
 - function: java.io.InputStream#read
   signature: () int
@@ -202,7 +202,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.ByteArrayInputStream#buffer#byte[]
+    - .java.io.ByteArrayInputStream#buffer#java.lang.Object
 - function:
     package: java.io
     class: InputStream
@@ -373,22 +373,10 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(0)
-    to:
-    - this
     - .java.io.File#path#java.lang.Object
 - function: java.io.File#<init>
   signature: (java.lang.String, java.lang.String) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
   - from: arg(0)
     to:
     - this
@@ -402,14 +390,10 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from: arg(1)
     to:
     - this
@@ -422,18 +406,10 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(0)
-    to:
-    - this
     - .java.io.File#path#java.lang.Object
 - function: java.io.File#getPath
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to: result
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -443,19 +419,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.io.File#path#java.lang.Object
     to: result
 - function: java.io.File#getCanonicalPath
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to: result
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -465,19 +433,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.io.File#path#java.lang.Object
     to: result
 - function: java.io.File#getParent
   signature: () java.lang.String
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to: result
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -487,10 +447,6 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.io.File#path#java.lang.Object
     to: result
 - function: java.io.File#getAbsoluteFile
@@ -498,10 +454,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -513,10 +469,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -528,10 +484,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -543,19 +499,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.io.File#path#java.lang.Object
     to: result
 - function: java.io.File#toURI
   signature: () java.net.URI
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to: result
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -565,10 +513,6 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
-    to: result
-  - from:
-    - this
     - .java.io.File#path#java.lang.Object
     to: result
 - function: java.io.File#listFiles
@@ -576,11 +520,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
     - '[*]'
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -590,11 +534,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
     - '[*]'
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -604,11 +548,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
     - '[*]'
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from:
     - this
     - .java.io.File#path#java.lang.Object
@@ -618,7 +562,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to:
     - result
     - '[*]'
@@ -631,7 +575,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.File#uri#java.net.URI
+    - .java.io.File#uri#java.lang.Object
 - function: java.io.File#getAbsolutePath
   signature: () java.lang.String
   taintCopyOnly: true
@@ -688,12 +632,12 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: java.io.File#getParent
   signature: () java.lang.String
   taintCopyOnly: true
@@ -706,12 +650,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to: result
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.io.File#getPath
   signature:
@@ -719,12 +663,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to: result
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.io.File#toURI
   signature:
@@ -732,7 +676,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
+    - .java.io.File#uri#java.lang.Object
     to: result
 - function: java.io.File#getAbsolutePath
   signature:
@@ -740,12 +684,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to: result
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.io.File#<init>
   signature:
@@ -756,24 +700,24 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: java.io.File#toString
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to: result
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.io.File#getName
   signature:
@@ -781,12 +725,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to: result
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.io.File#<init>
   signature: (java.lang.String, java.io.File) void
@@ -812,12 +756,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.String
+    - .java.io.File#path#java.lang.Object
     to: result
   - from:
     - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
+    - .java.io.File#uri#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.io.File#listFiles
   signature: (java.io.FileFilter) java.io.File[]

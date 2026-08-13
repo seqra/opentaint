@@ -6,10 +6,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.socket.TextMessage#payload#java.lang.CharSequence
+    - .org.springframework.web.socket.TextMessage#payload#java.lang.Object
     to:
     - result
-    - .java.lang.String#content#java.lang.CharSequence
+    - .java.lang.String#content#java.lang.Object
 - function: org.springframework.web.socket.TextMessage#<init>
   signature:
     params:
@@ -19,16 +19,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.socket.TextMessage#payload#java.lang.CharSequence
+    - .org.springframework.web.socket.TextMessage#payload#java.lang.Object
 - function: org.springframework.web.socket.BinaryMessage#toStringPayload
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .org.springframework.web.socket.BinaryMessage#payload#byte[]
+    - .org.springframework.web.socket.BinaryMessage#payload#java.lang.Object
     to:
     - result
-    - .java.lang.String#bytes#byte[]
+    - .java.lang.String#bytes#java.lang.Object
 - function: org.springframework.web.socket.PongMessage#<init>
   taintCopyOnly: true
   copy:
@@ -54,7 +54,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.socket.BinaryMessage#payload#byte[]
+    - .org.springframework.web.socket.BinaryMessage#payload#java.lang.Object
 - function: org.springframework.web.socket.TextMessage#<init>
   signature:
     params:
@@ -64,7 +64,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.socket.TextMessage#payloadBytes#byte[]
+    - .org.springframework.web.socket.TextMessage#payloadBytes#java.lang.Object
 - function: org.springframework.web.socket.TextMessage#asBytes
   taintCopyOnly: true
   copy:
@@ -105,7 +105,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.socket.TextMessage#payloadBytes#byte[]
+    - .org.springframework.web.socket.TextMessage#payloadBytes#java.lang.Object
     to: result
 - function: org.springframework.web.socket.BinaryMessage#<init>
   taintCopyOnly: true

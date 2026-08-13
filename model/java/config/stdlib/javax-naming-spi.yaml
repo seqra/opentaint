@@ -6,7 +6,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.spi.DirStateFactory$Result#attributes#javax.naming.directory.Attributes
+    - .javax.naming.spi.DirStateFactory$Result#attributes#java.lang.Object
     to: result
 - function: javax.naming.spi.DirStateFactory$Result#getObject
   signature:
