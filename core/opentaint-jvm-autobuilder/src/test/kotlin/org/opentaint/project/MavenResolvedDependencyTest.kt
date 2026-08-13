@@ -6,13 +6,12 @@ import kotlin.test.assertEquals
 
 class MavenResolvedDependencyTest {
     @Test
-    fun `resolved maven artifacts carry coordinates`() {
+    fun `resolved maven artifacts carry a purl`() {
         val r = MavenProjectResolver.MavenDependencyGraphResolver()
         r.addDependencies(mavenGraphWith(group = "com.fasterxml.jackson.core",
             artifact = "jackson-core", version = "2.17.3"))
         val deps = r.resolveDependencies(resolvePath = { Path("/m2/${it.artifactId}-${it.version}.jar") })
-        val jc = deps.single { it.artifact == "jackson-core" }
-        assertEquals("2.17.3", jc.version)
+        val jc = deps.single { it.purl == "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.17.3" }
         assertEquals(Path("/m2/jackson-core-2.17.3.jar"), jc.path)
     }
 

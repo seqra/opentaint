@@ -191,7 +191,7 @@ class GradleProjectResolver(
             val indirect = all.filterNot { it.key in directDependencies }
             fun resolve(d: GradleDependencyInfo): ResolvedDependency? =
                 table["${d.groupId}:${d.artifactId}:${d.version}"]
-                    ?.let { ResolvedDependency(it, d.groupId, d.artifactId, d.version) }
+                    ?.let { ResolvedDependency(it, mavenPurl(d.groupId, d.artifactId, d.version)) }
             return (direct + indirect).mapNotNull { resolve(it.value) }
         }
     }

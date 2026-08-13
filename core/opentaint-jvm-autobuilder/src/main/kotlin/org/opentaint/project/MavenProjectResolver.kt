@@ -159,7 +159,7 @@ class MavenProjectResolver(
             val buildArtifactsNames = buildArtifacts.mapTo(mutableSetOf()) { artifacts.getValue(it).artifactName }
             return artifacts.values
                 .filter { it.artifactName !in buildArtifactsNames }
-                .mapNotNull { a -> resolvePath(a)?.let { ResolvedDependency(it, a.groupId, a.artifactId, a.version) } }
+                .mapNotNull { a -> resolvePath(a)?.let { ResolvedDependency(it, mavenPurl(a.groupId, a.artifactId, a.version)) } }
         }
     }
 

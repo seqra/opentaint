@@ -3,12 +3,17 @@ package org.opentaint.project
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
+import com.charleskorn.kaml.YamlInput
+import com.charleskorn.kaml.YamlScalar
 import com.charleskorn.kaml.decodeFromStream
 import com.charleskorn.kaml.encodeToStream
+import kotlinx.serialization.ContextualSerializer
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.nio.file.Path
@@ -22,15 +27,52 @@ sealed interface CommonProject {
     fun sourceRoot(): Path?
 }
 
-@Serializable
+/**
+ * Builds a Maven package-URL of the form `pkg:maven/<group>/<artifact>@<version>`. Maven
+ * group/artifact/version are simple tokens, so no percent-encoding is applied.
+ */
+fun mavenPurl(group: String, artifact: String, version: String): String =
+    "pkg:maven/$group/$artifact@$version"
+
+@Serializable(with = ResolvedDependencySerializer::class)
 data class ResolvedDependency(
-    val path: @Serializable(with = PathAsStringSerializer::class) Path,
-    val group: String? = null,
-    val artifact: String? = null,
-    val version: String? = null,
+    val path: Path,
+    val purl: String? = null,
 ) {
     fun relativeTo(base: Path): ResolvedDependency = copy(path = path.relativeTo(base))
     fun resolve(base: Path): ResolvedDependency = copy(path = base.resolve(path))
+}
+
+@Serializable
+private data class ResolvedDependencySurrogate(
+    val path: @Serializable(with = PathAsStringSerializer::class) Path,
+    val purl: String? = null,
+)
+
+/**
+ * Decodes the tagged mapping via a private surrogate, or a bare scalar (legacy `- /path.jar`) as a
+ * path-only dependency. The descriptor is CONTEXTUAL so kaml routes scalar nodes here instead of
+ * rejecting them before [deserialize] runs.
+ */
+object ResolvedDependencySerializer : KSerializer<ResolvedDependency> {
+    @OptIn(ExperimentalSerializationApi::class)
+    override val descriptor: SerialDescriptor =
+        ContextualSerializer(ResolvedDependency::class).descriptor
+
+    override fun serialize(encoder: Encoder, value: ResolvedDependency) {
+        encoder.encodeSerializableValue(
+            ResolvedDependencySurrogate.serializer(),
+            ResolvedDependencySurrogate(value.path, value.purl),
+        )
+    }
+
+    override fun deserialize(decoder: Decoder): ResolvedDependency {
+        if (decoder is YamlInput && decoder.node is YamlScalar) {
+            return ResolvedDependency(path = Path(decoder.decodeString()))
+        }
+        val surrogate = decoder.decodeSerializableValue(ResolvedDependencySurrogate.serializer())
+        return ResolvedDependency(surrogate.path, surrogate.purl)
+    }
 }
 
 @Suppress("DEPRECATION")
