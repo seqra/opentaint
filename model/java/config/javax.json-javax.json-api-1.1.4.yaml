@@ -225,20 +225,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -360,20 +352,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -632,28 +616,12 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeNull
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
     to: result
-  - from: arg(0)
-    to: this
 - function: javax.json.JsonReader#readArray
   signature: () javax.json.JsonArray
   copy:
@@ -828,20 +796,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -863,20 +823,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -1004,20 +956,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -1042,20 +986,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -1144,18 +1080,6 @@ passThrough:
     to: result
   - from: this
     to: result
-- function: javax.json.JsonArray#getInt
-  signature: (int) int
-  overrides: false
-  copy:
-  - from: arg(1)
-    to: result
-- function: javax.json.JsonObject#getString
-  signature: (java.lang.String) java.lang.String
-  overrides: false
-  copy:
-  - from: arg(1)
-    to: result
 - function: javax.json.JsonWriterFactory#createWriter
   signature: (java.io.OutputStream) javax.json.JsonWriter
   condition:
@@ -1207,12 +1131,6 @@ passThrough:
     - this
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
     to: result
-- function: javax.json.JsonObject#getBoolean
-  signature: (java.lang.String) boolean
-  overrides: false
-  copy:
-  - from: arg(1)
-    to: result
 - function: javax.json.JsonWriter#write
   signature: (javax.json.JsonStructure) void
   copy:
@@ -1229,12 +1147,6 @@ passThrough:
     to: result
 - function: javax.json.JsonArray#getBoolean
   signature: (int, boolean) boolean
-  overrides: false
-  copy:
-  - from: arg(1)
-    to: result
-- function: javax.json.JsonObject#getInt
-  signature: (java.lang.String) int
   overrides: false
   copy:
   - from: arg(1)
@@ -1342,18 +1254,6 @@ passThrough:
     - this
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
     to: result
-- function: javax.json.JsonArray#getBoolean
-  signature: (int) boolean
-  overrides: false
-  copy:
-  - from: arg(1)
-    to: result
-- function: javax.json.JsonArray#getString
-  signature: (int) java.lang.String
-  overrides: false
-  copy:
-  - from: arg(1)
-    to: result
 - function: javax.json.stream.JsonGeneratorFactory#createGenerator
   signature: (java.io.OutputStream) javax.json.stream.JsonGenerator
   condition:
@@ -1418,20 +1318,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -1451,28 +1343,12 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeStartObject
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
     to: result
-  - from: arg(0)
-    to: this
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, javax.json.JsonObjectBuilder) javax.json.JsonArrayBuilder
   copy:
@@ -1582,20 +1458,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -1653,28 +1521,12 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeStartArray
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
     to: result
-  - from: arg(0)
-    to: this
 - function: javax.json.JsonWriterFactory#createWriter
   signature: (java.io.OutputStream, java.nio.charset.Charset) javax.json.JsonWriter
   condition:
@@ -1701,20 +1553,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -1874,20 +1718,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
@@ -2081,20 +1917,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
-  - from: arg(1)
-    to:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
   - from:
     - this
     - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
