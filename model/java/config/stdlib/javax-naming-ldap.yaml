@@ -87,16 +87,12 @@ passThrough:
   - from:
     - this
     - .javax.naming.ldap.ExtendedRequest#encodedValue#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#bytes#java.lang.Object
+    to: result
   - from:
     - this
     - .javax.naming.ldap.ExtendedRequest#requestId#java.lang.Object
     - .java.lang.String#bytes#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#bytes#java.lang.Object
+    to: result
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.directory.Attributes) void
   copy:
@@ -209,7 +205,8 @@ passThrough:
   - from: arg(*)
     to: this
 - function: javax.naming.ldap.ControlFactory#getControlInstance
-  signature: (javax.naming.ldap.Control, javax.naming.Context, java.util.Hashtable) javax.naming.ldap.Control
+  signature: (javax.naming.ldap.Control, javax.naming.Context, java.util.Hashtable)
+    javax.naming.ldap.Control
   copy:
   - from: arg(0)
     to: result
