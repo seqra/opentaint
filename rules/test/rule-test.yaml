@@ -43,6 +43,56 @@ tests:
       - security.commandinjection.CommandInjectionServletSamples$UnsafeCommandServlet#doGet
       - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePing
       - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePingList
+      # passThrough model regressions - one entry per library slot under test
+      - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendCharsUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringBufferInsertUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringFormatUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringJoinerAddUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringJoinerDelimiterUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#matcherGroupUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#matcherAppendTailUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#byteArrayOutputStreamUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringReaderUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#byteBufferUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#charBufferUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#basicControlIdUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#rdnTypeUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#sortKeyMatchingRuleUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#referenceClassNameUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#httpHeadersUnsafe
+      - security.passthrough.PassthroughServletAccessorSamples$RequestUriServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$QueryStringServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$ServletPathServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$PathInfoServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$RequestUrlServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$RemoteUserServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$ParameterMapServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$ParameterValuesServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$CookiesServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$HeaderNamesServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$ReaderServlet#doPost
+    negative:
+      - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendCharsSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringBufferInsertSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringFormatSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringJoinerAddSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringJoinerDelimiterSafe
+      - security.passthrough.PassthroughValueFlowSamples#matcherGroupSafe
+      - security.passthrough.PassthroughValueFlowSamples#matcherAppendTailSafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatSafe
+      - security.passthrough.PassthroughValueFlowSamples#byteArrayOutputStreamSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringReaderSafe
+      - security.passthrough.PassthroughValueFlowSamples#byteBufferSafe
+      - security.passthrough.PassthroughValueFlowSamples#charBufferSafe
+      - security.passthrough.PassthroughValueFlowSamples#basicControlIdSafe
+      - security.passthrough.PassthroughValueFlowSamples#rdnTypeSafe
+      - security.passthrough.PassthroughValueFlowSamples#sortKeyMatchingRuleSafe
+      - security.passthrough.PassthroughValueFlowSamples#referenceClassNameSafe
+      - security.passthrough.PassthroughValueFlowSamples#httpHeadersSafe
+      - security.passthrough.PassthroughServletAccessorSamples$SafeAccessorsServlet#doGet
   - rule-id: java/security/crlf-injection.yaml#http-response-splitting
     positive:
       - security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeHeaderServlet#doGet
@@ -351,7 +401,22 @@ tests:
       - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeHeaderDownload
       - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload
       - security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload
+      # java.io.File model regressions - one entry per constructor/accessor slot pair
+      - security.passthrough.PassthroughFileModelSamples#fileGetNameUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileCanonicalPathUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileParentUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileGetParentFileUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe
     negative:
+      - security.passthrough.PassthroughFileModelSamples#fileGetNameSafe
+      - security.passthrough.PassthroughFileModelSamples#fileCanonicalPathSafe
+      - security.passthrough.PassthroughFileModelSamples#fileParentSafe
+      - security.passthrough.PassthroughFileModelSamples#fileGetParentFileSafe
+      - security.passthrough.PassthroughFileModelSamples#fileToPathSafe
+      - security.passthrough.PassthroughFileModelSamples#fileFromUriSafe
+      - security.passthrough.PassthroughFileModelSamples#fileToStringSafe
       - security.pathtraversal.PathTraversalServletSamples$SafeFileCreateTempFilePrefixSuffixServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempDirectoryPrefixServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempFilePrefixSuffixServlet#doGet
